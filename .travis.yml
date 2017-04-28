@@ -1,0 +1,16 @@
+# this file is *not* meant to cover or endorse the use of travis, but rather to
+# help confirm pull requests to this project.
+
+language: python
+
+env:
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+
+install: pip install tox
+
+script: tox
+
+notifications:
+  email: false
