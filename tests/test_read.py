@@ -9,36 +9,45 @@ The test corresponds to annotations for the following sentence:
 
 import os
 from pytest import fixture
-from corenlp_protobuf import Document, Sentence, Token, DependencyGraph, CorefChain
+from corenlp_protobuf import Document, Sentence, Token, DependencyGraph,\
+                             CorefChain
 from corenlp_protobuf import parseFromDelimitedString, to_text
 
 
 # Thext that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 
+
 @fixture
 def doc_pb():
-    test_data = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'test.dat')
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    test_data = os.path.join(test_dir, 'data', 'test.dat')
     with open(test_data, 'rb') as f:
         buf = f.read()
     doc = Document()
     parseFromDelimitedString(doc, buf)
     return doc
 
+
 def test_parse_protobuf(doc_pb):
     assert doc_pb.ByteSize() == 4239
 
+
 def test_document_text(doc_pb):
     assert doc_pb.text == TEXT
+
 
 def test_sentences(doc_pb):
     assert len(doc_pb.sentence) == 1
 
     sentence = doc_pb.sentence[0]
     assert isinstance(sentence, Sentence)
-    assert sentence.characterOffsetEnd - sentence.characterOffsetBegin # Sentence length == 67
-    assert sentence.text == '' # Note that the sentence text should actually be recovered from the tokens.
-    assert to_text(sentence) == TEXT[:-1] # Note that the sentence text should actually be recovered from the tokens.
+    # check sentence length
+    assert sentence.characterOffsetEnd - sentence.characterOffsetBegin == 67
+    # Note that the sentence text should actually be recovered from the tokens.
+    assert sentence.text == ''
+    assert to_text(sentence) == TEXT[:-1]
+
 
 def test_tokens(doc_pb):
     sentence = doc_pb.sentence[0]
@@ -54,25 +63,26 @@ def test_tokens(doc_pb):
     # Lemma
     lemmas = "Chris write a simple sentence that he parse with Stanford CoreNLP .".split()
     lemmas_ = [t.lemma for t in tokens]
-    assert  lemmas_ == lemmas
+    assert lemmas_ == lemmas
 
     # POS
     pos = "NNP VBD DT JJ NN IN PRP VBD IN NNP NNP .".split()
     pos_ = [t.pos for t in tokens]
-    assert  pos_ == pos
+    assert pos_ == pos
 
     # NER
     ner = "PERSON O O O O O O O O ORGANIZATION O O".split()
     ner_ = [t.ner for t in tokens]
-    assert  ner_ == ner
+    assert ner_ == ner
 
     # character offsets
     begin = [int(i) for i in "0 6 12 14 21 30 35 38 45 50 59 66".split()]
     end =   [int(i) for i in "5 11 13 20 29 34 37 44 49 58 66 67".split()]
     begin_ = [t.beginChar for t in tokens]
     end_ = [t.endChar for t in tokens]
-    assert  begin_ == begin
-    assert  end_ == end
+    assert begin_ == begin
+    assert end_ == end
+
 
 def test_dependency_parse(doc_pb):
     """
@@ -89,7 +99,7 @@ def test_dependency_parse(doc_pb):
     tree = sentence.enhancedPlusPlusDependencies
     isinstance(tree, DependencyGraph)
     # Indices are 1-indexd with 0 being the "pseudo root"
-    assert  tree.root # 'wrote' is the root. == [2]
+    assert tree.root  # 'wrote' is the root. == [2]
     # There are as many nodes as there are tokens.
     assert len(tree.node) == len(sentence.token)
 
@@ -104,6 +114,7 @@ def test_dependency_parse(doc_pb):
     assert edge.target == 1
     assert edge.dep == "nsubj"
 
+
 def test_coref_chain(doc_pb):
     """
     Extract the corefence chains from the annotation.
@@ -113,15 +124,15 @@ def test_coref_chain(doc_pb):
     chains = doc_pb.corefChain
 
     # In this document there is 1 chain with Chris and he.
-    assert  len(chains) == 1
+    assert len(chains) == 1
     chain = chains[0]
     assert isinstance(chain, CorefChain)
-    assert chain.mention[0].beginIndex == 0 # 'Chris'
+    assert chain.mention[0].beginIndex == 0  # 'Chris'
     assert chain.mention[0].endIndex == 1
     assert chain.mention[0].gender == "MALE"
 
-    assert chain.mention[1].beginIndex == 6 # 'he'
+    assert chain.mention[1].beginIndex == 6  # 'he'
     assert chain.mention[1].endIndex == 7
     assert chain.mention[1].gender == "MALE"
 
-    assert chain.representative == 0 # The head of the chain is 'Chris'
+    assert chain.representative == 0  # Head of the chain is 'Chris'

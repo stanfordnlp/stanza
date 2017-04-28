@@ -1,5 +1,7 @@
 # Include the license file
-include LICENSE.txt
+include *.md
+include LICENSE
 
 # Include the data files
-recursive-include data *
+recursive-include corenlp_protobuf *.py
+recursive-include doc *.proto
