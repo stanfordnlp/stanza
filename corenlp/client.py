@@ -112,8 +112,9 @@ class CoreNLPClient(RobustService):
     A CoreNLP client to the Stanford CoreNLP server.
     """
     DEFAULT_ANNOTATORS = "tokenize ssplit lemma pos ner depparse".split()
+    DEFAULT_PROPERTIES = {}
 
-    def __init__(self, start_server=True, endpoint="http://localhost:9000", timeout=5000, annotators=DEFAULT_ANNOTATORS):
+    def __init__(self, start_server=True, endpoint="http://localhost:9000", timeout=5000, annotators=DEFAULT_ANNOTATORS, properties=DEFAULT_PROPERTIES):
         if start_server:
             host, port = urlparse(endpoint).netloc.split(":")
             assert host == "localhost", "If starting a server, endpoint must be localhost"
@@ -129,6 +130,7 @@ class CoreNLPClient(RobustService):
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint)
         self.default_annotators = annotators
+        self.default_properties = properties
 
     def _request(self, buf, properties):
         """Send a request to the CoreNLP server.
@@ -140,7 +142,17 @@ class CoreNLPClient(RobustService):
         self.ensure_alive()
 
         try:
-            r = requests.post(self.endpoint, params={'properties': str(properties)}, data=buf)
+            input_format = properties.get("inputFormat", "text")
+            if input_format == "text":
+                ctype = "text/plain; charset=utf-8"
+            elif input_format == "serialized":
+                ctype = "application/x-protobuf"
+            else:
+                raise ValueError("Unrecognized inputFormat " + input_format)
+
+            r = requests.post(self.endpoint,
+                              params={'properties': str(properties)},
+                              data=buf, headers={'content-type': ctype})
             r.raise_for_status()
             return r
         except requests.HTTPError as e:
@@ -156,24 +168,28 @@ class CoreNLPClient(RobustService):
         :param (dict) properties: properties that the server expects
         :return: request result
         """
-        properties = properties or {
-            'annotators': ','.join(annotators or self.default_annotators),
-            'inputFormat': 'text',
-            'outputFormat': 'serialized',
-            'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
-        }
+        if properties is None:
+            properties = self.default_properties
+            properties.update({
+                'annotators': ','.join(annotators or self.default_annotators),
+                'inputFormat': 'text',
+                'outputFormat': 'serialized',
+                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
+            })
         r = self._request(text.encode('utf-8'), properties)
         doc = Document()
         parseFromDelimitedString(doc, r.content)
         return doc
 
     def update(self, doc, annotators=None, properties=None):
-        properties = properties or {
-            'annotators': ','.join(annotators or self.default_annotators),
-            'inputFormat': 'serialized',
-            'outputFormat': 'serialized',
-            'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
-        }
+        if properties is None:
+            properties = self.default_properties
+            properties.update({
+                'annotators': ','.join(annotators or self.default_annotators),
+                'inputFormat': 'serialized',
+                'outputFormat': 'serialized',
+                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
+            })
         r = self._request(doc.SerializeToString(), properties)
         doc = Document()
         parseFromDelimitedString(doc, r.content)

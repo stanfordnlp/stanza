@@ -38,3 +38,10 @@ Annotation Server Usage::
   print(token.lemma)
 
 See `test_client.py` and `test_protobuf.py` for more examples.
+
+Annotation Service Usage::
+  from corenlp import AnnotatorBackend
+  class NeuralNER(AnnotatorBackend):
+    pass
+
+See `test_service.py` for more examples.
