@@ -1,7 +1,7 @@
 """
 A test annotator (tokens).
 """
-
+import requests
 from pytest import fixture
 
 import corenlp
@@ -38,25 +38,74 @@ class HappyFunTokenizer(Tokenizer, corenlp.Annotator):
         return ["TextAnnotation",
                 "TokensAnnotation",
                 "TokenBeginAnnotation",
-                "TokenEndAnnotation"]
+                "TokenEndAnnotation",
+                "CharacterOffsetBeginAnnotation",
+                "CharacterOffsetEndAnnotation",
+               ]
 
     def annotate(self, ann):
         """
         @ann: is a protobuf annotation object.
         Actually populate @ann with tokens.
         """
+        buf, beg_idx, end_idx = ann.text.lower(), 0, 0
         for i, word in enumerate(self.tokenize(ann.text)):
             token = ann.sentencelessToken.add()
             # These are the bare minimum required for the TokenAnnotation
             token.word = word
-            token.tokenOffsetBegin = i
-            token.tokenOffsetEnd = i+1
+            token.tokenBeginIndex = i
+            token.tokenEndIndex = i+1
+
+            # Seek into the txt until you can find this word.
+            try:
+                # Try to update beginning index
+                beg_idx = buf.index(word, beg_idx)
+            except ValueError:
+                # Give up -- this will be something random
+                end_idx = beg_idx + len(word)
+
+            token.beginChar = beg_idx
+            token.endChar = end_idx
+
+            beg_idx, end_idx = end_idx, end_idx
+
+def test_annotator_annotate():
+    cases = [("RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
+              "rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
+             ("HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
+              "html entities and other web oddities can be an ácute".split() + ["<em class='grumpy'>", "pain", "</em>", ">:("]),
+             ("It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
+              "it's perhaps noteworthy that phone numbers like".split() + ["+1 (800) 123-4567", ",", "(800) 123-4567", ",", "and", "123-4567"] + "are treated as words despite their whitespace .".split())
+            ]
+
+    annotator = HappyFunTokenizer()
+
+    for text, tokens in cases:
+        ann = corenlp.Document()
+        ann.text = text
+        annotator.annotate(ann)
+        tokens_ = [t.word for t in ann.sentencelessToken]
+        assert tokens_ == tokens
+
+def test_annotator_alive():
+    annotator = HappyFunTokenizer()
+    annotator.start()
+
+    # Ping the annotator.
+    r = requests.get("http://localhost:8432/ping")
+    assert r.ok
+    assert r.content.decode("utf-8") == "pong"
+    r = requests.get("http://localhost:8432/ping/")
+    assert r.ok
+    assert r.content.decode("utf-8") == "pong"
+
+    annotator.join()
 
 def test_tokenizer():
     annotator = HappyFunTokenizer()
     annotator.start()
 
-    client = corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun pos".split())
+    client = corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun ssplit pos".split())
     ann = client.annotate("RT @ #happyfuncoding: this is a typical Twitter tweet :-)")
 
     tokens = [t.word for t in ann.sentencelessToken]

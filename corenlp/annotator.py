@@ -61,7 +61,10 @@ class Annotator(Thread):
             }
 
     class _Handler(BaseHTTPRequestHandler):
-        def __init__(self, annotator):
+        annotator = None
+
+        def __init__(self, request, client_address, server):
+            BaseHTTPRequestHandler.__init__(self, request, client_address, server)
             self.annotator = annotator
 
         def do_GET(self):
@@ -114,6 +117,7 @@ class Annotator(Thread):
         """
         Thread.__init__(self)
         self.host, self.port = host, port
+        self._Handler.annotator = self
 
     def run(self):
         """
