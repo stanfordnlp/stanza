@@ -12,17 +12,23 @@ pipeline via a lightweight service.
 ----
 
 Annotation Server Usage::
-  from corenlp import Pipeline
+  from corenlp import CoreNLPClient
 
-  # document.dat contains a serialized Document.
-  with open('document.txt', 'r') as f:
-    doc = f.read()
+    text = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP."
 
-  pipeline = Pipeline(annotators='tokenize ssplit pos lemma ner'.split())
-  ann = pipeline.annotate(doc)
+    # We assume that you've defined a variable $JAVANLP_HOME
+    # that points to a Stanford CoreNLP checkout.
+    # The code below will launch StanfordCoreNLPServer in the background
+    # and communicate with the server to annotate the sentence.
+    with corenlp.CoreNLPClient(annotators="tokenize ssplit".split()) as client:
+        ann = client.annotate(text)
 
   # You can access annotations using ann.
   sentence = ann.sentence[0]
+
+  # The corenlp.to_text function is a helper function that
+  # reconstructs a sentence from tokens.
+  assert corenlp.to_text(sentence) == text
 
   # You can access any property within a sentence.
   print(sentence.text)
@@ -31,11 +37,4 @@ Annotation Server Usage::
   token = sentence.token[0]
   print(token.lemma)
 
-See `test_pipeline.py` for more examples.
-
-Annotation Service Usage::
-  from corenlp import AnnotatorBackend
-  class NeuralNER(AnnotatorBackend):
-    pass
-
-See `test_service.py` for more examples.
+See `test_client.py` and `test_protobuf.py` for more examples.

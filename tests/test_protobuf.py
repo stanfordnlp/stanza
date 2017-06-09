@@ -1,10 +1,13 @@
 """
-Tests to read a stored protobuf.
-Also serves as an example of how to parse sentences, tokens, pos, lemma,
-ner, dependencies and mentions.
+Tests to read from the protobuf returned by the CoreNLP client.
+These tests use a stored protobuf because python-corenlp needs Java
+CoreNLP to be running.
 
 The test corresponds to annotations for the following sentence:
     Chris wrote a simple sentence that he parsed with Stanford CoreNLP.
+
+These tests can also be found in python-corenlp-protobuf, but are
+present here as useful documentation.
 """
 
 import os
@@ -13,10 +16,8 @@ from corenlp_protobuf import Document, Sentence, Token, DependencyGraph,\
                              CorefChain
 from corenlp_protobuf import parseFromDelimitedString, to_text
 
-
-# Thext that was annotated
+# Text that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
-
 
 @fixture
 def doc_pb():
@@ -28,14 +29,11 @@ def doc_pb():
     parseFromDelimitedString(doc, buf)
     return doc
 
-
 def test_parse_protobuf(doc_pb):
     assert doc_pb.ByteSize() == 4239
 
-
 def test_document_text(doc_pb):
     assert doc_pb.text == TEXT
-
 
 def test_sentences(doc_pb):
     assert len(doc_pb.sentence) == 1
@@ -47,7 +45,6 @@ def test_sentences(doc_pb):
     # Note that the sentence text should actually be recovered from the tokens.
     assert sentence.text == ''
     assert to_text(sentence) == TEXT[:-1]
-
 
 def test_tokens(doc_pb):
     sentence = doc_pb.sentence[0]
@@ -108,7 +105,7 @@ def test_dependency_parse(doc_pb):
     # 'sentence'
     assert len(tree.edge) == 12
 
-    # This edge goes from "wrote" to "Chirs"
+    # This edge goes from "wrote" to "Chris"
     edge = tree.edge[0]
     assert edge.source == 2
     assert edge.target == 1
