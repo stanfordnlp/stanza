@@ -23,13 +23,13 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='3.7.0',
+    version='3.7.1',
 
     description='Official python interface for Stanford CoreNLP',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/stanfordnlp/python-corenlp',
+    url='https://github.com/stanfordnlp/python-stanford-corenlp',
 
     # Author details
     author='Stanford NLP Group',
