@@ -1,0 +1,14 @@
+sudo: required
+dist: trusty
+language: python
+python:
+  - 2.7
+  - 3.5
+notifications:
+  email: false
+# Run test
+script: tox
+# only integrate the master branch
+branches:
+  only:
+    - master
