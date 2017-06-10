@@ -1,8 +1,8 @@
 Stanford CoreNLP Python Bindings
 ================================
 
-.. image:: https://travis-ci.org/stanfordnlp/python-corenlp.svg?branch=master
-    :target: https://travis-ci.org/stanfordnlp/python-corenlp
+.. image:: https://travis-ci.org/stanfordnlp/python-corenlp-protobuf.svg?branch=master
+    :target: https://travis-ci.org/stanfordnlp/python-corenlp-protobuf
 
 This package contains python bindings for `Stanford
 CoreNLP <https://github.com/stanfordnlp/CoreNLP>`_'s protobuf
