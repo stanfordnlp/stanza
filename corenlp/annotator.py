@@ -1,13 +1,12 @@
 """
 Defines a base class that can be used to annotate.
 """
-import sys
-import time
-from threading import Thread
+import io
+from multiprocessing import Process
 from http.server import BaseHTTPRequestHandler, HTTPStatus, HTTPServer
-from corenlp_protobuf import Document, parseFromDelimitedString
+from corenlp_protobuf import Document, parseFromDelimitedString, writeToDelimitedString
 
-class Annotator(Thread):
+class Annotator(Process):
     """
     This annotator base class hosts a lightweight server that accepts
     annotation requests from CoreNLP.
@@ -65,7 +64,6 @@ class Annotator(Thread):
 
         def __init__(self, request, client_address, server):
             BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-            self.annotator = annotator
 
         def do_GET(self):
             """
@@ -97,8 +95,11 @@ class Annotator(Thread):
                 # Do the annotation
                 doc = Document()
                 parseFromDelimitedString(doc, msg)
-                doc = self.annotator.annotate(doc)
-                msg = doc.SerializeToString()
+                self.annotator.annotate(doc)
+
+                with io.BytesIO() as stream:
+                    writeToDelimitedString(doc, stream)
+                    msg = stream.getvalue()
 
                 # write message
                 self.send_response(HTTPStatus.OK)
@@ -115,7 +116,7 @@ class Annotator(Thread):
         """
         Launches a server endpoint to communicate with CoreNLP
         """
-        Thread.__init__(self)
+        Process.__init__(self)
         self.host, self.port = host, port
         self._Handler.annotator = self
 

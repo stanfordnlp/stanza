@@ -99,16 +99,26 @@ def test_annotator_alive():
     assert r.ok
     assert r.content.decode("utf-8") == "pong"
 
+    annotator.terminate()
     annotator.join()
 
 def test_tokenizer():
+    cases = [("RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
+              "rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
+             ("HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
+              "html entities and other web oddities can be an ácute".split() + ["<em class='grumpy'>", "pain", "</em>", ">:("]),
+             ("It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
+              "it's perhaps noteworthy that phone numbers like".split() + ["+1 (800) 123-4567", ",", "(800) 123-4567", ",", "and", "123-4567"] + "are treated as words despite their whitespace .".split())
+            ]
+
     annotator = HappyFunTokenizer()
     annotator.start()
 
-    client = corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun ssplit pos".split())
-    ann = client.annotate("RT @ #happyfuncoding: this is a typical Twitter tweet :-)")
+    with corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun ssplit pos".split()) as client:
+        for text, tokens in cases:
+            ann = client.annotate(text)
+            tokens_ = [t.word for t in ann.sentence[0].token]
+            assert tokens == tokens_
 
-    tokens = [t.word for t in ann.sentencelessToken]
-    assert tokens == "RT @ #happyfuncoding : this is a typical Twitter tweet :-)".split()
-
+    annotator.terminate()
     annotator.join()
