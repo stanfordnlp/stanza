@@ -1,16 +1,17 @@
-# this file is *not* meant to cover or endorse the use of travis, but rather to
-# help confirm pull requests to this project.
-
 language: python
-
-env:
-  - TOXENV=py27
-  - TOXENV=py33
-  - TOXENV=py34
-
-install: pip install tox
-
-script: tox
-
+python:
+  - 2.7
+  - 3.5
 notifications:
   email: false
+before_install:
+  - sudo apt-get update
+install:
+  - pip install tox-travis
+# Run test
+script: 
+  - tox
+# only integrate the master branch
+branches:
+  only:
+    - master
