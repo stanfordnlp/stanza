@@ -1,23 +1,22 @@
 """
-Tests to read from the protobuf returned by the CoreNLP client.
-These tests use a stored protobuf because python-corenlp needs Java
-CoreNLP to be running.
+Tests to read a stored protobuf.
+Also serves as an example of how to parse sentences, tokens, pos, lemma,
+ner, dependencies and mentions.
 
 The test corresponds to annotations for the following sentence:
     Chris wrote a simple sentence that he parsed with Stanford CoreNLP.
-
-These tests can also be found in python-corenlp-protobuf, but are
-present here as useful documentation.
 """
 
 import os
 from pytest import fixture
 from corenlp_protobuf import Document, Sentence, Token, DependencyGraph,\
                              CorefChain
-from corenlp_protobuf import parseFromDelimitedString, to_text
+from corenlp_protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
 
-# Text that was annotated
+
+# Thext that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
+
 
 @fixture
 def doc_pb():
@@ -32,8 +31,18 @@ def doc_pb():
 def test_parse_protobuf(doc_pb):
     assert doc_pb.ByteSize() == 4239
 
+def test_write_protobuf(doc_pb):
+    stream = writeToDelimitedString(doc_pb)
+    buf = stream.getvalue()
+    stream.close()
+
+    doc_pb_ = Document()
+    parseFromDelimitedString(doc_pb_, buf)
+    assert doc_pb == doc_pb_
+
 def test_document_text(doc_pb):
     assert doc_pb.text == TEXT
+
 
 def test_sentences(doc_pb):
     assert len(doc_pb.sentence) == 1
@@ -45,6 +54,7 @@ def test_sentences(doc_pb):
     # Note that the sentence text should actually be recovered from the tokens.
     assert sentence.text == ''
     assert to_text(sentence) == TEXT[:-1]
+
 
 def test_tokens(doc_pb):
     sentence = doc_pb.sentence[0]
@@ -105,7 +115,7 @@ def test_dependency_parse(doc_pb):
     # 'sentence'
     assert len(tree.edge) == 12
 
-    # This edge goes from "wrote" to "Chris"
+    # This edge goes from "wrote" to "Chirs"
     edge = tree.edge[0]
     assert edge.source == 2
     assert edge.target == 1
