@@ -64,7 +64,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='protobuf corenlp natural-language-processing nlp',
+    keywords='corenlp natural-language-processing nlp',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().

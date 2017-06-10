@@ -1,6 +1,7 @@
 r"""
 Python CoreNLP: a server based interface to Java CoreNLP.
 """
+import io
 import os
 import logging
 import shlex
@@ -11,7 +12,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from corenlp_protobuf import Document, parseFromDelimitedString, to_text
+from corenlp_protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
 logger = logging.getLogger(__name__)
@@ -190,7 +191,11 @@ class CoreNLPClient(RobustService):
                 'outputFormat': 'serialized',
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
-        r = self._request(doc.SerializeToString(), properties)
+        with io.BytesIO() as stream:
+            writeToDelimitedString(doc, stream)
+            msg = stream.getvalue()
+
+        r = self._request(msg, properties)
         doc = Document()
         parseFromDelimitedString(doc, r.content)
         return doc
