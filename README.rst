@@ -1,6 +1,9 @@
 Stanford CoreNLP Python Interface
 =================================
 
+.. image:: https://travis-ci.org/stanfordnlp/python-corenlp.svg?branch=master
+    :target: https://travis-ci.org/stanfordnlp/python-corenlp
+
 This package contains a python interface for `Stanford CoreNLP
 <https://github.com/stanfordnlp/CoreNLP>` that contains a reference
 implementation to interface with the `Stanford CoreNLP server
