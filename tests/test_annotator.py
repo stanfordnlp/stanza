@@ -2,7 +2,6 @@
 A test annotator (tokens).
 """
 import requests
-from pytest import fixture
 
 import corenlp
 from .happyfuntokenizer import Tokenizer
