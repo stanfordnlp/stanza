@@ -4,6 +4,7 @@ A test annotator (tokens).
 """
 import six
 
+import time
 import requests
 import corenlp
 from .happyfuntokenizer import Tokenizer
@@ -92,16 +93,18 @@ def test_annotator_alive():
     annotator = HappyFunTokenizer()
     annotator.start()
 
-    # Ping the annotator.
-    r = requests.get("http://localhost:8432/ping")
-    assert r.ok
-    assert r.content.decode("utf-8") == "pong"
-    r = requests.get("http://localhost:8432/ping/")
-    assert r.ok
-    assert r.content.decode("utf-8") == "pong"
-
-    annotator.terminate()
-    annotator.join()
+    try:
+        time.sleep(2)
+        # Ping the annotator.
+        r = requests.get("http://localhost:8432/ping")
+        assert r.ok
+        assert r.content.decode("utf-8") == "pong"
+        r = requests.get("http://localhost:8432/ping/")
+        assert r.ok
+        assert r.content.decode("utf-8") == "pong"
+    finally:
+        annotator.terminate()
+        annotator.join()
 
 def test_tokenizer():
     cases = [(u"RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
@@ -115,11 +118,12 @@ def test_tokenizer():
     annotator = HappyFunTokenizer()
     annotator.start()
 
-    with corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun ssplit pos".split()) as client:
-        for text, tokens in cases:
-            ann = client.annotate(text)
-            tokens_ = [t.word for t in ann.sentence[0].token]
-            assert tokens == tokens_
-
-    annotator.terminate()
-    annotator.join()
+    try:
+        with corenlp.CoreNLPClient(properties=annotator.properties, annotators="happyfun ssplit pos".split()) as client:
+            for text, tokens in cases:
+                ann = client.annotate(text)
+                tokens_ = [t.word for t in ann.sentence[0].token]
+                assert tokens == tokens_
+    finally:
+        annotator.terminate()
+        annotator.join()
