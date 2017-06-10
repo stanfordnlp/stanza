@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """
 A test annotator (tokens).
 """
-import requests
+import six
 
+import requests
 import corenlp
 from .happyfuntokenizer import Tokenizer
 
@@ -51,7 +53,7 @@ class HappyFunTokenizer(Tokenizer, corenlp.Annotator):
         for i, word in enumerate(self.tokenize(ann.text)):
             token = ann.sentencelessToken.add()
             # These are the bare minimum required for the TokenAnnotation
-            token.word = word
+            token.word = six.u(word)
             token.tokenBeginIndex = i
             token.tokenEndIndex = i+1
 
@@ -69,12 +71,12 @@ class HappyFunTokenizer(Tokenizer, corenlp.Annotator):
             beg_idx, end_idx = end_idx, end_idx
 
 def test_annotator_annotate():
-    cases = [("RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
-              "rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
-             ("HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
-              "html entities and other web oddities can be an ácute".split() + ["<em class='grumpy'>", "pain", "</em>", ">:("]),
-             ("It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
-              "it's perhaps noteworthy that phone numbers like".split() + ["+1 (800) 123-4567", ",", "(800) 123-4567", ",", "and", "123-4567"] + "are treated as words despite their whitespace .".split())
+    cases = [(u"RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
+              u"rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
+             (u"HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
+              u"html entities and other web oddities can be an ácute".split() + [u"<em class='grumpy'>", u"pain", u"</em>", u">:("]),
+             (u"It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
+              u"it's perhaps noteworthy that phone numbers like".split() + [u"+1 (800) 123-4567", u",", u"(800) 123-4567", u",", u"and", u"123-4567"] + u"are treated as words despite their whitespace .".split())
             ]
 
     annotator = HappyFunTokenizer()
@@ -102,12 +104,12 @@ def test_annotator_alive():
     annotator.join()
 
 def test_tokenizer():
-    cases = [("RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
-              "rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
-             ("HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
-              "html entities and other web oddities can be an ácute".split() + ["<em class='grumpy'>", "pain", "</em>", ">:("]),
-             ("It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
-              "it's perhaps noteworthy that phone numbers like".split() + ["+1 (800) 123-4567", ",", "(800) 123-4567", ",", "and", "123-4567"] + "are treated as words despite their whitespace .".split())
+    cases = [(u"RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
+              u"rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
+             (u"HTML entities &amp; other Web oddities can be an &aacute;cute <em class='grumpy'>pain</em> >:(",
+              u"html entities and other web oddities can be an ácute".split() + [u"<em class='grumpy'>", u"pain", u"</em>", u">:("]),
+             (u"It's perhaps noteworthy that phone numbers like +1 (800) 123-4567, (800) 123-4567, and 123-4567 are treated as words despite their whitespace.",
+              u"it's perhaps noteworthy that phone numbers like".split() + [u"+1 (800) 123-4567", u",", u"(800) 123-4567", u",", u"and", u"123-4567"] + u"are treated as words despite their whitespace .".split())
             ]
 
     annotator = HappyFunTokenizer()

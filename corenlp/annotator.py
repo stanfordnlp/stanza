@@ -3,7 +3,9 @@ Defines a base class that can be used to annotate.
 """
 import io
 from multiprocessing import Process
-from http.server import BaseHTTPRequestHandler, HTTPStatus, HTTPServer
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from six.moves import http_client as HTTPStatus
+
 from corenlp_protobuf import Document, parseFromDelimitedString, writeToDelimitedString
 
 class Annotator(Process):

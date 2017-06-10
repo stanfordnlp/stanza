@@ -8,7 +8,7 @@ import shlex
 import subprocess
 import time
 
-from urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse
 
 import requests
 
@@ -59,7 +59,7 @@ class RobustService(object):
         try:
             return requests.get(self.endpoint + "/ping").ok
         except requests.exceptions.ConnectionError as e:
-            raise ShouldRetryException() from e
+            raise ShouldRetryException(e)
 
     def start(self):
         if self.start_cmd:
@@ -158,9 +158,9 @@ class CoreNLPClient(RobustService):
             return r
         except requests.HTTPError as e:
             if r.text == "CoreNLP request timed out. Your document may be too long.":
-                raise TimeoutException(r.text) from e
+                raise TimeoutException(r.text)
             else:
-                raise AnnotationException(r.text) from e
+                raise AnnotationException(r.text)
 
     def annotate(self, text, annotators=None, properties=None):
         """Send a request to the CoreNLP server.

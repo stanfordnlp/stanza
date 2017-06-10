@@ -47,7 +47,7 @@ __email__ = "See the author's website"
 ######################################################################
 
 import re
-import html.entities
+from six.moves import html_entities
 
 ######################################################################
 # The following strings are components in the regular expression
@@ -200,7 +200,7 @@ class Tokenizer:
         for ent in ents:
             entname = ent[1:-1]
             try:
-                s = s.replace(ent, chr(html.entities.name2codepoint[entname]))
+                s = s.replace(ent, chr(html_entities.name2codepoint[entname]))
             except:
                 pass
             s = s.replace(amp, " and ")
