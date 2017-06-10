@@ -6,6 +6,10 @@ python:
   - 3.5
 notifications:
   email: false
+before_install:
+  - sudo apt-get update
+install:
+  sudo apt-get install python-pip python-tox
 # Run test
 script: tox
 # only integrate the master branch
