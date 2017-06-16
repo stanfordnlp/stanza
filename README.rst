@@ -48,7 +48,7 @@ See `test_client.py` and `test_protobuf.py` for more examples.
 
 
 Annotation Service Usage
------------------------
+------------------------
 
 .. code-block:: python
 
