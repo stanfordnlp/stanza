@@ -4,6 +4,7 @@ Python CoreNLP: a server based interface to Java CoreNLP.
 import io
 import os
 import logging
+import json
 import shlex
 import subprocess
 import time
@@ -199,5 +200,34 @@ class CoreNLPClient(RobustService):
         doc = Document()
         parseFromDelimitedString(doc, r.content)
         return doc
+
+    def tokensregex(self, text, pattern, filter=False):
+        return self.__regex('/tokensregex', text, pattern, filter)
+
+    def semgrex(self, text, pattern, filter=False):
+        return self.__regex('/semgrex', text, pattern, filter)
+
+    def tregrex(self, text, pattern, filter=False):
+        return self.__regex('/tregex', text, pattern, filter)
+
+    def __regex(self, path, text, pattern, filter):
+        """Send a regex-related request to the CoreNLP server.
+        :param (str | unicode) path: the path for the regex endpoint
+        :param text: raw text for the CoreNLPServer to apply the regex
+        :param (str | unicode) pattern: regex pattern
+        :param (bool) filter: option to filter sentences that contain matches, if false returns matches
+        :return: request result
+        """
+        r = requests.get(
+            self.endpoint + path, params={
+                'pattern': pattern,
+                'filter': filter,
+            }, data=text)
+        output = r.text
+        try:
+            output = json.loads(r.text)
+        except:
+            pass
+        return output
 
 __all__ = ["CoreNLPClient", "AnnotationException", "TimeoutException", "to_text"]
