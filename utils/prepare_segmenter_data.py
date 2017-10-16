@@ -31,8 +31,12 @@ def find_next_word(index, text, word, output):
         index += 1
     return index
 
+mwt_expansions = []
 with smart_open(args.conllu_file, 'r') as f:
     buf = ''
+    mwtbegin = 0
+    mwtend = -1
+    expanded = []
     for line in f:
         line = line.strip()
         if len(line):
@@ -46,16 +50,36 @@ with smart_open(args.conllu_file, 'r') as f:
                 continue
 
             word = line[1]
+            if '-' in line[0]:
+                # multiword token
+                mwtbegin, mwtend = [int(x) for x in line[0].split('-')]
+                lastmwt = word
+                expanded = []
+            elif mwtbegin <= int(line[0]) < mwtend:
+                expanded += [word]
+                continue
+            elif int(line[0]) == mwtend:
+                expanded += [word]
+                mwt_expansions += [(lastmwt, tuple(expanded))]
+                mwtbegin = 0
+                mwtend = -1
+                lastmwt = None
+                continue
+
             if len(buf):
                 output.write(buf)
             index = find_next_word(index, text, word, output)
-            assert text[index:(index+len(word))] == word, "word mismatch: raw text contains |%s| but the next word is |%s|." % (text[index:(index+len(word))], word)
-            buf = '0' * (len(word)-1) + '1'
+            assert text[index:(index+len(word))].replace('\n', ' ') == word, "word mismatch: raw text contains |%s| but the next word is |%s|." % (text[index:(index+len(word))], word)
+            buf = '0' * (len(word)-1) + ('1' if '-' not in line[0] else '3')
             index += len(word)
+
         else:
             # sentence break found
             if len(buf):
                 output.write(buf[:-1] + '2')
                 buf = ''
+
+from collections import Counter
+print Counter(mwt_expansions)
 
 output.close()
