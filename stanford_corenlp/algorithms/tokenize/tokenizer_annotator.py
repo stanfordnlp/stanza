@@ -15,7 +15,7 @@ tokens = (
     "WHITESPACE"
 )
 
-t_TOKEN = (r"[a-zA-Z0-9\.]+")
+t_TOKEN = (r"[^ \n]+")
 t_WHITESPACE = (r"[ \n]+")
 
 lex.lex()
