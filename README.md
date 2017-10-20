@@ -1,4 +1,4 @@
-# stanford_corenlp
+# stanfordnlp
 This project is meant to be a standalone Python version of CoreNLP. Right now we aim to replicate the functionality of the main components of CoreNLP.
 For now, this includes the following parts of the processing pipeline:
   * tokenize
