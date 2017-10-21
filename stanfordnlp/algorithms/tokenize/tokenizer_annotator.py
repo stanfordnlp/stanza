@@ -5,9 +5,9 @@ Tokenization is performed with the lexer PLY.
 """
 
 from ply import lex
-from stanford_corenlp.annotator import Annotator
-from stanford_corenlp.data_structures import Token
-from stanford_corenlp.annotations import TOKENS
+from stanfordnlp.annotator import Annotator
+from stanfordnlp.data_structures import Token
+from stanfordnlp.annotations import TOKENS
 
 # set up the lexer
 tokens = (

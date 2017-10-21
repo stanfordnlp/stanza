@@ -3,7 +3,7 @@ __author__ = 'victor'
 import logging
 import os
 import requests
-import stanford_corenlp
+import stanfordnlp
 
 def get_from_url(url):
     """
@@ -22,7 +22,7 @@ def get_data_or_download(dir_name, file_name, url='', size='unknown'):
     :param size: the expected size
     :return: path to the requested file
     """
-    dname = os.path.join(stanford_corenlp.DATA_DIR, dir_name)
+    dname = os.path.join(stanfordnlp.DATA_DIR, dir_name)
     fname = os.path.join(dname, file_name)
     if not os.path.isdir(dname):
         assert url, 'Could not locate data {}, and url was not specified. Cannot retrieve data.'.format(dname)

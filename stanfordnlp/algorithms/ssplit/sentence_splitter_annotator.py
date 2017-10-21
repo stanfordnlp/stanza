@@ -2,9 +2,9 @@
 Module containing annotators for performing tokenization
 """
 
-from stanford_corenlp.annotator import Annotator
-from stanford_corenlp.data_structures import Sentence
-from stanford_corenlp.annotations import TOKENS, SENTENCES
+from stanfordnlp.annotator import Annotator
+from stanfordnlp.data_structures import Sentence
+from stanfordnlp.annotations import TOKENS, SENTENCES
 
 class SentenceSplitterAnnotator(Annotator):
     """Class which splits a tokenized document into sentences"""

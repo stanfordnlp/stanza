@@ -2,8 +2,8 @@
 Module for NLP processing pipeline
 """
 
-from stanford_corenlp.algorithms.ssplit import SentenceSplitterAnnotator
-from stanford_corenlp.algorithms.tokenize import TokenizerAnnotator
+from stanfordnlp.algorithms.ssplit import SentenceSplitterAnnotator
+from stanfordnlp.algorithms.tokenize import TokenizerAnnotator
 
 # by default run all annotators
 DEFAULT_ANNOTATORS_LIST = "tokenize,ssplit,pos,ner,depparse"

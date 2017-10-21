@@ -10,7 +10,7 @@ import zipfile
 from abc import ABCMeta, abstractmethod
 from copy import copy
 from collections import Counter, namedtuple, OrderedDict
-from stanford_corenlp.util import get_data_or_download
+from stanfordnlp.util import get_data_or_download
 
 class BaseVocab(object):
     __metaclass__ = ABCMeta

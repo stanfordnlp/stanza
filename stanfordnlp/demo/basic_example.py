@@ -2,8 +2,8 @@
 A basic example showing how to build a document and run a pipeline on it.
 """
 
-from stanford_corenlp.data_structures import Document
-from stanford_corenlp.pipeline import Pipeline
+from stanfordnlp.data_structures import Document
+from stanfordnlp.pipeline import Pipeline
 
 # create the document
 simple_document = Document("Joe Smith went to Hawaii .\nHe enjoyed his vacation .")
