@@ -12,7 +12,9 @@ server <https://stanfordnlp.github.io/CoreNLP/corenlp-server.html>`_.
 
 ----
 
-Usage::
+Usage:
+
+.. code-block:: python
   
   from corenlp_protobuf import Document, parseFromDelimitedString
 
