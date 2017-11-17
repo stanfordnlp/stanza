@@ -12,6 +12,10 @@ The package also contains a base class to expose a python-based annotation
 provider (e.g. your favorite neural NER system) to the CoreNLP
 pipeline via a lightweight service.
 
+To use the package, first download the `official java CoreNLP release 
+<https://stanfordnlp.github.io/CoreNLP/#download>`_, unzip it, and define an environment
+variable :code:`$CORENLP_HOME` that points to the unzipped directory.
+
 ----
 
 Annotation Server Usage
@@ -19,15 +23,16 @@ Annotation Server Usage
 
 .. code-block:: python
 
-  from corenlp import CoreNLPClient
+  import corenlp
 
   text = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP."
 
-  # We assume that you've defined a variable $JAVANLP_HOME
-  # that points to a Stanford CoreNLP checkout.
+  # We assume that you've downloaded the Stanford CoreNLP package from 
+  # `https://stanfordnlp.github.io/CoreNLP/` and defined an environment
+  # variable $CORENLP_HOME that points to the unzipped directory.
   # The code below will launch StanfordCoreNLPServer in the background
   # and communicate with the server to annotate the sentence.
-  with CoreNLPClient(annotators="tokenize ssplit".split()) as client:
+  with corenlp.CoreNLPClient(annotators="tokenize ssplit".split()) as client:
     ann = client.annotate(text)
 
   # You can access annotations using ann.
