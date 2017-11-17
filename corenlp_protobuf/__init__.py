@@ -29,7 +29,7 @@ def writeToDelimitedString(obj, stream=None):
     if stream is None:
         stream = BytesIO()
 
-    _EncodeVarint(stream.write, obj.ByteSize())
+    _EncodeVarint(stream.write, obj.ByteSize(), True)
     stream.write(obj.SerializeToString())
     return stream
 
