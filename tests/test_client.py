@@ -25,40 +25,47 @@ def test_update():
 def test_tokensregex():
     with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split()) as client:
         # Example pattern from: https://nlp.stanford.edu/software/tokensregex.shtml
-        text = 'Hello. Bob Ross was a famous painter. Goodbye.'
-        pattern = '([ner: PERSON]+) /was|is/ /an?/ []{0,3} /painter|artist/'
-        matches = client.tokensregex(text, pattern)
+        pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
+        matches = client.tokensregex(TEXT, pattern)
+        assert len(matches["sentences"]) == 1
+        assert matches["sentences"][0]["length"] == 1
         assert matches == {
             "sentences": [{
-                "length": 0
-                },{
-                    "0": {
-                        "text": "Ross was a famous painter",
+                "0": {
+                    "text": "Chris wrote a simple sentence",
+                    "begin": 1,
+                    "end": 6,
+                    "1": {
+                        "text": "Chris",
                         "begin": 1,
-                        "end": 6,
-                        "1": {
-                            "text": "Ross",
-                            "begin": 1,
-                            "end": 2
-                            }},
-                    "length": 1
-                },{
-                    "length": 0
-                }]}
+                        "end": 2
+                        }},
+                "length": 1
+                },]}
 
 def test_semgrex():
     with corenlp.CoreNLPClient(annotators='tokenize ssplit depparse'.split()) as client:
-        text = 'I ran.'
-        pattern = '{} < {}'
-        matches = client.semgrex(text, pattern, to_words=True)
-        assert matches == [{
-            "text": ".",
-            "begin": 2,
-            "end": 3,
-            "sentence": 0
-        },{
-            "text": "I",
-            "begin": 0,
-            "end": 1,
-            "sentence": 0
-            }]
+        pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+        matches = client.semgrex(TEXT, pattern, to_words=True)
+        assert matches == {
+            "sentences": [
+                {
+                    "0": {
+                        "text": "wrote",
+                        "begin": 1,
+                        "end": 2,
+                        "$subject": {
+                            "text": "Chris",
+                            "begin": 0,
+                            "end": 1
+                            },
+                        "$object": {
+                            "text": "sentence",
+                            "begin": 4,
+                            "end": 5
+                            }
+                        },
+                    "length": 1
+                    }
+                ]
+            }

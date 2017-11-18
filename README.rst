@@ -48,11 +48,40 @@ Annotation Server Usage
   token = sentence.token[0]
   print(token.lemma)
 
-See `test_client.py` and `test_protobuf.py` for more examples.
+  # Use tokensregex patterns to find who wrote a sentence.
+  pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
+  matches = client.tokensregex(text, pattern)
+  # sentences contains a list with matches for each sentence.
+  assert len(matches["sentences"]) == 1
+  # length tells you whether or not there are any matches in this
+  assert matches["sentences"][0]["length"] == 1
+  # You can access matches like most regex groups.
+  matches["sentences"][1]["0"]["text"] == "Chris wrote a simple sentence"
+  matches["sentences"][1]["0"]["1"]["text"] == "Chris"
+
+  # Use semgrex patterns to directly find who wrote what.
+  pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+  matches = client.semgrex(text, pattern)
+  # sentences contains a list with matches for each sentence.
+  assert len(matches["sentences"]) == 1
+  # length tells you whether or not there are any matches in this
+  assert matches["sentences"][0]["length"] == 1
+  # You can access matches like most regex groups.
+  matches["sentences"][1]["0"]["text"] == "wrote"
+  matches["sentences"][1]["0"]["$subject"]["text"] == "Chris"
+  matches["sentences"][1]["0"]["$object"]["text"] == "sentence"
+
+See `test_client.py` and `test_protobuf.py` for more examples. Props to
+@dan-zheng for tokensregex/semgrex support.
 
 
 Annotation Service Usage
 ------------------------
+
+*NOTE*: The annotation service allows users to provide a custom
+annotator to be used by the CoreNLP pipeline. Unfortunately, it relies
+on experimental code internal to the Stanford CoreNLP project is not yet
+available for public use.
 
 .. code-block:: python
 
