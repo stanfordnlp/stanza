@@ -205,13 +205,13 @@ class CoreNLPClient(RobustService):
         matches = self.__regex('/tokensregex', text, pattern, filter)
         if not to_words:
             return matches
-        return self.regex_matches_to_indexed_words(matches)
+        return regex_matches_to_indexed_words(matches)
 
     def semgrex(self, text, pattern, filter=False, to_words=False):
         matches = self.__regex('/semgrex', text, pattern, filter)
         if not to_words:
             return matches
-        return self.regex_matches_to_indexed_words(matches)
+        return regex_matches_to_indexed_words(matches)
 
     def tregrex(self, text, pattern, filter=False):
         return self.__regex('/tregex', text, pattern, filter)
@@ -236,15 +236,14 @@ class CoreNLPClient(RobustService):
             pass
         return output
 
-    @staticmethod
-    def regex_matches_to_indexed_words(matches):
-        """Transforms tokensregex and semgrex matches to indexed words.
-        :param matches: unprocessed regex matches
-        :return: flat array of indexed words
-        """
-        words = [dict(v, **dict([('sentence', i)]))
-                 for i, s in enumerate(matches['sentences'])
-                 for k, v in s.items() if k != 'length']
-        return words
+def regex_matches_to_indexed_words(matches):
+    """Transforms tokensregex and semgrex matches to indexed words.
+    :param matches: unprocessed regex matches
+    :return: flat array of indexed words
+    """
+    words = [dict(v, **dict([('sentence', i)]))
+             for i, s in enumerate(matches['sentences'])
+             for k, v in s.items() if k != 'length']
+    return words
 
 __all__ = ["CoreNLPClient", "AnnotationException", "TimeoutException", "to_text"]
