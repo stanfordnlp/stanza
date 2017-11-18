@@ -203,15 +203,15 @@ class CoreNLPClient(RobustService):
 
     def tokensregex(self, text, pattern, filter=False, to_words=False):
         matches = self.__regex('/tokensregex', text, pattern, filter)
-        if not to_words:
-            return matches
-        return regex_matches_to_indexed_words(matches)
+        if to_words:
+            matches = regex_matches_to_indexed_words(matches)
+        return matches
 
     def semgrex(self, text, pattern, filter=False, to_words=False):
         matches = self.__regex('/semgrex', text, pattern, filter)
-        if not to_words:
-            return matches
-        return regex_matches_to_indexed_words(matches)
+        if to_words:
+            matches = regex_matches_to_indexed_words(matches)
+        return matches
 
     def tregrex(self, text, pattern, filter=False):
         return self.__regex('/tregex', text, pattern, filter)
@@ -224,17 +224,28 @@ class CoreNLPClient(RobustService):
         :param (bool) filter: option to filter sentences that contain matches, if false returns matches
         :return: request result
         """
-        r = requests.get(
-            self.endpoint + path, params={
-                'pattern': pattern,
-                'filter': filter,
-            }, data=text)
-        output = r.text
+        self.ensure_alive()
+
+        # HACK: For some stupid reason, CoreNLPServer will timeout if we
+        # need to annotate something from scratch. So, we need to call
+        # this to ensure that the _regex call doesn't timeout.
+        self.annotate(text)
+
         try:
-            output = json.loads(r.text)
-        except:
-            pass
-        return output
+            r = requests.get(
+                self.endpoint + path, params={
+                    'pattern': pattern,
+                    'filter': filter,
+                }, data=text)
+            r.raise_for_status()
+            return json.loads(r.text)
+        except requests.HTTPError as e:
+            if r.text.startswith("Timeout"):
+                raise TimeoutException(r.text)
+            else:
+                raise AnnotationException(r.text)
+        except json.JSONDecodeError:
+            raise AnnotationException(r.text)
 
 def regex_matches_to_indexed_words(matches):
     """Transforms tokensregex and semgrex matches to indexed words.

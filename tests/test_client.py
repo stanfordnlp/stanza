@@ -33,39 +33,33 @@ def test_tokensregex():
             "sentences": [{
                 "0": {
                     "text": "Chris wrote a simple sentence",
-                    "begin": 1,
-                    "end": 6,
+                    "begin": 0,
+                    "end": 5,
                     "1": {
                         "text": "Chris",
-                        "begin": 1,
-                        "end": 2
+                        "begin": 0,
+                        "end": 1
                         }},
                 "length": 1
                 },]}
 
 def test_semgrex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit depparse'.split()) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split()) as client:
         pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
         matches = client.semgrex(TEXT, pattern, to_words=True)
-        assert matches == {
-            "sentences": [
+        assert matches == [
                 {
-                    "0": {
-                        "text": "wrote",
-                        "begin": 1,
-                        "end": 2,
-                        "$subject": {
-                            "text": "Chris",
-                            "begin": 0,
-                            "end": 1
-                            },
-                        "$object": {
-                            "text": "sentence",
-                            "begin": 4,
-                            "end": 5
-                            }
+                    "text": "wrote",
+                    "begin": 1,
+                    "end": 2,
+                    "$subject": {
+                        "text": "Chris",
+                        "begin": 0,
+                        "end": 1
                         },
-                    "length": 1
-                    }
-                ]
-            }
+                    "$object": {
+                        "text": "sentence",
+                        "begin": 4,
+                        "end": 5
+                        },
+                    "sentence": 0,}]
