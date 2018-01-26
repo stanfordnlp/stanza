@@ -16,6 +16,8 @@ To use the package, first download the `official java CoreNLP release
 <https://stanfordnlp.github.io/CoreNLP/#download>`_, unzip it, and define an environment
 variable :code:`$CORENLP_HOME` that points to the unzipped directory.
 
+You can also install this package from `PyPI <https://pypi.python.org/pypi/stanford-corenlp/>`_ using :code:`pip install stanford-corenlp` 
+
 ----
 
 Annotation Server Usage
