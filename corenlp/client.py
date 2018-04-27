@@ -201,8 +201,17 @@ class CoreNLPClient(RobustService):
         parseFromDelimitedString(doc, r.content)
         return doc
 
-    def tokensregex(self, text, pattern, filter=False, to_words=False):
-        matches = self.__regex('/tokensregex', text, pattern, filter)
+    def tokensregex(self, text, pattern, filter=False, to_words=False, annotators=None, properties=None):
+        # Error occurs unless put properties in params
+        if properties is None:
+            properties = self.default_properties
+            properties.update({
+                'annotators': ','.join(annotators or self.default_annotators),
+                'inputFormat': 'text',
+                'outputFormat': 'serialized',
+                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
+            })
+        matches = self.__regex('/tokensregex', text, pattern, filter, properties)
         if to_words:
             matches = regex_matches_to_indexed_words(matches)
         return matches
@@ -216,7 +225,7 @@ class CoreNLPClient(RobustService):
     def tregrex(self, text, pattern, filter=False):
         return self.__regex('/tregex', text, pattern, filter)
 
-    def __regex(self, path, text, pattern, filter):
+    def __regex(self, path, text, pattern, filter, properties):
         """Send a regex-related request to the CoreNLP server.
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
@@ -229,14 +238,25 @@ class CoreNLPClient(RobustService):
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
         # this to ensure that the _regex call doesn't timeout.
-        self.annotate(text)
+        # self.annotate(text)
 
         try:
-            r = requests.get(
+            # Error occurs unless put properties in params
+            input_format = properties.get("inputFormat", "text")
+            if input_format == "text":
+                ctype = "text/plain; charset=utf-8"
+            elif input_format == "serialized":
+                ctype = "application/x-protobuf"
+            else:
+                raise ValueError("Unrecognized inputFormat " + input_format)
+            # change request method from `get` to `post` as required by CoreNLP
+            r = requests.post(
                 self.endpoint + path, params={
                     'pattern': pattern,
                     'filter': filter,
-                }, data=text)
+                    'properties': str(properties)
+                }, data=text,
+                    headers={'content-type': ctype})
             r.raise_for_status()
             return json.loads(r.text)
         except requests.HTTPError as e:
