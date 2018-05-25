@@ -19,17 +19,22 @@ output = sys.stdout if args.output is None else open(args.output, 'w')
 index = 0 # character offset in rawtext
 
 def find_next_word(index, text, word, output):
-    while index < len(text) and text[index] != word[0]:
+    idx = 0
+    word_sofar = ''
+    while index < len(text) and idx < len(word):
         if text[index] == '\n' and index+1 < len(text) and text[index+1] == '\n':
             # paragraph break
             output.write('\n\n')
             index += 1
-        elif re.match(r'^\s$', text[index]):
+        elif re.match(r'^\s$', text[index]) and not re.match(r'^\s$', word[idx]):
+            word_sofar += text[index]
             output.write('0') # not word boundary
         else:
-            assert False, "character mismatch: raw text contains |%s| but the next word is |%s|." % (text[index:(index+20)], word)
+            word_sofar += text[index]
+            assert text[index].replace('\n', ' ') == word[idx], "character mismatch: raw text contains |%s| but the next word is |%s|." % (word_sofar, word)
+            idx += 1
         index += 1
-    return index
+    return index, word_sofar
 
 mwt_expansions = []
 with open(args.conllu_file, 'r') as f:
@@ -68,10 +73,8 @@ with open(args.conllu_file, 'r') as f:
 
             if len(buf):
                 output.write(buf)
-            index = find_next_word(index, text, word, output)
-            assert text[index:(index+len(word))].replace('\n', ' ') == word, "word mismatch: raw text contains |%s| but the next word is |%s|." % (text[index:(index+len(word))], word)
-            buf = '0' * (len(word)-1) + ('1' if '-' not in line[0] else '3')
-            index += len(word)
+            index, word_found = find_next_word(index, text, word, output)
+            buf = '0' * (len(word_found)-1) + ('1' if '-' not in line[0] else '3')
         else:
             # sentence break found
             if len(buf):
