@@ -1,6 +1,5 @@
 import argparse
 import re
-from smart_open import smart_open
 import sys
 
 parser = argparse.ArgumentParser()
@@ -11,10 +10,11 @@ parser.add_argument('-o', '--output', default=None, type=str, help="Output file 
 
 args = parser.parse_args()
 
-with smart_open(args.plaintext_file, 'r') as f:
+with open(args.plaintext_file, 'r') as f:
     text = ''.join(f.readlines())
+textlen = len(text)
 
-output = sys.stdout if args.output is None else smart_open(args.output, 'w')
+output = sys.stdout if args.output is None else open(args.output, 'w')
 
 index = 0 # character offset in rawtext
 
@@ -22,7 +22,7 @@ def find_next_word(index, text, word, output):
     while index < len(text) and text[index] != word[0]:
         if text[index] == '\n' and index+1 < len(text) and text[index+1] == '\n':
             # paragraph break
-            output.write('\n')
+            output.write('\n\n')
             index += 1
         elif re.match(r'^\s$', text[index]):
             output.write('0') # not word boundary
@@ -32,7 +32,7 @@ def find_next_word(index, text, word, output):
     return index
 
 mwt_expansions = []
-with smart_open(args.conllu_file, 'r') as f:
+with open(args.conllu_file, 'r') as f:
     buf = ''
     mwtbegin = 0
     mwtend = -1
@@ -72,14 +72,14 @@ with smart_open(args.conllu_file, 'r') as f:
             assert text[index:(index+len(word))].replace('\n', ' ') == word, "word mismatch: raw text contains |%s| but the next word is |%s|." % (text[index:(index+len(word))], word)
             buf = '0' * (len(word)-1) + ('1' if '-' not in line[0] else '3')
             index += len(word)
-
         else:
             # sentence break found
             if len(buf):
+                assert buf[-1] == '1'
                 output.write(buf[:-1] + '2')
                 buf = ''
 
 from collections import Counter
-print Counter(mwt_expansions)
+print('MWTs: ', Counter(mwt_expansions))
 
 output.close()
