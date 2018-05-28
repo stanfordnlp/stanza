@@ -28,7 +28,6 @@ def find_next_word(index, text, word, output):
             index += 1
         elif re.match(r'^\s$', text[index]) and not re.match(r'^\s$', word[idx]):
             word_sofar += text[index]
-            output.write('0') # not word boundary
         else:
             word_sofar += text[index]
             assert text[index].replace('\n', ' ') == word[idx], "character mismatch: raw text contains |%s| but the next word is |%s|." % (word_sofar, word)
