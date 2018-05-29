@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
 parser.add_argument('conllu_file', type=str, help="CoNLL-U file containing tokens and sentence breaks")
 parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
+parser.add_argument('-m', '--mwt_output', default=None, type=str, help="Output file name for MWT expansions; output to the console if not specified (the default)")
 
 args = parser.parse_args()
 
@@ -85,3 +86,12 @@ from collections import Counter
 print('MWTs: ', Counter(mwt_expansions))
 
 output.close()
+
+from collections import Counter
+mwts = Counter(mwt_expansions)
+if args.mwt_output is None:
+    print('MWTs:', mwts)
+else:
+    import json
+    with open(args.mwt_output, 'w') as f:
+        json.dump(list(mwts.items()), f)

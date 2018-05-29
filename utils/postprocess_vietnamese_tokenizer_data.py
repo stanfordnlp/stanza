@@ -4,24 +4,6 @@ import sys
 from collections import Counter
 import json
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
-parser.add_argument('char_level_pred', type=str, help="Plaintext file containing character-level predictions")
-parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
-
-args = parser.parse_args()
-
-with open(args.plaintext_file, 'r') as f:
-    text = ''.join(f.readlines()).rstrip()
-
-with open(args.char_level_pred, 'r') as f:
-    char_level_pred = ''.join(f.readlines())
-
-assert len(text) == len(char_level_pred), 'Text has {} characters but there are {} char-level labels!'.format(len(text), len(char_level_pred))
-
-output = sys.stdout if args.output is None else open(args.output, 'w')
-
 def para_to_chunks(text, char_level_pred):
     chunks = []
     preds = []
@@ -48,6 +30,28 @@ def para_to_chunks(text, char_level_pred):
 
     return list(zip(chunks, preds))
 
-json.dump([para_to_chunks(pt, pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))], output)
+def paras_to_chunks(text, char_level_pred):
+    return [para_to_chunks(pt, pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
 
-output.close()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
+    parser.add_argument('char_level_pred', type=str, help="Plaintext file containing character-level predictions")
+    parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
+
+    args = parser.parse_args()
+
+    with open(args.plaintext_file, 'r') as f:
+        text = ''.join(f.readlines()).rstrip()
+
+    with open(args.char_level_pred, 'r') as f:
+        char_level_pred = ''.join(f.readlines())
+
+    assert len(text) == len(char_level_pred), 'Text has {} characters but there are {} char-level labels!'.format(len(text), len(char_level_pred))
+
+    output = sys.stdout if args.output is None else open(args.output, 'w')
+
+    json.dump(paras2chunks(text, char_level_pred), output)
+
+    output.close()
