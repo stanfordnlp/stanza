@@ -20,7 +20,7 @@ class Tokenizer(nn.Module):
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
 
-        self.conv1 = nn.Conv1d(emb_dim + feat_dim, hidden_dim, 5, padding=2)
+        self.conv1 = nn.Conv1d(emb_dim + feat_dim, hidden_dim, 9, padding=4)
 
         self.dense_clf = nn.Conv1d(hidden_dim, N_CLASSES, 1)
 
@@ -275,6 +275,7 @@ if __name__ == '__main__':
     parser.add_argument('--txt_file', type=str, help="Input plaintext file")
     parser.add_argument('--label_file', type=str, default=None, help="Character-level label file")
     parser.add_argument('--json_file', type=str, default=None, help="JSON file with pre-chunked units")
+    parser.add_argument('--mwt_json_file', type=str, default=None, help="JSON file for MWT expansions")
     parser.add_argument('--conll_file', type=str, default=None, help="CoNLL file for output")
     parser.add_argument('--lang', type=str, help="Language")
 
@@ -300,11 +301,10 @@ if __name__ == '__main__':
     args['save_name'] = args['save_name'] if args['save_name'] is not None else '{}_tokenizer.pkl'.format(args['lang'])
     trainer = TokenizerTrainer(args)
 
-    if args['cuda']:
-        trainer.cuda()
-
     N = len(trainer.data_generator)
     if args['mode'] == 'train':
+        if args['cuda']:
+            trainer.model.cuda()
         steps = int(N * args['epochs'] / args['batch_size'] + .5)
 
         for step in range(steps):
@@ -317,8 +317,43 @@ if __name__ == '__main__':
         trainer.save(args['save_name'])
     else:
         trainer.load(args['save_name'])
+        if args['cuda']:
+            trainer.model.cuda()
 
         offset = 0
+
+        mwt_dict = None
+        if args['mwt_json_file'] is not None:
+            with open(args['mwt_json_file'], 'r') as f:
+                mwt_dict0 = json.load(f)
+
+            mwt_dict = dict()
+            for item in mwt_dict0:
+                (key, expansion), count = item
+
+                if key not in mwt_dict or mwt_dict[key][1] < count:
+                    mwt_dict[key] = (expansion, count)
+
+        def print_sentence(sentence, f, mwt_dict=None):
+            i = 0
+            for tok, p in current_sent:
+                expansion = None
+                if p == 3 and mwt_dict is not None:
+                    # MWT found, (attempt to) expand it!
+                    if tok in mwt_dict:
+                        expansion = mwt_dict[tok][0]
+                    elif tok.lower() in mwt_dict:
+                        expansion = mwt_dict[tok.lower()][0]
+                if expansion is not None:
+                    f.write("{}-{}\t{}{}\n".format(i+1, i+len(expansion), tok, "\t_" * 8))
+                    for etok in expansion:
+                        f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
+                        i += 1
+                else:
+                    f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
+                    i += 1
+            f.write('\n')
+
         with open(args['conll_file'], 'w') as f:
             while True:
                 batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs, eval_offset=offset)
@@ -334,20 +369,15 @@ if __name__ == '__main__':
                         break
                     offset += 1
                     current_tok += t
-                    if p == 1 or p == 2:
-                        current_sent += [trainer.vocab.normalize_token(current_tok)]
+                    if p >= 1:
+                        current_sent += [(trainer.vocab.normalize_token(current_tok), p)]
                         current_tok = ''
                         if p == 2:
-                            for i, tok in enumerate(current_sent):
-                                f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
-                            f.write('\n')
-
+                            print_sentence(current_sent, f, mwt_dict)
                             current_sent = []
 
                 if len(current_tok):
-                    current_sent += [trainer.vocab.normalize_token(current_tok)]
+                    current_sent += [(trainer.vocab.normalize_token(current_tok), 2)]
 
                 if len(current_sent):
-                    for i, tok in enumerate(current_sent):
-                        f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
-                    f.write('\n')
+                    print_sentence(current_sent, f, mwt_dict)
