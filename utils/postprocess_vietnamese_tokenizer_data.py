@@ -31,7 +31,7 @@ def para_to_chunks(text, char_level_pred):
     return list(zip(chunks, preds))
 
 def paras_to_chunks(text, char_level_pred):
-    return [para_to_chunks(pt, pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
+    return [para_to_chunks(pt.rstrip(), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

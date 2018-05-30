@@ -139,6 +139,8 @@ class TokenizerDataGenerator:
 
         if eval_offset >= 0:
             # find unit
+            if eval_offset >= self.cumlen[-1]:
+                return None
             pair_id = bisect_left(self.cumlen, eval_offset)
             pair = self.sentence_ids[pair_id]
             res = [strings_starting(pair, offset=eval_offset-self.cumlen[pair_id])]
@@ -191,7 +193,7 @@ class TokenizerTrainer(nn.Module):
             else:
                 labels = '\n\n'.join(['0' * len(pt) for pt in text.split('\n\n')])
 
-            self.data = [list(zip(pt, [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
+            self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
 
         self.data_generator = TokenizerDataGenerator(args, self.data)
         self.feat_funcs = args['feat_funcs']
@@ -315,21 +317,37 @@ if __name__ == '__main__':
         trainer.save(args['save_name'])
     else:
         trainer.load(args['save_name'])
-        batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs, eval_offset=0)
-        pred = np.argmax(trainer.predict(batch)[0], axis=1)
 
-        current_tok = ''
-        current_sent = []
-
+        offset = 0
         with open(args['conll_file'], 'w') as f:
-            for t, p in zip(batch[3][0], pred):
-                current_tok += t
-                if p == 1 or p == 2:
-                    current_sent += [trainer.vocab.normalize_token(current_tok)]
-                    current_tok = ''
-                    if p == 2:
-                        for i, tok in enumerate(current_sent):
-                            f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
-                        f.write('\n')
+            while True:
+                batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs, eval_offset=offset)
+                if batch is None:
+                    break
+                pred = np.argmax(trainer.predict(batch)[0], axis=1)
 
-                        current_sent = []
+                current_tok = ''
+                current_sent = []
+
+                for t, p in zip(batch[3][0], pred):
+                    if t == '<PAD>':
+                        break
+                    offset += 1
+                    current_tok += t
+                    if p == 1 or p == 2:
+                        current_sent += [trainer.vocab.normalize_token(current_tok)]
+                        current_tok = ''
+                        if p == 2:
+                            for i, tok in enumerate(current_sent):
+                                f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
+                            f.write('\n')
+
+                            current_sent = []
+
+                if len(current_tok):
+                    current_sent += [trainer.vocab.normalize_token(current_tok)]
+
+                if len(current_sent):
+                    for i, tok in enumerate(current_sent):
+                        f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
+                    f.write('\n')

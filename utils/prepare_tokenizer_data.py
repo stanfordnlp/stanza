@@ -22,9 +22,14 @@ index = 0 # character offset in rawtext
 def find_next_word(index, text, word, output):
     idx = 0
     word_sofar = ''
+    yeah=False
     while index < len(text) and idx < len(word):
         if text[index] == '\n' and index+1 < len(text) and text[index+1] == '\n':
             # paragraph break
+            if len(word_sofar) > 0:
+                assert re.match(r'^\s+$', word_sofar), 'Found non-empty string at the end of a paragraph that doesn\'t match any token: |{}|'.format(word_sofar)
+                word_sofar = ''
+
             output.write('\n\n')
             index += 1
         elif re.match(r'^\s$', text[index]) and not re.match(r'^\s$', word[idx]):
