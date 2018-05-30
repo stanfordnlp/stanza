@@ -52,6 +52,6 @@ if __name__ == '__main__':
 
     output = sys.stdout if args.output is None else open(args.output, 'w')
 
-    json.dump(paras2chunks(text, char_level_pred), output)
+    json.dump(paras_to_chunks(text, char_level_pred), output)
 
     output.close()

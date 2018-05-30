@@ -42,11 +42,14 @@ with open(args.conllu_file, 'r') as f:
     mwtbegin = 0
     mwtend = -1
     expanded = []
+    last_comments = ""
     for line in f:
         line = line.strip()
         if len(line):
             if line[0] == "#":
                 # comment, don't do anything
+                if len(last_comments) == 0:
+                    last_comments = line
                 continue
 
             line = line.split('\t')
@@ -66,6 +69,8 @@ with open(args.conllu_file, 'r') as f:
             elif int(line[0]) == mwtend:
                 expanded += [word]
                 mwt_expansions += [(lastmwt, tuple(expanded))]
+                if lastmwt[0].islower() and not expanded[0][0].islower():
+                    print('Sentence ID with potential wrong MWT expansion: ', last_comments, file=sys.stderr)
                 mwtbegin = 0
                 mwtend = -1
                 lastmwt = None
@@ -82,8 +87,7 @@ with open(args.conllu_file, 'r') as f:
                 output.write(buf[:-1] + '2')
                 buf = ''
 
-from collections import Counter
-print('MWTs: ', Counter(mwt_expansions))
+            last_comments = ''
 
 output.close()
 
