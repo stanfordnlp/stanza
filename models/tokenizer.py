@@ -20,7 +20,7 @@ class Tokenizer(nn.Module):
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
 
-        self.conv_sizes = [[int(y) for y in x.split(',')] for x in args['conv_filters'].split(';')]
+        self.conv_sizes = [[int(y) for y in x.split(',')] for x in args['conv_filters'].split(',,')]
 
         self.conv_filters = nn.ModuleList()
 
@@ -95,7 +95,7 @@ class Vocab:
     def normalize_token(self, token):
         token = token.lstrip().replace('\n', ' ')
 
-        if self.lang == 'zh':
+        if self.lang in ['zh', 'ja', 'ko']:
             token = token.replace(' ', '')
 
         return token
@@ -105,10 +105,14 @@ class Vocab:
 
 class TokenizerDataGenerator:
     def __init__(self, args, data):
-        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels
-        self.sentences = [self.para_to_sentences(para) for para in data]
         self.args = args
 
+        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels
+        self.sentences = [self.para_to_sentences(para) for para in data]
+
+        self.init_sent_ids()
+
+    def init_sent_ids(self):
         self.sentence_ids = []
         self.cumlen = [0]
         for i, para in enumerate(self.sentences):
@@ -123,16 +127,24 @@ class TokenizerDataGenerator:
         for unit, label in para:
             current += [[unit, label]]
             if label == 2: # end of sentence
-                res += [current]
+                if len(current) <= self.args['max_seqlen']:
+                    # get rid of sentences that are too long during training of the tokenizer
+                    res += [current]
                 current = []
 
         if len(current) > 0:
-            res += [current]
+            if args['mode'] == 'predict' or len(current) <= self.args['max_seqlen']:
+                res += [current]
 
         return res
 
     def __len__(self):
         return len(self.sentence_ids)
+
+    def shuffle(self):
+        for para in self.sentences:
+            random.shuffle(para)
+        self.init_sent_ids()
 
     def next(self, vocab, feat_funcs=['space_before', 'capitalized'], eval_offset=-1, unit_dropout=0.0):
         def strings_starting(id_pair, offset=0):
@@ -143,7 +155,7 @@ class TokenizerDataGenerator:
             for sid1 in range(sid+1, len(self.sentences[pid])):
                 res += self.sentences[pid][sid1]
 
-                if len(res) >= args['max_seqlen']:
+                if args['mode'] != 'predict' and len(res) >= args['max_seqlen']:
                     res = res[:args['max_seqlen']]
                     break
 
@@ -160,6 +172,7 @@ class TokenizerDataGenerator:
             # find unit
             if eval_offset >= self.cumlen[-1]:
                 return None
+
             pair_id = bisect_left(self.cumlen, eval_offset)
             pair = self.sentence_ids[pair_id]
             res = [strings_starting(pair, offset=eval_offset-self.cumlen[pair_id])]
@@ -239,6 +252,7 @@ class TokenizerTrainer(nn.Module):
         return self._model
 
     def update(self, inputs):
+        self.model.train()
         units, labels, features, _ = inputs
 
         if self.model.embeddings.weight.is_cuda:
@@ -258,6 +272,7 @@ class TokenizerTrainer(nn.Module):
         return loss.data[0]
 
     def predict(self, inputs):
+        self.model.eval()
         units, labels, features, _ = inputs
 
         if self.model.embeddings.weight.is_cuda:
@@ -302,7 +317,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--emb_dim', type=int, default=30, help="Dimension of unit embeddings")
     parser.add_argument('--hidden_dim', type=int, default=200, help="Dimension of hidden units")
-    parser.add_argument('--conv_filters', type=str, default="1,5,9;1,5,9", help="Configuration of conv filters. ; separates layers and , separates filter sizes in the same layer.")
+    parser.add_argument('--conv_filters', type=str, default="1,5,9,,1,5,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--dropout', type=float, default=0.0, help="Dropout probability")
@@ -312,6 +327,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10, help="Total epochs to train the model for")
     parser.add_argument('--steps', type=int, default=None, help="Steps to train the model for, if unspecified use epochs")
     parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
+    parser.add_argument('--shuffle_steps', type=int, default=0, help="Step interval to shuffle each paragragraph in the generator")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--save_dir', type=str, default='saved_models', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
@@ -336,6 +352,9 @@ if __name__ == '__main__':
             loss = trainer.update(batch)
             if step % args['report_steps'] == 0:
                 print("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
+
+            if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
+                trainer.data_generator.shuffle()
 
         trainer.save(args['save_name'])
     else:
@@ -394,6 +413,7 @@ if __name__ == '__main__':
                     offset += 1
                     if trainer.vocab.unit2id(t) == trainer.vocab.unit2id('<UNK>'):
                         oov_count += 1
+
                     current_tok += t
                     if p >= 1:
                         current_sent += [(trainer.vocab.normalize_token(current_tok), p)]
