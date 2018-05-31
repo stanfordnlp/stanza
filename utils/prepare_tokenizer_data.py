@@ -88,7 +88,7 @@ with open(args.conllu_file, 'r') as f:
         else:
             # sentence break found
             if len(buf):
-                assert buf[-1] == '1'
+                assert buf[-1] >= '1'
                 output.write(buf[:-1] + '2')
                 buf = ''
 
