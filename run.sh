@@ -14,6 +14,14 @@ else
     label_type=label_file
     eval_file="--txt_file /u/nlp/data/dependency_treebanks/CoNLL18/$treebank/${short}-ud-dev.txt"
 fi
+
+if [ ! -e $labels ]; then
+    bash scripts/prep_data.sh $treebank train
+    if [ $lang == "vi" ]; then
+        bash scripts/prep_data.sh $treebank dev
+    fi
+fi
+
 seqlen=$(python -c "from math import ceil; print(ceil($(python utils/avg_sent_len.py $labels) * 2 / 100) * 100)")
 echo "Running $args..."
 CUDA_VISIBLE_DEVICES=$gpu python -m models.tokenizer --${label_type} $labels --txt_file /u/nlp/data/dependency_treebanks/CoNLL18/${treebank}/${short}-ud-train.txt --lang $lang --max_seqlen $seqlen --dropout .5 $args
