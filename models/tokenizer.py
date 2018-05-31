@@ -20,9 +20,19 @@ class Tokenizer(nn.Module):
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
 
-        self.conv1 = nn.Conv1d(emb_dim + feat_dim, hidden_dim, 9, padding=4)
+        self.conv_sizes = [[int(y) for y in x.split(',')] for x in args['conv_filters'].split(';')]
 
-        self.dense_clf = nn.Conv1d(hidden_dim, N_CLASSES, 1)
+        self.conv_filters = nn.ModuleList()
+
+        for layer, sizes in enumerate(self.conv_sizes):
+            thislayer = nn.ModuleList()
+            in_dim = emb_dim + feat_dim if layer == 0 else len(self.conv_sizes[layer-1]) * hidden_dim
+            for size in sizes:
+                thislayer.append(nn.Conv1d(in_dim, hidden_dim, size, padding=size//2))
+
+            self.conv_filters.append(thislayer)
+
+        self.dense_clf = nn.Conv1d(hidden_dim * len(self.conv_sizes[-1]), N_CLASSES, 1)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -33,11 +43,17 @@ class Tokenizer(nn.Module):
         emb = torch.cat([emb, feats], 2)
 
         emb = emb.transpose(1, 2).contiguous()
+        inp = emb
 
-        hid = F.relu(self.conv1(emb))
-        hid = self.dropout(hid)
+        for layeri, layer in enumerate(self.conv_filters):
+            out = [f(inp) for f in layer]
+            out = torch.cat(out, 1)
+            out = F.relu(out)
+            if layeri < len(self.conv_filters) - 1:
+                out = self.dropout(out)
+            inp = out
 
-        pred = self.dense_clf(hid)
+        pred = self.dense_clf(inp)
         pred = pred.transpose(1, 2).contiguous()
 
         return pred
@@ -118,7 +134,7 @@ class TokenizerDataGenerator:
     def __len__(self):
         return len(self.sentence_ids)
 
-    def next(self, vocab, feat_funcs=['space_before', 'capitalized'], eval_offset=-1):
+    def next(self, vocab, feat_funcs=['space_before', 'capitalized'], eval_offset=-1, unit_dropout=0.0):
         def strings_starting(id_pair, offset=0):
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])
@@ -130,6 +146,9 @@ class TokenizerDataGenerator:
                 if len(res) >= args['max_seqlen']:
                     res = res[:args['max_seqlen']]
                     break
+
+            if unit_dropout > 0:
+                res = [('<UNK>', x[1]) if random.random() < unit_dropout else x for x in res]
 
             # pad with padding units and labels if necessary
             if len(res) < args['max_seqlen']:
@@ -283,14 +302,18 @@ if __name__ == '__main__':
 
     parser.add_argument('--emb_dim', type=int, default=30, help="Dimension of unit embeddings")
     parser.add_argument('--hidden_dim', type=int, default=200, help="Dimension of hidden units")
+    parser.add_argument('--conv_filters', type=str, default="1,5,9;1,5,9", help="Configuration of conv filters. ; separates layers and , separates filter sizes in the same layer.")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--dropout', type=float, default=0.0, help="Dropout probability")
+    parser.add_argument('--unit_dropout', type=float, default=0.0, help="Unit dropout probability")
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")
     parser.add_argument('--epochs', type=int, default=10, help="Total epochs to train the model for")
+    parser.add_argument('--steps', type=int, default=None, help="Steps to train the model for, if unspecified use epochs")
     parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_dir', type=str, default='saved_models', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
 
     args = parser.parse_args()
@@ -298,17 +321,17 @@ if __name__ == '__main__':
     args = vars(args)
     args['feat_funcs'] = ['space_before', 'capitalized']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = args['save_name'] if args['save_name'] is not None else '{}_tokenizer.pkl'.format(args['lang'])
+    args['save_name'] = args['save_name'] if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['lang'])
     trainer = TokenizerTrainer(args)
 
     N = len(trainer.data_generator)
     if args['mode'] == 'train':
         if args['cuda']:
             trainer.model.cuda()
-        steps = int(N * args['epochs'] / args['batch_size'] + .5)
+        steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
 
         for step in range(steps):
-            batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs)
+            batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs, unit_dropout=args['unit_dropout'])
 
             loss = trainer.update(batch)
             if step % args['report_steps'] == 0:
@@ -321,6 +344,7 @@ if __name__ == '__main__':
             trainer.model.cuda()
 
         offset = 0
+        oov_count = 0
 
         mwt_dict = None
         if args['mwt_json_file'] is not None:
@@ -368,6 +392,8 @@ if __name__ == '__main__':
                     if t == '<PAD>':
                         break
                     offset += 1
+                    if trainer.vocab.unit2id(t) == trainer.vocab.unit2id('<UNK>'):
+                        oov_count += 1
                     current_tok += t
                     if p >= 1:
                         current_sent += [(trainer.vocab.normalize_token(current_tok), p)]
@@ -381,3 +407,5 @@ if __name__ == '__main__':
 
                 if len(current_sent):
                     print_sentence(current_sent, f, mwt_dict)
+
+        print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / offset * 100, oov_count, offset))
