@@ -10,7 +10,6 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
 from utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 
 class Tokenizer(nn.Module):
@@ -222,7 +221,7 @@ class TokenizerDataGenerator:
         raw_units = [[y[0] for y in x] for x in res]
         labels = [[y[1] for y in x] for x in res]
 
-        convert = lambda t: Variable(torch.from_numpy(np.array(t[0], dtype=t[1])))
+        convert = lambda t: (torch.from_numpy(np.array(t[0], dtype=t[1])))
 
         units, labels, features = list(map(convert, [(units, np.int64), (labels, np.int64), (features, np.float32)]))
 
@@ -290,10 +289,10 @@ class TokenizerTrainer(nn.Module):
                 loss += self.args['aux_clf'] * self.criterion(aux_output.view(-1, classes), labels.view(-1))
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm(self.model.parameters(), self.args['max_grad_norm'])
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
         self.opt.step()
 
-        return loss.data[0]
+        return loss.item()
 
     def change_lr(self, new_lr):
         for param_group in self.opt.param_groups:
@@ -369,7 +368,7 @@ if __name__ == '__main__':
     args = vars(args)
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = args['save_name'] if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['lang'])
+    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['lang'])
     trainer = TokenizerTrainer(args)
 
     N = len(trainer.data_generator)
