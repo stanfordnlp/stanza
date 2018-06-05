@@ -5,6 +5,7 @@ import json
 import pickle
 import numpy as np
 import random
+import re
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -16,6 +17,7 @@ class Tokenizer(nn.Module):
     def __init__(self, nchars, emb_dim, hidden_dim, N_CLASSES=4, dropout=0):
         super().__init__()
 
+        self.args = args
         feat_dim = args['feat_dim']
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
@@ -23,6 +25,12 @@ class Tokenizer(nn.Module):
         self.conv_sizes = [[int(y) for y in x.split(',')] for x in args['conv_filters'].split(',,')]
 
         self.conv_filters = nn.ModuleList()
+
+        if args['residual']:
+            self.res_filters = nn.ModuleList()
+
+        if args['aux_clf'] > 0:
+            self.aux_clf = nn.ModuleList()
 
         for layer, sizes in enumerate(self.conv_sizes):
             thislayer = nn.ModuleList()
@@ -32,10 +40,15 @@ class Tokenizer(nn.Module):
 
             self.conv_filters.append(thislayer)
 
+            if args['residual']:
+                self.res_filters.append(nn.Conv1d(in_dim, len(self.conv_sizes[layer]) * hidden_dim, 1))
+
+            if args['aux_clf'] > 0 and layer < len(self.conv_sizes) - 1:
+                self.aux_clf.append(nn.Conv1d(hidden_dim * len(self.conv_sizes[layer]), N_CLASSES, 1))
+
         self.dense_clf = nn.Conv1d(hidden_dim * len(self.conv_sizes[-1]), N_CLASSES, 1)
 
         self.dropout = nn.Dropout(dropout)
-
 
     def forward(self, x, feats):
         emb = self.embeddings(x)
@@ -45,10 +58,16 @@ class Tokenizer(nn.Module):
         emb = emb.transpose(1, 2).contiguous()
         inp = emb
 
+        aux_outputs = []
+
         for layeri, layer in enumerate(self.conv_filters):
             out = [f(inp) for f in layer]
             out = torch.cat(out, 1)
             out = F.relu(out)
+            if self.args['residual']:
+                out += self.res_filters[layeri](inp)
+            if self.args['aux_clf'] > 0 and layeri < len(self.conv_sizes) - 1:
+                aux_outputs += [self.aux_clf[layeri](out).transpose(1, 2).contiguous()]
             if layeri < len(self.conv_filters) - 1:
                 out = self.dropout(out)
             inp = out
@@ -56,7 +75,7 @@ class Tokenizer(nn.Module):
         pred = self.dense_clf(inp)
         pred = pred.transpose(1, 2).contiguous()
 
-        return pred
+        return pred, aux_outputs
 
 class Vocab:
     def __init__(self, paras, lang):
@@ -189,7 +208,7 @@ class TokenizerDataGenerator:
             elif feat_func == 'all_caps':
                 func = lambda x: x.isupper()
             elif feat_func == 'numeric':
-                func = lambda x: re.match('^[\d\s]+$', x)
+                func = lambda x: re.match('^[\d]+$', x) is not None
             else:
                 assert False, 'Feature function "{}" is undefined.'.format(feat_func)
 
@@ -247,7 +266,7 @@ class TokenizerTrainer(nn.Module):
 
             if args['mode'] == 'train':
                 self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
-                self.opt = optim.Adam(self._model.parameters(), lr=2e-3, betas=(.9, .9))
+                self.opt = optim.Adam(self._model.parameters(), lr=2e-3, betas=(.9, .9), weight_decay=args['weight_decay'])
 
         return self._model
 
@@ -260,16 +279,25 @@ class TokenizerTrainer(nn.Module):
             labels = labels.cuda()
             features = features.cuda()
 
-        pred = self.model(units, features)
+        pred, aux_outputs = self.model(units, features)
 
         self.opt.zero_grad()
         classes = pred.size(2)
         loss = self.criterion(pred.view(-1, classes), labels.view(-1))
+
+        if self.args['aux_clf'] > 0:
+            for aux_output in aux_outputs:
+                loss += self.args['aux_clf'] * self.criterion(aux_output.view(-1, classes), labels.view(-1))
+
         loss.backward()
         torch.nn.utils.clip_grad_norm(self.model.parameters(), self.args['max_grad_norm'])
         self.opt.step()
 
         return loss.data[0]
+
+    def change_lr(self, new_lr):
+        for param_group in self.opt.param_groups:
+            param_group['lr'] = new_lr
 
     def predict(self, inputs):
         self.model.eval()
@@ -280,7 +308,7 @@ class TokenizerTrainer(nn.Module):
             labels = labels.cuda()
             features = features.cuda()
 
-        pred = self.model(units, features)
+        pred, _ = self.model(units, features)
 
         return pred.data.cpu().numpy()
 
@@ -318,10 +346,14 @@ if __name__ == '__main__':
     parser.add_argument('--emb_dim', type=int, default=30, help="Dimension of unit embeddings")
     parser.add_argument('--hidden_dim', type=int, default=200, help="Dimension of hidden units")
     parser.add_argument('--conv_filters', type=str, default="1,5,9,,1,5,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
+    parser.add_argument('--residual', action='store_true', help="Add linear residual connections")
+    parser.add_argument('--aux_clf', type=float, default=0.0, help="Strength for auxiliary classifiers; default 0 (don't use auxiliary classifiers)")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
+    parser.add_argument('--anneal', type=float, default=0, help="(Equivalent) frequency to half the learning rate; 0 means no annealing (the default)")
     parser.add_argument('--dropout', type=float, default=0.0, help="Dropout probability")
     parser.add_argument('--unit_dropout', type=float, default=0.0, help="Unit dropout probability")
+    parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")
     parser.add_argument('--epochs', type=int, default=10, help="Total epochs to train the model for")
@@ -335,7 +367,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args = vars(args)
-    args['feat_funcs'] = ['space_before', 'capitalized']
+    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
     args['save_name'] = args['save_name'] if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['lang'])
     trainer = TokenizerTrainer(args)
@@ -345,6 +377,7 @@ if __name__ == '__main__':
         if args['cuda']:
             trainer.model.cuda()
         steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
+        lr0 = 2e-3
 
         for step in range(steps):
             batch = trainer.data_generator.next(trainer.vocab, feat_funcs=trainer.feat_funcs, unit_dropout=args['unit_dropout'])
@@ -355,6 +388,9 @@ if __name__ == '__main__':
 
             if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
                 trainer.data_generator.shuffle()
+
+            if args['anneal'] > 0:
+                trainer.change_lr(lr0 * (.5 ** ((step + 1) / args['anneal'])))
 
         trainer.save(args['save_name'])
     else:
@@ -393,6 +429,8 @@ if __name__ == '__main__':
                         f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
                         i += 1
                 else:
+                    if len(tok) <= 0:
+                        continue
                     f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
                     i += 1
             f.write('\n')

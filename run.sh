@@ -22,9 +22,10 @@ if [ ! -e $labels ]; then
     fi
 fi
 
-seqlen=$(python -c "from math import ceil; print(ceil($(python utils/avg_sent_len.py $labels) * 2 / 100) * 100)")
+seqlen=$(python -c "from math import ceil; print(ceil($(python utils/avg_sent_len.py $labels) * 3 / 100) * 100)")
 echo "Running $args..."
 CUDA_VISIBLE_DEVICES=$gpu python -m models.tokenizer --${label_type} $labels --txt_file /u/nlp/data/dependency_treebanks/CoNLL18/${treebank}/${short}-ud-train.txt --lang $lang --max_seqlen $seqlen --dropout .5 $args
 CUDA_VISIBLE_DEVICES=$gpu python -m models.tokenizer --mode predict $eval_file --lang $lang --mwt_json_file data/${short}-ud-train-mwt.json --conll_file ${short}-dev-pred.conllu $args
 results=`python utils/conll18_ud_eval.py -v /u/nlp/data/dependency_treebanks/CoNLL18/${treebank}/${short}-ud-dev.conllu ${short}-dev-pred.conllu | head -5 | tail -n+3 | awk '{print $7}' | pr --columns 3 -aJT`
 echo $results $args >> data/${short}.results
+echo $results $args
