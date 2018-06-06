@@ -172,12 +172,13 @@ if os.path.exists(SAVED_PROGRESS):
 
 try:
     while True:
-        invtemp = .01 * (1+len(progress))
-        print('Inv Temp = {}'.format(invtemp))
-        proposal = get_proposal(invtemp=invtemp)
-        res = evaluate_proposal(proposal)
-        progress += [[proposal, res]]
-        save_progress(progress)
+        #invtemp = .01 * (1+len(progress))
+        #print('Inv Temp = {}'.format(invtemp))
+        for i in range(5):
+            proposal = get_proposal(invtemp=1)
+            res = evaluate_proposal(proposal)
+            progress += [[proposal, res]]
+            save_progress(progress)
         estimate_params(progress)
 except:
     save_progress(progress)
