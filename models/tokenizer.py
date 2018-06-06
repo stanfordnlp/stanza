@@ -227,9 +227,8 @@ class TokenizerDataGenerator:
 
         return units, labels, features, raw_units
 
-class TokenizerTrainer(nn.Module):
+class TokenizerTrainer:
     def __init__(self, args):
-        super().__init__()
         if args['json_file'] is not None:
             with open(args['json_file']) as f:
                 self.data = json.load(f)
@@ -246,7 +245,7 @@ class TokenizerTrainer(nn.Module):
             self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
 
         self.data_generator = TokenizerDataGenerator(args, self.data)
-        self.feat_funcs = args['feat_funcs']
+        self.feat_funcs = args.get('feat_funcs', None)
         self.args = args
         self.lang = args['lang'] # language determines how token normlization is done
 

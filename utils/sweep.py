@@ -19,12 +19,12 @@ SAVED_PROGRESS = 'sweep_progress.pkl'
 PRIOR_STRENGTH = .01
 BINARY_PRIOR_STRENGTH = 1
 
-unitary = {k: [0.0 for _ in range(len(config[k])-1)] for k in config}
+unitary = {k: [[0.0, PRIOR_STRENGTH] for _ in range(len(config[k])-1)] for k in config}
 
 binary_keys = [k for k in config.keys() if len(config[k]) > 2]
-binary = {"{}<>{}".format(k1, k2):[0.0 for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
+binary = {"{}<>{}".format(k1, k2):[[0.0, BINARY_PRIOR_STRENGTH] for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
 
-overall = [0]
+overall = [0, PRIOR_STRENGTH]
 
 def estimate_params(progress, unitary=unitary, overall=overall, config=config, binary=binary, binary_keys=binary_keys):
     print("Estimating hyperparameter optimizer parameters...")
@@ -80,17 +80,20 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
     print(" > Unpacking parameters...")
 
     overall[0] = params[0]
+    overall[1] = len(progress) + PRIOR_STRENGTH
+
+    counts = A[(D+D2):].sum(0)
     idx = 1
     for k in config:
         for j in range(len(unitary[k])):
-            unitary[k][j] = params[idx]
+            unitary[k][j] = params[idx], counts[idx] + PRIOR_STRENGTH
             idx += 1
 
     for i, k1 in enumerate(binary_keys[:-1]):
         for k2 in binary_keys[i+1:]:
             k = "{}<>{}".format(k1, k2)
             for j in range(len(binary[k])):
-                binary[k][j] = params[idx]
+                binary[k][j] = params[idx], counts[idx] + BINARY_PRIOR_STRENGTH
                 idx += 1
 
     assert idx == len(params)
@@ -102,7 +105,7 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
 def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binary_keys=binary_keys):
     res = OrderedDict()
     for k in config:
-        p = np.array([0] + unitary[k])
+        p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) for x in unitary[k]])
 
         if k in binary_keys:
             for k1 in binary_keys:
@@ -113,9 +116,10 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
                 key = "{}<>{}".format(k1, k)
 
                 for j in range(2, len(config[k])):
-                    p[j] += binary[key][(idx1 - 2) * (len(config[k]) - 2) + j - 2]
+                    cand = binary[key][(idx1 - 2) * (len(config[k]) - 2) + j - 2]
+                    p[j] += cand[0] + np.random.randn() / np.sqrt(cand[1])
 
-        p += np.random.randn(*p.shape) / invtemp
+        p += np.random.randn(*p.shape) / invtemp / np.sqrt(overall[1])
 #        p = p - np.max(p)
 #        p = np.exp(p * invtemp)
 #        p /= np.sum(p)
