@@ -14,14 +14,21 @@ class SentenceSplitter(nn.Module):
 
         self.embeddings = nn.Embedding(nwords, emb_dim, padding_idx=0)
 
-        #self.rnn = SRU(emb_dim, hidden_dim, num_layers=2, dropout=dropout, use_tanh=1)
-        self.rnn = nn.LSTM(emb_dim, hidden_dim, num_layers=2, dropout=dropout)
-        self.clf = nn.Linear(hidden_dim, N_CLASSES)
+        #self.rnn = SRU(emb_dim, hidden_dim, num_layers=1, dropout=dropout, use_tanh=1, bidirectional=True)
+        #self.rnn = nn.GRU(emb_dim, hidden_dim, num_layers=1, dropout=dropout, bidirectional=True)
+        self.rnn = nn.LSTM(emb_dim, hidden_dim, num_layers=1, dropout=dropout, bidirectional=True)
+        self.clf = nn.Linear(hidden_dim * 2, N_CLASSES)
+
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         emb = self.embeddings(x.transpose(0, 1))
 
+        emb = self.dropout(emb)
+
         hid, _ = self.rnn(emb)
+
+        hid = self.dropout(hid)
 
         pred = self.clf(hid)
         pred = pred.transpose(0, 1).contiguous()
