@@ -6,7 +6,7 @@ for d in `ls $CONLLBASE`; do
     train=$CONLLBASE$d/$short-ud-train.conllu
 
     if [ -e $train ]; then
-        tokens=`cat $train | grep -v "^#" | grep -v "\S" | wc -l`
+        tokens=`cat $train | grep -v "^#" | grep "\S" | wc -l`
         echo $d" "$tokens
     else
         echo $d

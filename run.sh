@@ -28,4 +28,4 @@ CUDA_VISIBLE_DEVICES=$gpu python -m models.tokenizer --${label_type} $labels --t
 CUDA_VISIBLE_DEVICES=$gpu python -m models.tokenizer --mode predict $eval_file --lang $lang --mwt_json_file data/${short}-ud-train-mwt.json --conll_file ${short}-dev-pred.conllu $args
 results=`python utils/conll18_ud_eval.py -v /u/nlp/data/dependency_treebanks/CoNLL18/${treebank}/${short}-ud-dev.conllu ${short}-dev-pred.conllu | head -5 | tail -n+3 | awk '{print $7}' | pr --columns 3 -aJT`
 echo $results $args >> data/${short}.results
-echo $results $args
+echo $short $results $args

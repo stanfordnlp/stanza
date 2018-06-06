@@ -28,6 +28,10 @@ def para_to_chunks(text, char_level_pred):
                 lastchunk += text[idx]
         lastpred = char_level_pred[idx]
 
+    if len(lastchunk) > 0:
+        chunks += [lastchunk]
+        preds += [int(lastpred)]
+
     return list(zip(chunks, preds))
 
 def paras_to_chunks(text, char_level_pred):

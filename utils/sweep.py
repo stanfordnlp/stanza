@@ -17,6 +17,7 @@ with open(config_file, 'r') as f:
 SAVED_PROGRESS = 'sweep_progress.pkl'
 
 PRIOR_STRENGTH = .01
+BINARY_PRIOR_STRENGTH = 1
 
 unitary = {k: [0.0 for _ in range(len(config[k])-1)] for k in config}
 
@@ -33,11 +34,12 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
 
     # build prior
     SQRT_PRIOR = np.sqrt(PRIOR_STRENGTH)
+    SQRT_BPRIOR = np.sqrt(BINARY_PRIOR_STRENGTH)
     A = [] # features are organized as follows [overall bias, unitary features, binary interaction features]
     b = []
 
     for i in range(D+D2):
-        A += [[0] + [SQRT_PRIOR if j == i else 0 for j in range(D+D2)]]
+        A += [[0] + [(SQRT_PRIOR if i < D else SQRT_BPRIOR) if j == i else 0 for j in range(D+D2)]]
         b += [0]
 
     #for i in range(D):
@@ -122,13 +124,15 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
 
     return res
 
-def evaluate_proposal(proposal, command=command):
+def evaluate_proposal(proposal, command=command, config=config):
     cmd = ['bash', command]
     is_conv = False
     conv_str = ''
-    for k in proposal:
+    for k in config:
         if not k.startswith('conv_filters'):
             if proposal[k] != False:
+                if k == 'aux_clf':
+                    print(proposal[k], proposal[k] != True, str(proposal[k]))
                 cmd += ["--{}".format(k)]
                 if proposal[k] != True:
                     cmd += [str(proposal[k])]
