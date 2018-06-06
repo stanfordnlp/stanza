@@ -131,10 +131,8 @@ def evaluate_proposal(proposal, command=command, config=config):
     for k in config:
         if not k.startswith('conv_filters'):
             if proposal[k] != False:
-                if k == 'aux_clf':
-                    print(proposal[k], proposal[k] != True, str(proposal[k]))
                 cmd += ["--{}".format(k)]
-                if proposal[k] != True:
+                if proposal[k] != True or not isinstance(proposal[k], bool):
                     cmd += [str(proposal[k])]
         else:
             if not is_conv:
