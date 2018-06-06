@@ -73,6 +73,7 @@ with open(args.conllu_file, 'r') as f:
                 continue
             elif int(line[0]) == mwtend:
                 expanded += [word]
+                expanded = [x.lower() for x in expanded] # evaluation doesn't care about case
                 mwt_expansions += [(lastmwt, tuple(expanded))]
                 if lastmwt[0].islower() and not expanded[0][0].islower():
                     print('Sentence ID with potential wrong MWT expansion: ', last_comments, file=sys.stderr)
