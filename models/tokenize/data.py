@@ -5,6 +5,23 @@ import random
 import re
 import torch
 
+class TokenizerDataProcessor:
+    def __init__(self, args):
+        if args['json_file'] is not None:
+            with open(args['json_file']) as f:
+                self.data = json.load(f)
+        else:
+            with open(args['txt_file']) as f:
+                text = ''.join(f.readlines()).rstrip()
+
+            if args['label_file'] is not None:
+                with open(args['label_file']) as f:
+                    labels = ''.join(f.readlines()).rstrip()
+            else:
+                labels = '\n\n'.join(['0' * len(pt) for pt in text.split('\n\n')])
+
+            self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
+
 class TokenizerDataGenerator:
     def __init__(self, args, data):
         self.args = args

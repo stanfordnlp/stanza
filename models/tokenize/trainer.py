@@ -3,27 +3,15 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .data import TokenizerDataGenerator
+from .data import TokenizerDataGenerator, TokenizerDataProcessor
 from .tokenizer_models import Tokenizer, RNNTokenizer
 from .vocab import Vocab
 
 class TokenizerTrainer:
     def __init__(self, args):
         self.args = args
-        if args['json_file'] is not None:
-            with open(args['json_file']) as f:
-                self.data = json.load(f)
-        else:
-            with open(args['txt_file']) as f:
-                text = ''.join(f.readlines()).rstrip()
 
-            if args['label_file'] is not None:
-                with open(args['label_file']) as f:
-                    labels = ''.join(f.readlines()).rstrip()
-            else:
-                labels = '\n\n'.join(['0' * len(pt) for pt in text.split('\n\n')])
-
-            self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
+        self.data = TokenizerDataProcessor(args).data
 
         self.data_generator = TokenizerDataGenerator(args, self.data)
         self.feat_funcs = args.get('feat_funcs', None)
@@ -33,7 +21,7 @@ class TokenizerTrainer:
     def vocab(self):
         # enable lazy construction in case we're just loading the vocab from file
         if not hasattr(self, '_vocab'):
-            self._vocab = Vocab(self.data, self.lang)
+            self._vocab = Vocab(self.args['vocab_file'], self.data, self.args['lang'])
 
         return self._vocab
 

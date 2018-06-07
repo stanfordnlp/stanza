@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--json_file', type=str, default=None, help="JSON file with pre-chunked units")
     parser.add_argument('--mwt_json_file', type=str, default=None, help="JSON file for MWT expansions")
     parser.add_argument('--conll_file', type=str, default=None, help="CoNLL file for output")
+    parser.add_argument('--vocab_file', type=str, default=None, help="Vocab file")
     parser.add_argument('--lang', type=str, help="Language")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
