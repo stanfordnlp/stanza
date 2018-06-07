@@ -106,7 +106,7 @@ class RNNTokenizer(nn.Module):
                 self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2))
 
         self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
-        self.dense_clf2 = nn.Linear(hidden_dim * 2, 1)
+        self.dense_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -136,7 +136,7 @@ class RNNTokenizer(nn.Module):
 
         pred1 = self.dense_clf2(inp2)
 
-        pred = torch.cat([pred0[:,:,:1], pred0[:,:,2].unsqueeze(2) + pred1, pred0[:,:,3].unsqueeze(2)], 2)
+        pred = torch.cat([pred0[:,:,:2], pred0[:,:,2].unsqueeze(2) + pred1, pred0[:,:,3].unsqueeze(2)], 2)
 
         return pred, []
 
