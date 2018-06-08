@@ -4,7 +4,7 @@ import os
 from collections import Counter
 import torch
 
-from models.lemma import constant
+from models.lemma import constant, conll
 from models.lemma.vocab import Vocab
 
 class DataLoader:
@@ -12,9 +12,10 @@ class DataLoader:
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
+        self.shuffled = not self.eval
 
-        self.raw_sents = self.load_file(filename, self.eval)
-        data = sum(self.raw_sents, []) # merge all sents
+        assert filename.endswith('conllu'), "Loaded file must be conllu file."
+        self.conll, data = self.load_file(filename)
         
         # handle vocab
         vocab_file = filename.split('.')[0] + '.vocab'
@@ -28,7 +29,7 @@ class DataLoader:
 
         data = self.preprocess(data, self.vocab, args)
         # shuffle for training
-        if not evaluation:
+        if self.shuffled:
             indices = list(range(len(data)))
             random.shuffle(indices)
             data = [data[i] for i in indices]
@@ -44,7 +45,7 @@ class DataLoader:
             vocab = Vocab(vocab_file, load=True)
         else:
             assert self.eval == False # for eval vocab file must exist
-            chars = sum([list(d[0]) for d in data], [])
+            chars = "".join([d[0] for d in data])
             char_counter = Counter(chars)
             vocab = Vocab(vocab_file, load=False, unit_counter=char_counter)
         return vocab
@@ -97,24 +98,13 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def load_file(self, filename, evaluation=False):
-        sents, cache = [], []
-        with open(filename) as infile:
-            while True:
-                line = infile.readline()
-                if len(line) == 0:
-                    break
-                line = line.strip()
-                if len(line) == 0:
-                    if len(cache) > 0:
-                        sents.append(cache)
-                        cache = []
-                else:
-                    array = line.split('\t')
-                    assert (evaluation and len(array) == 1) or (not evaluation and len(array) == 2)
-                    cache += [array]
-            if len(cache) > 0:
-                sents.append(cache)
-        return sents
+        conll_file = conll.CoNLLFile(filename)
+        if evaluation:
+            data = conll_file.get_words()
+            data = [[d] for d in data]
+        else:
+            data = conll_file.get_words_and_lemmas()
+        return conll_file, data
 
 def map_to_ids(tokens, vocab):
     ids = [vocab[t] if t in vocab else constant.UNK_ID for t in tokens]

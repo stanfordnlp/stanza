@@ -29,7 +29,7 @@ parser.add_argument('--mode', default='train', choices=['train', 'predict'])
 parser.add_argument('--lang', type=str, help="Language")
 
 parser.add_argument('--hidden_dim', type=int, default=100)
-parser.add_argument('--emb_dim', type=int, default=100)
+parser.add_argument('--emb_dim', type=int, default=50)
 parser.add_argument('--num_layers', type=int, default=1)
 parser.add_argument('--emb_dropout', type=float, default=0.5)
 parser.add_argument('--dropout', type=float, default=0.5)
@@ -113,7 +113,7 @@ for epoch in range(1, args['num_epoch']+1):
     for i, batch in enumerate(dev_batch):
         preds = trainer.predict(batch)
         dev_preds += preds
-    scorer.write_to_conllu(dev_batch.raw_sents, dev_preds, system_pred_file)
+    dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_score = scorer.score(system_pred_file, gold_file)
     
     train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
