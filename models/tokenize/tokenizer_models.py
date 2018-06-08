@@ -86,7 +86,6 @@ class RNNTokenizer(nn.Module):
 
         self.rnn = nn.LSTM(emb_dim + feat_dim, hidden_dim, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
         #self.rnn2 = nn.LSTM(emb_dim + feat_dim + 1, hidden_dim, num_layers=1, bidirectional=True)
-        self.rnn2 = nn.LSTM(hidden_dim * 2, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
 
         if self.args['conv_res'] is not None:
             self.conv_res = nn.ModuleList()
@@ -96,7 +95,10 @@ class RNNTokenizer(nn.Module):
                 self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2))
 
         self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
-        self.dense_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
+
+        if args['hierarchical']:
+            self.rnn2 = nn.LSTM(hidden_dim * 2, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
+            self.dense_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -118,14 +120,17 @@ class RNNTokenizer(nn.Module):
 
         pred0 = self.dense_clf(inp)
 
-        pred0_ = F.log_softmax(pred0, 2)
+        if self.args['hierarchical']:
+            pred0_ = F.log_softmax(pred0, 2)
 
-        #emb = torch.cat([emb, pred0_[:,:,0].unsqueeze(2)], 2)
-        inp2, _ = self.rnn2(inp * (1 - torch.exp(pred0_[:,:,0].unsqueeze(2))))
-        inp2 = self.dropout(inp2)
+            #emb = torch.cat([emb, pred0_[:,:,0].unsqueeze(2)], 2)
+            inp2, _ = self.rnn2(inp * (1 - torch.exp(pred0_[:,:,0].unsqueeze(2))))
+            inp2 = self.dropout(inp2)
 
-        pred1 = self.dense_clf2(inp2)
+            pred1 = self.dense_clf2(inp2)
 
-        pred = torch.cat([pred0[:,:,:2], pred0[:,:,2].unsqueeze(2) + pred1, pred0[:,:,3].unsqueeze(2)], 2)
+            pred = torch.cat([pred0[:,:,:2], pred0[:,:,2].unsqueeze(2) + pred1, pred0[:,:,3].unsqueeze(2)], 2)
+        else:
+            pred = pred0
 
         return pred, []

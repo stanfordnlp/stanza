@@ -1,21 +1,23 @@
 from bisect import bisect_left
 from copy import copy
+import json
 import numpy as np
 import random
 import re
 import torch
 
 class TokenizerDataProcessor:
-    def __init__(self, args):
-        if args['json_file'] is not None:
-            with open(args['json_file']) as f:
+    def __init__(self, json_file, txt_file, label_file):
+        if json_file is not None:
+            with open(json_file) as f:
                 self.data = json.load(f)
         else:
-            with open(args['txt_file']) as f:
+            assert txt_file is not None
+            with open(txt_file) as f:
                 text = ''.join(f.readlines()).rstrip()
 
-            if args['label_file'] is not None:
-                with open(args['label_file']) as f:
+            if label_file is not None:
+                with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
             else:
                 labels = '\n\n'.join(['0' * len(pt) for pt in text.split('\n\n')])

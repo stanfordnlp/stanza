@@ -1,41 +1,30 @@
-import pickle
-import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from models.common.trainer import Trainer
 
 from .data import TokenizerDataGenerator, TokenizerDataProcessor
 from .tokenizer_models import Tokenizer, RNNTokenizer
 from .vocab import Vocab
 
-class TokenizerTrainer:
+class TokenizerTrainer(Trainer):
     def __init__(self, args):
         self.args = args
 
-        self.data = TokenizerDataProcessor(args).data
-
-        self.data_generator = TokenizerDataGenerator(args, self.data)
         self.feat_funcs = args.get('feat_funcs', None)
         self.lang = args['lang'] # language determines how token normlization is done
-
-    @property
-    def vocab(self):
-        # enable lazy construction in case we're just loading the vocab from file
-        if not hasattr(self, '_vocab'):
-            self._vocab = Vocab(self.args['vocab_file'], self.data, self.args['lang'])
-
-        return self._vocab
 
     @property
     def model(self):
         if not hasattr(self, '_model'):
             if self.args['rnn']:
-                self._model = RNNTokenizer(self.args, len(self.vocab), self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+                self._model = RNNTokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
             else:
-                self._model = Tokenizer(self.args, len(self.vocab), self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+                self._model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
 
             if self.args['mode'] == 'train':
                 self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
-                self.opt = optim.Adam(self._model.parameters(), lr=2e-3, betas=(.9, .9), weight_decay=self.args['weight_decay'])
+                self.optimizer = optim.Adam(self._model.parameters(), lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
 
         return self._model
 
@@ -50,7 +39,7 @@ class TokenizerTrainer:
 
         pred, aux_outputs = self.model(units, features)
 
-        self.opt.zero_grad()
+        self.optimizer.zero_grad()
         classes = pred.size(2)
         loss = self.criterion(pred.view(-1, classes), labels.view(-1))
 
@@ -59,14 +48,10 @@ class TokenizerTrainer:
                 loss += self.args['aux_clf'] * self.criterion(aux_output.view(-1, classes), labels.view(-1))
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
-        self.opt.step()
+        nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
+        self.optimizer.step()
 
         return loss.item()
-
-    def change_lr(self, new_lr):
-        for param_group in self.opt.param_groups:
-            param_group['lr'] = new_lr
 
     def predict(self, inputs):
         self.model.eval()
@@ -80,21 +65,3 @@ class TokenizerTrainer:
         pred, _ = self.model(units, features)
 
         return pred.data.cpu().numpy()
-
-    def save(self, filename):
-        savedict = {
-                   'vocab': self.vocab,
-                   'model': self.model.state_dict(),
-                   'optim': self.opt.state_dict()
-                   }
-        with open(filename, 'wb') as f:
-            pickle.dump(savedict, f)
-
-    def load(self, filename):
-        with open(filename, 'rb') as f:
-            savedict = pickle.load(f)
-
-        self._vocab = savedict['vocab']
-        self.model.load_state_dict(savedict['model'])
-        if self.args['mode'] == 'train':
-            self.opt.load_state_dict(savedict['optim'])
