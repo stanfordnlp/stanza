@@ -157,7 +157,7 @@ def evaluate_proposal(proposal, command=command, config=config):
     try:
         return float(res.stderr)
     except Exception as e:
-        print(res.stderr)
+        print(res.stderr.decode('utf-8'))
         raise e
 
 def save_progress(progress, filename=SAVED_PROGRESS):
@@ -177,11 +177,10 @@ try:
     while True:
         #invtemp = .01 * (1+len(progress))
         #print('Inv Temp = {}'.format(invtemp))
-        for i in range(5):
-            proposal = get_proposal(invtemp=1)
-            res = evaluate_proposal(proposal)
-            progress += [[proposal, res]]
-            save_progress(progress)
+        proposal = get_proposal(invtemp=1)
+        res = evaluate_proposal(proposal)
+        progress += [[proposal, res]]
+        save_progress(progress)
         estimate_params(progress)
 except:
     import traceback

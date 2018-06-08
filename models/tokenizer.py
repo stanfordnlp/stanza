@@ -69,14 +69,20 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
                 current_tok += t
                 if p >= 1:
-                    current_sent += [(vocab.normalize_token(current_tok), p)]
+                    tok = vocab.normalize_token(current_tok)
+                    if len(tok) <= 0:
+                        current_tok = ''
+                        continue
+                    current_sent += [(tok, p)]
                     current_tok = ''
                     if p == 2:
                         print_sentence(current_sent, f, mwt_dict)
                         current_sent = []
 
             if len(current_tok):
-                current_sent += [(vocab.normalize_token(current_tok), 2)]
+                tok = vocab.normalize_token(current_tok)
+                if len(tok) > 0:
+                    current_sent += [(tok, 2)]
 
             if len(current_sent):
                 print_sentence(current_sent, f, mwt_dict)
