@@ -6,7 +6,7 @@ i=0
 for tb in `cat ./lemma_test_treebanks`; do
     echo "Treebank: $tb"
     short=`bash scripts/treebank_to_shorthand.sh ud $tb`
-    ./run_lemma.sh $tb $((i % n_gpus)) $args 2>&1 | tee logs/${short}.log &
+    ./scripts/run_lemma.sh $tb $((i % n_gpus)) $args 2>&1 | tee logs/${short}.log &
     pids[${i}]=$!
     i=$((i+1))
 done
