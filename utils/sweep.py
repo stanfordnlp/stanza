@@ -113,6 +113,9 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
 
                 idx1 = config[k1].index(res[k1])
 
+                if idx1 < 2:
+                    continue
+
                 key = "{}<>{}".format(k1, k)
 
                 for j in range(2, len(config[k])):
@@ -181,4 +184,6 @@ try:
             save_progress(progress)
         estimate_params(progress)
 except:
+    import traceback
+    traceback.print_last()
     save_progress(progress)
