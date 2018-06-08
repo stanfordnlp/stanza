@@ -144,7 +144,7 @@ def eval_model(env):
     oov_count, N = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict)
     scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
 
-    return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1])
+    return harmonic_mean([scores['Tokens'].f1, scores['Sentences'].f1])
 
 def train(env):
     args = env.args
