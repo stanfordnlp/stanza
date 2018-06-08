@@ -134,7 +134,7 @@ def evaluate_proposal(proposal, command=command, config=config):
     conv_str = ''
     for k in config:
         if not k.startswith('conv_filters'):
-            if proposal[k] != False:
+            if proposal[k] != False or not isinstance(proposal[k], bool):
                 cmd += ["--{}".format(k)]
                 if proposal[k] != True or not isinstance(proposal[k], bool):
                     cmd += [str(proposal[k])]
