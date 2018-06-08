@@ -3,6 +3,7 @@ Utils for lemmatizer.
 """
 from collections import Counter
 import random
+import json
 import unicodedata
 import torch
 
@@ -46,6 +47,20 @@ def keep_partial_grad(grad, topk):
     return grad
 
 # other utils
+def save_config(config, path, verbose=True):
+    with open(path, 'w') as outfile:
+        json.dump(config, outfile, indent=2)
+    if verbose:
+        print("Config saved to file {}".format(path))
+    return config
+
+def load_config(path, verbose=True):
+    with open(path) as f:
+        config = json.load(f)
+    if verbose:
+        print("Config loaded from file {}".format(path))
+    return config
+
 def normalize_text(text):
     return unicodedata.normalize('NFD', text)
 
