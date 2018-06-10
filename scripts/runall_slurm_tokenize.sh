@@ -2,9 +2,11 @@ args=$@
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 tbs=`wc -l tokenize_test_treebanks`
+i=0
 for tb in `cat tokenize_test_treebanks`; do
     sbatch --wait $ROOT/scripts/run_slurm_tokenize.sh $tb $ROOT $args 2>/dev/null &
     pids[${i}]=$!
+    i=$((i+1))
 done
 
 # wait for all pids
