@@ -98,7 +98,7 @@ class RNNTokenizer(nn.Module):
 
         if args['hierarchical']:
             self.rnn2 = nn.LSTM(hidden_dim * 2, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
-            self.dense_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
+            self.dense_clf2 = nn.Linear(hidden_dim * 2, 2, bias=False)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -129,7 +129,7 @@ class RNNTokenizer(nn.Module):
 
             pred1 = self.dense_clf2(inp2)
 
-            pred = torch.cat([pred0[:,:,:2], pred0[:,:,2].unsqueeze(2) + pred1, pred0[:,:,3].unsqueeze(2)], 2)
+            pred = torch.cat([pred0[:,:,:2], pred0[:,:,2:] + pred1], 2)
         else:
             pred = pred0
 

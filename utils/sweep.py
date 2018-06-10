@@ -105,7 +105,7 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
 def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binary_keys=binary_keys):
     res = OrderedDict()
     for k in config:
-        p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) for x in unitary[k]])
+        p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) / invtemp for x in unitary[k]])
 
         if k in binary_keys:
             for k1 in binary_keys:
@@ -120,13 +120,14 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
 
                 for j in range(2, len(config[k])):
                     cand = binary[key][(idx1 - 2) * (len(config[k]) - 2) + j - 2]
-                    p[j] += cand[0] + np.random.randn() / np.sqrt(cand[1])
+                    p[j] += cand[0] + np.random.randn() / np.sqrt(cand[1]) / invtemp
 
         p += np.random.randn(*p.shape) / invtemp / np.sqrt(overall[1])
 #        p = p - np.max(p)
 #        p = np.exp(p * invtemp)
 #        p /= np.sum(p)
 #        res[k] = config[k][np.random.choice(np.arange(len(config[k])), p=p)]
+
         res[k] = config[k][np.argmax(p, axis=0)]
 
     return res
@@ -175,9 +176,10 @@ if os.path.exists(SAVED_PROGRESS):
 
 try:
     while True:
-        #invtemp = .01 * (1+len(progress))
-        #print('Inv Temp = {}'.format(invtemp))
-        proposal = get_proposal(invtemp=1)
+        #invtemp = min(1, .001 * (1+len(progress)))
+        invtemp = 1
+        print('Inv Temp = {}'.format(invtemp))
+        proposal = get_proposal(invtemp=invtemp)
         res = evaluate_proposal(proposal)
         progress += [[proposal, res]]
         save_progress(progress)
