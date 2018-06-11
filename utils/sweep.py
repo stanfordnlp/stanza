@@ -105,6 +105,10 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
 def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binary_keys=binary_keys):
     res = OrderedDict()
     for k in config:
+        if np.random.random() < .05:
+            # epsilon-greedy
+            res[k] = config[k][np.random.randint(len(unitary[k])+1)]
+            continue
         p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) / invtemp for x in unitary[k]])
 
         if k in binary_keys:
