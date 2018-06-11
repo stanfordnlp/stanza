@@ -1,0 +1,18 @@
+{
+  "hidden_dim": 100,
+  "emb_dim": 50,
+  "num_layers": 1,
+  "emb_dropout": 0.5,
+  "dropout": 0.5,
+  "max_dec_len": 50,
+  "beam_size": 1,
+  "attn_type": "soft",
+  "enc2dec": "no",
+  "optim": "adam",
+  "lr": 0.001,
+  "lr_decay": 0.9,
+  "decay_epoch": 30,
+  "num_epoch": 50,
+  "batch_size": 50,
+  "best_dev_score": 0
+}

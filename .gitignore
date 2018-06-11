@@ -13,3 +13,6 @@ __pycache__/
 data/
 saved_models/
 logs/
+
+params/*/*.json
+!params/*/default.json

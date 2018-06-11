@@ -17,7 +17,7 @@ from models.lemma.loader import DataLoader
 from models.lemma.vocab import Vocab
 from models.lemma.trainer import Trainer
 from models.lemma import scorer
-from models.common import utils
+from models.common import utils, param
 import models.common.seq2seq_constant as constant
 
 parser = argparse.ArgumentParser()
@@ -29,6 +29,7 @@ parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U 
 
 parser.add_argument('--mode', default='train', choices=['train', 'predict'])
 parser.add_argument('--lang', type=str, help='Language')
+parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters on record.')
 
 parser.add_argument('--hidden_dim', type=int, default=100)
 parser.add_argument('--emb_dim', type=int, default=50)
@@ -85,7 +86,10 @@ if args['mode'] == 'train':
     system_pred_file = args['data_dir'] + '/' + args['output_file']
     gold_file = args['gold_file']
     
-    # save config
+    # activate param manager and save config
+    param_manager = param.ParamManager('params/lemma', args['lang'])
+    if args['best_param']: # use best param in file, otherwise use command line params
+        args = param_manager.load_to_args(args)
     utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['lang']))
     
     trainer = Trainer(args, vocab)
@@ -140,6 +144,8 @@ if args['mode'] == 'train':
     
     best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
     print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+
+    param_manager.update(args, best_f)
 
 else:
     # load config
