@@ -1,5 +1,5 @@
 """
-Some constants for lemmatizer.
+Some constants for seq2seq models.
 """
 
 PAD = '<PAD>'

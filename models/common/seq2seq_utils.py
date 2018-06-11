@@ -1,5 +1,5 @@
 """
-Utils for lemmatizer.
+Utils for seq2seq models.
 """
 from collections import Counter
 import random
@@ -7,7 +7,7 @@ import json
 import unicodedata
 import torch
 
-from models.lemma import constant
+import models.common.seq2seq_constant as constant
 
 # torch utils
 def get_optimizer(name, parameters, lr):

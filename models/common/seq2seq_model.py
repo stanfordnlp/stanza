@@ -9,9 +9,10 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
 
-from models.lemma import constant, utils
-from models.lemma.modules import LSTMAttention
-from models.lemma.beam import Beam
+import models.common.seq2seq_constant as constant
+from models.common import utils
+from models.common.seq2seq_modules import LSTMAttention
+from models.common.beam import Beam
 
 class Seq2SeqModel(nn.Module):
     """
@@ -44,7 +45,7 @@ class Seq2SeqModel(nn.Module):
         self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
                 bidirectional=True, batch_first=True, dropout=self.dropout)
         self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
-                batch_first=True)
+                batch_first=True, attn_type=self.args['attn_type'])
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])

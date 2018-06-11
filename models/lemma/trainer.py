@@ -9,15 +9,9 @@ import torch.nn.init as init
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from models.lemma.seq2seq_model import Seq2SeqModel
-from models.lemma import constant, utils
-
-def SequenceLoss(vocab_size):
-    weight = torch.ones(vocab_size)
-    weight[constant.PAD_ID] = 0
-    crit = nn.NLLLoss(weight)
-    print("Using NLL sequence loss.")
-    return crit
+import models.common.seq2seq_constant as constant
+from models.common.seq2seq_model import Seq2SeqModel
+from models.common import utils, loss
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
@@ -33,7 +27,7 @@ class Trainer(object):
     def __init__(self, args, vocab, emb_matrix=None):
         self.args = args
         self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        self.crit = SequenceLoss(vocab.size)
+        self.crit = loss.SequenceLoss(vocab.size)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()

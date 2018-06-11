@@ -8,7 +8,7 @@ import random
 import numpy as np
 import pickle
 
-from models.lemma import constant
+import models.common.seq2seq_constant as constant
 
 random.seed(1234)
 np.random.seed(1234)

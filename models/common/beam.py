@@ -1,7 +1,7 @@
 from __future__ import division
 import torch
 
-from models.lemma import constant
+import models.common.seq2seq_constant as constant
 
 """
  Adapted and modified from OpenNMT-py.

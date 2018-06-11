@@ -4,7 +4,8 @@ import os
 from collections import Counter
 import torch
 
-from models.lemma import constant, conll
+import models.common.seq2seq_constant as constant
+from models.lemma import conll
 from models.lemma.vocab import Vocab
 
 class DataLoader:

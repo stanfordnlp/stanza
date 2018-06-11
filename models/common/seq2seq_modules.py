@@ -9,7 +9,7 @@ import math
 import torch.nn.functional as F
 import numpy as np
 
-from models.lemma import constant
+import models.common.seq2seq_constant as constant
 
 class BasicAttention(nn.Module):
     """

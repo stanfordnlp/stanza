@@ -5,7 +5,7 @@ Different loss functions.
 import torch
 import torch.nn as nn
 
-from models.lemma import constant
+import models.common.seq2seq_constant as constant
 
 def SequenceLoss(vocab_size):
     weight = torch.ones(vocab_size)
