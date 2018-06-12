@@ -4,7 +4,6 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=20480
 #SBATCH --gres=gpu:1
-#SBATCH --job-name="tokenize"
 #SBATCH --output=/sailhome/pengqi/logs/slurm-%j.out
 #SBATCH --mail-user=pengqi@cs.stanford.edu
 #SBATCH --mail-type=FAIL
