@@ -5,7 +5,6 @@ base seq2seq modules.
 
 import torch
 from torch import nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
 
@@ -77,8 +76,8 @@ class Seq2SeqModel(nn.Module):
 
     def zero_state(self, inputs):
         batch_size = inputs.size(0)
-        h0 = Variable(torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim), requires_grad=False)
-        c0 = Variable(torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim), requires_grad=False)
+        h0 = torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim, requires_grad=False)
+        c0 = torch.zeros(self.encoder.num_layers*2, batch_size, self.enc_hidden_dim, requires_grad=False)
         if self.use_cuda:
             return h0.cuda(), c0.cuda()
         return h0, c0
@@ -132,7 +131,7 @@ class Seq2SeqModel(nn.Module):
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
         
         # greedy decode by step
-        dec_inputs = self.embedding(Variable(self.SOS_tensor))
+        dec_inputs = self.embedding(self.SOS_tensor)
         dec_inputs = dec_inputs.expand(batch_size, dec_inputs.size(0), dec_inputs.size(1))
 
         done = [False for _ in range(batch_size)]
@@ -166,11 +165,12 @@ class Seq2SeqModel(nn.Module):
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
 
         # (2) set up beam
-        h_in = Variable(h_in.data.repeat(beam_size, 1, 1), volatile=True) # repeat data for beam search
-        src_mask = src_mask.repeat(beam_size, 1)
-        # repeat decoder hidden states 
-        hn = Variable(hn.data.repeat(beam_size, 1), volatile=True)
-        cn = Variable(cn.data.repeat(beam_size, 1), volatile=True)
+        with torch.no_grad():
+            h_in = h_in.data.repeat(beam_size, 1, 1) # repeat data for beam search
+            src_mask = src_mask.repeat(beam_size, 1)
+            # repeat decoder hidden states 
+            hn = hn.data.repeat(beam_size, 1)
+            cn = cn.data.repeat(beam_size, 1)
         beam = [Beam(beam_size, self.use_cuda) for _ in range(batch_size)]
 
         def update_state(states, idx, positions, beam_size):
@@ -183,7 +183,7 @@ class Seq2SeqModel(nn.Module):
         # (3) main loop
         for i in range(self.max_dec_len):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
-            dec_inputs = self.embedding(Variable(dec_inputs))
+            dec_inputs = self.embedding(dec_inputs)
             log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask)
             log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
                     .contiguous() # [batch, beam, V]

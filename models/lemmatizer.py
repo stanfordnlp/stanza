@@ -11,7 +11,6 @@ import numpy as np
 import random
 import torch
 from torch import nn, optim
-from torch.autograd import Variable
 
 from models.lemma.loader import DataLoader
 from models.lemma.vocab import Vocab
