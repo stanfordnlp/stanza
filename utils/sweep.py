@@ -8,13 +8,13 @@ import random
 import sys
 import subprocess
 
-command, config_file = sys.argv[1:3]
+config_file, sweep_progress, command = sys.argv[1], sys.argv[2], sys.argv[3:]
 
 with open(config_file, 'r') as f:
     loaded = ''.join([x.strip() for x in f.readlines()])
     config = json.loads(loaded, object_pairs_hook=OrderedDict)
 
-SAVED_PROGRESS = 'sweep_progress.pkl'
+SAVED_PROGRESS = sweep_progress
 
 PRIOR_STRENGTH = .01
 BINARY_PRIOR_STRENGTH = 1
@@ -140,7 +140,7 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
     return res
 
 def evaluate_proposal(proposal, command=command, config=config):
-    cmd = ['bash', command]
+    cmd = ['bash'] + command
     is_conv = False
     conv_str = ''
     for k in config:

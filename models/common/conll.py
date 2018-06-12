@@ -82,7 +82,7 @@ class CoNLLFile():
                 else:
                     results += [[ln[fid] for fid in field_idxs]]
         return results
-    
+
     def write_conll_with_lemmas(self, lemmas, filename):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
         assert self.num_words == len(lemmas), "Num of lemmas does not match the number in original data file."
@@ -107,6 +107,8 @@ class CoNLLFile():
         src = ''
         dst = []
         for sent in self.sents:
+            mwt_begin = 0
+            mwt_end = -1
             for ln in sent:
                 if '.' in ln[0]:
                     # skip ellipsis
@@ -121,37 +123,45 @@ class CoNLLFile():
                     dst += [ln[word_idx]]
                 elif int(ln[0]) == mwt_end:
                     dst += [ln[word_idx]]
-                    expansions += [src, ' '.join(dst)]
+                    expansions += [[src, ' '.join(dst)]]
+                    src = ''
+                    dst = []
 
         return expansions
 
     def get_mwt_expansion_cands(self):
         word_idx = FIELD_TO_IDX['word']
         cands = []
-        for sid, sent in enumerate(self.sents):
-            for wid, ln in enumerate(sent):
-                if ln[-1] == "MWT=Yes":
-                    cands += [(sid, wid), ln[word_idx]]
+        for sent in self.sents:
+            for ln in sent:
+                if "MWT=Yes" in ln[-1]:
+                    cands += [ln[word_idx]]
 
         return cands
 
     def write_conll_with_mwt_expansions(self, expansions, filename):
+        """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with a right branching tree. """
         idx = 0
+        count = 0
         with open(filename, 'w') as outfile:
-            for sid, sent in enumerate(self.sents):
-                for wid, ln in enumerate(sent):
+            for sent in self.sents:
+                for ln in sent:
                     idx += 1
-                    if (sid, wid) not in expansions:
-                        print("{}\t{}".format(idx, "\t".join(ln[1:])), file=outfile)
+                    if "MWT=Yes" not in ln[-1]:
+                        print("{}\t{}".format(idx, "\t".join(ln[1:6] + [str(idx-1)] + ln[7:])), file=outfile)
                     else:
                         # print MWT expansion
-                        expanded = expansion[(sid, wid)].split(' ')
+                        expanded = expansions[count].split(' ')
+                        count += 1
                         endidx = idx + len(expanded) - 1
 
                         print("{}-{}\t{}".format(idx, endidx, "\t".join(ln[1:])), file=outfile)
                         for e_i, e_word in enumerate(expanded):
-                            print("{}\t{}{}".format(idx + e_i, e_word, "\t_" * 8), file=outfile)
+                            print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=outfile)
+                        idx = endidx
 
                 print("", file=outfile)
                 idx = 0
+
+        assert count == len(expansions)
         return

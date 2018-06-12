@@ -39,5 +39,26 @@ class Vocab:
     def id2unit(self, id):
         return self._id2unit[id]
 
+    def map(self, units):
+        return [self.unit2id(x) for x in units]
+
+    def unmap(self, ids):
+        return [self.id2unit(x) for x in ids]
+
     def __len__(self):
         return len(self._id2unit)
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return self.unit2id(key)
+        elif isinstance(key, int):
+            return self.id2unit(key)
+        else:
+            raise TypeError("Vocab key must be either str or int")
+
+    def __contains__(self, key):
+        return key in self._unit2id
+
+    @property
+    def size(self):
+        return len(self)
