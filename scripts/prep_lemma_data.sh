@@ -7,8 +7,20 @@ DATADIR=data/lemma
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
-#cat $UDBASE/$treebank/${short}-ud-train.conllu | grep -vP "^#" | cut -d$'\t' -f2-3  > $DATADIR/${short}.train.lem
-#cat $UDPIPEBASE/${short}-dev-pred-udpipe.conllu | grep -vP "^#" | cut -d$'\t' -f2  > $DATADIR/${short}.dev.lem
+train_conllu=$UDBASE/$treebank/${short}-ud-train.conllu
+train_in_file=$DATADIR/${short}.train.in.conllu
+dev_conllu=$UDPIPEBASE/${short}-dev-pred-udpipe.conllu
+dev_in_file=$DATADIR/${short}.dev.in.conllu
+# copy conllu file if exists; otherwise create empty files
+if [ -e $train_conllu ]; then
+    cp $train_conllu $train_in_file
+else
+    touch $train_in_file
+fi
 
-cp $UDBASE/$treebank/${short}-ud-train.conllu $DATADIR/${short}.train.in.conllu
-cp $UDPIPEBASE/${short}-dev-pred-udpipe.conllu $DATADIR/${short}.dev.in.conllu
+if [ -e $dev_conllu ]; then
+    cp $dev_conllu $dev_in_file
+else
+    touch $dev_in_file
+fi
+

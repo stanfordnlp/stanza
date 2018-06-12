@@ -3,6 +3,7 @@ A trainer class to handle training and testing of models.
 """
 
 import numpy as np
+from collections import Counter
 import torch
 from torch import nn
 import torch.nn.init as init
@@ -92,4 +93,49 @@ class Trainer(object):
         self.model.load_state_dict(checkpoint['model'])
         if self.args['mode'] == 'train':
             self.optimizer.load_state_dict(checkpoint['optim'])
+
+class DictTrainer(object):
+    """ A trainer wrapper for a simple dictionary-based lemmatizer. """
+    def __init__(self, args):
+        self.model = dict()
+
+    def train(self, pairs):
+        """ Train a lemmatizer given training word-lemma pairs. """
+        # accumulate counter
+        ctr = Counter()
+        ctr.update([(p[0], p[1]) for p in pairs])
+        # find the most frequent mappings
+        for p, _ in ctr.most_common():
+            w, l = p
+            if w not in self.model and w != l:
+                self.model[w] = l
+        return
+
+    def predict(self, words):
+        """ Predict a list of lemmas given words. """
+        lemmas = []
+        for w in words:
+            if w in self.model:
+                lemmas += [self.model[w]]
+            else:
+                lemmas += [w]
+        return lemmas
+
+    def save(self, filename):
+        params = {
+                'model': self.model,
+                }
+        try:
+            torch.save(params, filename)
+            print("model saved to {}".format(filename))
+        except BaseException:
+            print("[Warning: Saving failed... continuing anyway.]")
+    
+    def load(self, filename):
+        try:
+            checkpoint = torch.load(filename)
+        except BaseException:
+            print("Cannot load model from {}".format(filename))
+            exit()
+        self.model = checkpoint['model']
 
