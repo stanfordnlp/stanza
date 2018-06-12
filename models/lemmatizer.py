@@ -215,7 +215,7 @@ def evaluate(args):
     dict_trainer.load(dict_file)
     dict_preds = dict_trainer.predict(batch.conll.get(['word', 'upos']))
     
-    if args.get('dict_only', False):
+    if loaded_args.get('dict_only', False):
         preds = dict_preds
     else:
         # load seq2seq model
@@ -226,7 +226,7 @@ def evaluate(args):
         for i, b in enumerate(batch):
             preds += trainer.predict(b, args['beam_size'])
         
-        if args.get('ensemble_dict', False):
+        if loaded_args.get('ensemble_dict', False):
             preds = dict_trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
     
     # write to file and score
