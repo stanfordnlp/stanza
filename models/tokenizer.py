@@ -1,3 +1,5 @@
+from models.common import param, utils
+
 from models.tokenize.trainer import TokenizerTrainer
 from models.tokenize.utils import train, evaluate, load_mwt_dict, Env
 
@@ -16,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--dev_json_file', type=str, default=None, help="(Train only) JSON file with pre-chunked units for the dev set")
     parser.add_argument('--dev_conll_gold', type=str, default=None, help="(Train only) CoNLL-U file for the dev set for early stopping")
     parser.add_argument('--lang', type=str, help="Language")
+    parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
 
@@ -48,18 +51,26 @@ if __name__ == '__main__':
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--save_dir', type=str, default='saved_models', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
+    parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     args = parser.parse_args()
 
     args = vars(args)
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['lang'])
+    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['shorthand'])
+
+    # activate param manager and save config
+    param_manager = param.ParamManager('params/mwt', args['shorthand'])
+    if args['best_param']: # use best param in file, otherwise use command line params
+        args = param_manager.load_to_args(args)
+    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
 
     env = Env(args)
     args['vocab_size'] = len(env.vocab)
 
     env.trainer = TokenizerTrainer(args)
+    env.param_manager = param_manager
     trainer = env.trainer
 
     env.mwt_dict = load_mwt_dict(args['mwt_json_file'])

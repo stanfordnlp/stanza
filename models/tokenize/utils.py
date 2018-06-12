@@ -173,6 +173,8 @@ def train(env):
                 trainer.save(args['save_name'])
             print('\t'.join(reports))
 
+    env.param_manager.update(args, best_dev_score)
+
 def evaluate(env):
     args = env.args
     trainer = env.trainer
