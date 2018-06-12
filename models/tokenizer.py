@@ -61,7 +61,7 @@ if __name__ == '__main__':
     args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['shorthand'])
 
     # activate param manager and save config
-    param_manager = param.ParamManager('params/mwt', args['shorthand'])
+    param_manager = param.ParamManager('params/tokenize', args['shorthand'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
     utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
