@@ -113,9 +113,9 @@ def train(args):
         # train a dictionary-based lemmatizer only
         trainer = DictTrainer(args)
         print("Training dictionary-based lemmatizer...")
-        trainer.train(train_batch.conll.get_words_and_lemmas())
+        trainer.train(train_batch.conll.get(['word', 'upos', 'lemma']))
         print("Evaluating on dev set...")
-        dev_preds = trainer.predict(dev_batch.conll.get_words())
+        dev_preds = trainer.predict(dev_batch.conll.get(['word', 'upos']))
         dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
         _, _, dev_f = scorer.score(system_pred_file, gold_file)
         print("Dev F1 = {:.2f}".format(dev_f * 100))
@@ -202,7 +202,7 @@ def evaluate(args):
     if loaded_args['dict_only']:
         trainer = DictTrainer(loaded_args)
         trainer.load(model_file)
-        preds = trainer.predict(batch.conll.get_words())
+        preds = trainer.predict(batch.conll.get(['word', 'upos']))
     else:
         trainer = Trainer(loaded_args, vocab)
         trainer.load(model_file)

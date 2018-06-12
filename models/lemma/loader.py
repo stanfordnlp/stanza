@@ -102,8 +102,8 @@ class DataLoader:
     def load_file(self, filename, evaluation=False):
         conll_file = conll.CoNLLFile(filename)
         if evaluation:
-            data = conll_file.get_words()
+            data = conll_file.get(['word'])
             data = [[d] for d in data]
         else:
-            data = conll_file.get_words_and_lemmas()
+            data = conll_file.get(['word', 'lemma'])
         return conll_file, data

@@ -99,26 +99,27 @@ class DictTrainer(object):
     def __init__(self, args):
         self.model = dict()
 
-    def train(self, pairs):
-        """ Train a lemmatizer given training word-lemma pairs. """
+    def train(self, triples):
+        """ Train a lemmatizer given training (word, pos, lemma) triples. """
         # accumulate counter
         ctr = Counter()
-        ctr.update([(p[0], p[1]) for p in pairs])
+        ctr.update([(p[0], p[1], p[2]) for p in triples])
         seen = set()
         # find the most frequent mappings
         for p, _ in ctr.most_common():
-            w, l = p
-            if w not in seen and w != l:
-                self.model[w] = l
-            seen.add(w)
+            w, pos, l = p
+            if (w,pos) not in seen and w != l:
+                self.model[(w,pos)] = l
+            seen.add((w,pos))
         return
 
-    def predict(self, words):
-        """ Predict a list of lemmas given words. """
+    def predict(self, pairs):
+        """ Predict a list of lemmas given (word, pos) pairs. """
         lemmas = []
-        for w in words:
-            if w in self.model:
-                lemmas += [self.model[w]]
+        for p in pairs:
+            w, pos = p
+            if (w,pos) in self.model:
+                lemmas += [self.model[(w,pos)]]
             else:
                 lemmas += [w]
         return lemmas

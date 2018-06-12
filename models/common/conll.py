@@ -5,8 +5,7 @@ import os
 
 FIELD_NUM = 10
 
-WORD_IDX = 1
-LEMMA_IDX = 2
+FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
 
 class CoNLLFile():
     def __init__(self, filename):
@@ -65,39 +64,29 @@ class CoNLLFile():
             self._num_words = n
         return self._num_words
 
-    def get_words(self):
-        """ Get all words (after multi-word expansion) in a huge list, Note that
-        the (original) tokens that are expanded will be skipped."""
-        words = []
+    def get(self, fields):
+        """ Get fields from a list of field names. If only one field name is provided, return a list
+        of that field; if more than one, return a list of list. Note that all returned fields are after
+        multi-word expansion.
+        """
+        assert isinstance(fields, list), "Must provide field names as a list."
+        assert len(fields) >= 1, "Must have at least one field."
+        field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
+        results = []
         for sent in self.sents:
             for ln in sent:
                 if '-' in ln[0]: # skip
                     continue
-                words += [ln[WORD_IDX]]
-        return words
-
-    def get_lemmas(self):
-        """ Get all lemmas in a huge list, like the get_words() function. """
-        lemmas = []
-        for sent in self.sents:
-            for ln in sent:
-                if '-' in ln[0]:
-                    continue
-                lemmas += [ln[LEMMA_IDX]]
-        return lemmas
-
-    def get_words_and_lemmas(self):
-        pairs = []
-        for sent in self.sents:
-            for ln in sent:
-                if '-' in ln[0]:
-                    continue
-                pairs += [(ln[WORD_IDX], ln[LEMMA_IDX])]
-        return pairs
-
+                if len(field_idxs) == 1:
+                    results += [ln[field_idxs[0]]]
+                else:
+                    results += [[ln[fid] for fid in field_idxs]]
+        return results
+    
     def write_conll_with_lemmas(self, lemmas, filename):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
         assert self.num_words == len(lemmas), "Num of lemmas does not match the number in original data file."
+        lemma_idx = FIELD_TO_IDX['lemma']
         idx = 0
         with open(filename, 'w') as outfile:
             for sent in self.sents:
@@ -106,13 +95,14 @@ class CoNLLFile():
                         lm = lemmas[idx]
                         if len(lm) == 0:
                             lm = '_'
-                        ln[LEMMA_IDX] = lm
+                        ln[lemma_idx] = lm
                         idx += 1
                     print("\t".join(ln), file=outfile)
                 print("", file=outfile)
         return
 
     def get_mwt_expansions(self):
+        word_idx = FIELD_TO_IDX['word']
         expansions = []
         src = ''
         dst = []
@@ -124,23 +114,24 @@ class CoNLLFile():
 
                 if '-' in ln[0]:
                     mwt_begin, mwt_end = [int(x) for x in ln[0].split('-')]
-                    src = ln[WORD_IDX]
+                    src = ln[word_idx]
                     continue
 
                 if mwt_begin <= int(ln[0]) < mwt_end:
-                    dst += [ln[WORD_IDX]]
+                    dst += [ln[word_idx]]
                 elif int(ln[0]) == mwt_end:
-                    dst += [ln[WORD_IDX]]
+                    dst += [ln[word_idx]]
                     expansions += [src, ' '.join(dst)]
 
         return expansions
 
     def get_mwt_expansion_cands(self):
+        word_idx = FIELD_TO_IDX['word']
         cands = []
         for sid, sent in enumerate(self.sents):
             for wid, ln in enumerate(sent):
                 if ln[-1] == "MWT=Yes":
-                    cands += [(sid, wid), ln[WORD_IDX]]
+                    cands += [(sid, wid), ln[word_idx]]
 
         return cands
 
