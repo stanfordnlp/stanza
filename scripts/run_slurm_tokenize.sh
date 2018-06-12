@@ -8,7 +8,6 @@
 #SBATCH --output=/sailhome/pengqi/logs/slurm-%j.out
 #SBATCH --mail-user=pengqi@cs.stanford.edu
 #SBATCH --mail-type=FAIL
-#SBATCH --exclude=jagupard15
 
 echo "SLURM_JOBID="$SLURM_JOBID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
@@ -25,10 +24,10 @@ args=$@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-8.0/lib64
 export PATH=/usr/local/cuda-8.0/bin:$PATH
 export CUDA_HOME=/usr/local/cuda-8.0
-cd $root
 export PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/bin:$PATH
 export LD_LIBRARY_PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/lib:$LD_LIBRARY_PATH
 
+cd $root
 bash scripts/run_tokenize.sh $tb $CUDA_VISIBLE_DEVICES $args
 
 #
