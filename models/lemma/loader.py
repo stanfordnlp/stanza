@@ -99,11 +99,7 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_file(self, filename, evaluation=False):
+    def load_file(self, filename):
         conll_file = conll.CoNLLFile(filename)
-        if evaluation:
-            data = conll_file.get(['word'])
-            data = [[d] for d in data]
-        else:
-            data = conll_file.get(['word', 'lemma'])
+        data = conll_file.get(['word', 'lemma'])
         return conll_file, data
