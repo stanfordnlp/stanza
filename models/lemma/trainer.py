@@ -56,13 +56,13 @@ class Trainer(object):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, unsort=True):
+    def predict(self, batch, beam_size=1, unsort=True):
         inputs, orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt, tgt_mask = inputs
         
         self.model.eval()
         batch_size = src.size(0)
-        preds = self.model.predict(src, src_mask, self.args['beam_size'])
+        preds = self.model.predict(src, src_mask, beam_size)
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
@@ -104,13 +104,11 @@ class DictTrainer(object):
         # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1], p[2]) for p in triples])
-        seen = set()
         # find the most frequent mappings
         for p, _ in ctr.most_common():
             w, pos, l = p
-            if (w,pos) not in seen and w != l:
+            if (w,pos) not in self.model:
                 self.model[(w,pos)] = l
-            seen.add((w,pos))
         return
 
     def predict(self, pairs):
@@ -122,6 +120,18 @@ class DictTrainer(object):
                 lemmas += [self.model[(w,pos)]]
             else:
                 lemmas += [w]
+        return lemmas
+
+    def ensemble(self, pairs, other_preds):
+        """ Ensemble the dict with another model predictions. """
+        lemmas = []
+        assert len(pairs) == len(other_preds)
+        for p, pred in zip(pairs, other_preds):
+            w, pos = p
+            if (w,pos) in self.model:
+                lemmas += [self.model[(w,pos)]]
+            else:
+                lemmas += [pred]
         return lemmas
 
     def save(self, filename):

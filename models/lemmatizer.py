@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
     
+    parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
     
     parser.add_argument('--hidden_dim', type=int, default=100)
@@ -54,7 +55,6 @@ def parse_args():
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -83,15 +83,14 @@ def main():
 
 def train(args):
     # load data
-    print("Loading data from {} with batch size {}...".format(args['data_dir'], args['batch_size']))
+    print("[Loading data from {} with batch size {}...]".format(args['data_dir'], args['batch_size']))
     train_batch = DataLoader('{}/{}'.format(args['data_dir'], args['train_file']), args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
     dev_batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True)
         
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_lemmatizer.pt'.format(args['save_dir'], args['lang'])
-    args['save_name'] = model_file
+    args['save_name'] = '{}/{}_lemmatizer.pt'.format(args['save_dir'], args['lang'])
+    args['dict_save_name'] = args['save_name'].replace('.pt', '.dict')
     
     # pred and gold path
     system_pred_file = args['data_dir'] + '/' + args['output_file']
@@ -105,28 +104,30 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
+        print("[Skip training because no data available...]")
         exit()
     
-    # decide trainer type and start training
-    if args['dict_only']:
-        # train a dictionary-based lemmatizer only
-        trainer = DictTrainer(args)
-        print("Training dictionary-based lemmatizer...")
-        trainer.train(train_batch.conll.get(['word', 'upos', 'lemma']))
-        print("Evaluating on dev set...")
-        dev_preds = trainer.predict(dev_batch.conll.get(['word', 'upos']))
-        dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
-        _, _, dev_f = scorer.score(system_pred_file, gold_file)
-        print("Dev F1 = {:.2f}".format(dev_f * 100))
-        trainer.save(args['save_name'])
-    else:
+    # start training
+    # train a dictionary-based lemmatizer
+    dict_trainer = DictTrainer(args)
+    print("[Training dictionary-based lemmatizer...]")
+    dict_trainer.train(train_batch.conll.get(['word', 'upos', 'lemma']))
+    print("Evaluating on dev set...")
+    dev_preds = dict_trainer.predict(dev_batch.conll.get(['word', 'upos']))
+    dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
+    _, _, dev_f = scorer.score(system_pred_file, gold_file)
+    print("Dev F1 = {:.2f}".format(dev_f * 100))
+    dict_trainer.save(args['dict_save_name'])
+    
+    if not args.get('dict_only', False):
         # train a seq2seq model
+        print("[Training seq2seq-based lemmatizer...]")
         trainer = Trainer(args, vocab)
         
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
+        best_dev_preds = []
         current_lr = args['lr']
         global_start_time = time.time()
         format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
@@ -148,7 +149,7 @@ def train(args):
             print("Evaluating on dev set...")
             dev_preds = []
             for i, batch in enumerate(dev_batch):
-                preds = trainer.predict(batch)
+                preds = trainer.predict(batch, args['beam_size'])
                 dev_preds += preds
             dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
@@ -160,6 +161,7 @@ def train(args):
             if epoch == 1 or dev_score > max(dev_score_history):
                 trainer.save(args['save_name'])
                 print("new best model saved.")
+                best_dev_preds = dev_preds
             
             # lr schedule
             if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1] and \
@@ -174,6 +176,15 @@ def train(args):
         
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+
+        # try ensembling with dict if necessary
+        if args.get('ensemble_dict', False):
+            print("[Ensembling dict with seq2seq model...]")
+            dev_preds = dict_trainer.ensemble(dev_batch.conll.get(['word', 'upos']), best_dev_preds)
+            dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
+            _, _, dev_score = scorer.score(system_pred_file, gold_file)
+            print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
+            best_f = max(best_f, dev_score)
 
         param_manager.update(args, best_f)
 
@@ -197,20 +208,27 @@ def evaluate(args):
     system_pred_file = args['data_dir'] + '/' + args['output_file']
     gold_file = args['gold_file']
     model_file = loaded_args['save_name']
+    dict_file = loaded_args.get('dict_save_name', '')
 
-    # decide trainer type and run eval
-    if loaded_args['dict_only']:
-        trainer = DictTrainer(loaded_args)
-        trainer.load(model_file)
-        preds = trainer.predict(batch.conll.get(['word', 'upos']))
+    # load dict-based model
+    dict_trainer = DictTrainer(loaded_args)
+    dict_trainer.load(dict_file)
+    dict_preds = dict_trainer.predict(batch.conll.get(['word', 'upos']))
+    
+    if args.get('dict_only', False):
+        preds = dict_preds
     else:
+        # load seq2seq model
         trainer = Trainer(loaded_args, vocab)
         trainer.load(model_file)
         print("Start evaluation...")
         preds = []
         for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-
+            preds += trainer.predict(b, args['beam_size'])
+        
+        if args.get('ensemble_dict', False):
+            preds = dict_trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
+    
     # write to file and score
     batch.conll.write_conll_with_lemmas(preds, system_pred_file)
     _, _, score = scorer.score(system_pred_file, gold_file)
