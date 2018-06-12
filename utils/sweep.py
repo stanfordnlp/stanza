@@ -59,9 +59,12 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
     # convert actual data
     for proposal, res in progress:
         cur = [1]
-        for k in config:
-            idx = config[k].index(proposal.get(k, config[k][0])) - 1
-            cur += [1 if idx == j else 0 for j in range(len(config[k]) - 1)]
+        try:
+            for k in config:
+                idx = config[k].index(proposal.get(k, config[k][0])) - 1
+                cur += [1 if idx == j else 0 for j in range(len(config[k]) - 1)]
+        except ValueError:
+            continue
 
         for i, k1 in enumerate(binary_keys[:-1]):
             idx1 = config[k1].index(proposal.get(k1, config[k1][0]))
@@ -80,7 +83,7 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
     print(" > Unpacking parameters...")
 
     overall[0] = params[0]
-    overall[1] = len(progress) + PRIOR_STRENGTH
+    overall[1] = A.shape[0] - (D+D2) + PRIOR_STRENGTH
 
     counts = A[(D+D2):].sum(0)
     idx = 1
@@ -109,7 +112,7 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
             # epsilon-greedy
             res[k] = config[k][np.random.randint(len(unitary[k])+1)]
             continue
-        p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) / invtemp for x in unitary[k]])
+        p = np.array([0] + [x[0] + np.random.randn() / np.sqrt(x[1]) / invtemp for x in unitary[k]], dtype=np.float64)
 
         if k in binary_keys:
             for k1 in binary_keys:
