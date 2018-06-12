@@ -104,11 +104,13 @@ class DictTrainer(object):
         # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1]) for p in pairs])
+        seen = set()
         # find the most frequent mappings
         for p, _ in ctr.most_common():
             w, l = p
-            if w not in self.model and w != l:
+            if w not in seen and w != l:
                 self.model[w] = l
+            seen.add(w)
         return
 
     def predict(self, words):
