@@ -5,7 +5,8 @@ from collections import Counter
 import torch
 
 import models.common.seq2seq_constant as constant
-from models.lemma import conll
+from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from models.common import conll
 from models.lemma.vocab import Vocab
 
 class DataLoader:
@@ -17,7 +18,7 @@ class DataLoader:
 
         assert filename.endswith('conllu'), "Loaded file must be conllu file."
         self.conll, data = self.load_file(filename)
-        
+
         # handle vocab
         vocab_file = filename.split('.')[0] + '.vocab'
         self.vocab = self.init_vocab(vocab_file, data)
@@ -79,7 +80,7 @@ class DataLoader:
         batch_size = len(batch)
         batch = list(zip(*batch))
         assert len(batch) == 3
-        
+
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
@@ -106,31 +107,3 @@ class DataLoader:
         else:
             data = conll_file.get_words_and_lemmas()
         return conll_file, data
-
-def map_to_ids(tokens, vocab):
-    ids = [vocab[t] if t in vocab else constant.UNK_ID for t in tokens]
-    return ids
-
-def get_long_tensor(tokens_list, batch_size, pad_id=constant.PAD_ID):
-    """ Convert list of list of tokens to a padded LongTensor. """
-    token_len = max(len(x) for x in tokens_list)
-    tokens = torch.LongTensor(batch_size, token_len).fill_(pad_id)
-    for i, s in enumerate(tokens_list):
-        tokens[i, :len(s)] = torch.LongTensor(s)
-    return tokens
-
-def get_float_tensor(features_list, batch_size):
-    if features_list is None or features_list[0] is None:
-        return None
-    seq_len = max(len(x) for x in features_list)
-    feature_len = len(features_list[0][0])
-    features = torch.FloatTensor(batch_size, seq_len, feature_len).zero_()
-    for i,f in enumerate(features_list):
-        features[i,:len(f),:] = torch.FloatTensor(f)
-    return features
-
-def sort_all(batch, lens):
-    """ Sort all fields by descending order of lens, and return the original indices. """
-    unsorted_all = [lens] + [range(len(lens))] + list(batch)
-    sorted_all = [list(t) for t in zip(*sorted(zip(*unsorted_all), reverse=True))]
-    return sorted_all[2:], sorted_all[1]

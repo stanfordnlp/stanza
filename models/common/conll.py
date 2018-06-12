@@ -39,7 +39,7 @@ class CoNLLFile():
             if len(cache) > 0:
                 sents.append(cache)
         return sents
-    
+
     @property
     def file(self):
         return self._file
@@ -110,4 +110,57 @@ class CoNLLFile():
                         idx += 1
                     print("\t".join(ln), file=outfile)
                 print("", file=outfile)
+        return
+
+    def get_mwt_expansions(self):
+        expansions = []
+        src = ''
+        dst = []
+        for sent in self.sents:
+            for ln in sent:
+                if '.' in ln[0]:
+                    # skip ellipsis
+                    continue
+
+                if '-' in ln[0]:
+                    mwt_begin, mwt_end = [int(x) for x in ln[0].split('-')]
+                    src = ln[WORD_IDX]
+                    continue
+
+                if mwt_begin <= int(ln[0]) < mwt_end:
+                    dst += [ln[WORD_IDX]]
+                elif int(ln[0]) == mwt_end:
+                    dst += [ln[WORD_IDX]]
+                    expansions += [src, ' '.join(dst)]
+
+        return expansions
+
+    def get_mwt_expansion_cands(self):
+        cands = []
+        for sid, sent in enumerate(self.sents):
+            for wid, ln in enumerate(sent):
+                if ln[-1] == "MWT=Yes":
+                    cands += [(sid, wid), ln[WORD_IDX]]
+
+        return cands
+
+    def write_conll_with_mwt_expansions(self, expansions, filename):
+        idx = 0
+        with open(filename, 'w') as outfile:
+            for sid, sent in enumerate(self.sents):
+                for wid, ln in enumerate(sent):
+                    idx += 1
+                    if (sid, wid) not in expansions:
+                        print("{}\t{}".format(idx, "\t".join(ln[1:])), file=outfile)
+                    else:
+                        # print MWT expansion
+                        expanded = expansion[(sid, wid)].split(' ')
+                        endidx = idx + len(expanded) - 1
+
+                        print("{}-{}\t{}".format(idx, endidx, "\t".join(ln[1:])), file=outfile)
+                        for e_i, e_word in enumerate(expanded):
+                            print("{}\t{}{}".format(idx + e_i, e_word, "\t_" * 8), file=outfile)
+
+                print("", file=outfile)
+                idx = 0
         return

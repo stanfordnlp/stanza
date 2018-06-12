@@ -42,7 +42,7 @@ def print_sentence(sentence, f, mwt_dict=None):
         else:
             if len(tok) <= 0:
                 continue
-            f.write("{}\t{}{}\t{}{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 3))
+            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, "MWT=Yes" if p == 3 else "_"))
             i += 1
     f.write('\n')
 

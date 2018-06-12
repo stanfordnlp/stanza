@@ -105,3 +105,5 @@ else:
     import json
     with open(args.mwt_output, 'w') as f:
         json.dump(list(mwts.items()), f)
+
+    print('{} MWTs in the training set'.format(len(mwts)))
