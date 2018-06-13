@@ -76,6 +76,13 @@ def load_config(path, verbose=True):
         print("Config loaded from file {}".format(path))
     return config
 
+def print_config(config):
+    info = "Running with the following configs:\n"
+    for k,v in config.items():
+        info += "\t{} : {}\n".format(k, str(v))
+    print("\n" + info + "\n")
+    return
+
 def normalize_text(text):
     return unicodedata.normalize('NFD', text)
 

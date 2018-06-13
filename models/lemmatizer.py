@@ -100,6 +100,7 @@ def train(args):
     param_manager = param.ParamManager('params/lemma', args['lang'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
+    utils.print_config(args)
     utils.save_config(args, '{}/{}_config.json'.format(args['model_dir'], args['lang']))
 
     # skip training if the language does not have training or dev data
@@ -151,6 +152,11 @@ def train(args):
             for i, batch in enumerate(dev_batch):
                 preds = trainer.predict(batch, args['beam_size'])
                 dev_preds += preds
+            
+            # try ensembling with dict if necessary
+            if args.get('ensemble_dict', False):
+                print("[Ensembling dict with seq2seq model...]")
+                dev_preds = dict_trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
             dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             
@@ -176,16 +182,7 @@ def train(args):
         
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
-
-        # try ensembling with dict if necessary
-        if args.get('ensemble_dict', False):
-            print("[Ensembling dict with seq2seq model...]")
-            dev_preds = dict_trainer.ensemble(dev_batch.conll.get(['word', 'upos']), best_dev_preds)
-            dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
-            _, _, dev_score = scorer.score(system_pred_file, gold_file)
-            print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
-            best_f = max(best_f, dev_score)
-
+        
         param_manager.update(args, best_f)
 
 def evaluate(args):
@@ -227,6 +224,7 @@ def evaluate(args):
             preds += trainer.predict(b, args['beam_size'])
         
         if loaded_args.get('ensemble_dict', False):
+            print("[Ensembling dict with seq2seq lemmatizer...]")
             preds = dict_trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
     
     # write to file and score
