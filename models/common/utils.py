@@ -31,7 +31,7 @@ def get_optimizer(name, parameters, lr):
     elif name == 'adagrad':
         return torch.optim.Adagrad(parameters, lr=lr)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, lr=2e-3, betas=(.9, .9)) # use default lr
+        return torch.optim.Adam(parameters) # use default lr
     elif name == 'adamax':
         return torch.optim.Adamax(parameters) # use default lr
     else:
