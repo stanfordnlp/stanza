@@ -10,5 +10,8 @@
     "num_epoch": 30,
     "max_grad_norm": 5,
     "decay_epoch": 30,
-    "beam_size": 1
+    "beam_size": 1,
+    "ensemble_dict": false,
+    "ensemble_early_stop": false,
+    "best_dev_score": 0
 }

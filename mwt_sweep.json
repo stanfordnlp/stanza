@@ -10,5 +10,7 @@
     "num_epoch": [10, 20, 30, 40, 50],
     "max_grad_norm": [1, 5],
     "decay_epoch": [5, 10, 15, 20],
-    "beam_size": [1, 2, 4, 8]
+    "beam_size": [1, 2, 4, 8],
+    "ensemble_dict": [false, true],
+    "ensemble_early_stop": [false, true]
 }

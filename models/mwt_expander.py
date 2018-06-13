@@ -31,6 +31,8 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
+    parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
+    parser.add_argument('--ensemble_early_stop', action='store_true', help='Early stopping based on ensemble performance.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based MWT expander.')
 
     parser.add_argument('--hidden_dim', type=int, default=100)
@@ -91,7 +93,7 @@ def train(args):
 
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])
-    args['save_name'] = model_file
+    dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
     system_pred_file = args['data_dir'] + '/' + args['output_file']
@@ -108,25 +110,26 @@ def train(args):
         print("Skip training because no data available...")
         exit()
 
-    # decide trainer type and start training
-    if args['dict_only']:
-        # train a dictionary-based MWT expander
-        trainer = DictTrainer(args)
-        print("Training dictionary-based MWT expander...")
-        trainer.train(train_batch.conll.get_mwt_expansions())
-        print("Evaluating on dev set...")
-        dev_preds = trainer.predict(dev_batch.conll.get_mwt_expansion_cands())
-        dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
-        _, _, dev_f = scorer.score(system_pred_file, gold_file)
-        print("Dev F1 = {:.2f}".format(dev_f * 100))
-        trainer.save(args['save_name'])
-    else:
+    # train a dictionary-based MWT expander
+    dict_trainer = DictTrainer(args)
+    print("Training dictionary-based MWT expander...")
+    dict_trainer.train(train_batch.conll.get_mwt_expansions())
+    print("Evaluating on dev set...")
+    dev_preds = dict_trainer.predict(dev_batch.conll.get_mwt_expansion_cands())
+    dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+    _, _, dev_f = scorer.score(system_pred_file, gold_file)
+    print("Dev F1 = {:.2f}".format(dev_f * 100))
+    dict_trainer.save(dict_file)
+
+    if not args.get('dict_only', False):
+        print("Training seq2seq-based MWT expander...")
         # train a seq2seq model
         trainer = Trainer(args, vocab)
 
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
+        best_dev_preds = []
         current_lr = args['lr']
         global_start_time = time.time()
         format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
@@ -150,6 +153,9 @@ def train(args):
             for i, batch in enumerate(dev_batch):
                 preds = trainer.predict(batch)
                 dev_preds += preds
+            if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
+                print("[Ensembling dict with seq2seq model...]")
+                dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
             dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -158,8 +164,9 @@ def train(args):
 
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
-                trainer.save(args['save_name'])
+                trainer.save(model_file)
                 print("new best model saved.")
+                best_dev_preds = dev_preds
 
             # lr schedule
             if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1]:
@@ -173,6 +180,15 @@ def train(args):
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+
+        # try ensembling with dict if necessary
+        if args.get('ensemble_dict', False):
+            print("[Ensembling dict with seq2seq model...]")
+            dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
+            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+            _, _, dev_score = scorer.score(system_pred_file, gold_file)
+            print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
+            best_f = max(best_f, dev_score)
 
         param_manager.update(args, best_f)
 
@@ -195,13 +211,16 @@ def evaluate(args):
     # file paths
     system_pred_file = args['data_dir'] + '/' + args['output_file']
     gold_file = args['gold_file']
-    model_file = loaded_args['save_name']
+    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
+            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])
+    dict_file = model_file.replace('.pt', '.dict')
 
+    dict_trainer = DictTrainer(loaded_args)
+    dict_trainer.load(model_file)
+    dict_preds = trainer.predict(batch.conll.get_mwt_expansion_cands())
     # decide trainer type and run eval
     if loaded_args['dict_only']:
-        trainer = DictTrainer(loaded_args)
-        trainer.load(model_file)
-        preds = trainer.predict(batch.conll.get_mwt_expansion_cands())
+        preds = dict_preds
     else:
         trainer = Trainer(loaded_args, vocab)
         trainer.load(model_file)
@@ -209,6 +228,9 @@ def evaluate(args):
         preds = []
         for i, b in enumerate(batch):
             preds += trainer.predict(b)
+
+        if loaded_args.get('ensemble_dict', False):
+            preds = dict_trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
 
     # write to file and score
     batch.conll.write_conll_with_mwt_expansions(preds, system_pred_file)

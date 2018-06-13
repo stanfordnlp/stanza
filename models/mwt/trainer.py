@@ -72,11 +72,11 @@ class Trainer(BaseTrainer):
 
 class DictTrainer(BaseTrainer):
     """ A trainer wrapper for a simple dictionary-based MWT expander. """
-    def __init__(self, args, vocab):
+    def __init__(self, args, vocab=None):
         self.model = dict()
 
     def train(self, pairs):
-        """ Train a lemmatizer given training word-lemma pairs. """
+        """ Train a MWT expander given training word-expansion pairs. """
         # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1]) for p in pairs])
@@ -90,14 +90,14 @@ class DictTrainer(BaseTrainer):
         return
 
     def predict(self, words):
-        """ Predict a list of lemmas given words. """
-        lemmas = []
+        """ Predict a list of expansions given words. """
+        expansions = []
         for w in words:
             if w in self.model:
-                lemmas += [self.model[w]]
+                expansions += [self.model[w]]
             else:
-                lemmas += [w]
-        return lemmas
+                expansions += [w]
+        return expansions
 
     def save(self, filename):
         params = {
@@ -116,3 +116,14 @@ class DictTrainer(BaseTrainer):
             print("Cannot load model from {}".format(filename))
             exit()
         self.model = checkpoint['model']
+
+    def ensemble(self, cands, other_preds):
+        """ Ensemble the dict with another model predictions. """
+        expansions = []
+        assert len(cands) == len(other_preds)
+        for c, pred in zip(cands, other_preds):
+            if c in self.model:
+                expansions += [self.model[c]]
+            else:
+                expansions += [pred]
+        return expansions
