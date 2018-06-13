@@ -31,27 +31,27 @@ class Seq2SeqModel(nn.Module):
         self.top = args.get('top', 1e10)
         self.args = args
         self.emb_matrix = emb_matrix
-        
+
         print("Building an attentional Seq2Seq model...")
         print("Using a Bi-LSTM encoder")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
-        
+
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
         self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
-                bidirectional=True, batch_first=True, dropout=self.dropout)
+                bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
         self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
                 batch_first=True, attn_type=self.args['attn_type'])
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
-        
+
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
 
         self.init_weights()
-            
+
     def init_weights(self):
         # initialize embeddings
         if self.emb_matrix is not None:
@@ -81,7 +81,7 @@ class Seq2SeqModel(nn.Module):
         if self.use_cuda:
             return h0.cuda(), c0.cuda()
         return h0, c0
-    
+
     def encode(self, enc_inputs, lens):
         """ Encode source sequence. """
         self.h0, self.c0 = self.zero_state(enc_inputs)
@@ -97,7 +97,7 @@ class Seq2SeqModel(nn.Module):
         """ Decode a step, based on context encoding and source context states."""
         dec_hidden = (hn, cn)
         h_out, dec_hidden = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask)
-        
+
         h_out_reshape = h_out.contiguous().view(h_out.size(0) * h_out.size(1), -1)
         decoder_logits = self.dec2vocab(h_out_reshape)
         decoder_logits = decoder_logits.view(h_out.size(0), h_out.size(1), -1)
@@ -109,9 +109,9 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.emb_drop(self.embedding(src))
         dec_inputs = self.emb_drop(self.embedding(tgt_in))
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
-        
+
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask) 
+        log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
         return log_probs
 
     def get_log_prob(self, logits):
@@ -126,10 +126,10 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
-        
+
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        
+
         # greedy decode by step
         dec_inputs = self.embedding(self.SOS_tensor)
         dec_inputs = dec_inputs.expand(batch_size, dec_inputs.size(0), dec_inputs.size(1))
@@ -160,7 +160,7 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
-        
+
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
 
@@ -168,7 +168,7 @@ class Seq2SeqModel(nn.Module):
         with torch.no_grad():
             h_in = h_in.data.repeat(beam_size, 1, 1) # repeat data for beam search
             src_mask = src_mask.repeat(beam_size, 1)
-            # repeat decoder hidden states 
+            # repeat decoder hidden states
             hn = hn.data.repeat(beam_size, 1)
             cn = cn.data.repeat(beam_size, 1)
         beam = [Beam(beam_size, self.use_cuda) for _ in range(batch_size)]
