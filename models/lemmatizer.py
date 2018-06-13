@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
-    parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
+    parser.add_argument('--model_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
     
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -88,9 +88,9 @@ def train(args):
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
     dev_batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True)
-        
-    args['save_name'] = '{}/{}_lemmatizer.pt'.format(args['save_dir'], args['lang'])
-    args['dict_save_name'] = args['save_name'].replace('.pt', '.dict')
+
+    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    dict_file = model_file.replace('.pt', '.dict')
     
     # pred and gold path
     system_pred_file = args['data_dir'] + '/' + args['output_file']
@@ -100,7 +100,7 @@ def train(args):
     param_manager = param.ParamManager('params/lemma', args['lang'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
-    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['lang']))
+    utils.save_config(args, '{}/{}_config.json'.format(args['model_dir'], args['lang']))
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -117,7 +117,7 @@ def train(args):
     dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
-    dict_trainer.save(args['dict_save_name'])
+    dict_trainer.save(dict_file)
     
     if not args.get('dict_only', False):
         # train a seq2seq model
@@ -159,7 +159,7 @@ def train(args):
         
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
-                trainer.save(args['save_name'])
+                trainer.save(model_file)
                 print("new best model saved.")
                 best_dev_preds = dev_preds
             
@@ -190,7 +190,7 @@ def train(args):
 
 def evaluate(args):
     # load config
-    config_file = '{}/{}_config.json'.format(args['save_dir'], args['lang'])
+    config_file = '{}/{}_config.json'.format(args['model_dir'], args['lang'])
     loaded_args = utils.load_config(config_file)
     # laod data
     print("Loading data from {} with batch size {}...".format(args['data_dir'], args['batch_size']))
@@ -207,8 +207,8 @@ def evaluate(args):
     # file paths
     system_pred_file = args['data_dir'] + '/' + args['output_file']
     gold_file = args['gold_file']
-    model_file = loaded_args['save_name']
-    dict_file = loaded_args.get('dict_save_name', '')
+    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    dict_file = model_file.replace('.pt', '.dict')
 
     # load dict-based model
     dict_trainer = DictTrainer(loaded_args)

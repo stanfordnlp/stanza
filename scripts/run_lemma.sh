@@ -14,7 +14,7 @@ output_file=${short}.dev.pred.conllu
 gold_file=$UDBASE/$treebank/${short}-ud-dev.conllu
 
 if [ ! -e $DATADIR/$train_file ]; then
-    bash scripts/prep_lemma_data.sh $treebank
+    bash scripts/prep_lemma_data.sh $treebank $DATADIR
 fi
 
 echo "Running $args..."
