@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from functools import reduce
 import json
 import numpy as np
+from operator import mul
 import os
 import pickle
 from pprint import pprint
@@ -186,6 +188,7 @@ try:
         #invtemp = min(1, .001 * (1+len(progress)))
         invtemp = 1
         print('Inv Temp = {}'.format(invtemp))
+        print('Grid size = {}'.format(reduce(mul, [len(config[k]) for k in config], 1)))
         proposal = get_proposal(invtemp=invtemp)
         res = evaluate_proposal(proposal)
         progress += [[proposal, res]]

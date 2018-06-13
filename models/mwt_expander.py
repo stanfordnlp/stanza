@@ -162,8 +162,7 @@ def train(args):
                 print("new best model saved.")
 
             # lr schedule
-            if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1] and \
-                    args['optim'] in ['sgd', 'adagrad']:
+            if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1]:
                 current_lr *= args['lr_decay']
                 trainer.change_lr(current_lr)
 
