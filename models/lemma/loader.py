@@ -10,7 +10,7 @@ from models.common import conll
 from models.lemma.vocab import Vocab
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, evaluation=False):
+    def __init__(self, filename, batch_size, args, evaluation=False, conll_only=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -18,6 +18,9 @@ class DataLoader:
 
         assert filename.endswith('conllu'), "Loaded file must be conllu file."
         self.conll, data = self.load_file(filename)
+
+        if conll_only: # only load conll file
+            return
 
         # handle vocab
         vocab_file = filename.split('.')[0] + '.vocab'

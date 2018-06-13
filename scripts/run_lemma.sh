@@ -18,8 +18,13 @@ if [ ! -e $DATADIR/$train_file ]; then
 fi
 
 echo "Running $args..."
-CUDA_VISIBLE_DEVICES=$gpu python -m models.lemmatizer --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
-CUDA_VISIBLE_DEVICES=$gpu python -m models.lemmatizer --data_dir $DATADIR --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $short --mode predict
+if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
+    python -m models.identity_lemmatizer --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
+        --output_file $output_file --gold_file $gold_file --lang $short
+else
+    CUDA_VISIBLE_DEVICES=$gpu python -m models.lemmatizer --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
+        --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
+    CUDA_VISIBLE_DEVICES=$gpu python -m models.lemmatizer --data_dir $DATADIR --eval_file $eval_file \
+        --output_file $output_file --gold_file $gold_file --lang $short --mode predict
+fi
 #python utils/conll18_ud_eval.py -v $gold_file $DATADIR/$output_file | grep "Lemmas" | awk '{print $7}'
