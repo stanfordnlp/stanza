@@ -124,6 +124,8 @@ class DictTrainer(BaseTrainer):
         for c, pred in zip(cands, other_preds):
             if c in self.model:
                 expansions += [self.model[c]]
+            elif c.lower() in self.model:
+                expansions += [self.model[c.lower()]]
             else:
                 expansions += [pred]
         return expansions
