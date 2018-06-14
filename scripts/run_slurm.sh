@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=jag --qos=normal
+#SBATCH --partition=jag-hi --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=20480

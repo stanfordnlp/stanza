@@ -21,7 +21,7 @@ echo "Running $args..."
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --data_dir $DATADIR --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $short --mode predict
+    --output_file $output_file --gold_file $gold_file --lang $short --mode predict $args
 #python utils/conll18_ud_eval.py -v $gold_file $DATADIR/$output_file | grep "Lemmas" | awk '{print $7}'
 results=`python utils/conll18_ud_eval.py -v $gold_file data/mwt/$output_file | head -5 | tail -n+5 | awk '{print $7}'`
 echo $results $args >> data/mwt/${short}.results
