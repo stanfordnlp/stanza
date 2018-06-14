@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
     
-    parser.add_argument('--hidden_dim', type=int, default=100)
+    parser.add_argument('--hidden_dim', type=int, default=200)
     parser.add_argument('--emb_dim', type=int, default=50)
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--emb_dropout', type=float, default=0.5)
@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=30)
+    parser.add_argument('--num_epoch', type=int, default=50)
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
