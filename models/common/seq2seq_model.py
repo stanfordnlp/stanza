@@ -38,6 +38,11 @@ class Seq2SeqModel(nn.Module):
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
 
+        self.use_pos = args.get('pos', False)
+        self.pos_dim = args.get('pos_dim', 0)
+        self.pos_vocab_size = args.get('pos_vocab_size', 0)
+        self.pos_dropout = args.get('pos_dropout', 0)
+
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
@@ -46,6 +51,11 @@ class Seq2SeqModel(nn.Module):
         self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
                 batch_first=True, attn_type=self.args['attn_type'])
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
+        if self.use_pos and self.pos_dim > 0:
+            print("Using POS in encoder")
+            self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
+            self.pos_drop = nn.Dropout(self.pos_dropout)
+            self.enc2dec = nn.Linear(self.hidden_dim + self.pos_dim, self.dec_hidden_dim)
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -54,6 +64,7 @@ class Seq2SeqModel(nn.Module):
 
     def init_weights(self):
         # initialize embeddings
+        init_range = constant.EMB_INIT_RANGE
         if self.emb_matrix is not None:
             if isinstance(self.emb_matrix, np.ndarray):
                 self.emb_matrix = torch.from_numpy(self.emb_matrix)
@@ -61,7 +72,6 @@ class Seq2SeqModel(nn.Module):
                     "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
             self.embedding.weight.data.copy_(self.emb_matrix)
         else:
-            init_range = constant.EMB_INIT_RANGE
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
@@ -72,6 +82,9 @@ class Seq2SeqModel(nn.Module):
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
             print("Finetune all embeddings.")
+        # initialize pos embeddings
+        if self.use_pos:
+            self.pos_embedding.weight.data.uniform_(-init_range, init_range)
         #self.dec2vocab.bias.data.fill_(0.0)
 
     def zero_state(self, inputs):
@@ -104,13 +117,19 @@ class Seq2SeqModel(nn.Module):
         log_probs = self.get_log_prob(decoder_logits)
         return log_probs, dec_hidden
 
-    def forward(self, src, src_mask, tgt_in):
+    def forward(self, src, src_mask, tgt_in, pos=None):
         # prepare for encoder/decoder
         enc_inputs = self.emb_drop(self.embedding(src))
         dec_inputs = self.emb_drop(self.embedding(tgt_in))
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
 
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+        # add pos-aware transformation to hn
+        if self.use_pos:
+            assert pos is not None
+            pos_inputs = self.pos_drop(self.pos_embedding(pos))
+            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
+
         log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
         return log_probs
 
@@ -121,7 +140,7 @@ class Seq2SeqModel(nn.Module):
             return log_probs
         return log_probs.view(logits.size(0), logits.size(1), logits.size(2))
 
-    def predict_greedy(self, src, src_mask, beam_size=1):
+    def predict_greedy(self, src, src_mask, pos=None, beam_size=1):
         """ Predict with greedy decoding. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
@@ -129,6 +148,11 @@ class Seq2SeqModel(nn.Module):
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+        # add pos-aware transformation to hn
+        if self.use_pos:
+            assert pos is not None
+            pos_inputs = self.pos_embedding(pos)
+            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
 
         # greedy decode by step
         dec_inputs = self.embedding(self.SOS_tensor)
@@ -155,7 +179,7 @@ class Seq2SeqModel(nn.Module):
                         output_seqs[i].append(token)
         return output_seqs
 
-    def predict(self, src, src_mask, beam_size=5):
+    def predict(self, src, src_mask, pos=None, beam_size=5):
         """ Predict with beam search. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
@@ -163,6 +187,11 @@ class Seq2SeqModel(nn.Module):
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+        # add pos-aware transformation to hn
+        if self.use_pos:
+            assert pos is not None
+            pos_inputs = self.pos_embedding(pos)
+            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
 
         # (2) set up beam
         with torch.no_grad():

@@ -44,7 +44,10 @@ def parse_args():
     
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('-e2d','--enc2dec', default='no', choices=['no', 'linear', 'nonlinear', 'zero'], help='Use an encoder to decoder transformation layer')
-    
+    parser.add_argument('--pos', action='store_true', help='Use POS in lemmatization.')
+    parser.add_argument('--pos_dim', type=int, default=50)
+    parser.add_argument('--pos_dropout', type=float, default=0.5)
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
@@ -87,6 +90,7 @@ def train(args):
     train_batch = DataLoader('{}/{}'.format(args['data_dir'], args['train_file']), args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
+    args['pos_vocab_size'] = train_batch.pos_vocab.size
     dev_batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True)
 
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])

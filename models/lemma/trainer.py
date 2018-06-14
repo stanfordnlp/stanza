@@ -17,10 +17,10 @@ from models.common import utils, loss
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
     if args['cuda']:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:4]]
+        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:5]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:4]]
-    orig_idx = batch[4]
+        inputs = [Variable(b) if b is not None else None for b in batch[:5]]
+    orig_idx = batch[5]
     return inputs, orig_idx
 
 class Trainer(object):
@@ -38,14 +38,14 @@ class Trainer(object):
 
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt_in, tgt_out = inputs
+        src, src_mask, tgt_in, tgt_out, pos = inputs
         
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs = self.model(src, src_mask, tgt_in)
+        log_probs = self.model(src, src_mask, tgt_in, pos)
         loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
         loss_val = loss.data.item()
         if eval:
@@ -58,11 +58,11 @@ class Trainer(object):
 
     def predict(self, batch, beam_size=1, unsort=True):
         inputs, orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt, tgt_mask = inputs
+        src, src_mask, tgt, tgt_mask, pos = inputs
         
         self.model.eval()
         batch_size = src.size(0)
-        preds = self.model.predict(src, src_mask, beam_size)
+        preds = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
