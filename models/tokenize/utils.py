@@ -138,9 +138,15 @@ def eval_model(env):
 def train(env):
     args = env.args
     trainer = env.trainer
-    N = len(env.data_generator)
     if args['cuda']:
         trainer.model.cuda()
+
+    if args['load_name'] is not None:
+        load_name = "{}/{}".format(args['save_dir'], args['load_name'])
+        trainer.load(load_name)
+        trainer.change_lr(args['lr0'])
+
+    N = len(env.data_generator)
     steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
     lr = args['lr0']
 
