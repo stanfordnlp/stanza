@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--aux_clf', type=float, default=0.0, help="Strength for auxiliary classifiers; default 0 (don't use auxiliary classifiers)")
     parser.add_argument('--merge_aux_clf', action='store_true', help="Merge prediction from auxiliary classifiers with final classifier output")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
+    parser.add_argument('--hier_conv_res', action='store_true', help="Two-layer hierarchical convolutional residual layer for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")

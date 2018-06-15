@@ -94,6 +94,9 @@ class RNNTokenizer(nn.Module):
             for size in self.conv_sizes:
                 self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2))
 
+            if self.args.get('hier_conv_res', False):
+                self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)
+
         self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
 
         if args['hierarchical']:
@@ -113,8 +116,17 @@ class RNNTokenizer(nn.Module):
 
         if self.args['conv_res'] is not None:
             conv_input = emb.transpose(1, 2).contiguous()
-            for l in self.conv_res:
-                inp = inp + l(conv_input).transpose(1, 2).contiguous()
+            if not self.args.get('hier_conv_res', False):
+                for l in self.conv_res:
+                    inp = inp + l(conv_input).transpose(1, 2).contiguous()
+            else:
+                hid = []
+                for l in self.conv_res:
+                    hid += [l(conv_input)]
+                hid = torch.cat(hid, 1)
+                hid = F.relu(hid)
+                hid = self.dropout(hid)
+                inp = inp + self.conv_res2(hid).transpose(1, 2).contiguous()
 
         inp = self.dropout(inp)
 
