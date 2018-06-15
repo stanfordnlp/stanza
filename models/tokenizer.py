@@ -65,7 +65,6 @@ if __name__ == '__main__':
     param_manager = param.ParamManager('params/tokenize', args['shorthand'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
-    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
 
     env = Env(args)
     args['vocab_size'] = len(env.vocab)
