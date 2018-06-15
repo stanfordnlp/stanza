@@ -2,7 +2,7 @@ from copy import copy
 import json
 import numpy as np
 
-from models.common.utils import ud_scores, harmonic_mean, load_config
+from models.common.utils import ud_scores, harmonic_mean, load_config, save_config
 
 from .data import TokenizerDataProcessor, TokenizerDataGenerator
 from .trainer import TokenizerTrainer
@@ -137,7 +137,7 @@ def eval_model(env):
 
 def train(env):
     args = env.args
-    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
+    save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
     trainer = TokenizerTrainer(args)
     if args['cuda']:
         trainer.model.cuda()
