@@ -67,7 +67,7 @@ class DataLoader:
             src = [constant.SOS] + src + [constant.EOS]
             src = map_to_ids(src, vocab.unit2id)
             pos = d[1]
-            pos = pos_vocab.unit2id[pos] if pos in pos_vocab.unit2id else constant.UNK
+            pos = pos_vocab.unit2id[pos] if pos in pos_vocab.unit2id else constant.UNK_ID
             tgt = list(d[2])
             tgt_in = map_to_ids([constant.SOS] + tgt, vocab.unit2id)
             tgt_out = map_to_ids(tgt + [constant.EOS], vocab.unit2id)

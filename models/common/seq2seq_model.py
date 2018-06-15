@@ -121,7 +121,7 @@ class Seq2SeqModel(nn.Module):
         # prepare for encoder/decoder
         enc_inputs = self.emb_drop(self.embedding(src))
         dec_inputs = self.emb_drop(self.embedding(tgt_in))
-        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
 
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
         # add pos-aware transformation to hn
