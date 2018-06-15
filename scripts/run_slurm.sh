@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=jag-hi --qos=normal
+#SBATCH --partition=jag --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=20480
@@ -16,6 +16,8 @@ echo "working directory = "$SLURM_SUBMIT_DIR
 
 module=$1
 shift
+mode=$1
+shift
 tb=$1
 shift
 root=$1
@@ -29,7 +31,7 @@ export PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/bin:$PATH
 export LD_LIBRARY_PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/lib:$LD_LIBRARY_PATH
 
 cd $root
-bash scripts/run_${module}.sh $tb $CUDA_VISIBLE_DEVICES $args
+bash scripts/${mode}_${module}.sh $tb $CUDA_VISIBLE_DEVICES $args
 
 #
 echo "Done"

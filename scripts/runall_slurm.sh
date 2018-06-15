@@ -6,7 +6,7 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 tbs=`wc -l ${module}_test_treebanks`
 i=0
 for tb in `cat ${module}_test_treebanks`; do
-    sbatch --wait --job-name $module $ROOT/scripts/run_slurm.sh $module $tb $ROOT $args 2>/dev/null &
+    sbatch --wait --job-name $module $ROOT/scripts/run_slurm.sh $module run $tb $ROOT $args 2>/dev/null &
     pids[${i}]=$!
     i=$((i+1))
 done
