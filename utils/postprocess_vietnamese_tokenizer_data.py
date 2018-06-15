@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
-    parser.add_argument('char_level_pred', type=str, help="Plaintext file containing character-level predictions")
+    parser.add_argument('--char_level_pred', type=str, default=None, help="Plaintext file containing character-level predictions")
     parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
 
     args = parser.parse_args()
@@ -49,8 +49,11 @@ if __name__ == '__main__':
     with open(args.plaintext_file, 'r') as f:
         text = ''.join(f.readlines()).rstrip()
 
-    with open(args.char_level_pred, 'r') as f:
-        char_level_pred = ''.join(f.readlines())
+    if args.char_level_pred is not None:
+        with open(args.char_level_pred, 'r') as f:
+            char_level_pred = ''.join(f.readlines())
+    else:
+        char_level_pred = '0' * len(text)
 
     assert len(text) == len(char_level_pred), 'Text has {} characters but there are {} char-level labels!'.format(len(text), len(char_level_pred))
 

@@ -21,7 +21,6 @@ import models.common.seq2seq_constant as constant
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/mwt', help='Directory for all MWT data.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -85,18 +84,18 @@ def main():
 
 def train(args):
     # load data
-    print("Loading data from {} with batch size {}...".format(args['data_dir'], args['batch_size']))
-    train_batch = DataLoader('{}/{}'.format(args['data_dir'], args['train_file']), args['batch_size'], args, evaluation=False)
+    print("Loading data with batch size {}...".format(args['batch_size']))
+    train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = len(vocab)
-    dev_batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True)
+    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
 
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])
     dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
-    system_pred_file = args['data_dir'] + '/' + args['output_file']
+    system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
     # activate param manager and save config
@@ -197,8 +196,8 @@ def evaluate(args):
     config_file = '{}/{}_config.json'.format(args['save_dir'], args['lang'])
     loaded_args = utils.load_config(config_file)
     # laod data
-    print("Loading data from {} with batch size {}...".format(args['data_dir'], args['batch_size']))
-    batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], loaded_args, evaluation=True)
+    print("Loading data with batch size {}...".format(args['batch_size']))
+    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
     vocab = batch.vocab
 
     # skip eval if dev data does not exist
@@ -209,7 +208,7 @@ def evaluate(args):
         exit()
 
     # file paths
-    system_pred_file = args['data_dir'] + '/' + args['output_file']
+    system_pred_file = args['output_file']
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])

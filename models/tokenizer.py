@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
-    parser.add_argument('--save_dir', type=str, default='saved_models', help="Directory to save models in")
+    parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
