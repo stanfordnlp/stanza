@@ -9,6 +9,7 @@ for tb in `cat ${module}_test_treebanks`; do
     sbatch --wait --job-name $module $ROOT/scripts/run_slurm.sh $module run $tb $ROOT $args 2>/dev/null &
     pids[${i}]=$!
     i=$((i+1))
+    sleep .1
 done
 
 # wait for all pids
