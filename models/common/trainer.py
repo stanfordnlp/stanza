@@ -1,4 +1,4 @@
-import pickle
+import torch
 
 class Trainer:
     def change_lr(self, new_lr):
@@ -10,12 +10,10 @@ class Trainer:
                    'model': self.model.state_dict(),
                    'optimizer': self.optimizer.state_dict()
                    }
-        with open(filename, 'wb') as f:
-            pickle.dump(savedict, f)
+        torch.save(savedict, filename)
 
     def load(self, filename):
-        with open(filename, 'rb') as f:
-            savedict = pickle.load(f)
+        savedict = torch.load(filename, lambda storage, loc: storage)
 
         self.model.load_state_dict(savedict['model'])
         if self.args['mode'] == 'train':
