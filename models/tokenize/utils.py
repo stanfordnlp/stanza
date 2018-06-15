@@ -139,6 +139,7 @@ def train(env):
     args = env.args
     save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
     trainer = TokenizerTrainer(args)
+    env.trainer = trainer
     if args['cuda']:
         trainer.model.cuda()
 
