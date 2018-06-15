@@ -1,6 +1,5 @@
 from models.common import param, utils
 
-from models.tokenize.trainer import TokenizerTrainer
 from models.tokenize.utils import train, evaluate, load_mwt_dict, Env
 
 if __name__ == '__main__':
@@ -71,9 +70,7 @@ if __name__ == '__main__':
     env = Env(args)
     args['vocab_size'] = len(env.vocab)
 
-    env.trainer = TokenizerTrainer(args)
     env.param_manager = param_manager
-    trainer = env.trainer
 
     env.mwt_dict = load_mwt_dict(args['mwt_json_file'])
 

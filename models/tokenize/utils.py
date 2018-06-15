@@ -137,7 +137,7 @@ def eval_model(env):
 
 def train(env):
     args = env.args
-    trainer = env.trainer
+    trainer = TokenizerTrainer(args)
     if args['cuda']:
         trainer.model.cuda()
 
@@ -188,7 +188,7 @@ def evaluate(env):
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda']:
             args[k] = loaded_args[k]
-    trainer = env.trainer
+    trainer = TokenizerTrainer(args)
     trainer.load(args['save_name'])
     if args['cuda']:
         trainer.model.cuda()
