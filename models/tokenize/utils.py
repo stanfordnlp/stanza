@@ -184,7 +184,7 @@ def train(env):
 def evaluate(env):
     args = env.args
     config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
-    loaded_args = utils.load_config(config_file)
+    loaded_args = load_config(config_file)
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda']:
             args[k] = loaded_args[k]
