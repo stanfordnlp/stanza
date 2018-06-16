@@ -64,12 +64,15 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
                 idx = 0
                 pred = []
                 while idx < N:
-                    print(idx)
                     en = min(N, idx + eval_limit)
                     batch1 = batch[0][:, idx:en], batch[1][:, idx:en], batch[2][:, idx:en], [x[idx:en] for x in batch[3]]
                     pred1 = np.argmax(trainer.predict(batch1)[0], axis=1)
 
-                    advance = np.max(np.where(pred1 == 2)) if idx < N - eval_limit else N - idx
+                    sentbreaks = np.where(pred1 == 2)[0]
+                    if len(sentbreaks) <= 0 or idx >= N - eval_limit:
+                        advance = en - idx
+                    else:
+                        advance = np.max(sentbreaks) + 1
 
                     pred += [pred1[:advance]]
 
