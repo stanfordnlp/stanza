@@ -5,6 +5,8 @@ short=$4
 shift;shift;shift;shift;
 args=$@
 
+SAVE_DIR=/media/data/final_saved_models/tokenize
+DATA_DIR=/media/data/final_data/tokenize
 PYTHON=$HOME/anaconda3/bin/python
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
@@ -18,4 +20,4 @@ else
     eval_file="--txt_file $rawfile"
 fi
 
-$PYTHON -m models.tokenizer --mode predict $eval_file --lang $lang --conll_file $outputfile --vocab_file data/tokenize/${short}_vocab.pkl --shorthand $short --no_cuda $args
+$PYTHON -m models.tokenizer --mode predict $eval_file --lang $lang --conll_file $outputfile --vocab_file ${DATA_DIR}/${short}_vocab.pkl --shorthand $short --no_cuda --save_dir ${SAVE_DIR} $args
