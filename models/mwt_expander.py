@@ -216,7 +216,7 @@ def evaluate(args):
 
     dict_trainer = DictTrainer(loaded_args)
     dict_trainer.load(model_file)
-    dict_preds = trainer.predict(batch.conll.get_mwt_expansion_cands())
+    dict_preds = dict_trainer.predict(batch.conll.get_mwt_expansion_cands())
     # decide trainer type and run eval
     if loaded_args['dict_only']:
         preds = dict_preds

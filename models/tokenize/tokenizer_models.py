@@ -91,8 +91,8 @@ class RNNTokenizer(nn.Module):
             self.conv_res = nn.ModuleList()
             self.conv_sizes = [int(x) for x in self.args['conv_res'].split(',')]
 
-            for size in self.conv_sizes:
-                self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2))
+            for si, size in enumerate(self.conv_sizes):
+                self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0)))
 
             if self.args.get('hier_conv_res', False):
                 self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)

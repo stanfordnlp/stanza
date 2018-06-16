@@ -46,16 +46,37 @@ def print_sentence(sentence, f, mwt_dict=None):
             i += 1
     f.write('\n')
 
-def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict):
+def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
     offset = 0
     oov_count = 0
 
     with open(output_filename, 'w') as f:
+        eval_limit = max(2000, max_seqlen)
         while True:
             batch = data_generator.next(vocab, feat_funcs=trainer.feat_funcs, eval_offset=offset)
             if batch is None:
                 break
-            pred = np.argmax(trainer.predict(batch)[0], axis=1)
+
+            N = len(batch[3][0])
+            if N <= eval_limit:
+                pred = np.argmax(trainer.predict(batch)[0], axis=1)
+            else:
+                idx = 0
+                pred = []
+                while idx < N:
+                    print(idx)
+                    en = min(N, idx + eval_limit)
+                    batch1 = batch[0][:, idx:en], batch[1][:, idx:en], batch[2][:, idx:en], [x[idx:en] for x in batch[3]]
+                    pred1 = np.argmax(trainer.predict(batch1)[0], axis=1)
+
+                    advance = np.max(np.where(pred1 == 2)) if idx < N - eval_limit else N - idx
+
+                    pred += [pred1[:advance]]
+
+                    idx += advance
+
+                pred = np.concatenate(pred, 0)
+
 
             current_tok = ''
             current_sent = []
@@ -130,7 +151,7 @@ def eval_model(env):
     trainer = env.trainer
     args = env.args
 
-    oov_count, N = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict)
+    oov_count, N = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
     scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
 
     return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1])
@@ -195,6 +216,6 @@ def evaluate(env):
     if args['cuda']:
         trainer.model.cuda()
 
-    oov_count, N = output_predictions(args['conll_file'], trainer, env.data_generator, env.vocab, env.mwt_dict)
+    oov_count, N = output_predictions(args['conll_file'], trainer, env.data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
