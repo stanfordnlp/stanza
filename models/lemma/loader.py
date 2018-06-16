@@ -52,7 +52,7 @@ class DataLoader:
             pos_vocab = Vocab(pos_vocab_file, load=True)
         else:
             assert self.eval == False, "Vocab file must exist for evaluation"
-            chars = "".join([d[0] for d in data])
+            chars = "".join([d[0] + d[2] for d in data])
             char_counter = Counter(chars)
             vocab = Vocab(vocab_file, load=False, unit_counter=char_counter)
             poss = [d[1] for d in data]
