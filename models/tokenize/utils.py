@@ -188,7 +188,7 @@ def evaluate(env):
     config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
     loaded_args = load_config(config_file)
     for k in loaded_args:
-        if not k.endswith('_file') and k not in ['cuda']:
+        if not k.endswith('_file') and k not in ['cuda', 'mode']:
             args[k] = loaded_args[k]
     trainer = TokenizerTrainer(args)
     trainer.load(args['save_name'])
