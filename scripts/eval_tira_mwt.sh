@@ -6,12 +6,12 @@ shift;shift;shift;shift;
 args=$@
 
 if [[ `hostname` = *"stanford.edu" ]]; then
-    SAVE_DIR=final_saved_models/tokenize
-    DATA_DIR=data/tokenize
+    SAVE_DIR=final_saved_models/mwt
+    DATA_DIR=data/mwt
     PYTHON=python
 else
-    SAVE_DIR=/media/data/final_saved_models/tokenize
-    DATA_DIR=/media/data/final_data/tokenize
+    SAVE_DIR=/media/data/final_saved_models/mwt
+    DATA_DIR=/media/data/final_data/mwt
     PYTHON=$HOME/anaconda3/bin/python
 fi
 
