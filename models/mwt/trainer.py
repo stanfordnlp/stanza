@@ -111,7 +111,7 @@ class DictTrainer(BaseTrainer):
 
     def load(self, filename):
         try:
-            checkpoint = torch.load(filename)
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
             exit()

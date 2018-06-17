@@ -19,9 +19,9 @@ fi
 
 echo "Running $args..."
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --train_file $train_file --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
+    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode train $args
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $short --mode predict $args
+    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict $args
 results=`python utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
 echo $results $args >> ${DATADIR}/${short}.results
 echo $short $results $args
