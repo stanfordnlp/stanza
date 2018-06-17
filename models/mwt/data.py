@@ -20,7 +20,7 @@ class DataLoader:
         self.conll, data = self.load_file(filename, evaluation=self.eval)
 
         # handle vocab
-        vocab_file = filename.split('.')[0] + '.vocab'
+        vocab_file = "{}/{}.vocab".format(args['data_dir'], args['shorthand'])
         self.vocab = self.init_vocab(vocab_file, data)
 
 	# filter and sample data
@@ -44,10 +44,10 @@ class DataLoader:
 
     def init_vocab(self, vocab_file, data):
         if os.path.exists(vocab_file):
-            vocab = Vocab(vocab_file, data, self.args['lang'])
+            vocab = Vocab(vocab_file, data, self.args['shorthand'])
         else:
             assert self.eval == False # for eval vocab file must exist
-            vocab = Vocab(vocab_file, data, self.args['lang'])
+            vocab = Vocab(vocab_file, data, self.args['shorthand'])
         return vocab
 
     def preprocess(self, data, vocab, args):

@@ -21,6 +21,7 @@ import models.common.seq2seq_constant as constant
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', type=str, default='data/mwt', help='Root dir for saving models.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -28,6 +29,7 @@ def parse_args():
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
+    parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
@@ -91,7 +93,7 @@ def train(args):
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
 
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])
+            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
     dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
@@ -99,10 +101,10 @@ def train(args):
     gold_file = args['gold_file']
 
     # activate param manager and save config
-    param_manager = param.ParamManager('params/mwt', args['lang'])
+    param_manager = param.ParamManager('params/mwt', args['shorthand'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
-    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['lang']))
+    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -193,50 +195,53 @@ def train(args):
 
 def evaluate(args):
     # load config
-    config_file = '{}/{}_config.json'.format(args['save_dir'], args['lang'])
+    config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
     loaded_args = utils.load_config(config_file)
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
+    for k in args:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
+            loaded_args[k] = args[k]
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
     vocab = batch.vocab
-
-    # skip eval if dev data does not exist
-    if len(batch) == 0:
-        print("Skip evaluation because no dev data is available...")
-        print("MWT expansion score:")
-        print("{} ".format(args['lang']))
-        exit()
 
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['lang'])
-    dict_file = model_file.replace('.pt', '.dict')
+            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
 
-    dict_trainer = DictTrainer(loaded_args)
-    dict_trainer.load(model_file)
-    dict_preds = dict_trainer.predict(batch.conll.get_mwt_expansion_cands())
-    # decide trainer type and run eval
-    if loaded_args['dict_only']:
-        preds = dict_preds
+    if len(batch) > 0:
+        dict_file = model_file.replace('.pt', '.dict')
+
+        dict_trainer = DictTrainer(loaded_args)
+        dict_trainer.load(model_file)
+        dict_preds = dict_trainer.predict(batch.conll.get_mwt_expansion_cands())
+        # decide trainer type and run eval
+        if loaded_args['dict_only']:
+            preds = dict_preds
+        else:
+            trainer = Trainer(loaded_args, vocab)
+            trainer.load(model_file)
+            print("Start evaluation...")
+            preds = []
+            for i, b in enumerate(batch):
+                preds += trainer.predict(b)
+
+            if loaded_args.get('ensemble_dict', False):
+                preds = dict_trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
     else:
-        trainer = Trainer(loaded_args, vocab)
-        trainer.load(model_file)
-        print("Start evaluation...")
+        # skip eval if dev data does not exist
         preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-
-        if loaded_args.get('ensemble_dict', False):
-            preds = dict_trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
 
     # write to file and score
     batch.conll.write_conll_with_mwt_expansions(preds, system_pred_file)
-    _, _, score = scorer.score(system_pred_file, gold_file)
 
-    print("MWT expansion score:")
-    print("{} {:.2f}".format(args['lang'], score*100))
+    if gold_file is not None:
+        _, _, score = scorer.score(system_pred_file, gold_file)
+
+        print("MWT expansion score:")
+        print("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()
