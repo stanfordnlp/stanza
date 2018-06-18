@@ -23,8 +23,8 @@ class DataLoader:
             return
 
         # handle vocab
-        vocab_file = filename.split('.')[0] + '.vocab'
-        pos_vocab_file = filename.split('.')[0] + '.pos.vocab'
+        vocab_file = "{}/{}.vocab".format(args['data_dir'], args['lang'])
+        pos_vocab_file = "{}/{}.pos.vocab".format(args['data_dir'], args['lang'])
         self.vocab, self.pos_vocab = self.init_vocab(vocab_file, pos_vocab_file, data)
 
 	# filter and sample data

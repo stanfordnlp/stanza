@@ -39,7 +39,7 @@ class Trainer(object):
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt_in, tgt_out, pos = inputs
-        
+
         if eval:
             self.model.eval()
         else:
@@ -59,7 +59,7 @@ class Trainer(object):
     def predict(self, batch, beam_size=1, unsort=True):
         inputs, orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt, tgt_mask, pos = inputs
-        
+
         self.model.eval()
         batch_size = src.size(0)
         preds = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
@@ -83,10 +83,10 @@ class Trainer(object):
             print("model saved to {}".format(filename))
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
-    
+
     def load(self, filename):
         try:
-            checkpoint = torch.load(filename)
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
             exit()
@@ -143,10 +143,10 @@ class DictTrainer(object):
             print("model saved to {}".format(filename))
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
-    
+
     def load(self, filename):
         try:
-            checkpoint = torch.load(filename)
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
             exit()
