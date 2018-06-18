@@ -55,7 +55,7 @@ class Seq2SeqModel(nn.Module):
             print("Using POS in encoder")
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
-            self.enc2dec = nn.Linear(self.hidden_dim + self.pos_dim, self.dec_hidden_dim)
+            #self.enc2dec = nn.Linear(self.hidden_dim + self.pos_dim, self.dec_hidden_dim)
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -122,14 +122,14 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.emb_drop(self.embedding(src))
         dec_inputs = self.emb_drop(self.embedding(tgt_in))
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
-
-        h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        # add pos-aware transformation to hn
         if self.use_pos:
+            # append pos to the end of src sequence
             assert pos is not None
             pos_inputs = self.pos_drop(self.pos_embedding(pos))
-            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
+            enc_inputs = torch.cat([enc_inputs, pos_inputs.unsqueeze(1)], dim=1)
 
+        h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+        
         log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
         return log_probs
 
@@ -145,6 +145,10 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
+        if self.use_pos:
+            assert pos is not None
+            pos_inputs = self.pos_drop(self.pos_embedding(pos))
+            enc_inputs = torch.cat([enc_inputs, pos_inputs.unsqueeze(1)], dim=1)
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -184,15 +188,14 @@ class Seq2SeqModel(nn.Module):
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
+        if self.use_pos:
+            assert pos is not None
+            pos_inputs = self.pos_drop(self.pos_embedding(pos))
+            enc_inputs = torch.cat([enc_inputs, pos_inputs.unsqueeze(1)], dim=1)
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        # add pos-aware transformation to hn
-        if self.use_pos:
-            assert pos is not None
-            pos_inputs = self.pos_embedding(pos)
-            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
-
+        
         # (2) set up beam
         with torch.no_grad():
             h_in = h_in.data.repeat(beam_size, 1, 1) # repeat data for beam search
