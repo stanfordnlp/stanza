@@ -19,11 +19,14 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 cd $ROOT
 
 echo "Evaluating $args..."
-if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
+if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then # for vi and fro use identity lemmatizer
     python -m models.identity_lemmatizer --data_dir $DATA_DIR --eval_file $inputfile --mode predict \
         --output_file $outputfile --lang $short --model_dir $SAVE_DIR
+elif [[ "$lang" == "zh" ]]; then # for Chinese use dict only
+    python -m models.lemmatizer --data_dir $DATA_DIR --eval_file $inputfile --mode predict\
+        --output_file $outputfile --lang $short --model_dir $SAVE_DIR --dict_only --cpu
 else
-    python -m models.lemmatizer --data_dir $DATA_DIR --eval_file $inputfile \
-        --output_file $outputfile --lang $short --mode predict --model_dir $SAVE_DIR --cpu
+    python -m models.lemmatizer --data_dir $DATA_DIR --eval_file $inputfile --mode predict\
+        --output_file $outputfile --lang $short --model_dir $SAVE_DIR --cpu
 fi
 #python utils/conll18_ud_eval.py -v $gold_file $DATADIR/$output_file | grep "Lemmas" | awk '{print $7}'
