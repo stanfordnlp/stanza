@@ -9,7 +9,8 @@ lang=`echo $short | sed -e 's#_.*##g'`
 
 train_conllu=$UDBASE/$treebank/${short}-ud-train.conllu
 train_in_file=$DATADIR/${short}.train.in.conllu
-dev_conllu=$UDPIPEBASE/${short}-dev-pred-udpipe.conllu
+#dev_conllu=$UDPIPEBASE/${short}-dev-pred-udpipe.conllu
+dev_conllu=$UDBASE/$treebank/${short}-ud-dev.conllu
 dev_in_file=$DATADIR/${short}.dev.in.conllu
 # copy conllu file if exists; otherwise create empty files
 if [ -e $train_conllu ]; then
