@@ -21,7 +21,7 @@ cd $ROOT
 echo "Evaluating $args..."
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then # for vi and fro use identity lemmatizer
     python -m models.identity_lemmatizer --data_dir $DATA_DIR --eval_file $inputfile --mode predict \
-        --output_file $outputfile --lang $short --model_dir $SAVE_DIR
+        --output_file $outputfile --lang $short
 elif [[ "$lang" == "zh" ]]; then # for Chinese use dict only
     python -m models.lemmatizer --data_dir $DATA_DIR --eval_file $inputfile --mode predict\
         --output_file $outputfile --lang $short --model_dir $SAVE_DIR --dict_only --cpu

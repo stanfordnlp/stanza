@@ -14,8 +14,9 @@ else
     ROOT=$HOME/Parser-v3
 fi
 
+ROOT0="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 cd $ROOT
 
 fullname=`grep -e "^$short " /media/data/short_to_tb | awk '{print $2}'`
 
-$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Tagger run --output_dir `dirname $outputfile` --output_filename `basename $outputfile` TaggerNetwork $inputfile
+$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Tagger run TaggerNetwork $inputfile | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
