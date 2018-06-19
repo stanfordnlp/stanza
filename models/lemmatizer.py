@@ -90,18 +90,18 @@ def main():
 
 def train(args):
     # load data
-    print("[Loading data from {} with batch size {}...]".format(args['data_dir'], args['batch_size']))
-    train_batch = DataLoader('{}/{}'.format(args['data_dir'], args['train_file']), args['batch_size'], args, evaluation=False)
+    print("[Loading data with batch size {}...]".format(args['batch_size']))
+    train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
     args['pos_vocab_size'] = train_batch.pos_vocab.size
-    dev_batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True)
+    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
 
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
     dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
-    system_pred_file = args['data_dir'] + '/' + args['output_file']
+    system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
     # activate param manager and save config
@@ -202,7 +202,7 @@ def evaluate(args):
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
     # laod data
-    print("Loading data from {} with batch size {}...".format(args['data_dir'], args['batch_size']))
+    print("Loading data with batch size {}...".format(args['batch_size']))
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
     vocab = batch.vocab
 

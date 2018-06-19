@@ -8,12 +8,12 @@ args=$@
 UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18/
 DATADIR=data/lemma
 
-train_file=${short}.train.in.conllu
-eval_file=${short}.dev.in.conllu
-output_file=${short}.dev.pred.conllu
+train_file=${DATADIR}/${short}.train.in.conllu
+eval_file=${DATADIR}/${short}.dev.in.conllu
+output_file=${DATADIR}/${short}.dev.pred.conllu
 gold_file=$UDBASE/$treebank/${short}-ud-dev.conllu
 
-if [ ! -e $DATADIR/$train_file ]; then
+if [ ! -e $train_file ]; then
     bash scripts/prep_lemma_data.sh $treebank $DATADIR
 fi
 

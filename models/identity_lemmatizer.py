@@ -37,8 +37,8 @@ def main():
     if args['mode'] == 'train':
         print("[No training is required; will only generate evaluation output...]")
 
-    batch = DataLoader('{}/{}'.format(args['data_dir'], args['eval_file']), args['batch_size'], args, evaluation=True, conll_only=True)
-    system_pred_file = args['data_dir'] + '/' + args['output_file']
+    batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True, conll_only=True)
+    system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
     # use identity mapping for prediction
