@@ -144,7 +144,7 @@ class Seq2SeqModel(nn.Module):
         """ Predict with greedy decoding. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
-        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
         if self.use_pos:
             assert pos is not None
             pos_inputs = self.pos_drop(self.pos_embedding(pos))
@@ -187,7 +187,7 @@ class Seq2SeqModel(nn.Module):
         """ Predict with beam search. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
-        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1).squeeze())
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
         if self.use_pos:
             assert pos is not None
             pos_inputs = self.pos_drop(self.pos_embedding(pos))
