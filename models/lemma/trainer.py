@@ -98,6 +98,7 @@ class DictTrainer(object):
     """ A trainer wrapper for a simple dictionary-based lemmatizer. """
     def __init__(self, args):
         self.model = dict()
+        self.word_model = dict()
 
     def train(self, triples):
         """ Train a lemmatizer given training (word, pos, lemma) triples. """
@@ -109,6 +110,8 @@ class DictTrainer(object):
             w, pos, l = p
             if (w,pos) not in self.model:
                 self.model[(w,pos)] = l
+            if w not in self.word_model:
+                self.word_model[w] = l
         return
 
     def predict(self, pairs):
@@ -118,6 +121,8 @@ class DictTrainer(object):
             w, pos = p
             if (w,pos) in self.model:
                 lemmas += [self.model[(w,pos)]]
+            elif w in self.word_model:
+                lemmas += [self.word_model[w]]
             else:
                 lemmas += [w]
         return lemmas
@@ -130,6 +135,8 @@ class DictTrainer(object):
             w, pos = p
             if (w,pos) in self.model:
                 lemmas += [self.model[(w,pos)]]
+            elif w in self.word_model:
+                lemmas += [self.word_model[w]]
             else:
                 lemmas += [pred]
         return lemmas
@@ -137,6 +144,7 @@ class DictTrainer(object):
     def save(self, filename):
         params = {
                 'model': self.model,
+                'word_model': self.word_model,
                 }
         try:
             torch.save(params, filename)
@@ -151,4 +159,5 @@ class DictTrainer(object):
             print("Cannot load model from {}".format(filename))
             exit()
         self.model = checkpoint['model']
+        self.word_model = checkpoint['word_model']
 
