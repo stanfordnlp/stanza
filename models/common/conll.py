@@ -2,16 +2,28 @@
 A wrapper/loader for the official conll-u format files.
 """
 import os
+import io
 
 FIELD_NUM = 10
 
 FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
 
 class CoNLLFile():
-    def __init__(self, filename):
-        if not os.path.exists(filename):
+    def __init__(self, filename=None, input_str=None):
+        if filename is not None and not os.path.exists(filename):
             raise Exception("File not found at: " + filename)
-        self._file = filename
+        if filename is None:
+            assert input_str is not None and len(input_str) > 0
+            self._file = input_str
+            self._from_str = True
+        else:
+            self._file = filename
+            self._from_str = False
+
+    def load_all(self):
+        """ Trigger all lazy initializations so that the file is loaded."""
+        _ = self.sents
+        _ = self.num_words
 
     def load_conll(self):
         """
@@ -19,24 +31,29 @@ class CoNLLFile():
         and each line is a list of conllu fields.
         """
         sents, cache = [], []
-        with open(self.file) as infile:
-            while True:
-                line = infile.readline()
-                if len(line) == 0:
-                    break
-                line = line.strip()
-                if len(line) == 0:
-                    if len(cache) > 0:
-                        sents.append(cache)
-                        cache = []
-                else:
-                    if line.startswith('#'): # skip comment line
-                        continue
-                    array = line.split('\t')
-                    assert len(array) == FIELD_NUM
-                    cache += [array]
-            if len(cache) > 0:
-                sents.append(cache)
+        if self._from_str:
+            infile = io.StringIO(self.file)
+        else:
+            infile = open(self.file)
+        while True:
+            line = infile.readline()
+            if len(line) == 0:
+                break
+            line = line.strip()
+            if len(line) == 0:
+                if len(cache) > 0:
+                    sents.append(cache)
+                    cache = []
+            else:
+                if line.startswith('#'): # skip comment line
+                    continue
+                array = line.split('\t')
+                assert len(array) == FIELD_NUM
+                cache += [array]
+        if len(cache) > 0:
+            sents.append(cache)
+        if not self._from_str:
+            infile.close()
         return sents
 
     @property
@@ -82,6 +99,37 @@ class CoNLLFile():
                 else:
                     results += [[ln[fid] for fid in field_idxs]]
         return results
+
+    def set(self, fields, contents):
+        """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be expected; otherwise a list of list of contents will be expected.
+        """
+        assert isinstance(fields, list), "Must provide field names as a list."
+        assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
+        assert len(fields) >= 1, "Must have at least one field."
+        assert self.num_words == len(contents), "Contents must have the same number as the original file."
+        field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
+        cidx = 0
+        for sent in self.sents:
+            for ln in sent:
+                if '-' in ln[0]:
+                    continue
+                if len(field_idxs) == 1:
+                    ln[field_idxs[0]] = contents[cidx]
+                else:
+                    for fid, ct in zip(field_idxs, contents[cidx]):
+                        ln[fid] = ct
+                cidx += 1
+        return
+
+    def write_conll(self, filename):
+        """ Write current conll contents to file.
+        """
+        with open(filename, 'w') as outfile:
+            for sent in self.sents:
+                for ln in sent:
+                    print("\t".join(ln), file=outfile)
+                print("", file=outfile)
+        return
 
     def write_conll_with_lemmas(self, lemmas, filename):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
