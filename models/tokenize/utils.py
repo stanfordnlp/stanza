@@ -178,6 +178,7 @@ def train(env):
 
     prev_dev_score = -1
     best_dev_score = -1
+    best_dev_step = -1
 
     for step in range(1, steps+1):
         batch = env.data_generator.next(env.vocab, feat_funcs=trainer.feat_funcs, unit_dropout=args['unit_dropout'])
@@ -202,8 +203,11 @@ def train(env):
             if dev_score > best_dev_score:
                 reports += ['New best dev score!']
                 best_dev_score = dev_score
+                best_dev_step = step
                 trainer.save(args['save_name'])
             print('\t'.join(reports))
+
+    print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
 
     env.param_manager.update(args, best_dev_score)
 

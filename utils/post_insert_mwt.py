@@ -13,13 +13,13 @@ for line in sys.stdin:
 
 input_lines = []
 with open(input_file) as f:
-    i = 0
     for line in f:
         line = line.strip()
 
         input_lines += [line]
 
 with open(output_file, 'w') as outf:
+    i = 0
     for line in input_lines:
         if len(line) == 0:
             print(lines[i], file=outf)

@@ -6,8 +6,8 @@ shift;shift;shift;shift;
 args=$@
 
 if [[ `hostname` = *"stanford.edu" ]]; then
-    SAVE_DIR=final_saved_models/lemma
-    DATA_DIR=data/lemma
+    SAVE_DIR=/u/scr/zyh/develop/UD_from_scratch2/saved_models/lemma_pos_dict
+    DATA_DIR=/u/scr/zyh/develop/UD_from_scratch2/data/lemma
     PYTHON=python
 else
     SAVE_DIR=/media/data/final_saved_models/lemma

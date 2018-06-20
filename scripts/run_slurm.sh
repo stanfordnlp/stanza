@@ -2,7 +2,7 @@
 #SBATCH --partition=jag-urgent --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --mem=20480
+#SBATCH --mem=5120
 #SBATCH --gres=gpu:1
 #SBATCH --output=/sailhome/pengqi/logs/slurm-%j.out
 #SBATCH --mail-user=pengqi@cs.stanford.edu
