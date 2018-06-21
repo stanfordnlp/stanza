@@ -53,7 +53,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
     with open(output_filename, 'w') as f:
         eval_limit = max(2000, max_seqlen)
         while True:
-            batch = data_generator.next(vocab, feat_funcs=trainer.feat_funcs, eval_offset=offset)
+            batch = data_generator.next(eval_offset=offset)
             if batch is None:
                 break
 
@@ -132,7 +132,7 @@ class Env:
     @property
     def data_generator(self):
         if not hasattr(self, '_data_generator'):
-            self._data_generator = TokenizerDataGenerator(self.args, self.data_processor.data)
+            self._data_generator = TokenizerDataGenerator(self.args, self.vocab, self.data_processor.data)
         return self._data_generator
 
     @property
@@ -140,7 +140,7 @@ class Env:
         if not hasattr(self, '_dev_data_generator'):
             args1 = copy(self.args)
             args1['mode'] = 'predict'
-            self._dev_data_generator = TokenizerDataGenerator(args1, self.dev_data_processor.data)
+            self._dev_data_generator = TokenizerDataGenerator(args1, self.vocab, self.dev_data_processor.data)
         return self._dev_data_generator
 
     @property
@@ -181,7 +181,7 @@ def train(env):
     best_dev_step = -1
 
     for step in range(1, steps+1):
-        batch = env.data_generator.next(env.vocab, feat_funcs=trainer.feat_funcs, unit_dropout=args['unit_dropout'])
+        batch = env.data_generator.next(unit_dropout=args['unit_dropout'])
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:

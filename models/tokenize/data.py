@@ -25,8 +25,9 @@ class TokenizerDataProcessor:
             self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
 
 class TokenizerDataGenerator:
-    def __init__(self, args, data):
+    def __init__(self, args, vocab, data):
         self.args = args
+        self.vocab = vocab
 
         # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels
         self.sentences = [self.para_to_sentences(para) for para in data]
@@ -43,6 +44,25 @@ class TokenizerDataGenerator:
 
     def para_to_sentences(self, para):
         res = []
+        funcs = []
+        for feat_func in self.args['feat_funcs']:
+            if feat_func == 'space_before':
+                func = lambda x: 1 if x.startswith(' ') else 0
+            elif feat_func == 'capitalized':
+                func = lambda x: 1 if x[0].isupper() else 0
+            elif feat_func == 'all_caps':
+                func = lambda x: 1 if x.isupper() else 0
+            elif feat_func == 'numeric':
+                func = lambda x: 1 if (re.match('^[\d]+$', x) is not None) else 0
+            else:
+                assert False, 'Feature function "{}" is undefined.'.format(feat_func)
+
+            funcs += [func]
+
+        composite_func = lambda x: list(map(lambda f: f(x), funcs))
+
+        def process_and_featurize(sent):
+            return [(self.vocab.unit2id(y[0]), y[1], composite_func(y[0]), y[0]) for y in sent]
 
         current = []
         for unit, label in para:
@@ -50,12 +70,12 @@ class TokenizerDataGenerator:
             if label == 2: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res += [current]
+                    res += [process_and_featurize(current)]
                 current = []
 
         if len(current) > 0:
             if self.args['mode'] == 'predict' or len(current) <= self.args['max_seqlen']:
-                res += [current]
+                res += [process_and_featurize(current)]
 
         return res
 
@@ -67,7 +87,8 @@ class TokenizerDataGenerator:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, vocab, feat_funcs=['space_before', 'capitalized'], eval_offset=-1, unit_dropout=0.0):
+    def next(self, eval_offset=-1, unit_dropout=0.0):
+        null_feats = [0] * len(self.sentences[0][0][0][2])
         def strings_starting(id_pair, offset=0):
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])
@@ -80,12 +101,14 @@ class TokenizerDataGenerator:
                     res = res[:self.args['max_seqlen']]
                     break
 
-            if unit_dropout > 0:
-                res = [('<UNK>', x[1]) if random.random() < unit_dropout else x for x in res]
+            if unit_dropout > 0 and self.args['mode'] == 'train':
+                unkid = self.vocab.unit2id('<UNK>')
+                res = [(unkid, x[1], x[2], '<UNK>') if random.random() < unit_dropout else x for x in res]
 
             # pad with padding units and labels if necessary
             if len(res) < self.args['max_seqlen']:
-                res += [('<PAD>', -1)] * (self.args['max_seqlen'] - len(res))
+                padid = self.vocab.unit2id('<PAD>')
+                res += [(padid, -1, null_feats, '<PAD>')] * (self.args['max_seqlen'] - len(res))
 
             return res
 
@@ -101,28 +124,10 @@ class TokenizerDataGenerator:
             id_pairs = random.sample(self.sentence_ids, self.args['batch_size'])
             res = [strings_starting(pair) for pair in id_pairs]
 
-        funcs = []
-        for feat_func in feat_funcs:
-            if feat_func == 'space_before':
-                func = lambda x: x.startswith(' ')
-            elif feat_func == 'capitalized':
-                func = lambda x: x[0].isupper()
-            elif feat_func == 'all_caps':
-                func = lambda x: x.isupper()
-            elif feat_func == 'numeric':
-                func = lambda x: re.match('^[\d]+$', x) is not None
-            else:
-                assert False, 'Feature function "{}" is undefined.'.format(feat_func)
-
-            funcs += [func]
-
-        composite_func = lambda x: list(map(lambda f: f(x), funcs))
-
-        features = [[composite_func(y[0]) for y in x] for x in res]
-
-        units = [[vocab.unit2id(y[0]) for y in x] for x in res]
-        raw_units = [[y[0] for y in x] for x in res]
+        units = [[y[0] for y in x] for x in res]
         labels = [[y[1] for y in x] for x in res]
+        features = [[y[2] for y in x] for x in res]
+        raw_units = [[y[3] for y in x] for x in res]
 
         convert = lambda t: (torch.from_numpy(np.array(t[0], dtype=t[1])))
 
