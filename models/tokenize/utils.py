@@ -87,6 +87,9 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
             for t, p in zip(batch[3][0], pred):
                 if t == '<PAD>':
                     break
+                # hack la_ittb
+                if trainer.args['shorthand'] == 'la_ittb' and t in [":", ";"]:
+                    p = 2
                 offset += 1
                 if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
                     oov_count += 1
@@ -157,6 +160,7 @@ def eval_model(env):
     oov_count, N = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
     scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
 
+    print(scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
     return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1])
 
 def train(env):

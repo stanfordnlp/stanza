@@ -199,7 +199,7 @@ class CoNLLFile():
                         print("{}\t{}".format(idx, "\t".join(ln[1:6] + [str(idx-1)] + ln[7:])), file=outfile)
                     else:
                         # print MWT expansion
-                        expanded = expansions[count].split(' ')
+                        expanded = [x for x in expansions[count].split(' ') if len(x) > 0]
                         count += 1
                         endidx = idx + len(expanded) - 1
 

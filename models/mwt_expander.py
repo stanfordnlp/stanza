@@ -86,6 +86,7 @@ def main():
 
 def train(args):
     # load data
+    print('max_dec_len:', args['max_dec_len'])
     print("Loading data with batch size {}...".format(args['batch_size']))
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
@@ -201,6 +202,7 @@ def evaluate(args):
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
+    print('max_dec_len:', loaded_args['max_dec_len'])
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
