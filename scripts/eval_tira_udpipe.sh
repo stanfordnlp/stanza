@@ -20,5 +20,5 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 cd $ROOT
 
 echo "Starting $module with UDPipe..."
-python -m models.udpipe_wrapper --input_file $inputfile --output_file $outputfile --treebank $short --module $module --udpipe_dir $UDPIPE_DIR --short2tb $SHORT2TB
+$PYTHON -m models.udpipe_wrapper --input_file $inputfile --output_file $outputfile --treebank $short --module $module --udpipe_dir $UDPIPE_DIR --short2tb $SHORT2TB
 
