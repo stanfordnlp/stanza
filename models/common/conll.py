@@ -203,9 +203,7 @@ class CoNLLFile():
                         count += 1
                         endidx = idx + len(expanded) - 1
 
-                        ln[6] = "_"
-                        ln[9] = "_"
-                        print("{}-{}\t{}".format(idx, endidx, "\t".join(ln[1:])), file=outfile)
+                        print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=outfile)
                         for e_i, e_word in enumerate(expanded):
                             print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=outfile)
                         idx = endidx
@@ -213,5 +211,5 @@ class CoNLLFile():
                 print("", file=outfile)
                 idx = 0
 
-        assert count == len(expansions)
+        assert count == len(expansions), "{} {} {}".format(count, len(expansions), expansions)
         return
