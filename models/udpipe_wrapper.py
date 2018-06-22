@@ -32,7 +32,7 @@ def main():
     tb_short = args['treebank']
     tb_full = short2tb[tb_short]
 
-    lang_full = tb_full.split('_')[1].split('-')[0].lower()
+    lang_full = tb_full[3:].split('-')[0].lower()
     lang_short, tb_code = tb_short.split('_')
 
     # look for commands and models
