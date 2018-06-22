@@ -34,6 +34,8 @@ with open(output_file, 'w') as outf:
             continue
 
         if '-' in line[0]:
+            line[6] = '_'
+            line[9] = '_'
             print('\t'.join(line), file=outf)
             continue
 
