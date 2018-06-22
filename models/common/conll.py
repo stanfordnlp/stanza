@@ -203,6 +203,8 @@ class CoNLLFile():
                         count += 1
                         endidx = idx + len(expanded) - 1
 
+                        ln[6] = "_"
+                        ln[9] = "_"
                         print("{}-{}\t{}".format(idx, endidx, "\t".join(ln[1:])), file=outfile)
                         for e_i, e_word in enumerate(expanded):
                             print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=outfile)
