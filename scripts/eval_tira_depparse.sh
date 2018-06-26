@@ -21,4 +21,4 @@ cd $ROOT
 
 fullname=`grep -e "^$short " $SHORT_TO_TB | awk '{print $2}'`
 
-$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Parser run ParserNetwork $inputfile | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
+$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Parser run $inputfile | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
