@@ -95,6 +95,8 @@ class DictTrainer(BaseTrainer):
         for w in words:
             if w in self.model:
                 expansions += [self.model[w]]
+            elif w.lower() in self.model:
+                expansions += [self.model[w.lower()]]
             else:
                 expansions += [w]
         return expansions
