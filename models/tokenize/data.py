@@ -1,4 +1,4 @@
-from bisect import bisect_left
+from bisect import bisect_right
 from copy import copy
 import json
 import numpy as np
@@ -53,7 +53,7 @@ class TokenizerDataGenerator:
             elif feat_func == 'all_caps':
                 func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
-                func = lambda x: 1 if (re.match('^[\d]+$', x) is not None) else 0
+                func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
             else:
                 assert False, 'Feature function "{}" is undefined.'.format(feat_func)
 
@@ -88,9 +88,9 @@ class TokenizerDataGenerator:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offset=-1, unit_dropout=0.0):
+    def next(self, eval_offsets=None, unit_dropout=0.0):
         null_feats = [0] * len(self.sentences[0][0][0][2])
-        def strings_starting(id_pair, offset=0):
+        def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])
 
@@ -107,20 +107,32 @@ class TokenizerDataGenerator:
                 res = [(unkid, x[1], x[2], '<UNK>') if random.random() < unit_dropout else x for x in res]
 
             # pad with padding units and labels if necessary
-            if len(res) < self.args['max_seqlen']:
+            if pad_len > 0 and len(res) < pad_len:
                 padid = self.vocab.unit2id('<PAD>')
-                res += [(padid, -1, null_feats, '<PAD>')] * (self.args['max_seqlen'] - len(res))
+                res += [(padid, -1, null_feats, '<PAD>')] * (pad_len - len(res))
 
             return res
 
-        if eval_offset >= 0:
-            # find unit
-            if eval_offset >= self.cumlen[-1]:
-                return None
+        if eval_offsets is not None:
+            # find max padding length
+            pad_len = 0
+            for eval_offset in eval_offsets:
+                if eval_offset < self.cumlen[-1]:
+                    pair_id = bisect_right(self.cumlen, eval_offset) - 1
+                    pair = self.sentence_ids[pair_id]
+                    pad_len = max(pad_len, len(strings_starting(pair, offset=eval_offset-self.cumlen[pair_id], pad_len=0)))
 
-            pair_id = bisect_left(self.cumlen, eval_offset)
-            pair = self.sentence_ids[pair_id]
-            res = [strings_starting(pair, offset=eval_offset-self.cumlen[pair_id])]
+            res = []
+            for eval_offset in eval_offsets:
+                # find unit
+                if eval_offset >= self.cumlen[-1]:
+                    padid = self.vocab.unit2id('<PAD>')
+                    res += [[(padid, -1, null_feats, '<PAD>')] * pad_len]
+                    continue
+
+                pair_id = bisect_right(self.cumlen, eval_offset) - 1
+                pair = self.sentence_ids[pair_id]
+                res += [strings_starting(pair, offset=eval_offset-self.cumlen[pair_id], pad_len=pad_len)]
         else:
             id_pairs = random.sample(self.sentence_ids, self.args['batch_size'])
             res = [strings_starting(pair) for pair in id_pairs]

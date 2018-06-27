@@ -48,50 +48,75 @@ def print_sentence(sentence, f, mwt_dict=None):
     f.write('\n')
 
 def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
-    offset = 0
-    oov_count = 0
+    paragraphs = []
+    for i, p in enumerate(data_generator.sentences):
+        start = 0 if i == 0 else paragraphs[-1][2]
+        length = sum([len(x) for x in p])
+        paragraphs += [(i, start, start+length, length)] # para idx, start idx, end idx, length
 
-    all_preds = []
+    paragraphs = list(sorted(paragraphs, key=lambda x: x[3], reverse=True))
 
-    with open(output_filename, 'w') as f:
-        eval_limit = max(2000, max_seqlen)
-        while True:
-            batch = data_generator.next(eval_offset=offset)
-            if batch is None:
-                break
+    all_preds = [None] * len(paragraphs)
+    all_raw = [None] * len(paragraphs)
 
-            N = len(batch[3][0])
-            if N <= eval_limit:
-                pred = np.argmax(trainer.predict(batch)[0], axis=1)
-            else:
-                idx = 0
-                pred = []
-                while idx < N:
-                    en = min(N, idx + eval_limit)
-                    batch1 = batch[0][:, idx:en], batch[1][:, idx:en], batch[2][:, idx:en], [x[idx:en] for x in batch[3]]
-                    pred1 = np.argmax(trainer.predict(batch1)[0], axis=1)
+    eval_limit = max(3000, max_seqlen)
 
-                    sentbreaks = np.where((pred1 == 2) + (pred1 == 4))[0]
-                    if len(sentbreaks) <= 0 or idx >= N - eval_limit:
-                        advance = en - idx
+    batch_size = trainer.args['batch_size']
+    batches = int((len(paragraphs) + batch_size - 1) / batch_size)
+
+    t = 0
+    for i in range(batches):
+        batchparas = paragraphs[i * batch_size : (i + 1) * batch_size]
+        offsets = [x[1] for x in batchparas]
+        t += sum([x[3] for x in batchparas])
+
+        batch = data_generator.next(eval_offsets=offsets)
+        raw = batch[3]
+
+        N = len(batch[3][0])
+        if N <= eval_limit:
+            pred = np.argmax(trainer.predict(batch), axis=2)
+        else:
+            idx = [0] * len(batchparas)
+            Ns = [p[3] for p in batchparas]
+            pred = [[] for _ in batchparas]
+            while True:
+                ens = [min(N - idx1, eval_limit) for idx1, N in zip(idx, Ns)]
+                en = max(ens)
+                batch1 = batch[0][:, :en], batch[1][:, :en], batch[2][:, :en], [x[:en] for x in batch[3]]
+                pred1 = np.argmax(trainer.predict(batch1), axis=2)
+
+                for j in range(len(batchparas)):
+                    sentbreaks = np.where((pred1[j] == 2) + (pred1[j] == 4))[0]
+                    if len(sentbreaks) <= 0 or idx[j] >= Ns[j] - eval_limit:
+                        advance = ens[j]
                     else:
                         advance = np.max(sentbreaks) + 1
 
-                    pred += [pred1[:advance]]
+                    pred[j] += [pred1[j, :advance]]
+                    idx[j] += advance
 
-                    idx += advance
+                if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
+                    break
+                batch = data_generator.next(eval_offsets=[x+y for x, y in zip(idx, offsets)])
 
-                pred = np.concatenate(pred, 0)
+            pred = [np.concatenate(p, 0) for p in pred]
 
-            N1 = N
-            while N1 > 0 and batch[3][0][N1-1] == '<PAD>':
-                N1 -= 1
-            all_preds += [pred[:N1]]
+        for j, p in enumerate(batchparas):
+            all_preds[p[0]] = pred[j]
+            all_raw[p[0]] = raw[j]
+
+    offset = 0
+    oov_count = 0
+    with open(output_filename, 'w') as f:
+        for j in range(len(paragraphs)):
+            raw = all_raw[j]
+            pred = all_preds[j]
 
             current_tok = ''
             current_sent = []
 
-            for t, p in zip(batch[3][0], pred):
+            for t, p in zip(raw, pred):
                 if t == '<PAD>':
                     break
                 # hack la_ittb
