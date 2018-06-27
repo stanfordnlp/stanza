@@ -103,7 +103,8 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
             pred = [np.concatenate(p, 0) for p in pred]
 
         for j, p in enumerate(batchparas):
-            all_preds[p[0]] = pred[j]
+            len1 = len([1 for x in raw[j] if x != '<PAD>'])
+            all_preds[p[0]] = pred[j][:len1]
             all_raw[p[0]] = raw[j]
 
     offset = 0
