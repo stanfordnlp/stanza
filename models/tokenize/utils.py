@@ -1,3 +1,4 @@
+from collections import Counter
 from copy import copy
 import json
 import numpy as np
@@ -28,7 +29,7 @@ def print_sentence(sentence, f, mwt_dict=None):
     i = 0
     for tok, p in sentence:
         expansion = None
-        if p == 3 and mwt_dict is not None:
+        if (p == 3 or p == 4) and mwt_dict is not None:
             # MWT found, (attempt to) expand it!
             if tok in mwt_dict:
                 expansion = mwt_dict[tok][0]
@@ -42,13 +43,15 @@ def print_sentence(sentence, f, mwt_dict=None):
         else:
             if len(tok) <= 0:
                 continue
-            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, "MWT=Yes" if p == 3 else "_"))
+            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, "MWT=Yes" if p == 3 or p == 4 else "_"))
             i += 1
     f.write('\n')
 
 def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
     offset = 0
     oov_count = 0
+
+    all_preds = []
 
     with open(output_filename, 'w') as f:
         eval_limit = max(2000, max_seqlen)
@@ -68,7 +71,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
                     batch1 = batch[0][:, idx:en], batch[1][:, idx:en], batch[2][:, idx:en], [x[idx:en] for x in batch[3]]
                     pred1 = np.argmax(trainer.predict(batch1)[0], axis=1)
 
-                    sentbreaks = np.where(pred1 == 2)[0]
+                    sentbreaks = np.where((pred1 == 2) + (pred1 == 4))[0]
                     if len(sentbreaks) <= 0 or idx >= N - eval_limit:
                         advance = en - idx
                     else:
@@ -80,6 +83,10 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
                 pred = np.concatenate(pred, 0)
 
+            N1 = N
+            while N1 > 0 and batch[3][0][N1-1] == '<PAD>':
+                N1 -= 1
+            all_preds += [pred[:N1]]
 
             current_tok = ''
             current_sent = []
@@ -102,7 +109,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
                         continue
                     current_sent += [(tok, p)]
                     current_tok = ''
-                    if p == 2:
+                    if p == 2 or p == 4:
                         print_sentence(current_sent, f, mwt_dict)
                         current_sent = []
 
@@ -114,7 +121,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
             if len(current_sent):
                 print_sentence(current_sent, f, mwt_dict)
 
-    return oov_count, offset
+    return oov_count, offset, all_preds
 
 class Env:
     def __init__(self, args):
@@ -157,11 +164,50 @@ def eval_model(env):
     trainer = env.trainer
     args = env.args
 
-    oov_count, N = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
+    oov_count, N, all_preds = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
+
     scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
 
-    print(scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
-    return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1])
+    print(args['shorthand'], scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
+#    return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1], [.5, 1])
+    all_preds = np.concatenate(all_preds, 0)
+    labels = [y[1] for x in env.dev_data_processor.data for y in x]
+    counter = Counter(zip(all_preds, labels))
+
+    def f1(pred, gold, mapping):
+        pred = [mapping[p] for p in pred]
+        gold = [mapping[g] for g in gold]
+
+        lastp = -1; lastg = -1
+        tp = 0; fp = 0; fn = 0
+        for i, (p, g) in enumerate(zip(pred, gold)):
+            if p == g > 0 and lastp == lastg:
+                lastp = i
+                lastg = i
+                tp += 1
+            elif p > 0 and g > 0:
+                lastp = i
+                lastg = i
+                fp += 1
+                fn += 1
+            elif p > 0:
+                # and g == 0
+                lastp = i
+                fp += 1
+            elif g > 0:
+                lastg = i
+                fn += 1
+
+        if tp == 0:
+            return 0
+        else:
+            return 2 * tp / (2 * tp + fp + fn)
+
+    f1tok = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
+    f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
+    f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
+    print(args['shorthand'], f1tok, f1sent, f1mwt)
+    return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
 
 def train(env):
     args = env.args
@@ -174,7 +220,7 @@ def train(env):
     if args['load_name'] is not None:
         load_name = "{}/{}".format(args['save_dir'], args['load_name'])
         trainer.load(load_name)
-        trainer.change_lr(args['lr0'])
+    trainer.change_lr(args['lr0'])
 
     N = len(env.data_generator)
     steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
@@ -227,6 +273,6 @@ def evaluate(env):
     if args['cuda']:
         trainer.model.cuda()
 
-    oov_count, N = output_predictions(args['conll_file'], trainer, env.data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
+    oov_count, N, _ = output_predictions(args['conll_file'], trainer, env.data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))

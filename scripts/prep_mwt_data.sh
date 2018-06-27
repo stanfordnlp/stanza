@@ -15,12 +15,14 @@ dev_in_file=$DATADIR/${short}.dev.in.conllu
 # copy conllu file if exists; otherwise create empty files
 if [ -e $train_conllu ]; then
     cp $train_conllu $train_in_file
+    bash scripts/prep_tokenize_data.sh $treebank train
 else
     touch $train_in_file
 fi
 
 if [ -e $dev_conllu ]; then
     python utils/contract_mwt.py $dev_conllu $dev_in_file
+    bash scripts/prep_tokenize_data.sh $treebank dev
 else
     touch $dev_in_file
 fi

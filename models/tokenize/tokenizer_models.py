@@ -76,7 +76,7 @@ class Tokenizer(nn.Module):
         return pred, aux_outputs
 
 class RNNTokenizer(nn.Module):
-    def __init__(self, args, nchars, emb_dim, hidden_dim, N_CLASSES=4, dropout=0):
+    def __init__(self, args, nchars, emb_dim, hidden_dim, N_CLASSES=5, dropout=0):
         super().__init__()
 
         self.args = args
@@ -97,11 +97,17 @@ class RNNTokenizer(nn.Module):
             if self.args.get('hier_conv_res', False):
                 self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)
 
-        self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
-
         if args['hierarchical']:
-            self.rnn2 = nn.LSTM(hidden_dim * 2, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
-            self.dense_clf2 = nn.Linear(hidden_dim * 2, 3)
+            self.dense_clf = nn.Linear(hidden_dim * 2, 2)
+            in_dim = hidden_dim * 2
+            self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
+            #self.sent_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1))
+            #self.mwt_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1))
+            self.sent_clf = nn.Linear(hidden_dim * 2, 1, bias=False)
+            self.mwt_clf = nn.Linear(hidden_dim * 2, 1, bias=False)
+            self.biases = nn.Parameter(torch.zeros(N_CLASSES - 2))
+        else:
+            self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -136,12 +142,15 @@ class RNNTokenizer(nn.Module):
             pred0_ = F.log_softmax(pred0, 2)
 
             inp2, _ = self.rnn2(inp * (1 - torch.exp(pred0_[:,:,0].unsqueeze(2))))
+
             inp2 = self.dropout(inp2)
 
-            pred1 = self.dense_clf2(inp2)
+            nontok = pred0[:,:,0].unsqueeze(2)
+            tok = pred0[:,:,1].unsqueeze(2)
+            sent = self.sent_clf(inp2)
+            mwt = self.mwt_clf(inp2)
 
-            #pred = torch.cat([pred0[:,:,:2], pred0[:,:,2:] + pred1], 2)
-            pred = torch.cat([pred0[:,:,0].unsqueeze(2), pred1], 2)
+            pred = torch.cat([nontok, tok-sent-mwt, tok+sent-mwt+self.biases[0], tok-sent+mwt+self.biases[1], tok+sent+mwt+self.biases[2]], 2)
         else:
             pred = pred0
 

@@ -89,8 +89,8 @@ with open(args.conllu_file, 'r') as f:
         else:
             # sentence break found
             if len(buf):
-                assert buf[-1] >= '1'
-                output.write(buf[:-1] + '2')
+                assert int(buf[-1]) >= 1
+                output.write(buf[:-1] + '{}'.format(int(buf[-1]) + 1))
                 buf = ''
 
             last_comments = ''

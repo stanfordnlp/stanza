@@ -14,7 +14,7 @@ else
     labels=data/tokenize/${short}-ud-train.toklabels
     label_type=label_file
     eval_file="--txt_file /u/nlp/data/dependency_treebanks/CoNLL18/$treebank/${short}-ud-dev.txt"
-    train_eval_file="--dev_txt_file /u/nlp/data/dependency_treebanks/CoNLL18/$treebank/${short}-ud-dev.txt"
+    train_eval_file="--dev_txt_file /u/nlp/data/dependency_treebanks/CoNLL18/$treebank/${short}-ud-dev.txt --dev_label_file data/tokenize/${short}-ud-dev.toklabels"
 fi
 
 if [ ! -e $labels ]; then

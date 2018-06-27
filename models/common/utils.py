@@ -18,11 +18,15 @@ def ud_scores(gold_conllu_file, system_conllu_file):
 
     return evaluation
 
-def harmonic_mean(a):
+def harmonic_mean(a, weights=None):
     if any([x == 0 for x in a]):
         return 0
     else:
-        return len(a) / sum([1/x for x in a])
+        assert weights is None or len(weights) == len(a), 'Weights has length {} which is different from that of the array ({}).'.format(len(weights), len(a))
+        if weights is None:
+            return len(a) / sum([1/x for x in a])
+        else:
+            return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
 def get_optimizer(name, parameters, lr):

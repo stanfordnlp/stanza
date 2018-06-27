@@ -20,7 +20,7 @@ class TokenizerDataProcessor:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
             else:
-                labels = '\n\n'.join(['0' * len(pt) for pt in text.split('\n\n')])
+                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in text.split('\n\n')])
 
             self.data = [list(zip(pt.rstrip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n'))]
 
@@ -66,8 +66,9 @@ class TokenizerDataGenerator:
 
         current = []
         for unit, label in para:
+            label1 = label if self.args['mode'] == 'train' else 0
             current += [[unit, label]]
-            if label == 2: # end of sentence
+            if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
                     res += [process_and_featurize(current)]
