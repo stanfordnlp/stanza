@@ -8,6 +8,7 @@ import models.common.seq2seq_constant as constant
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
 from models.lemma.vocab import Vocab
+from models.lemma import edit
 
 class DataLoader:
     def __init__(self, filename, batch_size, args, evaluation=False, conll_only=False):
@@ -63,6 +64,7 @@ class DataLoader:
     def preprocess(self, data, vocab, pos_vocab, args):
         processed = []
         for d in data:
+            edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
             src = map_to_ids(src, vocab.unit2id)
@@ -71,7 +73,7 @@ class DataLoader:
             tgt = list(d[2])
             tgt_in = map_to_ids([constant.SOS] + tgt, vocab.unit2id)
             tgt_out = map_to_ids(tgt + [constant.EOS], vocab.unit2id)
-            processed += [[src, tgt_in, tgt_out, pos]]
+            processed += [[src, tgt_in, tgt_out, pos, edit_type]]
         return processed
 
     def __len__(self):
@@ -86,7 +88,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 4
+        assert len(batch) == 5
 
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -99,9 +101,10 @@ class DataLoader:
         tgt_in = get_long_tensor(batch[1], batch_size)
         tgt_out = get_long_tensor(batch[2], batch_size)
         pos = torch.LongTensor(batch[3])
+        edits = torch.LongTensor(batch[4])
         assert tgt_in.size(1) == tgt_out.size(1), \
                 "Target input and output sequence sizes do not match."
-        return (src, src_mask, tgt_in, tgt_out, pos, orig_idx)
+        return (src, src_mask, tgt_in, tgt_out, pos, edits, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):

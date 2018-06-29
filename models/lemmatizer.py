@@ -15,7 +15,7 @@ from torch import nn, optim
 from models.lemma.loader import DataLoader
 from models.lemma.vocab import Vocab
 from models.lemma.trainer import Trainer, DictTrainer
-from models.lemma import scorer
+from models.lemma import scorer, edit
 from models.common import utils, param
 import models.common.seq2seq_constant as constant
 
@@ -47,13 +47,16 @@ def parse_args():
     parser.add_argument('--pos', action='store_true', help='Use POS in lemmatization.')
     parser.add_argument('--pos_dim', type=int, default=50)
     parser.add_argument('--pos_dropout', type=float, default=0.5)
+    parser.add_argument('--edit', action='store_true', help='Use edit classifier in lemmatization.')
+    parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
+    parser.add_argument('--alpha', type=float, default=0.1)
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=50)
+    parser.add_argument('--num_epoch', type=int, default=60)
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
@@ -157,9 +160,13 @@ def train(args):
             # eval on dev
             print("Evaluating on dev set...")
             dev_preds = []
+            dev_edits = []
             for i, batch in enumerate(dev_batch):
-                preds = trainer.predict(batch, args['beam_size'])
+                preds, edits = trainer.predict(batch, args['beam_size'])
                 dev_preds += preds
+                if edits is not None:
+                    dev_edits += edits
+            dev_preds = trainer.postprocess(dev_batch.conll.get(['word']), dev_preds, edits=dev_edits)
 
             # try ensembling with dict if necessary
             if args.get('ensemble_dict', False):
@@ -232,8 +239,13 @@ def evaluate(args):
         trainer.load(model_file)
         print("Start evaluation...")
         preds = []
+        edits = []
         for i, b in enumerate(batch):
-            preds += trainer.predict(b, args['beam_size'])
+            ps, es = trainer.predict(b, args['beam_size'])
+            preds += ps
+            if es is not None:
+                edits += es
+        preds = trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
 
         if loaded_args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq lemmatizer...]")

@@ -11,8 +11,25 @@ def SequenceLoss(vocab_size):
     weight = torch.ones(vocab_size)
     weight[constant.PAD_ID] = 0
     crit = nn.NLLLoss(weight)
-    print("Using NLL sequence loss.")
     return crit
+
+class MixLoss(nn.Module):
+    """
+    A mixture of SequenceLoss and CrossEntropyLoss.
+    Loss = SequenceLoss + alpha * CELoss
+    """
+    def __init__(self, vocab_size, alpha):
+        super().__init__()
+        self.seq_loss = SequenceLoss(vocab_size)
+        self.ce_loss = nn.CrossEntropyLoss()
+        assert alpha >= 0
+        self.alpha = alpha
+
+    def forward(self, seq_inputs, seq_targets, class_inputs, class_targets):
+        sl = self.seq_loss(seq_inputs, seq_targets)
+        cel = self.ce_loss(class_inputs, class_targets)
+        loss = sl + self.alpha * cel
+        return loss
 
 class MaxEntropySequenceLoss(nn.Module):
     """
@@ -27,7 +44,6 @@ class MaxEntropySequenceLoss(nn.Module):
         weight[constant.PAD_ID] = 0
         self.nll = nn.NLLLoss(weight)
         self.alpha = alpha
-        print("Using max entropy sequence loss.")
 
     def forward(self, inputs, targets):
         """

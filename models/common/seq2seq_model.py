@@ -42,6 +42,8 @@ class Seq2SeqModel(nn.Module):
         self.pos_dim = args.get('pos_dim', 0)
         self.pos_vocab_size = args.get('pos_vocab_size', 0)
         self.pos_dropout = args.get('pos_dropout', 0)
+        self.edit = args.get('edit', False)
+        self.num_edit = args.get('num_edit', 0)
 
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
@@ -56,6 +58,12 @@ class Seq2SeqModel(nn.Module):
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
             #self.enc2dec = nn.Linear(self.hidden_dim + self.pos_dim, self.dec_hidden_dim)
+        if self.edit:
+            edit_hidden = self.hidden_dim//2
+            self.edit_clf = nn.Sequential(
+                    nn.Linear(self.hidden_dim, edit_hidden),
+                    nn.ReLU(),
+                    nn.Linear(edit_hidden, self.num_edit))
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -129,9 +137,14 @@ class Seq2SeqModel(nn.Module):
             enc_inputs = torch.cat([enc_inputs, pos_inputs.unsqueeze(1)], dim=1)
 
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+
+        if self.edit:
+            edit_logits = self.edit_clf(hn)
+        else:
+            edit_logits = None
         
         log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
-        return log_probs
+        return log_probs, edit_logits
 
     def get_log_prob(self, logits):
         logits_reshape = logits.view(-1, self.vocab_size)
@@ -152,11 +165,16 @@ class Seq2SeqModel(nn.Module):
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        # add pos-aware transformation to hn
-        if self.use_pos:
-            assert pos is not None
-            pos_inputs = self.pos_embedding(pos)
-            hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
+        ## add pos-aware transformation to hn
+        #if self.use_pos:
+        #    assert pos is not None
+        #    pos_inputs = self.pos_embedding(pos)
+        #    hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
+        
+        if self.edit:
+            edit_logits = self.edit_clf(hn)
+        else:
+            edit_logits = None
 
         # greedy decode by step
         dec_inputs = self.embedding(self.SOS_tensor)
@@ -181,7 +199,7 @@ class Seq2SeqModel(nn.Module):
                         total_done += 1
                     else:
                         output_seqs[i].append(token)
-        return output_seqs
+        return output_seqs, edit_logits
 
     def predict(self, src, src_mask, pos=None, beam_size=5):
         """ Predict with beam search. """
@@ -195,6 +213,11 @@ class Seq2SeqModel(nn.Module):
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+
+        if self.edit:
+            edit_logits = self.edit_clf(hn)
+        else:
+            edit_logits = None
         
         # (2) set up beam
         with torch.no_grad():
@@ -242,6 +265,5 @@ class Seq2SeqModel(nn.Module):
             hyp = utils.prune_hyp(hyp)
             all_hyp += [hyp]
 
-        return all_hyp
-
+        return all_hyp, edit_logits
 

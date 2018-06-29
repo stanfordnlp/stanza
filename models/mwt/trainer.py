@@ -46,7 +46,7 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs = self.model(src, src_mask, tgt_in)
+        log_probs, _ = self.model(src, src_mask, tgt_in)
         loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
         loss_val = loss.data.item()
         if eval:
@@ -62,7 +62,7 @@ class Trainer(BaseTrainer):
 
         self.model.eval()
         batch_size = src.size(0)
-        preds = self.model.predict(src, src_mask, self.args['beam_size'])
+        preds, _ = self.model.predict(src, src_mask, self.args['beam_size'])
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens

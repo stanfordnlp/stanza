@@ -13,14 +13,15 @@ import torch.nn.functional as F
 import models.common.seq2seq_constant as constant
 from models.common.seq2seq_model import Seq2SeqModel
 from models.common import utils, loss
+from models.lemma import edit
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
     if args['cuda']:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:5]]
+        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:6]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:5]]
-    orig_idx = batch[5]
+        inputs = [Variable(b) if b is not None else None for b in batch[:6]]
+    orig_idx = batch[6]
     return inputs, orig_idx
 
 class Trainer(object):
@@ -28,7 +29,11 @@ class Trainer(object):
     def __init__(self, args, vocab, emb_matrix=None):
         self.args = args
         self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        self.crit = loss.SequenceLoss(vocab.size)
+        if args.get('edit', False):
+            self.crit = loss.MixLoss(vocab.size, args['alpha'])
+            print("[Running seq2seq lemmatizer with edit classifier]")
+        else:
+            self.crit = loss.SequenceLoss(vocab.size)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
@@ -38,15 +43,20 @@ class Trainer(object):
 
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt_in, tgt_out, pos = inputs
+        src, src_mask, tgt_in, tgt_out, pos, edits = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs = self.model(src, src_mask, tgt_in, pos)
-        loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
+        log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos)
+        if self.args.get('edit', False):
+            assert edit_logits is not None
+            loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1), \
+                    edit_logits, edits)
+        else:
+            loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -56,19 +66,45 @@ class Trainer(object):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, beam_size=1, unsort=True):
+    def predict(self, batch, beam_size=1):
         inputs, orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt, tgt_mask, pos = inputs
+        src, src_mask, tgt, tgt_mask, pos, edits = inputs
 
         self.model.eval()
         batch_size = src.size(0)
-        preds = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
+        preds, edit_logits = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
-        if unsort:
-            pred_tokens = utils.unsort(pred_tokens, orig_idx)
-        return pred_tokens
+        pred_tokens = utils.unsort(pred_tokens, orig_idx)
+        if self.args.get('edit', False):
+            assert edit_logits is not None
+            edits = np.argmax(edit_logits.data.cpu().numpy(), axis=1).reshape([batch_size]).tolist()
+            edits = utils.unsort(edits, orig_idx)
+        else:
+            edits = None
+        return pred_tokens, edits
+
+    def postprocess(self, words, preds, edits=None):
+        """ Postprocess, mainly for handing edits. """
+        assert len(words) == len(preds), "Lemma predictions must have same length as words."
+        edited = []
+        if self.args.get('edit', False):
+            assert edits is not None and len(words) == len(edits)
+            for w, p, e in zip(words, preds, edits):
+                lem = edit.edit_word(w, p, e)
+                edited += [lem]
+        else:
+            edited = preds # do not edit
+        # final sanity check
+        assert len(edited) == len(words)
+        final = []
+        for lem, w in zip(edited, words):
+            if len(lem) == 0 or constant.UNK in lem:
+                final += [w] # invalid prediction, fall back to word
+            else:
+                final += [lem]
+        return final
 
     def update_lr(self, new_lr):
         utils.change_lr(self.optimizer, new_lr)
