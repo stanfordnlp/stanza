@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--pos_dropout', type=float, default=0.5)
     parser.add_argument('--edit', action='store_true', help='Use edit classifier in lemmatization.')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
-    parser.add_argument('--alpha', type=float, default=0.1)
+    parser.add_argument('--alpha', type=float, default=1.0)
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
