@@ -1,3 +1,9 @@
+outputprefix=$1
+if [[ "$outputprefix" == "UD_"* ]]; then
+    outputprefix=""
+else
+    shift
+fi
 treebank=$1
 shift
 gpu=$1

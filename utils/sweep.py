@@ -170,11 +170,16 @@ def evaluate_proposal(proposal, command=command, config=config):
         print(res.stderr.decode('utf-8'))
         raise e
 
-def save_progress(progress, filename=SAVED_PROGRESS):
+def save_load_progress(progress, update=[], filename=SAVED_PROGRESS):
     print('Saving sweep progress to "{}", please be patient...'.format(filename))
+    if os.path.exists(filename):
+        with open(filename, 'rb') as f:
+            progress = pickle.load(f)
+    progress += update
     with open(filename, 'wb') as f:
         pickle.dump(progress, f)
     print('Done!')
+    return progress
 
 progress = []
 if os.path.exists(SAVED_PROGRESS):
@@ -191,10 +196,9 @@ try:
         print('Grid size = {}'.format(reduce(mul, [len(config[k]) for k in config], 1)))
         proposal = get_proposal(invtemp=invtemp)
         res = evaluate_proposal(proposal)
-        progress += [[proposal, res]]
-        save_progress(progress)
+        progress = save_load_progress(progress, [[proposal, res]])
         estimate_params(progress)
 except:
     import traceback
     traceback.print_last()
-    save_progress(progress)
+    save_load_progress(progress)
