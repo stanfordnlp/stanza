@@ -16,7 +16,7 @@ DATADIR=data/mwt
 
 train_file=${DATADIR}/${short}.train.in.conllu
 eval_file=${DATADIR}/${short}.dev.in.conllu
-output_file=${DATADIR}/${short}.dev.pred.conllu
+output_file=${DATADIR}/${short}.dev.${outputprefix}pred.conllu
 gold_file=$UDBASE/$treebank/${short}-ud-dev.conllu
 
 if [ ! -e $train_file ]; then
