@@ -92,24 +92,28 @@ class RNNTokenizer(nn.Module):
             self.conv_sizes = [int(x) for x in self.args['conv_res'].split(',')]
 
             for si, size in enumerate(self.conv_sizes):
-                self.conv_res.append(nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0)))
+                l = nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0))
+                self.conv_res.append(l)
 
             if self.args.get('hier_conv_res', False):
                 self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)
+        self.hid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
+        self.tok0 = nn.Linear(hidden_dim * 2, 1)
+        self.sent0 = nn.Linear(hidden_dim * 2, 1)
+        self.mwt0 = nn.Linear(hidden_dim * 2, 1)
 
         if args['hierarchical']:
-            self.dense_clf = nn.Linear(hidden_dim * 2, 2)
             in_dim = hidden_dim * 2
             self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
-            #self.sent_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1))
-            #self.mwt_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1))
-            self.sent_clf = nn.Linear(hidden_dim * 2, 1, bias=False)
-            self.mwt_clf = nn.Linear(hidden_dim * 2, 1, bias=False)
-            self.biases = nn.Parameter(torch.zeros(N_CLASSES - 2))
-        else:
-            self.dense_clf = nn.Linear(hidden_dim * 2, N_CLASSES)
+            #self.sent_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1, bias=False))
+            #self.mwt_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1, bias=False))
+            self.hierhid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
+            self.tok_clf = nn.Linear(hidden_dim * 2, 1)
+            self.sent_clf = nn.Linear(hidden_dim * 2, 1)
+            self.mwt_clf = nn.Linear(hidden_dim * 2, 1)
 
         self.dropout = nn.Dropout(dropout)
+        self.toknoise = nn.Dropout(self.args['tok_noise'])
 
     def forward(self, x, feats):
         emb = self.embeddings(x)
@@ -136,22 +140,29 @@ class RNNTokenizer(nn.Module):
 
         inp = self.dropout(inp)
 
-        pred0 = self.dense_clf(inp)
+        hid = self.hid(inp)
+        hid = self.dropout(F.relu(hid))
+        tok0 = self.tok0(hid)
+        sent0 = self.sent0(hid)
+        mwt0 = self.mwt0(hid)
 
         if self.args['hierarchical']:
-            pred0_ = F.log_softmax(pred0, 2)
-
-            inp2, _ = self.rnn2(inp * (1 - torch.exp(pred0_[:,:,0].unsqueeze(2))))
+            inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0))))
 
             inp2 = self.dropout(inp2)
 
-            nontok = pred0[:,:,0].unsqueeze(2)
-            tok = pred0[:,:,1].unsqueeze(2)
-            sent = self.sent_clf(inp2)
-            mwt = self.mwt_clf(inp2)
+            inp2 = self.dropout(F.relu(self.hierhid(inp2)))
+            tok0 = tok0 + self.tok_clf(inp2)
+            sent0 = sent0 + self.sent_clf(inp2)
+            mwt0 = mwt0 + self.mwt_clf(inp2)
 
-            pred = torch.cat([nontok, tok-sent-mwt, tok+sent-mwt+self.biases[0], tok-sent+mwt+self.biases[1], tok+sent+mwt+self.biases[2]], 2)
-        else:
-            pred = pred0
+        nontok = F.logsigmoid(-tok0)
+        tok = F.logsigmoid(tok0)
+        nonsent = F.logsigmoid(-sent0)
+        sent = F.logsigmoid(sent0)
+        nonmwt = F.logsigmoid(-mwt0)
+        mwt = F.logsigmoid(mwt0)
+
+        pred = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2)
 
         return pred, []

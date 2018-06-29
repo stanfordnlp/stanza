@@ -192,9 +192,9 @@ def eval_model(env):
 
     oov_count, N, all_preds = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
 
-    scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
+    #scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
 
-    print(args['shorthand'], scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
+    #print(args['shorthand'], scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
 #    return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1], [.5, 1])
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in env.dev_data_processor.data for y in x]

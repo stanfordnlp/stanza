@@ -123,6 +123,7 @@ class TokenizerDataGenerator:
                     pad_len = max(pad_len, len(strings_starting(pair, offset=eval_offset-self.cumlen[pair_id], pad_len=0)))
 
             res = []
+            pad_len += 1
             for eval_offset in eval_offsets:
                 # find unit
                 if eval_offset >= self.cumlen[-1]:
