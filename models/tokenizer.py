@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--conv_filters', type=str, default="1,5,9,,1,5,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
     parser.add_argument('--residual', action='store_true', help="Add linear residual connections")
     parser.add_argument('--hierarchical', action='store_true', help="\"Hierarchical\" RNN tokenizer")
+    parser.add_argument('--hier_invtemp', type=float, default=1.0, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--no-rnn', dest='rnn', action='store_false', help="Use CNN tokenizer")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--aux_clf', type=float, default=0.0, help="Strength for auxiliary classifiers; default 0 (don't use auxiliary classifiers)")

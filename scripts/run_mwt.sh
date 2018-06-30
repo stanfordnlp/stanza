@@ -17,7 +17,7 @@ DATADIR=data/mwt
 train_file=${DATADIR}/${short}.train.in.conllu
 eval_file=${DATADIR}/${short}.dev.in.conllu
 output_file=${DATADIR}/${short}.dev.${outputprefix}pred.conllu
-gold_file=$UDBASE/$treebank/${short}-ud-dev.conllu
+gold_file=${DATADIR}/${short}.dev.gold.conllu
 
 if [ ! -e $train_file ]; then
     bash scripts/prep_mwt_data.sh $treebank
@@ -27,9 +27,9 @@ dec_len=$(python -c "from math import ceil; print(ceil($(python utils/max_mwt_le
 
 echo "Running $args..."
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --train_file $train_file --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode train --max_dec_len $dec_len --save_dir ${outputprefix}saved_models $args
+    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode train --max_dec_len $dec_len --save_dir ${outputprefix}saved_models/mwt $args
 CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --eval_file $eval_file \
-    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict --save_dir ${outputprefix}saved_models $args
+    --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict --save_dir ${outputprefix}saved_models/mwt $args
 results=`python utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
 echo $results $args >> ${DATADIR}/${short}.${outputprefix}results
 echo $short $results $args

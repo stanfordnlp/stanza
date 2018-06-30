@@ -7,6 +7,7 @@
 #SBATCH --output=/sailhome/pengqi/logs/slurm-%j.out
 #SBATCH --mail-user=pengqi@cs.stanford.edu
 #SBATCH --mail-type=FAIL
+#SBATCH --exclude=jagupard14
 
 echo "SLURM_JOBID="$SLURM_JOBID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
@@ -14,6 +15,12 @@ echo "SLURM_NNODES"=$SLURM_NNODES
 echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 
+outputprefix=$1
+if [[ "$outputprefix" == "tokenize" || "$outputprefix" == "mwt" || "$outputprefix" == "lemma" ]]; then
+    outputprefix=""
+else
+    shift
+fi
 module=$1
 shift
 mode=$1
@@ -31,7 +38,7 @@ export PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/bin:$PATH
 export LD_LIBRARY_PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/lib:$LD_LIBRARY_PATH
 
 cd $root
-bash scripts/${mode}_${module}.sh slurm_ $tb $CUDA_VISIBLE_DEVICES $args
+bash scripts/${mode}_${module}.sh slurm_${outputprefix} $tb $CUDA_VISIBLE_DEVICES $args
 
 #
 echo "Done"

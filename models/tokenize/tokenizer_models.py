@@ -97,20 +97,20 @@ class RNNTokenizer(nn.Module):
 
             if self.args.get('hier_conv_res', False):
                 self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)
-        self.hid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
-        self.tok0 = nn.Linear(hidden_dim * 2, 1)
-        self.sent0 = nn.Linear(hidden_dim * 2, 1)
-        self.mwt0 = nn.Linear(hidden_dim * 2, 1)
+        #self.hid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
+        self.tok_clf = nn.Linear(hidden_dim * 2, 1)
+        self.sent_clf = nn.Linear(hidden_dim * 2, 1)
+        self.mwt_clf = nn.Linear(hidden_dim * 2, 1)
 
         if args['hierarchical']:
             in_dim = hidden_dim * 2
             self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
             #self.sent_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1, bias=False))
             #self.mwt_clf = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim * 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim * 2, 1, bias=False))
-            self.hierhid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
-            self.tok_clf = nn.Linear(hidden_dim * 2, 1)
-            self.sent_clf = nn.Linear(hidden_dim * 2, 1)
-            self.mwt_clf = nn.Linear(hidden_dim * 2, 1)
+            #self.hierhid = nn.Linear(hidden_dim * 2, hidden_dim * 2)
+            self.tok_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
+            self.sent_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
+            self.mwt_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         self.dropout = nn.Dropout(dropout)
         self.toknoise = nn.Dropout(self.args['tok_noise'])
@@ -140,21 +140,21 @@ class RNNTokenizer(nn.Module):
 
         inp = self.dropout(inp)
 
-        hid = self.hid(inp)
-        hid = self.dropout(F.relu(hid))
-        tok0 = self.tok0(hid)
-        sent0 = self.sent0(hid)
-        mwt0 = self.mwt0(hid)
+        #inp = self.hid(inp)
+        #inp = self.dropout(F.relu(inp))
+        tok0 = self.tok_clf(inp)
+        sent0 = self.sent_clf(inp)
+        mwt0 = self.mwt_clf(inp)
 
         if self.args['hierarchical']:
-            inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0))))
+            inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0 * self.args['hier_invtemp']))))
 
             inp2 = self.dropout(inp2)
 
-            inp2 = self.dropout(F.relu(self.hierhid(inp2)))
-            tok0 = tok0 + self.tok_clf(inp2)
-            sent0 = sent0 + self.sent_clf(inp2)
-            mwt0 = mwt0 + self.mwt_clf(inp2)
+            #inp2 = self.dropout(F.relu(self.hierhid(inp2)))
+            tok0 = tok0 + self.tok_clf2(inp2)
+            sent0 = sent0 + self.sent_clf2(inp2)
+            mwt0 = mwt0 + self.mwt_clf2(inp2)
 
         nontok = F.logsigmoid(-tok0)
         tok = F.logsigmoid(tok0)

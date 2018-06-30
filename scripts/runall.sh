@@ -22,6 +22,9 @@ done
 i=0
 tbs=`wc -l ${module}_test_treebanks`
 for tb in `cat ${module}_test_treebanks`; do
+    while [[ $free_gpus != *"$((i % n_gpus))"* ]]; do
+        i=$((i+1))
+    done
     if [[ "$outputprefix" == "" ]]; then
         scripts/run_${module}.sh $tb $((i % n_gpus)) $args &
     else
@@ -29,9 +32,6 @@ for tb in `cat ${module}_test_treebanks`; do
     fi
     pids[${i}]=$!
     i=$((i+1))
-    while [[ $free_gpus != *"$((i % n_gpus))"* ]]; do
-        i=$((i+1))
-    done
 done
 
 # wait for all pids
