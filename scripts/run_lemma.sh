@@ -11,7 +11,7 @@ DATADIR=data/lemma
 train_file=${DATADIR}/${short}.train.in.conllu
 eval_file=${DATADIR}/${short}.dev.in.conllu
 output_file=${DATADIR}/${short}.dev.pred.conllu
-gold_file=$UDBASE/$treebank/${short}-ud-dev.conllu
+gold_file=${DATADIR}/${short}.dev.gold.conllu
 
 if [ ! -e $train_file ]; then
     bash scripts/prep_lemma_data.sh $treebank $DATADIR
