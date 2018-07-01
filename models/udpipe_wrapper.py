@@ -26,7 +26,7 @@ def main():
 
     args = vars(args)
     print("Running UDPipe with module {}...".format(args['module']))
-    
+
     # convert names
     short2tb = load_short2tb(args['short2tb'])
     tb_short = args['treebank']
@@ -39,6 +39,10 @@ def main():
     udpipe_script = '{}/bin-linux64/udpipe'.format(args['udpipe_dir'])
     model_name = '{}-{}-ud-2.2-conll18-180430.udpipe'.format(lang_full, tb_code)
     model_file = '{}/models/{}'.format(args['udpipe_dir'], model_name)
+
+    if not os.path.exists(model_file):
+        model_name = "mixed-ud-ud-2.2-conll18-180430.udpipe"
+        model_file = '{}/models/{}'.format(args['udpipe_dir'], model_name)
 
     # check files
     if not args['output_file'].endswith('.conllu'):
@@ -63,7 +67,7 @@ def main():
         # do udpipe
         if args['module'] == 'parse':
             udpipe_cmd = "{} --parse {} {} --output=conllu --input=conllu".format(udpipe_script, model_file, args['input_file'])
-        else: 
+        else:
             udpipe_cmd = "{} --tag {} {} --output=conllu --input=conllu".format(udpipe_script, model_file, args['input_file'])
         udpipe_outputs = run_udpipe(udpipe_cmd, return_stdout=True)
         print("Waiting for filesystem...")
