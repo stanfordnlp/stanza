@@ -135,7 +135,7 @@ class TokenizerDataGenerator:
                 pair = self.sentence_ids[pair_id]
                 res += [strings_starting(pair, offset=eval_offset-self.cumlen[pair_id], pad_len=pad_len)]
         else:
-            id_pairs = random.sample(self.sentence_ids, self.args['batch_size'])
+            id_pairs = random.sample(self.sentence_ids, min(len(self.sentence_ids), self.args['batch_size']))
             res = [strings_starting(pair) for pair in id_pairs]
 
         units = [[y[0] for y in x] for x in res]
