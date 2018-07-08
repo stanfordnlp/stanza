@@ -20,9 +20,9 @@ class TokenizerDataProcessor:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
             else:
-                labels = '\n\n'.join(['0' * len(pt.strip()) for pt in text.split('\n\n')])
+                labels = '\n\n'.join(['0' * len(pt.strip()) for pt in re.split('\n\s*\n', text)])
 
-            self.data = [list(zip(pt.strip(), [int(x) for x in pc])) for pt, pc in zip(text.split('\n\n'), labels.split('\n\n')) if len(pt.strip()) > 0]
+            self.data = [list(zip(pt.strip(), [int(x) for x in pc])) for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.strip()) > 0]
 
 class TokenizerDataGenerator:
     def __init__(self, args, vocab, data):

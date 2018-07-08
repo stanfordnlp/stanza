@@ -1,4 +1,5 @@
 from collections import Counter
+import re
 
 from models.common.vocab import Vocab as BaseVocab
 
@@ -24,7 +25,7 @@ class Vocab(BaseVocab):
         return normalized
 
     def normalize_token(self, token):
-        token = token.lstrip().replace('\n', ' ')
+        token = re.sub('\s', ' ', token.lstrip())
 
         if self.lang in ['zh', 'ja', 'ko']:
             token = token.replace(' ', '')

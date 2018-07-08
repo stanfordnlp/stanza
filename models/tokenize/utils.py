@@ -104,6 +104,10 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
         for j, p in enumerate(batchparas):
             len1 = len([1 for x in raw[j] if x != '<PAD>'])
+            if pred[j][len1-1] < 2:
+                pred[j][len1-1] = 2
+            elif pred[j][len1-1] > 2:
+                pred[j][len1-1] = 4
             all_preds[p[0]] = pred[j][:len1]
             all_raw[p[0]] = raw[j]
 
@@ -130,6 +134,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
                 current_tok += t
                 if p >= 1:
                     tok = vocab.normalize_token(current_tok)
+                    assert '\t' not in tok, tok
                     if len(tok) <= 0:
                         current_tok = ''
                         continue
@@ -141,6 +146,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
             if len(current_tok):
                 tok = vocab.normalize_token(current_tok)
+                assert '\t' not in tok, tok
                 if len(tok) > 0:
                     current_sent += [(tok, 2)]
 
