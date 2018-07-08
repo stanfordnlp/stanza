@@ -52,7 +52,7 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
         length = sum([len(x) for x in p])
-        paragraphs += [(i, start, start+length, length)] # para idx, start idx, end idx, length
+        paragraphs += [(i, start, start+length, length+1)] # para idx, start idx, end idx, length
 
     paragraphs = list(sorted(paragraphs, key=lambda x: x[3], reverse=True))
 
