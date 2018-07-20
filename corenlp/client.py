@@ -163,13 +163,16 @@ class CoreNLPClient(RobustService):
             else:
                 raise AnnotationException(r.text)
 
-    def annotate(self, text, annotators=None, properties=None):
+    def annotate(self, text, annotators=None, output_format=None, properties=None):
         """Send a request to the CoreNLP server.
 
         :param (str | unicode) text: raw text for the CoreNLPServer to parse
+        :param (list | string) annotators: list of annotators to use
+        :param (str) output_format: output type from server: serialized, json, text, conll, conllu, or xml
         :param (dict) properties: properties that the server expects
         :return: request result
         """
+        # set properties for server call
         if properties is None:
             properties = self.default_properties
             properties.update({
@@ -178,10 +181,24 @@ class CoreNLPClient(RobustService):
                 'outputFormat': 'serialized',
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
+        elif "annotators" not in properties:
+            properties.update({'annotators': ','.join(annotators or self.default_annotators)})
+        # if an output_format is specified, use that to override
+        if output_format is not None:
+            properties["outputFormat"] = output_format
+        # make the request
         r = self._request(text.encode('utf-8'), properties)
-        doc = Document()
-        parseFromDelimitedString(doc, r.content)
-        return doc
+        # customize what is returned based outputFormat
+        if properties["outputFormat"] == "serialized":
+            doc = Document()
+            parseFromDelimitedString(doc, r.content)
+            return doc
+        elif properties["outputFormat"] == "json":
+            return r.json()
+        elif properties["outputFormat"] in ["text", "conllu", "conll", "xml"]:
+            return r.text
+        else:
+            return r
 
     def update(self, doc, annotators=None, properties=None):
         if properties is None:
