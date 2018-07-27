@@ -21,4 +21,4 @@ cd $ROOT
 
 fullname=`grep -e "^$short " $SHORT_TO_TB | awk '{print $2}'`
 
-$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Parser --save_metadir $SAVE_DIR run $inputfile --CoNLLUDataset batch_size=1000 --SubtokenVocab max_buckets=3 | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
+$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Parser --save_metadir $SAVE_DIR run $inputfile --CoNLLUDataset batch_size=5000 | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile

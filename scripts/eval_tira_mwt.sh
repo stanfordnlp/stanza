@@ -9,10 +9,12 @@ if [[ `hostname` = *"stanford.edu" ]]; then
     SAVE_DIR=final_saved_models/mwt
     DATA_DIR=data/mwt
     PYTHON=python
+    CUDA=""
 else
     SAVE_DIR=/media/data/final_saved_models/mwt
     DATA_DIR=/media/data/final_data/mwt
     PYTHON=$HOME/anaconda3/bin/python
+    CUDA="--cpu"
 fi
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
@@ -20,4 +22,4 @@ cd $ROOT
 
 echo "Evaluating $args..."
 $PYTHON -m models.mwt_expander --eval_file $inputfile --data_dir ${DATA_DIR} \
-    --output_file $outputfile --lang $lang --shorthand $short --mode predict --save_dir $SAVE_DIR --cpu $args
+    --output_file $outputfile --lang $lang --shorthand $short --mode predict --save_dir $SAVE_DIR $CUDA $args

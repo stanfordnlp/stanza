@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=jag-urgent --qos=normal
+#SBATCH --partition=jag-lo --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=5120
@@ -7,6 +7,7 @@
 #SBATCH --output=/sailhome/pengqi/logs/slurm-%j.out
 #SBATCH --mail-user=pengqi@cs.stanford.edu
 #SBATCH --mail-type=FAIL
+#SBATCH --exclude=jagupard14
 
 echo "SLURM_JOBID="$SLURM_JOBID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
