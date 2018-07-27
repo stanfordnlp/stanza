@@ -6,8 +6,8 @@ shift;shift;shift;shift;
 args=$@
 
 if [[ `hostname` = *"stanford.edu" ]]; then
-    SAVE_DIR=final_saved_models/lemma
-    DATA_DIR=final_data/lemma
+    SAVE_DIR=/u/scr/pengqi/UD_from_scratch/final_saved_models/lemma
+    DATA_DIR=/u/scr/pengqi/UD_from_scratch/final_data/lemma
     PYTHON=python
     CUDA=""
 else

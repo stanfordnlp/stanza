@@ -7,8 +7,8 @@ shift;shift;shift;shift;
 if [[ `hostname` = *"stanford.edu" ]]; then
     SAVE_DIR=/u/scr/tdozat/v3saves/CoNLL18
     PYTHON=python
-    ROOT=~/scr/Parser-v3
-    SHORT_TO_TB=~/scr/UD_from_scratch/short_to_tb
+    ROOT=/u/scr/pengqi/Parser-v3
+    SHORT_TO_TB=/u/scr/pengqi/UD_from_scratch/short_to_tb
 else
     SAVE_DIR=/media/data/final_saved_models/depparse
     PYTHON=$HOME/anaconda3/bin/python
