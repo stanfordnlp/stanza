@@ -147,7 +147,10 @@ class RNNTokenizer(nn.Module):
         mwt0 = self.mwt_clf(inp)
 
         if self.args['hierarchical']:
-            inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0 * self.args['hier_invtemp']))))
+            if self.args['hier_invtemp'] > 0:
+                inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0 * self.args['hier_invtemp']))))
+            else:
+                inp2, _ = self.rnn2(inp)
 
             inp2 = self.dropout(inp2)
 

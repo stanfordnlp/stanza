@@ -16,9 +16,15 @@ else
     SHORT_TO_TB=/media/data/short_to_tb
 fi
 
+if [[ "$inputfile" == *"ja_modern"* ]]; then
+    ADDITIONAL_FLAGS="--CoNLLUDataset batch_size=10000"
+else
+    ADDITIONAL_FLAGS="--CoNLLUDataset batch_size=1000 --SubtokenVocab max_buckets=3"
+fi
+
 ROOT0="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 cd $ROOT
 
 fullname=`grep -e "^$short " $SHORT_TO_TB | awk '{print $2}'`
 
-$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Tagger --save_metadir $SAVE_DIR run $inputfile --CoNLLUDataset batch_size=10000 | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
+$PYTHON main.py --save_dir $SAVE_DIR/$fullname/Tagger --save_metadir $SAVE_DIR run $inputfile $ADDITIONAL_FLAGS | $PYTHON ${ROOT0}/utils/post_insert_mwt.py $inputfile $outputfile
