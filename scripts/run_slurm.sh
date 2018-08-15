@@ -38,7 +38,8 @@ export PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/bin:$PATH
 export LD_LIBRARY_PATH=/juicier/scr127/scr/pengqi/anaconda3_slurm/lib:$LD_LIBRARY_PATH
 
 cd $root
-bash scripts/${mode}_${module}.sh slurm_${outputprefix} $tb $CUDA_VISIBLE_DEVICES $args
+echo bash scripts/${mode}_${module}.sh slurm_${outputprefix} $tb 0 $args
+bash scripts/${mode}_${module}.sh slurm_${outputprefix} $tb 0 $args
 
 #
 echo "Done"

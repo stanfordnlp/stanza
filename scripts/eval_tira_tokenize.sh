@@ -6,8 +6,11 @@ shift;shift;shift;shift;
 args=$@
 
 if [[ `hostname` = *"stanford.edu" ]]; then
-    SAVE_DIR=/u/scr/pengqi/UD_from_scratch/final_saved_models/tokenize
-    DATA_DIR=/u/scr/pengqi/UD_from_scratch/final_data/tokenize
+    #SAVE_DIR=/u/scr/pengqi/UD_from_scratch/final_saved_models/tokenize
+    #DATA_DIR=/u/scr/pengqi/UD_from_scratch/final_data/tokenize
+    SAVE_DIR=/u/scr/pengqi/UD_from_scratch/final_saved_models2/tokenize
+    #SAVE_DIR=/u/scr/pengqi/UD_from_scratch/saved_models_noreg/tokenize
+    DATA_DIR=/u/scr/pengqi/UD_from_scratch/data/tokenize
     PYTHON=python
     CUDA=""
 else
