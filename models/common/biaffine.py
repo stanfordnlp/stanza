@@ -1,0 +1,35 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class BiaffineScorer(nn.Module):
+    def __init__(self, input1_size, input2_size, output_size):
+        super().__init__()
+        self.input1_size = input1_size
+        self.input2_size = input2_size
+        self.output_size = output_size
+        self.W_bilin = nn.Linear(input1_size, input2_size * output_size, bias=False)
+        self.W1 = nn.Linear(input1_size, output_size, bias=False)
+        self.W2 = nn.Linear(input2_size, output_size)
+
+    def forward(self, input1, input2):
+        res = self.W1(input1) + self.W2(input2)
+        res = res + input2.unsqueeze(1).bmm(self.W_bilin(input1).view(input1.size(0), self.input2_size, self.output_size)).squeeze(1)
+        return res
+
+class DeepBiaffineScorer(nn.Module):
+    def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu):
+        super().__init__()
+        self.W1 = nn.Linear(input1_size, hidden_size)
+        self.W2 = nn.Linear(input2_size, hidden_size)
+        self.hidden_func = hidden_func
+        self.scorer = BiaffineScorer(hidden_size, hidden_size, output_size)
+
+    def forward(self, input1, input2):
+        return self.scorer(self.hidden_func(self.W1(input1)), self.hidden_func(self.W2(input2)))
+
+if __name__ == "__main__":
+    x1 = torch.randn(3,4)
+    x2 = torch.randn(3,5)
+    scorer = DeepBiaffineScorer(4, 5, 6, 7)
+    print(scorer(x1, x2))
