@@ -65,6 +65,7 @@ class HighwayLSTM(nn.Module):
 
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
+        self.gate = nn.ModuleList()
         self.drop = nn.Dropout(dropout)
         self.recur_drop = nn.Dropout(recur_dropout)
         if self.recur_dropout == 0:
@@ -73,6 +74,7 @@ class HighwayLSTM(nn.Module):
                 self.lstm.append(nn.LSTM(in_size, hidden_size, num_layers=1, bias=bias,
                     batch_first=batch_first, dropout=0, bidirectional=bidirectional))
                 self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
+                self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
                 in_size = hidden_size * self.num_directions
         else:
             raise NotImplementedError()
@@ -86,7 +88,7 @@ class HighwayLSTM(nn.Module):
             for l in range(self.num_layers):
                 layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
                 h, _ = self.lstm[l](input, layer_hx)
-                h = self.drop(h) + highway_func(self.highway[l](input))
+                h = self.drop(h) + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
                 input = h
             return input
         else:
