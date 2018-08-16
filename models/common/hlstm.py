@@ -45,18 +45,60 @@ class HLSTMCell(nn.modules.rnn.RNNCellBase):
 
         return h, c
 
+# Highway LSTM network, does NOT use the HLSTMCell above
+class HighwayLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size,
+                 num_layers=1, bias=True, batch_first=False,
+                 dropout=0, bidirectional=False, recur_dropout=0, highway_func=None):
+        super(HighwayLSTM, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.bias = bias
+        self.batch_first = batch_first
+        self.dropout = dropout
+        self.dropout_state = {}
+        self.bidirectional = bidirectional
+        self.num_directions = 2 if bidirectional else 1
+        self.highway_func = highway_func
+        self.recur_dropout = recur_dropout
+
+        self.lstm = nn.ModuleList()
+        self.highway = nn.ModuleList()
+        self.drop = nn.Dropout(dropout)
+        self.recur_drop = nn.Dropout(recur_dropout)
+        if self.recur_dropout == 0:
+            in_size = input_size
+            for l in range(num_layers):
+                self.lstm.append(nn.LSTM(in_size, hidden_size, num_layers=1, bias=bias,
+                    batch_first=batch_first, dropout=0, bidirectional=bidirectional))
+                self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
+                in_size = hidden_size * self.num_directions
+        else:
+            raise NotImplementedError()
+
+    def forward(self, input, hx=None):
+        highway_func = lambda x: x if self.highway_func is None else self.highway_func
+
+        if self.recur_dropout == 0:
+            hs = []
+            cs = []
+            for l in range(self.num_layers):
+                layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
+                h, _ = self.lstm[l](input, layer_hx)
+                h = self.drop(h) + highway_func(self.highway[l](input))
+                input = h
+            return input
+        else:
+            raise NotImplementedError()
+
 if __name__ == "__main__":
     T = 10
-    rnn = HLSTMCell(10, 20)
-    rnn2 = HLSTMCell(20, 20)
+    bidir = True
+    num_dir = 2 if bidir else 1
+    rnn = HighwayLSTM(10, 20, num_layers=2, bidirectional=True)
     input = torch.randn(T, 3, 10)
-    hx = torch.randn(3, 20)
-    cx = torch.randn(3, 20)
-    hx2 = torch.randn(3, 20)
-    cx2 = torch.randn(3, 20)
-    output = []
-    for i in range(T):
-        hx, cx = rnn(input[i], None, (hx, cx))
-        hx2, cx2 = rnn2(hx, cx, (hx2, cx2))
-        output.append(hx2)
-    print(torch.stack(output))
+    hx = torch.randn(2 * num_dir, 3, 20)
+    cx = torch.randn(2 * num_dir, 3, 20)
+    output = rnn(input, (hx, cx))
+    print(output)
