@@ -5,16 +5,12 @@ import torch.nn.functional as F
 class BiaffineScorer(nn.Module):
     def __init__(self, input1_size, input2_size, output_size):
         super().__init__()
-        self.input1_size = input1_size
-        self.input2_size = input2_size
-        self.output_size = output_size
-        self.W_bilin = nn.Linear(input1_size, input2_size * output_size, bias=False)
+        self.W_bilin = nn.Bilinear(input1_size, input2_size, output_size)
         self.W1 = nn.Linear(input1_size, output_size, bias=False)
-        self.W2 = nn.Linear(input2_size, output_size)
+        self.W2 = nn.Linear(input2_size, output_size, bias=False)
 
     def forward(self, input1, input2):
-        res = self.W1(input1) + self.W2(input2)
-        res = res + input2.unsqueeze(1).bmm(self.W_bilin(input1).view(input1.size(0), self.input2_size, self.output_size)).squeeze(1)
+        res = self.W1(input1) + self.W2(input2) + self.W_bilin(input1, input2)
         return res
 
 class DeepBiaffineScorer(nn.Module):
