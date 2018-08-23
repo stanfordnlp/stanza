@@ -1,0 +1,17 @@
+{
+    "batch_size": 50,
+    "attn_type": "soft",
+    "hidden_dim": 128,
+    "emb_dim": 64,
+    "num_layers": 1,
+    "dropout": 0.5,
+    "emb_dropout": 0.5,
+    "lr_decay": 0.9,
+    "num_epoch": 30,
+    "max_grad_norm": 5,
+    "decay_epoch": 30,
+    "beam_size": 1,
+    "ensemble_dict": false,
+    "ensemble_early_stop": false,
+    "best_dev_score": 0
+}
