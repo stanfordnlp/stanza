@@ -81,7 +81,7 @@ class CoNLLFile():
             self._num_words = n
         return self._num_words
 
-    def get(self, fields):
+    def get(self, fields, as_sentences=False):
         """ Get fields from a list of field names. If only one field name is provided, return a list
         of that field; if more than one, return a list of list. Note that all returned fields are after
         multi-word expansion.
@@ -91,13 +91,19 @@ class CoNLLFile():
         field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
         results = []
         for sent in self.sents:
+            cursent = []
             for ln in sent:
                 if '-' in ln[0]: # skip
                     continue
                 if len(field_idxs) == 1:
-                    results += [ln[field_idxs[0]]]
+                    cursent += [ln[field_idxs[0]]]
                 else:
-                    results += [[ln[fid] for fid in field_idxs]]
+                    cursent += [[ln[fid] for fid in field_idxs]]
+
+            if as_sentences:
+                results.append(cursent)
+            else:
+                results += cursent
         return results
 
     def set(self, fields, contents):
