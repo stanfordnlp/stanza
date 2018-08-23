@@ -4,9 +4,19 @@ from models.common.vocab import Vocab as BaseVocab
 from models.common.vocab import ComposedVocab
 import models.common.seq2seq_constant as constant
 
+class CharVocab(BaseVocab):
+    def build_vocab(self):
+        counter = Counter([c for sent in self.data for w in sent for c in w[self.idx]])
+
+        self._id2unit = constant.VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
+        self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
+
 class WordVocab(BaseVocab):
     def build_vocab(self):
         counter = Counter([w[self.idx] for sent in self.data for w in sent])
+        for k in list(counter.keys()):
+            if counter[k] < self.cutoff:
+                del counter[k]
 
         self._id2unit = constant.VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}

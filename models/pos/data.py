@@ -7,7 +7,7 @@ import torch
 import models.common.seq2seq_constant as constant
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
-from models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab
+from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab
 
 class DataLoader:
     def __init__(self, filename, batch_size, args, evaluation=False):
@@ -43,15 +43,17 @@ class DataLoader:
         print("{} batches created for {}.".format(len(data), filename))
 
     def init_vocab(self, vocab_pattern, data):
-        types = ['word', 'upos', 'xpos', 'feats']
+        types = ['char', 'word', 'upos', 'xpos', 'feats']
         if not all([os.path.exists(vocab_pattern.format(type_)) for type_ in types]):
             assert self.eval == False # for eval vocab file must exist
-        wordvocab = WordVocab(vocab_pattern.format('word'), data, self.args['shorthand'])
+        charvocab = CharVocab(vocab_pattern.format('char'), data, self.args['shorthand'])
+        wordvocab = WordVocab(vocab_pattern.format('word'), data, self.args['shorthand'], cutoff=7)
         uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
-        # TODO: make this line language-specific
+        # TODO: make XPOSVocab language-specific
         xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
         featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
-        vocab = {'word': wordvocab,
+        vocab = {'char': charvocab,
+                'word': wordvocab,
                 'upos': uposvocab,
                 'xpos': xposvocab,
                 'feats': featsvocab}
@@ -59,17 +61,13 @@ class DataLoader:
 
     def preprocess(self, data, vocab, args):
         processed = []
-        for d in data:
-            src = list(d[0])
-            src = [constant.SOS] + src + [constant.EOS]
-            src = map_to_ids(src, vocab)
-            if self.eval:
-                tgt = src # as a placeholder
-            else:
-                tgt = list(d[1])
-            tgt_in = map_to_ids([constant.SOS] + tgt, vocab)
-            tgt_out = map_to_ids(tgt + [constant.EOS], vocab)
-            processed += [[src, tgt_in, tgt_out]]
+        for sent in data:
+            processed_sent = [map_to_ids([w[0] for w in sent], vocab['word'])]
+            processed_sent += [[map_to_ids([x for x in w[0]], vocab['char']) for w in sent]]
+            processed_sent += [map_to_ids([w[1] for w in sent], vocab['upos'])]
+            processed_sent += [map_to_ids([w[2] for w in sent], vocab['xpos'])]
+            processed_sent += [map_to_ids([w[3] for w in sent], vocab['feats'])]
+            processed.append(processed_sent)
         return processed
 
     def __len__(self):
@@ -84,20 +82,28 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 3
+        assert len(batch) == 5
 
-        # sort all fields by lens for easy RNN operations
+        # sort sentences by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
 
+        # sort words by lens for easy char-RNN operations
+        batch_words = [w for sent in batch[1] for w in sent]
+        word_lens = [len(x) for x in batch_words]
+        batch_words, word_orig_idx = sort_all([batch_words], word_lens)
+        batch_words = batch_words[0]
+
         # convert to tensors
-        src = batch[0]
-        src = get_long_tensor(src, batch_size)
-        src_mask = torch.eq(src, constant.PAD_ID)
+        words = batch[0]
+        words = get_long_tensor(words, batch_size)
+        words_mask = torch.eq(words, constant.PAD_ID)
+        wordchars = get_long_tensor(batch_words, len(word_lens))
+        wordchars_mask = torch.eq(wordchars, constant.PAD_ID)
+
+        # TODO: deal with UPOS, XPOS, and UFeats
         tgt_in = get_long_tensor(batch[1], batch_size)
         tgt_out = get_long_tensor(batch[2], batch_size)
-        assert tgt_in.size(1) == tgt_out.size(1), \
-                "Target input and output sequence sizes do not match."
         return (src, src_mask, tgt_in, tgt_out, orig_idx)
 
     def __iter__(self):

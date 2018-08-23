@@ -8,11 +8,12 @@ PAD_ID = 0
 VOCAB_PREFIX = [PAD]
 
 class Vocab:
-    def __init__(self, filename, data, lang, idx=0):
+    def __init__(self, filename, data, lang, idx=0, cutoff=0):
         self.filename = filename
         self.data = data
         self.lang = lang
         self.idx = idx
+        self.cutoff = cutoff
         if os.path.exists(self.filename):
             self.load()
         else:
@@ -91,9 +92,9 @@ class ComposedVocab(Vocab):
     def unit2id(self, unit):
         parts = self.unit2parts(unit)
         if self.keyed:
-            return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [0] for k in self._unit2id]
+            return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [PAD_ID] for k in self._unit2id]
         else:
-            return [self._unit2id[i].get(parts[i], 0) if i < len(parts) else 0 for i in range(len(self._unit2id))]
+            return [self._unit2id[i].get(parts[i], PAD_ID) if i < len(parts) else PAD_ID for i in range(len(self._unit2id))]
 
     def id2unit(self, id):
         raise NotImplementedError()

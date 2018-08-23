@@ -29,7 +29,7 @@ class Trainer(BaseTrainer):
     def __init__(self, args, vocab, emb_matrix=None):
         self.args = args
         self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        self.crit = loss.SequenceLoss(vocab.size)
+        self.crit = loss.SequenceLoss(vocab['upos'].size)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
