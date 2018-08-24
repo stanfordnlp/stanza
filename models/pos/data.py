@@ -62,11 +62,11 @@ class DataLoader:
     def preprocess(self, data, vocab, args):
         processed = []
         for sent in data:
-            processed_sent = [map_to_ids([w[0] for w in sent], vocab['word'])]
-            processed_sent += [[map_to_ids([x for x in w[0]], vocab['char']) for w in sent]]
-            processed_sent += [map_to_ids([w[1] for w in sent], vocab['upos'])]
-            processed_sent += [map_to_ids([w[2] for w in sent], vocab['xpos'])]
-            processed_sent += [map_to_ids([w[3] for w in sent], vocab['feats'])]
+            processed_sent = [vocab['word'].map([w[0] for w in sent])]
+            processed_sent += [[vocab['char'].map([x for x in w[0]]) for w in sent]]
+            processed_sent += [vocab['upos'].map([w[1] for w in sent])]
+            processed_sent += [vocab['xpos'].map([w[2] for w in sent])]
+            processed_sent += [vocab['feats'].map([w[3] for w in sent])]
             processed.append(processed_sent)
         return processed
 
@@ -101,10 +101,10 @@ class DataLoader:
         wordchars = get_long_tensor(batch_words, len(word_lens))
         wordchars_mask = torch.eq(wordchars, constant.PAD_ID)
 
-        # TODO: deal with UPOS, XPOS, and UFeats
-        tgt_in = get_long_tensor(batch[1], batch_size)
-        tgt_out = get_long_tensor(batch[2], batch_size)
-        return (src, src_mask, tgt_in, tgt_out, orig_idx)
+        upos = get_long_tensor(batch[2], batch_size)
+        xpos = get_long_tensor(batch[3], batch_size)
+        ufeats = get_long_tensor(batch[4], batch_size)
+        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, orig_idx, word_orig_idx
 
     def __iter__(self):
         for i in range(self.__len__()):

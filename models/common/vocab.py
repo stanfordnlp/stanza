@@ -5,7 +5,9 @@ import pickle
 
 PAD = '<PAD>'
 PAD_ID = 0
-VOCAB_PREFIX = [PAD]
+UNK = '<UNK>'
+UNK_ID = 1
+VOCAB_PREFIX = [PAD, UNK]
 
 class Vocab:
     def __init__(self, filename, data, lang, idx=0, cutoff=0):
@@ -58,10 +60,10 @@ class Vocab:
     def __getitem__(self, key):
         if isinstance(key, str):
             return self.unit2id(key)
-        elif isinstance(key, int):
+        elif isinstance(key, int) or isinstance(key, list):
             return self.id2unit(key)
         else:
-            raise TypeError("Vocab key must be either str or int")
+            raise TypeError("Vocab key must be one of str, list, or int")
 
     def __contains__(self, key):
         return key in self._unit2id
@@ -86,13 +88,18 @@ class ComposedVocab(Vocab):
             if len(parts) == 1 and parts[0] == '_':
                 return dict()
             parts = [x.split('=') for x in parts]
-            parts = dict([[x, y.split(',')] for x, y in parts])
+            #parts = dict([[x, y.split(',')] for x, y in parts])
+
+            # Just treat multi-valued properties values as one possible value
+            parts = dict(parts)
         return parts
 
     def unit2id(self, unit):
         parts = self.unit2parts(unit)
         if self.keyed:
-            return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [PAD_ID] for k in self._unit2id]
+            #return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [PAD_ID] for k in self._unit2id]
+            # treat multi-valued properties as singletons
+            return [self._unit2id[k].get(parts[k], UNK_ID) if k in parts else PAD_ID for k in self._unit2id]
         else:
             return [self._unit2id[i].get(parts[i], PAD_ID) if i < len(parts) else PAD_ID for i in range(len(self._unit2id))]
 
@@ -109,9 +116,13 @@ class ComposedVocab(Vocab):
                 for key in parts:
                     if key not in self._id2unit:
                         self._id2unit[key] = copy(VOCAB_PREFIX)
-                    for v in parts[key]:
-                        if v not in self._id2unit[key]:
-                            self._id2unit[key].append(v)
+
+                    # treat multi-valued properties as singletons
+                    if parts[key] not in self._id2unit[key]:
+                        self._id2unit[key].append(parts[key])
+                    #for v in parts[key]:
+                    #    if v not in self._id2unit[key]:
+                    #        self._id2unit[key].append(v)
         else:
             self._id2unit = OrderedDict()
 

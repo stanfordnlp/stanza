@@ -7,9 +7,13 @@ def map_to_ids(tokens, vocab):
     return ids
 
 def get_long_tensor(tokens_list, batch_size, pad_id=constant.PAD_ID):
-    """ Convert list of list of tokens to a padded LongTensor. """
-    token_len = max(len(x) for x in tokens_list)
-    tokens = torch.LongTensor(batch_size, token_len).fill_(pad_id)
+    """ Convert (list of )+ tokens to a padded LongTensor. """
+    sizes = []
+    x = tokens_list
+    while isinstance(x[0], list):
+        sizes.append(max(len(y) for y in x))
+        x = [z for y in x for z in y]
+    tokens = torch.LongTensor(batch_size, *sizes).fill_(pad_id)
     for i, s in enumerate(tokens_list):
         tokens[i, :len(s)] = torch.LongTensor(s)
     return tokens

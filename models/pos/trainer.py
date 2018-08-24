@@ -18,11 +18,12 @@ from models.common import utils, loss
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
     if args['cuda']:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:4]]
+        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:7]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:4]]
-    orig_idx = batch[4]
-    return inputs, orig_idx
+        inputs = [Variable(b) if b is not None else None for b in batch[:7]]
+    orig_idx = batch[7]
+    word_orig_idx = batch[8]
+    return inputs, orig_idx, word_orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -38,8 +39,8 @@ class Trainer(BaseTrainer):
         self.vocab = vocab
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt_in, tgt_out = inputs
+        inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats = inputs
 
         if eval:
             self.model.eval()
@@ -57,7 +58,7 @@ class Trainer(BaseTrainer):
         self.optimizer.step()
         return loss_val
     def predict(self, batch, unsort=True):
-        inputs, orig_idx = unpack_batch(batch, self.args)
+        inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()
