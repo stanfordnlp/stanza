@@ -10,12 +10,13 @@ UNK_ID = 1
 VOCAB_PREFIX = [PAD, UNK]
 
 class Vocab:
-    def __init__(self, filename, data, lang, idx=0, cutoff=0):
+    def __init__(self, filename, data, lang, idx=0, cutoff=0, lower=False):
         self.filename = filename
         self.data = data
         self.lang = lang
         self.idx = idx
         self.cutoff = cutoff
+        self.lower = lower
         if os.path.exists(self.filename):
             self.load()
         else:
@@ -36,6 +37,8 @@ class Vocab:
         raise NotImplementedError()
 
     def normalize_unit(self, unit):
+        if self.lower:
+            return unit.lower()
         return unit
 
     def unit2id(self, unit):

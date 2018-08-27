@@ -10,45 +10,47 @@ import torch.nn.init as init
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-import models.common.seq2seq_constant as constant
+from models.common.constant import lcode2lang
 from models.common.trainer import Trainer as BaseTrainer
 from models.common.seq2seq_model import Seq2SeqModel
 from models.common import utils, loss
 
+from models.pos.model import Tagger
+
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
     if args['cuda']:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:7]]
+        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:8]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:7]]
-    orig_idx = batch[7]
+        inputs = [Variable(b) if b is not None else None for b in batch[:8]]
+    orig_idx = batch[8]
     word_orig_idx = batch[8]
     return inputs, orig_idx, word_orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args, vocab, emb_matrix=None):
+    def __init__(self, args, vocab, emb_matrix):
         self.args = args
-        self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        self.crit = loss.SequenceLoss(vocab['upos'].size)
+
+        self.model = Tagger(args, vocab, emb_matrix=emb_matrix)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
             self.crit.cuda()
         self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'])
+
         self.vocab = vocab
 
     def update(self, batch, eval=False):
         inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
-        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats = inputs
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs, _ = self.model(src, src_mask, tgt_in)
-        loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
+        loss = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -57,6 +59,7 @@ class Trainer(BaseTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
         self.optimizer.step()
         return loss_val
+
     def predict(self, batch, unsort=True):
         inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt, tgt_mask = inputs

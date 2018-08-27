@@ -21,6 +21,7 @@ import models.common.seq2seq_constant as constant
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -31,13 +32,17 @@ def parse_args():
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
-    parser.add_argument('--hidden_dim', type=int, default=100)
-    parser.add_argument('--emb_dim', type=int, default=50)
-    parser.add_argument('--num_layers', type=int, default=1)
+    parser.add_argument('--hidden_dim', type=int, default=200)
+    parser.add_argument('--char_hidden_dim', type=int, default=400)
+    parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
+    parser.add_argument('--word_emb_dim', type=int, default=75)
+    parser.add_argument('--char_emb_dim', type=int, default=100)
+    parser.add_argument('--tag_emb_dim', type=int, default=50)
+    parser.add_argument('--transformed_dim', type=int, default=125)
+    parser.add_argument('--num_layers', type=int, default=2)
+    parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--emb_dropout', type=float, default=0.5)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--max_dec_len', type=int, default=50)
-    parser.add_argument('--beam_size', type=int, default=1)
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
     parser.add_argument('-e2d','--enc2dec', default='no', choices=['no', 'linear', 'nonlinear', 'zero'], help='Use an encoder to decoder transformation layer')
@@ -81,7 +86,6 @@ def main():
 
 def train(args):
     # load data
-    print('max_dec_len:', args['max_dec_len'])
     print("Loading data with batch size {}...".format(args['batch_size']))
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
@@ -107,7 +111,7 @@ def train(args):
         exit()
 
     print("Training tagger...")
-    trainer = Trainer(args, vocab)
+    trainer = Trainer(args, vocab, train_batch.pretrained_emb)
 
     global_step = 0
     max_steps = len(train_batch) * args['num_epoch']
@@ -183,7 +187,6 @@ def evaluate(args):
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
-    print('max_dec_len:', loaded_args['max_dec_len'])
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
