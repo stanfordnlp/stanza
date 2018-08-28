@@ -1,5 +1,5 @@
 """
-Training and evaluation for MWT expander.
+Training and evaluation for the tagger.
 """
 
 import os
@@ -50,10 +50,11 @@ def parse_args():
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.9)
-    parser.add_argument('--decay_epoch', type=int, default=30, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=30)
+    parser.add_argument('--beta2', type=float, default=0.95)
+    parser.add_argument('--decay_epoch', type=int, default=100, help="Decay the lr starting from this epoch.")
+    parser.add_argument('--num_epoch', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
@@ -141,10 +142,8 @@ def train(args):
         for i, batch in enumerate(dev_batch):
             preds = trainer.predict(batch)
             dev_preds += preds
-        if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
-            print("[Ensembling dict with seq2seq model...]")
-            dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
-        dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+        dev_batch.conll.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
+        dev_batch.conll.write_conll(system_pred_file)
         _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
         train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -168,15 +167,6 @@ def train(args):
 
     best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
     print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
-
-    # try ensembling with dict if necessary
-    if args.get('ensemble_dict', False):
-        print("[Ensembling dict with seq2seq model...]")
-        dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
-        dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
-        _, _, dev_score = scorer.score(system_pred_file, gold_file)
-        print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
-        best_f = max(best_f, dev_score)
 
     param_manager.update(args, best_f)
 
@@ -215,20 +205,18 @@ def evaluate(args):
             preds = []
             for i, b in enumerate(batch):
                 preds += trainer.predict(b)
-
-            if loaded_args.get('ensemble_dict', False):
-                preds = dict_trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
     else:
         # skip eval if dev data does not exist
         preds = []
 
     # write to file and score
-    batch.conll.write_conll_with_mwt_expansions(preds, system_pred_file)
+    batch.conll.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
+    batch.conll.write_conll(system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("MWT expansion score:")
+        print("Tagger score:")
         print("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':

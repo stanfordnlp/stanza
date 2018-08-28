@@ -37,7 +37,7 @@ class Trainer(BaseTrainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'])
+        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']))
 
         self.vocab = vocab
 
@@ -61,15 +61,17 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
-        src, src_mask, tgt, tgt_mask = inputs
+        inputs, orig_idx, word_orig_idx, sentlens = unpack_batch(batch, self.args)
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         self.model.eval()
-        batch_size = src.size(0)
-        preds, _ = self.model.predict(src, src_mask, self.args['beam_size'])
-        pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
-        pred_seqs = utils.prune_decoded_seqs(pred_seqs)
-        pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
+        batch_size = word.size(0)
+        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens)
+        upos_seqs = [self.vocab['upos'].unmap(sent) for sent in preds[0]]
+        xpos_seqs = [self.vocab['xpos'].unmap(sent) for sent in preds[1]]
+        feats_seqs = [self.vocab['feats'].unmap(sent) for sent in preds[2]]
+
+        pred_tokens = [[[upos_seqs[i][j], xpos_seqs[i][j], feats_seqs[i][j]] for j in range(sentlens[i])] for i in range(batch_size)]
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens

@@ -109,12 +109,22 @@ class CompositeVocab(Vocab):
             return [self._unit2id[i].get(parts[i], UNK_ID) if i < len(parts) else EMPTY_ID for i in range(len(self._unit2id))]
 
     def id2unit(self, id):
-        raise NotImplementedError()
+        items = []
+        for v, k in zip(id, self._id2unit.keys()):
+            if v == EMPTY_ID: continue
+            if self.keyed:
+                items.append("{}={}".format(k, self._id2unit[k][v]))
+            else:
+                items.append(self._id2unit[k][v])
+        res = self.sep.join(items)
+        if res == "":
+            res = "_"
+        return res
 
     def build_vocab(self):
         allunits = [w[self.idx] for sent in self.data for w in sent]
         if self.keyed:
-            self._id2unit = OrderedDict()
+            self._id2unit = dict()
 
             for u in allunits:
                 parts = self.unit2parts(u)
@@ -129,7 +139,7 @@ class CompositeVocab(Vocab):
                     #    if v not in self._id2unit[key]:
                     #        self._id2unit[key].append(v)
         else:
-            self._id2unit = OrderedDict()
+            self._id2unit = dict()
 
             allparts = [self.unit2parts(u) for u in allunits]
             maxlen = max([len(p) for p in allparts])
@@ -141,6 +151,7 @@ class CompositeVocab(Vocab):
                     if i < len(parts) and p not in self._id2unit[i]:
                         self._id2unit[i].append(p)
 
+        self._id2unit = OrderedDict([(k, self._id2unit[k]) for k in sorted(self._id2unit.keys())])
         self._unit2id = {k: {w:i for i, w in enumerate(self._id2unit[k])} for k in self._id2unit}
 
     def lens(self):

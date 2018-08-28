@@ -65,7 +65,7 @@ class Tagger(nn.Module):
         self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'])
 
         input_size = self.args['word_emb_dim'] + self.args['transformed_dim'] * 2 # freq word + transformed pretrained + transformed char-level
-        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True)
+        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'])
 
         # classifiers
         self.upos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
@@ -104,12 +104,12 @@ class Tagger(nn.Module):
 
         lstm_inputs = torch.cat([char_reps, pretrained_emb, word_emb], 2)
 
-        lstm_outputs = self.taggerlstm(lstm_inputs, word_mask)
+        lstm_outputs = self.drop(self.taggerlstm(lstm_inputs, word_mask))
 
         upos_hid = self.drop(F.relu(self.upos_hid(lstm_outputs)))
         upos_pred = self.upos_clf(upos_hid)
 
-        preds = [upos_pred.max(2)[0]]
+        preds = [upos_pred.max(2)[1]]
 
         loss = self.crit(upos_pred.view(-1, upos_pred.size(2)), upos.view(-1))
 
@@ -134,18 +134,18 @@ class Tagger(nn.Module):
             for i in range(len(self.vocab['xpos'])):
                 xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
                 loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos[:, :, i].view(-1))
-                xpos_preds.append(xpos_pred.max(2)[0])
-            preds.append(xpos_preds)
+                xpos_preds.append(xpos_pred.max(2, keepdim=True)[1])
+            preds.append(torch.cat(xpos_preds, 2))
         else:
             xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
             loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos.view(-1))
-            preds.append(xpos_pred.max(2)[0])
+            preds.append(xpos_pred.max(2)[1])
 
         ufeats_preds = []
         for i in range(len(self.vocab['feats'])):
             ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
             loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(2)), ufeats[:, :, i].view(-1))
-            ufeats_preds.append(ufeats_pred.max(2)[0])
-        preds.append(ufeats_preds)
+            ufeats_preds.append(ufeats_pred.max(2, keepdim=True)[1])
+        preds.append(torch.cat(ufeats_preds, 2))
 
         return loss, preds

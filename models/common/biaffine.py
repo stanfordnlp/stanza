@@ -14,15 +14,16 @@ class BiaffineScorer(nn.Module):
         return res
 
 class DeepBiaffineScorer(nn.Module):
-    def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu):
+    def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu, dropout=0):
         super().__init__()
         self.W1 = nn.Linear(input1_size, hidden_size)
         self.W2 = nn.Linear(input2_size, hidden_size)
         self.hidden_func = hidden_func
         self.scorer = BiaffineScorer(hidden_size, hidden_size, output_size)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, input1, input2):
-        return self.scorer(self.hidden_func(self.W1(input1)), self.hidden_func(self.W2(input2)))
+        return self.scorer(self.dropout(self.hidden_func(self.W1(input1))), self.dropout(self.hidden_func(self.W2(input2))))
 
 if __name__ == "__main__":
     x1 = torch.randn(3,4)
