@@ -6,6 +6,10 @@ from models.common.biaffine import BiaffineScorer
 from models.common.hlstm import HighwayLSTM
 from models.common.packed_lstm import PackedLSTM
 from models.common.utils import unsort
+from models.common.biaffine import BiaffineScorer
+
+from models.common.vocab import Vocab as BaseVoab
+from models.common.vocab import CompositeVocab
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=True):
@@ -37,11 +41,12 @@ class CharacterModel(nn.Module):
         return res
 
 class Tagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix):
+    def __init__(self, args, vocab, emb_matrix, share_hid=False):
         super().__init__()
 
         self.vocab = vocab
         self.args = args
+        self.share_hid = share_hid
 
         # pretrained embeddings
         self.pretrained_emb = nn.Embedding(emb_matrix.shape[0], emb_matrix.shape[1], padding_idx=0)
@@ -50,8 +55,9 @@ class Tagger(nn.Module):
         # frequent word embeddings
         self.word_emb = nn.Embedding(len(vocab['word']), self.args['word_emb_dim'], padding_idx=0)
 
-        # upos embeddings
-        self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
+        if not share_hid:
+            # upos embeddings
+            self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
 
         # modules
         self.charmodel = CharacterModel(args, vocab)
@@ -65,8 +71,26 @@ class Tagger(nn.Module):
         self.upos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
         self.upos_clf = nn.Linear(self.args['deep_biaff_hidden_dim'], len(vocab['upos']))
 
-        # criteria
-        self.upos_crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
+        if share_hid:
+            clf_constructor = lambda outsize: nn.Linear(self.args['deep_biaff_hidden_dim'], outsize)
+        else:
+            self.xpos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
+            self.ufeats_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
+            clf_constructor = lambda outsize: BiaffineScorer(self.args['deep_biaff_hidden_dim'], self.args['tag_emb_dim'], outsize)
+
+        if isinstance(vocab['xpos'], CompositeVocab):
+            self.xpos_clf = nn.ModuleList()
+            for l in vocab['xpos'].lens():
+                self.xpos_clf.append(clf_constructor(l))
+        else:
+            self.xpos_clf = clf_constructor(len(vocab['xpos']))
+
+        self.ufeats_clf = nn.ModuleList()
+        for l in vocab['feats'].lens():
+            self.ufeats_clf.append(clf_constructor(l))
+
+        # criterion
+        self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
 
         self.drop = nn.Dropout(args['dropout'])
 
@@ -85,6 +109,43 @@ class Tagger(nn.Module):
         upos_hid = self.drop(F.relu(self.upos_hid(lstm_outputs)))
         upos_pred = self.upos_clf(upos_hid)
 
-        loss = self.upos_crit(upos_pred.view(-1, upos_pred.size(2)), upos.view(-1))
+        preds = [upos_pred.max(2)[0]]
 
-        return loss, (upos_pred,)
+        loss = self.crit(upos_pred.view(-1, upos_pred.size(2)), upos.view(-1))
+
+        if self.share_hid:
+            xpos_hid = upos_hid
+            ufeats_hid = upos_hid
+
+            clffunc = lambda clf, hid: clf(hid)
+        else:
+            xpos_hid = self.drop(F.relu(self.xpos_hid(lstm_outputs)))
+            ufeats_hid = self.drop(F.relu(self.ufeats_hid(lstm_outputs)))
+
+            if self.training:
+                upos_emb = self.upos_emb(upos)
+            else:
+                upos_emb = self.upos_emb(preds[-1])
+
+            clffunc = lambda clf, hid: clf(hid, upos_emb)
+
+        if isinstance(self.vocab['xpos'], CompositeVocab):
+            xpos_preds = []
+            for i in range(len(self.vocab['xpos'])):
+                xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
+                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos[:, :, i].view(-1))
+                xpos_preds.append(xpos_pred.max(2)[0])
+            preds.append(xpos_preds)
+        else:
+            xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
+            loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos.view(-1))
+            preds.append(xpos_pred.max(2)[0])
+
+        ufeats_preds = []
+        for i in range(len(self.vocab['feats'])):
+            ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
+            loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(2)), ufeats[:, :, i].view(-1))
+            ufeats_preds.append(ufeats_pred.max(2)[0])
+        preds.append(ufeats_preds)
+
+        return loss, preds

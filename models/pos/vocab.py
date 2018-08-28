@@ -1,7 +1,7 @@
 from collections import Counter
 
 from models.common.vocab import Vocab as BaseVocab
-from models.common.vocab import ComposedVocab
+from models.common.vocab import CompositeVocab
 import models.common.seq2seq_constant as constant
 
 class CharVocab(BaseVocab):
@@ -24,11 +24,11 @@ class WordVocab(BaseVocab):
         self._id2unit = constant.VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
-class XPOSVocab(ComposedVocab):
+class XPOSVocab(CompositeVocab):
     def __init__(self, filename, data, lang, idx=0, sep="", keyed=False):
         super().__init__(filename, data, lang, idx=idx, sep=sep, keyed=keyed)
 
-class FeatureVocab(ComposedVocab):
+class FeatureVocab(CompositeVocab):
     def __init__(self, filename, data, lang, idx=0, sep="|", keyed=True):
         super().__init__(filename, data, lang, idx=idx, sep=sep, keyed=keyed)
 

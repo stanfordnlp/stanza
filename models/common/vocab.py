@@ -7,7 +7,9 @@ PAD = '<PAD>'
 PAD_ID = 0
 UNK = '<UNK>'
 UNK_ID = 1
-VOCAB_PREFIX = [PAD, UNK]
+EMPTY = '<EMPTY>'
+EMPTY_ID = 2
+VOCAB_PREFIX = [PAD, UNK, EMPTY]
 
 class Vocab:
     def __init__(self, filename, data, lang, idx=0, cutoff=0, lower=False):
@@ -75,7 +77,7 @@ class Vocab:
     def size(self):
         return len(self)
 
-class ComposedVocab(Vocab):
+class CompositeVocab(Vocab):
     def __init__(self, filename, data, lang, idx=0, sep="", keyed=False):
         self.sep = sep
         self.keyed = keyed
@@ -102,9 +104,9 @@ class ComposedVocab(Vocab):
         if self.keyed:
             #return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [PAD_ID] for k in self._unit2id]
             # treat multi-valued properties as singletons
-            return [self._unit2id[k].get(parts[k], UNK_ID) if k in parts else PAD_ID for k in self._unit2id]
+            return [self._unit2id[k].get(parts[k], UNK_ID) if k in parts else EMPTY_ID for k in self._unit2id]
         else:
-            return [self._unit2id[i].get(parts[i], PAD_ID) if i < len(parts) else PAD_ID for i in range(len(self._unit2id))]
+            return [self._unit2id[i].get(parts[i], UNK_ID) if i < len(parts) else EMPTY_ID for i in range(len(self._unit2id))]
 
     def id2unit(self, id):
         raise NotImplementedError()
@@ -140,3 +142,6 @@ class ComposedVocab(Vocab):
                         self._id2unit[i].append(p)
 
         self._unit2id = {k: {w:i for i, w in enumerate(self._id2unit[k])} for k in self._id2unit}
+
+    def lens(self):
+        return [len(self._unit2id[k]) for k in self._unit2id]
