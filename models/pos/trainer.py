@@ -24,8 +24,9 @@ def unpack_batch(batch, args):
     else:
         inputs = [Variable(b) if b is not None else None for b in batch[:8]]
     orig_idx = batch[8]
-    word_orig_idx = batch[8]
-    return inputs, orig_idx, word_orig_idx
+    word_orig_idx = batch[9]
+    sentlens = batch[10]
+    return inputs, orig_idx, word_orig_idx, sentlens
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -36,13 +37,12 @@ class Trainer(BaseTrainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
-            self.crit.cuda()
         self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'])
 
         self.vocab = vocab
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx = unpack_batch(batch, self.args)
+        inputs, orig_idx, word_orig_idx, sentlens = unpack_batch(batch, self.args)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         if eval:
@@ -50,7 +50,7 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens)
         loss_val = loss.data.item()
         if eval:
             return loss_val

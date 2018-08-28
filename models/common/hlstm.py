@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from models.common.packed_lstm import PackedLSTM
+
 # Highway LSTM Cell (Zhang et al. (2018) Highway Long Short-Term Memory RNNs for Distant Speech Recognition)
 class HLSTMCell(nn.modules.rnn.RNNCellBase):
     def __init__(self, input_size, hidden_size, bias=True):
@@ -71,15 +73,15 @@ class HighwayLSTM(nn.Module):
         if self.recur_dropout == 0:
             in_size = input_size
             for l in range(num_layers):
-                self.lstm.append(nn.LSTM(in_size, hidden_size, num_layers=1, bias=bias,
-                    batch_first=batch_first, dropout=0, bidirectional=bidirectional))
+                self.lstm.append(PackedLSTM(in_size, hidden_size, num_layers=1, bias=bias,
+                    batch_first=batch_first, dropout=0, bidirectional=bidirectional, pad=True))
                 self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
                 self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
                 in_size = hidden_size * self.num_directions
         else:
             raise NotImplementedError()
 
-    def forward(self, input, hx=None):
+    def forward(self, input, mask, hx=None):
         highway_func = lambda x: x if self.highway_func is None else self.highway_func
 
         if self.recur_dropout == 0:
@@ -87,7 +89,7 @@ class HighwayLSTM(nn.Module):
             cs = []
             for l in range(self.num_layers):
                 layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
-                h, _ = self.lstm[l](input, layer_hx)
+                h, _ = self.lstm[l](input, mask, layer_hx)
                 h = self.drop(h) + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
                 input = h
             return input

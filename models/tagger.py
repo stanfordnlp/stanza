@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument('--hidden_dim', type=int, default=200)
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
+    parser.add_argument('--ufeats_hidden_dim', type=int, default=400)
     parser.add_argument('--word_emb_dim', type=int, default=75)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)

@@ -138,7 +138,8 @@ class DataLoader:
         xpos = get_long_tensor(batch[3], batch_size)
         ufeats = get_long_tensor(batch[4], batch_size)
         pretrained = get_long_tensor(batch[5], batch_size)
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx
+        sentlens = [len(x) for x in batch[0]]
+        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens
 
     def __iter__(self):
         for i in range(self.__len__()):
