@@ -13,7 +13,7 @@ import torch
 from torch import nn, optim
 
 from models.pos.data import DataLoader
-from models.pos.trainer import Trainer, DictTrainer
+from models.pos.trainer import Trainer
 from models.pos import scorer
 from models.common import utils, param
 import models.common.seq2seq_constant as constant
@@ -51,11 +51,12 @@ def parse_args():
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
-    parser.add_argument('--lr_decay', type=float, default=0.9)
     parser.add_argument('--beta2', type=float, default=0.95)
-    parser.add_argument('--decay_epoch', type=int, default=100, help="Decay the lr starting from this epoch.")
-    parser.add_argument('--num_epoch', type=int, default=100)
-    parser.add_argument('--batch_size', type=int, default=50)
+
+    parser.add_argument('--max_steps', type=int, default=100000)
+    parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--max_steps_before_stop', type=int, default=3000)
+    parser.add_argument('--batch_size', type=int, default=100)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
@@ -116,16 +117,18 @@ def train(args):
     trainer = Trainer(args, vocab, train_batch.pretrained_emb)
 
     global_step = 0
-    max_steps = len(train_batch) * args['num_epoch']
+    max_steps = args['max_steps']
     dev_score_history = []
     best_dev_preds = []
     current_lr = args['lr']
     global_start_time = time.time()
-    format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
+    format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
+    using_amsgrad = False
+    last_best_step = 0
     # start training
-    for epoch in range(1, args['num_epoch']+1):
-        train_loss = 0
+    train_loss = 0
+    while True:
         for i, batch in enumerate(train_batch):
             start_time = time.time()
             global_step += 1
@@ -134,34 +137,50 @@ def train(args):
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                        max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+                        max_steps, loss, duration, current_lr))
 
-        # eval on dev
-        print("Evaluating on dev set...")
-        dev_preds = []
-        for i, batch in enumerate(dev_batch):
-            preds = trainer.predict(batch)
-            dev_preds += preds
-        dev_batch.conll.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
-        dev_batch.conll.write_conll(system_pred_file)
-        _, _, dev_score = scorer.score(system_pred_file, gold_file)
+            if global_step % args['eval_interval'] == 0:
+                # eval on dev
+                print("Evaluating on dev set...")
+                dev_preds = []
+                for i, batch in enumerate(dev_batch):
+                    preds = trainer.predict(batch)
+                    dev_preds += preds
+                dev_batch.conll.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
+                dev_batch.conll.write_conll(system_pred_file)
+                _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
-        train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
-        print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+                train_loss = train_loss / args['eval_interval'] # avg loss per batch
+                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                train_loss = 0
 
-        # save best model
-        if epoch == 1 or dev_score > max(dev_score_history):
-            trainer.save(model_file)
-            print("new best model saved.")
-            best_dev_preds = dev_preds
+                # save best model
+                if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
+                    last_best_step = global_step
+                    trainer.save(model_file)
+                    print("new best model saved.")
+                    best_dev_preds = dev_preds
 
-        # lr schedule
-        if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1]:
-            current_lr *= args['lr_decay']
-            trainer.change_lr(current_lr)
+                dev_score_history += [dev_score]
+                print("")
 
-        dev_score_history += [dev_score]
-        print("")
+            if global_step - last_best_step >= args['max_steps_before_stop']:
+                if not using_amsgrad:
+                    print("Switching to AMSGrad")
+                    last_best_step = global_step
+                    using_amsgrad = True
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), use_amsgrad=True)
+                else:
+                    break
+
+            if global_step >= args['max_steps']:
+                if not using_amsgrad:
+                    print("Switching to AMSGrad")
+                    last_best_step = global_step
+                    using_amsgrad = True
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), use_amsgrad=True)
+                elif global_step >= args['max_steps'] * 2:
+                    break
 
     print("Training ended with {} epochs.".format(epoch))
 
@@ -190,21 +209,12 @@ def evaluate(args):
             else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
 
     if len(batch) > 0:
-        dict_file = model_file.replace('.pt', '.dict')
-
-        dict_trainer = DictTrainer(loaded_args)
-        dict_trainer.load(dict_file)
-        dict_preds = dict_trainer.predict(batch.conll.get_mwt_expansion_cands())
-        # decide trainer type and run eval
-        if loaded_args['dict_only']:
-            preds = dict_preds
-        else:
-            trainer = Trainer(loaded_args, vocab)
-            trainer.load(model_file)
-            print("Start evaluation...")
-            preds = []
-            for i, b in enumerate(batch):
-                preds += trainer.predict(b)
+        trainer = Trainer(loaded_args, vocab)
+        trainer.load(model_file)
+        print("Start evaluation...")
+        preds = []
+        for i, b in enumerate(batch):
+            preds += trainer.predict(b)
     else:
         # skip eval if dev data does not exist
         preds = []
