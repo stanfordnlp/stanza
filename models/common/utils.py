@@ -29,13 +29,13 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, parameters, lr, betas=(0.9, 0.999)):
+def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8):
     if name == 'sgd':
         return torch.optim.SGD(parameters, lr=lr)
     elif name == 'adagrad':
         return torch.optim.Adagrad(parameters, lr=lr)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, lr=lr, betas=betas) # use default lr
+        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps)
     elif name == 'adamax':
         return torch.optim.Adamax(parameters) # use default lr
     else:

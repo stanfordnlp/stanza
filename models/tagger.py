@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--emb_dropout', type=float, default=0.5)
+    parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--max_steps_before_stop', type=int, default=3000)
     parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
+    parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
@@ -169,7 +169,7 @@ def train(args):
                     print("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), use_amsgrad=True)
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
                 else:
                     break
 
@@ -178,7 +178,7 @@ def train(args):
                     print("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), use_amsgrad=True)
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
                 elif global_step >= args['max_steps'] * 2:
                     break
 

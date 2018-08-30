@@ -18,18 +18,21 @@ class CharacterModel(nn.Module):
         self.pad = pad
         # char embeddings
         self.char_emb = nn.Embedding(len(vocab['char']), self.args['char_emb_dim'], padding_idx=0)
-        self.char_attn = nn.Linear(self.args['char_hidden_dim'], 1)
+        self.char_attn = nn.Linear(self.args['char_hidden_dim'], 1, bias=False)
+        self.char_attn.weight.data.zero_()
 
         # modules
-        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, pad=True)
+        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, pad=True, dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'])
+
+        self.dropout = nn.Dropout(args['dropout'])
 
     def forward(self, chars, chars_mask, word_orig_idx, sentlens):
         embs = self.char_emb(chars)
-        char_reps, _ = self.charlstm(embs, chars_mask)
+        char_reps = self.dropout(self.charlstm(embs, chars_mask)[0])
 
         # attention
-        weights = F.sigmoid(self.char_attn(char_reps).masked_fill(chars_mask.unsqueeze(2), -float('inf')))
-        weights = weights / weights.sum(1, keepdim=True) + 1e-20
+        weights = F.sigmoid(self.char_attn(char_reps)).masked_fill(chars_mask.unsqueeze(2), 0)
+        #weights = F.softmax(weights, 1)
         weights = weights.transpose(1, 2)
 
         res = weights.bmm(char_reps).squeeze(1)
@@ -37,6 +40,25 @@ class CharacterModel(nn.Module):
         res = nn.utils.rnn.pack_sequence(res.split(sentlens))
         if self.pad:
             res = nn.utils.rnn.pad_packed_sequence(res, batch_first=True)[0]
+
+        return res
+
+class WordDropout(nn.Module):
+    def __init__(self, dropprob):
+        super().__init__()
+        self.dropprob = dropprob
+
+    def forward(self, x, replacement=None):
+        if not self.training or self.dropprob == 0:
+            return x
+
+        masksize = [y for y in x.size()]
+        masksize[-1] = 1
+        dropmask = torch.rand(*masksize, device=x.device) < self.dropprob
+
+        res = x.masked_fill(dropmask, 0)
+        if replacement is not None:
+            res = res + dropmask.float() * replacement
 
         return res
 
@@ -66,6 +88,7 @@ class Tagger(nn.Module):
 
         input_size = self.args['word_emb_dim'] + self.args['transformed_dim'] * 2 # freq word + transformed pretrained + transformed char-level
         self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'])
+        self.dropreplacement = nn.Parameter(torch.zeros(input_size))
 
         # classifiers
         self.upos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
@@ -93,6 +116,7 @@ class Tagger(nn.Module):
         self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
 
         self.drop = nn.Dropout(args['dropout'])
+        self.worddrop = WordDropout(args['word_dropout'])
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens):
         char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens)
@@ -103,6 +127,7 @@ class Tagger(nn.Module):
         char_reps = self.trans_char(char_reps)
 
         lstm_inputs = torch.cat([char_reps, pretrained_emb, word_emb], 2)
+        lstm_inputs = self.worddrop(lstm_inputs, self.dropreplacement)
 
         lstm_outputs = self.drop(self.taggerlstm(lstm_inputs, word_mask))
 

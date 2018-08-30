@@ -37,7 +37,7 @@ class Trainer(BaseTrainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']))
+        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']), eps=1e-12)
 
         self.vocab = vocab
 
