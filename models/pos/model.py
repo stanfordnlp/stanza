@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from models.common.biaffine import BiaffineScorer
 from models.common.hlstm import HighwayLSTM
 from models.common.packed_lstm import PackedLSTM
-from models.common.utils import unsort
+from models.common.utils import tensor_unsort
 from models.common.biaffine import BiaffineScorer
 
 from models.common.vocab import Vocab as BaseVoab
@@ -22,20 +22,21 @@ class CharacterModel(nn.Module):
         self.char_attn.weight.data.zero_()
 
         # modules
-        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, pad=True, dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'])
+        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, pad=True, dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'], rec_dropout = self.args['char_rec_dropout'])
 
+        self.char_dropout = WordDropout(args['char_dropout'])
         self.dropout = nn.Dropout(args['dropout'])
 
     def forward(self, chars, chars_mask, word_orig_idx, sentlens):
-        embs = self.char_emb(chars)
-        char_reps = self.dropout(self.charlstm(embs, chars_mask)[0])
+        embs = self.dropout(self.char_dropout(self.char_emb(chars)))
+        char_reps = self.charlstm(embs, chars_mask)[0]
 
         # attention
         weights = F.sigmoid(self.char_attn(char_reps)).masked_fill(chars_mask.unsqueeze(2), 0)
-        #weights = F.softmax(weights, 1)
         weights = weights.transpose(1, 2)
 
         res = weights.bmm(char_reps).squeeze(1)
+        res = tensor_unsort(res, word_orig_idx)
 
         res = nn.utils.rnn.pack_sequence(res.split(sentlens))
         if self.pad:
@@ -83,12 +84,12 @@ class Tagger(nn.Module):
 
         # modules
         self.charmodel = CharacterModel(args, vocab)
-        self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'])
-        self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'])
+        self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
+        self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
 
         input_size = self.args['word_emb_dim'] + self.args['transformed_dim'] * 2 # freq word + transformed pretrained + transformed char-level
-        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'])
-        self.dropreplacement = nn.Parameter(torch.zeros(input_size))
+        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'])
+        self.drop_replacement = nn.Parameter(torch.zeros(input_size))
 
         # classifiers
         self.upos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
@@ -127,7 +128,8 @@ class Tagger(nn.Module):
         char_reps = self.trans_char(char_reps)
 
         lstm_inputs = torch.cat([char_reps, pretrained_emb, word_emb], 2)
-        lstm_inputs = self.worddrop(lstm_inputs, self.dropreplacement)
+        lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
+        lstm_inputs = self.drop(lstm_inputs)
 
         lstm_outputs = self.drop(self.taggerlstm(lstm_inputs, word_mask))
 
@@ -148,7 +150,7 @@ class Tagger(nn.Module):
             ufeats_hid = self.drop(F.relu(self.ufeats_hid(lstm_outputs)))
 
             if self.training:
-                upos_emb = self.upos_emb(upos)
+                upos_emb = self.drop(self.upos_emb(upos))
             else:
                 upos_emb = self.upos_emb(preds[-1])
 

@@ -150,3 +150,8 @@ class DataLoader:
         data = conll_file.get(['word', 'upos', 'xpos', 'feats'], as_sentences=True)
         return conll_file, data
 
+    def reshuffle(self):
+        data = [y for x in self.data for y in x]
+        random.shuffle(data)
+        data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
+        self.data = data

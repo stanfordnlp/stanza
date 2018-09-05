@@ -51,7 +51,7 @@ class HLSTMCell(nn.modules.rnn.RNNCellBase):
 class HighwayLSTM(nn.Module):
     def __init__(self, input_size, hidden_size,
                  num_layers=1, bias=True, batch_first=False,
-                 dropout=0, bidirectional=False, recur_dropout=0, highway_func=None):
+                 dropout=0, bidirectional=False, rec_dropout=0, highway_func=None):
         super(HighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -63,38 +63,31 @@ class HighwayLSTM(nn.Module):
         self.bidirectional = bidirectional
         self.num_directions = 2 if bidirectional else 1
         self.highway_func = highway_func
-        self.recur_dropout = recur_dropout
 
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
         self.gate = nn.ModuleList()
         self.drop = nn.Dropout(dropout)
-        self.recur_drop = nn.Dropout(recur_dropout)
-        if self.recur_dropout == 0:
-            in_size = input_size
-            for l in range(num_layers):
-                self.lstm.append(PackedLSTM(in_size, hidden_size, num_layers=1, bias=bias,
-                    batch_first=batch_first, dropout=0, bidirectional=bidirectional, pad=True))
-                self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
-                self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
-                in_size = hidden_size * self.num_directions
-        else:
-            raise NotImplementedError()
+
+        in_size = input_size
+        for l in range(num_layers):
+            self.lstm.append(PackedLSTM(in_size, hidden_size, num_layers=1, bias=bias,
+                batch_first=batch_first, dropout=0, bidirectional=bidirectional, pad=True, rec_dropout=rec_dropout))
+            self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
+            self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
+            in_size = hidden_size * self.num_directions
 
     def forward(self, input, mask, hx=None):
         highway_func = lambda x: x if self.highway_func is None else self.highway_func
 
-        if self.recur_dropout == 0:
-            hs = []
-            cs = []
-            for l in range(self.num_layers):
-                layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
-                h, _ = self.lstm[l](input, mask, layer_hx)
-                h = self.drop(h) + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
-                input = h
-            return input
-        else:
-            raise NotImplementedError()
+        hs = []
+        cs = []
+        for l in range(self.num_layers):
+            layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
+            h, _ = self.lstm[l](input, mask, layer_hx)
+            h = self.drop(h) + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
+            input = h
+        return input
 
 if __name__ == "__main__":
     T = 10

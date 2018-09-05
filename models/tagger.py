@@ -44,9 +44,9 @@ def parse_args():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
-
-    parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
-    parser.add_argument('-e2d','--enc2dec', default='no', choices=['no', 'linear', 'nonlinear', 'zero'], help='Use an encoder to decoder transformation layer')
+    parser.add_argument('--char_dropout', type=float, default=0.1)
+    parser.add_argument('--rec_dropout', type=float, default=0.5, help="Recurrent dropout")
+    parser.add_argument('--char_rec_dropout', type=float, default=0.25, help="Recurrent dropout")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
@@ -181,6 +181,9 @@ def train(args):
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
                 elif global_step >= args['max_steps'] * 2:
                     break
+
+        print('Reshuffling training data...')
+        train_batch.reshuffle()
 
     print("Training ended with {} epochs.".format(epoch))
 
