@@ -129,6 +129,7 @@ def train(args):
     # start training
     train_loss = 0
     while True:
+        do_break = False
         for i, batch in enumerate(train_batch):
             start_time = time.time()
             global_step += 1
@@ -171,6 +172,7 @@ def train(args):
                     using_amsgrad = True
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
                 else:
+                    do_break = True
                     break
 
             if global_step >= args['max_steps']:
@@ -180,7 +182,10 @@ def train(args):
                     using_amsgrad = True
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
                 elif global_step >= args['max_steps'] * 2:
+                    do_break = True
                     break
+
+        if do_break: break
 
         print('Reshuffling training data...')
         train_batch.reshuffle()
@@ -212,7 +217,7 @@ def evaluate(args):
             else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
 
     if len(batch) > 0:
-        trainer = Trainer(loaded_args, vocab)
+        trainer = Trainer(loaded_args, vocab, batch.pretrained_emb)
         trainer.load(model_file)
         print("Start evaluation...")
         preds = []

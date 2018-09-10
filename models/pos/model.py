@@ -64,7 +64,7 @@ class WordDropout(nn.Module):
         return res
 
 class Tagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix, share_hid=False):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False):
         super().__init__()
 
         self.vocab = vocab

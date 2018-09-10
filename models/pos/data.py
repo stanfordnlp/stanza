@@ -80,11 +80,11 @@ class DataLoader:
                     first = False
                     line = line.strip().split(' ')
                     rows, cols = [int(x) for x in line]
-                    res = np.zeros((rows, cols), dtype=np.float32)
+                    res = np.zeros((rows + len(constant.VOCAB_PREFIX), cols), dtype=np.float32) # save embeddings for special tokens
                     continue
 
                 line = line.rstrip().split(' ')
-                res[i-1, :] = [float(x) for x in line[-cols:]]
+                res[i+len(constant.VOCAB_PREFIX)-1, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
 
         pretrained_vocab = PretrainedWordVocab(vocab_file, words, shorthand)

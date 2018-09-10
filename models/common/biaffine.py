@@ -9,6 +9,11 @@ class BiaffineScorer(nn.Module):
         self.W1 = nn.Linear(input1_size, output_size, bias=False)
         self.W2 = nn.Linear(input2_size, output_size, bias=False)
 
+        self.W_bilin.weight.data.zero_()
+        self.W_bilin.bias.data.zero_()
+        self.W1.weight.data.zero_()
+        self.W2.weight.data.zero_()
+
     def forward(self, input1, input2):
         res = self.W1(input1) + self.W2(input2) + self.W_bilin(input1, input2)
         return res

@@ -6,10 +6,9 @@ from models.common.utils import ud_scores
 def score(system_conllu_file, gold_conllu_file):
     """ Wrapper for word segmenter scorer. """
     evaluation = ud_scores(gold_conllu_file, system_conllu_file)
-    p = r = f = 1
     el = evaluation['AllTags']
-    p *= el.precision
-    r *= el.recall
-    f = 0 if p == 0 or r == 0 else 2 * p * r / (p + r)
+    p = el.precision
+    r = el.recall
+    f = el.f1
     return p, r, f
 

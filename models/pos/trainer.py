@@ -30,7 +30,7 @@ def unpack_batch(batch, args):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args, vocab, emb_matrix):
+    def __init__(self, args, vocab, emb_matrix=None):
         self.args = args
 
         self.model = Tagger(args, vocab, emb_matrix=emb_matrix)
