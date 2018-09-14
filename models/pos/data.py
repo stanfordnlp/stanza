@@ -53,7 +53,8 @@ class DataLoader:
         self.pretrained_emb, pretrainedvocab = self.read_emb_matrix(self.args['wordvec_dir'], self.args['shorthand'], vocab_pattern.format('pretrained'))
         uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
         # TODO: make XPOSVocab language-specific
-        xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
+        #xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
+        xposvocab = WordVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
         featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
         vocab = {'char': charvocab,
                 'word': wordvocab,
@@ -71,9 +72,14 @@ class DataLoader:
 
         first = True
         words = []
+        failed = 0
         with lzma.open(wordvec_file, 'rb') as f:
             for i, line in enumerate(f):
-                line = line.decode()
+                try:
+                    line = line.decode()
+                except UnicodeDecodeError:
+                    failed += 1
+                    continue
                 if first:
                     # the first line contains the number of word vectors and the
                     # dimensionality of them
@@ -88,6 +94,9 @@ class DataLoader:
                 words.append(' '.join(line[:-cols]))
 
         pretrained_vocab = PretrainedWordVocab(vocab_file, words, shorthand)
+
+        if failed > 0:
+            res = res[:-failed]
 
         return res, pretrained_vocab
 

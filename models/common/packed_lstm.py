@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
+from models.common.broadcast_dropout import BroadcastDropout as Dropout
+
 class PackedLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, bias=True, batch_first=False, dropout=0, bidirectional=False, pad=False, rec_dropout=0):
         super().__init__()
@@ -33,8 +35,9 @@ class LSTMwRecDropout(nn.Module):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
 
-        self.dropout = nn.Dropout(dropout)
-        self.rec_dropout = nn.Dropout(rec_dropout)
+        self.dropout = dropout
+        self.drop = Dropout(dropout)
+        self.rec_drop = nn.Dropout(rec_dropout)
 
         self.num_directions = 2 if bidirectional else 1
 
@@ -45,44 +48,48 @@ class LSTMwRecDropout(nn.Module):
                 self.cells.append(nn.LSTMCell(in_size, hidden_size, bias=bias))
 
     def forward(self, input, hx=None):
-        def rnn_loop(x, cell, init, reverse=False):
+        def rnn_loop(x, cell, inits, reverse=False):
             # RNN loop for one layer in one direction with recurrent dropout
             # Assumes input is PackedSequence, returns PackedSequence as well
             batch_size = x.batch_sizes[0].item()
-            states = [[i for _ in range(batch_size)] for i in init]
+            states = [list(init.split([1] * batch_size)) for init in inits]
             h_drop_mask = x.data.new_ones(batch_size, self.hidden_size)
-            h_drop_mask = self.rec_dropout(h_drop_mask)
-            resh = [[] for _ in range(batch_size)]
+            h_drop_mask = self.rec_drop(h_drop_mask)
+            resh = []
 
             if not reverse:
                 st = 0
                 for bs in x.batch_sizes:
                     s1 = cell(x.data[st:st+bs], (torch.cat(states[0][:bs], 0) * h_drop_mask[:bs], torch.cat(states[1][:bs], 0)))
+                    resh.append(s1[0])
                     for j in range(bs):
-                        resh[j].append(s1[0][j].unsqueeze(0))
                         states[0][j] = s1[0][j].unsqueeze(0)
                         states[1][j] = s1[1][j].unsqueeze(0)
                     st += bs
             else:
-                en = x.data.size(0).item()
-                for bs in reversed(x.batch_sizes):
+                en = x.data.size(0)
+                for i in range(x.batch_sizes.size(0)-1, -1, -1):
+                    bs = x.batch_sizes[i]
                     s1 = cell(x.data[en-bs:en], (torch.cat(states[0][:bs], 0) * h_drop_mask[:bs], torch.cat(states[1][:bs], 0)))
+                    resh = [s1[0]] + resh
                     for j in range(bs):
-                        resh[j] = [s1[0][j].unsqueeze(0)] + resh[j]
                         states[0][j] = s1[0][j].unsqueeze(0)
                         states[1][j] = s1[1][j].unsqueeze(0)
                     en -= bs
 
-            resh = pack_sequence([torch.cat(hs, 0) for hs in resh])
+            resh = PackedSequence(torch.cat(resh, 0), x.batch_sizes)
             return resh, tuple(torch.cat(s, 0) for s in states)
 
         all_states = [[], []]
         for l in range(self.num_layers):
             new_input = []
+
+            if self.dropout > 0 and l > 0:
+                input = PackedSequence(self.drop(input.data), input.batch_sizes)
             for d in range(self.num_directions):
                 idx = l * self.num_directions + d
                 cell = self.cells[idx]
-                out, states = rnn_loop(input, cell, (hx[i][idx].unsqueeze(0) for i in range(2)) if hx is not None else (input.data.new_zeros(1, self.hidden_size) for _ in range(2)))
+                out, states = rnn_loop(input, cell, (hx[i][idx] for i in range(2)) if hx is not None else (input.data.new_zeros(input.batch_sizes[0].item(), self.hidden_size) for _ in range(2)), reverse=(d == 1))
 
                 new_input.append(out)
                 all_states[0].append(states[0].unsqueeze(0))
@@ -90,8 +97,8 @@ class LSTMwRecDropout(nn.Module):
 
             if self.num_directions > 1:
                 # concatenate both directions
-                input = PackedSequence(self.dropout(torch.cat([x.data for x in new_input], 1)), new_input[0].batch_sizes)
+                input = PackedSequence(torch.cat([x.data for x in new_input], 1), new_input[0].batch_sizes)
             else:
-                input = PackedSequence(self.dropout(new_input[0].data), new_input[0].batch_sizes)
+                input = new_input[0]
 
         return input, tuple(torch.cat(x, 0) for x in all_states)

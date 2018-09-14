@@ -10,5 +10,6 @@ def score(system_conllu_file, gold_conllu_file):
     p = el.precision
     r = el.recall
     f = el.f1
+    print(evaluation['UPOS'].f1, evaluation['XPOS'].f1, evaluation['UFeats'].f1, evaluation['AllTags'].f1)
     return p, r, f
 

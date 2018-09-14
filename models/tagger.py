@@ -187,10 +187,9 @@ def train(args):
 
         if do_break: break
 
-        print('Reshuffling training data...')
         train_batch.reshuffle()
 
-    print("Training ended with {} epochs.".format(epoch))
+    print("Training ended with {} steps.".format(global_step))
 
     best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
     print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))

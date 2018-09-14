@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.common.packed_lstm import PackedLSTM
+from models.common.broadcast_dropout import BroadcastDropout as Dropout
 
 # Highway LSTM Cell (Zhang et al. (2018) Highway Long Short-Term Memory RNNs for Distant Speech Recognition)
 class HLSTMCell(nn.modules.rnn.RNNCellBase):
@@ -67,26 +68,42 @@ class HighwayLSTM(nn.Module):
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
         self.gate = nn.ModuleList()
-        self.drop = nn.Dropout(dropout)
+        self.drop = Dropout(dropout, dims=[1] if batch_first else [0])
 
         in_size = input_size
+        hw_in_size = input_size
         for l in range(num_layers):
             self.lstm.append(PackedLSTM(in_size, hidden_size, num_layers=1, bias=bias,
                 batch_first=batch_first, dropout=0, bidirectional=bidirectional, pad=True, rec_dropout=rec_dropout))
-            self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions, bias=bias))
-            self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
+            for d in range(self.num_directions):
+                self.highway.append(nn.Linear(hw_in_size, hidden_size, bias=bias))
+                self.gate.append(nn.Linear(hw_in_size, hidden_size))
             in_size = hidden_size * self.num_directions
+            hw_in_size = hidden_size
 
     def forward(self, input, mask, hx=None):
-        highway_func = lambda x: x if self.highway_func is None else self.highway_func
+        highway_func = (lambda x: x) if self.highway_func is None else self.highway_func
 
         hs = []
         cs = []
         for l in range(self.num_layers):
+            if l > 0:
+                input = self.drop(input)
             layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
             h, _ = self.lstm[l](input, mask, layer_hx)
-            h = self.drop(h) + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
-            input = h
+
+            if self.num_directions == 2:
+                idx_f, idx_b = l * 2, l * 2 + 1
+                if l > 0:
+                    input_f, input_b = input.split([input.size(2) // 2] * 2, dim=2)
+                else:
+                    input_f = input_b = input
+
+                input_f = F.sigmoid(self.gate[idx_f](input_f)) + highway_func(self.highway[idx_f](input_f))
+                input_b = F.sigmoid(self.gate[idx_b](input_b)) + highway_func(self.highway[idx_b](input_b))
+                input = h + torch.cat([input_f, input_b], 2)
+            else:
+                input = h + F.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
         return input
 
 if __name__ == "__main__":
