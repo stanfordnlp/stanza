@@ -70,7 +70,7 @@ class HighwayLSTM(nn.Module):
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
         self.gate = nn.ModuleList()
-        self.drop = Dropout(dropout, dims=[1] if batch_first else [0])
+        self.drop = nn.Dropout(dropout)
 
         in_size = input_size
         for l in range(num_layers):

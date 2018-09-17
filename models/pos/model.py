@@ -29,7 +29,7 @@ class CharacterModel(nn.Module):
         self.charlstm_h_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
         self.charlstm_c_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
 
-        self.dropout = Dropout(args['dropout'])
+        self.dropout = nn.Dropout(args['dropout'])
 
     def forward(self, chars, chars_mask, word_orig_idx, sentlens, wordlens):
         embs = self.dropout(self.char_emb(chars))
@@ -136,7 +136,7 @@ class Tagger(nn.Module):
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
 
-        self.drop = Dropout(args['dropout'])
+        self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens):

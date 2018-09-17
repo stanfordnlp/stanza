@@ -36,7 +36,7 @@ class LSTMwRecDropout(nn.Module):
         self.hidden_size = hidden_size
 
         self.dropout = dropout
-        self.drop = Dropout(dropout)
+        self.drop = nn.Dropout(dropout)
         self.rec_drop = nn.Dropout(rec_dropout)
 
         self.num_directions = 2 if bidirectional else 1
