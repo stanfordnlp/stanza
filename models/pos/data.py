@@ -54,8 +54,10 @@ class DataLoader:
         self.pretrained_emb, pretrainedvocab = self.read_emb_matrix(self.args['wordvec_dir'], self.args['shorthand'], vocab_pattern.format('pretrained'))
         uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
         # TODO: make XPOSVocab language-specific
-        #xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
-        xposvocab = WordVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
+        if self.args['shorthand'] in ['zh_gsd', 'en_ewt']:
+            xposvocab = WordVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
+        elif self.args['shorthand'] in ['grc_perseus']:
+            xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
         featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
         vocab = {'char': charvocab,
                 'word': wordvocab,
@@ -148,6 +150,7 @@ class DataLoader:
         word_lens = [len(x) for x in batch_words]
         batch_words, word_orig_idx = sort_all([batch_words], word_lens)
         batch_words = batch_words[0]
+        word_lens = [len(x) for x in batch_words]
 
         # convert to tensors
         words = batch[0]
@@ -161,7 +164,7 @@ class DataLoader:
         ufeats = get_long_tensor(batch[4], batch_size)
         pretrained = get_long_tensor(batch[5], batch_size)
         sentlens = [len(x) for x in batch[0]]
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens
+        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens, word_lens
 
     def __iter__(self):
         for i in range(self.__len__()):

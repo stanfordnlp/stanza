@@ -26,7 +26,8 @@ def unpack_batch(batch, args):
     orig_idx = batch[8]
     word_orig_idx = batch[9]
     sentlens = batch[10]
-    return inputs, orig_idx, word_orig_idx, sentlens
+    wordlens = batch[11]
+    return inputs, orig_idx, word_orig_idx, sentlens, wordlens
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -42,7 +43,7 @@ class Trainer(BaseTrainer):
         self.vocab = vocab
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens = unpack_batch(batch, self.args)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.args)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         if eval:
@@ -50,7 +51,7 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -61,12 +62,12 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens = unpack_batch(batch, self.args)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.args)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens)
+        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens)
         upos_seqs = [self.vocab['upos'].unmap(sent) for sent in preds[0]]
         xpos_seqs = [self.vocab['xpos'].unmap(sent) for sent in preds[1]]
         feats_seqs = [self.vocab['feats'].unmap(sent) for sent in preds[2]]

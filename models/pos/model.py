@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
 from models.common.biaffine import BiaffineScorer
 from models.common.hlstm import HighwayLSTM
@@ -14,7 +15,7 @@ from models.common.vocab import Vocab as BaseVoab
 from models.common.vocab import CompositeVocab
 
 class CharacterModel(nn.Module):
-    def __init__(self, args, vocab, pad=True):
+    def __init__(self, args, vocab, pad=False):
         super().__init__()
         self.args = args
         self.pad = pad
@@ -30,9 +31,9 @@ class CharacterModel(nn.Module):
 
         self.dropout = Dropout(args['dropout'])
 
-    def forward(self, chars, chars_mask, word_orig_idx, sentlens):
+    def forward(self, chars, chars_mask, word_orig_idx, sentlens, wordlens):
         embs = self.dropout(self.char_emb(chars))
-        char_reps = self.charlstm(embs, chars_mask, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous()))[0]
+        char_reps = self.charlstm(embs, wordlens, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous()))[0]
 
         # attention
         weights = torch.sigmoid(self.char_attn(self.dropout(char_reps))).masked_fill(chars_mask.unsqueeze(2), 0)
@@ -41,9 +42,9 @@ class CharacterModel(nn.Module):
         res = weights.bmm(char_reps).squeeze(1)
         res = tensor_unsort(res, word_orig_idx)
 
-        res = nn.utils.rnn.pack_sequence(res.split(sentlens))
+        res = pack_sequence(res.split(sentlens))
         if self.pad:
-            res = nn.utils.rnn.pad_packed_sequence(res, batch_first=True)[0]
+            res = pad_packed_sequence(res, batch_first=True)[0]
 
         return res
 
@@ -138,33 +139,44 @@ class Tagger(nn.Module):
         self.drop = Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens):
+        def pack(x):
+            return pack_padded_sequence(x, sentlens, batch_first=True)
+
         pretrained_emb = self.pretrained_emb(pretrained)
         pretrained_emb = self.trans_pretrained(pretrained_emb)
+        pretrained_emb = pack(pretrained_emb)
+        def pad(x):
+            return pad_packed_sequence(PackedSequence(x, pretrained_emb.batch_sizes), batch_first=True)[0]
 
         inputs = [pretrained_emb]
         if self.args['word_emb_dim'] > 0:
             word_emb = self.word_emb(word)
+            word_emb = pack(word_emb)
             inputs += [word_emb]
 
         if self.args['char_emb_dim'] > 0:
-            char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens)
-            char_reps = self.trans_char(self.drop(char_reps))
+            char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+            char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
 
             inputs += [char_reps]
-        lstm_inputs = torch.cat(inputs, 2)
+        lstm_inputs = torch.cat([x.data for x in inputs], 1)
 
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
         lstm_inputs = self.drop(lstm_inputs)
 
-        lstm_outputs, _ = self.taggerlstm(lstm_inputs, word_mask, hx=(self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
+        lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
+
+        lstm_outputs, _ = self.taggerlstm(lstm_inputs, sentlens, hx=(self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
+        lstm_outputs = lstm_outputs.data
 
         upos_hid = F.relu(self.upos_hid(self.drop(lstm_outputs)))
         upos_pred = self.upos_clf(self.drop(upos_hid))
 
-        preds = [upos_pred.max(2)[1]]
+        preds = [pad(upos_pred).max(2)[1]]
 
-        loss = self.crit(upos_pred.view(-1, upos_pred.size(2)), upos.view(-1))
+        upos = pack(upos).data
+        loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
 
         if self.share_hid:
             xpos_hid = upos_hid
@@ -178,27 +190,29 @@ class Tagger(nn.Module):
             if self.training:
                 upos_emb = self.upos_emb(upos)
             else:
-                upos_emb = self.upos_emb(preds[-1])
+                upos_emb = self.upos_emb(upos_pred.max(1)[1])
 
             clffunc = lambda clf, hid: clf(self.drop(hid), self.drop(upos_emb))
 
+        xpos = pack(xpos).data
         if isinstance(self.vocab['xpos'], CompositeVocab):
             xpos_preds = []
             for i in range(len(self.vocab['xpos'])):
                 xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
-                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos[:, :, i].view(-1))
-                xpos_preds.append(xpos_pred.max(2, keepdim=True)[1])
+                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
+                xpos_preds.append(pad(xpos_pred).max(2, keepdim=True)[1])
             preds.append(torch.cat(xpos_preds, 2))
         else:
             xpos_pred = clffunc(self.xpos_clf, xpos_hid)
-            loss += self.crit(xpos_pred.view(-1, xpos_pred.size(2)), xpos.view(-1))
-            preds.append(xpos_pred.max(2)[1])
+            loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
+            preds.append(pad(xpos_pred).max(2)[1])
 
         ufeats_preds = []
+        ufeats = pack(ufeats).data
         for i in range(len(self.vocab['feats'])):
             ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
-            loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(2)), ufeats[:, :, i].view(-1))
-            ufeats_preds.append(ufeats_pred.max(2, keepdim=True)[1])
+            loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
+            ufeats_preds.append(pad(ufeats_pred).max(2, keepdim=True)[1])
         preds.append(torch.cat(ufeats_preds, 2))
 
         return loss, preds

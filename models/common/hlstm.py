@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
 from models.common.packed_lstm import PackedLSTM
 from models.common.broadcast_dropout import BroadcastDropout as Dropout
@@ -52,7 +53,7 @@ class HLSTMCell(nn.modules.rnn.RNNCellBase):
 class HighwayLSTM(nn.Module):
     def __init__(self, input_size, hidden_size,
                  num_layers=1, bias=True, batch_first=False,
-                 dropout=0, bidirectional=False, rec_dropout=0, highway_func=None):
+                 dropout=0, bidirectional=False, rec_dropout=0, highway_func=None, pad=False):
         super(HighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -64,6 +65,7 @@ class HighwayLSTM(nn.Module):
         self.bidirectional = bidirectional
         self.num_directions = 2 if bidirectional else 1
         self.highway_func = highway_func
+        self.pad = pad
 
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
@@ -73,28 +75,35 @@ class HighwayLSTM(nn.Module):
         in_size = input_size
         for l in range(num_layers):
             self.lstm.append(PackedLSTM(in_size, hidden_size, num_layers=1, bias=bias,
-                batch_first=batch_first, dropout=0, bidirectional=bidirectional, pad=True, rec_dropout=rec_dropout))
+                batch_first=batch_first, dropout=0, bidirectional=bidirectional, rec_dropout=rec_dropout))
             self.highway.append(nn.Linear(in_size, hidden_size * self.num_directions))
             self.gate.append(nn.Linear(in_size, hidden_size * self.num_directions))
             self.highway[-1].bias.data.zero_()
             self.gate[-1].bias.data.zero_()
             in_size = hidden_size * self.num_directions
 
-    def forward(self, input, mask, hx=None):
+    def forward(self, input, seqlens, hx=None):
         highway_func = (lambda x: x) if self.highway_func is None else self.highway_func
 
         hs = []
         cs = []
+
+        if not isinstance(input, PackedSequence):
+            input = pack_padded_sequence(input, seqlens, batch_first=self.batch_first)
+
         for l in range(self.num_layers):
             if l > 0:
-                input = self.drop(input)
+                input = PackedSequence(self.drop(input.data), input.batch_sizes)
             layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
-            h, (ht, ct) = self.lstm[l](input, mask, layer_hx)
+            h, (ht, ct) = self.lstm[l](input, seqlens, layer_hx)
 
             hs.append(ht)
             cs.append(ct)
 
-            input = h + torch.sigmoid(self.gate[l](input)) * highway_func(self.highway[l](input))
+            input = PackedSequence(h.data + torch.sigmoid(self.gate[l](input.data)) * highway_func(self.highway[l](input.data)), input.batch_sizes)
+
+        if self.pad:
+            input = pad_packed_sequence(input, batch_first=self.batch_first)[0]
         return input, (torch.cat(hs, 0), torch.cat(cs, 0))
 
 if __name__ == "__main__":
