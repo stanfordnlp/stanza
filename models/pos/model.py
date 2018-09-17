@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,15 +28,14 @@ class CharacterModel(nn.Module):
         self.charlstm_h_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
         self.charlstm_c_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
 
-        self.char_dropout = WordDropout(args['char_dropout'])
-        self.dropout = nn.Dropout(args['dropout'])
+        self.dropout = Dropout(args['dropout'])
 
     def forward(self, chars, chars_mask, word_orig_idx, sentlens):
-        embs = self.dropout(self.char_dropout(self.char_emb(chars)))
-        char_reps = self.dropout(self.charlstm(embs, chars_mask, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous()))[0])
+        embs = self.dropout(self.char_emb(chars))
+        char_reps = self.charlstm(embs, chars_mask, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous()))[0]
 
         # attention
-        weights = F.sigmoid(self.char_attn(char_reps)).masked_fill(chars_mask.unsqueeze(2), 0)
+        weights = torch.sigmoid(self.char_attn(self.dropout(char_reps))).masked_fill(chars_mask.unsqueeze(2), 0)
         weights = weights.transpose(1, 2)
 
         res = weights.bmm(char_reps).squeeze(1)
@@ -75,11 +75,13 @@ class Tagger(nn.Module):
         self.share_hid = share_hid
 
         # pretrained embeddings
-        self.pretrained_emb = nn.Embedding(emb_matrix.shape[0], emb_matrix.shape[1], padding_idx=0)
-        self.pretrained_emb.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
+        self.pretrained_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
 
-        # frequent word embeddings
-        self.word_emb = nn.Embedding(len(vocab['word']), self.args['word_emb_dim'], padding_idx=0)
+        input_size = 0
+        if self.args['word_emb_dim'] > 0:
+            # frequent word embeddings
+            self.word_emb = nn.Embedding(len(vocab['word']), self.args['word_emb_dim'], padding_idx=0)
+            input_size += self.args['word_emb_dim']
 
         if not share_hid:
             # upos embeddings
@@ -88,14 +90,13 @@ class Tagger(nn.Module):
         # modules
         if self.args['char_emb_dim'] > 0:
             self.charmodel = CharacterModel(args, vocab)
-            self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'])
-            input_size = self.args['word_emb_dim'] + self.args['transformed_dim'] * 2 # freq word + transformed pretrained + transformed char-level
-        else:
-            input_size = self.args['word_emb_dim'] + self.args['transformed_dim']
+            self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
+            input_size += self.args['transformed_dim']
         self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
+        input_size += self.args['transformed_dim']
 
-        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=F.tanh)
-        self.drop_replacement = nn.Parameter(torch.zeros(input_size))
+        self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
+        self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
         self.taggerlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
         self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
 
@@ -106,51 +107,57 @@ class Tagger(nn.Module):
         self.upos_clf.bias.data.zero_()
 
         if share_hid:
-            clf_constructor = lambda outsize: nn.Linear(self.args['deep_biaff_hidden_dim'], outsize)
+            clf_constructor = lambda insize, outsize: nn.Linear(insize, outsize)
         else:
-            self.xpos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
-            self.ufeats_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'])
-            clf_constructor = lambda outsize: BiaffineScorer(self.args['deep_biaff_hidden_dim'], self.args['tag_emb_dim'], outsize)
+            self.xpos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'] if not isinstance(vocab['xpos'], CompositeVocab) else self.args['composite_deep_biaff_hidden_dim'])
+            self.ufeats_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['composite_deep_biaff_hidden_dim'])
+            clf_constructor = lambda insize, outsize: BiaffineScorer(insize, self.args['tag_emb_dim'], outsize)
 
         if isinstance(vocab['xpos'], CompositeVocab):
             self.xpos_clf = nn.ModuleList()
             for l in vocab['xpos'].lens():
-                self.xpos_clf.append(clf_constructor(l))
+                self.xpos_clf.append(clf_constructor(self.args['composite_deep_biaff_hidden_dim'], l))
         else:
-            self.xpos_clf = clf_constructor(len(vocab['xpos']))
-            self.xpos_clf.weight.data.zero_()
-            self.xpos_clf.bias.data.zero_()
+            self.xpos_clf = clf_constructor(self.args['deep_biaff_hidden_dim'], len(vocab['xpos']))
+            if share_hid:
+                self.xpos_clf.weight.data.zero_()
+                self.xpos_clf.bias.data.zero_()
 
         self.ufeats_clf = nn.ModuleList()
         for l in vocab['feats'].lens():
-            self.ufeats_clf.append(clf_constructor(l))
             if share_hid:
+                self.ufeats_clf.append(clf_constructor(self.args['deep_biaff_hidden_dim'], l))
                 self.ufeats_clf[-1].weight.data.zero_()
                 self.ufeats_clf[-1].bias.data.zero_()
+            else:
+                self.ufeats_clf.append(clf_constructor(self.args['composite_deep_biaff_hidden_dim'], l))
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
 
-        self.drop = nn.Dropout(args['dropout'])
+        self.drop = Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens):
         pretrained_emb = self.pretrained_emb(pretrained)
         pretrained_emb = self.trans_pretrained(pretrained_emb)
 
-        word_emb = self.word_emb(word)
+        inputs = [pretrained_emb]
+        if self.args['word_emb_dim'] > 0:
+            word_emb = self.word_emb(word)
+            inputs += [word_emb]
 
         if self.args['char_emb_dim'] > 0:
             char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens)
             char_reps = self.trans_char(self.drop(char_reps))
 
-            lstm_inputs = torch.cat([char_reps, pretrained_emb, word_emb], 2)
-        else:
-            lstm_inputs = torch.cat([pretrained_emb, word_emb], 2)
+            inputs += [char_reps]
+        lstm_inputs = torch.cat(inputs, 2)
+
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
         lstm_inputs = self.drop(lstm_inputs)
 
-        lstm_outputs = (self.taggerlstm(lstm_inputs, word_mask, hx=(self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous())))
+        lstm_outputs, _ = self.taggerlstm(lstm_inputs, word_mask, hx=(self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
 
         upos_hid = F.relu(self.upos_hid(self.drop(lstm_outputs)))
         upos_pred = self.upos_clf(self.drop(upos_hid))

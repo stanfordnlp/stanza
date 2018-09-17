@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('--hidden_dim', type=int, default=200)
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
-    parser.add_argument('--ufeats_hidden_dim', type=int, default=400)
+    parser.add_argument('--composite_deep_biaff_hidden_dim', type=int, default=100)
     parser.add_argument('--word_emb_dim', type=int, default=75)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
@@ -44,7 +44,6 @@ def parse_args():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--char_dropout', type=float, default=0.1)
     parser.add_argument('--rec_dropout', type=float, default=0.5, help="Recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0.25, help="Recurrent dropout")
 
@@ -53,10 +52,10 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--beta2', type=float, default=0.95)
 
-    parser.add_argument('--max_steps', type=int, default=100000)
+    parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--max_steps_before_stop', type=int, default=3000)
-    parser.add_argument('--batch_size', type=int, default=100)
+    parser.add_argument('--batch_size', type=int, default=200)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
@@ -144,7 +143,7 @@ def train(args):
                 # eval on dev
                 print("Evaluating on dev set...")
                 dev_preds = []
-                for i, batch in enumerate(dev_batch):
+                for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
                 dev_batch.conll.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
@@ -170,20 +169,14 @@ def train(args):
                     print("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
                 else:
                     do_break = True
                     break
 
             if global_step >= args['max_steps']:
-                if not using_amsgrad:
-                    print("Switching to AMSGrad")
-                    last_best_step = global_step
-                    using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-12)
-                elif global_step >= args['max_steps'] * 2:
-                    do_break = True
-                    break
+                do_break = True
+                break
 
         if do_break: break
 

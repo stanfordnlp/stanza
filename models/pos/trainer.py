@@ -33,11 +33,11 @@ class Trainer(BaseTrainer):
     def __init__(self, args, vocab, emb_matrix=None):
         self.args = args
 
-        self.model = Tagger(args, vocab, emb_matrix=emb_matrix, share_hid=True)
+        self.model = Tagger(args, vocab, emb_matrix=emb_matrix)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if args['cuda']:
             self.model.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']), eps=1e-12)
+        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6)
 
         self.vocab = vocab
 

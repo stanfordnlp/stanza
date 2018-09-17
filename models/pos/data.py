@@ -2,13 +2,14 @@ import random
 import numpy as np
 import lzma
 import os
+import pickle
 from collections import Counter
 import torch
 
-import models.common.seq2seq_constant as constant
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
 from models.common.constant import lcode2lang
+from models.common.vocab import PAD_ID, VOCAB_PREFIX
 from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, PretrainedWordVocab
 
 class DataLoader:
@@ -65,38 +66,50 @@ class DataLoader:
         return vocab
 
     def read_emb_matrix(self, wordvec_dir, shorthand, vocab_file):
-        lcode, tcode = shorthand.split('_')
+        vec_file = vocab_file + '.vec'
+        if not os.path.exists(vocab_file) or not os.path.exists(vec_file):
+            lcode, tcode = shorthand.split('_')
 
-        lang = lcode2lang[lcode]
-        wordvec_file = os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(lcode))
+            lang = lcode2lang[lcode]
+            if lcode == 'zh':
+                lang = 'ChineseT'
+            wordvec_file = os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(lcode))
 
-        first = True
-        words = []
-        failed = 0
-        with lzma.open(wordvec_file, 'rb') as f:
-            for i, line in enumerate(f):
-                try:
-                    line = line.decode()
-                except UnicodeDecodeError:
-                    failed += 1
-                    continue
-                if first:
-                    # the first line contains the number of word vectors and the
-                    # dimensionality of them
-                    first = False
-                    line = line.strip().split(' ')
-                    rows, cols = [int(x) for x in line]
-                    res = np.zeros((rows + len(constant.VOCAB_PREFIX), cols), dtype=np.float32) # save embeddings for special tokens
-                    continue
+            first = True
+            words = []
+            failed = 0
+            with lzma.open(wordvec_file, 'rb') as f:
+                for i, line in enumerate(f):
+                    try:
+                        line = line.decode()
+                    except UnicodeDecodeError:
+                        failed += 1
+                        continue
+                    if first:
+                        # the first line contains the number of word vectors and the
+                        # dimensionality of them
+                        first = False
+                        line = line.strip().split(' ')
+                        rows, cols = [int(x) for x in line]
+                        res = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32) # save embeddings for special tokens
+                        continue
 
-                line = line.rstrip().split(' ')
-                res[i+len(constant.VOCAB_PREFIX)-1, :] = [float(x) for x in line[-cols:]]
-                words.append(' '.join(line[:-cols]))
+                    line = line.rstrip().split(' ')
+                    res[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
+                    words.append(' '.join(line[:-cols]))
 
-        pretrained_vocab = PretrainedWordVocab(vocab_file, words, shorthand)
+            pretrained_vocab = PretrainedWordVocab(vocab_file, words, shorthand)
 
-        if failed > 0:
-            res = res[:-failed]
+            if failed > 0:
+                res = res[:-failed]
+
+            with open(vec_file, 'wb') as f:
+                pickle.dump(res, f)
+
+        else:
+            pretrained_vocab = PretrainedWordVocab(vocab_file, [], shorthand)
+            with open(vec_file, 'rb') as f:
+                res = pickle.load(f)
 
         return res, pretrained_vocab
 
@@ -139,9 +152,9 @@ class DataLoader:
         # convert to tensors
         words = batch[0]
         words = get_long_tensor(words, batch_size)
-        words_mask = torch.eq(words, constant.PAD_ID)
+        words_mask = torch.eq(words, PAD_ID)
         wordchars = get_long_tensor(batch_words, len(word_lens))
-        wordchars_mask = torch.eq(wordchars, constant.PAD_ID)
+        wordchars_mask = torch.eq(wordchars, PAD_ID)
 
         upos = get_long_tensor(batch[2], batch_size)
         xpos = get_long_tensor(batch[3], batch_size)

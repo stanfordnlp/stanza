@@ -71,11 +71,12 @@ class LSTMwRecDropout(nn.Module):
                 for i in range(x.batch_sizes.size(0)-1, -1, -1):
                     bs = x.batch_sizes[i]
                     s1 = cell(x.data[en-bs:en], (torch.cat(states[0][:bs], 0) * h_drop_mask[:bs], torch.cat(states[1][:bs], 0)))
-                    resh = [s1[0]] + resh
+                    resh.append(s1[0])
                     for j in range(bs):
                         states[0][j] = s1[0][j].unsqueeze(0)
                         states[1][j] = s1[1][j].unsqueeze(0)
                     en -= bs
+                resh = list(reversed(resh))
 
             resh = PackedSequence(torch.cat(resh, 0), x.batch_sizes)
             return resh, tuple(torch.cat(s, 0) for s in states)
@@ -89,7 +90,7 @@ class LSTMwRecDropout(nn.Module):
             for d in range(self.num_directions):
                 idx = l * self.num_directions + d
                 cell = self.cells[idx]
-                out, states = rnn_loop(input, cell, (hx[i][idx] for i in range(2)) if hx is not None else (input.data.new_zeros(input.batch_sizes[0].item(), self.hidden_size) for _ in range(2)), reverse=(d == 1))
+                out, states = rnn_loop(input, cell, (hx[i][idx] for i in range(2)) if hx is not None else (input.data.new_zeros(input.batch_sizes[0].item(), self.hidden_size, requires_grad=False) for _ in range(2)), reverse=(d == 1))
 
                 new_input.append(out)
                 all_states[0].append(states[0].unsqueeze(0))
