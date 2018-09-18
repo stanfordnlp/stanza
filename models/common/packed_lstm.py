@@ -98,7 +98,7 @@ class LSTMwRecDropout(nn.Module):
 
             if self.num_directions > 1:
                 # concatenate both directions
-                inputdata = torch.cat([x.data for x in new_input], 1)
+                inputdata = torch.cat(new_input, 1)
             else:
                 inputdata = new_input[0]
 
