@@ -194,7 +194,7 @@ def evaluate(args):
     config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
     loaded_args = utils.load_config(config_file)
     for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand'] or k == 'mode':
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
     # load data
