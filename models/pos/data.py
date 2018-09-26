@@ -11,6 +11,7 @@ from models.common import conll
 from models.common.constant import lcode2lang
 from models.common.vocab import PAD_ID, VOCAB_PREFIX
 from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, PretrainedWordVocab
+from models.pos.xpos_vocab_factory import xpos_vocab_factory
 
 class DataLoader:
     def __init__(self, filename, batch_size, args, evaluation=False):
@@ -35,15 +36,12 @@ class DataLoader:
         data = self.preprocess(data, self.vocab, args)
         # shuffle for training
         if self.shuffled:
-            indices = list(range(len(data)))
-            random.shuffle(indices)
-            data = [data[i] for i in indices]
+            random.shuffle(data)
         self.num_examples = len(data)
 
 	# chunk into batches
-        data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
-        self.data = data
-        print("{} batches created for {}.".format(len(data), filename))
+        self.data = self.chunk_batches(data)
+        print("{} batches created for {}.".format(len(self.data), filename))
 
     def init_vocab(self, vocab_pattern, data):
         types = ['char', 'word', 'upos', 'xpos', 'feats']
@@ -53,11 +51,7 @@ class DataLoader:
         wordvocab = WordVocab(vocab_pattern.format('word'), data, self.args['shorthand'], cutoff=7, lower=True)
         self.pretrained_emb, pretrainedvocab = self.read_emb_matrix(self.args['wordvec_dir'], self.args['shorthand'], vocab_pattern.format('pretrained'))
         uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
-        # TODO: make XPOSVocab language-specific
-        if self.args['shorthand'] in ['zh_gsd', 'en_ewt']:
-            xposvocab = WordVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
-        elif self.args['shorthand'] in ['grc_perseus']:
-            xposvocab = XPOSVocab(vocab_pattern.format('xpos'), data, self.args['shorthand'], idx=2)
+        xposvocab = xpos_vocab_factory(vocab_pattern.format('xpos'), data, self.args['shorthand'])
         featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
         vocab = {'char': charvocab,
                 'word': wordvocab,
@@ -178,5 +172,22 @@ class DataLoader:
     def reshuffle(self):
         data = [y for x in self.data for y in x]
         random.shuffle(data)
-        data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
-        self.data = data
+        self.data = self.chunk_batches(data)
+
+    def chunk_batches(self, data):
+        res = []
+
+        current = []
+        currentlen = 0
+        for x in data:
+            if len(x[0]) + currentlen > self.batch_size:
+                res.append(current)
+                current = []
+                currentlen = 0
+            current.append(x)
+            currentlen += len(x[0])
+
+        if currentlen > 0:
+            res.append(current)
+
+        return res

@@ -20,9 +20,9 @@ from models.pos.model import Tagger
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
     if args['cuda']:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:8]]
+        inputs = [b.cuda() if b is not None else None for b in batch[:8]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:8]]
+        inputs = batch[:8]
     orig_idx = batch[8]
     word_orig_idx = batch[9]
     sentlens = batch[10]

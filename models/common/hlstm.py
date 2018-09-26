@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
 from models.common.packed_lstm import PackedLSTM
-from models.common.broadcast_dropout import BroadcastDropout as Dropout
 
 # Highway LSTM Cell (Zhang et al. (2018) Highway Long Short-Term Memory RNNs for Distant Speech Recognition)
 class HLSTMCell(nn.modules.rnn.RNNCellBase):
@@ -70,7 +69,7 @@ class HighwayLSTM(nn.Module):
         self.lstm = nn.ModuleList()
         self.highway = nn.ModuleList()
         self.gate = nn.ModuleList()
-        self.drop = nn.Dropout(dropout)
+        self.drop = nn.Dropout(dropout, inplace=True)
 
         in_size = input_size
         for l in range(num_layers):

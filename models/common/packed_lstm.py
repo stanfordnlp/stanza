@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from models.common.broadcast_dropout import BroadcastDropout as Dropout
-
 class PackedLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, bias=True, batch_first=False, dropout=0, bidirectional=False, pad=False, rec_dropout=0):
         super().__init__()
@@ -36,8 +34,8 @@ class LSTMwRecDropout(nn.Module):
         self.hidden_size = hidden_size
 
         self.dropout = dropout
-        self.drop = nn.Dropout(dropout)
-        self.rec_drop = nn.Dropout(rec_dropout)
+        self.drop = nn.Dropout(dropout, inplace=True)
+        self.rec_drop = nn.Dropout(rec_dropout, inplace=True)
 
         self.num_directions = 2 if bidirectional else 1
 
