@@ -43,6 +43,8 @@ with open(output_file, 'w') as f:
     print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_factory.
 # Please don't edit it!
 
+from models.pos.vocab import WordVocab, XPOSVocab
+
 def xpos_vocab_factory(vocabfile, data, shorthand):''', file=f)
 
     for key in mapping:
