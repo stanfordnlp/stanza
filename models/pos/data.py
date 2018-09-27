@@ -66,7 +66,7 @@ class DataLoader:
         if not os.path.exists(vocab_file) or not os.path.exists(vec_file):
             lcode, tcode = shorthand.split('_')
 
-            lang = lcode2lang[lcode]
+            lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shothand]
             if lcode == 'zh':
                 lang = 'ChineseT'
             wordvec_file = os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(lcode))
