@@ -6,7 +6,6 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_s
 
 from models.common.biaffine import BiaffineScorer
 from models.common.hlstm import HighwayLSTM
-from models.common.biaffine import BiaffineScorer
 from models.common.dropout import WordDropout
 
 from models.common.vocab import Vocab as BaseVoab

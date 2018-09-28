@@ -9,7 +9,9 @@ UNK = '<UNK>'
 UNK_ID = 1
 EMPTY = '<EMPTY>'
 EMPTY_ID = 2
-VOCAB_PREFIX = [PAD, UNK, EMPTY]
+ROOT = '<ROOT>'
+ROOT_ID = 3
+VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
 
 class Vocab:
     def __init__(self, filename, data, lang, idx=0, cutoff=0, lower=False):
