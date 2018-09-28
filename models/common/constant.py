@@ -38,7 +38,7 @@ lcode2lang = {
     "sme": "North_Sami",
     "no_bokmaal": "Norwegian-Bokmaal",
     "no_nynorsk": "Norwegian-Nynorsk",
-    "no_nynorsklia": "Norwegian-NyNorsk",
+    "no_nynorsklia": "Norwegian-Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
     "fa": "Persian",

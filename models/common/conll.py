@@ -9,7 +9,11 @@ FIELD_NUM = 10
 FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
 
 class CoNLLFile():
-    def __init__(self, filename=None, input_str=None):
+    def __init__(self, filename=None, input_str=None, ignore_gapping=True):
+        # If ignore_gapping is True, all words that are gap fillers (identified with a period in
+        # the sentence index) will be ignored.
+
+        self.ignore_gapping = ignore_gapping
         if filename is not None and not os.path.exists(filename):
             raise Exception("File not found at: " + filename)
         if filename is None:
@@ -48,6 +52,8 @@ class CoNLLFile():
                 if line.startswith('#'): # skip comment line
                     continue
                 array = line.split('\t')
+                if self.ignore_gapping and '.' in array[0]:
+                    continue
                 assert len(array) == FIELD_NUM
                 cache += [array]
         if len(cache) > 0:
