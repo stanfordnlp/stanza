@@ -21,7 +21,6 @@ class PairwiseBilinear(nn.Module):
         input2_size = list(input2.size())
         output_size = [input1_size[0], input1_size[1], input2_size[1], self.output_size]
 
-        import pdb; pdb.set_trace()
         # ((N x L1) x D1) * (D1 x (D2 x O)) -> (N x L1) x (D2 x O)
         intermediate = torch.mm(input1.view(-1, input1_size[-1]), self.weight.view(-1, self.input2_size * self.output_size))
         # (N x L2 x D2) -> (N x D2 x L2)
@@ -71,7 +70,7 @@ class PairwiseDeepBiaffineScorer(nn.Module):
         self.W1 = nn.Linear(input1_size, hidden_size)
         self.W2 = nn.Linear(input2_size, hidden_size)
         self.hidden_func = hidden_func
-        self.scorer = BiaffineScorer(hidden_size, hidden_size, output_size)
+        self.scorer = PairwiseBiaffineScorer(hidden_size, hidden_size, output_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input1, input2):

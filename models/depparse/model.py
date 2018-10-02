@@ -66,7 +66,7 @@ class Parser(nn.Module):
         self.unlabeled = PairwiseDeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1)
 
         # criterion
-        self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
+        self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
@@ -119,8 +119,15 @@ class Parser(nn.Module):
         lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
 
         lstm_outputs, _ = self.parserlstm(lstm_inputs, sentlens, hx=(self.parserlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.parserlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
-        lstm_outputs, _ = pad_packed_sequence(lstm_outputs)
+        lstm_outputs, _ = pad_packed_sequence(lstm_outputs, batch_first=True)
 
-        unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs)
+        unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs).squeeze(3)
+
+        unlabeled_scores = unlabeled_scores[:, 1:, :] # exclude attachment for the root symbol
+        unlabeled_target = head.masked_fill(word_mask[:, 1:], -1)
+        loss = self.crit(unlabeled_scores.contiguous().view(-1, unlabeled_scores.size(2)), unlabeled_target.view(-1))
+        preds = []
+
+        loss /= word.size(0)
 
         return loss, preds
