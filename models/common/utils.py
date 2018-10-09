@@ -1,6 +1,7 @@
 """
 Utils for seq2seq models.
 """
+import os
 from collections import Counter
 import random
 import json
@@ -66,6 +67,12 @@ def keep_partial_grad(grad, topk):
     return grad
 
 # other utils
+def ensure_dir(d, verbose=True):
+    if not os.path.exists(d):
+        if verbose:
+            print("Directory {} do not exist; creating...".format(d))
+        os.makedirs(d)
+
 def save_config(config, path, verbose=True):
     with open(path, 'w') as outfile:
         json.dump(config, outfile, indent=2)
