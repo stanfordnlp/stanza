@@ -14,6 +14,5 @@ def score(system_conllu_file, gold_conllu_file, verbose=True):
         scores = [evaluation[k].f1 * 100 for k in ['UPOS', 'XPOS', 'UFeats', 'AllTags']]
         print("UPOS\tXPOS\tUFeats\tAllTags")
         print("{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}".format(*scores))
-    #print(evaluation['UPOS'].f1 * 100, evaluation['XPOS'].f1 * 100, evaluation['UFeats'].f1 * 100, evaluation['AllTags'].f1 * 100)
     return p, r, f
 
