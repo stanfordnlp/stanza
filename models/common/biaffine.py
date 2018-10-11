@@ -64,13 +64,16 @@ class PairwiseBiaffineScorer(nn.Module):
         res = self.W1(input1).unsqueeze(2) + self.W2(input2).unsqueeze(1) + self.W_bilin(input1, input2)
         return res
 
-class PairwiseDeepBiaffineScorer(nn.Module):
-    def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu, dropout=0):
+class DeepBiaffineScorer(nn.Module):
+    def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu, dropout=0, pairwise=True):
         super().__init__()
         self.W1 = nn.Linear(input1_size, hidden_size)
         self.W2 = nn.Linear(input2_size, hidden_size)
         self.hidden_func = hidden_func
-        self.scorer = PairwiseBiaffineScorer(hidden_size, hidden_size, output_size)
+        if pairwise:
+            self.scorer = PairwiseBiaffineScorer(hidden_size, hidden_size, output_size)
+        else:
+            self.scorer = BiaffineScorer(hidden_size, hidden_size, output_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input1, input2):

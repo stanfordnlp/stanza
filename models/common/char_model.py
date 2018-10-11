@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_sequence, PackedSequence
 
 from models.common.packed_lstm import PackedLSTM
 from models.common.utils import tensor_unsort
@@ -16,21 +16,24 @@ class CharacterModel(nn.Module):
         self.char_attn.weight.data.zero_()
 
         # modules
-        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, pad=True, dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'], rec_dropout = self.args['char_rec_dropout'])
+        self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'], rec_dropout = self.args['char_rec_dropout'])
         self.charlstm_h_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
         self.charlstm_c_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
 
-        self.dropout = nn.Dropout(args['dropout'], inplace=True)
+        self.dropout = nn.Dropout(args['dropout'])
 
     def forward(self, chars, chars_mask, word_orig_idx, sentlens, wordlens):
         embs = self.dropout(self.char_emb(chars))
-        char_reps = self.charlstm(embs, wordlens, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], embs.size(0), self.args['char_hidden_dim']).contiguous()))[0]
+        batch_size = embs.size(0)
+        embs = pack_padded_sequence(embs, wordlens, batch_first=True)
+        char_reps = self.charlstm(embs, wordlens, hx=(self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))[0]
 
         # attention
-        weights = torch.sigmoid(self.char_attn(self.dropout(char_reps))).masked_fill(chars_mask.unsqueeze(2), 0)
-        weights = weights.transpose(1, 2)
+        weights = torch.sigmoid(self.char_attn(self.dropout(char_reps.data)))
 
-        res = weights.bmm(char_reps).squeeze(1)
+        char_reps = PackedSequence(char_reps.data * weights, char_reps.batch_sizes)
+        char_reps, _ = pad_packed_sequence(char_reps, batch_first=True)
+        res = char_reps.sum(1)
         res = tensor_unsort(res, word_orig_idx)
 
         res = pack_sequence(res.split(sentlens))

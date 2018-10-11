@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from models.common.biaffine import PairwiseDeepBiaffineScorer
+from models.common.biaffine import DeepBiaffineScorer
 from models.common.hlstm import HighwayLSTM
 from models.common.dropout import WordDropout
 
@@ -63,7 +63,8 @@ class Parser(nn.Module):
         self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
 
         # classifiers
-        self.unlabeled = PairwiseDeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1)
+        self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
+        self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=args['dropout'])
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
@@ -122,12 +123,27 @@ class Parser(nn.Module):
         lstm_outputs, _ = pad_packed_sequence(lstm_outputs, batch_first=True)
 
         unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs).squeeze(3)
+        deprel_scores = self.deprel(lstm_outputs, lstm_outputs)
 
-        unlabeled_scores = unlabeled_scores[:, 1:, :] # exclude attachment for the root symbol
-        unlabeled_target = head.masked_fill(word_mask[:, 1:], -1)
-        loss = self.crit(unlabeled_scores.contiguous().view(-1, unlabeled_scores.size(2)), unlabeled_target.view(-1))
         preds = []
 
-        loss /= word.size(0)
+        if self.training:
+            unlabeled_scores = unlabeled_scores[:, 1:, :] # exclude attachment for the root symbol
+            unlabeled_scores = unlabeled_scores.masked_fill(word_mask.unsqueeze(1), -float('inf'))
+            unlabeled_target = head.masked_fill(word_mask[:, 1:], -1)
+            loss = self.crit(unlabeled_scores.contiguous().view(-1, unlabeled_scores.size(2)), unlabeled_target.view(-1))
+
+            deprel_scores = deprel_scores[:, 1:] # exclude attachment for the root symbol
+            goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
+            goldmask.scatter_(2, head.unsqueeze(2), 1)
+            deprel_scores = deprel_scores.masked_select(goldmask.unsqueeze(3)).view(-1, len(self.vocab['deprel']))
+            deprel_target = deprel.masked_fill(word_mask[:, 1:], -1)
+            loss += self.crit(deprel_scores.contiguous(), deprel_target.view(-1))
+
+            loss /= word.size(0)
+        else:
+            loss = 0
+            preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
+            preds.append(deprel_scores.max(3)[1].detach().cpu().numpy())
 
         return loss, preds
