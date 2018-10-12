@@ -1,5 +1,5 @@
 outputprefix=$1
-if [[ "$outputprefix" == "tokenize" || "$outputprefix" == "mwt" || "$outputprefix" == "lemma" ]]; then
+if [[ "$outputprefix" == "tokenize" || "$outputprefix" == "mwt" || "$outputprefix" == "lemma" || "$outputprefix" == "pos" || "$outputprefix" == "depparse" ]]; then
     outputprefix=""
 else
     shift
@@ -12,10 +12,11 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 tbs=`wc -l ${module}_test_treebanks`
 i=0
 for tb in `cat ${module}_test_treebanks`; do
+    short=`bash $ROOT/scripts/treebank_to_shorthand.sh ud $tb`
     if [[ "$outputprefix" == "" ]]; then
-        sbatch --wait --job-name $module $ROOT/scripts/run_slurm.sh $module run $tb $ROOT $args 2>/dev/null &
+        sbatch --wait --job-name ${module}.${short} $ROOT/scripts/run_slurm.sh $module run $tb $ROOT $args 2>/dev/null &
     else
-        sbatch --wait --job-name $module $ROOT/scripts/run_slurm.sh $outputprefix $module run $tb $ROOT $args 2>/dev/null &
+        sbatch --wait --job-name ${module}.${short} $ROOT/scripts/run_slurm.sh $outputprefix $module run $tb $ROOT $args 2>/dev/null &
     fi
     pids[${i}]=$!
     i=$((i+1))
