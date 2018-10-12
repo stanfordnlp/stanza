@@ -99,6 +99,8 @@ class CompositeVocab(Vocab):
 
             # Just treat multi-valued properties values as one possible value
             parts = dict(parts)
+        elif unit == '_':
+            parts = []
         return parts
 
     def unit2id(self, unit):
