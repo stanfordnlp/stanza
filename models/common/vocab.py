@@ -155,6 +155,9 @@ class CompositeVocab(Vocab):
                     if i < len(parts) and p not in self._id2unit[i]:
                         self._id2unit[i].append(p)
 
+        # special handle for the case where upos/xpos/ufeats are always empty
+        self._id2unit['_'] = copy(VOCAB_PREFIX)
+
         self._id2unit = OrderedDict([(k, self._id2unit[k]) for k in sorted(self._id2unit.keys())])
         self._unit2id = {k: {w:i for i, w in enumerate(self._id2unit[k])} for k in self._id2unit}
 
