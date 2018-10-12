@@ -43,8 +43,7 @@ def parse_args():
     parser.add_argument('--beam_size', type=int, default=1)
 
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
-    parser.add_argument('-e2d','--enc2dec', default='no', choices=['no', 'linear', 'nonlinear', 'zero'], help='Use an encoder to decoder transformation layer')
-    parser.add_argument('--pos', action='store_true', help='Use POS in lemmatization.')
+    parser.add_argument('--pos', action='store_true', help='Use UPOS in lemmatization.')
     parser.add_argument('--pos_dim', type=int, default=50)
     parser.add_argument('--pos_dropout', type=float, default=0.5)
     parser.add_argument('--edit', action='store_true', help='Use edit classifier in lemmatization.')
