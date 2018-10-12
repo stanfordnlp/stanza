@@ -44,8 +44,8 @@ def parse_args():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--rec_dropout', type=float, default=0.5, help="Recurrent dropout")
-    parser.add_argument('--char_rec_dropout', type=float, default=0.25, help="Recurrent dropout")
+    parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
+    parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')

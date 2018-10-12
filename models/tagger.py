@@ -44,8 +44,8 @@ def parse_args():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--rec_dropout', type=float, default=0.5, help="Recurrent dropout")
-    parser.add_argument('--char_rec_dropout', type=float, default=0.25, help="Recurrent dropout")
+    parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
+    parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
     parser.add_argument('--share_hid', action='store_true', help="Share hidden representations for UPOS, XPOS and UFeats.")
     parser.set_defaults(share_hid=False)
 
