@@ -21,14 +21,20 @@ tempfile = 'temp.xpos.vocab'
 mapping = defaultdict(list)
 for sh in shorthands:
     print('Resolving vocab option for {}...'.format(sh))
+    if not os.path.exists('data/pos/{}.train.in.conllu'.format(sh)):
+        # without the training file, there's not much we can do
+        key = 'WordVocab(vocabfile, data, shorthand, idx=2)'
+        mapping[key].append(sh)
+        continue
+
     conll_file = CoNLLFile('data/pos/{}.train.in.conllu'.format(sh))
     data = conll_file.get(['word', 'upos', 'xpos', 'feats'], as_sentences=True)
     vocab = WordVocab(tempfile, data, sh, idx=2)
     os.remove(tempfile)
     key = 'WordVocab(vocabfile, data, shorthand, idx=2)'
     best_size = len(vocab) - len(VOCAB_PREFIX)
-    if best_size > 200:
-        for sep in ['', '-', '+', '|']: # separators
+    if best_size > 20:
+        for sep in ['', '-', '+', '|', ',', ':']: # separators
             vocab = XPOSVocab(tempfile, data, sh, idx=2, sep=sep)
             os.remove(tempfile)
             length = sum(len(x) - len(VOCAB_PREFIX) for x in vocab._id2unit.values())
