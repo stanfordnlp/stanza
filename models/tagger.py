@@ -46,6 +46,8 @@ def parse_args():
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0.5, help="Recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0.25, help="Recurrent dropout")
+    parser.add_argument('--share_hid', action='store_true', help="Share hidden representations for UPOS, XPOS and UFeats.")
+    parser.set_defaults(share_hid=False)
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
