@@ -8,7 +8,6 @@ import torch
 from torch import nn
 import torch.nn.init as init
 from torch.autograd import Variable
-import torch.nn.functional as F
 
 import models.common.seq2seq_constant as constant
 from models.common.seq2seq_model import Seq2SeqModel

@@ -5,7 +5,6 @@ Pytorch implementation of basic sequence to Sequence modules.
 import torch
 import torch.nn as nn
 import math
-import torch.nn.functional as F
 import numpy as np
 
 import models.common.seq2seq_constant as constant
@@ -219,13 +218,13 @@ class LSTMAttention(nn.Module):
                 self.hidden_weights(hx)
             ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
-            ingate = F.sigmoid(ingate)
-            forgetgate = F.sigmoid(forgetgate)
-            cellgate = F.tanh(cellgate)
-            outgate = F.sigmoid(outgate)
+            ingate = torch.sigmoid(ingate)
+            forgetgate = torch.sigmoid(forgetgate)
+            cellgate = torch.tanh(cellgate)
+            outgate = torch.sigmoid(outgate)
 
             cy = (forgetgate * cx) + (ingate * cellgate)
-            hy = outgate * F.tanh(cy)  # n_b x hidden_dim
+            hy = outgate * torch.tanh(cy)  # n_b x hidden_dim
             h_tilde, alpha = self.attention_layer(hy, ctx, mask=ctx_mask)
 
             return h_tilde, cy
