@@ -11,6 +11,18 @@ import torch
 import models.common.seq2seq_constant as constant
 import utils.conll18_ud_eval as ud_eval
 
+# training schedule
+def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):
+    """ Adjust the evaluation interval adaptively.
+    If cur_dev_size <= thres_dev_size, return base_interval;
+    else, linearly increase the interval (round to integer times of base interval).
+    """
+    if cur_dev_size <= thres_dev_size:
+        return base_interval
+    else:
+        alpha = round(cur_dev_size / thres_dev_size)
+        return base_interval * alpha
+
 # ud utils
 def ud_scores(gold_conllu_file, system_conllu_file):
     gold_ud = ud_eval.load_conllu_file(gold_conllu_file)

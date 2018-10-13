@@ -56,6 +56,8 @@ def parse_args():
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--fix_eval_interval', dest='adapt_eval_interval', action='store_false', \
+            help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
     parser.add_argument('--max_steps_before_stop', type=int, default=3000)
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
@@ -125,6 +127,10 @@ def train(args):
     current_lr = args['lr']
     global_start_time = time.time()
     format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
+
+    if args['adapt_eval_interval']:
+        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
+        print("Use evaluation interval {}".format(args['eval_interval']))
 
     using_amsgrad = False
     last_best_step = 0
