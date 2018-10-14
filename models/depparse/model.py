@@ -65,6 +65,10 @@ class Parser(nn.Module):
         # classifiers
         self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
         self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=args['dropout'])
+        if not args['no_linearization']:
+            self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
+        if not args['no_distance']:
+            self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
@@ -125,6 +129,23 @@ class Parser(nn.Module):
         unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs).squeeze(3)
         deprel_scores = self.deprel(lstm_outputs, lstm_outputs)
 
+        goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
+        goldmask.scatter_(2, head.unsqueeze(2), 1)
+
+        if not self.args['no_linearization'] or not self.args['no_distance']:
+            head_offset = head - torch.arange(1, word.size(1), device=head.device).view(1, -1).expand(word.size(0), -1)
+
+        if not self.args['no_linearization']:
+            lin_scores = self.linearization(lstm_outputs, lstm_outputs).squeeze(3)
+            unlabeled_scores += F.logsigmoid(lin_scores).detach()
+
+        if not self.args['no_distance']:
+            dist_scores = self.distance(lstm_outputs, lstm_outputs).squeeze(3)
+            dist_pred = 1 + F.softplus(dist_scores)
+            dist_target = torch.cat([head_offset.new_zeros(head.size(0), 1), torch.abs(head_offset)], 1)
+            dist_kld = -torch.log((dist_target.unsqueeze(1).expand(-1, dist_target.size(1), -1).float() - dist_pred)**2/2 + 1)
+            unlabeled_scores += dist_kld.detach()
+
         preds = []
 
         if self.training:
@@ -134,11 +155,19 @@ class Parser(nn.Module):
             loss = self.crit(unlabeled_scores.contiguous().view(-1, unlabeled_scores.size(2)), unlabeled_target.view(-1))
 
             deprel_scores = deprel_scores[:, 1:] # exclude attachment for the root symbol
-            goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
-            goldmask.scatter_(2, head.unsqueeze(2), 1)
             deprel_scores = deprel_scores.masked_select(goldmask.unsqueeze(3)).view(-1, len(self.vocab['deprel']))
             deprel_target = deprel.masked_fill(word_mask[:, 1:], -1)
             loss += self.crit(deprel_scores.contiguous(), deprel_target.view(-1))
+
+            if not self.args['no_linearization']:
+                lin_scores = lin_scores[:, 1:].masked_select(goldmask)
+                lin_scores = torch.cat([-lin_scores.unsqueeze(1), lin_scores.unsqueeze(1)], 1)
+                lin_target = (head_offset > 0).long().masked_fill(word_mask[:, 1:], -1)
+                loss += self.crit(lin_scores.contiguous(), lin_target.view(-1))
+
+            if not self.args['no_distance']:
+                dist_kld = dist_kld[:, 1:].masked_select(goldmask)
+                loss -= dist_kld.sum()
 
             loss /= word.size(0)
         else:
