@@ -133,17 +133,17 @@ class Parser(nn.Module):
         goldmask.scatter_(2, head.unsqueeze(2), 1)
 
         if not self.args['no_linearization'] or not self.args['no_distance']:
-            head_offset = head - torch.arange(1, word.size(1), device=head.device).view(1, -1).expand(word.size(0), -1)
+            head_offset = torch.arange(word.size(1), device=head.device).view(1, 1, -1).expand(word.size(0), -1, -1) - torch.arange(word.size(1), device=head.device).view(1, -1, 1).expand(word.size(0), -1, -1)
 
         if not self.args['no_linearization']:
             lin_scores = self.linearization(lstm_outputs, lstm_outputs).squeeze(3)
-            unlabeled_scores += F.logsigmoid(lin_scores).detach()
+            unlabeled_scores += F.logsigmoid(lin_scores * torch.sign(head_offset).float()).detach()
 
         if not self.args['no_distance']:
             dist_scores = self.distance(lstm_outputs, lstm_outputs).squeeze(3)
             dist_pred = 1 + F.softplus(dist_scores)
-            dist_target = torch.cat([head_offset.new_zeros(head.size(0), 1), torch.abs(head_offset)], 1)
-            dist_kld = -torch.log((dist_target.unsqueeze(1).expand(-1, dist_target.size(1), -1).float() - dist_pred)**2/2 + 1)
+            dist_target = torch.abs(head_offset)
+            dist_kld = -torch.log((dist_target.float() - dist_pred)**2/2 + 1)
             unlabeled_scores += dist_kld.detach()
 
         preds = []
@@ -161,8 +161,8 @@ class Parser(nn.Module):
 
             if not self.args['no_linearization']:
                 lin_scores = lin_scores[:, 1:].masked_select(goldmask)
-                lin_scores = torch.cat([-lin_scores.unsqueeze(1), lin_scores.unsqueeze(1)], 1)
-                lin_target = (head_offset > 0).long().masked_fill(word_mask[:, 1:], -1)
+                lin_scores = torch.cat([-lin_scores.unsqueeze(1)/2, lin_scores.unsqueeze(1)/2], 1)
+                lin_target = (head_offset[:, 1:] > 0).long().masked_select(goldmask)
                 loss += self.crit(lin_scores.contiguous(), lin_target.view(-1))
 
             if not self.args['no_distance']:
