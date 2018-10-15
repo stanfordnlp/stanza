@@ -99,6 +99,7 @@ def train(args):
     args['pos_vocab_size'] = train_batch.pos_vocab.size
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
 
+    utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
     dict_file = model_file.replace('.pt', '.dict')
 

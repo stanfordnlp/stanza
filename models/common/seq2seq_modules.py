@@ -191,11 +191,9 @@ class LSTMAttention(nn.Module):
         super(LSTMAttention, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.num_layers = 1
         self.batch_first = batch_first
 
-        self.input_weights = nn.Linear(input_size, 4 * hidden_size)
-        self.hidden_weights = nn.Linear(hidden_size, 4 * hidden_size)
+        self.lstm_cell = nn.LSTMCell(input_size, hidden_size)
         
         if attn_type == 'soft':
             self.attention_layer = SoftDotAttention(hidden_size)
@@ -210,36 +208,17 @@ class LSTMAttention(nn.Module):
         print("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
-        """Propogate input through the network."""
-        def recurrence(input, hidden):
-            """Recurrence helper."""
-            hx, cx = hidden  # n_b x hidden_dim
-            gates = self.input_weights(input) + \
-                self.hidden_weights(hx)
-            ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
-
-            ingate = torch.sigmoid(ingate)
-            forgetgate = torch.sigmoid(forgetgate)
-            cellgate = torch.tanh(cellgate)
-            outgate = torch.sigmoid(outgate)
-
-            cy = (forgetgate * cx) + (ingate * cellgate)
-            hy = outgate * torch.tanh(cy)  # n_b x hidden_dim
-            h_tilde, alpha = self.attention_layer(hy, ctx, mask=ctx_mask)
-
-            return h_tilde, cy
-
+        """Propogate input through the network.""" 
         if self.batch_first:
             input = input.transpose(0,1)
 
         output = []
         steps = range(input.size(0))
         for i in steps:
-            hidden = recurrence(input[i], hidden)
-            if isinstance(hidden, tuple):
-                output.append(hidden[0])
-            else:
-                output.append(hidden)
+            hidden = self.lstm_cell(input[i], hidden)
+            hy, cy = hidden
+            h_tilde, alpha = self.attention_layer(hy, ctx, mask=ctx_mask)
+            output.append(h_tilde)
         output = torch.cat(output, 0).view(input.size(0), *output[0].size())
 
         if self.batch_first:
