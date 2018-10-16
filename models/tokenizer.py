@@ -1,7 +1,6 @@
 from copy import copy
 
 from models.common import param, utils
-from models.common.utils import load_config, save_config
 
 from models.tokenize.trainer import Trainer
 from models.tokenize.data import DataLoader
@@ -10,7 +9,6 @@ from models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
 
 def train(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
 
     train_batches = DataLoader(args, args['json_file'], args['txt_file'], args['label_file'])
     vocab = train_batches.vocab
@@ -20,6 +18,7 @@ def train(args):
     dev_batches = DataLoader(dev_args, args['dev_json_file'], args['dev_txt_file'], args['dev_label_file'], vocab=vocab)
 
     trainer = Trainer(args)
+    trainer.vocab = vocab
     if args['cuda']:
         trainer.model.cuda()
 
@@ -67,15 +66,14 @@ def train(args):
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
-    vocab = Vocab(self.args['vocab_file'], [], self.args['lang'])
+    trainer = Trainer(args)
+    trainer.load(args['save_name'])
+    loaded_args = trainer.args
+    vocab = trainer.vocab
     args['vocab_size'] = len(vocab)
-    loaded_args = load_config(config_file)
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
             args[k] = loaded_args[k]
-    trainer = Trainer(args)
-    trainer.load(args['save_name'])
     if args['cuda']:
         trainer.model.cuda()
 
@@ -104,40 +102,35 @@ if __name__ == '__main__':
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
 
-    parser.add_argument('--emb_dim', type=int, default=30, help="Dimension of unit embeddings")
-    parser.add_argument('--hidden_dim', type=int, default=100, help="Dimension of hidden units")
-    parser.add_argument('--conv_filters', type=str, default="1,5,9,,1,5,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
-    parser.add_argument('--residual', action='store_true', help="Add linear residual connections")
-    parser.add_argument('--hierarchical', action='store_true', help="\"Hierarchical\" RNN tokenizer")
-    parser.add_argument('--hier_invtemp', type=float, default=1.0, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
-    parser.add_argument('--no-rnn', dest='rnn', action='store_false', help="Use CNN tokenizer")
+    parser.add_argument('--emb_dim', type=int, default=32, help="Dimension of unit embeddings")
+    parser.add_argument('--hidden_dim', type=int, default=64, help="Dimension of hidden units")
+    parser.add_argument('--conv_filters', type=str, default="1,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
+    parser.add_argument('--no-residual', dest='residual', action='store_false', help="Add linear residual connections")
+    parser.add_argument('--no-hierarchical', dest='hierarchical', action='store_false', help="\"Hierarchical\" RNN tokenizer")
+    parser.add_argument('--hier_invtemp', type=float, default=0.5, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
-    parser.add_argument('--aux_clf', type=float, default=0.0, help="Strength for auxiliary classifiers; default 0 (don't use auxiliary classifiers)")
-    parser.add_argument('--merge_aux_clf', action='store_true', help="Merge prediction from auxiliary classifiers with final classifier output")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
-    parser.add_argument('--hier_conv_res', action='store_true', help="Two-layer hierarchical convolutional residual layer for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
-    parser.add_argument('--anneal', type=float, default=.9, help="Anneal the learning rate by this amount when dev performance deteriorate")
-    parser.add_argument('--anneal_after', type=int, default=0, help="Anneal the learning rate no earlier than this step")
+    parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
+    parser.add_argument('--anneal_after', type=int, default=2000, help="Anneal the learning rate no earlier than this step")
     parser.add_argument('--lr0', type=float, default=2e-3, help="Initial learning rate")
-    parser.add_argument('--dropout', type=float, default=0.0, help="Dropout probability")
-    parser.add_argument('--unit_dropout', type=float, default=0.0, help="Unit dropout probability")
-    parser.add_argument('--tok_noise', type=float, default=0.0, help="Probability to induce noise to the input of the higher RNN")
+    parser.add_argument('--dropout', type=float, default=0.33, help="Dropout probability")
+    parser.add_argument('--unit_dropout', type=float, default=0.33, help="Unit dropout probability")
+    parser.add_argument('--tok_noise', type=float, default=0.02, help="Probability to induce noise to the input of the higher RNN")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")
     parser.add_argument('--epochs', type=int, default=10, help="Total epochs to train the model for")
-    parser.add_argument('--steps', type=int, default=None, help="Steps to train the model for, if unspecified use epochs")
+    parser.add_argument('--steps', type=int, default=20000, help="Steps to train the model for, if unspecified use epochs")
     parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
-    parser.add_argument('--shuffle_steps', type=int, default=0, help="Step interval to shuffle each paragragraph in the generator")
+    parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragragraph in the generator")
     parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
-    parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     args = parser.parse_args()
 

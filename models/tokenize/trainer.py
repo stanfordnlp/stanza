@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -32,15 +33,11 @@ class Trainer(Trainer):
             labels = labels.cuda()
             features = features.cuda()
 
-        pred, aux_outputs = self.model(units, features)
+        pred = self.model(units, features)
 
         self.optimizer.zero_grad()
         classes = pred.size(2)
         loss = self.criterion(pred.view(-1, classes), labels.view(-1))
-
-        if self.args['aux_clf'] > 0 and not self.args['merge_aux_clf']:
-            for aux_output in aux_outputs:
-                loss += self.args['aux_clf'] * self.criterion(aux_output.view(-1, classes), labels.view(-1))
 
         loss.backward()
         nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
@@ -57,6 +54,28 @@ class Trainer(Trainer):
             labels = labels.cuda()
             features = features.cuda()
 
-        pred, _ = self.model(units, features)
+        pred = self.model(units, features)
 
         return pred.data.cpu().numpy()
+
+    def save(self, filename):
+        params = {
+                'model': self.model.state_dict() if self.model is not None else None,
+                'vocab': self.vocab,
+                'config': self.args
+                }
+        try:
+            torch.save(params, filename)
+            print("model saved to {}".format(filename))
+        except BaseException:
+            print("[Warning: Saving failed... continuing anyway.]")
+
+    def load(self, filename):
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            print("Cannot load model from {}".format(filename))
+            exit()
+        self.args = checkpoint['config']
+        self.model.load_state_dict(checkpoint['model'])
+        self.vocab = checkpoint['vocab']

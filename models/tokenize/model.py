@@ -68,13 +68,12 @@ class Tokenizer(nn.Module):
 
         if self.args['hierarchical']:
             if self.args['hier_invtemp'] > 0:
-                inp2, _ = self.rnn2(inp * (1 - self.toknoise(F.sigmoid(-tok0 * self.args['hier_invtemp']))))
+                inp2, _ = self.rnn2(inp * (1 - self.toknoise(torch.sigmoid(-tok0 * self.args['hier_invtemp']))))
             else:
                 inp2, _ = self.rnn2(inp)
 
             inp2 = self.dropout(inp2)
 
-            #inp2 = self.dropout(F.relu(self.hierhid(inp2)))
             tok0 = tok0 + self.tok_clf2(inp2)
             sent0 = sent0 + self.sent_clf2(inp2)
             mwt0 = mwt0 + self.mwt_clf2(inp2)
@@ -88,4 +87,4 @@ class Tokenizer(nn.Module):
 
         pred = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2)
 
-        return pred, []
+        return pred
