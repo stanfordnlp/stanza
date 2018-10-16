@@ -6,8 +6,13 @@ import random
 import re
 import torch
 
-class TokenizerDataProcessor:
-    def __init__(self, json_file, txt_file, label_file):
+from .vocab import Vocab
+
+class DataLoader:
+    def __init__(self, args, json_file, txt_file, label_file, vocab=None):
+        self.args = args
+
+        # Load data and process it
         if json_file is not None:
             with open(json_file) as f:
                 self.data = json.load(f)
@@ -24,15 +29,16 @@ class TokenizerDataProcessor:
 
             self.data = [list(zip(re.sub('\s', ' ', pt.rstrip()), [int(x) for x in pc])) for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.rstrip()) > 0]
 
-class TokenizerDataGenerator:
-    def __init__(self, args, vocab, data):
-        self.args = args
-        self.vocab = vocab
+        self.vocab = vocab if vocab is not None else self.init_vocab()
 
         # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels
-        self.sentences = [self.para_to_sentences(para) for para in data]
+        self.sentences = [self.para_to_sentences(para) for para in self.data]
 
         self.init_sent_ids()
+
+    def init_vocab(self):
+        vocab = Vocab(self.args['vocab_file'], self.data, self.args['lang'])
+        return vocab
 
     def init_sent_ids(self):
         self.sentence_ids = []

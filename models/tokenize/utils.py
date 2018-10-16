@@ -3,11 +3,7 @@ from copy import copy
 import json
 import numpy as np
 
-from models.common.utils import ud_scores, harmonic_mean, load_config, save_config
-
-from .data import TokenizerDataProcessor, TokenizerDataGenerator
-from .trainer import TokenizerTrainer
-from .vocab import Vocab
+from models.common.utils import ud_scores, harmonic_mean
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -155,55 +151,11 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
     return oov_count, offset, all_preds
 
-class Env:
-    def __init__(self, args):
-        self.args = args
+def eval_model(args, trainer, batches, vocab, mwt_dict):
+    oov_count, N, all_preds = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
-    @property
-    def data_processor(self):
-        if not hasattr(self, '_data_processor'):
-            self._data_processor = TokenizerDataProcessor(self.args['json_file'], self.args['txt_file'], self.args['label_file'])
-        return self._data_processor
-
-    @property
-    def dev_data_processor(self):
-        if not hasattr(self, '_dev_data_processor'):
-            self._dev_data_processor = TokenizerDataProcessor(self.args['dev_json_file'], self.args['dev_txt_file'], self.args['dev_label_file'])
-        return self._dev_data_processor
-
-    @property
-    def data_generator(self):
-        if not hasattr(self, '_data_generator'):
-            self._data_generator = TokenizerDataGenerator(self.args, self.vocab, self.data_processor.data)
-        return self._data_generator
-
-    @property
-    def dev_data_generator(self):
-        if not hasattr(self, '_dev_data_generator'):
-            args1 = copy(self.args)
-            args1['mode'] = 'predict'
-            self._dev_data_generator = TokenizerDataGenerator(args1, self.vocab, self.dev_data_processor.data)
-        return self._dev_data_generator
-
-    @property
-    def vocab(self):
-        if not hasattr(self, '_vocab'):
-            self._vocab = Vocab(self.args['vocab_file'], self.data_processor.data, self.args['lang'])
-        return self._vocab
-
-
-def eval_model(env):
-    trainer = env.trainer
-    args = env.args
-
-    oov_count, N, all_preds = output_predictions(args['conll_file'], trainer, env.dev_data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
-
-    #scores = ud_scores(args['dev_conll_gold'], args['conll_file'])
-
-    #print(args['shorthand'], scores['Tokens'].f1, scores['Sentences'].f1, scores['Words'].f1)
-#    return harmonic_mean([scores['Words'].f1, scores['Sentences'].f1], [.5, 1])
     all_preds = np.concatenate(all_preds, 0)
-    labels = [y[1] for x in env.dev_data_processor.data for y in x]
+    labels = [y[1] for x in batches.data for y in x]
     counter = Counter(zip(all_preds, labels))
 
     def f1(pred, gold, mapping):
@@ -241,70 +193,3 @@ def eval_model(env):
     print(args['shorthand'], f1tok, f1sent, f1mwt)
     return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
 
-def train(env):
-    args = env.args
-    save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
-    trainer = TokenizerTrainer(args)
-    env.trainer = trainer
-    if args['cuda']:
-        trainer.model.cuda()
-
-    if args['load_name'] is not None:
-        load_name = "{}/{}".format(args['save_dir'], args['load_name'])
-        trainer.load(load_name)
-    trainer.change_lr(args['lr0'])
-
-    N = len(env.data_generator)
-    steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
-    lr = args['lr0']
-
-    prev_dev_score = -1
-    best_dev_score = -1
-    best_dev_step = -1
-
-    for step in range(1, steps+1):
-        batch = env.data_generator.next(unit_dropout=args['unit_dropout'])
-
-        loss = trainer.update(batch)
-        if step % args['report_steps'] == 0:
-            print("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
-
-        if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
-            env.data_generator.shuffle()
-
-        if step % args['eval_steps'] == 0:
-            dev_score = eval_model(env)
-            reports = ['Dev score: {:6.3f}'.format(dev_score * 100)]
-            if step >= args['anneal_after'] and dev_score < prev_dev_score:
-                reports += ['lr: {:.6f} -> {:.6f}'.format(lr, lr * args['anneal'])]
-                lr *= args['anneal']
-                trainer.change_lr(lr)
-
-            prev_dev_score = dev_score
-
-            if dev_score > best_dev_score:
-                reports += ['New best dev score!']
-                best_dev_score = dev_score
-                best_dev_step = step
-                trainer.save(args['save_name'])
-            print('\t'.join(reports))
-
-    print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
-
-    env.param_manager.update(args, best_dev_score)
-
-def evaluate(env):
-    args = env.args
-    config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
-    loaded_args = load_config(config_file)
-    for k in loaded_args:
-        if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
-            args[k] = loaded_args[k]
-    trainer = TokenizerTrainer(args)
-    trainer.load(args['save_name'])
-    if args['cuda']:
-        trainer.model.cuda()
-
-    oov_count, N, _ = output_predictions(args['conll_file'], trainer, env.data_generator, env.vocab, env.mwt_dict, args['max_seqlen'])
-
-    print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))

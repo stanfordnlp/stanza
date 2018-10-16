@@ -3,11 +3,9 @@ import torch.optim as optim
 
 from models.common.trainer import Trainer
 
-from .data import TokenizerDataGenerator, TokenizerDataProcessor
-from .tokenizer_models import Tokenizer, RNNTokenizer
-from .vocab import Vocab
+from .model import Tokenizer
 
-class TokenizerTrainer(Trainer):
+class Trainer(Trainer):
     def __init__(self, args):
         self.args = args
 
@@ -17,10 +15,7 @@ class TokenizerTrainer(Trainer):
     @property
     def model(self):
         if not hasattr(self, '_model'):
-            if self.args['rnn']:
-                self._model = RNNTokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
-            else:
-                self._model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+            self._model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
 
             if self.args['mode'] == 'train':
                 self.criterion = nn.CrossEntropyLoss(ignore_index=-1)

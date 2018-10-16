@@ -1,6 +1,89 @@
-from models.common import param, utils
+from copy import copy
 
-from models.tokenize.utils import train, evaluate, load_mwt_dict, Env
+from models.common import param, utils
+from models.common.utils import load_config, save_config
+
+from models.tokenize.trainer import Trainer
+from models.tokenize.data import DataLoader
+from models.tokenize.vocab import Vocab
+from models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
+
+def train(args):
+    mwt_dict = load_mwt_dict(args['mwt_json_file'])
+    save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
+
+    train_batches = DataLoader(args, args['json_file'], args['txt_file'], args['label_file'])
+    vocab = train_batches.vocab
+    args['vocab_size'] = len(vocab)
+    dev_args = copy(args)
+    dev_args['mode'] = 'predict'
+    dev_batches = DataLoader(dev_args, args['dev_json_file'], args['dev_txt_file'], args['dev_label_file'], vocab=vocab)
+
+    trainer = Trainer(args)
+    if args['cuda']:
+        trainer.model.cuda()
+
+    if args['load_name'] is not None:
+        load_name = "{}/{}".format(args['save_dir'], args['load_name'])
+        trainer.load(load_name)
+    trainer.change_lr(args['lr0'])
+
+    N = len(train_batches)
+    steps = args['steps'] if args['steps'] is not None else int(N * args['epochs'] / args['batch_size'] + .5)
+    lr = args['lr0']
+
+    prev_dev_score = -1
+    best_dev_score = -1
+    best_dev_step = -1
+
+    for step in range(1, steps+1):
+        batch = train_batches.next(unit_dropout=args['unit_dropout'])
+
+        loss = trainer.update(batch)
+        if step % args['report_steps'] == 0:
+            print("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
+
+        if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
+            train_batches.shuffle()
+
+        if step % args['eval_steps'] == 0:
+            dev_score = eval_model(args, trainer, dev_batches, vocab, mwt_dict)
+            reports = ['Dev score: {:6.3f}'.format(dev_score * 100)]
+            if step >= args['anneal_after'] and dev_score < prev_dev_score:
+                reports += ['lr: {:.6f} -> {:.6f}'.format(lr, lr * args['anneal'])]
+                lr *= args['anneal']
+                trainer.change_lr(lr)
+
+            prev_dev_score = dev_score
+
+            if dev_score > best_dev_score:
+                reports += ['New best dev score!']
+                best_dev_score = dev_score
+                best_dev_step = step
+                trainer.save(args['save_name'])
+            print('\t'.join(reports))
+
+    print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
+
+def evaluate(args):
+    mwt_dict = load_mwt_dict(args['mwt_json_file'])
+    config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
+    vocab = Vocab(self.args['vocab_file'], [], self.args['lang'])
+    args['vocab_size'] = len(vocab)
+    loaded_args = load_config(config_file)
+    for k in loaded_args:
+        if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
+            args[k] = loaded_args[k]
+    trainer = Trainer(args)
+    trainer.load(args['save_name'])
+    if args['cuda']:
+        trainer.model.cuda()
+
+    batches = DataLoader(args, args['json_file'], args['txt_file'], args['label_file'], vocab=vocab)
+
+    oov_count, N, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+
+    print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 
 if __name__ == '__main__':
     import argparse
@@ -64,19 +147,7 @@ if __name__ == '__main__':
     args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['shorthand'])
     utils.ensure_dir(args['save_dir'])
 
-    # activate param manager and save config
-    param_manager = param.ParamManager('params/tokenize', args['shorthand'])
-    if args['best_param']: # use best param in file, otherwise use command line params
-        args = param_manager.load_to_args(args)
-
-    env = Env(args)
-    args['vocab_size'] = len(env.vocab)
-
-    env.param_manager = param_manager
-
-    env.mwt_dict = load_mwt_dict(args['mwt_json_file'])
-
     if args['mode'] == 'train':
-        train(env)
+        train(args)
     else:
-        evaluate(env)
+        evaluate(args)
