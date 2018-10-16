@@ -25,20 +25,29 @@ def unpack_batch(batch, args):
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args, vocab, emb_matrix=None):
-        self.args = args
-        self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        if args.get('edit', False):
-            self.crit = loss.MixLoss(vocab.size, args['alpha'])
-            print("[Running seq2seq lemmatizer with edit classifier]")
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None):
+        if model_file is not None:
+            # load everything from file
+            self.load(model_file)
         else:
-            self.crit = loss.SequenceLoss(vocab.size)
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if args['cuda']:
-            self.model.cuda()
-            self.crit.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'])
-        self.vocab = vocab
+            # build model from scratch
+            self.args = args
+            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
+            self.vocab = vocab
+            # dict-based components
+            self.word_dict = dict()
+            self.composite_dict = dict()
+        if not self.args['dict_only']:
+            if self.args.get('edit', False):
+                self.crit = loss.MixLoss(self.vocab['char'].size, self.args['alpha'])
+                print("[Running seq2seq lemmatizer with edit classifier]")
+            else:
+                self.crit = loss.SequenceLoss(self.vocab['char'].size)
+            self.parameters = [p for p in self.model.parameters() if p.requires_grad]
+            if self.args['cuda']:
+                self.model.cuda()
+                self.crit.cuda()
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.args)
@@ -52,10 +61,10 @@ class Trainer(object):
         log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos)
         if self.args.get('edit', False):
             assert edit_logits is not None
-            loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1), \
+            loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1), \
                     edit_logits, edits)
         else:
-            loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
+            loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1))
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -72,7 +81,7 @@ class Trainer(object):
         self.model.eval()
         batch_size = src.size(0)
         preds, edit_logits = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
-        pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
+        pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
         pred_tokens = utils.unsort(pred_tokens, orig_idx)
@@ -108,78 +117,53 @@ class Trainer(object):
     def update_lr(self, new_lr):
         utils.change_lr(self.optimizer, new_lr)
 
-    def save(self, filename):
-        params = {
-                'model': self.model.state_dict(),
-                'optim': self.optimizer.state_dict(),
-                }
-        try:
-            torch.save(params, filename)
-            print("model saved to {}".format(filename))
-        except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
-
-    def load(self, filename):
-        try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
-        except BaseException:
-            print("Cannot load model from {}".format(filename))
-            exit()
-        self.model.load_state_dict(checkpoint['model'])
-        if self.args['mode'] == 'train':
-            self.optimizer.load_state_dict(checkpoint['optim'])
-
-class DictTrainer(object):
-    """ A trainer wrapper for a simple dictionary-based lemmatizer. """
-    def __init__(self, args):
-        self.model = dict()
-        self.word_model = dict()
-
-    def train(self, triples):
-        """ Train a lemmatizer given training (word, pos, lemma) triples. """
+    def train_dict(self, triples):
+        """ Train a dict lemmatizer given training (word, pos, lemma) triples. """
         # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1], p[2]) for p in triples])
         # find the most frequent mappings
         for p, _ in ctr.most_common():
             w, pos, l = p
-            if (w,pos) not in self.model:
-                self.model[(w,pos)] = l
-            if w not in self.word_model:
-                self.word_model[w] = l
+            if (w,pos) not in self.composite_dict:
+                self.composite_dict[(w,pos)] = l
+            if w not in self.word_dict:
+                self.word_dict[w] = l
         return
 
-    def predict(self, pairs):
-        """ Predict a list of lemmas given (word, pos) pairs. """
+    def predict_dict(self, pairs):
+        """ Predict a list of lemmas using the dict model given (word, pos) pairs. """
         lemmas = []
         for p in pairs:
             w, pos = p
-            if (w,pos) in self.model:
-                lemmas += [self.model[(w,pos)]]
-            elif w in self.word_model:
-                lemmas += [self.word_model[w]]
+            if (w,pos) in self.composite_dict:
+                lemmas += [self.composite_dict[(w,pos)]]
+            elif w in self.word_dict:
+                lemmas += [self.word_dict[w]]
             else:
                 lemmas += [w]
         return lemmas
 
     def ensemble(self, pairs, other_preds):
-        """ Ensemble the dict with another model predictions. """
+        """ Ensemble the dict with statitical model predictions. """
         lemmas = []
         assert len(pairs) == len(other_preds)
         for p, pred in zip(pairs, other_preds):
             w, pos = p
-            if (w,pos) in self.model:
-                lemmas += [self.model[(w,pos)]]
-            elif w in self.word_model:
-                lemmas += [self.word_model[w]]
+            if (w,pos) in self.composite_dict:
+                lemmas += [self.composite_dict[(w,pos)]]
+            elif w in self.word_dict:
+                lemmas += [self.word_dict[w]]
             else:
                 lemmas += [pred]
         return lemmas
 
     def save(self, filename):
         params = {
-                'model': self.model,
-                'word_model': self.word_model,
+                'model': self.model.state_dict() if self.model is not None else None,
+                'dicts': (self.word_dict, self.composite_dict),
+                'vocab': self.vocab,
+                'config': self.args
                 }
         try:
             torch.save(params, filename)
@@ -193,6 +177,12 @@ class DictTrainer(object):
         except BaseException:
             print("Cannot load model from {}".format(filename))
             exit()
-        self.model = checkpoint['model']
-        self.word_model = checkpoint['word_model']
+        self.args = checkpoint['config']
+        self.word_dict, self.composite_dict = checkpoint['dicts']
+        if not self.args['dict_only']:
+            self.model = Seq2SeqModel(self.args)
+            self.model.load_state_dict(checkpoint['model'])
+        else:
+            self.model = None
+        self.vocab = checkpoint['vocab']
 

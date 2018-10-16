@@ -14,7 +14,7 @@ from torch import nn, optim
 
 from models.lemma.loader import DataLoader
 from models.lemma.vocab import Vocab
-from models.lemma.trainer import Trainer, DictTrainer
+from models.lemma.trainer import Trainer
 from models.lemma import scorer, edit
 from models.common import utils, param
 import models.common.seq2seq_constant as constant
@@ -95,13 +95,12 @@ def train(args):
     print("[Loading data with batch size {}...]".format(args['batch_size']))
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
-    args['vocab_size'] = vocab.size
-    args['pos_vocab_size'] = train_batch.pos_vocab.size
-    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
+    args['vocab_size'] = vocab['char'].size
+    args['pos_vocab_size'] = vocab['pos'].size
+    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
-    dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -112,7 +111,6 @@ def train(args):
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
     utils.print_config(args)
-    utils.save_config(args, '{}/{}_config.json'.format(args['model_dir'], args['lang']))
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -121,21 +119,21 @@ def train(args):
 
     # start training
     # train a dictionary-based lemmatizer
-    dict_trainer = DictTrainer(args)
+    trainer = Trainer(args=args, vocab=vocab)
     print("[Training dictionary-based lemmatizer...]")
-    dict_trainer.train(train_batch.conll.get(['word', 'upos', 'lemma']))
+    trainer.train_dict(train_batch.conll.get(['word', 'upos', 'lemma']))
     print("Evaluating on dev set...")
-    dev_preds = dict_trainer.predict(dev_batch.conll.get(['word', 'upos']))
+    dev_preds = trainer.predict_dict(dev_batch.conll.get(['word', 'upos']))
     dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
-    dict_trainer.save(dict_file)
 
-    if not args.get('dict_only', False):
+    if args.get('dict_only', False):
+        # save dictionaries
+        trainer.save(model_file)
+    else:
         # train a seq2seq model
         print("[Training seq2seq-based lemmatizer...]")
-        trainer = Trainer(args, vocab)
-
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
@@ -171,7 +169,7 @@ def train(args):
             # try ensembling with dict if necessary
             if args.get('ensemble_dict', False):
                 print("[Ensembling dict with seq2seq model...]")
-                dev_preds = dict_trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
+                dev_preds = trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
             dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -201,17 +199,22 @@ def train(args):
         param_manager.update(args, best_f)
 
 def evaluate(args):
-    # load config
-    config_file = '{}/{}_config.json'.format(args['model_dir'], args['lang'])
-    loaded_args = utils.load_config(config_file)
+    # file paths
+    system_pred_file = args['output_file']
+    gold_file = args['gold_file']
+    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+
+    # load model
+    trainer = Trainer(model_file=model_file)
+    loaded_args, vocab = trainer.args, trainer.vocab
+
     for k in args:
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
-    vocab = batch.vocab
+    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
@@ -220,24 +223,12 @@ def evaluate(args):
         print("{} ".format(args['lang']))
         exit()
 
-    # file paths
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
-    dict_file = model_file.replace('.pt', '.dict')
-
-    # load dict-based model
-    dict_trainer = DictTrainer(loaded_args)
-    dict_trainer.load(dict_file)
-    dict_preds = dict_trainer.predict(batch.conll.get(['word', 'upos']))
+    dict_preds = trainer.predict_dict(batch.conll.get(['word', 'upos']))
 
     if loaded_args.get('dict_only', False):
         preds = dict_preds
     else:
-        # load seq2seq model
-        trainer = Trainer(loaded_args, vocab)
-        trainer.load(model_file)
-        print("Start evaluation...")
+        print("Running the seq2seq model...")
         preds = []
         edits = []
         for i, b in enumerate(batch):
@@ -249,7 +240,7 @@ def evaluate(args):
 
         if loaded_args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq lemmatizer...]")
-            preds = dict_trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
+            preds = trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
 
     # write to file and score
     batch.conll.write_conll_with_lemmas(preds, system_pred_file)

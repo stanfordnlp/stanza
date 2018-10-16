@@ -11,7 +11,7 @@ from models.lemma.vocab import Vocab
 from models.lemma import edit
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, evaluation=False, conll_only=False):
+    def __init__(self, filename, batch_size, args, vocab=None, evaluation=False, conll_only=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -24,9 +24,12 @@ class DataLoader:
             return
 
         # handle vocab
-        vocab_file = "{}/{}.vocab".format(args['data_dir'], args['lang'])
-        pos_vocab_file = "{}/{}.pos.vocab".format(args['data_dir'], args['lang'])
-        self.vocab, self.pos_vocab = self.init_vocab(vocab_file, pos_vocab_file, data)
+        if vocab is not None:
+            self.vocab = vocab
+        else:
+            self.vocab = dict()
+            char_vocab, pos_vocab = self.init_vocab(data)
+            self.vocab = {'char': char_vocab, 'pos': pos_vocab}
 
 	# filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -34,7 +37,7 @@ class DataLoader:
             data = random.sample(data, keep)
             print("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data, self.vocab, self.pos_vocab, args)
+        data = self.preprocess(data, self.vocab['char'], self.vocab['pos'], args)
         # shuffle for training
         if self.shuffled:
             indices = list(range(len(data)))
@@ -47,32 +50,28 @@ class DataLoader:
         self.data = data
         print("{} batches created for {}.".format(len(data), filename))
 
-    def init_vocab(self, vocab_file, pos_vocab_file, data):
-        if os.path.exists(vocab_file) and os.path.exists(pos_vocab_file):
-            vocab = Vocab(vocab_file, load=True)
-            pos_vocab = Vocab(pos_vocab_file, load=True)
-        else:
-            assert self.eval == False, "Vocab file must exist for evaluation"
-            chars = "".join([d[0] + d[2] for d in data])
-            char_counter = Counter(chars)
-            vocab = Vocab(vocab_file, load=False, unit_counter=char_counter)
-            poss = [d[1] for d in data]
-            poss_counter = Counter(poss)
-            pos_vocab = Vocab(pos_vocab_file, load=False, unit_counter=poss_counter)
+    def init_vocab(self, data):
+        assert self.eval == False, "Vocab file must exist for evaluation"
+        chars = "".join([d[0] + d[2] for d in data])
+        char_counter = Counter(chars)
+        vocab = Vocab(unit_counter=char_counter)
+        poss = [d[1] for d in data]
+        poss_counter = Counter(poss)
+        pos_vocab = Vocab(unit_counter=poss_counter)
         return vocab, pos_vocab
 
-    def preprocess(self, data, vocab, pos_vocab, args):
+    def preprocess(self, data, char_vocab, pos_vocab, args):
         processed = []
         for d in data:
             edit_type = edit.EDIT_TO_ID[edit.get_edit_type(d[0], d[2])]
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
-            src = map_to_ids(src, vocab.unit2id)
+            src = map_to_ids(src, char_vocab.unit2id)
             pos = d[1]
             pos = pos_vocab.unit2id[pos] if pos in pos_vocab.unit2id else constant.UNK_ID
             tgt = list(d[2])
-            tgt_in = map_to_ids([constant.SOS] + tgt, vocab.unit2id)
-            tgt_out = map_to_ids(tgt + [constant.EOS], vocab.unit2id)
+            tgt_in = map_to_ids([constant.SOS] + tgt, char_vocab.unit2id)
+            tgt_out = map_to_ids(tgt + [constant.EOS], char_vocab.unit2id)
             processed += [[src, tgt_in, tgt_out, pos, edit_type]]
         return processed
 
