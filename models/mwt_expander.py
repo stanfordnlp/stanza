@@ -92,7 +92,8 @@ def train(args):
     vocab = train_batch.vocab
     args['vocab_size'] = len(vocab)
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
-
+    
+    utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
     dict_file = model_file.replace('.pt', '.dict')
