@@ -24,18 +24,24 @@ def unpack_batch(batch, args):
     orig_idx = batch[4]
     return inputs, orig_idx
 
-class Trainer(BaseTrainer):
+class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args, vocab, emb_matrix=None):
-        self.args = args
-        self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
-        self.crit = loss.SequenceLoss(vocab.size)
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if args['cuda']:
-            self.model.cuda()
-            self.crit.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'])
-        self.vocab = vocab
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None):
+        if model_file is not None:
+            # load from file
+            self.load(model_file)
+        else:
+            self.args = args
+            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
+            self.vocab = vocab
+            self.expansion_dict = dict()
+        if not self.args['dict_only']:
+            self.crit = loss.SequenceLoss(self.vocab.size)
+            self.parameters = [p for p in self.model.parameters() if p.requires_grad]
+            if self.args['cuda']:
+                self.model.cuda()
+                self.crit.cuda()
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
         inputs, orig_idx = unpack_batch(batch, self.args)
@@ -56,6 +62,7 @@ class Trainer(BaseTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
         self.optimizer.step()
         return loss_val
+
     def predict(self, batch, unsort=True):
         inputs, orig_idx = unpack_batch(batch, self.args)
         src, src_mask, tgt, tgt_mask = inputs
@@ -69,6 +76,74 @@ class Trainer(BaseTrainer):
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
+
+    def train_dict(self, pairs):
+        """ Train a MWT expander given training word-expansion pairs. """
+        # accumulate counter
+        ctr = Counter()
+        ctr.update([(p[0], p[1]) for p in pairs])
+        seen = set()
+        # find the most frequent mappings
+        for p, _ in ctr.most_common():
+            w, l = p
+            if w not in seen and w != l:
+                self.expansion_dict[w] = l
+            seen.add(w)
+        return
+
+    def predict_dict(self, words):
+        """ Predict a list of expansions given words. """
+        expansions = []
+        for w in words:
+            if w in self.expansion_dict:
+                expansions += [self.expansion_dict[w]]
+            elif w.lower() in self.expansion_dict:
+                expansions += [self.expansion_dict[w.lower()]]
+            else:
+                expansions += [w]
+        return expansions
+
+    def ensemble(self, cands, other_preds):
+        """ Ensemble the dict with statistical model predictions. """
+        expansions = []
+        assert len(cands) == len(other_preds)
+        for c, pred in zip(cands, other_preds):
+            if c in self.expansion_dict:
+                expansions += [self.expansion_dict[c]]
+            elif c.lower() in self.expansion_dict:
+                expansions += [self.expansion_dict[c.lower()]]
+            else:
+                expansions += [pred]
+        return expansions
+
+    def save(self, filename):
+        params = {
+                'model': self.model.state_dict() if self.model is not None else None,
+                'dict': self.expansion_dict,
+                'vocab': self.vocab,
+                'config': self.args
+                }
+        try:
+            torch.save(params, filename)
+            print("model saved to {}".format(filename))
+        except BaseException:
+            print("[Warning: Saving failed... continuing anyway.]")
+
+    def load(self, filename):
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            print("Cannot load model from {}".format(filename))
+            exit()
+        self.args = checkpoint['config']
+        self.expansion_dict = checkpoint['dict']
+        if not self.args['dict_only']:
+            self.model = Seq2SeqModel(self.args)
+            self.model.load_state_dict(checkpoint['model'])
+        else:
+            self.model = None
+        self.vocab = checkpoint['vocab']
+
 
 class DictTrainer(BaseTrainer):
     """ A trainer wrapper for a simple dictionary-based MWT expander. """

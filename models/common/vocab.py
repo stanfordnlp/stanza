@@ -21,11 +21,14 @@ class Vocab:
         self.idx = idx
         self.cutoff = cutoff
         self.lower = lower
-        if os.path.exists(self.filename):
-            self.load()
+        if filename is not None:
+            if os.path.exists(self.filename):
+                self.load()
+            else:
+                self.build_vocab()
+                self.save()
         else:
             self.build_vocab()
-            self.save()
 
     def load(self):
         with open(self.filename, 'rb') as f:

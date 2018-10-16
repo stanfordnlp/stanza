@@ -10,7 +10,7 @@ from models.common import conll
 from models.mwt.vocab import Vocab
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, evaluation=False):
+    def __init__(self, filename, batch_size, args, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -20,8 +20,10 @@ class DataLoader:
         self.conll, data = self.load_file(filename, evaluation=self.eval)
 
         # handle vocab
-        vocab_file = "{}/{}.vocab".format(args['data_dir'], args['shorthand'])
-        self.vocab = self.init_vocab(vocab_file, data)
+        if vocab is None:
+            self.vocab = self.init_vocab(data)
+        else:
+            self.vocab = vocab
 
 	# filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -42,12 +44,9 @@ class DataLoader:
         self.data = data
         print("{} batches created for {}.".format(len(data), filename))
 
-    def init_vocab(self, vocab_file, data):
-        if os.path.exists(vocab_file):
-            vocab = Vocab(vocab_file, data, self.args['shorthand'])
-        else:
-            assert self.eval == False # for eval vocab file must exist
-            vocab = Vocab(vocab_file, data, self.args['shorthand'])
+    def init_vocab(self, data):
+        assert self.eval == False # for eval vocab must exist
+        vocab = Vocab(None, data, self.args['shorthand'])
         return vocab
 
     def preprocess(self, data, vocab, args):

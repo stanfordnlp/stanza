@@ -212,6 +212,7 @@ def evaluate(args):
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
     loaded_args['cuda'] = args['cuda'] and not args['cpu']
+
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)

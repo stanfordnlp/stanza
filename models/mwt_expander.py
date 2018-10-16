@@ -14,7 +14,7 @@ from torch import nn, optim
 
 from models.mwt.data import DataLoader
 from models.mwt.vocab import Vocab
-from models.mwt.trainer import Trainer, DictTrainer
+from models.mwt.trainer import Trainer
 from models.mwt import scorer
 from models.common import utils, param
 import models.common.seq2seq_constant as constant
@@ -43,9 +43,7 @@ def parse_args():
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--max_dec_len', type=int, default=50)
     parser.add_argument('--beam_size', type=int, default=1)
-
     parser.add_argument('--attn_type', default='soft', choices=['soft', 'mlp', 'linear', 'deep'], help='Attention type')
-    parser.add_argument('-e2d','--enc2dec', default='no', choices=['no', 'linear', 'nonlinear', 'zero'], help='Use an encoder to decoder transformation layer')
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
@@ -90,13 +88,12 @@ def train(args):
     print("Loading data with batch size {}...".format(args['batch_size']))
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
-    args['vocab_size'] = len(vocab)
-    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True)
+    args['vocab_size'] = vocab.size
+    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, vocab=vocab, evaluation=True)
     
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
-    dict_file = model_file.replace('.pt', '.dict')
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -106,7 +103,6 @@ def train(args):
     param_manager = param.ParamManager('params/mwt', args['shorthand'])
     if args['best_param']: # use best param in file, otherwise use command line params
         args = param_manager.load_to_args(args)
-    utils.save_config(args, '{}/{}_config.json'.format(args['save_dir'], args['shorthand']))
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -114,21 +110,21 @@ def train(args):
         exit()
 
     # train a dictionary-based MWT expander
-    dict_trainer = DictTrainer(args)
+    trainer = Trainer(args=args, vocab=vocab)
     print("Training dictionary-based MWT expander...")
-    dict_trainer.train(train_batch.conll.get_mwt_expansions())
+    trainer.train_dict(train_batch.conll.get_mwt_expansions())
     print("Evaluating on dev set...")
-    dev_preds = dict_trainer.predict(dev_batch.conll.get_mwt_expansion_cands())
+    dev_preds = trainer.predict_dict(dev_batch.conll.get_mwt_expansion_cands())
     dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
-    dict_trainer.save(dict_file)
 
-    if not args.get('dict_only', False):
-        print("Training seq2seq-based MWT expander...")
+    if args.get('dict_only', False):
+        # save dictionaries
+        trainer.save(model_file)
+    else:
         # train a seq2seq model
-        trainer = Trainer(args, vocab)
-
+        print("Training seq2seq-based MWT expander...")
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
@@ -158,7 +154,7 @@ def train(args):
                 dev_preds += preds
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
                 print("[Ensembling dict with seq2seq model...]")
-                dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
+                dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
             dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -187,7 +183,7 @@ def train(args):
         # try ensembling with dict if necessary
         if args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq model...]")
-            dev_preds = dict_trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
+            dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
             dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
@@ -196,44 +192,39 @@ def train(args):
         param_manager.update(args, best_f)
 
 def evaluate(args):
-    # load config
-    config_file = '{}/{}_config.json'.format(args['save_dir'], args['shorthand'])
-    loaded_args = utils.load_config(config_file)
-    for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
-            loaded_args[k] = args[k]
-    loaded_args['cuda'] = args['cuda'] and not args['cpu']
-    print('max_dec_len:', loaded_args['max_dec_len'])
-    # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, evaluation=True)
-    vocab = batch.vocab
-
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
+    
+    # load model
+    trainer = Trainer(model_file=model_file)
+    loaded_args, vocab = trainer.args, trainer.vocab
+
+    for k in args:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
+            loaded_args[k] = args[k]
+    loaded_args['cuda'] = args['cuda'] and not args['cpu']
+    print('max_dec_len:', loaded_args['max_dec_len'])
+
+    # load data
+    print("Loading data with batch size {}...".format(args['batch_size']))
+    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     if len(batch) > 0:
-        dict_file = model_file.replace('.pt', '.dict')
-
-        dict_trainer = DictTrainer(loaded_args)
-        dict_trainer.load(dict_file)
-        dict_preds = dict_trainer.predict(batch.conll.get_mwt_expansion_cands())
+        dict_preds = trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
         # decide trainer type and run eval
         if loaded_args['dict_only']:
             preds = dict_preds
         else:
-            trainer = Trainer(loaded_args, vocab)
-            trainer.load(model_file)
-            print("Start evaluation...")
+            print("Running the seq2seq model...")
             preds = []
             for i, b in enumerate(batch):
                 preds += trainer.predict(b)
 
             if loaded_args.get('ensemble_dict', False):
-                preds = dict_trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
+                preds = trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
     else:
         # skip eval if dev data does not exist
         preds = []
