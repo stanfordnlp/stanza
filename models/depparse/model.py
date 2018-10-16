@@ -146,6 +146,9 @@ class Parser(nn.Module):
             dist_kld = -torch.log((dist_target.float() - dist_pred)**2/2 + 1)
             unlabeled_scores += dist_kld.detach()
 
+        diag = torch.eye(head.size(-1)+1, dtype=torch.uint8, device=head.device).unsqueeze(0)
+        unlabeled_scores.masked_fill_(diag, -float('inf'))
+
         preds = []
 
         if self.training:
@@ -169,7 +172,7 @@ class Parser(nn.Module):
                 dist_kld = dist_kld[:, 1:].masked_select(goldmask)
                 loss -= dist_kld.sum()
 
-            loss /= word.size(0)
+            loss /= wordchars.size(0) # number of words
         else:
             loss = 0
             preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
