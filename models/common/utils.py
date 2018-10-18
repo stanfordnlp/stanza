@@ -8,8 +8,20 @@ import json
 import unicodedata
 import torch
 
+from models.common.constant import lcode2lang
 import models.common.seq2seq_constant as constant
 import utils.conll18_ud_eval as ud_eval
+
+# filenames
+def get_wordvec_file(wordvec_dir, shorthand):
+    """ Lookup the name of the word vectors file, given a directory and the language shorthand.
+    """
+    lcode, tcode = shorthand.split('_')
+    lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shorthand]
+    if lcode == 'zh':
+        lang = 'ChineseT'
+    return os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(\
+            lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')))
 
 # training schedule
 def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):

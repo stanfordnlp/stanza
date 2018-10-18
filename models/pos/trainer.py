@@ -31,16 +31,20 @@ def unpack_batch(batch, args):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args, vocab, emb_matrix=None):
-        self.args = args
-
-        self.model = Tagger(args, vocab, emb_matrix=emb_matrix, share_hid=args['share_hid'])
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None):
+        if model_file is not None:
+            # load everything from file
+            self.load(pretrain, model_file)
+        else:
+            assert all(var is not None for var in [args, vocab, pretrain])
+            # build model from scratch
+            self.args = args
+            self.vocab = vocab
+            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb, share_hid=args['share_hid'])
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if args['cuda']:
+        if self.args['cuda']:
             self.model.cuda()
-        self.optimizer = utils.get_optimizer(args['optim'], self.parameters, args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6)
-
-        self.vocab = vocab
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6)
 
     def update(self, batch, eval=False):
         inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.args)
@@ -76,3 +80,27 @@ class Trainer(BaseTrainer):
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
+
+    def save(self, filename):
+        params = {
+                'model': self.model.state_dict(),
+                'vocab': self.vocab,
+                'config': self.args
+                }
+        try:
+            torch.save(params, filename)
+            print("model saved to {}".format(filename))
+        except BaseException:
+            print("[Warning: Saving failed... continuing anyway.]")
+
+    def load(self, pretrain, filename):
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            print("Cannot load model from {}".format(filename))
+            exit()
+        self.args = checkpoint['config']
+        self.vocab = checkpoint['vocab']
+        self.model = Tagger(self.args, self.vocab, emb_matrix=pretrain.emb, share_hid=self.args['share_hid'])
+        self.model.load_state_dict(checkpoint['model'])
+

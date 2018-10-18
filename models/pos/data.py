@@ -13,8 +13,80 @@ from models.common.vocab import PAD_ID, VOCAB_PREFIX
 from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, PretrainedWordVocab
 from models.pos.xpos_vocab_factory import xpos_vocab_factory
 
+class Pretrain:
+    """ A loader and saver for pretrained embeddings. """
+
+    def __init__(self, filename, vec_filename=None):
+        self.filename = filename
+        self.vec_filename = vec_filename
+
+    @property
+    def vocab(self):
+        if not hasattr(self, '_vocab'):
+            self._vocab, self._emb = self.load()
+        return self._vocab
+
+    @property
+    def emb(self):
+        if not hasattr(self, '_emb'):
+            self._vocab, self._emb = self.load()
+        return self._emb
+
+    def load(self):
+        if os.path.exists(self.filename):
+            try:
+                data = torch.load(self.filename, lambda storage, loc: storage)
+            except BaseException:
+                print("Pretrained file exists but cannot be loaded from {}".format(self.filename))
+                return self.read_and_save()
+            return data['vocab'], data['emb']
+        else:
+            return self.read_and_save()
+
+    def read_and_save(self):
+        # load from pretrained filename
+        if self.vec_filename is None:
+            raise Exception("Vector file is not provided.")
+        print("Reading pretrained vectors from {}...".format(self.vec_filename))
+        first = True
+        words = []
+        failed = 0
+        with lzma.open(self.vec_filename, 'rb') as f:
+            for i, line in enumerate(f):
+                try:
+                    line = line.decode()
+                except UnicodeDecodeError:
+                    failed += 1
+                    continue
+                if first:
+                    # the first line contains the number of word vectors and the dimensionality
+                    first = False
+                    line = line.strip().split(' ')
+                    rows, cols = [int(x) for x in line]
+                    emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+                    continue
+
+                line = line.rstrip().split(' ')
+                emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
+                words.append(' '.join(line[:-cols]))
+
+        vocab = PretrainedWordVocab(None, words, "") # TODO: fix the BaseVocab interface
+
+        if failed > 0:
+            emb = emb[:-failed]
+
+        # save to file
+        data = {'vocab': vocab, 'emb': emb}
+        try:
+            torch.save(data, self.filename)
+            print("Saved pretrained vocab and vectors to {}".format(self.filename))
+        except BaseException:
+            print("Saving pretrained data failed... continuing anyway")
+
+        return vocab, emb
+
 class DataLoader:
-    def __init__(self, filename, batch_size, args, evaluation=False):
+    def __init__(self, filename, batch_size, args, pretrain, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -24,8 +96,11 @@ class DataLoader:
         self.conll, data = self.load_file(filename, evaluation=self.eval)
 
         # handle vocab
-        vocab_pattern = "{}/{}.{{}}.vocab".format(args['data_dir'], args['shorthand'])
-        self.vocab = self.init_vocab(vocab_pattern, data)
+        if vocab is None:
+            self.vocab = self.init_vocab(data)
+        else:
+            self.vocab = vocab
+        self.pretrain_vocab = pretrain.vocab
 
 	# filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -33,7 +108,7 @@ class DataLoader:
             data = random.sample(data, keep)
             print("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data, self.vocab, args)
+        data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
         # shuffle for training
         if self.shuffled:
             random.shuffle(data)
@@ -43,73 +118,21 @@ class DataLoader:
         self.data = self.chunk_batches(data)
         print("{} batches created for {}.".format(len(self.data), filename))
 
-    def init_vocab(self, vocab_pattern, data):
-        types = ['char', 'word', 'upos', 'xpos', 'feats']
-        if not all([os.path.exists(vocab_pattern.format(type_)) for type_ in types]):
-            assert self.eval == False # for eval vocab file must exist
-        charvocab = CharVocab(vocab_pattern.format('char'), data, self.args['shorthand'])
-        wordvocab = WordVocab(vocab_pattern.format('word'), data, self.args['shorthand'], cutoff=7, lower=True)
-        self.pretrained_emb, pretrainedvocab = self.read_emb_matrix(self.args['wordvec_dir'], self.args['shorthand'], vocab_pattern.format('pretrained'))
-        uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(vocab_pattern.format('xpos'), data, self.args['shorthand'])
-        featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
+    def init_vocab(self, data):
+        assert self.eval == False # for eval vocab must exist
+        charvocab = CharVocab(None, data, self.args['shorthand'])
+        wordvocab = WordVocab(None, data, self.args['shorthand'], cutoff=7, lower=True)
+        uposvocab = WordVocab(None, data, self.args['shorthand'], idx=1)
+        xposvocab = xpos_vocab_factory(None, data, self.args['shorthand'])
+        featsvocab = FeatureVocab(None, data, self.args['shorthand'], idx=3)
         vocab = {'char': charvocab,
                 'word': wordvocab,
-                'pretrained': pretrainedvocab,
                 'upos': uposvocab,
                 'xpos': xposvocab,
                 'feats': featsvocab}
         return vocab
-
-    def read_emb_matrix(self, wordvec_dir, shorthand, vocab_file):
-        vec_file = vocab_file + '.vec'
-        if not os.path.exists(vocab_file) or not os.path.exists(vec_file):
-            lcode, tcode = shorthand.split('_')
-
-            lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shorthand]
-            if lcode == 'zh':
-                lang = 'ChineseT'
-            wordvec_file = os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')))
-
-            first = True
-            words = []
-            failed = 0
-            with lzma.open(wordvec_file, 'rb') as f:
-                for i, line in enumerate(f):
-                    try:
-                        line = line.decode()
-                    except UnicodeDecodeError:
-                        failed += 1
-                        continue
-                    if first:
-                        # the first line contains the number of word vectors and the
-                        # dimensionality of them
-                        first = False
-                        line = line.strip().split(' ')
-                        rows, cols = [int(x) for x in line]
-                        res = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32) # save embeddings for special tokens
-                        continue
-
-                    line = line.rstrip().split(' ')
-                    res[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
-                    words.append(' '.join(line[:-cols]))
-
-            pretrained_vocab = PretrainedWordVocab(vocab_file, words, shorthand)
-
-            if failed > 0:
-                res = res[:-failed]
-
-            with open(vec_file, 'wb') as f:
-                pickle.dump(res, f)
-
-        else:
-            pretrained_vocab = PretrainedWordVocab(vocab_file, [], shorthand)
-            with open(vec_file, 'rb') as f:
-                res = pickle.load(f)
-
-        return res, pretrained_vocab
-
-    def preprocess(self, data, vocab, args):
+    
+    def preprocess(self, data, vocab, pretrain_vocab, args):
         processed = []
         for sent in data:
             processed_sent = [vocab['word'].map([w[0] for w in sent])]
@@ -117,7 +140,7 @@ class DataLoader:
             processed_sent += [vocab['upos'].map([w[1] for w in sent])]
             processed_sent += [vocab['xpos'].map([w[2] for w in sent])]
             processed_sent += [vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [vocab['pretrained'].map([w[0] for w in sent])]
+            processed_sent += [pretrain_vocab.map([w[0] for w in sent])]
             processed.append(processed_sent)
         return processed
 
