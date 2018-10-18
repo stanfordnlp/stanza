@@ -35,34 +35,28 @@ class PairwiseBilinear(nn.Module):
 class BiaffineScorer(nn.Module):
     def __init__(self, input1_size, input2_size, output_size):
         super().__init__()
-        self.W_bilin = nn.Bilinear(input1_size, input2_size, output_size)
-        self.W1 = nn.Linear(input1_size, output_size, bias=False)
-        self.W2 = nn.Linear(input2_size, output_size, bias=False)
+        self.W_bilin = nn.Bilinear(input1_size + 1, input2_size + 1, output_size)
 
         self.W_bilin.weight.data.zero_()
         self.W_bilin.bias.data.zero_()
-        self.W1.weight.data.zero_()
-        self.W2.weight.data.zero_()
 
     def forward(self, input1, input2):
-        res = self.W1(input1) + self.W2(input2) + self.W_bilin(input1, input2)
-        return res
+        input1 = torch.cat([input1, input1.new_ones(*input1.size()[:-1], 1)], len(input1.size())-1)
+        input2 = torch.cat([input2, input2.new_ones(*input2.size()[:-1], 1)], len(input2.size())-1)
+        return self.W_bilin(input1, input2)
 
 class PairwiseBiaffineScorer(nn.Module):
     def __init__(self, input1_size, input2_size, output_size):
         super().__init__()
-        self.W_bilin = PairwiseBilinear(input1_size, input2_size, output_size)
-        self.W1 = nn.Linear(input1_size, output_size, bias=False)
-        self.W2 = nn.Linear(input2_size, output_size, bias=False)
+        self.W_bilin = PairwiseBilinear(input1_size + 1, input2_size + 1, output_size)
 
         self.W_bilin.weight.data.zero_()
         self.W_bilin.bias.data.zero_()
-        self.W1.weight.data.zero_()
-        self.W2.weight.data.zero_()
 
     def forward(self, input1, input2):
-        res = self.W1(input1).unsqueeze(2) + self.W2(input2).unsqueeze(1) + self.W_bilin(input1, input2)
-        return res
+        input1 = torch.cat([input1, input1.new_ones(*input1.size()[:-1], 1)], len(input1.size())-1)
+        input2 = torch.cat([input2, input2.new_ones(*input2.size()[:-1], 1)], len(input2.size())-1)
+        return self.W_bilin(input1, input2)
 
 class DeepBiaffineScorer(nn.Module):
     def __init__(self, input1_size, input2_size, hidden_size, output_size, hidden_func=F.relu, dropout=0, pairwise=True):
