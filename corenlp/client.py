@@ -8,6 +8,7 @@ import json
 import shlex
 import subprocess
 import time
+import sys
 
 from six.moves.urllib.parse import urlparse
 
@@ -48,10 +49,13 @@ class RobustService(object):
     """
     TIMEOUT = 15
 
-    def __init__(self, start_cmd, stop_cmd, endpoint):
+    def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
+                 stderr=sys.stderr):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
+        self.stdout = stdout
+        self.stderr = stderr
 
         self.server = None
         self.is_active = False
@@ -64,7 +68,9 @@ class RobustService(object):
 
     def start(self):
         if self.start_cmd:
-            self.server = subprocess.Popen(self.start_cmd)
+            self.server = subprocess.Popen(self.start_cmd,
+                                           stderr=self.stderr,
+                                           stdout=self.stdout)
 
     def stop(self):
         if self.server:
@@ -121,7 +127,11 @@ class CoreNLPClient(RobustService):
                  timeout=5000, 
                  threads=5,
                  annotators=DEFAULT_ANNOTATORS, 
-                 properties=DEFAULT_PROPERTIES):
+                 properties=DEFAULT_PROPERTIES,
+                 stdout=sys.stdout,
+                 stderr=sys.stderr
+                ):
+
         if start_server:
             host, port = urlparse(endpoint).netloc.split(":")
             assert host == "localhost", "If starting a server, endpoint must be localhost"
@@ -136,7 +146,8 @@ class CoreNLPClient(RobustService):
         else:
             start_cmd = stop_cmd = None
 
-        super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint)
+        super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
+                                            stdout, stderr)
         self.default_annotators = annotators
         self.default_properties = properties
 
