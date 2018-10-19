@@ -12,10 +12,11 @@ import random
 import torch
 from torch import nn, optim
 
-from models.pos.data import DataLoader, Pretrain
+from models.pos.data import DataLoader
 from models.pos.trainer import Trainer
 from models.pos import scorer
 from models.common import utils, param
+from models.common.pretrain import Pretrain
 import models.common.seq2seq_constant as constant
 
 def parse_args():

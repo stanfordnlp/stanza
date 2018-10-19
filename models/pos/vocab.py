@@ -31,7 +31,3 @@ class FeatureVocab(CompositeVocab):
     def __init__(self, filename, data, lang, idx=0, sep="|", keyed=True):
         super().__init__(filename, data, lang, idx=idx, sep=sep, keyed=keyed)
 
-class PretrainedWordVocab(BaseVocab):
-    def build_vocab(self):
-        self._id2unit = VOCAB_PREFIX + self.data
-        self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
