@@ -46,8 +46,10 @@ def parse_args():
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
-    parser.add_argument('--no_linearization', action='store_true', help="Turn off linearization term")
-    parser.add_argument('--no_distance', action='store_true', help="Turn off distance term")
+    parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
+    parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
+    parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
+    parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')

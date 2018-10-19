@@ -22,8 +22,10 @@ class Parser(nn.Module):
         self.share_hid = share_hid
 
         # pretrained embeddings
-        self.pretrained_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
-
+        if self.args['pretrain']:
+            self.pretrained_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
+        
+        # input layers
         input_size = 0
         if self.args['word_emb_dim'] > 0:
             # frequent word embeddings
@@ -49,14 +51,16 @@ class Parser(nn.Module):
 
             input_size += self.args['tag_emb_dim'] * 2
 
-        # modules
-        if self.args['char_emb_dim'] > 0:
+        if self.args['char'] and self.args['char_emb_dim'] > 0:
             self.charmodel = CharacterModel(args, vocab)
             self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
-        self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
-        input_size += self.args['transformed_dim']
 
+        if self.args['pretrain']:
+            self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
+            input_size += self.args['transformed_dim']
+
+        # recurrent layers
         self.parserlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
         self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
         self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
@@ -65,9 +69,9 @@ class Parser(nn.Module):
         # classifiers
         self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
         self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=args['dropout'])
-        if not args['no_linearization']:
+        if args['linearization']:
             self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
-        if not args['no_distance']:
+        if args['distance']:
             self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
 
         # criterion
@@ -79,14 +83,17 @@ class Parser(nn.Module):
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
+        
+        inputs = []
+        if self.args['pretrain']:
+            pretrained_emb = self.pretrained_emb(pretrained)
+            pretrained_emb = self.trans_pretrained(pretrained_emb)
+            pretrained_emb = pack(pretrained_emb)
+            inputs += [pretrained_emb]
 
-        pretrained_emb = self.pretrained_emb(pretrained)
-        pretrained_emb = self.trans_pretrained(pretrained_emb)
-        pretrained_emb = pack(pretrained_emb)
-        def pad(x):
-            return pad_packed_sequence(PackedSequence(x, pretrained_emb.batch_sizes), batch_first=True)[0]
+        #def pad(x):
+        #    return pad_packed_sequence(PackedSequence(x, pretrained_emb.batch_sizes), batch_first=True)[0]
 
-        inputs = [pretrained_emb]
         if self.args['word_emb_dim'] > 0:
             word_emb = self.word_emb(word)
             word_emb = pack(word_emb)
@@ -111,11 +118,11 @@ class Parser(nn.Module):
 
             inputs += [pos_emb, feats_emb]
 
-        if self.args['char_emb_dim'] > 0:
+        if self.args['char'] and self.args['char_emb_dim'] > 0:
             char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
             char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
-
             inputs += [char_reps]
+        
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
 
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
@@ -132,14 +139,14 @@ class Parser(nn.Module):
         goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
         goldmask.scatter_(2, head.unsqueeze(2), 1)
 
-        if not self.args['no_linearization'] or not self.args['no_distance']:
+        if self.args['linearization'] or self.args['distance']:
             head_offset = torch.arange(word.size(1), device=head.device).view(1, 1, -1).expand(word.size(0), -1, -1) - torch.arange(word.size(1), device=head.device).view(1, -1, 1).expand(word.size(0), -1, -1)
 
-        if not self.args['no_linearization']:
+        if self.args['linearization']:
             lin_scores = self.linearization(lstm_outputs, lstm_outputs).squeeze(3)
             unlabeled_scores += F.logsigmoid(lin_scores * torch.sign(head_offset).float()).detach()
 
-        if not self.args['no_distance']:
+        if self.args['distance']:
             dist_scores = self.distance(lstm_outputs, lstm_outputs).squeeze(3)
             dist_pred = 1 + F.softplus(dist_scores)
             dist_target = torch.abs(head_offset)
@@ -162,13 +169,13 @@ class Parser(nn.Module):
             deprel_target = deprel.masked_fill(word_mask[:, 1:], -1)
             loss += self.crit(deprel_scores.contiguous(), deprel_target.view(-1))
 
-            if not self.args['no_linearization']:
+            if self.args['linearization']:
                 lin_scores = lin_scores[:, 1:].masked_select(goldmask)
                 lin_scores = torch.cat([-lin_scores.unsqueeze(1)/2, lin_scores.unsqueeze(1)/2], 1)
                 lin_target = (head_offset[:, 1:] > 0).long().masked_select(goldmask)
                 loss += self.crit(lin_scores.contiguous(), lin_target.view(-1))
 
-            if not self.args['no_distance']:
+            if self.args['distance']:
                 dist_kld = dist_kld[:, 1:].masked_select(goldmask)
                 loss -= dist_kld.sum()
 
