@@ -37,8 +37,9 @@ class Pretrain:
         if os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
-            except BaseException:
-                print("Pretrained file exists but cannot be loaded from {}".format(self.filename))
+            except BaseException as e:
+                print("Pretrained file exists but cannot be loaded from {}, due to the following exception:".format(self.filename))
+                print("\t{}".format(e))
                 return self.read_and_save()
             return data['vocab'], data['emb']
         else:
@@ -81,8 +82,9 @@ class Pretrain:
         try:
             torch.save(data, self.filename)
             print("Saved pretrained vocab and vectors to {}".format(self.filename))
-        except BaseException:
-            print("Saving pretrained data failed... continuing anyway")
+        except BaseException as e:
+            print("Saving pretrained data failed due to the following exception... continuing anyway")
+            print("\t{}".format(e))
 
         return vocab, emb
 
