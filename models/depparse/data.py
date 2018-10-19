@@ -1,35 +1,56 @@
 import random
-import numpy as np
-import lzma
-import os
-import pickle
-from collections import Counter
 import torch
 
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
-from models.common.constant import lcode2lang
 from models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
-from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, PretrainedWordVocab
+from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab
 from models.pos.xpos_vocab_factory import xpos_vocab_factory
-from models.pos.data import DataLoader as TaggerDataLoader
 
-class DataLoader(TaggerDataLoader):
-    def init_vocab(self, vocab_pattern, data):
-        types = ['char', 'word', 'upos', 'xpos', 'feats', 'lemma', 'deprel']
-        if not all([os.path.exists(vocab_pattern.format(type_)) for type_ in types]):
-            assert self.eval == False # for eval vocab file must exist
-        charvocab = CharVocab(vocab_pattern.format('char'), data, self.args['shorthand'])
-        wordvocab = WordVocab(vocab_pattern.format('word'), data, self.args['shorthand'], cutoff=7, lower=True)
-        self.pretrained_emb, pretrainedvocab = self.read_emb_matrix(self.args['wordvec_dir'], self.args['shorthand'], vocab_pattern.format('pretrained'))
-        uposvocab = WordVocab(vocab_pattern.format('upos'), data, self.args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(vocab_pattern.format('xpos'), data, self.args['shorthand'])
-        featsvocab = FeatureVocab(vocab_pattern.format('feats'), data, self.args['shorthand'], idx=3)
-        lemmavocab = WordVocab(vocab_pattern.format('lemma'), data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
-        deprelvocab = WordVocab(vocab_pattern.format('deprel'), data, self.args['shorthand'], idx=6)
+class DataLoader:
+    def __init__(self, filename, batch_size, args, pretrain, vocab=None, evaluation=False):
+        self.batch_size = batch_size
+        self.args = args
+        self.eval = evaluation
+        self.shuffled = not self.eval
+
+        assert filename.endswith('conllu'), "Loaded file must be conllu file."
+        self.conll, data = self.load_file(filename, evaluation=self.eval)
+
+        # handle vocab
+        if vocab is None:
+            self.vocab = self.init_vocab(data)
+        else:
+            self.vocab = vocab
+        self.pretrain_vocab = pretrain.vocab
+
+	# filter and sample data
+        if args.get('sample_train', 1.0) < 1.0 and not self.eval:
+            keep = int(args['sample_train'] * len(data))
+            data = random.sample(data, keep)
+            print("Subsample training set with rate {:g}".format(args['sample_train']))
+
+        data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
+        # shuffle for training
+        if self.shuffled:
+            random.shuffle(data)
+        self.num_examples = len(data)
+
+	# chunk into batches
+        self.data = self.chunk_batches(data)
+        print("{} batches created for {}.".format(len(self.data), filename))
+
+    def init_vocab(self, data):
+        assert self.eval == False # for eval vocab must exist
+        charvocab = CharVocab(None, data, self.args['shorthand'])
+        wordvocab = WordVocab(None, data, self.args['shorthand'], cutoff=7, lower=True)
+        uposvocab = WordVocab(None, data, self.args['shorthand'], idx=1)
+        xposvocab = xpos_vocab_factory(None, data, self.args['shorthand'])
+        featsvocab = FeatureVocab(None, data, self.args['shorthand'], idx=3)
+        lemmavocab = WordVocab(None, data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
+        deprelvocab = WordVocab(None, data, self.args['shorthand'], idx=6)
         vocab = {'char': charvocab,
                 'word': wordvocab,
-                'pretrained': pretrainedvocab,
                 'upos': uposvocab,
                 'xpos': xposvocab,
                 'feats': featsvocab,
@@ -37,7 +58,7 @@ class DataLoader(TaggerDataLoader):
                 'deprel': deprelvocab}
         return vocab
 
-    def preprocess(self, data, vocab, args):
+    def preprocess(self, data, vocab, pretrain_vocab, args):
         processed = []
         xpos_replacement = [[ROOT_ID] * len(vocab['xpos'])] if isinstance(vocab['xpos'], CompositeVocab) else [ROOT_ID]
         feats_replacement = [[ROOT_ID] * len(vocab['feats'])]
@@ -47,12 +68,15 @@ class DataLoader(TaggerDataLoader):
             processed_sent += [[ROOT_ID] + vocab['upos'].map([w[1] for w in sent])]
             processed_sent += [xpos_replacement + vocab['xpos'].map([w[2] for w in sent])]
             processed_sent += [feats_replacement + vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [[ROOT_ID] + vocab['pretrained'].map([w[0] for w in sent])]
+            processed_sent += [[ROOT_ID] + pretrain_vocab.map([w[0] for w in sent])]
             processed_sent += [[ROOT_ID] + vocab['lemma'].map([w[4] for w in sent])]
             processed_sent += [[int(w[5]) for w in sent]]
             processed_sent += [vocab['deprel'].map([w[6] for w in sent])]
             processed.append(processed_sent)
         return processed
+    
+    def __len__(self):
+        return len(self.data)
 
     def __getitem__(self, key):
         """ Get a batch with index. """
@@ -97,3 +121,34 @@ class DataLoader(TaggerDataLoader):
         conll_file = conll.CoNLLFile(filename)
         data = conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
         return conll_file, data
+    
+    def __iter__(self):
+        for i in range(self.__len__()):
+            yield self.__getitem__(i)
+
+    def reshuffle(self):
+        data = [y for x in self.data for y in x]
+        random.shuffle(data)
+        self.data = self.chunk_batches(data)
+
+    def chunk_batches(self, data):
+        res = []
+
+        if not self.eval:
+            # sort sentences (roughly) by length for better memory utilization
+            data = sorted(data, key = lambda x: len(x[0]) + random.random() * 5)
+
+        current = []
+        currentlen = 0
+        for x in data:
+            if len(x[0]) + currentlen > self.batch_size:
+                res.append(current)
+                current = []
+                currentlen = 0
+            current.append(x)
+            currentlen += len(x[0])
+
+        if currentlen > 0:
+            res.append(current)
+
+        return res

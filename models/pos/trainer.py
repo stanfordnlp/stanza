@@ -2,19 +2,11 @@
 A trainer class to handle training and testing of models.
 """
 
-import numpy as np
-from collections import Counter
 import torch
 from torch import nn
-import torch.nn.init as init
-from torch.autograd import Variable
-import torch.nn.functional as F
 
-from models.common.constant import lcode2lang
 from models.common.trainer import Trainer as BaseTrainer
-from models.common.seq2seq_model import Seq2SeqModel
 from models.common import utils, loss
-
 from models.pos.model import Tagger
 
 def unpack_batch(batch, args):

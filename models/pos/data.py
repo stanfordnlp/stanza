@@ -1,7 +1,4 @@
 import random
-import os
-import pickle
-from collections import Counter
 import torch
 
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
