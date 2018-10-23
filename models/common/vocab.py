@@ -65,6 +65,19 @@ class Vocab:
         return len(self)
 
 class CompositeVocab(Vocab):
+    ''' Vocabulary class that handles parsing and printing composite values such as
+    compositional XPOS and universal morphological features (UFeats).
+
+    Two key options are `keyed` and `sep`. `sep` specifies the separator used between
+    different parts of the composite values, which is `|` for UFeats, for example.
+    If `keyed` is `True`, then the incoming value is treated similarly to UFeats, where
+    each part is a key/value pair separated by an equal sign (`=`). There are no inherit
+    order to the keys, and we sort them alphabetically for serialization and deserialization.
+    Whenever a part is absent, its internal value is a special `<EMPTY>` symbol that will
+    be treated accordingly when generating the output. If `keyed` is `False`, then the parts
+    are treated as positioned values, and `<EMPTY>` is used to pad parts at the end when the
+    incoming value is not long enough.'''
+
     def __init__(self, data, lang, idx=0, sep="", keyed=False):
         self.sep = sep
         self.keyed = keyed
@@ -127,7 +140,7 @@ class CompositeVocab(Vocab):
                     #for v in parts[key]:
                     #    if v not in self._id2unit[key]:
                     #        self._id2unit[key].append(v)
-        
+
             # special handle for the case where upos/xpos/ufeats are always empty
             if len(self._id2unit) == 0:
                 self._id2unit['_'] = copy(VOCAB_PREFIX) # use an arbitrary key
@@ -144,7 +157,7 @@ class CompositeVocab(Vocab):
                         self._id2unit[i] = copy(VOCAB_PREFIX)
                     if i < len(parts) and p not in self._id2unit[i]:
                         self._id2unit[i].append(p)
-            
+
             # special handle for the case where upos/xpos/ufeats are always empty
             if len(self._id2unit) == 0:
                 self._id2unit[0] = copy(VOCAB_PREFIX) # use an arbitrary key
