@@ -12,7 +12,7 @@ import random
 import torch
 from torch import nn, optim
 
-from models.lemma.loader import DataLoader
+from models.lemma.data import DataLoader
 from models.lemma.vocab import Vocab
 from models.lemma.trainer import Trainer
 from models.lemma import scorer, edit
