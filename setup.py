@@ -23,7 +23,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='3.8.0',
+    version='3.9.2',
 
     description='Official python interface for Stanford CoreNLP',
     long_description=long_description,
@@ -105,5 +105,8 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
+        'console_scripts': [
+            'annotate = corenlp.main:main',
+        ],
     },
 )

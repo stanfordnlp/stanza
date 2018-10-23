@@ -20,6 +20,43 @@ You can also install this package from `PyPI <https://pypi.python.org/pypi/stanf
 
 ----
 
+Command Line Usage
+------------------
+Probably the easiest way to use this package is through the `annotate` command-line utility::
+
+    usage: annotate [-h] [-i INPUT] [-o OUTPUT] [-f {json}]
+                    [-a ANNOTATORS [ANNOTATORS ...]] [-s] [-v] [-m MEMORY]
+                    [-p PROPS [PROPS ...]]
+
+    Annotate data
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -i INPUT, --input INPUT
+                            Input file to process; each line contains one document
+                            (default: stdin)
+      -o OUTPUT, --output OUTPUT
+                            File to write annotations to (default: stdout)
+      -f {json}, --format {json}
+                            Output format
+      -a ANNOTATORS [ANNOTATORS ...], --annotators ANNOTATORS [ANNOTATORS ...]
+                            A list of annotators
+      -s, --sentence-mode   Assume each line of input is a sentence.
+      -v, --verbose-server  Server is made verbose
+      -m MEMORY, --memory MEMORY
+                            Memory to use for the server
+      -p PROPS [PROPS ...], --props PROPS [PROPS ...]
+                            Properties as a list of key=value pairs
+
+
+We recommend using `annotate` in conjuction with the wonderful `jq`
+command to process the output. As an example, given a file with a
+sentence on each line, the following command produces an equivalent
+space-separated tokens::
+
+    cat file.txt | annotate -s -a tokenize | jq '[.tokens[].originalText]' > tokenized.txt
+
+
 Annotation Server Usage
 -----------------------
 
