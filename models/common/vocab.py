@@ -53,7 +53,7 @@ class Vocab:
         if unit in self._unit2id:
             return self._unit2id[unit]
         else:
-            return self._unit2id['<UNK>']
+            return self._unit2id[UNK]
 
     def id2unit(self, id):
         return self._id2unit[id]
