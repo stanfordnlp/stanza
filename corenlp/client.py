@@ -50,7 +50,7 @@ class RobustService(object):
     TIMEOUT = 15
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr):
+                 stderr=sys.stderr, be_quiet=False):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -59,6 +59,7 @@ class RobustService(object):
 
         self.server = None
         self.is_active = False
+        self.be_quiet = be_quiet
 
     def is_alive(self):
         try:
@@ -68,9 +69,10 @@ class RobustService(object):
 
     def start(self):
         if self.start_cmd:
+            stderr = subprocess.DEVNULL if self.be_quiet else self.stderr
             self.server = subprocess.Popen(self.start_cmd,
-                                           stderr=self.stderr,
-                                           stdout=self.stdout)
+                                           stderr=stderr,
+                                           stdout=stderr)
 
     def stop(self):
         if self.server:
@@ -121,15 +123,19 @@ class CoreNLPClient(RobustService):
     """
     DEFAULT_ANNOTATORS = "tokenize ssplit lemma pos ner depparse".split()
     DEFAULT_PROPERTIES = {}
+    DEFAULT_OUTPUT_FORMAT = "serialized"
 
     def __init__(self, start_server=True, 
                  endpoint="http://localhost:9000", 
                  timeout=5000, 
                  threads=5,
-                 annotators=DEFAULT_ANNOTATORS, 
-                 properties=DEFAULT_PROPERTIES,
+                 annotators=None, 
+                 properties=None,
+                 output_format=None,
                  stdout=sys.stdout,
-                 stderr=sys.stderr
+                 stderr=sys.stderr,
+                 memory="4G",
+                 be_quiet=True,
                 ):
 
         if start_server:
@@ -137,9 +143,10 @@ class CoreNLPClient(RobustService):
             assert host == "localhost", "If starting a server, endpoint must be localhost"
 
             assert os.getenv("CORENLP_HOME") is not None, "Please define $CORENLP_HOME where your CoreNLP Java checkout is"
-            start_cmd = "java -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port {port} -timeout {timeout} -threads {threads}".format(
+            start_cmd = "java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port {port} -timeout {timeout} -threads {threads}".format(
                 corenlp_home=os.getenv("CORENLP_HOME"),
                 port=port,
+                memory=memory,
                 timeout=timeout,
                 threads=threads)
             stop_cmd = None
@@ -147,9 +154,10 @@ class CoreNLPClient(RobustService):
             start_cmd = stop_cmd = None
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr)
-        self.default_annotators = annotators
-        self.default_properties = properties
+                                            stdout, stderr, be_quiet)
+        self.default_annotators = annotators or self.DEFAULT_ANNOTATORS
+        self.default_properties = properties or self.DEFAULT_PROPERTIES
+        self.default_output_format = output_format or self.DEFAULT_OUTPUT_FORMAT
 
     def _request(self, buf, properties):
         """Send a request to the CoreNLP server.
@@ -195,7 +203,7 @@ class CoreNLPClient(RobustService):
             properties.update({
                 'annotators': ','.join(annotators or self.default_annotators),
                 'inputFormat': 'text',
-                'outputFormat': 'serialized',
+                'outputFormat': self.default_output_format,
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
         elif "annotators" not in properties:
