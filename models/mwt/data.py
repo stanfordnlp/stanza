@@ -46,7 +46,7 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        vocab = Vocab(None, data, self.args['shorthand'])
+        vocab = Vocab(data, self.args['shorthand'])
         return vocab
 
     def preprocess(self, data, vocab, args):

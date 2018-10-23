@@ -42,13 +42,13 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        charvocab = CharVocab(None, data, self.args['shorthand'])
-        wordvocab = WordVocab(None, data, self.args['shorthand'], cutoff=7, lower=True)
-        uposvocab = WordVocab(None, data, self.args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(None, data, self.args['shorthand'])
-        featsvocab = FeatureVocab(None, data, self.args['shorthand'], idx=3)
-        lemmavocab = WordVocab(None, data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
-        deprelvocab = WordVocab(None, data, self.args['shorthand'], idx=6)
+        charvocab = CharVocab(data, self.args['shorthand'])
+        wordvocab = WordVocab(data, self.args['shorthand'], cutoff=7, lower=True)
+        uposvocab = WordVocab(data, self.args['shorthand'], idx=1)
+        xposvocab = xpos_vocab_factory(data, self.args['shorthand'])
+        featsvocab = FeatureVocab(data, self.args['shorthand'], idx=3)
+        lemmavocab = WordVocab(data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
+        deprelvocab = WordVocab(data, self.args['shorthand'], idx=6)
         vocab = {'char': charvocab,
                 'word': wordvocab,
                 'upos': uposvocab,

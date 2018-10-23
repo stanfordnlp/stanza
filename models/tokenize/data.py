@@ -37,7 +37,7 @@ class DataLoader:
         self.init_sent_ids()
 
     def init_vocab(self):
-        vocab = Vocab(None, self.data, self.args['lang'])
+        vocab = Vocab(self.data, self.args['lang'])
         return vocab
 
     def init_sent_ids(self):

@@ -72,7 +72,7 @@ class Pretrain:
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
 
-        vocab = PretrainedWordVocab(None, words, "") # TODO: fix the BaseVocab interface
+        vocab = PretrainedWordVocab(words)
 
         if failed > 0:
             emb = emb[:-failed]

@@ -94,7 +94,6 @@ if __name__ == '__main__':
     parser.add_argument('--json_file', type=str, default=None, help="JSON file with pre-chunked units")
     parser.add_argument('--mwt_json_file', type=str, default=None, help="JSON file for MWT expansions")
     parser.add_argument('--conll_file', type=str, default=None, help="CoNLL file for output")
-    parser.add_argument('--vocab_file', type=str, default=None, help="Vocab file")
     parser.add_argument('--dev_txt_file', type=str, help="(Train only) Input plaintext file for the dev set")
     parser.add_argument('--dev_label_file', type=str, default=None, help="(Train only) Character-level label file for the dev set")
     parser.add_argument('--dev_json_file', type=str, default=None, help="(Train only) JSON file with pre-chunked units for the dev set")

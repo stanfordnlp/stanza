@@ -53,9 +53,9 @@ class DataLoader:
     def init_vocab(self, data):
         assert self.eval == False, "Vocab file must exist for evaluation"
         char_data = "".join(d[0] + d[2] for d in data)
-        char_vocab = Vocab(None, char_data, self.args['lang'])
+        char_vocab = Vocab(char_data, self.args['lang'])
         pos_data = [d[1] for d in data]
-        pos_vocab = Vocab(None, pos_data, self.args['lang'])
+        pos_vocab = Vocab(pos_data, self.args['lang'])
         return char_vocab, pos_vocab
 
     def preprocess(self, data, char_vocab, pos_vocab, args):
@@ -65,15 +65,11 @@ class DataLoader:
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
             src = char_vocab.map(src)
-            #src = map_to_ids(src, char_vocab.unit2id)
             pos = d[1]
             pos = pos_vocab.unit2id(pos)
-            #pos = pos_vocab.unit2id[pos] if pos in pos_vocab.unit2id else constant.UNK_ID
             tgt = list(d[2])
             tgt_in = char_vocab.map([constant.SOS] + tgt)
             tgt_out = char_vocab.map(tgt + [constant.EOS])
-            #tgt_in = map_to_ids([constant.SOS] + tgt, char_vocab.unit2id)
-            #tgt_out = map_to_ids(tgt + [constant.EOS], char_vocab.unit2id)
             processed += [[src, tgt_in, tgt_out, pos, edit_type]]
         return processed
 

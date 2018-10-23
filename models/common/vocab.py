@@ -14,31 +14,13 @@ ROOT_ID = 3
 VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
 
 class Vocab:
-    def __init__(self, filename, data, lang, idx=0, cutoff=0, lower=False):
-        self.filename = filename
+    def __init__(self, data, lang="", idx=0, cutoff=0, lower=False):
         self.data = data
         self.lang = lang
         self.idx = idx
         self.cutoff = cutoff
         self.lower = lower
-        if filename is not None:
-            if os.path.exists(self.filename):
-                self.load()
-            else:
-                self.build_vocab()
-                self.save()
-        else:
-            self.build_vocab()
-
-    def load(self):
-        with open(self.filename, 'rb') as f:
-            self._id2unit = pickle.load(f)
-            self._unit2id = pickle.load(f)
-
-    def save(self):
-        with open(self.filename, 'wb') as f:
-            pickle.dump(self._id2unit, f)
-            pickle.dump(self._unit2id, f)
+        self.build_vocab()
 
     def build_vocab(self):
         raise NotImplementedError()
@@ -83,10 +65,10 @@ class Vocab:
         return len(self)
 
 class CompositeVocab(Vocab):
-    def __init__(self, filename, data, lang, idx=0, sep="", keyed=False):
+    def __init__(self, data, lang, idx=0, sep="", keyed=False):
         self.sep = sep
         self.keyed = keyed
-        super().__init__(filename, data, lang, idx=idx)
+        super().__init__(data, lang, idx=idx)
 
     def unit2parts(self, unit):
         # unpack parts of a unit
