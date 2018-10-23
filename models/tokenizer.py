@@ -1,7 +1,9 @@
+import random
 from copy import copy
+import numpy as np
+import torch
 
 from models.common import param, utils
-
 from models.tokenize.trainer import Trainer
 from models.tokenize.data import DataLoader
 from models.tokenize.vocab import Vocab
@@ -131,8 +133,15 @@ if __name__ == '__main__':
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
     parser.add_argument('--no_cuda', dest="cuda", action="store_false")
+    parser.add_argument('--seed', type=int, default=1234)
 
     args = parser.parse_args()
+
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(1234)
+    if args.cuda:
+        torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']

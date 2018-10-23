@@ -2,6 +2,7 @@ from collections import Counter
 import re
 
 from models.common.vocab import Vocab as BaseVocab
+from models.common.vocab import UNK, PAD
 
 class Vocab(BaseVocab):
     def build_vocab(self):
@@ -12,14 +13,14 @@ class Vocab(BaseVocab):
                 normalized = self.normalize_unit(unit[0])
                 counter[normalized] += 1
 
-        self._id2unit = ['<PAD>', '<UNK>'] + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
+        self._id2unit = [PAD, UNK] + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
     def normalize_unit(self, unit):
         # Normalize minimal units used by the tokenizer
         # For Vietnamese this means a syllable, for other languages this means a character
         normalized = unit
-        if self.lang == 'vi':
+        if self.lang.startswith('vi'):
             normalized = normalized.lstrip()
 
         return normalized
@@ -27,7 +28,7 @@ class Vocab(BaseVocab):
     def normalize_token(self, token):
         token = re.sub('\s', ' ', token.lstrip())
 
-        if self.lang in ['zh', 'ja', 'ko']:
+        if any([self.lang.startswith(x) for x in ['zh', 'ja', 'ko']]):
             token = token.replace(' ', '')
 
         return token
