@@ -74,7 +74,7 @@ class DataLoader:
             processed_sent += [vocab['deprel'].map([w[6] for w in sent])]
             processed.append(processed_sent)
         return processed
-    
+
     def __len__(self):
         return len(self.data)
 
@@ -121,7 +121,7 @@ class DataLoader:
         conll_file = conll.CoNLLFile(filename)
         data = conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
         return conll_file, data
-    
+
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
