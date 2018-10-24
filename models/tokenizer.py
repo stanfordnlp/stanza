@@ -145,7 +145,7 @@ if __name__ == '__main__':
     args = vars(args)
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pkl'.format(args['save_dir'], args['shorthand'])
+    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
     utils.ensure_dir(args['save_dir'])
 
     if args['mode'] == 'train':
