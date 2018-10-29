@@ -13,6 +13,7 @@ import models.common.seq2seq_constant as constant
 from models.common.seq2seq_model import Seq2SeqModel
 from models.common import utils, loss
 from models.lemma import edit
+from models.lemma.vocab import MultiVocab
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
@@ -162,7 +163,7 @@ class Trainer(object):
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
                 'dicts': (self.word_dict, self.composite_dict),
-                'vocab': self.vocab,
+                'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
         try:
@@ -184,5 +185,5 @@ class Trainer(object):
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None
-        self.vocab = checkpoint['vocab']
+        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 

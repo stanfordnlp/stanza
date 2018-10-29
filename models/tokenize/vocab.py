@@ -1,7 +1,7 @@
 from collections import Counter
 import re
 
-from models.common.vocab import Vocab as BaseVocab
+from models.common.vocab import BaseVocab
 from models.common.vocab import UNK, PAD
 
 class Vocab(BaseVocab):

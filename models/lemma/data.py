@@ -7,7 +7,7 @@ import torch
 import models.common.seq2seq_constant as constant
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
-from models.lemma.vocab import Vocab
+from models.lemma.vocab import Vocab, MultiVocab
 from models.lemma import edit
 
 class DataLoader:
@@ -29,7 +29,7 @@ class DataLoader:
         else:
             self.vocab = dict()
             char_vocab, pos_vocab = self.init_vocab(data)
-            self.vocab = {'char': char_vocab, 'pos': pos_vocab}
+            self.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
 
 	# filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:

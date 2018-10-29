@@ -1,6 +1,6 @@
 from collections import Counter
 
-from models.common.vocab import Vocab as BaseVocab
+from models.common.vocab import BaseVocab
 import models.common.seq2seq_constant as constant
 
 class Vocab(BaseVocab):

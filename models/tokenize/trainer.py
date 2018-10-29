@@ -5,6 +5,7 @@ import torch.optim as optim
 from models.common.trainer import Trainer
 
 from .model import Tokenizer
+from .vocab import Vocab
 
 class Trainer(Trainer):
     def __init__(self, args):
@@ -61,7 +62,7 @@ class Trainer(Trainer):
     def save(self, filename):
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
-                'vocab': self.vocab,
+                'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
         try:
@@ -78,4 +79,4 @@ class Trainer(Trainer):
             exit()
         self.args = checkpoint['config']
         self.model.load_state_dict(checkpoint['model'])
-        self.vocab = checkpoint['vocab']
+        self.vocab = Vocab.load_state_dict(checkpoint['vocab'])

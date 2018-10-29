@@ -7,10 +7,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_s
 from models.common.biaffine import DeepBiaffineScorer
 from models.common.hlstm import HighwayLSTM
 from models.common.dropout import WordDropout
-
-from models.common.vocab import Vocab as BaseVoab
 from models.common.vocab import CompositeVocab
-
 from models.common.char_model import CharacterModel
 
 class Parser(nn.Module):

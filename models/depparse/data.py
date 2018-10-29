@@ -4,7 +4,7 @@ import torch
 from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from models.common import conll
 from models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
-from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab
+from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from models.pos.xpos_vocab_factory import xpos_vocab_factory
 
 class DataLoader:
@@ -49,13 +49,13 @@ class DataLoader:
         featsvocab = FeatureVocab(data, self.args['shorthand'], idx=3)
         lemmavocab = WordVocab(data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
         deprelvocab = WordVocab(data, self.args['shorthand'], idx=6)
-        vocab = {'char': charvocab,
+        vocab = MultiVocab({'char': charvocab,
                 'word': wordvocab,
                 'upos': uposvocab,
                 'xpos': xposvocab,
                 'feats': featsvocab,
                 'lemma': lemmavocab,
-                'deprel': deprelvocab}
+                'deprel': deprelvocab})
         return vocab
 
     def preprocess(self, data, vocab, pretrain_vocab, args):

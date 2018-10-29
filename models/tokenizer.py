@@ -6,7 +6,6 @@ import torch
 from models.common import param, utils
 from models.tokenize.trainer import Trainer
 from models.tokenize.data import DataLoader
-from models.tokenize.vocab import Vocab
 from models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
 
 def train(args):

@@ -13,17 +13,38 @@ ROOT = '<ROOT>'
 ROOT_ID = 3
 VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
 
-class Vocab:
-    def __init__(self, data, lang="", idx=0, cutoff=0, lower=False):
+class BaseVocab:
+    """ A base class for common vocabulary operations. Each subclass should at least 
+    implement its own build_vocab() function."""
+    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False):
         self.data = data
         self.lang = lang
         self.idx = idx
         self.cutoff = cutoff
         self.lower = lower
-        self.build_vocab()
+        if data is not None:
+            self.build_vocab()
+        self.state_attrs = ['lang', 'idx', 'cutoff', 'lower', '_unit2id', '_id2unit']
 
     def build_vocab(self):
         raise NotImplementedError()
+
+    def state_dict(self):
+        """ Returns a dictionary containing all states that are necessary to recover
+        this vocab. Useful for serialization."""
+        state = OrderedDict()
+        for attr in self.state_attrs:
+            if hasattr(self, attr):
+                state[attr] = getattr(self, attr)
+        return state
+
+    @classmethod
+    def load_state_dict(cls, state_dict):
+        """ Returns a new Vocab instance constructed from a state dict. """
+        new = cls()
+        for attr, value in state_dict.items():
+            setattr(new, attr, value)
+        return new
 
     def normalize_unit(self, unit):
         if self.lower:
@@ -64,7 +85,7 @@ class Vocab:
     def size(self):
         return len(self)
 
-class CompositeVocab(Vocab):
+class CompositeVocab(BaseVocab):
     ''' Vocabulary class that handles parsing and printing composite values such as
     compositional XPOS and universal morphological features (UFeats).
 
@@ -78,10 +99,11 @@ class CompositeVocab(Vocab):
     are treated as positioned values, and `<EMPTY>` is used to pad parts at the end when the
     incoming value is not long enough.'''
 
-    def __init__(self, data, lang, idx=0, sep="", keyed=False):
+    def __init__(self, data=None, lang="", idx=0, sep="", keyed=False):
         self.sep = sep
         self.keyed = keyed
         super().__init__(data, lang, idx=idx)
+        self.state_attrs += ['sep', 'keyed']
 
     def unit2parts(self, unit):
         # unpack parts of a unit
@@ -167,3 +189,38 @@ class CompositeVocab(Vocab):
 
     def lens(self):
         return [len(self._unit2id[k]) for k in self._unit2id]
+
+class BaseMultiVocab:
+    """ A convenient vocab container that can store multiple BaseVocab instances, and support 
+    safe serialization of all instances via state dicts. Each subclass of this base class 
+    should implement the load_state_dict() function to specify how a saved state dict 
+    should be loaded back."""
+    def __init__(self, vocab_dict=None):
+        self._vocabs = OrderedDict()
+        if vocab_dict is None:
+            return
+        # check all values provided must be a subclass of the Vocab base class
+        assert all([isinstance(v, BaseVocab) for v in vocab_dict.values()])
+        for k, v in vocab_dict.items():
+            self._vocabs[k] = v
+
+    def __setitem__(self, key, item):
+        self._vocabs[key] = item
+
+    def __getitem__(self, key):
+        return self._vocabs[key]
+
+    def state_dict(self):
+        """ Build a state dict by iteratively calling state_dict() of all vocabs. """
+        state = OrderedDict()
+        for k, v in self._vocabs.items():
+            state[k] = v.state_dict()
+        return state
+
+    @classmethod
+    def load_state_dict(cls, state_dict):
+        """ Construct a MultiVocab by reading from a state dict."""
+        raise NotImplementedError
+
+
+

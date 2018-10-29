@@ -6,8 +6,7 @@ import lzma
 import numpy as np
 import torch
 
-from .vocab import Vocab as BaseVocab
-from .vocab import VOCAB_PREFIX
+from .vocab import BaseVocab, VOCAB_PREFIX
 
 class PretrainedWordVocab(BaseVocab):
     def build_vocab(self):

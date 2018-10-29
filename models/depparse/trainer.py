@@ -9,6 +9,7 @@ from models.common.trainer import Trainer as BaseTrainer
 from models.common import utils, loss
 from models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from models.depparse.model import Parser
+from models.pos.vocab import MultiVocab
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
@@ -76,7 +77,7 @@ class Trainer(BaseTrainer):
     def save(self, filename):
         params = {
                 'model': self.model.state_dict(),
-                'vocab': self.vocab,
+                'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
         try:
@@ -92,7 +93,7 @@ class Trainer(BaseTrainer):
             print("Cannot load model from {}".format(filename))
             exit()
         self.args = checkpoint['config']
-        self.vocab = checkpoint['vocab']
+        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = Parser(self.args, self.vocab, emb_matrix=pretrain.emb)
         self.model.load_state_dict(checkpoint['model'])
 

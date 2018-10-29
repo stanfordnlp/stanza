@@ -8,6 +8,7 @@ from torch import nn
 from models.common.trainer import Trainer as BaseTrainer
 from models.common import utils, loss
 from models.pos.model import Tagger
+from models.pos.vocab import MultiVocab
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """
@@ -76,7 +77,7 @@ class Trainer(BaseTrainer):
     def save(self, filename):
         params = {
                 'model': self.model.state_dict(),
-                'vocab': self.vocab,
+                'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
         try:
@@ -92,7 +93,7 @@ class Trainer(BaseTrainer):
             print("Cannot load model from {}".format(filename))
             exit()
         self.args = checkpoint['config']
-        self.vocab = checkpoint['vocab']
+        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = Tagger(self.args, self.vocab, emb_matrix=pretrain.emb, share_hid=self.args['share_hid'])
         self.model.load_state_dict(checkpoint['model'])
 

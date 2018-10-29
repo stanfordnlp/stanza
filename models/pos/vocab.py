@@ -1,6 +1,6 @@
-from collections import Counter
+from collections import Counter, OrderedDict
 
-from models.common.vocab import Vocab as BaseVocab
+from models.common.vocab import BaseVocab, BaseMultiVocab
 from models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
 
 class CharVocab(BaseVocab):
@@ -11,9 +11,10 @@ class CharVocab(BaseVocab):
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
 class WordVocab(BaseVocab):
-    def __init__(self, data, lang="", idx=0, cutoff=0, lower=False, ignore=[]):
+    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, ignore=[]):
         self.ignore = ignore
         super().__init__(data, lang=lang, idx=idx, cutoff=cutoff, lower=lower)
+        self.state_attrs += ['ignore']
 
     def id2unit(self, id):
         if len(self.ignore) > 0 and id == EMPTY_ID:
@@ -40,10 +41,35 @@ class WordVocab(BaseVocab):
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
 class XPOSVocab(CompositeVocab):
-    def __init__(self, data, lang, idx=0, sep="", keyed=False):
+    def __init__(self, data=None, lang="", idx=0, sep="", keyed=False):
         super().__init__(data, lang, idx=idx, sep=sep, keyed=keyed)
 
 class FeatureVocab(CompositeVocab):
-    def __init__(self, data, lang, idx=0, sep="|", keyed=True):
+    def __init__(self, data=None, lang="", idx=0, sep="|", keyed=True):
         super().__init__(data, lang, idx=idx, sep=sep, keyed=keyed)
+
+class MultiVocab(BaseMultiVocab):
+    def state_dict(self):
+        """ Also save a vocab name to class name mapping in state dict. """
+        state = OrderedDict()
+        key2class = OrderedDict()
+        for k, v in self._vocabs.items():
+            state[k] = v.state_dict()
+            key2class[k] = type(v).__name__
+        state['_key2class'] = key2class
+        return state
+
+    @classmethod
+    def load_state_dict(cls, state_dict):
+        class_dict = {'CharVocab': CharVocab,
+                'WordVocab': WordVocab,
+                'XPOSVocab': XPOSVocab,
+                'FeatureVocab': FeatureVocab}
+        new = cls()
+        assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
+        key2class = state_dict.pop('_key2class')
+        for k,v in state_dict.items():
+            classname = key2class[k]
+            new[k] = class_dict[classname].load_state_dict(v)
+        return new
 

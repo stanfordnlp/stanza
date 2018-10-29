@@ -104,7 +104,6 @@ def train(args):
     print("Loading data with batch size {}...".format(args['batch_size']))
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    args['vocab_size'] = len(vocab)
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
 
     # pred and gold path
