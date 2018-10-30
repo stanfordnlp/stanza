@@ -3,7 +3,6 @@ shift
 set=$1
 shift
 
-UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18
 if [ -d $UDBASE/${treebank}_XV ]; then
     treebank=${treebank}_XV
 fi
