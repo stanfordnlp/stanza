@@ -6,13 +6,13 @@ The Stanford submission for the CoNLL-2018 Shared Task.
 
 The system requires Python 3.6 or greater.  
 
-Requirements:
+#### Requirements 
 
 ```
 torch 0.4.1
 ```
 
-Instructions:
+#### Instructions
 
 1. In the root directory, set up a directory called `extern_data`.  This must include the CoNLL18 treebank data and word2vec embeddings.
 
