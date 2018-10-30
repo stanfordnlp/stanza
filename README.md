@@ -16,8 +16,8 @@ Instructions:
 
 1. In the root directory, set up a directory called `extern_data`.  This must include the CoNLL18 treebank data and word2vec embeddings.
 
-You can access the CoNLL18 data here: http://universaldependencies.org
-You can access the word2vec embeddings here: ??
+* You can access the CoNLL18 data here: http://universaldependencies.org
+* You can access the word2vec embeddings here: ??
 
 
 The provided scripts will expect this directory structure:
