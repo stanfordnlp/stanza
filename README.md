@@ -52,7 +52,7 @@ The necessary data files will be stored in `data/depparse` and the model will be
 
 ### Evaluation
 
-You can evaluate models on all the tasks `scripts/eval.sh`
+You can evaluate models on all the tasks with `scripts/eval.sh`
 
 ```
 bash scripts/eval.sh TREEBANK TASK DATASET GPU_NUM
