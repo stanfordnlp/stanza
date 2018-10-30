@@ -1,3 +1,5 @@
+source scripts/config.sh
+
 outputprefix=$1
 if [[ "$outputprefix" == "UD_"* ]]; then
     outputprefix=""
@@ -11,7 +13,6 @@ shift
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 args=$@
-UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18/
 DATADIR=data/pos
 
 train_file=${DATADIR}/${short}.train.in.conllu
