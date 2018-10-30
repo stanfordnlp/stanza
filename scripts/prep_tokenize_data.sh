@@ -1,3 +1,5 @@
+source scripts/config.sh
+
 treebank=$1
 shift
 set=$1
