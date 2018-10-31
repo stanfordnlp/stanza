@@ -28,7 +28,7 @@ extern_data
 mkdir -p data/depparse
 ```
 
-3. Set up `scripts/config.sh` appropriately.  It should point to the location of your download of
+3. Set up `scripts/config.sh` appropriately.  It should point `UDBASE` to the location of your download of
 the `CoNLL18` directory with the treebanks.
 
 ```
