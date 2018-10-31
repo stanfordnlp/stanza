@@ -43,7 +43,7 @@ if [ $task == depparse ]; then
     module="parser"
 fi
 
-declare -A task2module=( ["depparse"]="parser" ["pos"]="tagger" ["tokenize"]="tokenizer")
+declare -A task2module=( ["lemma"]="lemmatizer" ["mwt"]="mwt_expander" ["depparse"]="parser" ["pos"]="tagger" ["tokenize"]="tokenizer" )
 module=${task2module[$task]}
 
 CUDA_VISIBLE_DEVICES=$gpu python -m models.${module} --eval_file $eval_file \
