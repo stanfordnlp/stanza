@@ -13,6 +13,7 @@ __pycache__/
 data/
 saved_models/
 logs/
+*_test_treebanks
 
 params/*/*.json
 !params/*/default.json
