@@ -2,23 +2,17 @@
 
 The Stanford submission for the CoNLL-2018 Shared Task.
 
-### Setup
+## Requirements 
 
-The system requires Python 3.6 or greater.  
+* Python 3.6
+* PyTorch 0.4.1
 
-#### Requirements 
-
-```
-torch 0.4.1
-```
-
-#### Instructions
+## Setup Instructions
 
 1. In the root directory, set up a directory called `extern_data`.  This must include the CoNLL18 treebank data and word2vec embeddings.
 
 * You can access the CoNLL18 data here: http://universaldependencies.org
 * You can access the word2vec embeddings here: ??
-
 
 The provided scripts will expect this directory structure:
 
@@ -34,9 +28,16 @@ extern_data
 mkdir -p data/depparse
 ```
 
-3. Set up `scripts/config.sh` appropriately.
+3. Set up `scripts/config.sh` appropriately.  It should point to the location of your download of
+the `CoNLL18` directory with the treebanks.
 
-### Training
+```
+/path/to/CoNLL18
+|--UD_French-GSD
+...
+```
+
+## Training
 
 All training commands follow the basic format of `bash scripts/run_{}.sh TREEBANK GPU_NUM`
 
@@ -50,7 +51,7 @@ This will train the model with standard settings.  When training is completed a 
 
 The necessary data files will be stored in `data/depparse` and the model will be stored in `saved_models/depparse`
 
-### Evaluation
+## Evaluation
 
 You can evaluate models on all the tasks with `scripts/eval.sh`
 
