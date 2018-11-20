@@ -6,7 +6,7 @@ import os
 import argparse
 import random
 
-from models.lemma.loader import DataLoader
+from models.lemma.data import DataLoader
 from models.lemma import scorer
 from models.common import utils
 
