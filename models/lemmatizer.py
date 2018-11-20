@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
-    parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
+    parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
 
     parser.add_argument('--hidden_dim', type=int, default=200)
@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument('--pos', action='store_true', help='Use UPOS in lemmatization.')
     parser.add_argument('--pos_dim', type=int, default=50)
     parser.add_argument('--pos_dropout', type=float, default=0.5)
-    parser.add_argument('--edit', action='store_true', help='Use edit classifier in lemmatization.')
+    parser.add_argument('--no_edit', dest='edit', action='store_false', help='Do not use edit classifier in lemmatization. By default use an edit classifier.')
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
 

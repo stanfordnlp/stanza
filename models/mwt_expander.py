@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
     parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
-    parser.add_argument('--ensemble_dict', action='store_true', help='Ensemble a dictionary-based lemmatizer with seq2seq.')
+    parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default ensemble a dict.')
     parser.add_argument('--ensemble_early_stop', action='store_true', help='Early stopping based on ensemble performance.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based MWT expander.')
 
