@@ -136,6 +136,7 @@ class CoreNLPClient(RobustService):
                  stderr=sys.stderr,
                  memory="4G",
                  be_quiet=True,
+                 max_char_length=100000
                 ):
 
         if start_server:
@@ -143,12 +144,13 @@ class CoreNLPClient(RobustService):
             assert host == "localhost", "If starting a server, endpoint must be localhost"
 
             assert os.getenv("CORENLP_HOME") is not None, "Please define $CORENLP_HOME where your CoreNLP Java checkout is"
-            start_cmd = "java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port {port} -timeout {timeout} -threads {threads}".format(
+            start_cmd = "java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length}".format(
                 corenlp_home=os.getenv("CORENLP_HOME"),
                 port=port,
                 memory=memory,
                 timeout=timeout,
-                threads=threads)
+                threads=threads,
+                max_char_length=max_char_length)
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
