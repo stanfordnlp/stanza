@@ -21,7 +21,7 @@ class Parser(nn.Module):
         # pretrained embeddings
         if self.args['pretrain']:
             self.pretrained_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
-        
+
         # input layers
         input_size = 0
         if self.args['word_emb_dim'] > 0:
@@ -80,7 +80,7 @@ class Parser(nn.Module):
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
-        
+
         inputs = []
         if self.args['pretrain']:
             pretrained_emb = self.pretrained_emb(pretrained)
@@ -119,7 +119,7 @@ class Parser(nn.Module):
             char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
             char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
             inputs += [char_reps]
-        
+
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
 
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
@@ -130,21 +130,21 @@ class Parser(nn.Module):
         lstm_outputs, _ = self.parserlstm(lstm_inputs, sentlens, hx=(self.parserlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.parserlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
         lstm_outputs, _ = pad_packed_sequence(lstm_outputs, batch_first=True)
 
-        unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs).squeeze(3)
-        deprel_scores = self.deprel(lstm_outputs, lstm_outputs)
+        unlabeled_scores = self.unlabeled(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
+        deprel_scores = self.deprel(self.drop(lstm_outputs), self.drop(lstm_outputs))
 
-        goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
-        goldmask.scatter_(2, head.unsqueeze(2), 1)
+        #goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
+        #goldmask.scatter_(2, head.unsqueeze(2), 1)
 
         if self.args['linearization'] or self.args['distance']:
             head_offset = torch.arange(word.size(1), device=head.device).view(1, 1, -1).expand(word.size(0), -1, -1) - torch.arange(word.size(1), device=head.device).view(1, -1, 1).expand(word.size(0), -1, -1)
 
         if self.args['linearization']:
-            lin_scores = self.linearization(lstm_outputs, lstm_outputs).squeeze(3)
+            lin_scores = self.linearization(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
             unlabeled_scores += F.logsigmoid(lin_scores * torch.sign(head_offset).float()).detach()
 
         if self.args['distance']:
-            dist_scores = self.distance(lstm_outputs, lstm_outputs).squeeze(3)
+            dist_scores = self.distance(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
             dist_pred = 1 + F.softplus(dist_scores)
             dist_target = torch.abs(head_offset)
             dist_kld = -torch.log((dist_target.float() - dist_pred)**2/2 + 1)
@@ -162,18 +162,22 @@ class Parser(nn.Module):
             loss = self.crit(unlabeled_scores.contiguous().view(-1, unlabeled_scores.size(2)), unlabeled_target.view(-1))
 
             deprel_scores = deprel_scores[:, 1:] # exclude attachment for the root symbol
-            deprel_scores = deprel_scores.masked_select(goldmask.unsqueeze(3)).view(-1, len(self.vocab['deprel']))
+            #deprel_scores = deprel_scores.masked_select(goldmask.unsqueeze(3)).view(-1, len(self.vocab['deprel']))
+            deprel_scores = torch.gather(deprel_scores, 2, head.unsqueeze(2).unsqueeze(3).expand(-1, -1, -1, len(self.vocab['deprel']))).view(-1, len(self.vocab['deprel']))
             deprel_target = deprel.masked_fill(word_mask[:, 1:], -1)
             loss += self.crit(deprel_scores.contiguous(), deprel_target.view(-1))
 
             if self.args['linearization']:
-                lin_scores = lin_scores[:, 1:].masked_select(goldmask)
+                #lin_scores = lin_scores[:, 1:].masked_select(goldmask)
+                lin_scores = torch.gather(lin_scores[:, 1:], 2, head.unsqueeze(2)).view(-1)
                 lin_scores = torch.cat([-lin_scores.unsqueeze(1)/2, lin_scores.unsqueeze(1)/2], 1)
-                lin_target = (head_offset[:, 1:] > 0).long().masked_select(goldmask)
+                #lin_target = (head_offset[:, 1:] > 0).long().masked_select(goldmask)
+                lin_target = torch.gather((head_offset[:, 1:] > 0).long(), 2, head.unsqueeze(2))
                 loss += self.crit(lin_scores.contiguous(), lin_target.view(-1))
 
             if self.args['distance']:
-                dist_kld = dist_kld[:, 1:].masked_select(goldmask)
+                #dist_kld = dist_kld[:, 1:].masked_select(goldmask)
+                dist_kld = torch.gather(dist_kld[:, 1:], 2, head.unsqueeze(2))
                 loss -= dist_kld.sum()
 
             loss /= wordchars.size(0) # number of words

@@ -53,7 +53,7 @@ class DataLoader:
                 'xpos': xposvocab,
                 'feats': featsvocab})
         return vocab
-    
+
     def preprocess(self, data, vocab, pretrain_vocab, args):
         processed = []
         for sent in data:
@@ -116,8 +116,8 @@ class DataLoader:
 
     def reshuffle(self):
         data = [y for x in self.data for y in x]
-        random.shuffle(data)
         self.data = self.chunk_batches(data)
+        random.shuffle(self.data)
 
     def chunk_batches(self, data):
         res = []
