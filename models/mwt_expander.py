@@ -16,7 +16,7 @@ from models.mwt.data import DataLoader
 from models.mwt.vocab import Vocab
 from models.mwt.trainer import Trainer
 from models.mwt import scorer
-from models.common import utils, param
+from models.common import utils
 import models.common.seq2seq_constant as constant
 
 def parse_args():
@@ -30,7 +30,6 @@ def parse_args():
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
-    parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default ensemble a dict.')
     parser.add_argument('--ensemble_early_stop', action='store_true', help='Early stopping based on ensemble performance.')
@@ -98,11 +97,6 @@ def train(args):
     # pred and gold path
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-
-    # activate param manager and save config
-    param_manager = param.ParamManager('params/mwt', args['shorthand'])
-    if args['best_param']: # use best param in file, otherwise use command line params
-        args = param_manager.load_to_args(args)
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -188,8 +182,6 @@ def train(args):
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
-
-        param_manager.update(args, best_f)
 
 def evaluate(args):
     # file paths

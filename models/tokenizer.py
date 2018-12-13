@@ -3,7 +3,7 @@ from copy import copy
 import numpy as np
 import torch
 
-from models.common import param, utils
+from models.common import utils
 from models.tokenize.trainer import Trainer
 from models.tokenize.data import DataLoader
 from models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
