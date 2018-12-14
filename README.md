@@ -142,3 +142,69 @@ print('dependency parse of first sentence: ')
 for dep_edge in english_doc.sentences[0].dependencies:
     print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
 ```
+
+## Access to Java Stanford CoreNLP Server
+
+This project also includes an official wrapper for acessing the Java Stanford CoreNLP Server with Python code.
+
+### Setup 
+
+There are  a few initial setup steps.
+
+* Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use.
+* Put the model jars in the distribution folder
+* Tell the python code where Stanford CoreNLP is located: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
+
+### Demo
+
+Here is some example Python code that will start a server, make an annotation request, and walk through the final annotation.
+
+```
+from stanfordnlp.server import CoreNLPClient
+
+# example text
+print('---')
+print('input text')
+print('')
+
+text = "Chris Manning is a nice person.  He gives oranges to people."
+
+print(text)
+
+# set up the client
+print('---')
+print('starting up Java Stanford CoreNLP Server...')
+with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner','depparse','coref'], memory='16G') as client:
+    # submit the request to the server
+    ann = client.annotate(text)
+    # get the first sentence
+    sentence = ann.sentence[0]
+    # get the dependency parse of the first sentence
+    print('---')
+    print('dependency parse of first sentence')
+    dependency_parse = sentence.basicDependencies
+    print(dependency_parse)
+    # get the first token of the first sentence
+    print('---')
+    print('first token of first sentence')
+    token = sentence.token[0]
+    print(token)
+    # get the part-of-speech tag
+    print('---')
+    print('part of speech tag of token')
+    token.pos
+    print(token.pos)
+    # get the named entity tag
+    print('---')
+    print('named entity tag of token')
+    print(token.ner)
+    # get an entity mention from the first sentence 
+    print('---')
+    print('first entity mention in sentence')
+    print(sentence.mentions[0])
+    # access the coref chain
+    print('---')
+    print('coref chains for the example')
+    print(ann.corefChain)
+
+```
