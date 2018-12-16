@@ -102,8 +102,7 @@ Once you have trained models, you can run a full NLP pipeline natively in Python
 The following demo code demonstrates how to run a pipeline
 
 ```
-from stanfordnlp.pipeline.pipeline import Pipeline
-from stanfordnlp.pipeline.data import Document
+from stanfordnlp.pipeline import Document, Pipeline
 
 # example documents
 english_doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
