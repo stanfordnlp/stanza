@@ -129,6 +129,7 @@ class CoreNLPClient(RobustService):
                  endpoint="http://localhost:9000", 
                  timeout=5000, 
                  threads=5,
+                 props_file = None,
                  annotators=None, 
                  properties=None,
                  output_format=None,
@@ -149,6 +150,8 @@ class CoreNLPClient(RobustService):
                 memory=memory,
                 timeout=timeout,
                 threads=threads)
+            if props_file is not None:
+                start_cmd += (" -serverProperties "+props_file)
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None

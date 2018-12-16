@@ -15,7 +15,7 @@ from torch import nn, optim
 from stanfordnlp.models.pos.data import DataLoader
 from stanfordnlp.models.pos.trainer import Trainer
 from stanfordnlp.models.pos import scorer
-from stanfordnlp.models.common import utils, param
+from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
 
 def parse_args():
@@ -30,7 +30,6 @@ def parse_args():
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
-    parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     parser.add_argument('--hidden_dim', type=int, default=200)
     parser.add_argument('--char_hidden_dim', type=int, default=400)
@@ -111,11 +110,6 @@ def train(args):
     # pred and gold path
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-
-    # activate param manager and save config
-    param_manager = param.ParamManager('params/pos', args['shorthand'])
-    if args['best_param']: # use best param in file, otherwise use command line params
-        args = param_manager.load_to_args(args)
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -200,8 +194,6 @@ def train(args):
 
     best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
     print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
-
-    param_manager.update(args, best_f)
 
 def evaluate(args):
     # file paths

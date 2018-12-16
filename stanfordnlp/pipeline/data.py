@@ -4,7 +4,7 @@ Basic data structures
 
 import re
 
-from stanfordnlp.pipeline.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
+from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
 multi_word_token_line = re.compile("[0-9]+\-[0-9]+")
 

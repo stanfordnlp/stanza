@@ -16,7 +16,7 @@ from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma.vocab import Vocab
 from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.models.lemma import scorer, edit
-from stanfordnlp.models.common import utils, param
+from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
 
 def parse_args():
@@ -29,7 +29,6 @@ def parse_args():
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
-    parser.add_argument('--best_param', action='store_true', help='Train with best language-specific parameters.')
 
     parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
@@ -106,10 +105,6 @@ def train(args):
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
-    # activate param manager and save config
-    param_manager = param.ParamManager('params/lemma', args['lang'])
-    if args['best_param']: # use best param in file, otherwise use command line params
-        args = param_manager.load_to_args(args)
     utils.print_config(args)
 
     # skip training if the language does not have training or dev data
@@ -195,8 +190,6 @@ def train(args):
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
-
-        param_manager.update(args, best_f)
 
 def evaluate(args):
     # file paths
