@@ -1,1 +1,2 @@
-export UDBASE=/u/scr/nlp/data/stanfordnlp_dev/stanfordnlp/extern_data/CoNLL18
+# set UDBASE to the location of CoNLL18 folder
+# export UDBASE=/path/to/CoNLL18
