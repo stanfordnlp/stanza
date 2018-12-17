@@ -10,6 +10,8 @@ treebank=$1
 shift
 gpu=$1
 shift
+tag_type=$1
+shift
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 args=$@
@@ -21,7 +23,7 @@ output_file=${DATADIR}/${short}.dev.${outputprefix}pred.conllu
 gold_file=${DATADIR}/${short}.dev.gold.conllu
 
 if [ ! -e $train_file ]; then
-    bash scripts/prep_depparse_data.sh $treebank
+    bash scripts/prep_depparse_data.sh $treebank $tag_type
 fi
 
 echo "Running $args..."
