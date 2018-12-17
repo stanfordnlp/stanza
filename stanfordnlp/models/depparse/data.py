@@ -136,7 +136,7 @@ class DataLoader:
 
         if not self.eval:
             # sort sentences (roughly) by length for better memory utilization
-            data = sorted(data, key = lambda x: len(x[0]) + random.random() * 5)
+            data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
 
         current = []
         currentlen = 0
