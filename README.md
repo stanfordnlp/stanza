@@ -71,9 +71,9 @@ bash scripts/run_ete.sh UD_English-EWT test 0
 
 We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task.   You can find links to these models in the table below.
 
-| language         | version    | .tgz file |
+| language         | version    | zip file |
 | :--------------- | :--------- | :------- |
-| UD_English_EWT   | 1.0.0      | [download](http://nlp.stanford.edu/software/conll_2018/english_ewt.models) |
+| UD_English_EWT   | 1.0.0      | [download](http://nlp.stanford.edu/software/conll_2018/english_ewt_models.zip) |
 
 ## Pipeline
 
