@@ -31,60 +31,40 @@ tagger
 parser
 ```
 
-### tokenize and mwt
+### Setup
 
-Training the tokenizer and multi-word-token expander currently requires some extra set up, so the easiest way is to use provided scripts.
+Before training and evaluating, you need to set up the scripts/config.sh
 
-First you need to set up the directory structure the scripts expect.
+Change `/path/to/CoNLL18` and `/path/to/word2vec` appropriately to where you have downloaded these resources.
 
-```
-# make directories to save models to
-mkdir -p /path/to/stanfordnlp/saved_models/tokenize
-mkdir /path/to/stanfordnlp/saved_models/mwt
+### Training
 
-# set up directory for tokenize data
-mkdir -p /path/to/stanfordnlp/data/tokenize
-
-# set up directory for mwt data
-mkdir /path/to/stanfordnlp/data/mwt
-
-# set up path to external data
-mkdir /path/to/stanfordnlp/extern_data
-
-# add CoNLL18 data to external data
-ln -s /path/to/CoNLL18 /path/to/stanfordnlp/extern_data/CoNLL18
-
-# add word2vec data to external data
-ln -s /path/to/word2vec /path/to/stanfordnlp/extern_data/word2vec
-```
+To train a model, run this command from the root directory:
 
 ```
-# model will be saved to /path/to/stanfordnlp/saved_models/tokenize
+bash scripts/run_${task}.sh ${treebank} ${gpu_num}
+```
+
+For example:
+
+```
 bash scripts/run_tokenize.sh UD_English-EWT 0
 ```
 
-```
-# model will be saved to /path/to/stanfordnlp/saved_models/mwt
-bash scripts/run_mwt.sh UD_French-GSD 0
-```
-
-### lemma, pos, and depparse
-
-These three modules can be trained with the same python command.  One just needs to change the module name.
-
-Here is an example of training the English-EWT dependency parser
+For the dependency parser, you also need to specify `gold|predicted` for the tag type in the training/dev data. 
 
 ```
-# will save a model to /path/to/saved_models/depparse/en_ewt_parser.pt
-# will save required word embeddings to /path/to/saved_models/depparse/en_ewt_parser.pretrain.pt
-python -m stanfordnlp.models.parser --train_file train_data.conllu --eval_file dev_data.conllu --gold_file dev_data.conllu --output_file dev_data.predictions.conllu --lang en_ewt --shorthand en_ewt --mode train --save_dir /path/to/saved_models/depparse
+bash scripts/run_depparse.sh UD_English-EWT 0 predicted
 ```
 
-A similar python command will enable evaluation on CoNLL-U files
+Models will be saved to the `saved_models` directory.
+
+### Evaluation
+
+Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
 
 ```
-# assumes appropriate resources in /path/to/saved_models/depparse
-python -m stanfordnlp.models.parser --eval_file dev_data.conllu --gold_file dev_data.conllu --output_file dev_data.predictions.conllu --lang en_ewt --shorthand en_ewt --mode predict --save_dir /path/to/saved_models/depparse
+bash scripts/run_ete.sh UD_English-EWT test 0
 ```
 
 ## Trained Models
