@@ -33,7 +33,7 @@ parser
 
 ### Setup
 
-Before training and evaluating, you need to set up the scripts/config.sh
+Before training and evaluating, you need to set up the `scripts/config.sh`
 
 Change `/path/to/CoNLL18` and `/path/to/word2vec` appropriately to where you have downloaded these resources.
 
