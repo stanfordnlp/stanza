@@ -1,5 +1,24 @@
 # stanfordnlp
-The Stanford NLP group's official Python code.  It contains packages for running our latest pipeline from the CoNLL 2018 shared task and for accessing the Java Stanford CoreNLP server.
+The Stanford NLP group's official Python code.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
+
+### References
+
+If you use the neural tokenizer, multi-word token expansion model, lemmatizer, POS/morphological features tagger, or dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf)
+
+```bibtex
+@InProceedings{qi2018universal,
+  author    = {Qi, Peng  and  Dozat, Timothy  and  Zhang, Yuhao  and  Manning, Christopher D.},
+  title     = {Universal Dependency Parsing from Scratch},
+  booktitle = {Proceedings of the {CoNLL} 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies},
+  month     = {October},
+  year      = {2018},
+  address   = {Brussels, Belgium},
+  publisher = {Association for Computational Linguistics},
+  pages     = {160--170},
+  url       = {http://www.aclweb.org/anthology/K18-2016}
+}
+```
+If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
 
 ## Requirements
 
@@ -7,7 +26,7 @@ Requires Python 3.6 or greater.
 
 * protobuf 3.6.1
 * requests 2.20.1
-* torch 0.4.1
+* torch 0.4.1 or above (only if you want to use the fully neural pipeline from the CoNLL 2018 Shared Task)
 
 ## Setup
 
@@ -19,55 +38,9 @@ cd stanfordnlp
 pip install -e .
 ```
 
-## Training And Evaluating Models
+## Using the Fully Neural Pipeline
 
-The following models can be trained with this code
-
-```
-tokenizer
-mwt_expander
-lemmatizer
-tagger
-parser
-```
-
-### Setup
-
-Before training and evaluating, you need to set up the `scripts/config.sh`
-
-Change `/path/to/CoNLL18` and `/path/to/word2vec` appropriately to where you have downloaded these resources.
-
-### Training
-
-To train a model, run this command from the root directory:
-
-```
-bash scripts/run_${task}.sh ${treebank} ${gpu_num}
-```
-
-For example:
-
-```
-bash scripts/run_tokenize.sh UD_English-EWT 0
-```
-
-For the dependency parser, you also need to specify `gold|predicted` for the tag type in the training/dev data. 
-
-```
-bash scripts/run_depparse.sh UD_English-EWT 0 predicted
-```
-
-Models will be saved to the `saved_models` directory.
-
-### Evaluation
-
-Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
-
-```
-bash scripts/run_ete.sh UD_English-EWT test 0
-```
-
-## Trained Models
+### Trained Models
 
 We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task.   You can find links to these models in the table below.
 
@@ -75,7 +48,7 @@ We currently provide models for all of the treebanks in the CoNLL 2018 Shared Ta
 | :--------------- | :--------- | :------- |
 | UD_English_EWT   | 1.0.0      | [download](http://nlp.stanford.edu/software/conll_2018/english_ewt_models.zip) |
 
-## Pipeline
+### Pipeline
 
 Once you have trained models, you can run a full NLP pipeline natively in Python, similar to running a pipeline with Stanford CoreNLP in Java.
 
@@ -120,6 +93,54 @@ for tok in english_doc.sentences[0].tokens:
 print('dependency parse of first sentence: ')
 for dep_edge in english_doc.sentences[0].dependencies:
     print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
+```
+
+### Training your own models
+
+The following models can be trained with this code
+
+```
+tokenizer
+mwt_expander
+lemmatizer
+tagger
+parser
+```
+
+#### Setup
+
+Before training and evaluating, you need to set up the `scripts/config.sh`
+
+Change `/path/to/CoNLL18` and `/path/to/word2vec` appropriately to where you have downloaded these resources.
+
+#### Training
+
+To train a model, run this command from the root directory:
+
+```
+bash scripts/run_${task}.sh ${treebank} ${gpu_num}
+```
+
+For example:
+
+```
+bash scripts/run_tokenize.sh UD_English-EWT 0
+```
+
+For the dependency parser, you also need to specify `gold|predicted` for the tag type in the training/dev data. 
+
+```
+bash scripts/run_depparse.sh UD_English-EWT 0 predicted
+```
+
+Models will be saved to the `saved_models` directory.
+
+### Evaluation
+
+Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
+
+```
+bash scripts/run_ete.sh UD_English-EWT test 0
 ```
 
 ## Access to Java Stanford CoreNLP Server
