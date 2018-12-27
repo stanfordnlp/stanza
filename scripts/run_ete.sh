@@ -60,7 +60,9 @@ fi
 # prep the dev/test data
 bash scripts/prep_tokenize_data.sh $treebank ${set}
 echo 'running tokenizer...'
-CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.tokenizer --mode predict $eval_file --lang $model_lang --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --mwt_json_file data/tokenize/${short}-ud-${set}-mwt.json --shorthand $model_short $savedir $args
+#CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.tokenizer --mode predict $eval_file --lang $model_lang --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --mwt_json_file data/tokenize/${short}-ud-${set}-mwt.json --shorthand $model_short $savedir $args
+CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.tokenizer --mode predict $eval_file --lang $model_lang --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --shorthand $model_short $savedir $args
+
 cp data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu $ete_file
 
 # run the mwt expander
@@ -77,7 +79,12 @@ cp data/pos/${short}.${set}.${outputprefix}pred.ete.conllu $ete_file
 
 # run the lemmatizer
 echo 'running lemmatizer...'
-CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.lemmatizer --data_dir data/lemma --eval_file $ete_file --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang $model_short --mode predict 
+if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
+    python -m stanfordnlp.models.identity_lemmatizer --data_dir data/lemma --eval_file $ete_file \
+        --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang $model_short --mode predict
+else
+    CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.lemmatizer --data_dir data/lemma --eval_file $ete_file --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang $model_short --mode predict 
+fi
 cp data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu $ete_file 
 
 # handle languages that need reduced batch size
