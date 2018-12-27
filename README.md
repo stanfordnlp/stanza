@@ -140,7 +140,7 @@ Models will be saved to the `saved_models` directory.
 Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
 
 ```
-bash scripts/run_ete.sh UD_English-EWT test 0
+bash scripts/run_ete.sh UD_English-EWT 0 test
 ```
 
 ## Access to Java Stanford CoreNLP Server
