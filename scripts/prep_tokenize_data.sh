@@ -5,7 +5,7 @@ shift
 set=$1
 shift
 
-if [ -d $UDBASE/${treebank}_XV ]; then
+if [ -d $UDBASE/${treebank}_XV ] && [ ! $set=='test' ]; then
     treebank=${treebank}_XV
 fi
 
