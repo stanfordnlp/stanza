@@ -18,7 +18,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version='1.0.0',
 
-    description='Stanford Core NLP Toolkit for Python',
+    description='Official Stanford NLP Python Library',
     long_description=long_description,
 
     # The project's main homepage.
@@ -26,7 +26,7 @@ setup(
 
     # Author details
     author='Stanford Natural Language Processing Group',
-    author_email='meric@cs.stanford.edu',
+    author_email='jebolton@cs.stanford.edu',
 
     # Choose your license
     license='GPL',
@@ -53,15 +53,13 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['data', 'docs', 'figures']),
+    packages=find_packages(exclude=['data', 'docs', 'extern_data', 'figures', 'saved_models']),
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy',
-                      'requests',
-                      'ply'],
+    install_requires=['ply', 'protobuf', 'requests >= 2.10.0', 'torch >= 0.4.1'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
