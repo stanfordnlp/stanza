@@ -26,7 +26,7 @@ setup(
 
     # Author details
     author='Stanford Natural Language Processing Group',
-    author_email='jebolton@cs.stanford.edu',
+    author_email='jebolton@stanford.edu',
 
     # Choose your license
     license='GPL',
