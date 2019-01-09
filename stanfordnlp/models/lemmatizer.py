@@ -12,12 +12,12 @@ import random
 import torch
 from torch import nn, optim
 
-from models.lemma.data import DataLoader
-from models.lemma.vocab import Vocab
-from models.lemma.trainer import Trainer
-from models.lemma import scorer, edit
-from models.common import utils
-import models.common.seq2seq_constant as constant
+from stanfordnlp.models.lemma.data import DataLoader
+from stanfordnlp.models.lemma.vocab import Vocab
+from stanfordnlp.models.lemma.trainer import Trainer
+from stanfordnlp.models.lemma import scorer, edit
+from stanfordnlp.models.common import utils
+import stanfordnlp.models.common.seq2seq_constant as constant
 
 def parse_args():
     parser = argparse.ArgumentParser()

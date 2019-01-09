@@ -12,12 +12,12 @@ import random
 import torch
 from torch import nn, optim
 
-from models.mwt.data import DataLoader
-from models.mwt.vocab import Vocab
-from models.mwt.trainer import Trainer
-from models.mwt import scorer
-from models.common import utils
-import models.common.seq2seq_constant as constant
+from stanfordnlp.models.mwt.data import DataLoader
+from stanfordnlp.models.mwt.vocab import Vocab
+from stanfordnlp.models.mwt.trainer import Trainer
+from stanfordnlp.models.mwt import scorer
+from stanfordnlp.models.common import utils
+import stanfordnlp.models.common.seq2seq_constant as constant
 
 def parse_args():
     parser = argparse.ArgumentParser()

@@ -6,9 +6,9 @@ import os
 import argparse
 import random
 
-from models.lemma.data import DataLoader
-from models.lemma import scorer
-from models.common import utils
+from stanfordnlp.models.lemma.data import DataLoader
+from stanfordnlp.models.lemma import scorer
+from stanfordnlp.models.common import utils
 
 def parse_args():
     parser = argparse.ArgumentParser()

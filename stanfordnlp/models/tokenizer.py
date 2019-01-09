@@ -3,10 +3,10 @@ from copy import copy
 import numpy as np
 import torch
 
-from models.common import utils
-from models.tokenize.trainer import Trainer
-from models.tokenize.data import DataLoader
-from models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
+from stanfordnlp.models.common import param, utils
+from stanfordnlp.models.tokenize.trainer import Trainer
+from stanfordnlp.models.tokenize.data import DataLoader
+from stanfordnlp.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
 
 def train(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])

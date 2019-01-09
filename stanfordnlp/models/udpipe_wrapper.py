@@ -8,7 +8,7 @@ import argparse
 import subprocess
 import time
 
-from models.common import conll
+from stanfordnlp.models.common import conll
 
 def parse_args():
     parser = argparse.ArgumentParser()

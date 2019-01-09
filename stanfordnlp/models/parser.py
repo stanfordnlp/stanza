@@ -12,11 +12,11 @@ import random
 import torch
 from torch import nn, optim
 
-from models.depparse.data import DataLoader
-from models.depparse.trainer import Trainer
-from models.depparse import scorer
-from models.common import utils
-from models.common.pretrain import Pretrain
+from stanfordnlp.models.depparse.data import DataLoader
+from stanfordnlp.models.depparse.trainer import Trainer
+from stanfordnlp.models.depparse import scorer
+from stanfordnlp.models.common import utils
+from stanfordnlp.models.common.pretrain import Pretrain
 
 def parse_args():
     parser = argparse.ArgumentParser()
