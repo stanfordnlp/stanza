@@ -72,7 +72,7 @@ echo 'prepare tokenize data'
 echo $prep_tokenize_cmd
 eval $prep_tokenize_cmd
 
-run_tokenize_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.tokenizer --mode predict ${eval_file} --lang ${model_lang} --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --shorthand ${model_short} ${savedir} ${args}"
+run_tokenize_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m models.tokenizer --mode predict ${eval_file} --lang ${model_lang} --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --shorthand ${model_short} ${savedir} ${args}"
 
 echo 'run tokenizer'
 echo $run_tokenize_cmd
@@ -89,7 +89,7 @@ eval $cp_ete_file_cmd
 if [ -e saved_models/mwt/${short}_mwt_expander.pt ]; then
     echo '---'
     echo 'running mwt expander...'
-    run_mwt_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.mwt_expander --mode predict --eval_file ${ete_file} --shorthand ${model_short} --output_file data/mwt/${short}.${set}.pred.ete.conllu --save_dir saved_models/mwt ${args}"
+    run_mwt_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m models.mwt_expander --mode predict --eval_file ${ete_file} --shorthand ${model_short} --output_file data/mwt/${short}.${set}.pred.ete.conllu --save_dir saved_models/mwt ${args}"
     echo 'run mwt expander'
     echo $run_mwt_cmd
     eval $run_mwt_cmd
@@ -102,7 +102,7 @@ fi
 # run the part-of-speech tagger
 echo '---'
 echo 'running part-of-speech tagger...'
-part_of_speech_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.tagger --eval_file ${ete_file} --output_file data/pos/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --save_dir saved_models/pos"
+part_of_speech_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m models.tagger --eval_file ${ete_file} --output_file data/pos/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --save_dir saved_models/pos"
 echo 'run part-of-speech'
 echo $part_of_speech_cmd
 eval $part_of_speech_cmd
@@ -115,9 +115,9 @@ eval $cp_ete_file_cmd
 echo '---'
 echo 'running lemmatizer...'
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
-    lemma_cmd="python -m stanfordnlp.models.identity_lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
+    lemma_cmd="python -m models.identity_lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
 else
-    lemma_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
+    lemma_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m models.lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
 fi
 echo 'run lemmatizer'
 echo $lemma_cmd
@@ -137,7 +137,7 @@ fi
 # run the dependency parser
 echo '---'
 echo 'running dependency parser...'
-depparse_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.parser --eval_file ${ete_file} --output_file data/depparse/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size} --save_dir saved_models/depparse"
+depparse_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m models.parser --eval_file ${ete_file} --output_file data/depparse/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size} --save_dir saved_models/depparse"
 echo 'run dependency parser'
 echo $depparse_cmd
 eval $depparse_cmd
@@ -153,6 +153,6 @@ gold_file=data/ete/${short}-ud-${set}.conllu
 # run official eval script
 echo 'running official eval script'
 # print out results
-python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $ete_file
+python utils/conll18_ud_eval.py -v $gold_file $ete_file
 # store results to file
-python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $ete_file > ${short}.ete.results
+python utils/conll18_ud_eval.py -v $gold_file $ete_file > ${short}.ete.results

@@ -1,7 +1,7 @@
 #!/bin/bash
-source scripts/config.sh
 treebank=$1; shift
 data_dir=$1; shift
+UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18
 UDPIPEBASE=$UDBASE/UDPipe_out
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
@@ -24,14 +24,12 @@ dev_gold_file=$data_dir/${short}.dev.gold.conllu
 
 # copy conllu file if exists; otherwise create empty files
 if [ -e $train_conllu ]; then
-    echo 'copying training data...'
     cp $train_conllu $train_in_file
 else
     touch $train_in_file
 fi
 
 if [ -e $dev_conllu ]; then
-    echo 'copying dev data...'
     cp $dev_conllu $dev_in_file
 else
     touch $dev_in_file

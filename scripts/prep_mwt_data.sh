@@ -1,8 +1,7 @@
 #!/bin/bash
-source scripts/config.sh
-
 treebank=$1
 shift
+UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18
 UDPIPEBASE=$UDBASE/UDPipe_out
 DATADIR=data/mwt
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
@@ -33,7 +32,7 @@ else
 fi
 
 if [ -e $dev_conllu ]; then
-    python stanfordnlp/utils/contract_mwt.py $dev_conllu $dev_in_file
+    python utils/contract_mwt.py $dev_conllu $dev_in_file
     bash scripts/prep_tokenize_data.sh $src_treebank dev
 else
     touch $dev_in_file

@@ -24,13 +24,13 @@ if [ ! -e $train_file ]; then
     bash scripts/prep_mwt_data.sh $treebank
 fi
 
-dec_len=$(python -c "from math import ceil; print(ceil($(python stanfordnlp/utils/max_mwt_length.py data/tokenize/${short}-ud-train-mwt.json data/tokenize/${short}-ud-dev-mwt.json) * 1.1 + 1))")
+dec_len=$(python -c "from math import ceil; print(ceil($(python utils/max_mwt_length.py data/tokenize/${short}-ud-train-mwt.json data/tokenize/${short}-ud-dev-mwt.json) * 1.1 + 1))")
 
 echo "Running $args..."
-CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.mwt_expander --train_file $train_file --eval_file $eval_file \
+CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode train --max_dec_len $dec_len --save_dir ${outputprefix}saved_models/mwt $args
-CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.mwt_expander --eval_file $eval_file \
+CUDA_VISIBLE_DEVICES=$gpu python -m models.mwt_expander --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict --save_dir ${outputprefix}saved_models/mwt $args
-results=`python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
+results=`python utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
 echo $results $args >> ${DATADIR}/${short}.${outputprefix}results
 echo $short $results $args
