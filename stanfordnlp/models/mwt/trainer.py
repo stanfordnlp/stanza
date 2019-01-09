@@ -10,11 +10,11 @@ import torch.nn.init as init
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-import models.common.seq2seq_constant as constant
-from models.common.trainer import Trainer as BaseTrainer
-from models.common.seq2seq_model import Seq2SeqModel
-from models.common import utils, loss
-from models.mwt.vocab import Vocab
+import stanfordnlp.models.common.seq2seq_constant as constant
+from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
+from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel
+from stanfordnlp.models.common import utils, loss
+from stanfordnlp.models.mwt.vocab import Vocab
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """

@@ -3,7 +3,7 @@ from copy import copy
 import json
 import numpy as np
 
-from models.common.utils import ud_scores, harmonic_mean
+from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
 
 def load_mwt_dict(filename):
     if filename is not None:

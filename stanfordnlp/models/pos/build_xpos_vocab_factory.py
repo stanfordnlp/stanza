@@ -1,9 +1,9 @@
 from collections import defaultdict
 import os
 import sys
-from models.common.vocab import VOCAB_PREFIX
-from models.pos.vocab import XPOSVocab, WordVocab
-from models.common.conll import CoNLLFile
+from stanfordnlp.models.common.vocab import VOCAB_PREFIX
+from stanfordnlp.models.pos.vocab import XPOSVocab, WordVocab
+from stanfordnlp.models.common.conll import CoNLLFile
 
 if len(sys.argv) != 3:
     print('Usage: {} short_to_tb_file output_factory_file'.format(sys.argv[0]))

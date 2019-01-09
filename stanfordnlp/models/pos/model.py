@@ -4,11 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from models.common.biaffine import BiaffineScorer
-from models.common.hlstm import HighwayLSTM
-from models.common.dropout import WordDropout
-from models.common.vocab import CompositeVocab
-from models.common.char_model import CharacterModel
+from stanfordnlp.models.common.biaffine import BiaffineScorer
+from stanfordnlp.models.common.hlstm import HighwayLSTM
+from stanfordnlp.models.common.dropout import WordDropout
+from stanfordnlp.models.common.vocab import CompositeVocab
+from stanfordnlp.models.common.char_model import CharacterModel
 
 class Tagger(nn.Module):
     def __init__(self, args, vocab, emb_matrix=None, share_hid=False):

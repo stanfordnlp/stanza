@@ -1,8 +1,8 @@
 from collections import Counter
 import re
 
-from models.common.vocab import BaseVocab
-from models.common.vocab import UNK, PAD
+from stanfordnlp.models.common.vocab import BaseVocab
+from stanfordnlp.models.common.vocab import UNK, PAD
 
 class Vocab(BaseVocab):
     def build_vocab(self):

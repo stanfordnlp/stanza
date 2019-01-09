@@ -5,11 +5,11 @@ A trainer class to handle training and testing of models.
 import torch
 from torch import nn
 
-from models.common.trainer import Trainer as BaseTrainer
-from models.common import utils, loss
-from models.common.chuliu_edmonds import chuliu_edmonds_one_root
-from models.depparse.model import Parser
-from models.pos.vocab import MultiVocab
+from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
+from stanfordnlp.models.common import utils, loss
+from stanfordnlp.models.common.chuliu_edmonds import chuliu_edmonds_one_root
+from stanfordnlp.models.depparse.model import Parser
+from stanfordnlp.models.pos.vocab import MultiVocab
 
 def unpack_batch(batch, args):
     """ Unpack a batch from the data loader. """

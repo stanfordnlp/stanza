@@ -1,7 +1,7 @@
 from collections import Counter, OrderedDict
 
-from models.common.vocab import BaseVocab, BaseMultiVocab
-from models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
+from stanfordnlp.models.common.vocab import BaseVocab, BaseMultiVocab
+from stanfordnlp.models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
 
 class CharVocab(BaseVocab):
     def build_vocab(self):

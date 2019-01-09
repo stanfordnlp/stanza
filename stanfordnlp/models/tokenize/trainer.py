@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from models.common.trainer import Trainer
+from stanfordnlp.models.common.trainer import Trainer
 
 from .model import Tokenizer
 from .vocab import Vocab

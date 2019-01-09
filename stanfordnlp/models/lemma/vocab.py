@@ -1,7 +1,7 @@
 from collections import Counter
 
-from models.common.vocab import BaseVocab, BaseMultiVocab
-from models.common.seq2seq_constant import VOCAB_PREFIX
+from stanfordnlp.models.common.vocab import BaseVocab, BaseMultiVocab
+from stanfordnlp.models.common.seq2seq_constant import VOCAB_PREFIX
 
 class Vocab(BaseVocab):
     def build_vocab(self):

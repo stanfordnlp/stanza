@@ -1,11 +1,11 @@
 import random
 import torch
 
-from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from models.common import conll
-from models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
-from models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
-from models.pos.xpos_vocab_factory import xpos_vocab_factory
+from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanfordnlp.models.common import conll
+from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
+from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
+from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
 
 class DataLoader:
     def __init__(self, filename, batch_size, args, pretrain, vocab=None, evaluation=False):

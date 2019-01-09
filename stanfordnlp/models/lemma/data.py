@@ -4,11 +4,11 @@ import os
 from collections import Counter
 import torch
 
-import models.common.seq2seq_constant as constant
-from models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from models.common import conll
-from models.lemma.vocab import Vocab, MultiVocab
-from models.lemma import edit
+import stanfordnlp.models.common.seq2seq_constant as constant
+from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanfordnlp.models.common import conll
+from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
+from stanfordnlp.models.lemma import edit
 
 class DataLoader:
     def __init__(self, filename, batch_size, args, vocab=None, evaluation=False, conll_only=False):

@@ -1,7 +1,7 @@
 """
 Utils and wrappers for scoring lemmatizers.
 """
-from models.common.utils import ud_scores
+from stanfordnlp.models.common.utils import ud_scores
 
 def score(system_conllu_file, gold_conllu_file):
     """ Wrapper for word segmenter scorer. """
