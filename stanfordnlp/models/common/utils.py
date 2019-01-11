@@ -8,9 +8,9 @@ import json
 import unicodedata
 import torch
 
-from models.common.constant import lcode2lang
-import models.common.seq2seq_constant as constant
-import utils.conll18_ud_eval as ud_eval
+from stanfordnlp.models.common.constant import lcode2lang
+import stanfordnlp.models.common.seq2seq_constant as constant
+import stanfordnlp.utils.conll18_ud_eval as ud_eval
 
 # filenames
 def get_wordvec_file(wordvec_dir, shorthand):

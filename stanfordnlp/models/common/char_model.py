@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_sequence, PackedSequence
 
-from models.common.packed_lstm import PackedLSTM
-from models.common.utils import tensor_unsort
+from stanfordnlp.models.common.packed_lstm import PackedLSTM
+from stanfordnlp.models.common.utils import tensor_unsort
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=False):

@@ -8,10 +8,10 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-import models.common.seq2seq_constant as constant
-from models.common import utils
-from models.common.seq2seq_modules import LSTMAttention
-from models.common.beam import Beam
+import stanfordnlp.models.common.seq2seq_constant as constant
+from stanfordnlp.models.common import utils
+from stanfordnlp.models.common.seq2seq_modules import LSTMAttention
+from stanfordnlp.models.common.beam import Beam
 
 class Seq2SeqModel(nn.Module):
     """

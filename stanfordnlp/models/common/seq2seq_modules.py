@@ -7,7 +7,7 @@ import torch.nn as nn
 import math
 import numpy as np
 
-import models.common.seq2seq_constant as constant
+import stanfordnlp.models.common.seq2seq_constant as constant
 
 class BasicAttention(nn.Module):
     """

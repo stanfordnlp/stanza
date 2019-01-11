@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from models.common.packed_lstm import PackedLSTM
+from stanfordnlp.models.common.packed_lstm import PackedLSTM
 
 # Highway LSTM Cell (Zhang et al. (2018) Highway Long Short-Term Memory RNNs for Distant Speech Recognition)
 class HLSTMCell(nn.modules.rnn.RNNCellBase):
