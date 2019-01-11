@@ -6,16 +6,26 @@ from stanfordnlp.models.common import conll
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
+from stanfordnlp.pipeline.data import Document
+
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, pretrain, vocab=None, evaluation=False):
+
+    def __init__(self, input_src, batch_size, args, pretrain, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
 
-        assert filename.endswith('conllu'), "Loaded file must be conllu file."
-        self.conll, data = self.load_file(filename, evaluation=self.eval)
+        # check if input source is a file or a Document object
+        if isinstance(input_src, str):
+            filename = input_src
+            assert filename.endswith('conllu'), "Loaded file must be conllu file."
+            self.conll, data = self.load_file(filename, evaluation=self.eval)
+        elif isinstance(input_src, Document):
+            filename = None
+            doc = input_src
+            self.conll, data = self.load_doc(doc)
 
         # handle vocab
         if vocab is None:
@@ -24,7 +34,7 @@ class DataLoader:
             self.vocab = vocab
         self.pretrain_vocab = pretrain.vocab
 
-	# filter and sample data
+        # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
@@ -36,9 +46,10 @@ class DataLoader:
             random.shuffle(data)
         self.num_examples = len(data)
 
-	# chunk into batches
+        # chunk into batches
         self.data = self.chunk_batches(data)
-        print("{} batches created for {}.".format(len(self.data), filename))
+        if filename is not None:
+            print("{} batches created for {}.".format(len(self.data), filename))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -50,12 +61,12 @@ class DataLoader:
         lemmavocab = WordVocab(data, self.args['shorthand'], cutoff=7, idx=4, lower=True)
         deprelvocab = WordVocab(data, self.args['shorthand'], idx=6)
         vocab = MultiVocab({'char': charvocab,
-                'word': wordvocab,
-                'upos': uposvocab,
-                'xpos': xposvocab,
-                'feats': featsvocab,
-                'lemma': lemmavocab,
-                'deprel': deprelvocab})
+                            'word': wordvocab,
+                            'upos': uposvocab,
+                            'xpos': xposvocab,
+                            'feats': featsvocab,
+                            'lemma': lemmavocab,
+                            'deprel': deprelvocab})
         return vocab
 
     def preprocess(self, data, vocab, pretrain_vocab, args):
@@ -121,6 +132,10 @@ class DataLoader:
         conll_file = conll.CoNLLFile(filename)
         data = conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
         return conll_file, data
+
+    def load_doc(self, doc):
+        data = doc.conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
+        return doc.conll_file, data
 
     def __iter__(self):
         for i in range(self.__len__()):
