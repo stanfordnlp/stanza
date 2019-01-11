@@ -8,15 +8,18 @@ from stanfordnlp.models.tokenize.trainer import Trainer
 from stanfordnlp.models.tokenize.data import DataLoader
 from stanfordnlp.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
 
+
 def train(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
 
-    train_batches = DataLoader(args, args['json_file'], args['txt_file'], args['label_file'])
+    train_input_files = {'json': args['json_file'], 'txt': args['txt_file'], 'label': args['label_file']}
+    train_batches = DataLoader(args, input_files=train_input_files)
     vocab = train_batches.vocab
     args['vocab_size'] = len(vocab)
     dev_args = copy(args)
     dev_args['mode'] = 'predict'
-    dev_batches = DataLoader(dev_args, args['dev_json_file'], args['dev_txt_file'], args['dev_label_file'], vocab=vocab)
+    dev_input_files = {'json': args['dev_json_file'], 'txt': args['dev_txt_file'], 'label': args['dev_label_file']}
+    dev_batches = DataLoader(dev_args, input_files=dev_input_files, vocab=vocab)
 
     trainer = Trainer(args)
     trainer.vocab = vocab
@@ -65,6 +68,7 @@ def train(args):
 
     print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
 
+
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
     trainer = Trainer(args)
@@ -78,11 +82,13 @@ def evaluate(args):
     if args['cuda']:
         trainer.model.cuda()
 
-    batches = DataLoader(args, args['json_file'], args['txt_file'], args['label_file'], vocab=vocab)
+    eval_input_files = {'json': args['json_file'], 'txt': args['txt_file'], 'label': args['label_file']}
+    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab)
 
     oov_count, N, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
+
 
 if __name__ == '__main__':
     import argparse

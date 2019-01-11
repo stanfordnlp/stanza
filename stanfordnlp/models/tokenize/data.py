@@ -8,18 +8,28 @@ import torch
 
 from .vocab import Vocab
 
+
 class DataLoader:
-    def __init__(self, args, json_file, txt_file, label_file, vocab=None):
+    def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, vocab=None):
         self.args = args
+
+        # get input files
+        json_file = input_files['json']
+        txt_file = input_files['txt']
+        label_file = input_files['label']
 
         # Load data and process it
         if json_file is not None:
             with open(json_file) as f:
                 self.data = json.load(f)
         else:
-            assert txt_file is not None
-            with open(txt_file) as f:
-                text = ''.join(f.readlines()).rstrip()
+            # set up text from file or input string
+            assert txt_file is not None or input_text is not None
+            if input_text is None:
+                with open(txt_file) as f:
+                    text = ''.join(f.readlines()).rstrip()
+            else:
+                text = input_text
 
             if label_file is not None:
                 with open(label_file) as f:
@@ -96,6 +106,7 @@ class DataLoader:
 
     def next(self, eval_offsets=None, unit_dropout=0.0):
         null_feats = [0] * len(self.sentences[0][0][0][2])
+
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])

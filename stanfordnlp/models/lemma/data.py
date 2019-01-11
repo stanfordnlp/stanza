@@ -9,16 +9,25 @@ from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_floa
 from stanfordnlp.models.common import conll
 from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
 from stanfordnlp.models.lemma import edit
+from stanfordnlp.pipeline.data import Document
+
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, vocab=None, evaluation=False, conll_only=False):
+    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False, conll_only=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
 
-        assert filename.endswith('conllu'), "Loaded file must be conllu file."
-        self.conll, data = self.load_file(filename)
+        # check if input source is a file or a Document object
+        if isinstance(input_src, str):
+            filename = input_src
+            assert filename.endswith('conllu'), "Loaded file must be conllu file."
+            self.conll, data = self.load_file(filename)
+        elif isinstance(input_src, Document):
+            filename = None
+            doc = input_src
+            self.conll, data = self.load_doc(doc)
 
         if conll_only: # only load conll file
             return
@@ -31,7 +40,7 @@ class DataLoader:
             char_vocab, pos_vocab = self.init_vocab(data)
             self.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
 
-	# filter and sample data
+        # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
@@ -45,13 +54,13 @@ class DataLoader:
             data = [data[i] for i in indices]
         self.num_examples = len(data)
 
-	# chunk into batches
+        # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
         print("{} batches created for {}.".format(len(data), filename))
 
     def init_vocab(self, data):
-        assert self.eval == False, "Vocab file must exist for evaluation"
+        assert self.eval is False, "Vocab file must exist for evaluation"
         char_data = "".join(d[0] + d[2] for d in data)
         char_vocab = Vocab(char_data, self.args['lang'])
         pos_data = [d[1] for d in data]
@@ -99,9 +108,8 @@ class DataLoader:
         tgt_out = get_long_tensor(batch[2], batch_size)
         pos = torch.LongTensor(batch[3])
         edits = torch.LongTensor(batch[4])
-        assert tgt_in.size(1) == tgt_out.size(1), \
-                "Target input and output sequence sizes do not match."
-        return (src, src_mask, tgt_in, tgt_out, pos, edits, orig_idx)
+        assert tgt_in.size(1) == tgt_out.size(1), "Target input and output sequence sizes do not match."
+        return src, src_mask, tgt_in, tgt_out, pos, edits, orig_idx
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -111,3 +119,7 @@ class DataLoader:
         conll_file = conll.CoNLLFile(filename)
         data = conll_file.get(['word', 'upos', 'lemma'])
         return conll_file, data
+
+    def load_doc(self, doc):
+        data = doc.conll_file.get(['word', 'upos', 'lemma'])
+        return doc.conll_file, data
