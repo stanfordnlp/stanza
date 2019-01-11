@@ -8,16 +8,25 @@ import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.vocab import Vocab
+from stanfordnlp.pipeline.data import Document
+
 
 class DataLoader:
-    def __init__(self, filename, batch_size, args, vocab=None, evaluation=False):
+    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
 
-        assert filename.endswith('conllu'), "Loaded file must be conllu file."
-        self.conll, data = self.load_file(filename, evaluation=self.eval)
+        # check if input source is a file or a Document object
+        if isinstance(input_src, str):
+            filename = input_src
+            assert filename.endswith('conllu'), "Loaded file must be conllu file."
+            self.conll, data = self.load_file(filename, evaluation=self.eval)
+        elif isinstance(input_src, Document):
+            filename = None
+            doc = input_src
+            self.conll, data = self.load_doc(doc)
 
         # handle vocab
         if vocab is None:
@@ -25,7 +34,7 @@ class DataLoader:
         else:
             self.vocab = vocab
 
-	# filter and sample data
+        # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
@@ -39,10 +48,11 @@ class DataLoader:
             data = [data[i] for i in indices]
         self.num_examples = len(data)
 
-	# chunk into batches
+        # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
-        print("{} batches created for {}.".format(len(data), filename))
+        if filename is not None:
+            print("{} batches created for {}.".format(len(data), filename))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -103,4 +113,8 @@ class DataLoader:
         else:
             data = conll_file.get_mwt_expansions()
         return conll_file, data
+
+    def load_doc(self, doc):
+        data = [[c] for c in doc.conll_file.get_mwt_expansion_cands()]
+        return doc.conll_file, data
 
