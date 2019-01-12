@@ -32,7 +32,7 @@ If you use the CoreNLP server, please cite the software package and the respecti
 * torch 0.4.1 or above (only if you want to use the fully neural pipeline from the CoNLL 2018 Shared Task)
 
 ### Note about versions
-The versions listed below reflect what the code has been tested with.  It is possible older versions can be used in some cases.
+The versions listed above reflect what the code has been tested with.  It is possible older versions can be used in some cases.
 
 ### Note about GPU's
 The provided models only run on GPU's at this time.  It is possible to train models that run on a CPU.
