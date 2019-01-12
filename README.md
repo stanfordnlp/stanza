@@ -22,8 +22,14 @@ If you use the CoreNLP server, please cite the software package and the respecti
 
 ## Requirements
 
-Requires Python 3.6 or greater.
+Note: The versions listed below reflect what the code has been tested with.  It is possible
+older versions can be used in some cases.
 
+* bash 4.3.48 (the scripts for training and evaluating CoNLL 2018 models use new features in bash)
+
+* python 3.6.5
+
+* numpy 1.15.4
 * protobuf 3.6.1
 * requests 2.10.1
 * torch 0.4.1 or above (only if you want to use the fully neural pipeline from the CoNLL 2018 Shared Task)
