@@ -22,8 +22,11 @@ If you use the CoreNLP server, please cite the software package and the respecti
 
 ## Requirements
 
-Note: The versions listed below reflect what the code has been tested with.  It is possible
-older versions can be used in some cases.
+### versions
+The versions listed below reflect what the code has been tested with.  It is possible older versions can be used in some cases.
+
+### GPU
+The provided models require a GPU
 
 * bash 4.3.48 (the scripts for training and evaluating CoNLL 2018 models use new features in bash)
 
@@ -33,6 +36,8 @@ older versions can be used in some cases.
 * protobuf 3.6.1
 * requests 2.10.1
 * torch 0.4.1 or above (only if you want to use the fully neural pipeline from the CoNLL 2018 Shared Task)
+
+
 
 ## Setup
 
