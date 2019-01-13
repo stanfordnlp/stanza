@@ -3,9 +3,9 @@ Pipeline that runs tokenize,mwt,lemma,pos,depparse
 """
 
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
-from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor
 from stanfordnlp.pipeline.pos_processor import POSProcessor
+from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 
 
@@ -28,18 +28,18 @@ class Pipeline:
             print('with settings')
             print(mwt_config)
             self.processors['mwt'] = MWTProcessor(config=mwt_config)
-        if 'lemma' in self.processor_names:
-            lemma_config = self.filter_config('lemma', self.config)
-            print('loading lemmatizer...')
-            print('with settings')
-            print(lemma_config)
-            self.processors['lemma'] = LemmaProcessor(config=lemma_config)
         if 'pos' in self.processor_names:
             pos_config = self.filter_config('pos', self.config)
             print('loading part of speech tagger...')
             print('with settings')
             print(pos_config)
             self.processors['pos'] = POSProcessor(config=pos_config)
+        if 'lemma' in self.processor_names:
+            lemma_config = self.filter_config('lemma', self.config)
+            print('loading lemmatizer...')
+            print('with settings')
+            print(lemma_config)
+            self.processors['lemma'] = LemmaProcessor(config=lemma_config)
         if 'depparse' in self.processor_names:
             depparse_config = self.filter_config('depparse', self.config)
             print('loading dependency parser...')
