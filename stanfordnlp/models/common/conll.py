@@ -143,6 +143,16 @@ class CoNLLFile():
                 print("", file=outfile)
         return
 
+    def conll_as_string(self):
+        """ Return current conll contents as string
+        """
+        return_string = ""
+        for sent in self.sents:
+            for ln in sent:
+                return_string += ("\t".join(ln)+"\n")
+            return_string += "\n"
+        return return_string
+
     def write_conll_with_lemmas(self, lemmas, filename):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
         assert self.num_words == len(lemmas), "Num of lemmas does not match the number in original data file."
