@@ -69,7 +69,11 @@ class RobustService(object):
 
     def start(self):
         if self.start_cmd:
-            stderr = subprocess.DEVNULL if self.be_quiet else self.stderr
+            if self.be_quiet:
+                # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
+                stderr = open(os.devnull, 'w')
+            else:
+                stderr = self.stderr
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
                                            stdout=stderr)
