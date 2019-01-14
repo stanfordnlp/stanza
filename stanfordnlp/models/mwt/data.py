@@ -6,9 +6,9 @@ import torch
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanfordnlp.models.common.doc import Document
 from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.vocab import Vocab
-from stanfordnlp.pipeline.data import Document
 
 
 class DataLoader:
