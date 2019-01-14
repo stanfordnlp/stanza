@@ -136,11 +136,9 @@ class CoNLLFile():
     def write_conll(self, filename):
         """ Write current conll contents to file.
         """
+        conll_string = self.conll_as_string()
         with open(filename, 'w') as outfile:
-            for sent in self.sents:
-                for ln in sent:
-                    print("\t".join(ln), file=outfile)
-                print("", file=outfile)
+            outfile.write(conll_string)
         return
 
     def conll_as_string(self):
