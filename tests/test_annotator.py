@@ -4,6 +4,7 @@ A test annotator (tokens).
 """
 import six
 
+import pytest
 import time
 import requests
 import corenlp
@@ -106,6 +107,9 @@ def test_annotator_alive():
         annotator.terminate()
         annotator.join()
 
+# Ignore this test because the CustomAnnotator interface isn't a part of
+# StanfordCoreNLP yet.
+@pytest.mark.skip(reason="Ignore this test because the CustomAnnotator interface isn't a part of Stanford CoreNLP yet.")
 def test_tokenizer():
     cases = [(u"RT @ #happyfuncoding: this is a typical Twitter tweet :-)",
               u"rt @ #happyfuncoding : this is a typical twitter tweet :-)".split()),
