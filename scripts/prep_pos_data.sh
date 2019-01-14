@@ -1,7 +1,7 @@
 #!/bin/bash
+source scripts/config.sh
 treebank=$1
 shift
-UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18
 UDPIPEBASE=$UDBASE/UDPipe_out
 DATADIR=data/pos
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
