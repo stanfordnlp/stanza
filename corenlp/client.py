@@ -129,11 +129,11 @@ class CoreNLPClient(RobustService):
     DEFAULT_PROPERTIES = {}
     DEFAULT_OUTPUT_FORMAT = "serialized"
 
-    def __init__(self, start_server=True, 
-                 endpoint="http://localhost:9000", 
-                 timeout=5000, 
+    def __init__(self, start_server=True,
+                 endpoint="http://localhost:9000",
+                 timeout=15000,
                  threads=5,
-                 annotators=None, 
+                 annotators=None,
                  properties=None,
                  output_format=None,
                  stdout=sys.stdout,
@@ -142,6 +142,8 @@ class CoreNLPClient(RobustService):
                  be_quiet=True,
                  max_char_length=100000
                 ):
+        if isinstance(annotators, str):
+            annotators = annotators.split()
 
         if start_server:
             host, port = urlparse(endpoint).netloc.split(":")
@@ -161,6 +163,7 @@ class CoreNLPClient(RobustService):
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet)
+        self.timeout = timeout
         self.default_annotators = annotators or self.DEFAULT_ANNOTATORS
         self.default_properties = properties or self.DEFAULT_PROPERTIES
         self.default_output_format = output_format or self.DEFAULT_OUTPUT_FORMAT
@@ -185,7 +188,8 @@ class CoreNLPClient(RobustService):
 
             r = requests.post(self.endpoint,
                               params={'properties': str(properties)},
-                              data=buf, headers={'content-type': ctype})
+                              data=buf, headers={'content-type': ctype},
+                              timeout=(self.timeout*2)/1000)
             r.raise_for_status()
             return r
         except requests.HTTPError as e:
@@ -250,43 +254,46 @@ class CoreNLPClient(RobustService):
         return doc
 
     def tokensregex(self, text, pattern, filter=False, to_words=False, annotators=None, properties=None):
-        # Error occurs unless put properties in params
-        if properties is None:
-            properties = self.default_properties
-            properties.update({
-                'annotators': ','.join(annotators or self.default_annotators),
-                'inputFormat': 'text',
-                'outputFormat': 'serialized',
-                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
-            })
-        matches = self.__regex('/tokensregex', text, pattern, filter, properties)
+        # this is required for some reason
+        matches = self.__regex('/tokensregex', text, pattern, filter, annotators, properties)
         if to_words:
             matches = regex_matches_to_indexed_words(matches)
         return matches
 
-    def semgrex(self, text, pattern, filter=False, to_words=False):
-        matches = self.__regex('/semgrex', text, pattern, filter)
+    def semgrex(self, text, pattern, filter=False, to_words=False, annotators=None, properties=None):
+        matches = self.__regex('/semgrex', text, pattern, filter, annotators, properties)
         if to_words:
             matches = regex_matches_to_indexed_words(matches)
         return matches
 
-    def tregrex(self, text, pattern, filter=False):
-        return self.__regex('/tregex', text, pattern, filter)
+    def tregrex(self, text, pattern, filter=False, annotators=None, properties=None):
+        return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
-    def __regex(self, path, text, pattern, filter, properties):
+    def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
         """Send a regex-related request to the CoreNLP server.
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
         :param (str | unicode) pattern: regex pattern
         :param (bool) filter: option to filter sentences that contain matches, if false returns matches
+        :param properties: option to filter sentences that contain matches, if false returns matches
         :return: request result
         """
         self.ensure_alive()
+        if properties is None:
+            properties = self.default_properties
+            properties.update({
+                'annotators': ','.join(annotators or self.default_annotators),
+                'inputFormat': 'text',
+                'outputFormat': self.default_output_format,
+                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
+            })
+        elif "annotators" not in properties:
+            properties.update({'annotators': ','.join(annotators or self.default_annotators)})
 
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
         # this to ensure that the _regex call doesn't timeout.
-        # self.annotate(text)
+        self.annotate(text, properties=properties)
 
         try:
             # Error occurs unless put properties in params
@@ -304,7 +311,9 @@ class CoreNLPClient(RobustService):
                     'filter': filter,
                     'properties': str(properties)
                 }, data=text,
-                    headers={'content-type': ctype})
+                    headers={'content-type': ctype},
+                    timeout=(self.timeout*2)/1000,
+                    )
             r.raise_for_status()
             return json.loads(r.text)
         except requests.HTTPError as e:
