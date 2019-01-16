@@ -57,7 +57,7 @@ class Pipeline:
 
     def process(self, doc):
         # run the pipeline
-        for processor_name in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse']:
+        for processor_name in ['tokenize', 'mwt', 'pos', 'lemma', 'depparse']:
             if self.processors[processor_name] is not None:
                 self.processors[processor_name].process(doc)
         doc.load_annotations()
