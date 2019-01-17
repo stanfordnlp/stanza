@@ -28,10 +28,6 @@ The code has currently been tested with Python 3.6.8.
 
 ### Dependencies
 
-```
-numpy ply protobuf requests torch
-```
-
 | dependency   | version |
 | :----------- | :------ |
 | numpy        | 1.5.14  |
