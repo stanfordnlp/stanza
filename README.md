@@ -26,10 +26,6 @@ If you use the CoreNLP server, please cite the software package and the respecti
 
 The code has currently been tested with Python 3.6.8.
 
-### bash 4.3.48
-
-The bash scripts for training and evaluation have been tested with bash 4.3.48.  They may not work with earlier versions of bash.
-
 ### Dependencies
 
 ```
