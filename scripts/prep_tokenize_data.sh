@@ -18,6 +18,7 @@ else
 fi
 
 lang=`echo $short | sed -e 's#_.*##g'`
+echo "Preparing $set data..."
 python stanfordnlp/utils/prepare_tokenizer_data.py $UDBASE/$treebank/${short}-ud-${set}.txt $UDBASE/$treebank/${short}-ud-${set}.conllu -o data/tokenize/${short1}-ud-${set}.toklabels -m data/tokenize/${short1}-ud-${set}-mwt.json
 cp $UDBASE/$treebank/${short}-ud-${set}.conllu data/tokenize/${short1}.${set}.gold.conllu
 cp $UDBASE/$treebank/${short}-ud-${set}.txt data/tokenize/${short1}.${set}.txt

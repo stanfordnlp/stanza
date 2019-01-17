@@ -106,4 +106,4 @@ else:
     with open(args.mwt_output, 'w') as f:
         json.dump(list(mwts.items()), f)
 
-    print('{} MWTs in the training set'.format(len(mwts)))
+    print('{} unique MWTs found in data'.format(len(mwts)))

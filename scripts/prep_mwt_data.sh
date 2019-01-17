@@ -26,6 +26,7 @@ dev_in_file=$DATADIR/${short}.dev.in.conllu
 dev_gold_file=$DATADIR/${short}.dev.gold.conllu
 # copy conllu file if exists; otherwise create empty files
 if [ -e $train_conllu ]; then
+    echo "Preparing training data..."
     cp $train_conllu $train_in_file
     bash scripts/prep_tokenize_data.sh $src_treebank train
 else
@@ -33,6 +34,7 @@ else
 fi
 
 if [ -e $dev_conllu ]; then
+    echo "Preparing dev data..."
     python stanfordnlp/utils/contract_mwt.py $dev_conllu $dev_in_file
     bash scripts/prep_tokenize_data.sh $src_treebank dev
 else
