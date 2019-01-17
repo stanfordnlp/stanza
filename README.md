@@ -1,5 +1,5 @@
 # stanfordnlp
-The Stanford NLP group's official Python code.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
+The Stanford NLP Group's official Python library.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
 
 ### References
 
@@ -20,33 +20,51 @@ If you use the neural tokenizer, multi-word token expansion model, lemmatizer, P
 ```
 If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
 
-## Requirements
-
-* bash 4.3.48 (the scripts for training and evaluating CoNLL 2018 models use new features in bash)
-
-* python 3.6.5
-
-* numpy 1.15.4
-* protobuf 3.6.1
-* requests 2.10.1
-* torch 0.4.1 or above (only if you want to use the fully neural pipeline from the CoNLL 2018 Shared Task)
-
-### Note about versions
-The versions listed above reflect what the code has been tested with.  It is possible older versions can be used in some cases.
-
-### Note about GPU's
-The provided models only run on GPU's at this time.  It is possible to train models that run on a CPU.
-
-
 ## Setup
 
-You can install the package as follows:
+### Python 3.6.8
+
+The code has currently been tested with Python 3.6.8.
+
+### bash 4.3.48
+
+The bash scripts for training and evaluation have been tested with bash 4.3.48.  They may not work with earlier versions of bash.
+
+### Dependencies
+
+```
+numpy ply protobuf requests torch
+```
+
+| dependency   | version |
+| :----------- | :------ |
+| numpy        | 1.5.14  |
+| ply          | 3.11    |
+| protobuf     | 3.6.1   |
+| requests     | 2.21.0  |
+| torch        | 1.0.0   |
+
+### pip
+
+#### from PyPI
+
+```
+pip install stanfordnlp
+```
+
+#### from source
 
 ```
 git clone git@github.com:stanfordnlp/stanfordnlp.git
 cd stanfordnlp
 pip install -e .
 ```
+
+### Note about versions
+The versions listed above reflect what the code has been tested with.  It is possible older versions can be used in some cases.
+
+### Note about GPU's
+The provided models only run on GPU's at this time.  It is possible to train models that run on a CPU.
 
 ## Using the Fully Neural Pipeline
 
