@@ -20,13 +20,15 @@ DEFAULT_LEMMA_CONFIG = {
     'lang': 'en_ewt',
     'cuda': True,
     'max_seqlen': 1000,
+    'beam_size': 1,
     'feat_funcs': ['space_before', 'capitalized', 'all_caps', 'numeric'],
     'feat_dim': 4,
     'model_path': 'saved_models/lemma/en_ewt_lemmatizer.pt',
     'batch_size': 1,
+    'edit': True,
+    'ensemble_dict': True,
     'cpu': False
 }
-
 
 class LemmaProcessor:
     def __init__(self, config={}):
@@ -47,7 +49,24 @@ class LemmaProcessor:
     def process(self, doc):
         batch = DataLoader(doc, self.args['batch_size'], self.loaded_args, vocab=self.vocab, evaluation=True)
         dict_preds = self.trainer.predict_dict(batch.conll.get(['word', 'upos']))
-        doc.conll_file = conll.CoNLLFile(input_str=self.write_conll_with_lemmas(batch.conll, dict_preds))
+        if self.loaded_args.get('dict_only', False):
+            preds = dict_preds
+        else:
+            print("Running the seq2seq model...")
+            preds = []
+            edits = []
+            for i, b in enumerate(batch):
+                ps, es = self.trainer.predict(b, self.args['beam_size'])
+                preds += ps
+                if es is not None:
+                    edits += es
+            preds = self.trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
+            
+            if self.loaded_args.get('ensemble_dict', False):
+                print("[Ensembling dict with seq2seq lemmatizer...]")
+                preds = self.trainer.ensemble(batch.conll.get(['word', 'upos']), preds)   
+        
+        doc.conll_file = conll.CoNLLFile(input_str=self.write_conll_with_lemmas(batch.conll, preds))
 
     def write_conll_with_lemmas(self, input_conll, lemmas):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
