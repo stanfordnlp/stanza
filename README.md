@@ -30,7 +30,7 @@ The code has currently been tested with Python 3.6.8.
 
 | dependency   | version |
 | :----------- | :------ |
-| numpy        | 1.5.14  |
+| numpy        | 1.16.0  |
 | ply          | 3.11    |
 | protobuf     | 3.6.1   |
 | requests     | 2.21.0  |
