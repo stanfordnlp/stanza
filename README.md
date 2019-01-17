@@ -161,7 +161,7 @@ english_doc = Document('Barack Obama was born in Hawaii.  He was elected preside
 
 # example configs
 english_config = {
-    'processors': 'tokenize,lemma,pos,depparse',
+    'processors': 'tokenize,pos,lemma,depparse',
     'tokenize.model_path': 'saved_models/tokenize/en_ewt_tokenizer.pt',
     'lemma.model_path': 'saved_models/lemma/en_ewt_lemmatizer.pt',
     'pos.pretrain_path': 'saved_models/pos/en_ewt_tagger.pretrain.pt',
