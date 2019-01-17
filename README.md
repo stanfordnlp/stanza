@@ -36,6 +36,12 @@ The code has currently been tested with Python 3.6.8.
 | requests     | 2.21.0  |
 | torch        | 1.0.0   |
 
+### conda
+
+```
+conda install stanfordnlp
+```
+
 ### pip
 
 #### from PyPI
