@@ -50,6 +50,9 @@ class Document:
         """ Integrate info from conllu"""
         self._sentences = [Sentence(token_list) for token_list in self.conll_file.sents]
 
+    def write_conll_to_file(self, file_path):
+        """ write conll contents to file"""
+        self.conll_file.write_conll(file_path)
 
 class Sentence:
 
