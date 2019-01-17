@@ -194,6 +194,13 @@ for dep_edge in english_doc.sentences[0].dependencies:
     print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
 ```
 
+### Batching To Maximize Pipeline Speed
+
+To maximize speed performance, it is essential to run the pipeline on batches of documents. Running a for loop
+on one sentence at a time will be very slow. The best approach at this time is to concatenate documents together, 
+with each document separated by a blank line.  The tokenizer will recognize blank lines as sentence breaks.
+We are actively working on improving multi-document processing.
+
 ### Training your own models
 
 The following models can be trained with this code
