@@ -10,8 +10,9 @@ from .vocab import Vocab
 
 
 class DataLoader:
-    def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, vocab=None):
+    def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False):
         self.args = args
+        self.eval = evaluation
 
         # get input files
         json_file = input_files['json']
@@ -82,7 +83,7 @@ class DataLoader:
 
         current = []
         for unit, label in para:
-            label1 = label if self.args['mode'] == 'train' else 0
+            label1 = label if not self.eval else 0
             current += [[unit, label]]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
@@ -91,7 +92,7 @@ class DataLoader:
                 current = []
 
         if len(current) > 0:
-            if self.args['mode'] == 'predict' or len(current) <= self.args['max_seqlen']:
+            if self.eval or len(current) <= self.args['max_seqlen']:
                 res += [process_and_featurize(current)]
 
         return res
@@ -111,15 +112,15 @@ class DataLoader:
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])
 
-            assert self.args['mode'] == 'predict' or len(res) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(res), ' '.join(["{}/{}".format(*x) for x in self.sentences[pid][sid]]))
+            assert self.eval or len(res) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(res), ' '.join(["{}/{}".format(*x) for x in self.sentences[pid][sid]]))
             for sid1 in range(sid+1, len(self.sentences[pid])):
                 res += self.sentences[pid][sid1]
 
-                if self.args['mode'] != 'predict' and len(res) >= self.args['max_seqlen']:
+                if not self.eval and len(res) >= self.args['max_seqlen']:
                     res = res[:self.args['max_seqlen']]
                     break
 
-            if unit_dropout > 0 and self.args['mode'] == 'train':
+            if unit_dropout > 0 and not self.eval:
                 unkid = self.vocab.unit2id('<UNK>')
                 res = [(unkid, x[1], x[2], '<UNK>') if random.random() < unit_dropout else x for x in res]
 
