@@ -103,10 +103,7 @@ def train(args):
             }
     dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True)
 
-    trainer = Trainer(args)
-    trainer.vocab = vocab
-    if args['cuda']:
-        trainer.model.cuda()
+    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
         load_name = "{}/{}".format(args['save_dir'], args['load_name'])
@@ -152,16 +149,12 @@ def train(args):
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    trainer = Trainer(args)
-    trainer.load(args['save_name'])
-    loaded_args = trainer.args
-    vocab = trainer.vocab
-    args['vocab_size'] = len(vocab)
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(model_file=args['save_name'], use_cuda=use_cuda)
+    loaded_args, vocab = trainer.args, trainer.vocab
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
             args[k] = loaded_args[k]
-    if args['cuda']:
-        trainer.model.cuda()
 
     eval_input_files = {
             'json': args['json_file'], 

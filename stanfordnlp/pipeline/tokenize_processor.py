@@ -34,17 +34,12 @@ class TokenizeProcessor:
         for key in config.keys():
             self.args[key] = config[key]
         # set up trainer
-        self.trainer = Trainer(self.args)
-        self.trainer.load(self.args['model_path'])
+        self.trainer = Trainer(model_file=self.args['model_path'])
         # set configurations from loaded model
-        loaded_args = self.trainer.args
-        self.vocab = self.trainer.vocab
-        self.args['vocab_size'] = len(self.vocab)
+        loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
         for k in loaded_args:
             if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
                 self.args[k] = loaded_args[k]
-        if self.args['cuda']:
-            self.trainer.model.cuda()
         # set up misc
         self.mwt_dict = None
 
