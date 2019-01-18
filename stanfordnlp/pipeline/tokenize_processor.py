@@ -44,7 +44,7 @@ class TokenizeProcessor:
         self.mwt_dict = None
 
     def build_input_data(self, text):
-        return DataLoader(self.args, input_text=text, vocab=self.vocab)
+        return DataLoader(self.args, input_text=text, vocab=self.vocab, evaluation=True)
 
     def process(self, doc):
         return_sentences = []

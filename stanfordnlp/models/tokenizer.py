@@ -161,7 +161,7 @@ def evaluate(args):
             'txt': args['txt_file'], 
             'label': args['label_file']
             }
-    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab)
+    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
 
     oov_count, N, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
