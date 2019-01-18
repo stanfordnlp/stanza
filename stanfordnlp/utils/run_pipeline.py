@@ -102,5 +102,5 @@ if __name__ == '__main__':
     pipeline.process(doc)
     # write conll to file
     doc.write_conll_to_file(output_file_path)
-    print('done.'  
+    print('done.')
     print('results written to: '+output_file_path)
