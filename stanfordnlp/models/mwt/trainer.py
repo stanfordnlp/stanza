@@ -30,7 +30,7 @@ class Trainer(object):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load from file
-            self.load(model_file)
+            self.load(model_file, use_cuda)
         else:
             self.args = args
             self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
@@ -133,7 +133,7 @@ class Trainer(object):
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
 
-    def load(self, filename):
+    def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -142,7 +142,7 @@ class Trainer(object):
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args)
+            self.model = Seq2SeqModel(self.args, use_cuda=use_cuda)
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None

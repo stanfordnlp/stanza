@@ -104,7 +104,7 @@ def train(args):
         exit()
 
     # train a dictionary-based MWT expander
-    trainer = Trainer(args=args, vocab=vocab)
+    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     print("Training dictionary-based MWT expander...")
     trainer.train_dict(train_batch.conll.get_mwt_expansions())
     print("Evaluating on dev set...")
@@ -191,13 +191,13 @@ def evaluate(args):
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
     
     # load model
-    trainer = Trainer(model_file=model_file)
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
-    loaded_args['cuda'] = args['cuda'] and not args['cpu']
     print('max_dec_len:', loaded_args['max_dec_len'])
 
     # load data
