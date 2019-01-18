@@ -15,9 +15,9 @@ from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.lemma import edit
 from stanfordnlp.models.lemma.vocab import MultiVocab
 
-def unpack_batch(batch, args):
+def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
-    if args['cuda']:
+    if use_cuda:
         inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:6]]
     else:
         inputs = [Variable(b) if b is not None else None for b in batch[:6]]
@@ -26,14 +26,15 @@ def unpack_batch(batch, args):
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None):
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
+        self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file)
+            self.load(model_file, use_cuda)
         else:
             # build model from scratch
             self.args = args
-            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
+            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix, use_cuda=use_cuda)
             self.vocab = vocab
             # dict-based components
             self.word_dict = dict()
@@ -45,13 +46,16 @@ class Trainer(object):
             else:
                 self.crit = loss.SequenceLoss(self.vocab['char'].size)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-            if self.args['cuda']:
+            if use_cuda:
                 self.model.cuda()
                 self.crit.cuda()
+            else:
+                self.model.cpu()
+                self.crit.cpu()
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch(batch, self.args)
+        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
         src, src_mask, tgt_in, tgt_out, pos, edits = inputs
 
         if eval:
@@ -76,7 +80,7 @@ class Trainer(object):
         return loss_val
 
     def predict(self, batch, beam_size=1):
-        inputs, orig_idx = unpack_batch(batch, self.args)
+        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
         src, src_mask, tgt, tgt_mask, pos, edits = inputs
 
         self.model.eval()
@@ -172,7 +176,7 @@ class Trainer(object):
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
 
-    def load(self, filename):
+    def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -181,7 +185,7 @@ class Trainer(object):
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args)
+            self.model = Seq2SeqModel(self.args, use_cuda=use_cuda)
             self.model.load_state_dict(checkpoint['model'])
         else:
             self.model = None

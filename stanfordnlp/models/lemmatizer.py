@@ -114,7 +114,7 @@ def train(args):
 
     # start training
     # train a dictionary-based lemmatizer
-    trainer = Trainer(args=args, vocab=vocab)
+    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     print("[Training dictionary-based lemmatizer...]")
     trainer.train_dict(train_batch.conll.get(['word', 'upos', 'lemma']))
     print("Evaluating on dev set...")
@@ -198,13 +198,13 @@ def evaluate(args):
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
 
     # load model
-    trainer = Trainer(model_file=model_file)
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
-    loaded_args['cuda'] = args['cuda'] and not args['cpu']
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))

@@ -17,7 +17,7 @@ class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
     """
-    def __init__(self, args, emb_matrix=None):
+    def __init__(self, args, emb_matrix=None, use_cuda=False):
         super().__init__()
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
@@ -27,7 +27,7 @@ class Seq2SeqModel(nn.Module):
         self.dropout = args['dropout']
         self.pad_token = constant.PAD_ID
         self.max_dec_len = args['max_dec_len']
-        self.use_cuda = args['cuda']
+        self.use_cuda = use_cuda
         self.top = args.get('top', 1e10)
         self.args = args
         self.emb_matrix = emb_matrix
@@ -92,6 +92,14 @@ class Seq2SeqModel(nn.Module):
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)
+
+    def cuda(self):
+        super().cuda()
+        self.use_cuda = True
+
+    def cpu(self):
+        super().cpu()
+        self.use_cuda = False
 
     def zero_state(self, inputs):
         batch_size = inputs.size(0)
