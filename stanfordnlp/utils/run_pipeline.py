@@ -4,12 +4,10 @@ script for running full pipeline on command line
 
 import argparse
 import os
-import subprocess
-import sys
-import urllib.request
 
 from pathlib import Path
 from stanfordnlp.pipeline import Document, Pipeline
+from stanfordnlp.utils import download
 
 # all languages with mwt
 MWT_LANGUAGES = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_gsd', 'el_gdt', 'es_ancora', 'fa_seraji', 'fi_ftb', 'fr_gsd', 'fr_sequoia', 'gl_ctg', 'gl_treegal', 'he_htb', 'hy_armtdp', 'it_isdt', 'it_postwita', 'kk_ktb', 'pl_sz', 'pt_bosque', 'tr_imst']
@@ -42,31 +40,6 @@ def load_config(config_file_path):
             loaded_config[config_key] = config_value.rstrip().lstrip()
     return loaded_config
 
-
-# ensure a model is present
-def ensure_models_for_lang(lang, model_data_path):
-    # create model data dir if necessary
-    if not os.path.exists(model_data_path):
-        subprocess.call('mkdir '+model_data_path, shell=True)
-    # check for the tokenizer
-    if not os.path.exists(model_data_path+'/'+lang+'_models/'+lang+'_tokenizer.pt'):
-        print('Could not find models for: '+lang)
-        print('Would you like to download the models for: '+lang+' now? (yes/no)')
-        response = input()
-        if response in ['yes', 'y']:
-            # download the models zip file
-            model_zip_file_name = lang+'_models.zip'
-            download_url = 'http://nlp.stanford.edu/software/conll_2018/'+model_zip_file_name
-            urllib.request.urlretrieve(download_url, model_data_path+'/'+model_zip_file_name)
-            # unzip the models
-            subprocess.call('cd '+model_data_path+' ; unzip '+model_zip_file_name, shell=True)
-            # delete the zip file
-            subprocess.call('rm '+model_data_path+'/'+model_zip_file_name, shell=True)
-        else:
-            print('Okay the models will not be downloaded at this time.  Please download the models before running the pipeline.  Exiting...')
-            sys.exit()
-
-
 if __name__ == '__main__':
     # get arguments
     # determine home directory
@@ -81,7 +54,11 @@ if __name__ == '__main__':
     # set up output file
     output_file_path = args.text_file+'.out'
     # check for models
-    ensure_models_for_lang(args.language,args.models_dir)
+    print('checking for models...')
+    lang_models_dir = '%s/%s_models' % (args.models_dir,args.language)
+    if not os.path.exists(lang_models_dir):
+        print('could not find: '+lang_models_dir)
+        download(args.language, resource_dir=args.models_dir)
     # set up pipeline
     if args.config is not None:
         print('loading pipeline configs from: '+args.config)
@@ -104,3 +81,4 @@ if __name__ == '__main__':
     doc.write_conll_to_file(output_file_path)
     print('done.')
     print('results written to: '+output_file_path)
+
