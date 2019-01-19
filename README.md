@@ -32,6 +32,7 @@ The code has currently been tested with Python 3.6.8.
 
 | dependency   | version |
 | :----------- | :------ |
+| clint        | 0.5.1   |
 | numpy        | 1.16.0  |
 | ply          | 3.11    |
 | protobuf     | 3.6.1   |
