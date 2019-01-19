@@ -16,7 +16,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.1',
+    version='0.1.0',
 
     description='Official Stanford NLP Python Library',
     long_description=long_description,
@@ -29,7 +29,7 @@ setup(
     author_email='jebolton@stanford.edu',
 
     # Choose your license
-    license='GPL',
+    license='Apache License 2.0',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -59,7 +59,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'ply', 'protobuf', 'requests', 'torch'],
+    install_requires=['clint', 'numpy', 'ply', 'protobuf', 'requests', 'torch'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
