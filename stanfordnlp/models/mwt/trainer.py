@@ -7,7 +7,6 @@ from collections import Counter
 import torch
 from torch import nn
 import torch.nn.init as init
-from torch.autograd import Variable
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
@@ -18,9 +17,9 @@ from stanfordnlp.models.mwt.vocab import Vocab
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
     if use_cuda:
-        inputs = [Variable(b.cuda()) if b is not None else None for b in batch[:4]]
+        inputs = [b.cuda() if b is not None else None for b in batch[:4]]
     else:
-        inputs = [Variable(b) if b is not None else None for b in batch[:4]]
+        inputs = [b if b is not None else None for b in batch[:4]]
     orig_idx = batch[4]
     return inputs, orig_idx
 
