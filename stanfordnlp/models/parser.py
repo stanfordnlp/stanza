@@ -115,7 +115,7 @@ def train(args):
         exit()
 
     print("Training parser...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain)
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
 
     global_step = 0
     max_steps = args['max_steps']
@@ -202,14 +202,15 @@ def evaluate(args):
     pretrain = Pretrain(pretrain_file)
 
     # load model
-    trainer = Trainer(pretrain=pretrain, model_file=model_file)
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
     for k in args:
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand'] or k == 'mode':
             loaded_args[k] = args[k]
-    loaded_args['cuda'] = args['cuda'] and not args['cpu']
+
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
