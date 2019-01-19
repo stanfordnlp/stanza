@@ -4,7 +4,7 @@ from copy import copy
 import numpy as np
 import torch
 
-from stanfordnlp.models.common import param, utils
+from stanfordnlp.models.common import utils
 from stanfordnlp.models.tokenize.trainer import Trainer
 from stanfordnlp.models.tokenize.data import DataLoader
 from stanfordnlp.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
