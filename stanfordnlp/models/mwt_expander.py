@@ -67,7 +67,7 @@ def main():
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
-    random.seed(1234)
+    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
     elif args.cuda:
