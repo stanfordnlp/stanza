@@ -1,76 +1,48 @@
-from datetime import datetime
-from stanfordnlp.pipeline import Document, Pipeline
+"""
+basic demo script
+"""
 
-# example documents
-english_doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
-french_doc = Document('Emmanuel Macron est né à Amiens. Il a été élu président en 2017.')
+import argparse
+import os
 
-# example configs
-english_config = {
-    'processors': 'tokenize,pos,lemma,depparse',
-    'tokenize.model_path': 'saved_models/tokenize/en_ewt_tokenizer.pt',
-    'lemma.model_path': 'saved_models/lemma/en_ewt_lemmatizer.pt',
-    'pos.pretrain_path': 'saved_models/pos/en_ewt_tagger.pretrain.pt',
-    'pos.model_path': 'saved_models/pos/en_ewt_tagger.pt',
-    'depparse.pretrain_path': 'saved_models/depparse/en_ewt_parser.pretrain.pt',
-    'depparse.model_path': 'saved_models/depparse/en_ewt_parser.pt'
-}
+from pathlib import Path
+from stanfordnlp import Document, Pipeline
+from stanfordnlp.utils.resources import build_default_config
 
-french_config = {
-    'processors': 'tokenize,mwt,pos,lemma,depparse',
-    'tokenize.model_path': 'saved_models/tokenize/fr_gsd_tokenizer.pt',
-    'mwt.model_path': 'saved_models/mwt/fr_gsd_mwt_expander.pt',
-    'lemma.model_path': 'saved_models/lemma/fr_gsd_lemmatizer.pt',
-    'pos.pretrain_path': 'saved_models/pos/fr_gsd_tagger.pretrain.pt',
-    'pos.model_path': 'saved_models/pos/fr_gsd_tagger.pt',
-    'depparse.pretrain_path': 'saved_models/depparse/fr_gsd_parser.pretrain.pt',
-    'depparse.model_path': 'saved_models/depparse/fr_gsd_parser.pt'
-}
 
-print('---')
-print('load pipeline')
-print('\tstart: '+str(datetime.now()))
+if __name__ == '__main__':
+    # get arguments
+    # determine home directory
+    home_dir = str(Path.home())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data', 
+                        default=home_dir+'/stanfordnlp_data')
+    args = parser.parse_args()
+    # download the models
+    if not os.path.exists(args.models_dir+'/en_ewt_models'):
+        download('en_ewt')
+    # set up a pipeline
+    print('---')
+    print('Building pipeline...')
+    print('with config: ')
+    pipeline_config = build_default_config('en_ewt', args.models_dir)
+    print(pipeline_config)
+    print('')
+    pipeline = Pipeline(config=pipeline_config)
+    # set up document
+    doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
+    # run pipeline on the document
+    pipeline.process(doc)
+    # access nlp annotations
+    print('')
+    print('---')
+    print('tokens of first sentence: ')
+    for tok in doc.sentences[0].tokens:
+        print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
+    print('')
+    print('---')
+    print('dependency parse of first sentence: ')
+    for dep_edge in doc.sentences[0].dependencies:
+        print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
+    print('')
 
-# english example
-english_pipeline = Pipeline(config=english_config)
-english_pipeline.process(english_doc)
-
-print('\tend: '+str(datetime.now()))
-
-print('---')
-print('english example')
-print('---')
-print('tokens of first English sentence')
-for tok in english_doc.sentences[0].tokens:
-    print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
-print('---')
-print('dependency parse of first English sentence')
-for dep_edge in english_doc.sentences[0].dependencies:
-    print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
-print('---')
-print('run on a second english document')
-second_english_doc = Document('I am a sentence.')
-english_pipeline.process(second_english_doc)
-print('---')
-print('tokens of second English document')
-for tok in second_english_doc.sentences[0].tokens:
-    print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
-print('---')
-print('dependency parse of second English document')
-for dep_edge in english_doc.sentences[0].dependencies:
-    print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
-
-# french example
-french_pipeline = Pipeline(config=french_config)
-french_pipeline.process(french_doc)
-
-print('---')
-print('french example')
-print('---')
-print('tokens of first French sentence')
-for tok in french_doc.sentences[0].tokens:
-    print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
-print('---')
-print('dependency parse of first French sentence')
-for dep_edge in french_doc.sentences[0].dependencies:
-    print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
