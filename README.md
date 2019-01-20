@@ -148,7 +148,7 @@ Once you have trained models, you can run a full NLP pipeline natively in Python
 
 The following demo code demonstrates how to run a pipeline
 
-```
+```python
 from pathlib import Path
 from stanfordnlp import Document, Pipeline
 from stanfordnlp.utils.resources import build_default_config
@@ -265,7 +265,7 @@ There are  a few initial setup steps.
 
 Here is some example Python code that will start a server, make an annotation request, and walk through the final annotation.
 
-```
+```python
 from stanfordnlp.server import CoreNLPClient
 
 # example text
