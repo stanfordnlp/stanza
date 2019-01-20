@@ -59,9 +59,6 @@ pip install -e .
 ### Note about versions
 The versions listed above reflect what the code has been tested with.  It is possible older versions can be used in some cases.
 
-### Note about GPU's
-The provided models only run on GPU's at this time.  It is possible to train models that run on a CPU.
-
 ## Using the Fully Neural Pipeline
 
 ### Trained Models
