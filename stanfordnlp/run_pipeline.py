@@ -7,6 +7,7 @@ import os
 
 from pathlib import Path
 from stanfordnlp import download, Document, Pipeline
+from stanfordnlp.utils.resources import build_default_config, load_config
 
 # all languages with mwt
 MWT_LANGUAGES = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_gsd', 'el_gdt', 'es_ancora', 'fa_seraji', 'fi_ftb', 'fr_gsd', 'fr_sequoia', 'gl_ctg', 'gl_treegal', 'he_htb', 'hy_armtdp', 'it_isdt', 'it_postwita', 'kk_ktb', 'pl_sz', 'pt_bosque', 'tr_imst']
@@ -14,30 +15,6 @@ MWT_LANGUAGES = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_g
 # map processor name to file ending
 processor_to_ending = {'tokenize': 'tokenizer', 'lemma': 'lemmatizer', 'pos': 'tagger', 'depparse': 'parser'}
 
-# given a language and models path, build a default configuration
-def build_default_config(lang,models_path):
-    default_config = {}
-    if lang in MWT_LANGUAGES:
-        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
-    else:
-        default_config['processors'] = 'tokenize,pos,lemma,depparse'
-    lang_dir = models_path+'/'+lang+'_models'
-    for processor in default_config['processors'].split(','):
-        model_file_ending = processor_to_ending[processor]+'.pt'
-        default_config[processor+'.model_path'] = lang_dir+'/'+lang+'_'+model_file_ending
-        if processor in ['pos', 'depparse']:
-            pretrain_file_ending = processor_to_ending[processor]+'.pretrain.pt'
-            default_config[processor+'.pretrain_path'] = lang_dir+'/'+lang+'_'+pretrain_file_ending
-    return default_config
-
-# load a config from file
-def load_config(config_file_path):
-    loaded_config = {}
-    with open(config_file_path) as config_file:
-        for config_line in config_file:
-            config_key, config_value = config_line.split(':')
-            loaded_config[config_key] = config_value.rstrip().lstrip()
-    return loaded_config
 
 if __name__ == '__main__':
     # get arguments

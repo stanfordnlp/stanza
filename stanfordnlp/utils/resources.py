@@ -21,6 +21,38 @@ conll_shorthands = ['af_afribooms', 'ar_padt', 'bg_btb', 'bxr_bdt', 'ca_ancora',
 # all languages with mwt
 mwt_languages = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_gsd', 'el_gdt', 'es_ancora', 'fa_seraji', 'fi_ftb', 'fr_gsd', 'fr_sequoia', 'gl_ctg', 'gl_treegal', 'he_htb', 'hy_armtdp', 'it_isdt', 'it_postwita', 'kk_ktb', 'pl_sz', 'pt_bosque', 'tr_imst']
 
+# map processor name to file ending
+processor_to_ending = {'tokenize': 'tokenizer', 'lemma': 'lemmatizer', 'pos': 'tagger', 'depparse': 'parser'}
+
+# functions for handling configs
+
+# given a language and models path, build a default configuration
+def build_default_config(lang, models_path):
+    default_config = {}
+    if lang in mwt_languages:
+        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
+    else:
+        default_config['processors'] = 'tokenize,pos,lemma,depparse'
+    lang_dir = models_path+'/'+lang+'_models'
+    for processor in default_config['processors'].split(','):
+        model_file_ending = processor_to_ending[processor]+'.pt'
+        default_config[processor+'.model_path'] = lang_dir+'/'+lang+'_'+model_file_ending
+        if processor in ['pos', 'depparse']:
+            pretrain_file_ending = processor_to_ending[processor]+'.pretrain.pt'
+            default_config[processor+'.pretrain_path'] = lang_dir+'/'+lang+'_'+pretrain_file_ending
+    return default_config
+
+
+# load a config from file
+def load_config(config_file_path):
+    loaded_config = {}
+    with open(config_file_path) as config_file:
+        for config_line in config_file:
+            config_key, config_value = config_line.split(':')
+            loaded_config[config_key] = config_value.rstrip().lstrip()
+    return loaded_config
+
+
 # download a ud models zip file
 def download_ud_model(lang_name, resource_dir=HOME_DIR+'/stanfordnlp_resources', should_unzip=True):
     # ask if user wants to download
@@ -62,11 +94,13 @@ def download_ud_model(lang_name, resource_dir=HOME_DIR+'/stanfordnlp_resources',
         subprocess.call('rm '+download_file_path, shell=True)
         print('Deleted zipfile.')
 
+
 # unzip a ud models zip file
 def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
     print('Unzipping models file for: '+lang_name)
     with zipfile.ZipFile(zip_file_src, "r") as zip_ref:
         zip_ref.extractall(zip_file_target)
+
 
 # main download function
 def download(download_label, resource_dir=HOME_DIR+'/stanfordnlp_resources'):
