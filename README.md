@@ -18,7 +18,7 @@ If you use the neural tokenizer, multi-word token expansion model, lemmatizer, P
   url       = {http://www.aclweb.org/anthology/K18-2016}
 }
 ```
-The PyTorch implementation of the neural pipeline in this repostory is due to [Peng Qi](https://qipeng.me) and [Yuhao Zhang](https://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/), who is the main contributor to the [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
+The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](https://qipeng.me) and [Yuhao Zhang](https://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/), who is the main contributor to the [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
 
 If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
 
@@ -152,44 +152,47 @@ Once you have trained models, you can run a full NLP pipeline natively in Python
 The following demo code demonstrates how to run a pipeline
 
 ```
-from stanfordnlp.pipeline import Document, Pipeline
+from pathlib import Path
+from stanfordnlp import Document, Pipeline
+from stanfordnlp.utils.resources import build_default_config
 
-# example documents
-english_doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
 
-# example configs
-english_config = {
-    'processors': 'tokenize,pos,lemma,depparse',
-    'tokenize.model_path': 'saved_models/tokenize/en_ewt_tokenizer.pt',
-    'lemma.model_path': 'saved_models/lemma/en_ewt_lemmatizer.pt',
-    'pos.pretrain_path': 'saved_models/pos/en_ewt_tagger.pretrain.pt',
-    'pos.model_path': 'saved_models/pos/en_ewt_tagger.pt',
-    'depparse.pretrain_path': 'saved_models/depparse/en_ewt_parser.pretrain.pt',
-    'depparse.model_path': 'saved_models/depparse/en_ewt_parser.pt'
-}
+if __name__ == '__main__':
+    # get arguments
+    # determine home directory
+    home_dir = str(Path.home())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data',
+                        default=home_dir+'/stanfordnlp_data')
+    args = parser.parse_args()
+    # download the models
+    if not os.path.exists(args.models_dir+'/en_ewt_models'):
+        download('en_ewt')
+    # set up a pipeline
+    print('---')
+    print('Building pipeline...')
+    print('with config: ')
+    pipeline_config = build_default_config('en_ewt', args.models_dir)
+    print(pipeline_config)
+    print('')
+    pipeline = Pipeline(config=pipeline_config)
+    # set up document
+    doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
+    # run pipeline on the document
+    pipeline.process(doc)
+    # access nlp annotations
+    print('')
+    print('---')
+    print('tokens of first sentence: ')
+    for tok in doc.sentences[0].tokens:
+        print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
+    print('')
+    print('---')
+    print('dependency parse of first sentence: ')
+    for dep_edge in doc.sentences[0].dependencies:
+        print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
+    print('')
 
-# build the pipeline
-print('---')
-print('loading pipeline...')
-english_pipeline = Pipeline(config=english_config)
-print('done loading pipeline')
-
-# process the example document
-print('---')
-print('processing example document...')
-english_pipeline.process(english_doc)
-print('done')
-
-# explore the processed document
-print('---')
-print('accessing NLP annotations...')
-print('')
-print('tokens of first sentence: ')
-for tok in english_doc.sentences[0].tokens:
-    print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
-print('dependency parse of first sentence: ')
-for dep_edge in english_doc.sentences[0].dependencies:
-    print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
 ```
 
 ### Batching To Maximize Pipeline Speed
