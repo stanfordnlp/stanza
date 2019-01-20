@@ -19,7 +19,6 @@ train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
 dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
 dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu
 
-#dev_conllu=$UDPIPEBASE/${short}-dev-pred-udpipe.conllu
 train_in_file=$DATADIR/${short}.train.in.conllu
 dev_in_file=$DATADIR/${short}.dev.in.conllu
 dev_gold_file=$DATADIR/${short}.dev.gold.conllu

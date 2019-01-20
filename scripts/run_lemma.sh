@@ -34,4 +34,3 @@ else
     CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.lemmatizer --data_dir $DATADIR --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short --mode predict
 fi
-#python utils/conll18_ud_eval.py -v $gold_file $DATADIR/$output_file | grep "Lemmas" | awk '{print $7}'
