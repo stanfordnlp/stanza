@@ -37,13 +37,13 @@ def build_default_config(lang, models_path):
         default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
     else:
         default_config['processors'] = 'tokenize,pos,lemma,depparse'
-    lang_dir = models_path+'/'+lang+'_models'
+    lang_dir = f"{models_path}/{lang}_models"
     for processor in default_config['processors'].split(','):
-        model_file_ending = processor_to_ending[processor]+'.pt'
-        default_config[processor+'.model_path'] = lang_dir+'/'+lang+'_'+model_file_ending
+        model_file_ending = f"{processor_to_ending[processor]}.pt"
+        default_config[f"{processor}.model_path"] = f"{lang_dir}/{lang}_{model_file_ending}"
         if processor in ['pos', 'depparse']:
-            pretrain_file_ending = processor_to_ending[processor]+'.pretrain.pt'
-            default_config[processor+'.pretrain_path'] = lang_dir+'/'+lang+'_'+pretrain_file_ending
+            pretrain_file_ending = f"{processor_to_ending[processor]}.pretrain.pt"
+            default_config[f"{processor}.pretrain_path"] = f"{lang_dir}/{lang}_{pretrain_file_ending}"
     return default_config
 
 

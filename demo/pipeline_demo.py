@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanfordnlp.Pipeline() # defaults to building the en_ewt pipeline
+    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir) # defaults to building the en_ewt pipeline
     # process the document
     doc = pipeline('Barack Obama was born in Hawaii.  He was elected president in 2008.')
     # access nlp annotations
