@@ -58,23 +58,27 @@ def load_config(config_file_path):
 
 
 # download a ud models zip file
-def download_ud_model(lang_name, resource_dir=DEFAULT_MODEL_DIR, should_unzip=True):
+def download_ud_model(lang_name, resource_dir=None, should_unzip=True):
     # ask if user wants to download
     print('')
-    print('Would you like to download the models for: '+lang_name+' now? (yes/no)')
+    print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
     should_download = input()
-    if should_download in ['yes', 'y']:
+    if should_download.strip().lower() in ['yes', 'y', '']:
         # set up data directory
-        download_dir = resource_dir
-        print('')
-        print('Default download directory: '+download_dir)
-        print('Hit enter to continue or type an alternate directory.')
-        where_to_download = input()
-        if where_to_download != '':
-            download_dir = where_to_download
-        # initiate download
-        if not os.path.exists(download_dir):
-            subprocess.call('mkdir '+download_dir, shell=True)
+        if resource_dir is None:
+            print('')
+            print('Default download directory: ' + DEFAULT_MODEL_DIR)
+            print('Hit enter to continue or type an alternate directory.')
+            where_to_download = input()
+            if where_to_download != '':
+                download_dir = where_to_download
+            else:
+                download_dir = DEFAULT_MODEL_DIR
+            # initiate download
+            if not os.path.exists(download_dir):
+                os.mkdirs(download_dir)
+        else:
+            download_dir = resource_dir
         print('')
         print('Downloading models for: '+lang_name)
         model_zip_file_name = lang_name+'_models.zip'
@@ -108,7 +112,7 @@ def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
 
 
 # main download function
-def download(download_label, resource_dir=DEFAULT_MODEL_DIR):
+def download(download_label, resource_dir=None):
     if download_label in conll_shorthands:
         download_ud_model(download_label, resource_dir=resource_dir)
     elif download_label in default_treebanks:

@@ -5,34 +5,25 @@ basic demo script
 import argparse
 import os
 
-from pathlib import Path
-from stanfordnlp import Document, Pipeline
-from stanfordnlp.utils.resources import build_default_config
+import stanfordnlp
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR
 
 
 if __name__ == '__main__':
     # get arguments
-    # determine home directory
-    home_dir = str(Path.home())
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data', 
-                        default=home_dir+'/stanfordnlp_data')
+    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data',
+                        default=DEFAULT_MODEL_DIR)
     args = parser.parse_args()
     # download the models
     if not os.path.exists(args.models_dir+'/en_ewt_models'):
-        download('en_ewt')
+        stanfordnlp.download('en_ewt', args.models_dir)
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    print('with config: ')
-    pipeline_config = build_default_config('en_ewt', args.models_dir)
-    print(pipeline_config)
-    print('')
-    pipeline = Pipeline(config=pipeline_config)
-    # set up document
-    doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
-    # run pipeline on the document
-    pipeline.process(doc)
+    pipeline = stanfordnlp.Pipeline() # defaults to building the en_ewt pipeline
+    # process the document
+    doc = pipeline('Barack Obama was born in Hawaii.  He was elected president in 2008.')
     # access nlp annotations
     print('')
     print('---')
@@ -42,7 +33,6 @@ if __name__ == '__main__':
     print('')
     print('---')
     print('dependency parse of first sentence: ')
-    for dep_edge in doc.sentences[0].dependencies:
-        print((dep_edge[0].word, dep_edge[1], dep_edge[2].word))
+    doc.sentences[0].print_dependencies()
     print('')
 
