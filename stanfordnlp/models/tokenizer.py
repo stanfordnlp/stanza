@@ -161,11 +161,15 @@ def evaluate(args):
             'txt': args['txt_file'], 
             'label': args['label_file']
             }
+
     batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
 
-    oov_count, N, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    conll_output_file = open(args['conll_file'], 'w')
+
+    oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
+
 
 if __name__ == '__main__':
     main()

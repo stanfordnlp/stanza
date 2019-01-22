@@ -43,7 +43,7 @@ def print_sentence(sentence, f, mwt_dict=None):
             i += 1
     f.write('\n')
 
-def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, should_close=True):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -109,45 +109,49 @@ def output_predictions(output_filename, trainer, data_generator, vocab, mwt_dict
 
     offset = 0
     oov_count = 0
-    with open(output_filename, 'w') as f:
-        for j in range(len(paragraphs)):
-            raw = all_raw[j]
-            pred = all_preds[j]
 
-            current_tok = ''
-            current_sent = []
+    for j in range(len(paragraphs)):
+        raw = all_raw[j]
+        pred = all_preds[j]
 
-            for t, p in zip(raw, pred):
-                if t == '<PAD>':
-                    break
-                # hack la_ittb
-                if trainer.args['shorthand'] == 'la_ittb' and t in [":", ";"]:
-                    p = 2
-                offset += 1
-                if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
-                    oov_count += 1
+        current_tok = ''
+        current_sent = []
 
-                current_tok += t
-                if p >= 1:
-                    tok = vocab.normalize_token(current_tok)
-                    assert '\t' not in tok, tok
-                    if len(tok) <= 0:
-                        current_tok = ''
-                        continue
-                    current_sent += [(tok, p)]
-                    current_tok = ''
-                    if p == 2 or p == 4:
-                        print_sentence(current_sent, f, mwt_dict)
-                        current_sent = []
+        for t, p in zip(raw, pred):
+            if t == '<PAD>':
+                break
+            # hack la_ittb
+            if trainer.args['shorthand'] == 'la_ittb' and t in [":", ";"]:
+                p = 2
+            offset += 1
+            if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
+                oov_count += 1
 
-            if len(current_tok):
+            current_tok += t
+            if p >= 1:
                 tok = vocab.normalize_token(current_tok)
                 assert '\t' not in tok, tok
-                if len(tok) > 0:
-                    current_sent += [(tok, 2)]
+                if len(tok) <= 0:
+                    current_tok = ''
+                    continue
+                current_sent += [(tok, p)]
+                current_tok = ''
+                if p == 2 or p == 4:
+                    print_sentence(current_sent, output_file, mwt_dict)
+                    current_sent = []
 
-            if len(current_sent):
-                print_sentence(current_sent, f, mwt_dict)
+        if len(current_tok):
+            tok = vocab.normalize_token(current_tok)
+            assert '\t' not in tok, tok
+            if len(tok) > 0:
+                current_sent += [(tok, 2)]
+
+        if len(current_sent):
+            print_sentence(current_sent, output_file, mwt_dict)
+
+    # close the output file if requested
+    if should_close:
+        output_file.close()
 
     return oov_count, offset, all_preds
 
