@@ -93,7 +93,7 @@ class Sentence:
         for tok in self.tokens:
             if tok.governor == 0:
                 # make a token for the ROOT
-                governor = Token(["_", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
+                governor = Token(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
             else:
                 # id is index in tokens list + 1
                 governor = self.tokens[tok.governor-1]
