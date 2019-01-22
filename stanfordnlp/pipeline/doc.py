@@ -99,6 +99,9 @@ class Sentence:
                 governor = self.tokens[tok.governor-1]
             self.dependencies.append((governor, tok.dependency_relation, tok))
 
+    def print_dependencies(self):
+        for dep_edge in self.dependencies:
+            print((dep_edge[2].word, dep_edge[0]._index, dep_edge[1]))
 
 class Token:
 
