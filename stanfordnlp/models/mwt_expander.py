@@ -109,7 +109,7 @@ def train(args):
     trainer.train_dict(train_batch.conll.get_mwt_expansions())
     print("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.conll.get_mwt_expansion_cands())
-    dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+    dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -149,7 +149,7 @@ def train(args):
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
                 print("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
-            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -178,7 +178,7 @@ def train(args):
         if args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq model...]")
             dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
-            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, system_pred_file)
+            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
@@ -222,13 +222,14 @@ def evaluate(args):
         preds = []
 
     # write to file and score
-    batch.conll.write_conll_with_mwt_expansions(preds, system_pred_file)
+    batch.conll.write_conll_with_mwt_expansions(preds, open(system_pred_file, 'w'))
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         print("MWT expansion score:")
         print("{} {:.2f}".format(args['shorthand'], score*100))
+
 
 if __name__ == '__main__':
     main()

@@ -207,29 +207,31 @@ class CoNLLFile():
 
         return cands
 
-    def write_conll_with_mwt_expansions(self, expansions, filename):
+    def write_conll_with_mwt_expansions(self, expansions, output_file, should_close=True):
         """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with a right branching tree. """
         idx = 0
         count = 0
-        with open(filename, 'w') as outfile:
-            for sent in self.sents:
-                for ln in sent:
-                    idx += 1
-                    if "MWT=Yes" not in ln[-1]:
-                        print("{}\t{}".format(idx, "\t".join(ln[1:6] + [str(idx-1)] + ln[7:])), file=outfile)
-                    else:
-                        # print MWT expansion
-                        expanded = [x for x in expansions[count].split(' ') if len(x) > 0]
-                        count += 1
-                        endidx = idx + len(expanded) - 1
 
-                        print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=outfile)
-                        for e_i, e_word in enumerate(expanded):
-                            print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=outfile)
-                        idx = endidx
+        for sent in self.sents:
+            for ln in sent:
+                idx += 1
+                if "MWT=Yes" not in ln[-1]:
+                    print("{}\t{}".format(idx, "\t".join(ln[1:6] + [str(idx-1)] + ln[7:])), file=output_file)
+                else:
+                    # print MWT expansion
+                    expanded = [x for x in expansions[count].split(' ') if len(x) > 0]
+                    count += 1
+                    endidx = idx + len(expanded) - 1
 
-                print("", file=outfile)
-                idx = 0
+                    print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=output_file)
+                    for e_i, e_word in enumerate(expanded):
+                        print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=output_file)
+                    idx = endidx
+
+            print("", file=output_file)
+            idx = 0
+        if should_close:
+            output_file.close()
 
         assert count == len(expansions), "{} {} {}".format(count, len(expansions), expansions)
         return
