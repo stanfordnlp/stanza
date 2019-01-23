@@ -16,12 +16,12 @@ if __name__ == '__main__':
                         default=DEFAULT_MODEL_DIR)
     args = parser.parse_args()
     # download the models
-    if not os.path.exists(args.models_dir+'/en_ewt_models'):
-        stanfordnlp.download('en_ewt', args.models_dir)
+    demo_language = "en"
+    stanfordnlp.download(demo_language, args.models_dir)
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir) # defaults to building the en_ewt pipeline
+    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=demo_language)
     # process the document
     doc = pipeline('Barack Obama was born in Hawaii.  He was elected president in 2008.')
     # access nlp annotations
