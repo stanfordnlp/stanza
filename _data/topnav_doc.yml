@@ -1,0 +1,32 @@
+# Topnav single links
+# if you want to list an external url, use external_url instead of url. the theme will apply a different link base.
+topnav:
+- title: Topnav
+  subcategories:
+    - title: Github repo
+      external_url: https://github.com/stanfordnlp/stanfordnlp
+      audience: writers, designers
+      platform: all
+      product: all
+      version: all
+      output: web
+
+#Topnav dropdowns
+topnav_dropdowns:
+- title: Topnav dropdowns
+  subcategories:
+    - title: Quick links
+      audience: writers, designers
+      platform: all
+      product: all
+      version: all
+      output: web
+      items:
+        - title: Paper to cite
+          external_url: http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf
+          audience: writers, designers
+          platform: all
+          product: all
+          version: all
+          output: web
+

@@ -1,0 +1,141 @@
+# This is your sidebar TOC. The sidebar code loops through sections here and provides the appropriate formatting.
+
+# Sidebar
+entries:
+- title: Sidebar
+  subcategories:
+
+
+    - title: Overview
+
+      items:
+        - title: About
+          url: index.html
+
+        - title: Installation
+          url: index.html#installation
+
+        - title: License and Citing
+          url: index.html#license
+
+    - title: Usage
+
+      items:
+
+        - title: Installation & Models Download
+          url: installation_download.html
+
+        - title: Command line usage
+          url: cmdline.html
+
+          #    - title : Annotators
+          #
+          #      items:
+          #        - title: Summary
+          #          url: annotators.html
+          #
+          #        - title: Annotator dependencies
+          #          url: dependencies.html
+          #
+          #        - title: Tokenization
+          #          url: tokenize.html
+          #
+          #        - title: Sentence Splitting
+          #          url: ssplit.html
+          #
+          #        - title: Lemmatization
+          #          url: lemma.html
+          #
+          #        - title: Parts of Speech
+          #          url: pos.html
+          #
+          #        - title: Named Entity Recognition
+          #          url: ner.html
+          #
+          #        - title: RegexNER (Named Entity Recognition)
+          #          url: regexner.html
+          #
+          #        - title: Constituency Parsing
+          #          url: parse.html
+          #
+          #        - title: Dependency Parsing
+          #          url: depparse.html
+          #
+          #        - title: Coreference Resolution
+          #          url: coref.html
+          #
+          #        - title: Natural Logic
+          #          url: natlog.html
+          #
+          #        - title: Open Information Extraction
+          #          url: openie.html
+          #
+          #        - title: Sentiment
+          #          url: sentiment.html
+          #
+          #        - title: Relation Extraction
+          #          url: relation.html
+          #
+          #        - title: Quote Annotator
+          #          url: quote.html
+          #
+          #        - title: CleanXML Annotator
+          #          url: cleanxml.html
+          #
+          #        - title: True case Annotator
+          #          url: truecase.html
+          #
+          #        - title: Entity Mentions Annotator
+          #          url: entitymentions.html
+          #
+          #        - title: UD Features
+          #          url: udfeats.html
+          #
+          #        - title: Adding a new annotator
+          #          url: new_annotator.html
+          #
+          #
+          #    - title: Additional tools
+          #
+          #      items:
+          #
+          #        - title: TokensRegex
+          #          url: tokensregex.html
+          #
+          #        - title: Bootstrapped surface patterns
+          #          url: patterns.html
+          #
+          #        - title: Extensions
+          #          url: extensions.html
+          #
+          #    - title: Resources
+          #
+          #      items:
+          #
+          #        - title: FAQ
+          #          url: faq.html
+          #
+          #        - title: Tutorials
+          #          url: tutorials.html
+          #
+          #        - title: Memory and time optimization
+          #          url: memory-time.html
+          #
+          #        - title: Annotation pipelines
+          #          url: pipelines.html
+          #
+          #        - title: Online demo (API)
+          #          external_url: http://corenlp.run/
+          #
+          #        - title: Online demo (old skool)
+          #          external_url: http://nlp.stanford.edu:8080/corenlp/
+          #
+          #        - title: Javadoc
+          #          external_url: http://nlp.stanford.edu/nlp/javadoc/javanlp/
+          #
+          #        - title: Release history
+          #          url: history.html
+          #
+          #        - title: Contact
+          #          url: contact.html
+          #
