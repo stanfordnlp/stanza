@@ -42,8 +42,7 @@ def build_default_config(lang, models_path):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
         default_config[f"{processor}.model_path"] = f"{lang_dir}/{lang}_{model_file_ending}"
         if processor in ['pos', 'depparse']:
-            pretrain_file_ending = f"{processor_to_ending[processor]}.pretrain.pt"
-            default_config[f"{processor}.pretrain_path"] = f"{lang_dir}/{lang}_{pretrain_file_ending}"
+            default_config[f"{processor}.pretrain_path"] = f"{lang_dir}/{lang}.pretrain.pt"
     return default_config
 
 

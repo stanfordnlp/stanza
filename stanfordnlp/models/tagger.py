@@ -98,7 +98,7 @@ def train(args):
 
     # load pretrained vectors
     vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-    pretrain_file = '{}/{}_tagger.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
     pretrain = Pretrain(pretrain_file, vec_file)
 
     # load data
@@ -201,7 +201,7 @@ def evaluate(args):
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain_file = '{}/{}_tagger.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
     
     # load pretrain
     pretrain = Pretrain(pretrain_file)

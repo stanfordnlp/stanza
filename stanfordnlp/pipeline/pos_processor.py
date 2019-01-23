@@ -17,7 +17,7 @@ DEFAULT_POS_CONFIG = {
                       'eval_file': 'pre_pos_content.conllu',
                       'output_file': 'post_pos_content.conllu',
                       'gold_file': 'pre_pos_content.conllu',
-                      'pretrain_path': 'saved_models/pos/en_ewt_tagger.pretrain.pt',
+                      'pretrain_path': 'saved_models/pos/en_ewt.pretrain.pt',
                       'model_path': 'saved_models/pos/en_ewt_tagger.pt',
                       'mode': 'predict',
                       'lang': 'en_ewt',

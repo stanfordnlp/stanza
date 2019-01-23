@@ -15,7 +15,7 @@ DEFAULT_DEPPARSE_CONFIG = {
     'eval_file': 'parser_input.conllu',
     'output_file': 'parser_output.conllu',
     'gold_file': 'parser_input.conllu',
-    'pretrain_path': 'saved_models/depparse/en_ewt_parser.pretrain.pt',
+    'pretrain_path': 'saved_models/depparse/en_ewt.pretrain.pt',
     'model_path': 'saved_models/depparse/en_ewt_parser.pt',
     'mode': 'predict',
     'lang': 'en',
