@@ -9,7 +9,7 @@ import sys
 import urllib.request
 import zipfile
 
-from clint.textui import progress
+from tqdm import tqdm
 from pathlib import Path
 
 # set home dir for default
@@ -59,10 +59,16 @@ def load_config(config_file_path):
 # download a ud models zip file
 def download_ud_model(lang_name, resource_dir=None, should_unzip=True):
     # ask if user wants to download
-    print('')
-    print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
-    should_download = input()
-    if should_download.strip().lower() in ['yes', 'y', '']:
+    if resource_dir is not None and os.path.exists(f"{resource_dir}/{lang_name}_models"):
+        print("")
+        print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download them again? [y/N]")
+        should_download = input()
+        should_download = should_download.strip().lower() in ['yes', 'y']
+    else:
+        print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
+        should_download = input()
+        should_download = should_download.strip().lower() in ['yes', 'y', '']
+    if should_download:
         # set up data directory
         if resource_dir is None:
             print('')
@@ -88,10 +94,12 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True):
         with open(download_file_path, 'wb') as f:
             file_size = int(r.headers.get('content-length'))
             default_chunk_size = 67108864
-            for chunk in progress.bar(r.iter_content(chunk_size=default_chunk_size), expected_size=(file_size/default_chunk_size)+1):
-                if chunk:
-                    f.write(chunk)
-                    f.flush()
+            with tqdm(total=file_size, unit='B', unit_scale=True) as pbar:
+                for chunk in r.iter_content(chunk_size=default_chunk_size):
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+                        pbar.update(len(chunk))
         # unzip models file
         print('')
         print('Download complete.  Models saved to: '+download_file_path)
