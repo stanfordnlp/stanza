@@ -41,4 +41,4 @@ limitations under the License.
 
 If you use StanfordNLP in your work, please cite this paper:
 
-> Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch]() In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf)\] \[[bib](http://universaldependencies.org/conll18/proceedings/bib/K18-2016.bib)\]
+> Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch]() In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]

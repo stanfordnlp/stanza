@@ -92,9 +92,39 @@ dependency parse of first sentence:
 ('。', '16', 'punct')
 ```
 
+## Models for Human Languages
+
+### Downloading and Using Models
+
+Downloading models for human languages of your interest for use in the StanfordNLP pipeline is as simple as
+
+```python
+>>> import stanfordnlp
+>>> stanfordnlp.download('ar')    # replace "ar" with the language code or treebank code you need, see below
+```
+
+The language code or treebank code can be looked up in the next section. If only the language code is specified, we will download the default models for that language (indicated by ✔️ in the table), which are the models trained on the largest treebank available in that language. If you really care about the models of a specific treebank, you can also download the corresponding models with the treebank code.
+
+To use the default model for any language, simply build the pipeline as follows
+
+```python
+>>> nlp = stanfordnlp.Pipeline(lang="es")    # replace "es" with the language of interest
+```
+
+If you are using a non-default treebank for the langauge, make sure to also specify the treebank code, for example
+
+```python
+>>> nlp = stanford.Pipeline(lang="it", treebank="it_postwita")
+```
+
 ### Human Languages Supported by StanfordNLP
 
-Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline).
+Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline). 
+
+**Note**
+
+1. Models marked with ⚠️ have significantly low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Any use of these models for serious syntactical analysis is strongly discouraged.
+2. 🧂 marks models that are at least 1% absolute UAS worse than the full neural pipeline presented in [our paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf) (which uses the [Tensorflow counterparts](https://github.com/tdozat/Parser-v3) for the tagger and the parser), so these should also be taken with a grain of salt.
 
 | Language | Treebank | Language code | Treebank code | Models | Version | Notes |
 | :------- | :------- | :------------ | :------------ | :----- | :------ | :---- |
