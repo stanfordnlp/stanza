@@ -1,9 +1,9 @@
-# stanfordnlp
+# StanfordNLP
 The Stanford NLP Group's official Python library.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
 
 ### References
 
-If you use the neural tokenizer, multi-word token expansion model, lemmatizer, POS/morphological features tagger, or dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf)
+If you use the neural pipeline including the tokenizer, the multi-word token expansion model, the lemmatizer, the POS/morphological features tagger, or the dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf)
 
 ```bibtex
 @InProceedings{qi2018universal,
@@ -138,3 +138,6 @@ Once you have trained all of the models for the pipeline, you can evaluate the f
 bash scripts/run_ete.sh UD_English-EWT 0 test
 ```
 
+## LICENSE
+
+StanfordNLP is released under the Apache License, Version 2.0. See the [LICENSE](https://github.com/stanfordnlp/stanfordnlp/blob/master/LICENSE) file for more details.
