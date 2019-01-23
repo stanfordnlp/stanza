@@ -77,9 +77,15 @@ class Trainer(BaseTrainer):
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
 
-    def save(self, filename):
+    def save(self, filename, skip_modules=True):
+        model_state = self.model.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.model.unsaved_modules]
+            for k in skipped:
+                del model_state[k]
         params = {
-                'model': self.model.state_dict(),
+                'model': model_state,
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
@@ -98,5 +104,5 @@ class Trainer(BaseTrainer):
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = Parser(self.args, self.vocab, emb_matrix=pretrain.emb)
-        self.model.load_state_dict(checkpoint['model'])
+        self.model.load_state_dict(checkpoint['model'], strict=False)
 

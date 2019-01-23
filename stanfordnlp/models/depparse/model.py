@@ -17,10 +17,11 @@ class Parser(nn.Module):
         self.vocab = vocab
         self.args = args
         self.share_hid = share_hid
+        self.unsaved_modules = []
 
-        # pretrained embeddings
-        if self.args['pretrain']:
-            self.pretrained_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True)
+        def add_unsaved_module(name, module):
+            self.unsaved_modules += [name]
+            setattr(self, name, module)
 
         # input layers
         input_size = 0
@@ -54,6 +55,8 @@ class Parser(nn.Module):
             input_size += self.args['transformed_dim']
 
         if self.args['pretrain']:
+            # pretrained embeddings, by default this won't be saved into model file
+            add_unsaved_module('pretrained_emb', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
             self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
 
