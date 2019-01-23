@@ -4,106 +4,170 @@ keywords: installation-download
 permalink: '/installation_download.html'
 ---
 
-## Getting a copy
+## Getting started
 
-Stanford StanfordNLP can be downloaded from the link below. This will download (1) all the code needed to run the models, which is itself largely language-agnostic, and (2) the model files for English to get you started.
+### Installation
 
-<div style="text-align:center; margin-top: 5ex; margin-bottom:5ex;"> <a class="downloadbutton" href="https://github.com/stanfordnlp/stanfordnlp/archive/master.zip">Download StanfordNLP 0.1.0 </a> </div>
+To get started with StanfordNLP, we strongly recommend that you install it through [PyPI](https://pypi.org/). Once you have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run in your command line
 
-**Other languages:** For working with another (human) language, you need additional model files. We have model files for several other languages, as is show in the table below. For some languages, we have models trained on multiple treebanks, in those cases, we highlight the recommended treebank for that language if you this distinction is not crucial to your applications.
+```pip install stanfordnlp```
 
-| Language | Treebank | Models | Version | Notes |
-| :------- | :------- | :----- | :------ | :---- |
-| Afrikaans | AfriBooms | [download](http://nlp.stanford.edu/software/conll_2018/af_afribooms_models.zip) | 0.1.0 | ✔️🧂 |
-| Ancient_Greek | Perseus | [download](http://nlp.stanford.edu/software/conll_2018/grc_perseus_models.zip) | 0.1.0 |  |
-|  | PROIEL | [download](http://nlp.stanford.edu/software/conll_2018/grc_proiel_models.zip) | 0.1.0 | ✔️ |
-| Arabic | PADT | [download](http://nlp.stanford.edu/software/conll_2018/ar_padt_models.zip) | 0.1.0 | ✔️ |
-| Armenian | ArmTDP | [download](http://nlp.stanford.edu/software/conll_2018/hy_armtdp_models.zip) | 0.1.0 | ✔️🧂 |
-| Basque | BDT | [download](http://nlp.stanford.edu/software/conll_2018/eu_bdt_models.zip) | 0.1.0 | ✔️ |
-| Bulgarian | BTB | [download](http://nlp.stanford.edu/software/conll_2018/bg_btb_models.zip) | 0.1.0 | ✔️ |
-| Buryat | BDT | [download](http://nlp.stanford.edu/software/conll_2018/bxr_bdt_models.zip) | 0.1.0 | ✔️⚠️ |
-| Catalan | AnCora | [download](http://nlp.stanford.edu/software/conll_2018/ca_ancora_models.zip) | 0.1.0 | ✔️ |
-| Chinese | GSD | [download](http://nlp.stanford.edu/software/conll_2018/zh_gsd_models.zip) | 0.1.0 | ✔️ |
-| Croatian | SET | [download](http://nlp.stanford.edu/software/conll_2018/hr_set_models.zip) | 0.1.0 | ✔️ |
-| Czech | CAC | [download](http://nlp.stanford.edu/software/conll_2018/cs_cac_models.zip) | 0.1.0 |  |
-|  | FicTree | [download](http://nlp.stanford.edu/software/conll_2018/cs_fictree_models.zip) | 0.1.0 |  |
-|  | PDT | [download](http://nlp.stanford.edu/software/conll_2018/cs_pdt_models.zip) | 0.1.0 | ✔️ |
-| Danish | DDT | [download](http://nlp.stanford.edu/software/conll_2018/da_ddt_models.zip) | 0.1.0 | ✔️🧂 |
-| Dutch | Alpino | [download](http://nlp.stanford.edu/software/conll_2018/nl_alpino_models.zip) | 0.1.0 | ✔️ |
-|  | LassySmall | [download](http://nlp.stanford.edu/software/conll_2018/nl_lassysmall_models.zip) | 0.1.0 |  |
-| English | EWT | [download](http://nlp.stanford.edu/software/conll_2018/en_ewt_models.zip) | 0.1.0 | ✔️ |
-|  | GUM | [download](http://nlp.stanford.edu/software/conll_2018/en_gum_models.zip) | 0.1.0 |  |
-|  | LinES | [download](http://nlp.stanford.edu/software/conll_2018/en_lines_models.zip) | 0.1.0 |  |
-| Estonian | EDT | [download](http://nlp.stanford.edu/software/conll_2018/et_edt_models.zip) | 0.1.0 | ✔️ |
-| Finnish | FTB | [download](http://nlp.stanford.edu/software/conll_2018/fi_ftb_models.zip) | 0.1.0 |  |
-|  | TDT | [download](http://nlp.stanford.edu/software/conll_2018/fi_tdt_models.zip) | 0.1.0 | ✔️🧂 |
-| French | GSD | [download](http://nlp.stanford.edu/software/conll_2018/fr_gsd_models.zip) | 0.1.0 | ✔️ |
-|  | Sequoia | [download](http://nlp.stanford.edu/software/conll_2018/fr_sequoia_models.zip) | 0.1.0 |  |
-|  | Spoken | [download](http://nlp.stanford.edu/software/conll_2018/fr_spoken_models.zip) | 0.1.0 | 🧂 |
-| Galician | CTG | [download](http://nlp.stanford.edu/software/conll_2018/gl_ctg_models.zip) | 0.1.0 | ✔️ |
-|  | TreeGal | [download](http://nlp.stanford.edu/software/conll_2018/gl_treegal_models.zip) | 0.1.0 | 🧂 |
-| German | GSD | [download](http://nlp.stanford.edu/software/conll_2018/de_gsd_models.zip) | 0.1.0 | ✔️ |
-| Gothic | PROIEL | [download](http://nlp.stanford.edu/software/conll_2018/got_proiel_models.zip) | 0.1.0 | ✔️ |
-| Greek | GDT | [download](http://nlp.stanford.edu/software/conll_2018/el_gdt_models.zip) | 0.1.0 | ✔️ |
-| Hebrew | HTB | [download](http://nlp.stanford.edu/software/conll_2018/he_htb_models.zip) | 0.1.0 | ✔️ |
-| Hindi | HDTB | [download](http://nlp.stanford.edu/software/conll_2018/hi_hdtb_models.zip) | 0.1.0 | ✔️ |
-| Hungarian | Szeged | [download](http://nlp.stanford.edu/software/conll_2018/hu_szeged_models.zip) | 0.1.0 | ✔️ |
-| Indonesian | GSD | [download](http://nlp.stanford.edu/software/conll_2018/id_gsd_models.zip) | 0.1.0 | ✔️ |
-| Irish | IDT | [download](http://nlp.stanford.edu/software/conll_2018/ga_idt_models.zip) | 0.1.0 | ✔️ |
-| Italian | ISDT | [download](http://nlp.stanford.edu/software/conll_2018/it_isdt_models.zip) | 0.1.0 | ✔️🧂 |
-|  | PoSTWITA | [download](http://nlp.stanford.edu/software/conll_2018/it_postwita_models.zip) | 0.1.0 |  |
-| Japanese | GSD | [download](http://nlp.stanford.edu/software/conll_2018/ja_gsd_models.zip) | 0.1.0 | ✔️🧂 |
-| Kazakh | KTB | [download](http://nlp.stanford.edu/software/conll_2018/kk_ktb_models.zip) | 0.1.0 | ✔️⚠️ |
-| Korean | GSD | [download](http://nlp.stanford.edu/software/conll_2018/ko_gsd_models.zip) | 0.1.0 |  |
-|  | Kaist | [download](http://nlp.stanford.edu/software/conll_2018/ko_kaist_models.zip) | 0.1.0 | ✔️ |
-| Kurmanji | MG | [download](http://nlp.stanford.edu/software/conll_2018/kmr_mg_models.zip) | 0.1.0 | ✔️⚠️🧂 |
-| Latin | ITTB | [download](http://nlp.stanford.edu/software/conll_2018/la_ittb_models.zip) | 0.1.0 | ✔️ |
-|  | Perseus | [download](http://nlp.stanford.edu/software/conll_2018/la_perseus_models.zip) | 0.1.0 |  |
-|  | PROIEL | [download](http://nlp.stanford.edu/software/conll_2018/la_proiel_models.zip) | 0.1.0 |  |
-| Latvian | LVTB | [download](http://nlp.stanford.edu/software/conll_2018/lv_lvtb_models.zip) | 0.1.0 | ✔️ |
-| North_Sami | Giella | [download](http://nlp.stanford.edu/software/conll_2018/sme_giella_models.zip) | 0.1.0 | ✔️ |
-| Norwegian | Bokmaal | [download](http://nlp.stanford.edu/software/conll_2018/no_bokmaal_models.zip) | 0.1.0 | ✔️ |
-|  | Nynorsk | [download](http://nlp.stanford.edu/software/conll_2018/no_nynorsk_models.zip) | 0.1.0 | ✔️ |
-|  | NynorskLIA | [download](http://nlp.stanford.edu/software/conll_2018/no_nynorsklia_models.zip) | 0.1.0 |  |
-| Old_Church_Slavonic | PROIEL | [download](http://nlp.stanford.edu/software/conll_2018/cu_proiel_models.zip) | 0.1.0 | ✔️ |
-| Old_French | SRCMF | [download](http://nlp.stanford.edu/software/conll_2018/fro_srcmf_models.zip) | 0.1.0 | ✔️ |
-| Persian | Seraji | [download](http://nlp.stanford.edu/software/conll_2018/fa_seraji_models.zip) | 0.1.0 | ✔️ |
-| Polish | LFG | [download](http://nlp.stanford.edu/software/conll_2018/pl_lfg_models.zip) | 0.1.0 | ✔️ |
-|  | SZ | [download](http://nlp.stanford.edu/software/conll_2018/pl_sz_models.zip) | 0.1.0 |  |
-| Portuguese | Bosque | [download](http://nlp.stanford.edu/software/conll_2018/pt_bosque_models.zip) | 0.1.0 | ✔️ |
-| Romanian | RRT | [download](http://nlp.stanford.edu/software/conll_2018/ro_rrt_models.zip) | 0.1.0 | ✔️ |
-| Russian | SynTagRus | [download](http://nlp.stanford.edu/software/conll_2018/ru_syntagrus_models.zip) | 0.1.0 | ✔️ |
-|  | Taiga | [download](http://nlp.stanford.edu/software/conll_2018/ru_taiga_models.zip) | 0.1.0 | 🧂 |
-| Serbian | SET | [download](http://nlp.stanford.edu/software/conll_2018/sr_set_models.zip) | 0.1.0 | ✔️ |
-| Slovak | SNK | [download](http://nlp.stanford.edu/software/conll_2018/sk_snk_models.zip) | 0.1.0 | ✔️ |
-| Slovenian | SSJ | [download](http://nlp.stanford.edu/software/conll_2018/sl_ssj_models.zip) | 0.1.0 | ✔️ |
-|  | SST | [download](http://nlp.stanford.edu/software/conll_2018/sl_sst_models.zip) | 0.1.0 |  |
-| Spanish | AnCora | [download](http://nlp.stanford.edu/software/conll_2018/es_ancora_models.zip) | 0.1.0 | ✔️ |
-| Swedish | LinES | [download](http://nlp.stanford.edu/software/conll_2018/sv_lines_models.zip) | 0.1.0 |  |
-|  | Talbanken | [download](http://nlp.stanford.edu/software/conll_2018/sv_talbanken_models.zip) | 0.1.0 | ✔️ |
-| Turkish | IMST | [download](http://nlp.stanford.edu/software/conll_2018/tr_imst_models.zip) | 0.1.0 | ✔️ |
-| Ukrainian | IU | [download](http://nlp.stanford.edu/software/conll_2018/uk_iu_models.zip) | 0.1.0 | ✔️ |
-| Upper_Sorbian | UFAL | [download](http://nlp.stanford.edu/software/conll_2018/hsb_ufal_models.zip) | 0.1.0 | ✔️⚠️🧂 |
-| Urdu | UDTB | [download](http://nlp.stanford.edu/software/conll_2018/ur_udtb_models.zip) | 0.1.0 | ✔️ |
-| Uyghur | UDT | [download](http://nlp.stanford.edu/software/conll_2018/ug_udt_models.zip) | 0.1.0 | ✔️ |
-| Vietnamese | VTB | [download](http://nlp.stanford.edu/software/conll_2018/vi_vtb_models.zip) | 0.1.0 | ✔️ |
+This will take care of all of the dependencies necessary to run StanfordNLP. The neural pipeline of StanfordNLP depends on PyTorch 1.0.0 or a later version with compatible APIs.
 
-If you want to change the source code and recompile the files, see [these instructions](files/basic-compiling.txt).
-Previous releases can be found on [the release history page](history.html).
+**Note** StanfordNLP will not work with Python 3.5 or below. Please use Python 3.6 or above.
 
+### Quick Example
 
-**GitHub**: Here is the [Stanford StanfordNLP GitHub site](https://github.com/stanfordnlp/UD-from-scratch).
+To try out StanfordNLP, you can simply follow these steps in the interactive Python interpreter:
 
-## Steps to setup
+```python
+>>> import stanfordnlp
+>>> stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
+>>> nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
+>>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+>>> doc.sentences[0].print_dependencies()
+```
 
-This example goes over how to set up StanfordNLP from the latest official release. This example will take you through downloading the package, and running a simple command-line invocation of StanfordNLP.
+The last command will print out the words in the first sentence in the input string (or `Document`, as it is represented in StanfordNLP), as well as the indices for the word that governs it in the Universal Dependencies parse of that sentence (its "head"), along with the dependency relation between the words. The output should look like:
 
-### Prerequisites
+```
+('Barack', '4', 'nsubj:pass')
+('Obama', '1', 'flat')
+('was', '4', 'aux:pass')
+('born', '0', 'root')
+('in', '6', 'case')
+('Hawaii', '4', 'obl')
+('.', '4', 'punct')
+```
 
-* Python 3. We have tested with Python 3.6 and 3.7, but earlier versions of Python 3 might work as well.
-* PyTorch 1.0.
-* [The `lzma` package](https://docs.python.org/3/library/lzma.html) for reading pretrained word vector files (which is part of Python 3.3 and after).
+To build a pipeline for other languages, simply pass in the language code to the constructor like this `stanfordnlp.Pipeline(lang="fr")`. For a full list of languages (and their corresponnding language codes) supported by StanfordNLP, please see [this section](#human-languages-supported-by-stanfordnlp).
 
-### Steps
+We also provide a [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/pipeline_demo.py) in our Github repostory that demonstrates how one uses StanfordNLP in other languages than English, for example Chinese (traditional)
 
-1.
+```python
+python demo/pipeline_demo.py -l zh
+```
+
+And expect outputs like the following:
+
+```
+---
+tokens of first sentence:
+達沃斯	達沃斯	PROPN
+世界	世界	NOUN
+經濟	經濟	NOUN
+論壇	論壇	NOUN
+是	是	AUX
+每年	每年	DET
+全球	全球	NOUN
+政	政	PART
+商界	商界	NOUN
+領袖	領袖	NOUN
+聚	聚	VERB
+在	在	VERB
+一起	一起	NOUN
+的	的	PART
+年度	年度	NOUN
+盛事	盛事	NOUN
+。	。	PUNCT
+
+---
+dependency parse of first sentence:
+('達沃斯', '4', 'nmod')
+('世界', '4', 'nmod')
+('經濟', '4', 'nmod')
+('論壇', '16', 'nsubj')
+('是', '16', 'cop')
+('每年', '10', 'nmod')
+('全球', '10', 'nmod')
+('政', '9', 'case:pref')
+('商界', '10', 'nmod')
+('領袖', '11', 'nsubj')
+('聚', '16', 'acl:relcl')
+('在', '11', 'mark')
+('一起', '11', 'obj')
+('的', '11', 'mark:relcl')
+('年度', '16', 'nmod')
+('盛事', '0', 'root')
+('。', '16', 'punct')
+```
+
+### Human Languages Supported by StanfordNLP
+
+Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline).
+
+| Language | Treebank | Language code | Treebank code | Models | Version | Notes |
+| :------- | :------- | :------------ | :------------ | :----- | :------ | :---- |
+| Afrikaans | AfriBooms | af | af_afribooms | [download](http://nlp.stanford.edu/software/conll_2018/af_afribooms_models.zip) | 0.1.0 | ✔️🧂 |
+| Ancient_Greek | Perseus | grc | grc_perseus | [download](http://nlp.stanford.edu/software/conll_2018/grc_perseus_models.zip) | 0.1.0 |  |
+|  | PROIEL | grc | grc_proiel | [download](http://nlp.stanford.edu/software/conll_2018/grc_proiel_models.zip) | 0.1.0 | ✔️ |
+| Arabic | PADT | ar | ar_padt | [download](http://nlp.stanford.edu/software/conll_2018/ar_padt_models.zip) | 0.1.0 | ✔️ |
+| Armenian | ArmTDP | hy | hy_armtdp | [download](http://nlp.stanford.edu/software/conll_2018/hy_armtdp_models.zip) | 0.1.0 | ✔️🧂 |
+| Basque | BDT | eu | eu_bdt | [download](http://nlp.stanford.edu/software/conll_2018/eu_bdt_models.zip) | 0.1.0 | ✔️ |
+| Bulgarian | BTB | bg | bg_btb | [download](http://nlp.stanford.edu/software/conll_2018/bg_btb_models.zip) | 0.1.0 | ✔️ |
+| Buryat | BDT | bxr | bxr_bdt | [download](http://nlp.stanford.edu/software/conll_2018/bxr_bdt_models.zip) | 0.1.0 | ✔️⚠️ |
+| Catalan | AnCora | ca | ca_ancora | [download](http://nlp.stanford.edu/software/conll_2018/ca_ancora_models.zip) | 0.1.0 | ✔️ |
+| Chinese (traditional) | GSD | zh | zh_gsd | [download](http://nlp.stanford.edu/software/conll_2018/zh_gsd_models.zip) | 0.1.0 | ✔️ |
+| Croatian | SET | hr | hr_set | [download](http://nlp.stanford.edu/software/conll_2018/hr_set_models.zip) | 0.1.0 | ✔️ |
+| Czech | CAC | cs | cs_cac | [download](http://nlp.stanford.edu/software/conll_2018/cs_cac_models.zip) | 0.1.0 |  |
+|  | FicTree | cs | cs_fictree | [download](http://nlp.stanford.edu/software/conll_2018/cs_fictree_models.zip) | 0.1.0 |  |
+|  | PDT | cs | cs_pdt | [download](http://nlp.stanford.edu/software/conll_2018/cs_pdt_models.zip) | 0.1.0 | ✔️ |
+| Danish | DDT | da | da_ddt | [download](http://nlp.stanford.edu/software/conll_2018/da_ddt_models.zip) | 0.1.0 | ✔️🧂 |
+| Dutch | Alpino | nl | nl_alpino | [download](http://nlp.stanford.edu/software/conll_2018/nl_alpino_models.zip) | 0.1.0 | ✔️ |
+|  | LassySmall | nl | nl_lassysmall | [download](http://nlp.stanford.edu/software/conll_2018/nl_lassysmall_models.zip) | 0.1.0 |  |
+| English | EWT | en | en_ewt | [download](http://nlp.stanford.edu/software/conll_2018/en_ewt_models.zip) | 0.1.0 | ✔️ |
+|  | GUM | en | en_gum | [download](http://nlp.stanford.edu/software/conll_2018/en_gum_models.zip) | 0.1.0 |  |
+|  | LinES | en | en_lines | [download](http://nlp.stanford.edu/software/conll_2018/en_lines_models.zip) | 0.1.0 |  |
+| Estonian | EDT | et | et_edt | [download](http://nlp.stanford.edu/software/conll_2018/et_edt_models.zip) | 0.1.0 | ✔️ |
+| Finnish | FTB | fi | fi_ftb | [download](http://nlp.stanford.edu/software/conll_2018/fi_ftb_models.zip) | 0.1.0 |  |
+|  | TDT | fi | fi_tdt | [download](http://nlp.stanford.edu/software/conll_2018/fi_tdt_models.zip) | 0.1.0 | ✔️🧂 |
+| French | GSD | fr | fr_gsd | [download](http://nlp.stanford.edu/software/conll_2018/fr_gsd_models.zip) | 0.1.0 | ✔️ |
+|  | Sequoia | fr | fr_sequoia | [download](http://nlp.stanford.edu/software/conll_2018/fr_sequoia_models.zip) | 0.1.0 |  |
+|  | Spoken | fr | fr_spoken | [download](http://nlp.stanford.edu/software/conll_2018/fr_spoken_models.zip) | 0.1.0 | 🧂 |
+| Galician | CTG | gl | gl_ctg | [download](http://nlp.stanford.edu/software/conll_2018/gl_ctg_models.zip) | 0.1.0 | ✔️ |
+|  | TreeGal | gl | gl_treegal | [download](http://nlp.stanford.edu/software/conll_2018/gl_treegal_models.zip) | 0.1.0 | 🧂 |
+| German | GSD | de | de_gsd | [download](http://nlp.stanford.edu/software/conll_2018/de_gsd_models.zip) | 0.1.0 | ✔️ |
+| Gothic | PROIEL | got | got_proiel | [download](http://nlp.stanford.edu/software/conll_2018/got_proiel_models.zip) | 0.1.0 | ✔️ |
+| Greek | GDT | el | el_gdt | [download](http://nlp.stanford.edu/software/conll_2018/el_gdt_models.zip) | 0.1.0 | ✔️ |
+| Hebrew | HTB | he | he_htb | [download](http://nlp.stanford.edu/software/conll_2018/he_htb_models.zip) | 0.1.0 | ✔️ |
+| Hindi | HDTB | hi | hi_hdtb | [download](http://nlp.stanford.edu/software/conll_2018/hi_hdtb_models.zip) | 0.1.0 | ✔️ |
+| Hungarian | Szeged | hu | hu_szeged | [download](http://nlp.stanford.edu/software/conll_2018/hu_szeged_models.zip) | 0.1.0 | ✔️ |
+| Indonesian | GSD | id | id_gsd | [download](http://nlp.stanford.edu/software/conll_2018/id_gsd_models.zip) | 0.1.0 | ✔️ |
+| Irish | IDT | ga | ga_idt | [download](http://nlp.stanford.edu/software/conll_2018/ga_idt_models.zip) | 0.1.0 | ✔️ |
+| Italian | ISDT | it | it_isdt | [download](http://nlp.stanford.edu/software/conll_2018/it_isdt_models.zip) | 0.1.0 | ✔️🧂 |
+|  | PoSTWITA | it | it_postwita | [download](http://nlp.stanford.edu/software/conll_2018/it_postwita_models.zip) | 0.1.0 |  |
+| Japanese | GSD | ja | ja_gsd | [download](http://nlp.stanford.edu/software/conll_2018/ja_gsd_models.zip) | 0.1.0 | ✔️🧂 |
+| Kazakh | KTB | kk | kk_ktb | [download](http://nlp.stanford.edu/software/conll_2018/kk_ktb_models.zip) | 0.1.0 | ✔️⚠️ |
+| Korean | GSD | ko | ko_gsd | [download](http://nlp.stanford.edu/software/conll_2018/ko_gsd_models.zip) | 0.1.0 |  |
+|  | Kaist | ko | ko_kaist | [download](http://nlp.stanford.edu/software/conll_2018/ko_kaist_models.zip) | 0.1.0 | ✔️ |
+| Kurmanji | MG | kmr | kmr_mg | [download](http://nlp.stanford.edu/software/conll_2018/kmr_mg_models.zip) | 0.1.0 | ✔️⚠️🧂 |
+| Latin | ITTB | la | la_ittb | [download](http://nlp.stanford.edu/software/conll_2018/la_ittb_models.zip) | 0.1.0 | ✔️ |
+|  | Perseus | la | la_perseus | [download](http://nlp.stanford.edu/software/conll_2018/la_perseus_models.zip) | 0.1.0 |  |
+|  | PROIEL | la | la_proiel | [download](http://nlp.stanford.edu/software/conll_2018/la_proiel_models.zip) | 0.1.0 |  |
+| Latvian | LVTB | lv | lv_lvtb | [download](http://nlp.stanford.edu/software/conll_2018/lv_lvtb_models.zip) | 0.1.0 | ✔️ |
+| North_Sami | Giella | sme | sme_giella | [download](http://nlp.stanford.edu/software/conll_2018/sme_giella_models.zip) | 0.1.0 | ✔️ |
+| Norwegian | Bokmaal | no_bokmaal | no_bokmaal | [download](http://nlp.stanford.edu/software/conll_2018/no_bokmaal_models.zip) | 0.1.0 | ✔️ |
+|  | Nynorsk | no_nynorsk | no_nynorsk | [download](http://nlp.stanford.edu/software/conll_2018/no_nynorsk_models.zip) | 0.1.0 | ✔️ |
+|  | NynorskLIA | no_nynorsk | no_nynorsklia | [download](http://nlp.stanford.edu/software/conll_2018/no_nynorsklia_models.zip) | 0.1.0 |  |
+| Old_Church_Slavonic | PROIEL | cu | cu_proiel | [download](http://nlp.stanford.edu/software/conll_2018/cu_proiel_models.zip) | 0.1.0 | ✔️ |
+| Old_French | SRCMF | fro | fro_srcmf | [download](http://nlp.stanford.edu/software/conll_2018/fro_srcmf_models.zip) | 0.1.0 | ✔️ |
+| Persian | Seraji | fa | fa_seraji | [download](http://nlp.stanford.edu/software/conll_2018/fa_seraji_models.zip) | 0.1.0 | ✔️ |
+| Polish | LFG | pl | pl_lfg | [download](http://nlp.stanford.edu/software/conll_2018/pl_lfg_models.zip) | 0.1.0 | ✔️ |
+|  | SZ | pl | pl_sz | [download](http://nlp.stanford.edu/software/conll_2018/pl_sz_models.zip) | 0.1.0 |  |
+| Portuguese | Bosque | pt | pt_bosque | [download](http://nlp.stanford.edu/software/conll_2018/pt_bosque_models.zip) | 0.1.0 | ✔️ |
+| Romanian | RRT | ro | ro_rrt | [download](http://nlp.stanford.edu/software/conll_2018/ro_rrt_models.zip) | 0.1.0 | ✔️ |
+| Russian | SynTagRus | ru | ru_syntagrus | [download](http://nlp.stanford.edu/software/conll_2018/ru_syntagrus_models.zip) | 0.1.0 | ✔️ |
+|  | Taiga | ru | ru_taiga | [download](http://nlp.stanford.edu/software/conll_2018/ru_taiga_models.zip) | 0.1.0 | 🧂 |
+| Serbian | SET | sr | sr_set | [download](http://nlp.stanford.edu/software/conll_2018/sr_set_models.zip) | 0.1.0 | ✔️ |
+| Slovak | SNK | sk | sk_snk | [download](http://nlp.stanford.edu/software/conll_2018/sk_snk_models.zip) | 0.1.0 | ✔️ |
+| Slovenian | SSJ | sl | sl_ssj | [download](http://nlp.stanford.edu/software/conll_2018/sl_ssj_models.zip) | 0.1.0 | ✔️ |
+|  | SST | sl | sl_sst | [download](http://nlp.stanford.edu/software/conll_2018/sl_sst_models.zip) | 0.1.0 |  |
+| Spanish | AnCora | es | es_ancora | [download](http://nlp.stanford.edu/software/conll_2018/es_ancora_models.zip) | 0.1.0 | ✔️ |
+| Swedish | LinES | sv | sv_lines | [download](http://nlp.stanford.edu/software/conll_2018/sv_lines_models.zip) | 0.1.0 |  |
+|  | Talbanken | sv | sv_talbanken | [download](http://nlp.stanford.edu/software/conll_2018/sv_talbanken_models.zip) | 0.1.0 | ✔️ |
+| Turkish | IMST | tr | tr_imst | [download](http://nlp.stanford.edu/software/conll_2018/tr_imst_models.zip) | 0.1.0 | ✔️ |
+| Ukrainian | IU | uk | uk_iu | [download](http://nlp.stanford.edu/software/conll_2018/uk_iu_models.zip) | 0.1.0 | ✔️ |
+| Upper_Sorbian | UFAL | hsb | hsb_ufal | [download](http://nlp.stanford.edu/software/conll_2018/hsb_ufal_models.zip) | 0.1.0 | ✔️⚠️🧂 |
+| Urdu | UDTB | ur | ur_udtb | [download](http://nlp.stanford.edu/software/conll_2018/ur_udtb_models.zip) | 0.1.0 | ✔️ |
+| Uyghur | UDT | ug | ug_udt | [download](http://nlp.stanford.edu/software/conll_2018/ug_udt_models.zip) | 0.1.0 | ✔️ |
+| Vietnamese | VTB | vi | vi_vtb | [download](http://nlp.stanford.edu/software/conll_2018/vi_vtb_models.zip) | 0.1.0 | ✔️ |
