@@ -53,10 +53,10 @@ class LemmaProcessor:
     def process(self, doc):
         batch = DataLoader(doc, self.args['batch_size'], self.loaded_args, vocab=self.vocab, evaluation=True)
         dict_preds = self.trainer.predict_dict(batch.conll.get(['word', 'upos']))
-        if self.loaded_args.get('dict_only', False):
-            preds = dict_preds
-        elif self.use_identity:
+        if self.use_identity:
             preds = [ln[FIELD_TO_IDX['word']] for sent in batch.conll.sents for ln in sent if '-' not in ln[0]]
+        elif self.loaded_args.get('dict_only', False):
+            preds = dict_preds
         else:
             print("Running the seq2seq model...")
             preds = []
