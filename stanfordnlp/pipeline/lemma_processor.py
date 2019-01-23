@@ -45,12 +45,18 @@ class LemmaProcessor:
         loaded_args['cuda'] = self.args['cuda'] and not self.args['cpu']
         self.loaded_args = loaded_args
         self.vocab = vocab
+        if self.args.get('use_identity') in ['True', True]:
+            self.use_identity = True
+        else:
+            self.use_identity = False
 
     def process(self, doc):
         batch = DataLoader(doc, self.args['batch_size'], self.loaded_args, vocab=self.vocab, evaluation=True)
         dict_preds = self.trainer.predict_dict(batch.conll.get(['word', 'upos']))
         if self.loaded_args.get('dict_only', False):
             preds = dict_preds
+        elif self.use_identity:
+            preds = [ln[FIELD_TO_IDX['word']] for sent in batch.conll.sents for ln in sent if '-' not in ln[0]]
         else:
             print("Running the seq2seq model...")
             preds = []
@@ -66,26 +72,7 @@ class LemmaProcessor:
                 print("[Ensembling dict with seq2seq lemmatizer...]")
                 preds = self.trainer.ensemble(batch.conll.get(['word', 'upos']), preds)   
         
-        doc.conll_file = conll.CoNLLFile(input_str=self.write_conll_with_lemmas(batch.conll, preds))
-
-    def write_conll_with_lemmas(self, input_conll, lemmas):
-        """ Write a new conll file, but use the new lemmas to replace the old ones."""
-        return_string = ""
-        assert input_conll.num_words == len(lemmas), "Num of lemmas does not match the number in original data file."
-        lemma_idx = FIELD_TO_IDX['lemma']
-        idx = 0
-        for sent in input_conll.sents:
-            for ln in sent:
-                if '-' not in ln[0]:  # do not process if it is a mwt line
-                    lm = lemmas[idx]
-                    if len(lm) == 0:
-                        lm = '_'
-                    ln[lemma_idx] = lm
-                    idx += 1
-                return_string += ("\t".join(ln))
-                return_string += "\n"
-            return_string += "\n"
-        return return_string
-
-
+        # map empty string lemmas to '_'
+        preds = [max([(len(x),x), (0, '_')])[1] for x in preds]
+        batch.conll.set(['lemma'], preds)
 
