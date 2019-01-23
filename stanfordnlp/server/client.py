@@ -125,12 +125,12 @@ class CoreNLPClient(RobustService):
     DEFAULT_PROPERTIES = {}
     DEFAULT_OUTPUT_FORMAT = "serialized"
 
-    def __init__(self, start_server=True, 
-                 endpoint="http://localhost:9000", 
-                 timeout=5000, 
+    def __init__(self, start_server=True,
+                 endpoint="http://localhost:9000",
+                 timeout=5000,
                  threads=5,
                  props_file = None,
-                 annotators=None, 
+                 annotators=None,
                  properties=None,
                  output_format=None,
                  stdout=sys.stdout,
@@ -270,7 +270,7 @@ class CoreNLPClient(RobustService):
     def tregrex(self, text, pattern, filter=False):
         return self.__regex('/tregex', text, pattern, filter)
 
-    def __regex(self, path, text, pattern, filter, properties):
+    def __regex(self, path, text, pattern, filter, properties={'inputFormat': 'text'}):
         """Send a regex-related request to the CoreNLP server.
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
