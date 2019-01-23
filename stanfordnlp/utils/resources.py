@@ -38,7 +38,7 @@ def build_default_config(lang, models_path):
     else:
         default_config['processors'] = 'tokenize,pos,lemma,depparse'
     if lang == 'vi':
-        default_config['use_identity'] = True
+        default_config['lemma.use_identity'] = True
     lang_dir = f"{models_path}/{lang}_models"
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
