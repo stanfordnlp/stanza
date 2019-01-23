@@ -46,8 +46,7 @@ class MWTProcessor(Processor):
             # skip eval if dev data does not exist
             preds = []
 
-        conll_with_mwt = io.StringIO()
-        batch.conll.write_conll_with_mwt_expansions(preds, conll_with_mwt, should_close=False)
-        doc.conll_file = conll.CoNLLFile(input_str=conll_with_mwt.getvalue())
-        conll_with_mwt.close()
+        with io.StringIO() as conll_with_mwt:
+            batch.conll.write_conll_with_mwt_expansions(preds, conll_with_mwt)
+            doc.conll_file = conll.CoNLLFile(input_str=conll_with_mwt.getvalue())
 

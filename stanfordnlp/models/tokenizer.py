@@ -61,7 +61,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -88,8 +88,8 @@ def train(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
 
     train_input_files = {
-            'json': args['json_file'], 
-            'txt': args['txt_file'], 
+            'json': args['json_file'],
+            'txt': args['txt_file'],
             'label': args['label_file']
             }
     train_batches = DataLoader(args, input_files=train_input_files)
@@ -98,7 +98,7 @@ def train(args):
 
     dev_input_files = {
             'json': args['dev_json_file'],
-            'txt': args['dev_txt_file'], 
+            'txt': args['dev_txt_file'],
             'label': args['dev_label_file']
             }
     dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True)
@@ -157,16 +157,15 @@ def evaluate(args):
             args[k] = loaded_args[k]
 
     eval_input_files = {
-            'json': args['json_file'], 
-            'txt': args['txt_file'], 
+            'json': args['json_file'],
+            'txt': args['txt_file'],
             'label': args['label_file']
             }
 
     batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
 
-    conll_output_file = open(args['conll_file'], 'w')
-
-    oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    with open(args['conll_file'], 'w') as conll_output_file:
+        oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 

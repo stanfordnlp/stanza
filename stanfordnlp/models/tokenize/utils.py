@@ -43,7 +43,7 @@ def print_sentence(sentence, f, mwt_dict=None):
             i += 1
     f.write('\n')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, should_close=True):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -149,14 +149,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
         if len(current_sent):
             print_sentence(current_sent, output_file, mwt_dict)
 
-    # close the output file if requested
-    if should_close:
-        output_file.close()
-
     return oov_count, offset, all_preds
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
-    oov_count, N, all_preds = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    with open(args['conll_file'], 'w') as conll_output:
+        oov_count, N, all_preds = output_predictions(conll_output, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in batches.data for y in x]

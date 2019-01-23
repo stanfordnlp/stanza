@@ -207,7 +207,7 @@ class CoNLLFile():
 
         return cands
 
-    def write_conll_with_mwt_expansions(self, expansions, output_file, should_close=True):
+    def write_conll_with_mwt_expansions(self, expansions, output_file):
         """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with a right branching tree. """
         idx = 0
         count = 0
@@ -230,8 +230,6 @@ class CoNLLFile():
 
             print("", file=output_file)
             idx = 0
-        if should_close:
-            output_file.close()
 
         assert count == len(expansions), "{} {} {}".format(count, len(expansions), expansions)
         return
