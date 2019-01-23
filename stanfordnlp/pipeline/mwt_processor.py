@@ -3,6 +3,7 @@ import io
 from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.data import DataLoader
 from stanfordnlp.models.mwt.trainer import Trainer
+from stanfordnlp.pipeline.processor import Processor
 
 
 DEFAULT_MWT_CONFIG = {
@@ -12,7 +13,7 @@ DEFAULT_MWT_CONFIG = {
 }
 
 
-class MWTProcessor:
+class MWTProcessor(Processor):
 
     def __init__(self, config={}):
         # set up configurations

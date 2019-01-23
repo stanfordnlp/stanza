@@ -1,14 +1,7 @@
-import random
-import torch
-
-from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
 from stanfordnlp.models.depparse.data import DataLoader
 from stanfordnlp.models.depparse.trainer import Trainer
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
-from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
+from stanfordnlp.pipeline.processor import Processor
 
 DEFAULT_DEPPARSE_CONFIG = {
     'data_dir': 'data/depparse', 'wordvec_dir': 'extern_data/word2vec', 'train_file': None,
@@ -57,7 +50,7 @@ DEFAULT_DEPPARSE_CONFIG = {
 }
 
 
-class DepparseProcessor:
+class DepparseProcessor(Processor):
 
     def __init__(self, config={}):
         # set up configurations

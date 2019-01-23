@@ -1,18 +1,7 @@
-import random
-import numpy as np
-import os
-from collections import Counter
-import torch
-
 from stanfordnlp.models.common.conll import FIELD_TO_IDX
-
-import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.lemma.data import DataLoader
-from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
-from stanfordnlp.models.lemma import edit
 from stanfordnlp.models.lemma.trainer import Trainer
+from stanfordnlp.pipeline.processor import Processor
 
 DEFAULT_LEMMA_CONFIG = {
     'mode': 'predict',
@@ -30,7 +19,8 @@ DEFAULT_LEMMA_CONFIG = {
     'cpu': False
 }
 
-class LemmaProcessor:
+
+class LemmaProcessor(Processor):
     def __init__(self, config={}):
         # set up configurations
         self.args = DEFAULT_LEMMA_CONFIG
