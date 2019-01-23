@@ -113,19 +113,19 @@ For languages that had pretrained word2vec embeddings released from the CoNLL 20
 To train a model, run this command from the root directory:
 
 ```bash
-bash scripts/run_${task}.sh ${treebank} ${gpu_num}
+bash scripts/run_${task}.sh ${treebank}
 ```
 
 For example:
 
 ```bash
-bash scripts/run_tokenize.sh UD_English-EWT 0
+bash scripts/run_tokenize.sh UD_English-EWT
 ```
 
 For the dependency parser, you also need to specify `gold|predicted` for the tag type in the training/dev data.
 
 ```bash
-bash scripts/run_depparse.sh UD_English-EWT 0 predicted
+bash scripts/run_depparse.sh UD_English-EWT predicted
 ```
 
 Models will be saved to the `saved_models` directory.
@@ -135,7 +135,7 @@ Models will be saved to the `saved_models` directory.
 Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
 
 ```bash
-bash scripts/run_ete.sh UD_English-EWT 0 test
+bash scripts/run_ete.sh UD_English-EWT test
 ```
 
 ## LICENSE

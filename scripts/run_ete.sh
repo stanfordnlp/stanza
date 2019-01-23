@@ -1,3 +1,10 @@
+#/bin/bash
+#
+# Run an end-to-end evaluation of all trained modules. Run as:
+#   ./run_ete.sh TREEBANK SET
+# where TREEBANK is the UD treebank name (e.g., UD_English-EWT) and set is one of train, dev or test.
+# This script assumes environment variables are correctly set is config.sh.
+
 # set up config
 source scripts/config.sh
 
@@ -8,18 +15,8 @@ machine_name=$(eval 'hostname')
 echo 'running on: '${machine_name}
 
 # get command line arguments
-outputprefix=$1
-if [[ "$outputprefix" == "UD_"* ]]; then
-    outputprefix=""
-else
-    shift
-fi
-treebank=$1
-shift
-gpu=$1
-shift
-set=$1
-shift
+treebank=$1; shift
+set=$1; shift
 
 # set up short and lang
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
@@ -27,23 +24,15 @@ if [[ "$short" == *"_xv" ]]; then
     short=`echo $short | rev | cut -d_ -f1- | rev`
 fi
 lang=`echo $short | sed -e 's#_.*##g'`
-args=$@
-
-# set up savedir
-if [[ "$args" == *"--save_dir"* ]]; then
-    savedir=""
-else
-    savedir="--save_dir ${outputprefix}saved_models/tokenize"
-fi
 
 # copy initial text data
-if [ ! -e data/tokenize/${short}-ud-${set}.txt ]; then
+if [ ! -e ${TOKENIZE_DATA_DIR}/${short}-ud-${set}.txt ]; then
     echo 'copying test data for: '${treebank}
-    cp ${UDBASE}/${treebank}/${short}-ud-${set}.txt data/tokenize
+    cp ${UDBASE}/${treebank}/${short}-ud-${set}.txt ${TOKENIZE_DATA_DIR}
 fi
 
 # location of ete file to update
-ete_file=data/ete/${short}.${set}.pred.ete.conllu
+ete_file=${ETE_DATA_DIR}/${short}.${set}.pred.ete.conllu
 
 # if necessary select backoff model
 model_short=$short
@@ -59,9 +48,9 @@ fi
 # run the tokenizer
 # variables for tokenizer
 if [ $lang == "vi" ]; then
-    eval_file="--json_file data/tokenize/${short}-ud-${set}.json"
+    eval_file="--json_file ${TOKENIZE_DATA_DIR}/${short}-ud-${set}.json"
 else
-    eval_file="--txt_file data/tokenize/${short}-ud-${set}.txt"
+    eval_file="--txt_file ${TOKENIZE_DATA_DIR}/${short}-ud-${set}.txt"
 fi
 
 # prep the dev/test data
@@ -72,7 +61,7 @@ echo 'prepare tokenize data'
 echo $prep_tokenize_cmd
 eval $prep_tokenize_cmd
 
-run_tokenize_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.tokenizer --mode predict ${eval_file} --lang ${model_lang} --conll_file data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu --shorthand ${model_short} ${savedir} ${args}"
+run_tokenize_cmd="python -m stanfordnlp.models.tokenizer --mode predict ${eval_file} --lang ${model_lang} --conll_file ${TOKENIZE_DATA_DIR}/${short}.${set}.pred.ete.conllu --shorthand ${model_short}"
 
 echo 'run tokenizer'
 echo $run_tokenize_cmd
@@ -80,7 +69,7 @@ eval $run_tokenize_cmd
 
 echo 'update full ete file'
 
-cp_ete_file_cmd="cp data/tokenize/${short}.${set}.${outputprefix}pred.ete.conllu ${ete_file}"
+cp_ete_file_cmd="cp ${TOKENIZE_DATA_DIR}/${short}.${set}.pred.ete.conllu ${ete_file}"
 
 echo $cp_ete_file_cmd
 eval $cp_ete_file_cmd
@@ -89,12 +78,12 @@ eval $cp_ete_file_cmd
 if [ -e saved_models/mwt/${short}_mwt_expander.pt ]; then
     echo '---'
     echo 'running mwt expander...'
-    run_mwt_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.mwt_expander --mode predict --eval_file ${ete_file} --shorthand ${model_short} --output_file data/mwt/${short}.${set}.pred.ete.conllu --save_dir saved_models/mwt ${args}"
+    run_mwt_cmd="python -m stanfordnlp.models.mwt_expander --mode predict --eval_file ${ete_file} --shorthand ${model_short} --output_file ${MWT_DATA_DIR}/${short}.${set}.pred.ete.conllu"
     echo 'run mwt expander'
     echo $run_mwt_cmd
     eval $run_mwt_cmd
     echo 'update full ete file'
-    cp_ete_file_cmd="cp data/mwt/${short}.${set}.pred.ete.conllu ${ete_file}"
+    cp_ete_file_cmd="cp ${MWT_DATA_DIR}/${short}.${set}.pred.ete.conllu ${ete_file}"
     echo $cp_ete_file_cmd
     eval $cp_ete_file_cmd
 fi
@@ -102,12 +91,12 @@ fi
 # run the part-of-speech tagger
 echo '---'
 echo 'running part-of-speech tagger...'
-part_of_speech_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.tagger --eval_file ${ete_file} --output_file data/pos/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --save_dir saved_models/pos"
+part_of_speech_cmd="python -m stanfordnlp.models.tagger --eval_file ${ete_file} --output_file ${POS_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict"
 echo 'run part-of-speech'
 echo $part_of_speech_cmd
 eval $part_of_speech_cmd
 echo 'update full ete file'
-cp_ete_file_cmd="cp data/pos/${short}.${set}.${outputprefix}pred.ete.conllu $ete_file"
+cp_ete_file_cmd="cp ${POS_DATA_DIR}/${short}.${set}.pred.ete.conllu $ete_file"
 echo $cp_ete_file_cmd
 eval $cp_ete_file_cmd
 
@@ -115,15 +104,15 @@ eval $cp_ete_file_cmd
 echo '---'
 echo 'running lemmatizer...'
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
-    lemma_cmd="python -m stanfordnlp.models.identity_lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
+    lemma_cmd="python -m stanfordnlp.models.identity_lemmatizer --data_dir ${LEMMA_DATA_DIR} --eval_file ${ete_file} --output_file ${LEMMA_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --mode predict"
 else
-    lemma_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.lemmatizer --data_dir data/lemma --eval_file ${ete_file} --output_file data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --mode predict"
+    lemma_cmd="python -m stanfordnlp.models.lemmatizer --data_dir ${LEMMA_DATA_DIR} --eval_file ${ete_file} --output_file ${LEMMA_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --mode predict"
 fi
 echo 'run lemmatizer'
 echo $lemma_cmd
 eval $lemma_cmd
 echo 'update full ete file'
-cp_ete_file_cmd="cp data/lemma/${short}.${set}.${outputprefix}pred.ete.conllu ${ete_file}"
+cp_ete_file_cmd="cp ${LEMMA_DATA_DIR}/${short}.${set}.pred.ete.conllu ${ete_file}"
 echo $cp_ete_file_cmd
 eval $cp_ete_file_cmd
 
@@ -137,19 +126,19 @@ fi
 # run the dependency parser
 echo '---'
 echo 'running dependency parser...'
-depparse_cmd="CUDA_VISIBLE_DEVICES=${gpu} python -m stanfordnlp.models.parser --eval_file ${ete_file} --output_file data/depparse/${short}.${set}.${outputprefix}pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size} --save_dir saved_models/depparse"
+depparse_cmd="python -m stanfordnlp.models.parser --eval_file ${ete_file} --output_file ${DEPPARSE_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size}"
 echo 'run dependency parser'
 echo $depparse_cmd
 eval $depparse_cmd
-cp_ete_file_cmd="cp data/depparse/${short}.${set}.${outputprefix}pred.ete.conllu ${ete_file}"
+cp_ete_file_cmd="cp ${DEPPARSE_DATA_DIR}/${short}.${set}.pred.ete.conllu ${ete_file}"
 echo 'update full ete file'
 echo $cp_ete_file_cmd
 eval $cp_ete_file_cmd
 
 # get final output table
 # copy over gold file
-cp ${UDBASE}/${treebank}/${short}-ud-${set}.conllu data/ete
-gold_file=data/ete/${short}-ud-${set}.conllu
+cp ${UDBASE}/${treebank}/${short}-ud-${set}.conllu ${ETE_DATA_DIR}
+gold_file=${ETE_DATA_DIR}/${short}-ud-${set}.conllu
 # run official eval script
 echo 'running official eval script'
 # print out results

@@ -1,36 +1,33 @@
+#!/bin/bash
+#
+# Train and evaluate lemmatizer. Run as:
+#   ./run_lemma.sh TREEBANK OTHER_ARGS
+# where TREEBANK is the UD treebank name (e.g., UD_English-EWT) and OTHER_ARGS are additional training arguments (see lemmatizer code) or empty.
+# This script assumes UDBASE and LEMMA_DATA_DIR are correctly set in config.sh.
+
 source scripts/config.sh
 
-outputprefix=$1
-if [[ "$outputprefix" == "UD_"* ]]; then
-    outputprefix=""
-else
-    shift
-fi
-treebank=$1
-shift
-gpu=$1
-shift
+treebank=$1; shift
+args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
-args=$@
-DATADIR=data/lemma
 
-train_file=${DATADIR}/${short}.train.in.conllu
-eval_file=${DATADIR}/${short}.dev.in.conllu
-output_file=${DATADIR}/${short}.dev.pred.conllu
-gold_file=${DATADIR}/${short}.dev.gold.conllu
+train_file=${LEMMA_DATA_DIR}/${short}.train.in.conllu
+eval_file=${LEMMA_DATA_DIR}/${short}.dev.in.conllu
+output_file=${LEMMA_DATA_DIR}/${short}.dev.pred.conllu
+gold_file=${LEMMA_DATA_DIR}/${short}.dev.gold.conllu
 
 if [ ! -e $train_file ]; then
-    bash scripts/prep_lemma_data.sh $treebank $DATADIR
+    bash scripts/prep_lemma_data.sh $treebank
 fi
 
-echo "Running $args..."
+echo "Running lemmatizer with $args..."
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
-    python -m stanfordnlp.models.identity_lemmatizer --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
+    python -m stanfordnlp.models.identity_lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short
 else
-    CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.lemmatizer --data_dir $DATADIR --train_file $train_file --eval_file $eval_file \
+    python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
-    CUDA_VISIBLE_DEVICES=$gpu python -m stanfordnlp.models.lemmatizer --data_dir $DATADIR --eval_file $eval_file \
-        --output_file $output_file --gold_file $gold_file --lang $short --mode predict
+    python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --eval_file $eval_file \
+        --output_file $output_file --gold_file $gold_file --lang $short --mode predict $args
 fi

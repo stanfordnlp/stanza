@@ -1,10 +1,13 @@
 #!/bin/bash
+#
+# Prepare data for training and evaluating MWT expanders. Run as:
+#   ./prep_mwt_data.sh TREEBANK
+# where TREEBANK is the UD treebank name (e.g., UD_English-EWT).
+# This script assumes UDBASE and MWT_DATA_DIR are correctly set in config.sh.
+
 source scripts/config.sh
 
-treebank=$1
-shift
-UDPIPEBASE=$UDBASE/UDPipe_out
-DATADIR=data/mwt
+treebank=$1; shift
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
@@ -20,9 +23,9 @@ train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
 dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
 dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu
 
-train_in_file=$DATADIR/${short}.train.in.conllu
-dev_in_file=$DATADIR/${short}.dev.in.conllu
-dev_gold_file=$DATADIR/${short}.dev.gold.conllu
+train_in_file=$MWT_DATA_DIR/${short}.train.in.conllu
+dev_in_file=$MWT_DATA_DIR/${short}.dev.in.conllu
+dev_gold_file=$MWT_DATA_DIR/${short}.dev.gold.conllu
 # copy conllu file if exists; otherwise create empty files
 if [ -e $train_conllu ]; then
     echo "Preparing training data..."
