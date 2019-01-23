@@ -57,13 +57,16 @@ def load_config(config_file_path):
 
 
 # download a ud models zip file
-def download_ud_model(lang_name, resource_dir=None, should_unzip=True):
+def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False):
     # ask if user wants to download
     if resource_dir is not None and os.path.exists(f"{resource_dir}/{lang_name}_models"):
-        print("")
-        print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download them again? [y/N]")
-        should_download = input()
-        should_download = should_download.strip().lower() in ['yes', 'y']
+        if confirm_if_exists:
+            print("")
+            print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download the models again? [y/N]")
+            should_download = input()
+            should_download = should_download.strip().lower() in ['yes', 'y']
+        else:
+            should_download = False
     else:
         print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
         should_download = input()
@@ -119,11 +122,11 @@ def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
 
 
 # main download function
-def download(download_label, resource_dir=None):
+def download(download_label, resource_dir=None, confirm_if_exists=False):
     if download_label in conll_shorthands:
-        download_ud_model(download_label, resource_dir=resource_dir)
+        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists)
     elif download_label in default_treebanks:
         print(f'Using the default treebank "{default_treebanks[download_label]}" for language "{download_label}".')
-        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir)
+        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir, confirm_if_exists=confirm_if_exists)
     else:
         raise ValueError(f'The language or treebank "{download_label}" is not currently supported by this function. Please try again with other languages or treebanks.')
