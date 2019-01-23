@@ -70,14 +70,4 @@ class POSProcessor:
             preds += self.trainer.predict(b)
         batch.conll.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
 
-    def write_conll(self, batch):
-        """ Write current conll contents to file.
-        """
-        return_string = ""
-        for sent in batch.conll.sents:
-            for ln in sent:
-                return_string += ("\t".join(ln))
-                return_string += "\n"
-            return_string += "\n"
-        return return_string
 
