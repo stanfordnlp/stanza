@@ -18,8 +18,8 @@ NAME_TO_PROCESSOR_CLASS = {'tokenize': TokenizeProcessor, 'mwt': MWTProcessor, '
 
 class Pipeline:
 
-    def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, shorthand=None, **kwargs):
-        shorthand = default_treebanks[lang] if shorthand is None else shorthand
+    def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, treebank=None, **kwargs):
+        shorthand = default_treebanks[lang] if treebank is None else treebank
         config = build_default_config(shorthand, models_dir)
         config.update(kwargs)
         self.config = config
