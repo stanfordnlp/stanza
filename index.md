@@ -21,7 +21,31 @@ Choose StanfordNLP if you need:
 
 ## Installation
 
-Details TBD, but something about pip and model download.
+We strongly recommend installing StanfordNLP with `pip`, which is as simple as
+
+```bash
+pip install stanfordnlp
+```
+
+To see StanfordNLP's neural pipeline in action, you can launch the Python interactive interpreter, and try the following commands
+
+```python
+>>> import stanfordnlp
+>>> stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
+>>> nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
+>>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+>>> doc.sentences[0].print_dependencies()
+```
+
+At the end, you should be able to see the dependency parse of the first sentence in the example. For more details, please see our [getting started guide](/installation_download.html#getting-started).
+
+Aside from the neural pipeline, StanfordNLP also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. To use it, you first need to set up the CoreNLP package as follows
+
+* Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use.
+* Put the model jars in the distribution folder
+* Tell the python code where Stanford CoreNLP is located: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
+
+After CoreNLP is set up, you can follow our [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) to test it out.
 
 ## License
 
@@ -39,6 +63,8 @@ limitations under the License.
 
 ## Citing StanfordNLP in papers
 
-If you use StanfordNLP in your work, please cite this paper:
+If you use the StanfordNLP neural pipeline in your work, please cite this paper:
 
-> Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch]() In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]
+> Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch](https://nlp.stanford.edu/pubs/qi2018universal.pdf) In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]
+
+If you use Stanford CoreNLP through the StanfordNLP python client, please follow the instructions [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) to cite the proper publications.
