@@ -23,7 +23,10 @@ class LemmaProcessor(UDProcessor):
             self.build_final_config(config)
 
     def process(self, doc):
-        batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+        if not self.use_identity:
+            batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+        else:
+            batch = DataLoader(doc, self.config['batch_size'], self.config, evaluation=True, conll_only=True)
         if self.use_identity:
             preds = [ln[FIELD_TO_IDX['word']] for sent in batch.conll.sents for ln in sent if '-' not in ln[0]]
         elif self.config.get('dict_only', False):
