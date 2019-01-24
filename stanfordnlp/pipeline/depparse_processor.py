@@ -1,77 +1,33 @@
 from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.models.depparse.data import DataLoader
 from stanfordnlp.models.depparse.trainer import Trainer
-from stanfordnlp.pipeline.processor import Processor
-
-DEFAULT_DEPPARSE_CONFIG = {
-    'data_dir': 'data/depparse', 'wordvec_dir': 'extern_data/word2vec', 'train_file': None,
-    'eval_file': 'parser_input.conllu',
-    'output_file': 'parser_output.conllu',
-    'gold_file': 'parser_input.conllu',
-    'pretrain_path': 'saved_models/depparse/en_ewt.pretrain.pt',
-    'model_path': 'saved_models/depparse/en_ewt_parser.pt',
-    'mode': 'predict',
-    'lang': 'en',
-    'shorthand': 'en_ewt',
-    'best_param': False,
-    'hidden_dim': 400,
-    'char_hidden_dim': 400,
-    'deep_biaff_hidden_dim': 400,
-    'composite_deep_biaff_hidden_dim': 100,
-    'word_emb_dim': 75,
-    'char_emb_dim': 100,
-    'tag_emb_dim': 50,
-    'transformed_dim': 125,
-    'num_layers': 3,
-    'char_num_layers': 1,
-    'word_dropout': 0.33,
-    'dropout': 0.5,
-    'rec_dropout': 0,
-    'char_rec_dropout': 0,
-    'char': True,
-    'pretrain': True,
-    'linearization': True,
-    'distance': True,
-    'sample_train': 1.0,
-    'optim': 'adam',
-    'lr': 0.003,
-    'beta2': 0.95,
-    'max_steps': 50000,
-    'eval_interval': 100,
-    'max_steps_before_stop': 3000,
-    'batch_size': 5000,
-    'max_grad_norm': 1.0,
-    'log_step': 20,
-    'save_dir': 'saved_models/depparse',
-    'save_name': None,
-    'seed': 1234,
-    'cuda': True,
-    'cpu': False
-}
+from stanfordnlp.pipeline.processor import UDProcessor
 
 
-class DepparseProcessor(Processor):
+DEPPARSE_MODEL_OPTIONS = ['batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
+                           'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'distance',
+                           'dropout', 'eval_interval', 'hidden_dim', 'linearization', 'log_step', 'lr', 'max_grad_norm',
+                           'max_steps', 'max_steps_before_stop', 'num_layers', 'optim', 'pretrain', 'rec_dropout',
+                           'seed', 'tag_emb_dim', 'transformed_dim', 'word_dropout', 'word_emb_dim']
 
-    def __init__(self, config={}):
+
+class DepparseProcessor(UDProcessor):
+
+    def __init__(self, config, use_gpu):
         # set up configurations
-        self.args = DEFAULT_DEPPARSE_CONFIG
-        for key in config.keys():
-            self.args[key] = config[key]
         # get pretrained word vectors
-        self.pretrain = Pretrain(self.args['pretrain_path'])
+        self.model_options = DEPPARSE_MODEL_OPTIONS
+        self.pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
-        self.trainer = Trainer(pretrain=self.pretrain, model_file=self.args['model_path'])
-        self.loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
-        for k in self.args:
-            if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand'] or k == 'mode':
-                self.loaded_args[k] = self.args[k]
-        self.loaded_args['cuda'] = self.args['cuda'] and not self.args['cpu']
+        self.trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        self.build_final_config(config)
 
     def process(self, doc):
         batch = DataLoader(
-            doc, self.loaded_args['batch_size'], self.loaded_args, self.pretrain, vocab=self.vocab, evaluation=True)
+            doc, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
         batch.conll.set(['head', 'deprel'], [y for x in preds for y in x])
         return batch.conll
+

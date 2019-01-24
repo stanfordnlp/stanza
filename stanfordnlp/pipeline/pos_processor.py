@@ -1,63 +1,29 @@
 from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.models.pos.data import DataLoader
 from stanfordnlp.models.pos.trainer import Trainer
-from stanfordnlp.pipeline.processor import Processor
+from stanfordnlp.pipeline.processor import UDProcessor
 
-DEFAULT_POS_CONFIG = {
-                      'data_dir': 'data/pos',
-                      'wordvec_dir': 'extern_data/word2vec',
-                      'train_file': None,
-                      'eval_file': 'pre_pos_content.conllu',
-                      'output_file': 'post_pos_content.conllu',
-                      'gold_file': 'pre_pos_content.conllu',
-                      'pretrain_path': 'saved_models/pos/en_ewt.pretrain.pt',
-                      'model_path': 'saved_models/pos/en_ewt_tagger.pt',
-                      'mode': 'predict',
-                      'lang': 'en_ewt',
-                      'shorthand': 'en_ewt',
-                      'best_param': False,
-                      'char': True,
-                      'pretrain': True,
-                      'share_hid': False,
-                      'sample_train': 1.0,
-                      'optim': 'adam',
-                      'lr': 0.003,
-                      'beta2': 0.95,
-                      'max_steps': 50000,
-                      'eval_interval': 100,
-                      'adapt_eval_interval': True,
-                      'max_steps_before_stop': 3000,
-                      'batch_size': 5000,
-                      'max_grad_norm': 1.0,
-                      'log_step': 20,
-                      'save_dir': 'saved_models/pos',
-                      'save_name': None,
-                      'seed': 1234,
-                      'cuda': True,
-                      'cpu': False
-                      }
+POS_MODEL_OPTIONS = ['adapt_eval_interval', 'batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim',
+                      'char_num_layers', 'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim',
+                      'dropout', 'eval_interval', 'hidden_dim', 'log_step', 'lr', 'max_grad_norm', 'max_steps',
+                      'max_steps_before_stop', 'num_layers', 'optim', 'pretrain', 'rec_dropout', 'seed', 'share_hid',
+                      'tag_emb_dim', 'transformed_dim', 'word_dropout', 'word_emb_dim']
 
 
-class POSProcessor(Processor):
+class POSProcessor(UDProcessor):
 
-    def __init__(self, config={}):
+    def __init__(self, config, use_gpu):
         # set up configurations
-        self.args = DEFAULT_POS_CONFIG
-        for key in config.keys():
-            self.args[key] = config[key]
         # get pretrained word vectors
-        self.pretrain = Pretrain(self.args['pretrain_path'])
+        self.model_options = POS_MODEL_OPTIONS
+        self.pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
-        self.trainer = Trainer(pretrain=self.pretrain, model_file=self.args['model_path'])
-        self.loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
-        for k in self.args:
-            if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand'] or k == 'mode':
-                self.loaded_args[k] = self.args[k]
-        self.loaded_args['cuda'] = self.args['cuda'] and not self.args['cpu']
+        self.trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        self.build_final_config(config)
 
     def process(self, doc):
         batch = DataLoader(
-            doc, self.loaded_args['batch_size'], self.loaded_args, self.pretrain, vocab=self.vocab, evaluation=True)
+            doc, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
