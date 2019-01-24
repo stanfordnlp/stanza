@@ -105,7 +105,7 @@ class Sentence:
 
     def print_tokens(self):
         for tok in self.tokens:
-            print(tok.word, tok.lemma, tok.pos)
+            print((tok.word, tok.lemma, tok.pos))
 
 
 class Token:
