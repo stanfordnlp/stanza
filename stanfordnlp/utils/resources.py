@@ -88,7 +88,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
                 download_dir = DEFAULT_MODEL_DIR
             # initiate download
             if not os.path.exists(download_dir):
-                os.mkdirs(download_dir)
+                os.mkdir(download_dir)
         else:
             download_dir = resource_dir
         print('')
