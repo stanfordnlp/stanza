@@ -30,6 +30,7 @@ processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 't
 
 # functions for handling configs
 
+
 # given a language and models path, build a default configuration
 def build_default_config(lang, models_path):
     default_config = {}
@@ -39,6 +40,7 @@ def build_default_config(lang, models_path):
         default_config['processors'] = 'tokenize,pos,lemma,depparse'
     if lang == 'vi':
         default_config['lemma.use_identity'] = True
+        default_config['lemma.batch_size'] = 5000
     lang_dir = f"{models_path}/{lang}_models"
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
