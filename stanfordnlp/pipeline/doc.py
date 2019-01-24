@@ -103,6 +103,11 @@ class Sentence:
         for dep_edge in self.dependencies:
             print((dep_edge[2].word, dep_edge[0]._index, dep_edge[1]))
 
+    def print_tokens(self):
+        for tok in self.tokens:
+            print(tok.word, tok.lemma, tok.pos)
+
+
 class Token:
 
     def __init__(self, token_entry):
