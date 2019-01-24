@@ -10,7 +10,7 @@ from .vocab import Vocab
 
 
 class DataLoader:
-    def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False):
+    def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
         self.args = args
         self.eval = evaluation
 
@@ -20,7 +20,9 @@ class DataLoader:
         label_file = input_files['label']
 
         # Load data and process it
-        if json_file is not None:
+        if input_data is not None:
+            self.data = input_data
+        elif json_file is not None:
             with open(json_file) as f:
                 self.data = json.load(f)
         else:

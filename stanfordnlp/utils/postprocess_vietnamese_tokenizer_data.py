@@ -48,12 +48,13 @@ if __name__ == '__main__':
 
     with open(args.plaintext_file, 'r') as f:
         text = ''.join(f.readlines()).rstrip()
+        text = '\n\n'.join([x for x in text.split('\n\n')])
 
     if args.char_level_pred is not None:
         with open(args.char_level_pred, 'r') as f:
             char_level_pred = ''.join(f.readlines())
     else:
-        char_level_pred = '0' * len(text)
+        char_level_pred = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
 
     assert len(text) == len(char_level_pred), 'Text has {} characters but there are {} char-level labels!'.format(len(text), len(char_level_pred))
 
