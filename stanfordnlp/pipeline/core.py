@@ -1,5 +1,5 @@
 """
-Pipeline that runs tokenize,mwt,lemma,pos,depparse
+Pipeline that runs tokenize,mwt,pos,lemma,depparse
 """
 
 import torch
