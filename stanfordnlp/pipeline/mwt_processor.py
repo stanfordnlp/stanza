@@ -5,16 +5,11 @@ from stanfordnlp.models.mwt.data import DataLoader
 from stanfordnlp.models.mwt.trainer import Trainer
 from stanfordnlp.pipeline.processor import UDProcessor
 
-MWT_MODEL_OPTIONS = ['attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'emb_dim',
-                     'emb_dropout', 'ensemble_dict', 'ensemble_early_stop', 'hidden_dim', 'log_step', 'lr', 'lr_decay',
-                     'max_dec_len', 'max_grad_norm', 'num_layers', 'optim', 'seed', 'vocab_size']
-
 
 class MWTProcessor(UDProcessor):
 
     def __init__(self, config, use_gpu):
         # set up configurations
-        self.model_options = MWT_MODEL_OPTIONS
         self.trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
         self.build_final_config(config)
 

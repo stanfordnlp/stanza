@@ -3,16 +3,10 @@ from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.pipeline.processor import UDProcessor
 
-LEMMA_MODEL_OPTIONS = ['alpha', 'attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout',
-                        'edit', 'emb_dim', 'emb_dropout', 'ensemble_dict', 'hidden_dim', 'log_step', 'lr', 'lr_decay',
-                        'max_dec_len', 'max_grad_norm', 'num_edit', 'num_epoch', 'num_layers', 'optim', 'pos',
-                        'pos_dim', 'pos_dropout', 'pos_vocab_size', 'seed', 'vocab_size']
-
 
 class LemmaProcessor(UDProcessor):
 
     def __init__(self, config, use_gpu):
-        self.model_options = LEMMA_MODEL_OPTIONS
         # check if in identity mode
         if config.get('use_identity') in ['True', True]:
             self.use_identity = True

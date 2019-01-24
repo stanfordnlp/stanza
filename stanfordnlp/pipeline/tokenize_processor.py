@@ -6,11 +6,6 @@ from stanfordnlp.models.tokenize.trainer import Trainer
 from stanfordnlp.models.tokenize.utils import output_predictions
 from stanfordnlp.pipeline.processor import UDProcessor
 
-TOKENIZE_MODEL_OPTIONS = ['anneal', 'anneal_after', 'batch_size', 'conv_filters', 'conv_res', 'dropout', 'emb_dim',
-                          'feat_dim', 'feat_funcs', 'hidden_dim', 'hier_invtemp', 'hierarchical', 'input_dropout',
-                          'lr0', 'max_grad_norm', 'max_seqlen', 'residual', 'rnn_layers', 'seed', 'shuffle_steps',
-                          'steps', 'tok_noise', 'unit_dropout', 'vocab_size', 'weight_decay']
-
 
 # class for running the tokenizer
 class TokenizeProcessor(UDProcessor):
@@ -18,7 +13,6 @@ class TokenizeProcessor(UDProcessor):
     def __init__(self, config, use_gpu):
         # set up configurations
         # set up trainer
-        self.model_options = TOKENIZE_MODEL_OPTIONS
         self.trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
         self.build_final_config(config)
 

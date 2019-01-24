@@ -24,10 +24,22 @@ class UDProcessor(Processor):
         # set configurations from loaded model
         loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
         # filter out unneeded args from model
-        loaded_args = {k: v for k, v in loaded_args.items() if k in self.model_options}
+        loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
         # overwrite with config for processor
         loaded_args.update(config)
         self.config = loaded_args
+
+    @staticmethod
+    def filter_out_option(option):
+        options_to_filter = ['cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
+        if option.endswith('_file') or option.endswith('_dir'):
+            return True
+        elif option in options_to_filter:
+            return True
+        else:
+            return False
+
+
 
 
 
