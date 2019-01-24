@@ -32,21 +32,21 @@ processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 't
 
 
 # given a language and models path, build a default configuration
-def build_default_config(lang, models_path):
+def build_default_config(treebank, models_path):
     default_config = {}
-    if lang in mwt_languages:
+    if treebank in mwt_languages:
         default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
     else:
         default_config['processors'] = 'tokenize,pos,lemma,depparse'
-    if lang == 'vi':
+    if treebank == 'vi_vtb':
         default_config['lemma.use_identity'] = True
         default_config['lemma.batch_size'] = 5000
-    lang_dir = f"{models_path}/{lang}_models"
+    treebank_dir = f"{models_path}/{treebank}_models"
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
-        default_config[f"{processor}.model_path"] = f"{lang_dir}/{lang}_{model_file_ending}"
+        default_config[f"{processor}.model_path"] = f"{treebank_dir}/{treebank}_{model_file_ending}"
         if processor in ['pos', 'depparse']:
-            default_config[f"{processor}.pretrain_path"] = f"{lang_dir}/{lang}.pretrain.pt"
+            default_config[f"{processor}.pretrain_path"] = f"{treebank_dir}/{treebank}.pretrain.pt"
     return default_config
 
 
