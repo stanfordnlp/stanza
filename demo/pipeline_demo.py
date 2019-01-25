@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     example_sentences = {"en": "Barack Obama was born in Hawaii.  He was elected president in 2008.",
             "zh": "達沃斯世界經濟論壇是每年全球政商界領袖聚在一起的年度盛事。",
-            "fr": "Vainqueur de Raonic à l'Open d'Australie, le Français Lucas Pouille atteint pour la première fois de sa carrière une demi-finale en Grand Chelem.",
+            "fr": "Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie. Il tente d'abord de faire carrière comme marchand d'art chez Goupil & C.",
             "vi": "Trận Trân Châu Cảng (hay Chiến dịch Hawaii theo cách gọi của Bộ Tổng tư lệnh Đế quốc Nhật Bản) là một đòn tấn công quân sự bất ngờ được Hải quân Nhật Bản thực hiện nhằm vào căn cứ hải quân của Hoa Kỳ tại Trân Châu Cảng thuộc tiểu bang Hawaii vào sáng Chủ Nhật, ngày 7 tháng 12 năm 1941, dẫn đến việc Hoa Kỳ sau đó quyết định tham gia vào hoạt động quân sự trong Chiến tranh thế giới thứ hai."}
 
     if args.lang not in example_sentences:
