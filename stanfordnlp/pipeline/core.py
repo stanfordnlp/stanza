@@ -23,7 +23,7 @@ PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 class Pipeline:
 
     def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, treebank=None,
-                 use_gpu=True, **kwargs):
+                 cpu=False, **kwargs):
         shorthand = default_treebanks[lang] if treebank is None else treebank
         config = build_default_config(shorthand, models_dir)
         config.update(kwargs)
@@ -34,8 +34,9 @@ class Pipeline:
         self.config['models_dir'] = models_dir
         self.processor_names = self.config['processors'].split(',')
         self.processors = {'tokenize': None, 'mwt': None, 'lemma': None, 'pos': None, 'depparse': None}
-        # determine whether to use gpu or cpu, default is yes if a device is found
-        self.use_gpu = use_gpu and torch.cuda.device_count() > 0
+        # always use GPU if a GPU device can be found, unless cpu is set to be True
+        self.use_gpu = torch.cuda.is_available() and not cpu
+        print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
         # set up processors
@@ -43,14 +44,15 @@ class Pipeline:
             if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
                 continue
             print('---')
-            print('loading: '+processor_name)
+            print('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
-            print('with settings: ')
+            print('With settings: ')
             print(curr_processor_config)
             self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
                                                                                       use_gpu=self.use_gpu)
-        print("done loading processors!")
+        print("Done loading processors!")
+        print('---')
 
     def filter_config(self, prefix, config_dict):
         filtered_dict = {}

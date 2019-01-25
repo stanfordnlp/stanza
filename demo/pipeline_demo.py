@@ -16,6 +16,7 @@ if __name__ == '__main__':
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--lang', help='Demo language',
                         default="en")
+    parser.add_argument('-c', '--cpu', action='store_true', help='Use cpu as the device.')
     args = parser.parse_args()
 
     example_sentences = {"en": "Barack Obama was born in Hawaii.  He was elected president in 2008.",
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=args.lang)
+    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=args.lang, cpu=args.cpu)
     # process the document
     doc = pipeline(example_sentences[args.lang])
     # access nlp annotations
