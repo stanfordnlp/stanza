@@ -3,7 +3,7 @@
 topnav:
 - title: Topnav
   subcategories:
-    - title: Github repo
+    - title: <i class="fab fa-github"></i> Github repo
       external_url: https://github.com/stanfordnlp/stanfordnlp
       audience: writers, designers
       platform: all
@@ -15,14 +15,14 @@ topnav:
 topnav_dropdowns:
 - title: Topnav dropdowns
   subcategories:
-    - title: Quick links
+    - title: <i class="fas fa-bars"></i> Quick links
       audience: writers, designers
       platform: all
       product: all
       version: all
       output: web
       items:
-        - title: Paper to cite
+        - title: <i class="fas fa-file"></i> Publication
           external_url: https://nlp.stanford.edu/pubs/qi2018universal.pdf
           audience: writers, designers
           platform: all
