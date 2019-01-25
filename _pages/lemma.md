@@ -10,7 +10,7 @@ Generates the word lemmas for all tokens in the corpus.
 
 | Property name | Annotator class name | Generated Annotation |
 | --- | --- | --- |
-| lemma | LemmaProcessor | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a `Token` using the `Token.word` value, and the result can be accessed in `Token.lemma`. | 
+| lemma | LemmaProcessor | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a `Token` using the `Token.word` and `Token.pos` value. The result can be accessed in `Token.lemma`. | 
 
 ## Options
 
