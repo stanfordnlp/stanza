@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=args.lang, cpu=args.cpu)
+    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=args.lang, use_gpu=(not args.cpu))
     # process the document
     doc = pipeline(example_sentences[args.lang])
     # access nlp annotations

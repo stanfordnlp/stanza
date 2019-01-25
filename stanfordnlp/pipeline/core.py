@@ -23,7 +23,7 @@ PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 class Pipeline:
 
     def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, treebank=None,
-                 cpu=False, **kwargs):
+                 use_gpu=True, **kwargs):
         shorthand = default_treebanks[lang] if treebank is None else treebank
         config = build_default_config(shorthand, models_dir)
         config.update(kwargs)
@@ -34,8 +34,8 @@ class Pipeline:
         self.config['models_dir'] = models_dir
         self.processor_names = self.config['processors'].split(',')
         self.processors = {'tokenize': None, 'mwt': None, 'lemma': None, 'pos': None, 'depparse': None}
-        # always use GPU if a GPU device can be found, unless cpu is set to be True
-        self.use_gpu = torch.cuda.is_available() and not cpu
+        # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
+        self.use_gpu = torch.cuda.is_available() and use_gpu
         print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
