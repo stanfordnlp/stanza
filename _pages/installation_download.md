@@ -10,7 +10,9 @@ permalink: '/installation_download.html'
 
 To get started with StanfordNLP, we strongly recommend that you install it through [PyPI](https://pypi.org/). Once you have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run in your command line
 
-```pip install stanfordnlp```
+```bash
+pip install stanfordnlp
+```
 
 This will take care of all of the dependencies necessary to run StanfordNLP. The neural pipeline of StanfordNLP depends on PyTorch 1.0.0 or a later version with compatible APIs.
 

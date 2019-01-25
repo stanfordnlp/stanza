@@ -1,31 +1,25 @@
 ---
-title: POSTaggerAnnotator 
+title: POSProcessor 
 keywords: pos
 permalink: '/pos.html'
 ---
 
 ## Description
 
-Labels tokens with their POS tag. For more details see [this page](http://nlp.stanford.edu/software/tagger.html). 
+Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html).
 
 | Property name | Annotator class name | Generated Annotation |
 | --- | --- | --- |
-| pos | POSTaggerAnnotator | PartOfSpeechAnnotation |
+| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through `Token`'s properties `pos`, `xpos`, and `ufeats`. |
 
 ## Options
 
-* pos.model: POS model to use. There is no need to explicitly set this option, unless you want to use a different POS model (for advanced developers only). By default, this is set to the english left3words POS model included in the stanford-corenlp-models JAR file.
-* pos.maxlen: Maximum sentence size for the POS sequence tagger.  Useful to control the speed of the tagger on noisy text without punctuation marks.  Note that the parser, if used, will be much more expensive than the tagger.
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| pos.cpu | bool | `False` (unset) | Set this flag to `True` to force the tagger to run on CPU. |
+| pos.batch_size | int | 5000 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). This parameter should be set larger than the number of words in the longest sentence in your input document, or you might run into unexpected behaviors. |
 
 
-## Caseless models
+## Training-Only Options
 
-It is possible to run StanfordCoreNLP with a POS tagger
-model that ignores capitalization. We have trained models like this
-for English. You can find details on the
-[Caseless models](caseless.html) page.
-
-
-## More information 
-
-The POS tagger is described in detail on the Stanford NLP [website](http://nlp.stanford.edu/software/tagger.html).
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/tagger.py#L21) of the POS/UFeats tagger.

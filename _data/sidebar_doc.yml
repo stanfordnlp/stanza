@@ -29,18 +29,25 @@ entries:
           url: cmdline.html
 
     - title : Processors
-          
+
       items:
+        - title: Summary
+          url: processors.html
 
         - title: TokenizeProcessor
           url: tokenize.html
-        
+
+        - title: MWTProcessor
+          url: mwt.html
+
         - title: LemmaProcessor
           url: lemma.html
 
-          #        - title: Summary
-          #          url: annotators.html
-          #
+        - title: POSProcessor
+          url: pos.html
+
+        - title: DepparseProcessor
+          url: depparse.html
           #        - title: Annotator dependencies
           #          url: dependencies.html
           #
