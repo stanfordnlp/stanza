@@ -22,14 +22,17 @@
 
                 {% for entry in topnav %}
                 {% for subcategory in entry.subcategories %}
-                {% if subcategory.audience contains audience and subcategory.product contains product and subcategory.platform contains platform and subcategory.version contains version and subcategory.web != false %}
-                {% if subcategory.external_url %}
-                <li><a href="{{subcategory.external_url}}" target="_blank">{{subcategory.title}}</a></li>
-                {% elsif page.url == subcategory.url %}
-                <li class="active"><a href="{{subcategory.url | replace: "/",""}}">{{subcategory.title}}</a></li>
+                {% if subcategory.icon %}
+                {% assign title = "<i class='CLASS'></i> " | replace: "CLASS", subcategory.icon | append: subcategory.title %}
                 {% else %}
-                <li><a href="{{subcategory.url | replace: "/",""}}">{{subcategory.title}}</a></li>
+                {% assign title = subcategory.title %}
                 {% endif %}
+                {% if subcategory.external_url %}
+                <li><a href="{{subcategory.external_url}}" target="_blank">{{title}}</a></li>
+                {% elsif page.url == subcategory.url %}
+                <li class="active"><a href="{{subcategory.url | replace: "/",""}}">{{title}}</a></li>
+                {% else %}
+                <li><a href="{{subcategory.url | replace: "/",""}}">{{title}}</a></li>
                 {% endif %}
                 {% endfor %}
                 {% endfor %}
@@ -41,21 +44,27 @@
                 <li class="dropdown">
                     {% for entry in topnav_dropdowns %}
                     {% for subcategory in entry.subcategories %}
-                    {% if subcategory.audience contains audience and subcategory.product contains product and subcategory.platform contains platform and subcategory.version contains version and subcategory.web != false %}
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ subcategory.title }}<b class="caret"></b></a>
+                    {% if subcategory.icon %}
+                    {% assign title = "<i class='CLASS'></i> " | replace: "CLASS", subcategory.icon | append: subcategory.title %}
+                    {% else %}
+                    {% assign title = subcategory.title %}
+                    {% endif %}
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ title }}<b class="caret"></b></a>
                     <ul class="dropdown-menu">
                         {% for subitem in subcategory.items %}
-                        {% if subitem.audience contains audience and subitem.product contains product and subitem.platform contains platform and subcategory.version contains version and subitem.web != false %}
-                        {% if subitem.external_url %}
-                        <li><a href="{{subitem.external_url}}" target="_blank">{{subitem.title}}</a></li>
-                        {% elsif page.url contains subitem.url %}
-                        <li class="dropdownActive"><a href="{{subitem.url | replace: '/',''}}">{{subitem.title}}</a></li>
+                        {% if subitem.icon %}
+                        {% assign itemtitle = "<i class='CLASS'></i> " | replace: "CLASS", subitem.icon | append: subitem.title %}
                         {% else %}
-                        <li><a href="{{subitem.url | replace: "/",""}}">{{subitem.title}}</a></li>
+                        {% assign itemtitle = subitem.title %}
                         {% endif %}
+                        {% if subitem.external_url %}
+                        <li><a href="{{subitem.external_url}}" target="_blank">{{itemtitle}}</a></li>
+                        {% elsif page.url contains subitem.url %}
+                        <li class="dropdownActive"><a href="{{subitem.url | replace: '/',''}}">{{itemtitle}}</a></li>
+                        {% else %}
+                        <li><a href="{{subitem.url | replace: "/",""}}">{{itemtitle}}</a></li>
                         {% endif %}
                         {% endfor %}
-                        {% endif %}
 
                     </ul>
                 </li>
