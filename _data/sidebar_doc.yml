@@ -28,9 +28,13 @@ entries:
         - title: Command line usage
           url: cmdline.html
 
-          #    - title : Annotators
-          #
-          #      items:
+    - title : Annotators
+          
+      items:
+
+        - title: TokenizeProcessor
+          url: tokenize.html
+
           #        - title: Summary
           #          url: annotators.html
           #
