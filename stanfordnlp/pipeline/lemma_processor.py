@@ -26,7 +26,6 @@ class LemmaProcessor(UDProcessor):
         elif self.config.get('dict_only', False):
             preds = self.trainer.predict_dict(batch.conll.get(['word', 'upos']))
         else:
-            print("Running the seq2seq model...")
             preds = []
             edits = []
             for i, b in enumerate(batch):
@@ -37,7 +36,6 @@ class LemmaProcessor(UDProcessor):
             preds = self.trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
 
             if self.config.get('ensemble_dict', False):
-                print("[Ensembling dict with seq2seq lemmatizer...]")
                 preds = self.trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
         
         # map empty string lemmas to '_'
