@@ -252,20 +252,19 @@ margin: 3px;
 
 div#toc ul li {
 margin: 8px 0px 8px 22px;
-font-size: 90%;
+font-size: 95%;
 list-style: square;
 }
 div#toc ul {
 background-color: whitesmoke;
 padding: 5px;
 border-radius: 5px;
-max-width: 300px;
+max-width: 350px;
 color: gray;
 }
 
 div#toc ul li ul {
   padding-left:8px;
-
 }
 
 div#toc ul li ul li::before {
