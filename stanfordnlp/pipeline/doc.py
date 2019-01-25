@@ -8,7 +8,6 @@ from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
 multi_word_token_line = re.compile("[0-9]+\-[0-9]+")
 
-
 class Document:
 
     def __init__(self, text):
@@ -18,13 +17,13 @@ class Document:
 
     @property
     def conll_file(self):
-        """ Access text of this document. Example: 'This is a sentence.'"""
-        return self._conllu
+        """ Access the CoNLLFile of this document. """
+        return self._conll_file
 
     @conll_file.setter
     def conll_file(self, value):
-        """ Set the document's text value. Example: 'This is a sentence.'"""
-        self._conllu = value
+        """ Set the document's CoNLLFile value. """
+        self._conll_file = value
 
     @property
     def text(self):
@@ -38,20 +37,20 @@ class Document:
 
     @property
     def sentences(self):
-        """ Access list of sentences for this document"""
+        """ Access list of sentences for this document. """
         return self._sentences
 
     @sentences.setter
     def sentences(self, value):
-        """ Set the list of tokens for this document"""
+        """ Set the list of tokens for this document. """
         self._sentences = value
 
     def load_annotations(self):
-        """ Integrate info from conllu"""
+        """ Integrate info from the CoNLLFile instance. """
         self._sentences = [Sentence(token_list) for token_list in self.conll_file.sents]
 
     def write_conll_to_file(self, file_path):
-        """ write conll contents to file"""
+        """ Write conll contents to file. """
         self.conll_file.write_conll(file_path)
 
 class Sentence:
@@ -71,22 +70,22 @@ class Sentence:
 
     @property
     def dependencies(self):
-        """ Access list of tokens for this sentence"""
+        """ Access list of dependencies for this sentence. """
         return self._dependencies
 
     @dependencies.setter
-    def tokens(self, value):
-        """ Set the list of tokens for this sentence"""
+    def dependencies(self, value):
+        """ Set the list of dependencies for this sentence. """
         self._dependencies = value
 
     @property
     def tokens(self):
-        """ Access list of tokens for this sentence"""
+        """ Access list of tokens for this sentence. """
         return self._tokens
 
     @tokens.setter
     def tokens(self, value):
-        """ Set the list of tokens for this sentence"""
+        """ Set the list of tokens for this sentence. """
         self._tokens = value
 
     def build_dependencies(self):
@@ -133,12 +132,12 @@ class Token:
 
     @property
     def lemma(self):
-        """ Access lemma of this token. Example: 'NNP'"""
+        """ Access lemma of this token. """
         return self._lemma
 
     @lemma.setter
     def lemma(self, value):
-        """ Set the token's lemma value. Example: 'NNP'"""
+        """ Set the token's lemma value. """
         self._lemma = value
 
     @property
