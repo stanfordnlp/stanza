@@ -10,7 +10,7 @@ In the table below you can find the performance of the version 0.1.0 models of S
 
 Note that these results are "unofficial" in the sense that these don't reflect the systems' state at the time of submission to the Shared Task (which had an unfortunate bug that we thereafter have fixed, as is also described in [our paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf)).
 
-|  | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
+| Treebank | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :-- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
 | UD\_<wbr>Afrikaans-AfriBooms | 99.67 | 100 | 99.67 | 97.47 | 93.89 | 97.01 | 93.85 | 96.78 | 87.68 | 84.69 | 79.07 | 75.02 | 75.06 |
 | UD\_<wbr>Ancient\_<wbr>Greek-Perseus | 99.97 | 98.81 | 99.97 | 92.44 | 85.06 | 91.03 | 84.82 | 87.78 | 78.81 | 73.44 | 67.92 | 53.58 | 56.71 |
