@@ -80,7 +80,7 @@ There are a few initial setup steps.
 * Put the model jars in the distribution folder
 * Tell the python code where Stanford CoreNLP is located: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
 
-We provide another [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py)
+We provide another [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) that shows how one can use the CoreNLP client and extract various annotations from it.
 
 
 ### Trained Models for the Neural Pipeline
