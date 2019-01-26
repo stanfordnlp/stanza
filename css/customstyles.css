@@ -188,6 +188,11 @@ table tr td {
   hyphens: auto;
 }
 
+/* For compact table. */
+table.compact {
+    font-size: 80%;
+    max-width: 100%;
+}
 
 p.external a {
   text-align:right;
