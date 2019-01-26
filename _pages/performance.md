@@ -11,7 +11,8 @@ In the table below you can find the performance of the version 0.1.0 models of S
 Note that these results are "unofficial" in the sense that these don't reflect the systems' state at the time of submission to the Shared Task (which had an unfortunate bug that we thereafter have fixed, as is also described in [our paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf)).
 
 | Treebank | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
-| :-- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
+| :------- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
+| Macro Avg | 97.54 | 85.75 | 97.34 | 90.01 | 86.85 | 86.75 | 81.12 | 89.52 | 78.94 | 73.94 | 70.10 | 62.59 | 65.29 |
 | UD\_<wbr>Afrikaans-AfriBooms | 99.67 | 100 | 99.67 | 97.47 | 93.89 | 97.01 | 93.85 | 96.78 | 87.68 | 84.69 | 79.07 | 75.02 | 75.06 |
 | UD\_<wbr>Ancient\_<wbr>Greek-Perseus | 99.97 | 98.81 | 99.97 | 92.44 | 85.06 | 91.03 | 84.82 | 87.78 | 78.81 | 73.44 | 67.92 | 53.58 | 56.71 |
 | UD\_<wbr>Ancient\_<wbr>Greek-PROIEL | 100 | 51.98 | 100 | 97.21 | 97.69 | 92.35 | 91.03 | 96.42 | 80.89 | 77.04 | 72.29 | 61.95 | 69.63 |
@@ -94,4 +95,4 @@ Note that these results are "unofficial" in the sense that these don't reflect t
 | UD\_<wbr>Urdu-UDTB | 99.98 | 98.88 | 99.98 | 94.54 | 92.73 | 84.23 | 80.55 | 95.47 | 88.34 | 82.54 | 76.43 | 59.07 | 74.07 |
 | UD\_<wbr>Uyghur-UDT | 99.82 | 85.4 | 99.82 | 89.34 | 91.7 | 87.81 | 80.16 | 95.68 | 75.53 | 63.55 | 56.95 | 45.49 | 53.86 |
 | UD\_<wbr>Vietnamese-VTB | 87.18 | 93.15 | 87.18 | 79.48 | 77.82 | 86.97 | 77.79 | 87.12 | 53.05 | 47.56 | 44.35 | 41.37 | 44.3 |
-{: .compact }
+{: .compact #conll18-results }

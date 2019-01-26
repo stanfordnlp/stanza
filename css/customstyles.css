@@ -194,6 +194,10 @@ table.compact {
     max-width: 100%;
 }
 
+table#conll18-results tbody tr:first-child {
+    background: #ffdddd;
+}
+
 p.external a {
   text-align:right;
   font-size:12px;
