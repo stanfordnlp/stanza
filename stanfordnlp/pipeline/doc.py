@@ -134,9 +134,9 @@ class Sentence:
 
 class Token:
 
-    def __init__(self, word_entry, words=[]):
-        self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
+    def __init__(self, token_entry, words=[]):
+        self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
+        self._text = token_entry[CONLLU_FIELD_TO_IDX['word']]
         self.words = words
 
     @property
