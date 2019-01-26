@@ -42,8 +42,7 @@ if __name__ == '__main__':
     print("The tokenizer split the input into {} sentences.".format(len(doc.sentences)))
     print('---')
     print('tokens of first sentence: ')
-    for tok in doc.sentences[0].tokens:
-        print(tok.word + '\t' + tok.lemma + '\t' + tok.pos)
+    doc.sentences[0].print_tokens()
     print('')
     print('---')
     print('dependency parse of first sentence: ')

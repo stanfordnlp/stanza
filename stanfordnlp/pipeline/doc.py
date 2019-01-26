@@ -6,7 +6,7 @@ import re
 
 from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
-multi_word_token_line = re.compile("[0-9]+\-[0-9]+")
+multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
 
 class Document:
 
@@ -56,17 +56,29 @@ class Document:
 class Sentence:
 
     def __init__(self, tokens):
-        self._tokens = [Token(token_entry) for token_entry in tokens if self.is_token_line(token_entry)]
+        self._tokens = []
+        self._words = []
+        self._process_tokens(tokens)
         self._dependencies = []
         # check if there is dependency info
-        if not self.tokens[0].governor == '_':
+        if not self.words[0].governor == '_':
             self.build_dependencies()
 
-    def is_token_line(self, ln):
-        if multi_word_token_line.match(ln[0]):
-            return False
-        else:
-            return True
+    def _process_tokens(self, tokens):
+        st, en = -1, -1
+        for tok in tokens:
+            m = multi_word_token_line.match(tok[CONLLU_FIELD_TO_IDX['id']])
+            if m:
+                st, en = int(m.group(1)), int(m.group(2))
+                self._tokens.append(Token(tok))
+            else:
+                new_word = Word(tok)
+                self._words.append(new_word)
+                idx = int(tok[CONLLU_FIELD_TO_IDX['id']])
+                if idx <= en:
+                    self._tokens[-1].words.append(new_word)
+                else:
+                    self.tokens.append(Token(tok, words=[new_word]))
 
     @property
     def dependencies(self):
@@ -88,84 +100,198 @@ class Sentence:
         """ Set the list of tokens for this sentence. """
         self._tokens = value
 
+    @property
+    def words(self):
+        """ Access list of words for this sentence. """
+        return self._words
+
+    @words.setter
+    def words(self, value):
+        """ Set the list of words for this sentence. """
+        self._words = value
+
     def build_dependencies(self):
-        for tok in self.tokens:
-            if tok.governor == 0:
-                # make a token for the ROOT
-                governor = Token(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
+        for word in self.words:
+            if word.governor == 0:
+                # make a word for the ROOT
+                governor = Word(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
             else:
-                # id is index in tokens list + 1
-                governor = self.tokens[tok.governor-1]
-            self.dependencies.append((governor, tok.dependency_relation, tok))
+                # id is index in words list + 1
+                governor = self.words[word.governor-1]
+            self.dependencies.append((governor, word.dependency_relation, word))
 
     def print_dependencies(self):
         for dep_edge in self.dependencies:
-            print((dep_edge[2].word, dep_edge[0]._index, dep_edge[1]))
+            print((dep_edge[2].text, dep_edge[0].index, dep_edge[1]))
 
     def print_tokens(self):
         for tok in self.tokens:
-            print((tok.word, tok.lemma, tok.pos))
+            print(tok)
 
+    def print_words(self):
+        for word in self.words:
+            print(word)
 
 class Token:
 
-    def __init__(self, token_entry):
-        self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._word = token_entry[CONLLU_FIELD_TO_IDX['word']]
-        self._lemma = token_entry[CONLLU_FIELD_TO_IDX['lemma']]
-        self._pos = token_entry[CONLLU_FIELD_TO_IDX['upos']]
-        self._governor = token_entry[CONLLU_FIELD_TO_IDX['head']]
+    def __init__(self, word_entry, words=[]):
+        self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
+        self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
+        self.words = words
+
+    @property
+    def words(self):
+        """ Access the list of syntactic words underlying this token. """
+        return self._words
+
+    @words.setter
+    def words(self, value):
+        """ Set this token's list of underlying syntactic words. """
+        self._words = value
+        for w in self._words:
+            w.parent_token = self
+
+    @property
+    def index(self):
+        """ Access index of this token. """
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        """ Set the token's index value. """
+        self._index = value
+
+    @property
+    def text(self):
+        """ Access text of this token. Example: 'The'"""
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the token's text value. Example: 'The'"""
+        self._text = value
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} index={self.index};words={self.words}>"
+
+class Word:
+
+    def __init__(self, word_entry):
+        self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
+        self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
+        self._lemma = word_entry[CONLLU_FIELD_TO_IDX['lemma']]
+        self._upos = word_entry[CONLLU_FIELD_TO_IDX['upos']]
+        self._xpos = word_entry[CONLLU_FIELD_TO_IDX['xpos']]
+        self._feats = word_entry[CONLLU_FIELD_TO_IDX['feats']]
+        self._governor = word_entry[CONLLU_FIELD_TO_IDX['head']]
+        self._parent_token = None
         # check if there is dependency information
         if self._governor != '_':
             self._governor = int(self._governor)
-        self._dependency_relation = token_entry[CONLLU_FIELD_TO_IDX['deprel']]
+        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX['deprel']]
 
     @property
     def dependency_relation(self):
-        """ Access dependency relation of this token. Example: 'nmod'"""
+        """ Access dependency relation of this word. Example: 'nmod'"""
         return self._dependency_relation
 
     @dependency_relation.setter
     def dependency_relation(self, value):
-        """ Set the token's dependency relation value. Example: 'nmod'"""
+        """ Set the word's dependency relation value. Example: 'nmod'"""
         self._dependency_relation = value
 
     @property
     def lemma(self):
-        """ Access lemma of this token. """
+        """ Access lemma of this word. """
         return self._lemma
 
     @lemma.setter
     def lemma(self, value):
-        """ Set the token's lemma value. """
+        """ Set the word's lemma value. """
         self._lemma = value
 
     @property
     def governor(self):
-        """ Access governor of this token. """
+        """ Access governor of this word. """
         return self._governor
 
     @governor.setter
     def governor(self, value):
-        """ Set the token's governor value. """
+        """ Set the word's governor value. """
         self._governor = value
 
     @property
     def pos(self):
-        """ Access part-of-speech of this token. Example: 'NNP'"""
-        return self._pos
+        """ Access (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
+        return self._xpos
 
     @pos.setter
     def pos(self, value):
-        """ Set the token's part-of-speech value. Example: 'NNP'"""
-        self._pos = value
+        """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
+        self._xpos = value
 
     @property
-    def word(self):
-        """ Access text of this token. Example: 'The'"""
-        return self._word
+    def text(self):
+        """ Access text of this word. Example: 'The'"""
+        return self._text
 
-    @word.setter
-    def word(self, value):
-        """ Set the token's text value. Example: 'The'"""
-        self._word = value
+    @text.setter
+    def text(self, value):
+        """ Set the word's text value. Example: 'The'"""
+        self._text = value
+
+    @property
+    def xpos(self):
+        """ Access treebank-specific part-of-speech of this word. Example: 'NNP'"""
+        return self._xpos
+
+    @xpos.setter
+    def xpos(self, value):
+        """ Set the word's treebank-specific part-of-speech value. Example: 'NNP'"""
+        self._xpos = value
+
+    @property
+    def upos(self):
+        """ Access universal part-of-speech of this word. Example: 'DET'"""
+        return self._upos
+
+    @upos.setter
+    def upos(self, value):
+        """ Set the word's universal part-of-speech value. Example: 'DET'"""
+        self._upos = value
+
+    @property
+    def feats(self):
+        """ Access morphological features of this word. Example: 'Gender=Fem'"""
+        return self._feats
+
+    @feats.setter
+    def feats(self, value):
+        """ Set this word's morphological features. Example: 'Gender=Fem'"""
+        self._feats = value
+
+    @property
+    def parent_token(self):
+        """ Access the parent token of this word. """
+        return self._parent_token
+
+    @parent_token.setter
+    def parent_token(self, value):
+        """ Set this word's parent token. """
+        self._parent_token = value
+
+    @property
+    def index(self):
+        """ Access index of this word. """
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        """ Set the word's index value. """
+        self._index = value
+
+    def __repr__(self):
+        features = ['index', 'text', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation']
+        feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
+
+        return f"<{self.__class__.__name__} {feature_str}>"
