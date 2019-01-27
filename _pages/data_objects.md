@@ -1,5 +1,5 @@
 ---
-title: Data Objects 
+title: Data Objects
 keywords: data objects
 permalink: '/data_objects.html'
 ---
@@ -16,7 +16,7 @@ Objects of this class expose useful properties such as `text`, `sentences`, and 
 
 A `Sentence` object represents a sentence (as is predicted by the [tokenizer](/tokenize.html)), and holds a list of the `Token`s in the sentence, as well as a list of all its `Word`s. It also processes the dependency parse as is predicted by the [parser](/depparse.html), through its member method `build_dependencies`.
 
-Objects of this class expose useful properties such as `words`, `tokens`, and `dependencies`, as well as methods such as `print_tokens`, `print_words`, `print_dependencies`. 
+Objects of this class expose useful properties such as `words`, `tokens`, and `dependencies`, as well as methods such as `print_tokens`, `print_words`, `print_dependencies`.
 
 ## Token
 
@@ -28,4 +28,4 @@ Aside from `index` that gives the 1-based sentence index of the token and `words
 
 A `Word` object holds a syntactic word and all of its word-level annotations. In the example of multi-word tokens (MWT), these are generated as a result of [multi-word token expansion](/mwt.html), and are used in all downstream syntactic analyses such as tagging, lemmatization, and parsing. If a `Word` is the result from an MWT expansion, its `text` will usually not be found in the input raw text. Aside from multi-word tokens, `Word`s should be similar to the familiar "tokens" one would see elsewhere.
 
-`Word` objects expose useful properties such as `index`, `text`, `lemma`, `pos` (which is an alias for `xpos`, the treebank-specific part-of-speech, e.g., `NN`), `upos` ([universal part-of-speech](https://universaldependencies.org/u/pos/), e.g., 'NOUN'), `feats` (morphological features), `governor` (governor/head in the dependency parse), `dependency_relation` (dependency relation between this word and its head), and `parent_token` (the `Token` object that this `Word` is part of).
+`Word` objects expose useful properties such as `index`, `text`, `lemma`, `pos` (which is an alias for `xpos`, the treebank-specific part-of-speech, e.g., `NN`), `upos` ([universal part-of-speech](https://universaldependencies.org/u/pos/), e.g., `NOUN`), `feats` (morphological features), `governor` (governor/head in the dependency parse), `dependency_relation` (dependency relation between this word and its head), and `parent_token` (the `Token` object that this `Word` is part of).
