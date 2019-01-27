@@ -28,11 +28,14 @@ entries:
         - title: System Performance
           url: performance.html
 
-    - title : Processors
+    - title : Pipeline
 
       items:
-        - title: Summary
+        - title: Processors Summary
           url: processors.html
+
+        - title: Data Objects
+          url: data_objects.html
 
         - title: TokenizeProcessor
           url: tokenize.html
