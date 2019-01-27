@@ -1,0 +1,17 @@
+language: python
+python:
+  - 2.7
+  - 3.5
+notifications:
+  email: false
+before_install:
+  - sudo apt-get update
+install:
+  - pip install tox-travis
+# Run test
+script: 
+  - tox
+# only integrate the master branch
+branches:
+  only:
+    - master
