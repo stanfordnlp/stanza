@@ -28,7 +28,6 @@ processor pages for descriptions.
 import stanfordnlp
 
 stanfordnlp.download('en') # download the English models
-nlp = stanfordnlp.Pipeline(processors='tokenize,ssplit,pos', models_dir='/path/to/stanfordnlp_resources', treebank='en_ewt', 
-                           use_gpu=True, pos.batch_size=3000) # build the pipeline
+nlp = stanfordnlp.Pipeline(processors='tokenize,ssplit,pos', models_dir='/path/to/stanfordnlp_resources', treebank='en_ewt', use_gpu=True, pos.batch_size=3000) # build the pipeline
 doc = nlp("Barack Obama was born in Hawaii.") # run the pipeline on input text
 ```
