@@ -7,7 +7,7 @@ permalink: '/pipeline.html'
 ## Pipeline
 
 Users of StanfordNLP can process documents by building a `Pipeline` with the desired `Processor` units.  The pipeline takes in a `Document`
-object or raw text, runs the processors in succession, and returns a fully annotated document.
+object or raw text, runs the processors in succession, and returns a fully annotated `Document`.
 
 ## Options
 
