@@ -16,7 +16,8 @@ StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a serve
  
 ## Usage
 
-After the above steps have been taken, you can start up the server and make requests with the following code:
+After the above steps have been taken, you can start up the server and make requests in Python code.
+Below is a comprehensive example of starting a server, making requests, and accessing data from the returnd object.
 
 ```python
 from stanfordnlp.server import CoreNLPClient
