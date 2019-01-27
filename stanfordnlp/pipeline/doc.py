@@ -61,7 +61,7 @@ class Sentence:
         self._process_tokens(tokens)
         self._dependencies = []
         # check if there is dependency info
-        if not self.words[0].governor == '_':
+        if self.words[0].dependency_relation is not None:
             self.build_dependencies()
 
     def _process_tokens(self, tokens):
@@ -180,15 +180,24 @@ class Word:
         self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
         self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
         self._lemma = word_entry[CONLLU_FIELD_TO_IDX['lemma']]
+        if self._lemma == '_':
+            self._lemma = None
         self._upos = word_entry[CONLLU_FIELD_TO_IDX['upos']]
         self._xpos = word_entry[CONLLU_FIELD_TO_IDX['xpos']]
         self._feats = word_entry[CONLLU_FIELD_TO_IDX['feats']]
+        if self._upos == '_':
+            self._upos = None
+            self._xpos = None
+            self._feats = None
         self._governor = word_entry[CONLLU_FIELD_TO_IDX['head']]
+        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX['deprel']]
         self._parent_token = None
         # check if there is dependency information
-        if self._governor != '_':
+        if self._dependency_relation != '_':
             self._governor = int(self._governor)
-        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX['deprel']]
+        else:
+            self._governor = None
+            self._dependency_relation = None
 
     @property
     def dependency_relation(self):
