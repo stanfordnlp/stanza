@@ -68,7 +68,8 @@ class Pipeline:
                 self.processors[processor_name].process(doc)
         doc.load_annotations()
 
-    def __call__(self, doc_str):
-        doc = Document(doc_str)
+    def __call__(self, doc):
+        if isinstance(doc, str):
+            doc = Document(doc)
         self.process(doc)
         return doc
