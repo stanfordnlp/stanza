@@ -19,6 +19,7 @@ We provide scripts that are useful for model training and evaluation in the `scr
 - `{module}_DATA_DIR`: The subdirectory for storing intermediate files used by each module.
 - `WORDVEC_DIR`: The directory to store all word vector files (see below).
 
+
 ## Preparing Word Vector Data
 
 To train modules that make use of word representations, such as the tagger and dependency parser, it is highly recommended that you use pretrained embedding vectors. For training, please organize your embedding vector files in the following way:
@@ -26,7 +27,7 @@ To train modules that make use of word representations, such as the tagger and d
 
 For example, the word2vec file for English should be put into `$WORDVEC_DIR/English/en.vectors.xz`.
 
-To get started, you can download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, we use the FastText embeddings from Facebook, which can be found here. Once you download the embeddings, please make sure you arrange them in a similar fashion as the CoNLL 2017 vector files.
+To get started, you can download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, we use the [FastText embeddings](https://fasttext.cc/docs/en/crawl-vectors.html) from Facebook. Once you download the embeddings, please make sure you arrange them in a similar fashion as described above.
 
 
 ## Training with Scripts
