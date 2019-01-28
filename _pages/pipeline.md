@@ -30,9 +30,9 @@ import stanfordnlp
 
 MODELS_DIR = '.'
 stanfordnlp.download('en', MODELS_DIR) # Download the English models
-processor_configs = { "pos.batch_size": 3000 } # Specify part-of-speech processor's batch size. Note we can't pass this in as a "normal" Python keyword argument because of the presence of the dot
-nlp = stanfordnlp.Pipeline(processors='tokenize,pos', models_dir=MODELS_DIR, treebank='en_ewt', use_gpu=True, **processor_configs) # Build the pipeline
+nlp = stanfordnlp.Pipeline(processors='tokenize,pos', models_dir=MODELS_DIR, treebank='en_ewt', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
 doc = nlp("Barack Obama was born in Hawaii.") # Run the pipeline on input text
+doc.sentences[0].print_tokens() # Look at the result
 ```
 
 ### Specifying A Full Config 
@@ -43,15 +43,16 @@ import stanfordnlp
 config = {
 	'processors': 'tokenize,mwt,pos,lemma,depparse', # Comma-separated list of processors to use
 	'lang': 'fr', # Language code for the language to build the Pipeline in
-	'tokenize.model_path': './fr_gsd_models/fr_gsd_tokenizer.pt', # Processor-specific arguments are set with keys "{processor_name}.{argument_name}"
-	'mwt.model_path': './fr_gsd_models/fr_gsd_mwt_expander.pt',
-	'pos.model_path': './fr_gsd_models/fr_gsd_tagger.pt',
-	'pos.pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt',
-	'lemma.model_path': './fr_gsd_models/fr_gsd_lemmatizer.pt',
-	'depparse.model_path': './fr_gsd_models/fr_gsd_parser.pt',
-	'depparse.pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt'
+	'tokenize_model_path': './fr_gsd_models/fr_gsd_tokenizer.pt', # Processor-specific arguments are set with keys "{processor_name}_{argument_name}"
+	'mwt_model_path': './fr_gsd_models/fr_gsd_mwt_expander.pt',
+	'pos_model_path': './fr_gsd_models/fr_gsd_tagger.pt',
+	'pos_pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt',
+	'lemma_model_path': './fr_gsd_models/fr_gsd_lemmatizer.pt',
+	'depparse_model_path': './fr_gsd_models/fr_gsd_parser.pt',
+	'depparse_pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt'
 }
-nlp = stanfordnlp.Pipeline(**config)
-doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.")
+nlp = stanfordnlp.Pipeline(**config) # Initialize the pipeline using a configuration dict
+doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.") # Run the pipeline on input text
+doc.sentences[0].print_tokens() # Look at the result
 ```
 
