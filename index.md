@@ -11,12 +11,11 @@ StanfordNLP is the combination of the software package used by the Stanford team
 
 This package is built with highly accurate neural network components that enables efficient training and evaluation with your own annotated data. The modules are built on top of [PyTorch](https://pytorch.org/).
 
-Choose StanfordNLP if you need:
+StanfordNLP features:
 
-* An integrated NLP toolkit with a broad range of grammatical analysis tools
-* A fast, robust annotator for arbitrary texts
-* A modern, regularly updated package, with cutting edge tools for text analytics
-* Support for a wide range of (human) languages
+* Native Python implementation requiring minimal efforts to set up;
+* Full neural network pipeline for robust text analytics, including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
+* Pretrained neural models supporting 53 (human) languages featured in 73 treebanks;
 * A stable, officially maintained Python interface to CoreNLP
 
 ## Installation
