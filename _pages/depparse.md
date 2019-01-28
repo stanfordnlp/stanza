@@ -10,7 +10,7 @@ Provides an accurate syntactic dependency parser.
 
 | Property name | Annotator class name | Generated Annotation |
 | --- | --- | --- |
-| depparse | DepparseProcessor | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_object.md#word)'s `governor` and `dependency_relation` attributes. |
+| depparse | DepparseProcessor | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `governor` and `dependency_relation` attributes. |
 
 ## Options
 
