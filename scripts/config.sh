@@ -4,7 +4,7 @@
 
 # Set UDBASE to the location of CoNLL18 folder
 # For details, see http://universaldependencies.org/conll18/data.html
-# export UDBASE=/path/to/CoNLL18
+export UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18/
 
 # Set directories to store processed training/evaluation files
 export DATA_ROOT=./data
@@ -15,11 +15,5 @@ export POS_DATA_DIR=$DATA_ROOT/pos
 export DEPPARSE_DATA_DIR=$DATA_ROOT/depparse
 export ETE_DATA_DIR=$DATA_ROOT/ete
 
-# Link to external resources
-#if [ ! -e extern_data/CoNLL18 ]; then
-    #ln -s /path/to/CoNLL18 extern_data/CoNLL18
-#fi
-
-#if [ ! -e extern_data/word2vec ]; then
-    #ln -s /path/to/word2vec extern_data/word2vec
-#fi
+# Set directories to store external word vector data
+export WORDVEC_DIR=./extern_data/word2vec

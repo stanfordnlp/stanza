@@ -91,7 +91,7 @@ fi
 # run the part-of-speech tagger
 echo '---'
 echo 'running part-of-speech tagger...'
-part_of_speech_cmd="python -m stanfordnlp.models.tagger --eval_file ${ete_file} --output_file ${POS_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict"
+part_of_speech_cmd="python -m stanfordnlp.models.tagger --wordvec_dir ${WORDVEC_DIR} --eval_file ${ete_file} --output_file ${POS_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict"
 echo 'run part-of-speech'
 echo $part_of_speech_cmd
 eval $part_of_speech_cmd
@@ -126,7 +126,7 @@ fi
 # run the dependency parser
 echo '---'
 echo 'running dependency parser...'
-depparse_cmd="python -m stanfordnlp.models.parser --eval_file ${ete_file} --output_file ${DEPPARSE_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size}"
+depparse_cmd="python -m stanfordnlp.models.parser --wordvec_dir ${WORDVEC_DIR} --eval_file ${ete_file} --output_file ${DEPPARSE_DATA_DIR}/${short}.${set}.pred.ete.conllu --lang ${model_short} --shorthand ${model_short} --mode predict --batch_size ${batch_size}"
 echo 'run dependency parser'
 echo $depparse_cmd
 eval $depparse_cmd

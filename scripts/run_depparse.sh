@@ -32,9 +32,9 @@ fi
 echo "Using batch size $batch_size"
 
 echo "Running parser with $args..."
-python -m stanfordnlp.models.parser --train_file $train_file --eval_file $eval_file \
+python -m stanfordnlp.models.parser --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --batch_size $batch_size --mode train $args
-python -m stanfordnlp.models.parser --eval_file $eval_file \
+python -m stanfordnlp.models.parser --wordvec_dir $WORDVEC_DIR --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict $args
 results=`python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $output_file | head -12 | tail -n+12 | awk '{print $7}'`
 echo $results $args >> ${DEPPARSE_DATA_DIR}/${short}.results
