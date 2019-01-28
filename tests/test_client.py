@@ -1,7 +1,7 @@
 """
 Tests that call a running CoreNLPClient.
 """
-import corenlp
+import stanfordnlp.server as corenlp
 
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 

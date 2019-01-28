@@ -9,9 +9,9 @@ The test corresponds to annotations for the following sentence:
 
 import os
 from pytest import fixture
-from corenlp_protobuf import Document, Sentence, Token, DependencyGraph,\
+from stanfordnlp.protobuf import Document, Sentence, Token, DependencyGraph,\
                              CorefChain
-from corenlp_protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
+from stanfordnlp.protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
 
 
 # Thext that was annotated
