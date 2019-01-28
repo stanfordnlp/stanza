@@ -1,0 +1,8 @@
+# Include the license file
+include *.rst
+include LICENSE
+include CHANGELOG
+
+# Include the data files
+recursive-include corenlp *.py
+recursive-include doc *.proto
