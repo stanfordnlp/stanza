@@ -1,21 +1,22 @@
 # StanfordNLP
-The Stanford NLP Group's official Python library.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
+
+The Stanford NLP Group's official Python library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
 
 ### References
 
-If you use the neural pipeline including the tokenizer, the multi-word token expansion model, the lemmatizer, the POS/morphological features tagger, or the dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](http://universaldependencies.org/conll18/proceedings/pdf/K18-2016.pdf)
+If you use our neural pipeline including the tokenizer, the multi-word token expansion model, the lemmatizer, the POS/morphological features tagger, or the dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf):
 
 ```bibtex
-@InProceedings{qi2018universal,
-  author    = {Qi, Peng  and  Dozat, Timothy  and  Zhang, Yuhao  and  Manning, Christopher D.},
-  title     = {Universal Dependency Parsing from Scratch},
-  booktitle = {Proceedings of the {CoNLL} 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies},
-  month     = {October},
-  year      = {2018},
-  address   = {Brussels, Belgium},
-  publisher = {Association for Computational Linguistics},
-  pages     = {160--170},
-  url       = {http://www.aclweb.org/anthology/K18-2016}
+@inproceedings{qi2018universal,
+ address = {Brussels, Belgium},
+ author = {Qi, Peng  and  Dozat, Timothy  and  Zhang, Yuhao  and  Manning, Christopher D.},
+ booktitle = {Proceedings of the {CoNLL} 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies},
+ month = {October},
+ pages = {160--170},
+ publisher = {Association for Computational Linguistics},
+ title = {Universal Dependency Parsing from Scratch},
+ url = {https://nlp.stanford.edu/pubs/qi2018universal.pdf},
+ year = {2018}
 }
 ```
 The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](https://qipeng.me) and [Yuhao Zhang](https://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/), who is the main contributor to the [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
@@ -96,47 +97,9 @@ We are actively working on improving multi-document processing.
 
 ## Training your own neural pipelines
 
-The following models can be trained with this code: the tokenizer`, the multi-word token (MWT) expander, the lemmatizer, the POS/morphological features tagger, and the dependency parser.
+All neural modules in this library, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser, can be trained with your own [CoNLL-U](https://universaldependencies.org/format.html) format data. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you need to clone this git repository and set up from source.
 
-To train your own models, you would need to clone the git repository and set up from source.
-
-### Setup
-
-Before training and evaluating, you need to set up the `scripts/config.sh`
-
-Change `/path/to/CoNLL18` and `/path/to/word2vec` appropriately to where you have downloaded these resources.
-
-For languages that had pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For the languages not in this list, we use the FastText embeddings from Facebook, which can be found [here](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md). Once you download the embeddings, please make sure you arrange them in a similar fashion as the CoNLL 2017 archive, where you have a `<language_code>.xz` file under `/path/to/word2vec/<language_name>` for each language (language and writing standard in the case of Norwegian Bokmal and Norwegian Nynorsk).
-
-### Training
-
-To train a model, run this command from the root directory:
-
-```bash
-bash scripts/run_${task}.sh ${treebank}
-```
-
-For example:
-
-```bash
-bash scripts/run_tokenize.sh UD_English-EWT
-```
-
-For the dependency parser, you also need to specify `gold|predicted` for the tag type in the training/dev data.
-
-```bash
-bash scripts/run_depparse.sh UD_English-EWT predicted
-```
-
-Models will be saved to the `saved_models` directory.
-
-### Evaluation
-
-Once you have trained all of the models for the pipeline, you can evaluate the full end-to-end system with this command:
-
-```bash
-bash scripts/run_ete.sh UD_English-EWT test
-```
+For detailes step-by-step guidance on how to train and evaluate your own models, please visit our [training documentation](https://stanfordnlp.github.io/stanfordnlp/training.html).
 
 ## LICENSE
 
