@@ -16,7 +16,6 @@ Generates the word lemmas for all tokens in the corpus.
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| lemma.cpu | bool | `False` | Set this flag to `True` to force the lemmatizer to run on CPU, even if GPU is available. |
 | lemma.use_identity | bool | `False` | When this flag is used, an identity lemmatizer (see `models.identity_lemmatizer`) will be used instead of a statistical lemmatizer. This is useful when [`Word.lemma`] is required for languages such as Vietnamese, where the lemma is identical to the original word form. |
 | lemma.batch_size | int | 50 | When annotating, this argument specifies the maximum number of words to batch for efficient processing. |
 | lemma.ensemble_dict | bool | `True` | If set to `True`, the lemmatizer will ensemble a seq2seq model with the output from a dictionary-based lemmatizer, which yields improvements on many languages (see system description paper for more details). |

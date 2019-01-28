@@ -1,8 +1,10 @@
 ---
-title: Processors 
+title: Processors Summary
 keywords: processor
 permalink: '/processors.html'
 ---
+
+Processors are units of the neural pipeline that create different annotations for a `Document`. The neural pipeline now supports the following processors:
 
 | Name | Annotator class name | Generated Annotation | Description |
 | --- | --- | --- | --- | 

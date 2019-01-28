@@ -16,7 +16,6 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| pos.cpu | bool | `False` (unset) | Set this flag to `True` to force the tagger to run on CPU. |
 | pos.batch_size | int | 5000 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). This parameter should be set larger than the number of words in the longest sentence in your input document, or you might run into unexpected behaviors. |
 
 

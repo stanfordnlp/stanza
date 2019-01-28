@@ -16,7 +16,6 @@ Tokenizes the text and performs sentence segmentation.
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| tokenize.cpu | bool | `False` (unset) | Set this flag to `True` to force the tokenizer to run on CPU. |
 | tokenize.batch_size | int | 32 | When annotating, this argument specifies the maximum number of paragraphs to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
 
 ## Training-Only Options
