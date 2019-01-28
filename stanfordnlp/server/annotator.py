@@ -6,7 +6,7 @@ from multiprocessing import Process
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from six.moves import http_client as HTTPStatus
 
-from corenlp_protobuf import Document, parseFromDelimitedString, writeToDelimitedString
+from stanfordnlp.protobuf import Document, parseFromDelimitedString, writeToDelimitedString
 
 class Annotator(Process):
     """

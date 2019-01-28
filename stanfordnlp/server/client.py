@@ -14,7 +14,7 @@ from six.moves.urllib.parse import urlparse
 
 import requests
 
-from corenlp_protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
+from stanfordnlp.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
 logger = logging.getLogger(__name__)
