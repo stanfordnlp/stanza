@@ -1,6 +1,5 @@
 """
-The full container encoder-decoder model, built on top of
-base seq2seq modules.
+The full encoder-decoder model, built on top of the base seq2seq modules.
 """
 
 import torch

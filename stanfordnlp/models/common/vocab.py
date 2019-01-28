@@ -115,7 +115,6 @@ class CompositeVocab(BaseVocab):
             if len(parts) == 1 and parts[0] == '_':
                 return dict()
             parts = [x.split('=') for x in parts]
-            #parts = dict([[x, y.split(',')] for x, y in parts])
 
             # Just treat multi-valued properties values as one possible value
             parts = dict(parts)
@@ -126,7 +125,6 @@ class CompositeVocab(BaseVocab):
     def unit2id(self, unit):
         parts = self.unit2parts(unit)
         if self.keyed:
-            #return [[self._unit2id[k][x] for x in parts[k]] if k in parts else [PAD_ID] for k in self._unit2id]
             # treat multi-valued properties as singletons
             return [self._unit2id[k].get(parts[k], UNK_ID) if k in parts else EMPTY_ID for k in self._unit2id]
         else:
@@ -159,9 +157,6 @@ class CompositeVocab(BaseVocab):
                     # treat multi-valued properties as singletons
                     if parts[key] not in self._id2unit[key]:
                         self._id2unit[key].append(parts[key])
-                    #for v in parts[key]:
-                    #    if v not in self._id2unit[key]:
-                    #        self._id2unit[key].append(v)
 
             # special handle for the case where upos/xpos/ufeats are always empty
             if len(self._id2unit) == 0:

@@ -1,5 +1,5 @@
 """
-Utils for seq2seq models.
+Utility functions.
 """
 import os
 from collections import Counter

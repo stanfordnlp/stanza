@@ -4,7 +4,7 @@ import torch
 import stanfordnlp.models.common.seq2seq_constant as constant
 
 """
- Adapted and modified from OpenNMT-py.
+ Adapted and modified from the OpenNMT project.
 
  Class for managing the internals of the beam search process.
 
@@ -38,9 +38,6 @@ class Beam(object):
         # The outputs at each time-step.
         self.nextYs = [self.tt.LongTensor(size).fill_(constant.PAD_ID)]
         self.nextYs[0][0] = constant.SOS_ID
-
-        # The attentions (matrix) for each time.
-        # self.attn = []
 
         # The copy indices for each time
         self.copy = []
@@ -87,7 +84,6 @@ class Beam(object):
         prevK = bestScoresId / numWords
         self.prevKs.append(prevK)
         self.nextYs.append(bestScoresId - prevK * numWords)
-        # self.attn.append(attnOut.index_select(0, prevK))
         if copy_indices is not None:
             self.copy.append(copy_indices.index_select(0, prevK))
 
@@ -110,23 +106,18 @@ class Beam(object):
         """
         Walk back to construct the full hypothesis.
 
-        Parameters.
+        Parameters:
 
              * `k` - the position in the beam to construct.
 
-         Returns.
-
-            1. The hypothesis
-            2. The attention at each time step.
+         Returns: The hypothesis
         """
-        #hyp, attn = [], []
         hyp = []
         cpy = []
         for j in range(len(self.prevKs) - 1, -1, -1):
             hyp.append(self.nextYs[j+1][k])
             if len(self.copy) > 0:
                 cpy.append(self.copy[j][k])
-            #attn.append(self.attn[j][k])
             k = self.prevKs[j][k]
          
         hyp = hyp[::-1]

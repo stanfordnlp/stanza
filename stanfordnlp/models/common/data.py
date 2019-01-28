@@ -1,3 +1,7 @@
+"""
+Utility functions for data transformations.
+"""
+
 import torch
 
 import stanfordnlp.models.common.seq2seq_constant as constant

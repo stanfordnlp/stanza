@@ -1,3 +1,7 @@
+"""
+Global constants.
+"""
+
 lcode2lang = {
     "af": "Afrikaans",
     "grc": "Ancient_Greek",

@@ -1,5 +1,5 @@
 """
-Some constants for seq2seq models.
+Constants for seq2seq models.
 """
 
 PAD = '<PAD>'
