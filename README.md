@@ -1,4 +1,4 @@
-# StanfordNLP
+# StanfordNLP: A Python NLP Library for Many Human Languages
 
 The Stanford NLP Group's official Python library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
 
