@@ -8,7 +8,7 @@ permalink: '/training.html'
 
 All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser, can be trained with your own `CoNLL-U` format data. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you will need to clone the source code from the [git repository](https://github.com/stanfordnlp/stanfordnlp) and follow the procedures below.
 
-If you only want to run the processors with the pretrained models, please skip this and go to [the Pipeline page](/pipeline.html).
+If you only want to run the processors with the pretrained models, please skip this and go to [the Pipeline page](pipeline.md).
 
 
 ## Setting Environment Variables
@@ -26,6 +26,10 @@ To train modules that make use of word representations, such as the tagger and d
 `TODO`
 
 To get started, you can download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, we use the FastText embeddings from Facebook, which can be found here. Once you download the embeddings, please make sure you arrange them in a similar fashion as the CoNLL 2017 vector files.
+
+TODO:
+- Fix the environment variables for word vectors.
+- Fix the link for FastText embeddings.
 
 
 ## Training with Scripts
