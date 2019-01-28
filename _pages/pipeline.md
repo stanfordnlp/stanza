@@ -6,8 +6,8 @@ permalink: '/pipeline.html'
 
 ## Pipeline
 
-Users of StanfordNLP can process documents by building a `Pipeline` with the desired `Processor` units.  The pipeline takes in a `Document`
-object or raw text, runs the processors in succession, and returns a fully annotated `Document`.
+Users of StanfordNLP can process documents by building a [`Pipeline`](pipeline.md) with the desired `Processor` units.  The pipeline takes in a [`Document`](data_objects.md#document)
+object or raw text, runs the processors in succession, and returns an annotated [`Document`](data_objects.md#document).
 
 ## Options
 
@@ -15,7 +15,7 @@ object or raw text, runs the processors in succession, and returns a fully annot
 | --- | --- | --- | --- |
 | lang | str | "en" | Use recommended models for this language. |
 | models_dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
-| processors | str | "tokenize,mwt,pos,lemma,depparse" | List of processors to use. For a list of all processors supported, see [Processors Summary](/processors.html). |
+| processors | str | "tokenize,<wbr>mwt,<wbr>pos,<wbr>lemma,<wbr>depparse" | List of processors to use. For a list of all processors supported, see [Processors Summary](processors.md). |
 | treebank | str | None | Use models for this treebank. If not specified, `Pipeline` will look up the default treebank for the language requested. |
 | use_gpu | bool | True | Attempt to use a GPU if possible. |
 
