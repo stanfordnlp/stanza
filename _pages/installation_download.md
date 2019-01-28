@@ -121,7 +121,7 @@ If you are using a non-default treebank for the langauge, make sure to also spec
 
 ### Human Languages Supported by StanfordNLP
 
-Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline). The performance of these systems on the [CoNLL 2018 Shared Task]() official test set (in our unofficial evaluation) can be found in the following subsection.
+Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline). The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
 
 **Note**
 
