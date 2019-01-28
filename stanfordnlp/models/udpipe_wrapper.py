@@ -1,5 +1,7 @@
 """
-A wrapper class for udpipe modules. Only one module will be run at each call.
+Wrapper functions to run UDPipe modules just as other neural modules. Only one module will be run at each call.
+
+For more information on the UDPipe system, please visit: http://ufal.mff.cuni.cz/udpipe.
 """
 
 import os

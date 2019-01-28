@@ -1,4 +1,11 @@
 """
+Entry point for training and evaluating a dependency parser.
+
+This implementation combines a deep biaffine graph-based parser with linearization and distance features.
+For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
+"""
+
+"""
 Training and evaluation for the parser.
 """
 

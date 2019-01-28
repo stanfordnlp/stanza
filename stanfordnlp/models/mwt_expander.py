@@ -1,5 +1,9 @@
 """
-Training and evaluation for MWT expander.
+Entry point for training and evaluating a multi-word token (MWT) expander.
+
+This MWT expander combines a neural sequence-to-sequence architecture with a dictionary 
+to decode the token into multiple words.
+For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
 import os

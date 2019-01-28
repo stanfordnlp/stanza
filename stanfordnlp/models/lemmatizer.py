@@ -1,6 +1,11 @@
 """
-Training and evaluation for lemmatizer.
+Entry point for training and evaluating a lemmatizer.
+
+This lemmatizer combines a neural sequence-to-sequence architecture with an `edit` classifier 
+and two dictionaries to produce robust lemmas from word forms.
+For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
+
 
 import os
 import shutil
