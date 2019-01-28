@@ -6,7 +6,7 @@ permalink: '/training.html'
 
 ## Overview
 
-All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser, can be trained with your own `CoNLL-U` format data. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you will need to clone the source code from the [git repository](https://github.com/stanfordnlp/stanfordnlp) and follow the procedures below.
+All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser, can be trained with your own [CoNLL-U](https://universaldependencies.org/format.html) format data. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you will need to clone the source code from the [git repository](https://github.com/stanfordnlp/stanfordnlp) and follow the procedures below.
 
 If you only want to run the processors with the pretrained models, please skip this and go to [the Pipeline page](pipeline.md).
 
