@@ -99,7 +99,7 @@ We are actively working on improving multi-document processing.
 
 All neural modules in this library, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser, can be trained with your own [CoNLL-U](https://universaldependencies.org/format.html) format data. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you need to clone this git repository and set up from source.
 
-For detailes step-by-step guidance on how to train and evaluate your own models, please visit our [training documentation](https://stanfordnlp.github.io/stanfordnlp/training.html).
+For detailed step-by-step guidance on how to train and evaluate your own models, please visit our [training documentation](https://stanfordnlp.github.io/stanfordnlp/training.html).
 
 ## LICENSE
 
