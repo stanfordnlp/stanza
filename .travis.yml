@@ -1,0 +1,9 @@
+language: python
+python:
+  - 3.6.8
+notifications:
+  email: false
+install:
+  - pip install -e .
+script:
+  - pytest tests/test_read.py
