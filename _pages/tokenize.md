@@ -10,7 +10,7 @@ Tokenizes the text and performs sentence segmentation.
 
 | Property name | Processor class name | Generated Annotation |
 | --- | --- | --- |
-| tokenize | TokenizeProcessor | Segments a `Document` into `Sentence`s, each containing a list of `Token`s. This processor doesn't expand multi-word tokens (see the [MWT expander](/mwt.html)). | 
+| tokenize | TokenizeProcessor | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWT expander](mwt.md). | 
 
 ## Options
 

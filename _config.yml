@@ -64,3 +64,9 @@ defaults:
       layout: "post"
       comments: true
 
+relative_links:
+  enabled:     true
+  collections: false
+
+plugins:
+  - jekyll-relative-links

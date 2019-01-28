@@ -6,7 +6,7 @@ permalink: '/mwt.html'
 
 ## Description
 
-Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](/tokenize.html). 
+Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](tokenize.md). 
 
 | Property name | Processor class name | Generated Annotation |
 | --- | --- | --- |

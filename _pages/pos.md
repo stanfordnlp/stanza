@@ -10,7 +10,7 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 | Property name | Annotator class name | Generated Annotation |
 | --- | --- | --- |
-| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through `Token`'s properties `pos`, `xpos`, and `ufeats`. |
+| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. |
 
 ## Options
 
