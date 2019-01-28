@@ -21,7 +21,6 @@ class MWTProcessor(UDProcessor):
             if self.config['dict_only']:
                 preds = dict_preds
             else:
-                print("Running the seq2seq model...")
                 preds = []
                 for i, b in enumerate(batch):
                     preds += self.trainer.predict(b)

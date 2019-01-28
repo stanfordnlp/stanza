@@ -57,7 +57,6 @@ class DataLoader:
         # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
-        print("{} batches created for {}.".format(len(data), filename))
 
     def init_vocab(self, data):
         assert self.eval is False, "Vocab file must exist for evaluation"

@@ -39,14 +39,14 @@ def build_default_config(treebank, models_path):
     else:
         default_config['processors'] = 'tokenize,pos,lemma,depparse'
     if treebank == 'vi_vtb':
-        default_config['lemma.use_identity'] = True
-        default_config['lemma.batch_size'] = 5000
+        default_config['lemma_use_identity'] = True
+        default_config['lemma_batch_size'] = 5000
     treebank_dir = f"{models_path}/{treebank}_models"
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
-        default_config[f"{processor}.model_path"] = f"{treebank_dir}/{treebank}_{model_file_ending}"
+        default_config[f"{processor}_model_path"] = f"{treebank_dir}/{treebank}_{model_file_ending}"
         if processor in ['pos', 'depparse']:
-            default_config[f"{processor}.pretrain_path"] = f"{treebank_dir}/{treebank}.pretrain.pt"
+            default_config[f"{processor}_pretrain_path"] = f"{treebank_dir}/{treebank}.pretrain.pt"
     return default_config
 
 

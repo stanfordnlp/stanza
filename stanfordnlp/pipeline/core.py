@@ -57,8 +57,8 @@ class Pipeline:
     def filter_config(self, prefix, config_dict):
         filtered_dict = {}
         for key in config_dict.keys():
-            if key.split('.')[0] == prefix:
-                filtered_dict[key.split('.')[1]] = config_dict[key]
+            if key.split('_')[0] == prefix:
+                filtered_dict['_'.join(key.split('_')[1:])] = config_dict[key]
         return filtered_dict
 
     def process(self, doc):
