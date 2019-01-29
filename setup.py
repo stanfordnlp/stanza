@@ -20,7 +20,7 @@ setup(
 
     description='Official Stanford NLP Python Library',
     long_description=long_description,
-
+    long_description_content_type="text/markdown",
     # The project's main homepage.
     url='https://github.com/stanfordnlp/stanfordnlp.git',
 
@@ -59,7 +59,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'ply', 'protobuf', 'requests', 'torch', 'tqdm'],
+    install_requires=['numpy', 'protobuf', 'requests', 'torch', 'tqdm'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
