@@ -34,7 +34,7 @@ Please use the following channels for questions and issue reports.
 
 ## Setup
 
-StanfordNLP supports Python 3.6.8 or later and 3.7.2 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
+StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
 ```bash
 pip install stanfordnlp
 ```
@@ -51,7 +51,7 @@ pip install -e .
 
 ### Getting Started with the neural pipeline
 
-To get run your first StanfordNLP pipeline, simply following these steps in your Python interactive interpreter:
+To run your first StanfordNLP pipeline, simply following these steps in your Python interactive interpreter:
 
 ```python
 >>> import stanfordnlp
@@ -72,6 +72,8 @@ The last command will print out the words in the first sentence in the input str
 ('Hawaii', '4', 'obl')
 ('.', '4', 'punct')
 ```
+
+**Note:** If you are running into issues like `OSError: [Errno 22] Invalid argument`, it's very likely that you are affected by a [known Python issue](https://bugs.python.org/issue24658), and we would recommend Python 3.6.8 or later and Python 3.7.2 or later.
 
 We also provide a multilingual [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/pipeline_demo.py) that demonstrates how one uses StanfordNLP in other languages than English, for example Chinese (traditional)
 
