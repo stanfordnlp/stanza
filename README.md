@@ -2,6 +2,9 @@
 
 The Stanford NLP Group's official Python library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
 
+[![Build Status](https://travis-ci.com/stanfordnlp/stanfordnlp.svg?token=RPNzRzNDQRoq2x3J2juj&branch=master)](https://travis-ci.com/stanfordnlp/stanfordnlp)
+[![PyPI version](https://img.shields.io/pypi/v/stanfordnlp.svg?colorB=blue)](https://pypi.org/project/stanfordnlp/)
+
 ### References
 
 If you use our neural pipeline including the tokenizer, the multi-word token expansion model, the lemmatizer, the POS/morphological features tagger, or the dependency parser in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf):
