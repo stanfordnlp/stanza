@@ -23,6 +23,15 @@ The PyTorch implementation of the neural pipeline in this repository is due to [
 
 If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
 
+## Issues and Usage Q&A
+
+Please use the following channels for questions and issue reports.
+
+| Purpose | Channel |
+|---|---|
+| Usage Q&A | [Google Group](https://groups.google.com/forum/#!forum/stanfordnlp) |
+| Bug Reports and Feature Requests | [GitHub Issue Tracker](https://github.com/stanfordnlp/stanfordnlp/issues) |
+
 ## Setup
 
 StanfordNLP supports Python 3.6 and above. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
