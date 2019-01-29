@@ -34,7 +34,7 @@ Please use the following channels for questions and issue reports.
 
 ## Setup
 
-StanfordNLP supports Python 3.6 and above. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
+StanfordNLP supports Python 3.6.8 or later and 3.7.2 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
 ```bash
 pip install stanfordnlp
 ```
@@ -52,6 +52,7 @@ pip install -e .
 ### Getting Started with the neural pipeline
 
 To get run your first StanfordNLP pipeline, simply following these steps in your Python interactive interpreter:
+
 ```python
 >>> import stanfordnlp
 >>> stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
