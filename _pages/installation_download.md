@@ -16,7 +16,7 @@ pip install stanfordnlp
 
 This will take care of all of the dependencies necessary to run StanfordNLP. The neural pipeline of StanfordNLP depends on PyTorch 1.0.0 or a later version with compatible APIs.
 
-**Note** StanfordNLP will not work with Python 3.5 or below. Please use Python 3.6 or above.
+**Note** StanfordNLP will not work with Python 3.5 or below. Please use Python 3.6 or later. If you have Python 3.6 or later but are still running into issues like `OSError: [Errno 22] Invalid argument`, it's very likely that you are affected by a [known Python issue](https://bugs.python.org/issue24658), and we would recommend Python 3.6.8 or later and Python 3.7.2 or later. 
 
 ### Quick Example
 

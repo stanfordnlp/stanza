@@ -46,6 +46,8 @@ Aside from the neural pipeline, StanfordNLP also provides the official Python wr
 
 After CoreNLP is set up, you can follow our [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) to test it out.
 
+Note that StanfordNLP works only with Python 3.6 or later. If you are running into issues like `OSError: [Errno 22] Invalid argument`, it's very likely that you are affected by a [known Python issue](https://bugs.python.org/issue24658), and we would recommend Python 3.6.8 or later and Python 3.7.2 or later. 
+
 ## License
 
 StanfordNLP is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) (the "License"), you may not use the software package except in compliance with the License.
