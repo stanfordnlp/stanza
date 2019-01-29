@@ -4,6 +4,6 @@ python:
 notifications:
   email: false
 install:
-  - pip install -e .
+  - pip install --quiet -e .
 script:
   - pytest tests/test_read.py
