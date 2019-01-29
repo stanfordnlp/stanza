@@ -15,6 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_resources', 
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--language', help='language of text | default: en', default='en')
+    parser.add_argument('-p', '--processors', help='list of processors to run | default: "tokenize,mwt,pos,lemma,depparse"',
+                        default='tokenize,mwt,pos,lemma,depparse')
     parser.add_argument('text_file')
     args = parser.parse_args()
     # set output file path
@@ -28,7 +30,7 @@ if __name__ == '__main__':
         print('could not find: '+lang_models_dir)
         download(args.language, resource_dir=args.models_dir)
     # set up pipeline
-    pipeline = Pipeline(lang=args.language, models_dir=args.models_dir)
+    pipeline = Pipeline(processors=args.processors,lang=args.language, models_dir=args.models_dir)
     # build document
     print('running pipeline...')
     doc = pipeline(open(args.text_file).read())
