@@ -15,8 +15,8 @@ CONLL17_TAR="word-embeddings-conll17.tar"
 FASTTEXT_BASE_URL="https://dl.fbaipublicfiles.com/fasttext/vectors-wiki"
 
 declare -a FASTTEXT_LANG=("Afrikaans" "Armenian" "Breton" "Buryat" "Chinese" "Faroese" "Gothic" "Kurmanji" "North_Sami" "Serbian" "Upper_Sorbian")
-declare -a FASTTEXT_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")
-declare -a LOCAL_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
+declare -a FASTTEXT_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
+declare -a LOCAL_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")
 
 color_green='\033[32;1m'
 color_clear='\033[0m' # No Color
