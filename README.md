@@ -84,6 +84,12 @@ We also provide a multilingual [demo script](https://github.com/stanfordnlp/stan
 python demo/pipeline_demo.py -l zh
 ```
 
+| Argument | Default | Meaning | 
+|---|---|---|
+| -d or --models_dir | '~/stanfordnlp_data' | location of models files |
+| -l or --lang | 'en' | Demo Language |
+| -c or --cpu | undefined | Use cpu as the device | 
+
 See [our getting started guide](https://stanfordnlp.github.io/stanfordnlp/installation_download.html#getting-started) for more details.
 
 ### Access to Java Stanford CoreNLP Server
