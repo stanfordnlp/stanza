@@ -86,17 +86,18 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
                 download_dir = where_to_download
             else:
                 download_dir = DEFAULT_MODEL_DIR
-            # initiate download
-            if not os.path.exists(download_dir):
-                os.mkdir(download_dir)
         else:
             download_dir = resource_dir
+        if not os.path.exists(download_dir):
+            os.mkdir(download_dir)
         print('')
         print('Downloading models for: '+lang_name)
         model_zip_file_name = lang_name+'_models.zip'
         download_url = 'http://nlp.stanford.edu/software/conll_2018/'+model_zip_file_name
         download_file_path = download_dir+'/'+model_zip_file_name
         print('Download location: '+download_file_path)
+
+        # initiate download
         r = requests.get(download_url, stream=True)
         with open(download_file_path, 'wb') as f:
             file_size = int(r.headers.get('content-length'))

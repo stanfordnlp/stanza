@@ -12,7 +12,7 @@ from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR
 if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data',
+    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_resources',
                         default=None)
     parser.add_argument('-l', '--lang', help='Demo language',
                         default="en")
