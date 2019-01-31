@@ -89,7 +89,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
         else:
             download_dir = resource_dir
         if not os.path.exists(download_dir):
-            os.mkdir(download_dir)
+            os.makedirs(download_dir)
         print('')
         print('Downloading models for: '+lang_name)
         model_zip_file_name = lang_name+'_models.zip'
