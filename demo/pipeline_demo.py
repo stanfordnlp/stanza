@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_data',
-                        default=DEFAULT_MODEL_DIR)
+                        default=None)
     parser.add_argument('-l', '--lang', help='Demo language',
                         default="en")
     parser.add_argument('-c', '--cpu', action='store_true', help='Use cpu as the device.')
