@@ -8,9 +8,10 @@ homepage: true
 
 ## About
 
-StanfordNLP is the combination of the software package used by the Stanford team in the CoNLL 2018 Shared Task on Universal Dependency Parsing, and the group's official Python interface to the [Stanford CoreNLP software](https://stanfordnlp.github.io/CoreNLP). Aside from the functions it inherits from CoreNLP, it contains tools to convert a string of text to lists of sentences and words, generate base forms of those words, their parts of speech and morphological features, and a syntactic structure that is designed to be parallel among more than 70 languages.
+StanfordNLP is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, and to give a syntactic structure dependency parse, which is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org). In addition, it is able to call the CoreNLP Java package and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
-This package is built with highly accurate neural network components that enables efficient training and evaluation with your own annotated data. The modules are built on top of [PyTorch](https://pytorch.org/).
+This package is built with highly accurate neural network components that enable efficient training and evaluation with your own annotated data. The modules are built on top of [PyTorch](https://pytorch.org/). You will get much faster performance if you run this system on a GPU-enabled machine.
+This package is a combination of software based on the Stanford entry in the [CoNLL 2018 Shared Task on Universal Dependency Parsing](http://universaldependencies.org/conll18/), and the group's official Python interface to the Java [Stanford CoreNLP software](https://stanfordnlp.github.io/CoreNLP). The CoNLL UD system is partly a cleaned up version of code used in the shared task and partly an approximate rewrite in PyTorch of the [original Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
 
 StanfordNLP features:
 
