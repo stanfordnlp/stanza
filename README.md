@@ -3,7 +3,7 @@
 [![Travis Status](https://travis-ci.com/stanfordnlp/stanfordnlp.svg?token=RPNzRzNDQRoq2x3J2juj&branch=master)](https://travis-ci.com/stanfordnlp/stanfordnlp)
 [![PyPI version](https://img.shields.io/pypi/v/stanfordnlp.svg?colorB=blue)](https://pypi.org/project/stanfordnlp/)
 
-The Stanford NLP Group's official Python library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
+The Stanford NLP Group's official Python NLP library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
 
 ### References
 
@@ -22,9 +22,11 @@ If you use our neural pipeline including the tokenizer, the multi-word token exp
  year = {2018}
 }
 ```
-The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](http://qipeng.me) and [Yuhao Zhang](http://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/), who is the main contributor to the [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
+The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](http://qipeng.me) and [Yuhao Zhang](http://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/) and [Jason Bolton](mailto:jebolton@stanford.edu).
 
-If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers"). The CoreNLP client is mostly written by [Arun Chaganty](http://arun.chagantys.org/), and [Jason Bolton](mailto:jebolton@stanford.edu) spearheaded merging the two projects together.
+This release is not the same as Stanford's CoNLL 2018 Shared Task system. The tokenizer, lemmatizer, morphological features, and multi-word term systems are a cleaned up version of the shared task code, but in the competition we used a  [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser by [Tim Dozat](https://web.stanford.edu/~tdozat/), which has been approximately reproduced in PyTorch (though with a few deviations from the original) for this release.
+
+If you use the CoreNLP server, please cite the CoreNLP software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers"). The CoreNLP client is mostly written by [Arun Chaganty](http://arun.chagantys.org/), and [Jason Bolton](mailto:jebolton@stanford.edu) spearheaded merging the two projects together.
 
 ## Issues and Usage Q&A
 
