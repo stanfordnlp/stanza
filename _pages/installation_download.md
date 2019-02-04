@@ -16,8 +16,6 @@ pip install stanfordnlp
 
 This will take care of all of the dependencies necessary to run StanfordNLP. The neural pipeline of StanfordNLP depends on PyTorch 1.0.0 or a later version with compatible APIs.
 
-**Note** StanfordNLP will not work with Python 3.5 or below. Please use Python 3.6 or later. If you have Python 3.6 or later but are still running into issues like `OSError: [Errno 22] Invalid argument` when running the example below, it's very likely that you are affected by a [known Python issue](https://bugs.python.org/issue24658), and we would recommend Python 3.6.8 or later and Python 3.7.2 or later.
-
 ### Quick Example
 
 To try out StanfordNLP, you can simply follow these steps in the interactive Python interpreter:
@@ -93,6 +91,17 @@ dependency parse of first sentence:
 ('盛事', '0', 'root')
 ('。', '16', 'punct')
 ```
+
+### Troubleshooting
+
+- Why do I keep getting a `SyntaxError: invalid syntax` error message while trying to import stanfordnlp?
+
+   StanfordNLP will not work with Python 3.5 or below. If you have trouble importing the package, please try to upgrade your Python.
+
+- Why am I getting an `OSError: [Errno 22] Invalid argument` error and therefore a `Vector file is not provided` exception while the model is being loaded?
+
+   If you are getting this error, it is very likely that you are running macOS and using Python with version <= 3.6.7 or <= 3.7.1. If this is the case, then you are affected by a [known Python bug](https://bugs.python.org/issue24658) on macOS, and upgrading your Python to >= 3.6.8 or >= 3.7.2 should solve this issue. If you are not running macOS or already have the specified Python version and still seeing this issue, please report this to us via the [GitHub issue tracker](https://github.com/stanfordnlp/stanfordnlp/issues).
+
 
 ## Models for Human Languages
 
