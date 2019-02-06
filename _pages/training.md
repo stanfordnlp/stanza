@@ -22,13 +22,16 @@ We provide scripts that are useful for model training and evaluation in the `scr
 
 ## Preparing Word Vector Data
 
-To train modules that make use of word representations, such as the tagger and dependency parser, it is highly recommended that you use pretrained embedding vectors. For training, please organize your embedding vector files in the following way:
-`$WORDVEC_DIR/{language}/{language_code}.vectors.xz`
+To train modules that make use of word representations, such as the tagger and dependency parser, it is highly recommended that you use pretrained embedding vectors. To replicate the system performance on the CONLL 2018 shared task, we have prepared a script for you to download all word vector files. Simply run from the source directory:
+```bash
+bash scripts/download_vectors.sh ${wordvec_dir}
+```
+where `${wordvec_dir}` is the target directory to store the word vector files, and should be the same as where the environment variable `WORDVEC_DIR` is pointed to. 
 
-For example, the word2vec file for English should be put into `$WORDVEC_DIR/English/en.vectors.xz`.
+The above script will first download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, it will download the [FastText embeddings](https://fasttext.cc/docs/en/crawl-vectors.html) from Facebook. Note that the total size of all downloaded vector files will be ~30G, therefore please use this script with caution.
 
-To get started, you can download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, we use the [FastText embeddings](https://fasttext.cc/docs/en/crawl-vectors.html) from Facebook. Once you download the embeddings, please make sure you arrange them in a similar fashion as described above.
-
+After running the script, your embedding vector files will be organized in the following way:
+`${WORDVEC_DIR}/{language}/{language_code}.vectors.xz`. For example, the word2vec file for English should be put into `$WORDVEC_DIR/English/en.vectors.xz`. If you use your own vector files, please make sure you arrange them in a similar fashion as described above.
 
 ## Training with Scripts
 
