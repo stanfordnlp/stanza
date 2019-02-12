@@ -99,3 +99,21 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner','depparse
     matches["sentences"][1]["0"]["$subject"]["text"] == "Chris"
     matches["sentences"][1]["0"]["$object"]["text"] == "sentence"
 ```
+
+## CoreNLP Client Options
+During initialization, a `CoreNLPClient` object accepts the following options as arguments:
+
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| annotators | list | ["tokenize", "ssplit", "lemma", "pos", "ner", "depparse"] | The default list of CoreNLP annotators to run for a request, unless otherwise specified in the call to `annotate()`. |
+| properties | dict | `empty` | This allows you to specify the detailed CoreNLP annotation properties as a Python `dict` object. For example, setting `{"tokenize.language": "en", "tokenize.options": "ptb3Escaping=false"}` will specify an English tokenizer and disable PTB escaping. For all available properties, please see the [CoreNLP annotators page](https://stanfordnlp.github.io/CoreNLP/annotators.html). |
+| endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on. |
+| timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
+| threads | int | 5 | The number of threads to hit the server with. If, for example, the server is running on an 8 core machine, you can specify this to be 8, and the client will allow you to make 8 simultaneous requests to the server. |
+| output_format | str | "serialized" | The default output format to use for the server response, unless otherwise specified. If set to be "serialized", the response will be converted to local Python objects (see usage examples above). For a list of all supported output format, see the [CoreNLP output options page](https://stanfordnlp.github.io/CoreNLP/cmdline.html). |
+| memory | str | "4G" | This specifies the memory used by the CoreNLP server process. |
+| start_server | bool | True | Whether to start the CoreNLP server when initializing the Python `CoreNLPClient` object. By default the CoreNLP server will be started using the provided options. |
+| stdout | file | sys.stdout | The standard output used by the CoreNLP server process. |
+| stderr | file | sys.stderr | The standard error used by the CoreNLP server process. |
+| be_quiet | bool | True | If set to False, the server process will print detailed error logs. Useful for diagnosing errors. |
+| max_char_length | int | 100000 | The max number of characters that will be accepted and processed by the CoreNLP server in a single request. |
