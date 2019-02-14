@@ -29,7 +29,7 @@ if __name__ == '__main__':
         exit()
 
     # download the models
-    stanfordnlp.download(args.lang, args.models_dir, confirm_if_exists=True)
+    stanfordnlp.download(args.lang, args.models_dir, force_download=False, confirm_if_exists=False)
     # set up a pipeline
     print('---')
     print('Building pipeline...')
