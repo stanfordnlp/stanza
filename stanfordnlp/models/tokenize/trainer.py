@@ -1,3 +1,5 @@
+import sys
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -81,7 +83,7 @@ class Trainer(Trainer):
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
-            exit()
+            sys.exit()
         self.args = checkpoint['config']
         self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
         self.model.load_state_dict(checkpoint['model'])
