@@ -14,7 +14,7 @@ from stanfordnlp.protobuf import Document, Sentence, Token, DependencyGraph,\
 from stanfordnlp.protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
 
 
-# Thext that was annotated
+# Text that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 
 

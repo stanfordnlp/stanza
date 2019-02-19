@@ -6,4 +6,4 @@ notifications:
 install:
   - pip install --quiet -e .
 script:
-  - pytest tests/test_read.py
+  - python -m pytest
