@@ -22,10 +22,12 @@ class UDProcessor(Processor):
 
     def build_final_config(self, config):
         # set configurations from loaded model
-        loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
-        # filter out unneeded args from model
-        loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
-        # overwrite with config for processor
+        if self.trainer is not None:
+            loaded_args, self.vocab = self.trainer.args, self.trainer.vocab
+            # filter out unneeded args from model
+            loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
+        else:
+            loaded_args = {}
         loaded_args.update(config)
         self.config = loaded_args
 
