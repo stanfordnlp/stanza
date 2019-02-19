@@ -6,7 +6,7 @@ and two dictionaries to produce robust lemmas from word forms.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
-
+import sys
 import os
 import shutil
 import time
@@ -115,7 +115,7 @@ def train(args):
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         print("[Skip training because no data available...]")
-        exit()
+        sys.exit(0)
 
     # start training
     # train a dictionary-based lemmatizer
@@ -220,7 +220,7 @@ def evaluate(args):
         print("Skip evaluation because no dev data is available...")
         print("Lemma score:")
         print("{} ".format(args['lang']))
-        exit()
+        sys.exit(0)
 
     dict_preds = trainer.predict_dict(batch.conll.get(['word', 'upos']))
 

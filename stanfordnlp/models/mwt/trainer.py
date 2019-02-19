@@ -2,6 +2,7 @@
 A trainer class to handle training and testing of models.
 """
 
+import sys
 import numpy as np
 from collections import Counter
 import torch
@@ -137,7 +138,7 @@ class Trainer(object):
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
-            exit()
+            sys.exit(1)
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']
         if not self.args['dict_only']:

@@ -6,6 +6,7 @@ to produce consistant POS and UFeats predictions.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
+import sys
 import os
 import shutil
 import time
@@ -118,7 +119,7 @@ def train(args):
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         print("Skip training because no data available...")
-        exit()
+        sys.exit(0)
 
     print("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])

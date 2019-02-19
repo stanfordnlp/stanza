@@ -2,6 +2,7 @@
 basic demo script
 """
 
+import sys
 import argparse
 import os
 
@@ -26,7 +27,7 @@ if __name__ == '__main__':
 
     if args.lang not in example_sentences:
         print(f'Sorry, but we don\'t have a demo sentence for "{args.lang}" for the moment. Try one of these languages: {list(example_sentences.keys())}')
-        exit()
+        sys.exit(1)
 
     # download the models
     stanfordnlp.download(args.lang, args.models_dir, confirm_if_exists=True)

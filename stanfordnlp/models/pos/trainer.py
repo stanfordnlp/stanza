@@ -2,6 +2,7 @@
 A trainer class to handle training and testing of models.
 """
 
+import sys
 import torch
 from torch import nn
 
@@ -100,7 +101,7 @@ class Trainer(BaseTrainer):
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             print("Cannot load model from {}".format(filename))
-            exit()
+            sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = Tagger(self.args, self.vocab, emb_matrix=pretrain.emb, share_hid=self.args['share_hid'])

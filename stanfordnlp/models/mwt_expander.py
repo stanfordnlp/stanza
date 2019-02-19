@@ -6,6 +6,7 @@ to decode the token into multiple words.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
+import sys
 import os
 import shutil
 import time
@@ -105,7 +106,7 @@ def train(args):
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         print("Skip training because no data available...")
-        exit()
+        sys.exit(0)
 
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
