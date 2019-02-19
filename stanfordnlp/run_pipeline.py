@@ -23,9 +23,9 @@ if __name__ == '__main__':
     # add processor settings so they can be specified at command line
     for processor_setting in PROCESSOR_SETTINGS_LIST:
         if processor_setting in BOOLEAN_PROCESSOR_SETTINGS_LIST:
-            parser.add_argument('--' + processor_setting, action='store_true', default=None)
+            parser.add_argument('--' + processor_setting, action='store_true', default=None, help=argparse.SUPPRESS)
         else:
-            parser.add_argument('--' + processor_setting)
+            parser.add_argument('--' + processor_setting, help=argparse.SUPPRESS)
     parser.add_argument('text_file')
     args = parser.parse_args()
     # set output file path
