@@ -6,4 +6,4 @@ notifications:
 install:
   - pip install --quiet -e .
 script:
-  - python -m pytest
+  - pytest tests/test_protobuf.py
