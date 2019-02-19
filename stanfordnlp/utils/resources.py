@@ -14,7 +14,7 @@ from pathlib import Path
 
 # set home dir for default
 HOME_DIR = str(Path.home())
-DEFAULT_MODEL_DIR = HOME_DIR+'/stanfordnlp_resources'
+DEFAULT_MODEL_DIR = os.path.join(HOME_DIR,'stanfordnlp_resources')
 
 # list of language shorthands
 conll_shorthands = ['af_afribooms', 'ar_padt', 'bg_btb', 'bxr_bdt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'cu_proiel', 'da_ddt', 'de_gsd', 'el_gdt', 'en_ewt', 'en_gum', 'en_lines', 'es_ancora', 'et_edt', 'eu_bdt', 'fa_seraji', 'fi_ftb', 'fi_tdt', 'fr_gsd', 'fro_srcmf', 'fr_sequoia', 'fr_spoken', 'ga_idt', 'gl_ctg', 'gl_treegal', 'got_proiel', 'grc_perseus', 'grc_proiel', 'he_htb', 'hi_hdtb', 'hr_set', 'hsb_ufal', 'hu_szeged', 'hy_armtdp', 'id_gsd', 'it_isdt', 'it_postwita', 'ja_gsd', 'kk_ktb', 'kmr_mg', 'ko_gsd', 'ko_kaist', 'la_ittb', 'la_perseus', 'la_proiel', 'lv_lvtb', 'nl_alpino', 'nl_lassysmall', 'no_bokmaal', 'no_nynorsklia', 'no_nynorsk', 'pl_lfg', 'pl_sz', 'pt_bosque', 'ro_rrt', 'ru_syntagrus', 'ru_taiga', 'sk_snk', 'sl_ssj', 'sl_sst', 'sme_giella', 'sr_set', 'sv_lines', 'sv_talbanken', 'tr_imst', 'ug_udt', 'uk_iu', 'ur_udtb', 'vi_vtb', 'zh_gsd']
@@ -41,12 +41,12 @@ def build_default_config(treebank, models_path):
     if treebank == 'vi_vtb':
         default_config['lemma_use_identity'] = True
         default_config['lemma_batch_size'] = 5000
-    treebank_dir = f"{models_path}/{treebank}_models"
+    treebank_dir = os.path.join(models_path, f"{treebank}_models")
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
-        default_config[f"{processor}_model_path"] = f"{treebank_dir}/{treebank}_{model_file_ending}"
+        default_config[f"{processor}_model_path"] = os.path.join(treebank_dir, f"{treebank}_{model_file_ending}")
         if processor in ['pos', 'depparse']:
-            default_config[f"{processor}_pretrain_path"] = f"{treebank_dir}/{treebank}.pretrain.pt"
+            default_config[f"{processor}_pretrain_path"] = os.path.join(treebank_dir, f"{treebank}.pretrain.pt")
     return default_config
 
 
@@ -63,7 +63,7 @@ def load_config(config_file_path):
 # download a ud models zip file
 def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False):
     # ask if user wants to download
-    if resource_dir is not None and os.path.exists(f"{resource_dir}/{lang_name}_models"):
+    if resource_dir is not None and os.path.exists(os.path.join(resource_dir, f"{lang_name}_models")):
         if confirm_if_exists:
             print("")
             print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download the models again? [y/N]")
@@ -94,7 +94,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
         print('Downloading models for: '+lang_name)
         model_zip_file_name = lang_name+'_models.zip'
         download_url = 'http://nlp.stanford.edu/software/conll_2018/'+model_zip_file_name
-        download_file_path = download_dir+'/'+model_zip_file_name
+        download_file_path = od.path.join(download_dir, model_zip_file_name)
         print('Download location: '+download_file_path)
 
         # initiate download
