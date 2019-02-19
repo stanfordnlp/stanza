@@ -39,27 +39,23 @@ class CoNLLFile():
             infile = io.StringIO(self.file)
         else:
             infile = open(self.file)
-        while True:
-            line = infile.readline()
-            if len(line) == 0:
-                break
-            line = line.strip()
-            if len(line) == 0:
-                if len(cache) > 0:
-                    sents.append(cache)
-                    cache = []
-            else:
-                if line.startswith('#'): # skip comment line
-                    continue
-                array = line.split('\t')
-                if self.ignore_gapping and '.' in array[0]:
-                    continue
-                assert len(array) == FIELD_NUM
-                cache += [array]
+        with infile:
+            for line in infile:
+                line = line.strip()
+                if len(line) == 0:
+                    if len(cache) > 0:
+                        sents.append(cache)
+                        cache = []
+                else:
+                    if line.startswith('#'): # skip comment line
+                        continue
+                    array = line.split('\t')
+                    if self.ignore_gapping and '.' in array[0]:
+                        continue
+                    assert len(array) == FIELD_NUM
+                    cache += [array]
         if len(cache) > 0:
             sents.append(cache)
-        if not self._from_str:
-            infile.close()
         return sents
 
     @property
