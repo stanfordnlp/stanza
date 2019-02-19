@@ -6,6 +6,7 @@ import argparse
 import os
 
 from stanfordnlp import download, Pipeline
+from stanfordnlp.pipeline.core import BOOLEAN_PROCESSOR_SETTINGS_LIST, PROCESSOR_SETTINGS_LIST
 from stanfordnlp.utils.resources import default_treebanks, DEFAULT_MODEL_DIR
 
 
@@ -15,12 +16,23 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_resources', 
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--language', help='language of text | default: en', default='en')
-    parser.add_argument('-p', '--processors', help='list of processors to run | default: "tokenize,mwt,pos,lemma,depparse"',
+    parser.add_argument('-o', '--output', help='output file path', default=None)
+    parser.add_argument('-p', '--processors',
+                        help='list of processors to run | default: "tokenize,mwt,pos,lemma,depparse"',
                         default='tokenize,mwt,pos,lemma,depparse')
+    # add processor settings so they can be specified at command line
+    for processor_setting in PROCESSOR_SETTINGS_LIST:
+        if processor_setting in BOOLEAN_PROCESSOR_SETTINGS_LIST:
+            parser.add_argument('--' + processor_setting, action='store_true', default=False)
+        else:
+            parser.add_argument('--' + processor_setting)
     parser.add_argument('text_file')
     args = parser.parse_args()
     # set output file path
-    output_file_path = args.text_file+'.out'
+    if args.output is None:
+        output_file_path = args.text_file+'.out'
+    else:
+        output_file_path = args.output
     # map language code to treebank shorthand
     treebank_shorthand = default_treebanks[args.language]
     # check for models
@@ -30,7 +42,9 @@ if __name__ == '__main__':
         print('could not find: '+lang_models_dir)
         download(args.language, resource_dir=args.models_dir)
     # set up pipeline
-    pipeline = Pipeline(processors=args.processors,lang=args.language, models_dir=args.models_dir)
+    pipeline_config = \
+        dict([(k, v) for k, v in vars(args).items() if k in PROCESSOR_SETTINGS_LIST and v is not None])
+    pipeline = Pipeline(processors=args.processors, lang=args.language, models_dir=args.models_dir, **pipeline_config)
     # build document
     print('running pipeline...')
     doc = pipeline(open(args.text_file).read())
