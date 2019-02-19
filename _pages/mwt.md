@@ -16,7 +16,7 @@ Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/t
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| mwt.batch_size | int | 50 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
+| mwt_batch_size | int | 50 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
 
 ## Training-Only Options
 

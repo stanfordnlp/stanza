@@ -16,7 +16,8 @@ Tokenizes the text and performs sentence segmentation.
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| tokenize.batch_size | int | 32 | When annotating, this argument specifies the maximum number of paragraphs to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
+| tokenize_batch_size | int | 32 | When annotating, this argument specifies the maximum number of paragraphs to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
+| tokenize_pretokenized | bool | False | Assume the text is tokenized by white space and sentence split by newline.  Do not run a model. |
 
 ## Training-Only Options
 
