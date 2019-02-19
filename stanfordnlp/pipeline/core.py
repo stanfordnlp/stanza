@@ -2,8 +2,10 @@
 Pipeline that runs tokenize,mwt,pos,lemma,depparse
 """
 
+import itertools
 import torch
 
+from distutils.util import strtobool
 from stanfordnlp.pipeline.doc import Document
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor
@@ -18,6 +20,43 @@ NAME_TO_PROCESSOR_CLASS = {'tokenize': TokenizeProcessor, 'mwt': MWTProcessor, '
                            'lemma': LemmaProcessor, 'depparse': DepparseProcessor}
 
 PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
+
+# list of settings for each processor
+PROCESSOR_SETTINGS = {
+    'tokenize': ['anneal', 'anneal_after', 'batch_size', 'conv_filters', 'conv_res', 'dropout', 'emb_dim', 'feat_dim',
+                 'feat_funcs', 'hidden_dim', 'hier_invtemp', 'hierarchical', 'input_dropout', 'lr0', 'max_grad_norm',
+                 'max_seqlen', 'pretokenized', 'report_steps', 'residual', 'rnn_layers', 'seed', 'shuffle_steps',
+                 'steps', 'tok_noise', 'unit_dropout', 'vocab_size', 'weight_decay'],
+    'mwt': ['attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'emb_dim', 'emb_dropout',
+            'ensemble_dict', 'ensemble_early_stop', 'hidden_dim', 'log_step', 'lr', 'lr_decay', 'max_dec_len',
+            'max_grad_norm', 'num_epoch', 'num_layers', 'optim', 'seed', 'vocab_size'],
+    'pos': ['adapt_eval_interval', 'batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
+            'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'dropout', 'eval_interval',
+            'hidden_dim', 'log_step', 'lr', 'max_grad_norm', 'max_steps', 'max_steps_before_stop', 'num_layers',
+            'optim', 'pretrain', 'rec_dropout', 'seed', 'share_hid', 'tag_emb_dim', 'transformed_dim', 'word_dropout',
+            'word_emb_dim', 'wordvec_dir'],
+    'lemma': ['alpha', 'attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'edit', 'emb_dim',
+              'emb_dropout', 'ensemble_dict', 'hidden_dim', 'log_step', 'lr', 'lr_decay', 'max_dec_len',
+              'max_grad_norm', 'num_edit', 'num_epoch', 'num_layers', 'optim', 'pos', 'pos_dim', 'pos_dropout',
+              'pos_vocab_size', 'seed', 'vocab_size'],
+    'depparse': ['batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
+                 'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'distance', 'dropout',
+                 'eval_interval', 'hidden_dim', 'linearization', 'log_step', 'lr', 'max_grad_norm', 'max_steps',
+                 'max_steps_before_stop', 'num_layers', 'optim', 'pretrain', 'rec_dropout', 'sample_train', 'seed',
+                 'shorthand', 'tag_emb_dim', 'transformed_dim', 'word_dropout', 'word_emb_dim', 'wordvec_dir']
+}
+
+PROCESSOR_SETTINGS_LIST = \
+    ['_'.join(psp) for k, v in PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
+
+BOOLEAN_PROCESSOR_SETTINGS = {
+    'tokenize': ['pretokenized'],
+    'mwt': ['dict_only'],
+    'lemma': ['dict_only', 'ensemble_dict', 'pos']
+}
+
+BOOLEAN_PROCESSOR_SETTINGS_LIST = \
+    ['_'.join(psp) for k, v in BOOLEAN_PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
 
 
 class Pipeline:
@@ -39,6 +78,7 @@ class Pipeline:
         print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
+        self.standardize_config_values()
         # set up processors
         for processor_name in self.processor_names:
             if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
@@ -60,6 +100,17 @@ class Pipeline:
             if key.split('_')[0] == prefix:
                 filtered_dict['_'.join(key.split('_')[1:])] = config_dict[key]
         return filtered_dict
+
+    def standardize_config_values(self):
+        """
+        Standardize config settings
+        1.) for boolean settings, convert string values to True or False using distutils.util.strtobool
+        """
+        standardized_entries = {}
+        for key, val in self.config.items():
+            if key in BOOLEAN_PROCESSOR_SETTINGS_LIST and isinstance(val, str):
+                standardized_entries[key] = strtobool(val)
+        self.config.update(standardized_entries)
 
     def process(self, doc):
         # run the pipeline
