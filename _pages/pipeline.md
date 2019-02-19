@@ -58,6 +58,9 @@ doc.sentences[0].print_tokens() # Look at the result
 
 ### Running On Pre-Tokenized Text
 
+If you set the `tokenize_pretokenized` option, the text will be interpreted as already tokenized on white space and sentence split by newlines.
+The tokenizer model will not be run.
+
 ```python
 import stanfordnlp
 
