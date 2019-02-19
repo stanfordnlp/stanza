@@ -38,7 +38,7 @@ PROCESSOR_SETTINGS = {
     'lemma': ['alpha', 'attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'edit', 'emb_dim',
               'emb_dropout', 'ensemble_dict', 'hidden_dim', 'log_step', 'lr', 'lr_decay', 'max_dec_len',
               'max_grad_norm', 'num_edit', 'num_epoch', 'num_layers', 'optim', 'pos', 'pos_dim', 'pos_dropout',
-              'pos_vocab_size', 'seed', 'vocab_size'],
+              'pos_vocab_size', 'seed', 'use_identity', 'vocab_size'],
     'depparse': ['batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
                  'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'distance', 'dropout',
                  'eval_interval', 'hidden_dim', 'linearization', 'log_step', 'lr', 'max_grad_norm', 'max_steps',
@@ -52,7 +52,7 @@ PROCESSOR_SETTINGS_LIST = \
 BOOLEAN_PROCESSOR_SETTINGS = {
     'tokenize': ['pretokenized'],
     'mwt': ['dict_only'],
-    'lemma': ['dict_only', 'ensemble_dict', 'pos']
+    'lemma': ['dict_only', 'ensemble_dict', 'pos', 'use_identity']
 }
 
 BOOLEAN_PROCESSOR_SETTINGS_LIST = \
