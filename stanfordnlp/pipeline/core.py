@@ -52,7 +52,7 @@ PROCESSOR_SETTINGS_LIST = \
 BOOLEAN_PROCESSOR_SETTINGS = {
     'tokenize': ['pretokenized'],
     'mwt': ['dict_only'],
-    'lemma': ['dict_only', 'ensemble_dict', 'pos', 'use_identity']
+    'lemma': ['dict_only', 'edit', 'ensemble_dict', 'pos', 'use_identity']
 }
 
 BOOLEAN_PROCESSOR_SETTINGS_LIST = \
