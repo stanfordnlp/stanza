@@ -61,19 +61,19 @@ def load_config(config_file_path):
 
 
 # download a ud models zip file
-def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False):
+def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False, force=False):
     # ask if user wants to download
     if resource_dir is not None and os.path.exists(f"{resource_dir}/{lang_name}_models"):
         if confirm_if_exists:
             print("")
             print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download the models again? [y/N]")
-            should_download = input()
+            should_download = 'y' if force else input()
             should_download = should_download.strip().lower() in ['yes', 'y']
         else:
             should_download = False
     else:
         print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
-        should_download = input()
+        should_download = 'y' if force else input()
         should_download = should_download.strip().lower() in ['yes', 'y', '']
     if should_download:
         # set up data directory
@@ -81,7 +81,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
             print('')
             print('Default download directory: ' + DEFAULT_MODEL_DIR)
             print('Hit enter to continue or type an alternate directory.')
-            where_to_download = input()
+            where_to_download = '' if force else input()
             if where_to_download != '':
                 download_dir = where_to_download
             else:
@@ -127,11 +127,11 @@ def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
 
 
 # main download function
-def download(download_label, resource_dir=None, confirm_if_exists=False):
+def download(download_label, resource_dir=None, confirm_if_exists=False, force=False):
     if download_label in conll_shorthands:
-        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists)
+        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force)
     elif download_label in default_treebanks:
         print(f'Using the default treebank "{default_treebanks[download_label]}" for language "{download_label}".')
-        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir, confirm_if_exists=confirm_if_exists)
+        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force)
     else:
         raise ValueError(f'The language or treebank "{download_label}" is not currently supported by this function. Please try again with other languages or treebanks.')
