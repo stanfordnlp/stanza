@@ -56,3 +56,19 @@ doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.") #
 doc.sentences[0].print_tokens() # Look at the result
 ```
 
+### Running On Pre-Tokenized Text
+
+```python
+import stanfordnlp
+
+config = {
+        'processors': 'tokenize,pos',
+        'tokenize_pretokenized': True,
+        'pos_model_path': './en_ewt_models/en_ewt_tagger.pt',
+        'pos_pretrain_path': './en_ewt_models/en_ewt.pretrain.pt',
+        'pos_batch_size': 1000
+         }
+nlp = stanfordnlp.Pipeline(**config)
+doc = nlp('Joe Smith lives in California .\nHe loves pizza .')
+print(doc.conll_file.conll_as_string())
+```
