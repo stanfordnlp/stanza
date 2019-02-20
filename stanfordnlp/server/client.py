@@ -131,7 +131,7 @@ class CoreNLPClient(RobustService):
 
     def __init__(self, start_server=True,
                  endpoint="http://localhost:9000",
-                 timeout=15000,
+                 timeout=30000,
                  threads=5,
                  annotators=None,
                  properties=None,
