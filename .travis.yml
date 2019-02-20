@@ -5,5 +5,10 @@ notifications:
   email: false
 install:
   - pip install --quiet -e .
+  - export CORENLP_HOME=~/corenlp CORENLP_VERSION=stanford-corenlp-full-2018-10-05
+  - export CORENLP_URL="http://nlp.stanford.edu/software/${CORENLP_VERSION}.zip"
+  - wget $CORENLP_URL -O corenlp.zip
+  - unzip corenlp.zip
+  - mv $CORENLP_VERSION $CORENLP_HOME
 script:
-  - pytest tests/test_protobuf.py
+  - python -m pytest
