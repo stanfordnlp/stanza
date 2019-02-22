@@ -4,7 +4,6 @@ utilities for getting resources
 
 import os
 import requests
-import subprocess
 import sys
 import urllib.request
 import zipfile
@@ -115,7 +114,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
             unzip_ud_model(lang_name, download_file_path, download_dir)
         # remove the zipe file
         print("Cleaning up...", end="")
-        subprocess.call('rm '+download_file_path, shell=True)
+        os.remove(download_file_path)
         print('Done.')
 
 
