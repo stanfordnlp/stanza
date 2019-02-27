@@ -1,6 +1,6 @@
 ---
-title: About
-keywords: overview, about
+title: StanfordNLP Python Library
+keywords: StanfordNLP, Python, NLP, Natural Language Processing, Deep Learning, PyTorch
 type: first_page
 permalink: '/index.html'
 homepage: true

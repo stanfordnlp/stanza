@@ -1,6 +1,6 @@
 ---
 title: Stanford CoreNLP Client
-keywords: corenlp client
+keywords: StanfordNLP, Stanford CoreNLP, Client, Server, Python
 permalink: '/corenlp_client.html'
 ---
 
