@@ -9,23 +9,23 @@ search: exclude
     {% unless page.sitemap.exclude == "yes" %}
     <url>
       <loc>{{ site.url }}{{ page.url | remove: "index.html" }}</loc>
-      {% if page.sitemap.last_updated %}
-        <last_updated>{{ page.sitemap.last_updated | date: "%Y-%m-%d" }}</last_updated>
-      {% elsif page.date %}
-        <last_updated>{{ page.date | date_to_xmlschema }}</last_updated>
-      {% else %}
-        <last_updated>{{ site.time | date_to_xmlschema }}</last_updated>
-      {% endif %}
-      {% if page.sitemap.changefreq %}
+      {%- if page.sitemap.last_updated -%}
+        <lastmod>{{ page.sitemap.lastmod | date: "%Y-%m-%d" }}</lastmod>
+      {%- elsif page.date -%}
+        <lastmod>{{ page.date | date_to_xmlschema }}</lastmod>
+      {%- else -%}
+        <lastmod>{{ site.time | date_to_xmlschema }}</lastmod>
+      {%- endif -%}
+      {%- if page.sitemap.changefreq -%}
         <changefreq>{{ page.sitemap.changefreq }}</changefreq>
-      {% else %}
+      {%- else -%}
         <changefreq>monthly</changefreq>
-      {% endif %}
-      {% if page.sitemap.priority %}
+      {%- endif -%}
+      {%- if page.sitemap.priority -%}
         <priority>{{ page.sitemap.priority }}</priority>
-      {% else %}
+      {%- else -%}
         <priority>0.3</priority>
-      {% endif %}
+      {%- endif -%}
     </url>
     {% endunless %}
   {% endfor %}
