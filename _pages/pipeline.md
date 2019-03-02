@@ -56,6 +56,30 @@ doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.") #
 doc.sentences[0].print_tokens() # Look at the result
 ```
 
+### Accessing Token Information
+
+```python
+import stanfordnlp
+
+nlp = stanfordnlp.Pipeline()
+doc = nlp("Barack Obama was born in Hawaii.")
+
+print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {word.xpos}' for sent in doc.sentences for word in sent.words], sep='\n')
+```
+
+This will produce the following output:
+
+```
+text: Barack 	lemma: Barack	upos: PROPN	xpos: NNP
+text: Obama 	lemma: Obama	upos: PROPN	xpos: NNP
+text: was 	lemma: be	upos: AUX	xpos: VBD
+text: born 	lemma: bear	upos: VERB	xpos: VBN
+text: in 	lemma: in	upos: ADP	xpos: IN
+text: Hawaii 	lemma: Hawaii	upos: PROPN	xpos: NNP
+text: . 	lemma: .	upos: PUNCT	xpos: .
+```
+
+
 ### Running On Pre-Tokenized Text
 
 If you set the `tokenize_pretokenized` option, the text will be interpreted as already tokenized on white space and sentence split by newlines.
