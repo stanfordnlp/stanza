@@ -138,7 +138,9 @@ class Token:
         self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
         self._text = token_entry[CONLLU_FIELD_TO_IDX['word']]
         if words is None:
-            self._words = []
+            self.words = []
+        else:
+            self.words = words
 
     @property
     def words(self):
