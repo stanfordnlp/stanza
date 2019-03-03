@@ -59,8 +59,8 @@ doc.sentences[0].print_tokens() # Look at the result
 ### Accessing Word Information
 
 After a pipeline is run, a `Document` object will be created and populated with annotation data.
-A `Document` contains a list of `Sentences`'s, and a `Sentence` contains a list of `Token`'s and
-`Word`'s. For the most part `Token`'s and `Word`'s overlap, but some tokens can be divided into
+A `Document` contains a list of `Sentences`s, and a `Sentence` contains a list of `Token`s and
+`Word`s. For the most part `Token`s and `Word`s overlap, but some tokens can be divided into
 mutiple words, for instance the French token `aux` is divided into the words `à` and `les`.  The
 dependency parses are derived over words.
 
