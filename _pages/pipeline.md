@@ -64,10 +64,16 @@ import stanfordnlp
 nlp = stanfordnlp.Pipeline()
 doc = nlp("Barack Obama was born in Hawaii.")
 
+# newer Python syntax
 print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {word.xpos}' for sent in doc.sentences for word in sent.words], sep='\n')
+
+# older equivalent
+for sent in doc.sentences:
+    for word in sent.words:
+        print(f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {word.xpos}')
 ```
 
-This will produce the following output:
+Both print loops above will create this output.
 
 ```
 text: Barack 	lemma: Barack	upos: PROPN	xpos: NNP
