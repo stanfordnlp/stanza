@@ -77,6 +77,7 @@ class Sentence:
                 idx = int(tok[CONLLU_FIELD_TO_IDX['id']])
                 if idx <= en:
                     self._tokens[-1].words.append(new_word)
+                    new_word.parent_token = self._tokens[-1]
                 else:
                     self.tokens.append(Token(tok, words=[new_word]))
 
