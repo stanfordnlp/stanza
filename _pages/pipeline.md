@@ -56,7 +56,11 @@ doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.") #
 doc.sentences[0].print_tokens() # Look at the result
 ```
 
-### Accessing Token Information
+### Accessing Word Information
+
+After a pipeline is run, a `Document` object will be created and populated with annotation data.  The document
+contains a list of sentences `doc.sentences`, and a sentence contains a list of words `sent.words`.  You
+can access various fields from the word, including `word.text`, `word.upos`, `word.xpos`, and `word.lemma`.  
 
 ```python
 import stanfordnlp
