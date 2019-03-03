@@ -51,12 +51,12 @@ entries:
 
         - title: MWTProcessor
           url: mwt.html
+        
+        - title: POSProcessor
+          url: pos.html
 
         - title: LemmaProcessor
           url: lemma.html
-
-        - title: POSProcessor
-          url: pos.html
 
         - title: DepparseProcessor
           url: depparse.html
