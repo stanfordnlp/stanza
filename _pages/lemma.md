@@ -24,6 +24,20 @@ Generates the word lemmas for all tokens in the corpus.
 | lemma_beam_size | int | 1 | Control the beam size used during decoding in the seq2seq lemmatizer. |
 | lemma_max_dec_len | int | 50 | Control the maximum decoding character length in the seq2seq lemmatizer. The decoder will stop if this length is achieved and the end-of-sequence character is still not seen. |
 
+## Example
+
+If your main interest is lemmatizing, you can supply a smaller processors list with just the prerequisites for lemma.
+After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of words.
+The lemma information can be found in the `lemma` field.
+
+```python
+import stanfordnlp
+
+nlp = stanfordnlp.Pipeline(processors='tokenize,mwt,pos,lemma')
+doc = nlp("Barack Obama was born in Hawaii.")
+print(*[f'word: {word.text}\tlemma: {word.lemma}' for sent in doc.sentences for word in sent.words], sep='\n')
+```
+
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/lemmatizer.py#L22) of the lemmatizer.
