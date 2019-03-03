@@ -67,8 +67,6 @@ import stanfordnlp
 
 nlp = stanfordnlp.Pipeline()
 doc = nlp("Barack Obama was born in Hawaii.")
-
-# newer Python syntax
 print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {word.xpos}' for sent in doc.sentences for word in sent.words], sep='\n')
 
 ```
