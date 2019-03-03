@@ -58,10 +58,15 @@ doc.sentences[0].print_tokens() # Look at the result
 
 ### Accessing Word Information
 
-After a pipeline is run, a `Document` object will be created and populated with annotation data.  In this code example,
-the document is named `doc`.  The document contains a list of sentences `doc.sentences`, and a sentence `sent` contains a 
-list of words `sent.words`.  You can access various fields from the `word`, including `word.text`, `word.upos`, `word.xpos`
-, and `word.lemma`.  
+After a pipeline is run, a `Document` object will be created and populated with annotation data.
+A `Document` contains a list of `Sentences`'s, and a `Sentence` contains a list of `Token`'s and
+`Word`'s. For the most part `Token`'s and `Word`'s overlap, but some tokens can be divided into
+mutiple words, for instance the French token `aux` is divided into the words `à` and `les`.  The
+dependency parses are derived over words.
+
+In this code example, the `Document` is named `doc`.  After the text is annotated, the for loops
+go through each sentence `sent` in `doc.sentences` and each word `word` in `sent.words` and information
+about the word is printed out, specifically `word.text`, `word.lemma`, `word.upos`, and `word.xpos`.
 
 ```python
 import stanfordnlp
@@ -72,7 +77,7 @@ print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {
 
 ```
 
-The code above will generate the following output:
+The following output is generated:
 
 ```
 text: Barack 	lemma: Barack	upos: PROPN	xpos: NNP
