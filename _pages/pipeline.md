@@ -69,7 +69,7 @@ print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {
 
 ```
 
-Both print loops above will create this output.
+The code above will generate the following output:
 
 ```
 text: Barack 	lemma: Barack	upos: PROPN	xpos: NNP
