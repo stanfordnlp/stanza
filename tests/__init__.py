@@ -31,7 +31,7 @@ assert os.path.basename(TEST_WORKING_DIR) == TEST_DIR_BASE_NAME, \
 def check_test_mode(tm):
     """ Check if current test mode matches test mode for a module, skip if there is a mismatch """
     if not os.getenv(TEST_MODE_VAR) == tm:
-        pytest.skip(f'Test module: test_run_pipeline only runs in FULL mode (set {TEST_MODE_VAR} to {test_mode})',
+        pytest.skip(f'Test module: test_run_pipeline only runs in FULL mode (set {TEST_MODE_VAR} to {tm})',
                     allow_module_level=True)
 
 
