@@ -8,6 +8,7 @@ from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
 multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
 
+
 class Document:
 
     def __init__(self, text):
