@@ -84,6 +84,6 @@ def safe_rm(path_to_rm):
             os.remove(file_to_rm)
             assert not os.path.exists(file_to_rm), f'Error removing: {file_to_rm}'
     # clear out directory
-    if os.path.isdir(dir_to_rm):
+    if dir_to_rm is not None and os.path.isdir(dir_to_rm):
         os.rmdir(dir_to_rm)
         assert not os.path.exists(dir_to_rm), f'Error removing: {dir_to_rm}'
