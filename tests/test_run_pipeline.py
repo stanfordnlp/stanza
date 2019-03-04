@@ -9,7 +9,7 @@ from datetime import datetime
 from tests import *
 
 # only run this test if TEST_MODE = FULL
-test_mode(TEST_MODE_FULL)
+check_test_mode(TEST_MODE_FULL)
 
 
 def test_fr_pipeline():
