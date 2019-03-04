@@ -10,5 +10,8 @@ install:
   - wget $CORENLP_URL -O corenlp.zip
   - unzip corenlp.zip
   - mv $CORENLP_VERSION $CORENLP_HOME
+  - mkdir ~/stanfordnlp_test
+  - export STANFORDNLP_TEST_MODE='BASIC'
+  - export STANFORDNLP_TEST_HOME=~/stanfordnlp_test
 script:
   - python -m pytest
