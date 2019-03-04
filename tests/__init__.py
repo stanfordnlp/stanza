@@ -67,7 +67,7 @@ REMOVABLE_PATHS = ['fr_gsd_models', 'fr_gsd_tokenizer.pt', 'fr_gsd_mwt_expander.
 def safe_rm(path_to_rm):
     """
     Safely remove a directory of files or a file
-    1.) check path exists
+    1.) check path exists, files are files, dirs are dirs
     2.) only remove things on approved list REMOVABLE_PATHS
     3.) assert no longer exists
     """
