@@ -9,7 +9,7 @@ from datetime import datetime
 from tests import *
 
 # check testing environment, only run these tests in FULL mode
-check_test_mode(TEST_MODE_FULL)
+test_mode(TEST_MODE_FULL)
 
 # French pipeline paths
 # files
