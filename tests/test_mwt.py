@@ -11,7 +11,7 @@ check_test_mode(TEST_MODE_FULL)
 
 # download the French models
 safe_rm(FR_MODELS_DIR)
-stanfordnlp.download('fr', resource_dir=TEST_WORKING_DIR)
+stanfordnlp.download('fr', resource_dir=TEST_WORKING_DIR, force=True)
 
 # test mwt stuff
 
