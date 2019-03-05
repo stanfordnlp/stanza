@@ -2,12 +2,10 @@
 Basic testing of the English pipeline
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
-
-# only run this test if TEST_MODE = FULL
-check_test_mode(TEST_MODE_FULL)
 
 
 def setup_module(module):
