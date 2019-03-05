@@ -6,13 +6,16 @@ ner, dependencies and mentions.
 The test corresponds to annotations for the following sentence:
     Chris wrote a simple sentence that he parsed with Stanford CoreNLP.
 """
-
 import os
+import pytest
+
 from pytest import fixture
 from stanfordnlp.protobuf import Document, Sentence, Token, DependencyGraph,\
                              CorefChain
 from stanfordnlp.protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
 
+# set the marker for this module
+pytestmark = pytest.mark.travis
 
 # Text that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
