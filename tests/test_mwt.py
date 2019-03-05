@@ -9,12 +9,19 @@ from tests import *
 # only run this test if TEST_MODE = FULL
 check_test_mode(TEST_MODE_FULL)
 
-# download the French models
-safe_rm(FR_MODELS_DIR)
-stanfordnlp.download('fr', resource_dir=TEST_WORKING_DIR, force=True)
+
+def setup_module(module):
+    """Set up resources for all tests in this module"""
+    safe_rm(FR_MODELS_DIR)
+    stanfordnlp.download('fr', resource_dir=TEST_WORKING_DIR, force=True)
+
+
+def teardown_module(module):
+    """Clean up resources after tests complete"""
+    safe_rm(FR_MODELS_DIR)
+
 
 # test mwt stuff
-
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \
                   "l'Industrie et du Numérique."
 
