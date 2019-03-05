@@ -2,6 +2,7 @@
 Basic data structures
 """
 
+import io
 import re
 
 from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
@@ -122,17 +123,33 @@ class Sentence:
                 governor = self.words[word.governor-1]
             self.dependencies.append((governor, word.dependency_relation, word))
 
-    def print_dependencies(self):
+    def print_dependencies(self, file=None):
         for dep_edge in self.dependencies:
-            print((dep_edge[2].text, dep_edge[0].index, dep_edge[1]))
+            print((dep_edge[2].text, dep_edge[0].index, dep_edge[1]), file=file)
 
-    def print_tokens(self):
+    def dependencies_string(self):
+        dep_string = io.StringIO()
+        self.print_dependencies(file=dep_string)
+        return dep_string.getvalue().strip()
+
+    def print_tokens(self, file=None):
         for tok in self.tokens:
             print(tok)
+
+    def tokens_string(self):
+        toks_string = io.StringIO()
+        self.print_tokens(file=tok_string)
+        return tok_string.getvalue().strip()
 
     def print_words(self):
         for word in self.words:
             print(word)
+
+    def words_string(self):
+        wrds_string = io.StringIO()
+        self.print_tokens(file=wrds_string)
+        return wrds_string.getvalue().strip()
+
 
 class Token:
 
