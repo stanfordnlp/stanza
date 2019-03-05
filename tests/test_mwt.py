@@ -6,10 +6,6 @@ import stanfordnlp
 
 from tests import *
 
-# only run this test if TEST_MODE = FULL
-check_test_mode(TEST_MODE_FULL)
-
-
 def setup_module(module):
     """Set up resources for all tests in this module"""
     safe_rm(FR_MODELS_DIR)

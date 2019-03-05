@@ -8,9 +8,6 @@ import subprocess
 from datetime import datetime
 from tests import *
 
-# only run this test if TEST_MODE = FULL
-check_test_mode(TEST_MODE_FULL)
-
 
 def test_fr_pipeline():
     # check input files present
