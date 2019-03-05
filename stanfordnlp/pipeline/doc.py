@@ -138,8 +138,8 @@ class Sentence:
 
     def tokens_string(self):
         toks_string = io.StringIO()
-        self.print_tokens(file=tok_string)
-        return tok_string.getvalue().strip()
+        self.print_tokens(file=toks_string)
+        return toks_string.getvalue().strip()
 
     def print_words(self):
         for word in self.words:
