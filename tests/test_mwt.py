@@ -21,7 +21,7 @@ def teardown_module(module):
     safe_rm(FR_MODELS_DIR)
 
 
-# test mwt stuff
+# mwt data for testing
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \
                   "l'Industrie et du Numérique."
 
