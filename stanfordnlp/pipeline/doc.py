@@ -147,7 +147,7 @@ class Sentence:
 
     def words_string(self):
         wrds_string = io.StringIO()
-        self.print_tokens(file=wrds_string)
+        self.print_words(file=wrds_string)
         return wrds_string.getvalue().strip()
 
 
