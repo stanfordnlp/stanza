@@ -31,8 +31,10 @@ def doc_pb():
     parseFromDelimitedString(doc, buf)
     return doc
 
+
 def test_parse_protobuf(doc_pb):
     assert doc_pb.ByteSize() == 4239
+
 
 def test_write_protobuf(doc_pb):
     stream = writeToDelimitedString(doc_pb)
@@ -42,6 +44,7 @@ def test_write_protobuf(doc_pb):
     doc_pb_ = Document()
     parseFromDelimitedString(doc_pb_, buf)
     assert doc_pb == doc_pb_
+
 
 def test_document_text(doc_pb):
     assert doc_pb.text == TEXT

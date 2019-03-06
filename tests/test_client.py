@@ -51,6 +51,7 @@ def test_tokensregex():
                 "length": 1
                 },]}
 
+
 def test_semgrex():
     with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=60000) as client:
         pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
