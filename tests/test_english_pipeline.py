@@ -54,4 +54,5 @@ def processed_doc():
 
 
 def test_dependency_parse(processed_doc):
-    assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == EN_DOC_DEPENDENCY_PARSES_GOLD
+    assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == \
+           EN_DOC_DEPENDENCY_PARSES_GOLD
