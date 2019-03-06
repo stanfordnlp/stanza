@@ -53,6 +53,7 @@ EN_DOC_WORDS_GOLD = """
 <Word index=5;text=in;lemma=in;upos=ADP;xpos=IN;feats=_;governor=6;dependency_relation=case>
 <Word index=6;text=Hawaii;lemma=Hawaii;upos=PROPN;xpos=NNP;feats=Number=Sing;governor=4;dependency_relation=obl>
 <Word index=7;text=.;lemma=.;upos=PUNCT;xpos=.;feats=_;governor=4;dependency_relation=punct>
+
 <Word index=1;text=He;lemma=he;upos=PRON;xpos=PRP;feats=Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs;governor=3;dependency_relation=nsubj:pass>
 <Word index=2;text=was;lemma=be;upos=AUX;xpos=VBD;feats=Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin;governor=3;dependency_relation=aux:pass>
 <Word index=3;text=elected;lemma=elect;upos=VERB;xpos=VBN;feats=Tense=Past|VerbForm=Part|Voice=Pass;governor=0;dependency_relation=root>
@@ -60,6 +61,7 @@ EN_DOC_WORDS_GOLD = """
 <Word index=5;text=in;lemma=in;upos=ADP;xpos=IN;feats=_;governor=6;dependency_relation=case>
 <Word index=6;text=2008;lemma=2008;upos=NUM;xpos=CD;feats=NumType=Card;governor=3;dependency_relation=obl>
 <Word index=7;text=.;lemma=.;upos=PUNCT;xpos=.;feats=_;governor=3;dependency_relation=punct>
+
 <Word index=1;text=Obama;lemma=Obama;upos=PROPN;xpos=NNP;feats=Number=Sing;governor=2;dependency_relation=nsubj>
 <Word index=2;text=attended;lemma=attend;upos=VERB;xpos=VBD;feats=Mood=Ind|Tense=Past|VerbForm=Fin;governor=0;dependency_relation=root>
 <Word index=3;text=Harvard;lemma=Harvard;upos=PROPN;xpos=NNP;feats=Number=Sing;governor=2;dependency_relation=obj>
@@ -111,7 +113,7 @@ EN_DOC_CONLLU_GOLD = """
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	_
 4	.	.	PUNCT	.	_	2	punct	_	_
 
-"""
+""".lstrip()
 
 
 @pytest.fixture(scope="module")
