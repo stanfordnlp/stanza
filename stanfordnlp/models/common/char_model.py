@@ -44,7 +44,7 @@ class CharacterModel(nn.Module):
             res = char_reps.sum(1)
         else:
             h, c = output[1]
-            res = h.transpose(0,1).contiguous().view(batch_size, -1)
+            res = h[-2:].transpose(0,1).contiguous().view(batch_size, -1)
 
         # recover character order and word separation
         res = tensor_unsort(res, word_orig_idx)
