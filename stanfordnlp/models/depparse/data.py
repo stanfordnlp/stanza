@@ -81,7 +81,7 @@ class DataLoader:
             processed_sent += [feats_replacement + vocab['feats'].map([w[3] for w in sent])]
             processed_sent += [[ROOT_ID] + pretrain_vocab.map([w[0] for w in sent])]
             processed_sent += [[ROOT_ID] + vocab['lemma'].map([w[4] for w in sent])]
-            processed_sent += [[int(w[5]) for w in sent]]
+            processed_sent += [[to_int(w[5], ignore_error=self.eval) for w in sent]]
             processed_sent += [vocab['deprel'].map([w[6] for w in sent])]
             processed.append(processed_sent)
         return processed
@@ -167,3 +167,13 @@ class DataLoader:
             res.append(current)
 
         return res
+
+def to_int(string, ignore_error=False):
+    try:
+        res = int(string)
+    except ValueError as err:
+        if ignore_error:
+            return 0
+        else:
+            raise err
+    return res
