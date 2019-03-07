@@ -31,7 +31,7 @@ def test_update():
 
 
 def test_tokensregex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split(), timeout=60000) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split(), timeout=90000) as client:
         # Example pattern from: https://nlp.stanford.edu/software/tokensregex.shtml
         pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
         matches = client.tokensregex(TEXT, pattern)
@@ -53,7 +53,7 @@ def test_tokensregex():
 
 
 def test_semgrex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=60000) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=90000) as client:
         pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
         matches = client.semgrex(TEXT, pattern, to_words=True)
         assert matches == [
