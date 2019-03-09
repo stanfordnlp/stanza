@@ -49,27 +49,13 @@ class Pretrain:
         if self.vec_filename is None:
             raise Exception("Vector file is not provided.")
         print("Reading pretrained vectors from {}...".format(self.vec_filename))
-        first = True
-        words = []
-        failed = 0
-        with lzma.open(self.vec_filename, 'rb') as f:
-            for i, line in enumerate(f):
-                try:
-                    line = line.decode()
-                except UnicodeDecodeError:
-                    failed += 1
-                    continue
-                if first:
-                    # the first line contains the number of word vectors and the dimensionality
-                    first = False
-                    line = line.strip().split(' ')
-                    rows, cols = [int(x) for x in line]
-                    emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
-                    continue
 
-                line = line.rstrip().split(' ')
-                emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
-                words.append(' '.join(line[:-cols]))
+        # first try reading as xz file, if failed retry as text file
+        try:
+            words, emb, failed = self.read_from_file(self.vec_filename, open_func=lzma.open)
+        except lzma.LZMAError as err:
+            print("Cannot decode vector file as xz file. Retrying as text file...")
+            words, emb, failed = self.read_from_file(self.vec_filename, open_func=open)
 
         vocab = PretrainedWordVocab(words, lower=True)
 
@@ -87,3 +73,29 @@ class Pretrain:
 
         return vocab, emb
 
+    def read_from_file(self, filename, open_func=open):
+        """
+        Open a vector file using the provided function and read from it.
+        """
+        first = True
+        words = []
+        failed = 0
+        with open_func(filename, 'rb') as f:
+            for i, line in enumerate(f):
+                try:
+                    line = line.decode()
+                except UnicodeDecodeError:
+                    failed += 1
+                    continue
+                if first:
+                    # the first line contains the number of word vectors and the dimensionality
+                    first = False
+                    line = line.strip().split(' ')
+                    rows, cols = [int(x) for x in line]
+                    emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+                    continue
+
+                line = line.rstrip().split(' ')
+                emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
+                words.append(' '.join(line[:-cols]))
+        return words, emb, failed
