@@ -2,11 +2,14 @@
 Pipeline that runs tokenize,mwt,pos,lemma,depparse
 """
 
+import io
 import itertools
 import torch
 
 from distutils.util import strtobool
+from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.pipeline.processor import ProcessorRequirementsException
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor
 from stanfordnlp.pipeline.pos_processor import POSProcessor
@@ -14,10 +17,10 @@ from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, default_treebanks, mwt_languages, build_default_config
 
-DEFAULT_PROCESSORS_LIST = 'tokenize,mwt,pos,lemma,depparse'
+DEFAULT_PROCESSORS_LIST = f'{TOKENIZE},{MWT},{POS},{LEMMA},{DEPPARSE}'
 
-NAME_TO_PROCESSOR_CLASS = {'tokenize': TokenizeProcessor, 'mwt': MWTProcessor, 'pos': POSProcessor,
-                           'lemma': LemmaProcessor, 'depparse': DepparseProcessor}
+NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
+                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor}
 
 PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 
@@ -50,13 +53,33 @@ PROCESSOR_SETTINGS_LIST = \
     ['_'.join(psp) for k, v in PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
 
 BOOLEAN_PROCESSOR_SETTINGS = {
-    'tokenize': ['pretokenized'],
-    'mwt': ['dict_only'],
-    'lemma': ['dict_only', 'edit', 'ensemble_dict', 'pos', 'use_identity']
+    TOKENIZE: ['pretokenized'],
+    MWT: ['dict_only'],
+    LEMMA: ['dict_only', 'edit', 'ensemble_dict', 'pos', 'use_identity']
 }
 
 BOOLEAN_PROCESSOR_SETTINGS_LIST = \
     ['_'.join(psp) for k, v in BOOLEAN_PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
+
+
+class PipelineRequirementsException(Exception):
+    """
+    Exception indicating one or more requirements failures while attempting to build a pipeline.
+    Contains a ProcessorRequirementsException list.
+    """
+
+    def __init__(self, processor_req_fails):
+        self._processor_req_fails = processor_req_fails
+        super().__init__(self.build_message())
+
+    @property
+    def processor_req_fails(self):
+        return self._processor_req_fails
+
+    def build_message(self):
+        err_msg = io.StringIO()
+        print(*[req_fail.message for req_fail in self.processor_req_fails], sep='\n', file=err_msg)
+        return err_msg.getvalue().rstrip()
 
 
 class Pipeline:
@@ -72,7 +95,7 @@ class Pipeline:
         self.config['shorthand'] = shorthand
         self.config['models_dir'] = models_dir
         self.processor_names = self.config['processors'].split(',')
-        self.processors = {'tokenize': None, 'mwt': None, 'lemma': None, 'pos': None, 'depparse': None}
+        self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
         # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
         self.use_gpu = torch.cuda.is_available() and use_gpu
         print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
@@ -80,6 +103,8 @@ class Pipeline:
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
         self.standardize_config_values()
         # set up processors
+        provided_reqs = set([])
+        pipeline_reqs_exceptions = []
         for processor_name in self.processor_names:
             if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
                 continue
@@ -89,8 +114,16 @@ class Pipeline:
             curr_processor_config.update(pipeline_level_configs)
             print('With settings: ')
             print(curr_processor_config)
-            self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
-                                                                                      use_gpu=self.use_gpu)
+            try:
+                # try to build processor, throw an exception if there is a requirements issue
+                self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
+                                                                                          pipeline=self,
+                                                                                          use_gpu=self.use_gpu)
+                provided_reqs.update(self.processors[processor_name].provides)
+            except ProcessorRequirementsException as e:
+                # if there was a requirements issue, add it to list which will be printed at end
+                pipeline_reqs_exceptions.append(e)
+
         print("Done loading processors!")
         print('---')
 
@@ -100,6 +133,14 @@ class Pipeline:
             if key.split('_')[0] == prefix:
                 filtered_dict['_'.join(key.split('_')[1:])] = config_dict[key]
         return filtered_dict
+
+    def loaded_processors(self):
+        """
+        Return all currently loaded processors in execution order.
+        :return:
+        """
+        return [self.processors[processor_name] for processor_name in self.processor_names
+                if self.processors.get(processor_name)]
 
     def standardize_config_values(self):
         """
