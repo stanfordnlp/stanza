@@ -138,6 +138,7 @@ class Pipeline:
                 filtered_dict['_'.join(key.split('_')[1:])] = config_dict[key]
         return filtered_dict
 
+    @property
     def loaded_processors(self):
         """
         Return all currently loaded processors in execution order.
