@@ -32,7 +32,7 @@ class ProcessorRequirementsException(Exception):
 
     @property
     def err_proc_provides(self):
-        return self._err_proc_provided
+        return self._err_proc_provides
 
     @property
     def requires(self):
