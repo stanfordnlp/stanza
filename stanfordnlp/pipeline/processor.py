@@ -14,6 +14,7 @@ class ProcessorRequirementsException(Exception):
         self._processor_type = type(err_processor).__name__
         self._processors_list = processors_list
         self._provided_reqs = provided_reqs
+        self._err_proc_provides = err_processor.provides
         self._requires = err_processor.requires
         self.build_message()
 
@@ -28,6 +29,10 @@ class ProcessorRequirementsException(Exception):
     @property
     def provided_reqs(self):
         return self._provided_reqs
+
+    @property
+    def err_proc_provides(self):
+        return self._err_proc_provided
 
     @property
     def requires(self):
