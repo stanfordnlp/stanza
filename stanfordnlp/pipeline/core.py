@@ -79,7 +79,7 @@ class PipelineRequirementsException(Exception):
     def build_message(self):
         err_msg = io.StringIO()
         print(*[req_fail.message for req_fail in self.processor_req_fails], sep='\n', file=err_msg)
-        self.message = '\n' + err_msg.getvalue()
+        self.message = '\n\n' + err_msg.getvalue()
 
     def __str__(self):
         return self.message
