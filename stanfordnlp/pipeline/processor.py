@@ -11,16 +11,21 @@ class ProcessorRequirementsException(Exception):
     """
 
     def __init__(self, processors_list, err_processor, provided_reqs):
-        self._processor_type = type(err_processor).__name__
+        self._err_processor = err_processor
+        # mark the broken processor as inactive, drop resources
+        self.err_processor.mark_inactive()
         self._processors_list = processors_list
         self._provided_reqs = provided_reqs
-        self._err_proc_provides = err_processor.provides
-        self._requires = err_processor.requires
         self.build_message()
 
     @property
+    def err_processor(self):
+        """ The processor that raised the exception """
+        return self._err_processor
+
+    @property
     def processor_type(self):
-        return self._processor_type
+        return type(self.err_processor).__name__
 
     @property
     def processors_list(self):
@@ -29,22 +34,14 @@ class ProcessorRequirementsException(Exception):
     @property
     def provided_reqs(self):
         return self._provided_reqs
-
-    @property
-    def err_proc_provides(self):
-        return self._err_proc_provides
-
-    @property
-    def requires(self):
-        return self._requires
-
+    
     def build_message(self):
         self.message = (f"---\nPipeline Requirements Error!\n"
                         f"\tProcessor: {self.processor_type}\n"
                         f"\tPipeline processors list: {','.join(self.processors_list)}\n"
-                        f"\tProcessor Requirements: {self.requires}\n"
-                        f"\t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}\n"
-                        f"\t\t- missing: {self.requires - self.provided_reqs}\n"
+                        f"\tProcessor Requirements: {self.err_processor.requires}\n"
+                        f"\t\t- fulfilled: {self.err_processor.requires.intersection(self.provided_reqs)}\n"
+                        f"\t\t- missing: {self.err_processor.requires - self.provided_reqs}\n"
                         f"\nThe processors list provided for this pipeline is invalid.  Please make sure all "
                         f"prerequisites are met for every processor.\n\n")
 
@@ -129,6 +126,19 @@ class UDProcessor(Processor):
             loaded_args = {}
         loaded_args.update(config)
         self._config = loaded_args
+
+    def mark_inactive(self):
+        """ Drop memory intensive resources if keeping this processor around for reasons other than running it. """
+        self._trainer = None
+        self._vocab = None
+
+    @property
+    def trainer(self):
+        return self._trainer
+
+    @property
+    def vocab(self):
+        return self._vocab
 
     @staticmethod
     def filter_out_option(option):
