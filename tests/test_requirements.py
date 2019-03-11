@@ -28,10 +28,10 @@ def check_exception_vals(req_exception, req_exception_vals):
     :param req_exception_vals: expected values for the ProcessorRequirementsException
     :return: None
     """
-    assert req_exception is ProcessorRequirementsException
+    assert isinstance(req_exception, ProcessorRequirementsException)
     assert req_exception.processor_type == req_exception_vals['processor_type']
     assert req_exception.processors_list == req_exception_vals['processors_list']
-    assert req_exception.err_processor.requires == req_exception['requires']
+    assert req_exception.err_processor.requires == req_exception_vals['requires']
 
 
 def test_missing_requirements():
@@ -50,7 +50,7 @@ def test_missing_requirements():
                 {'processor_type': 'POSProcessor', 'processors_list': ['pos', 'depparse'], 'provided_reqs': set([]),
                  'requires': set(['tokenize'])},
                 {'processor_type': 'DepparseProcessor', 'processors_list': ['pos', 'depparse'],
-                 'provided_reqs': set([]), 'requires': set(['tokenize'])}
+                 'provided_reqs': set([]), 'requires': set(['tokenize','pos'])}
             ]
         ),
         # no pos when lemma_pos set to True
@@ -71,9 +71,9 @@ def test_missing_requirements():
             stanfordnlp.Pipeline(**bad_config)
         except PipelineRequirementsException as e:
             pipeline_fails += 1
-            assert e is PipelineRequirementsException
+            assert isinstance(e, PipelineRequirementsException)
             assert len(e.processor_req_fails) == len(gold_exceptions)
-            for processor_req_e, gold_exception in zip(e.processor_req_fails,gold_exception):
+            for processor_req_e, gold_exception in zip(e.processor_req_fails,gold_exceptions):
                 # compare the thrown ProcessorRequirementsExceptions against gold
                 check_exception_vals(processor_req_e, gold_exception)
     # check pipeline building failed twice
