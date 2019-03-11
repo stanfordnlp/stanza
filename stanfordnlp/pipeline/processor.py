@@ -32,11 +32,7 @@ class ProcessorRequirementsException(Exception):
     @property
     def requires(self):
         return self._requires
-
-    @property
-    def missing_reqs(self):
-        return self._missing_reqs
-
+    
     def build_message(self):
         return f"""
         ---
