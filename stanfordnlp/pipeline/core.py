@@ -79,9 +79,9 @@ class PipelineRequirementsException(Exception):
     def build_message(self):
         err_msg = io.StringIO()
         print(*[req_fail.message for req_fail in self.processor_req_fails], sep='\n', file=err_msg)
-        self.message = err_msg.getvalue()
+        self.message = '\n' + err_msg.getvalue()
 
-    def _str__(self):
+    def __str__(self):
         return self.message
 
 
@@ -130,7 +130,6 @@ class Pipeline:
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
             pipeline_reqs_exception = PipelineRequirementsException(pipeline_reqs_exceptions)
-            print(pipeline_reqs_exception.message)
             raise pipeline_reqs_exception
 
         print("Done loading processors!")
