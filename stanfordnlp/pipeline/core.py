@@ -126,12 +126,12 @@ class Pipeline:
             except ProcessorRequirementsException as e:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)
+                provided_reqs.update(e.err_proc_provides)
 
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
-            pipeline_reqs_exception = PipelineRequirementsException(pipeline_reqs_exceptions)
             print('\n')
-            raise pipeline_reqs_exception
+            raise PipelineRequirementsException(pipeline_reqs_exceptions)
 
         print("Done loading processors!")
         print('---')
