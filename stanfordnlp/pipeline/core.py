@@ -127,11 +127,11 @@ class Pipeline:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)
 
-            # if there are any processor exceptions, throw an exception to indicate pipeline build failure
-            if pipeline_reqs_exceptions:
-                pipeline_reqs_exception = PipelineRequirementsException(pipeline_reqs_exceptions)
-                print(pipeline_reqs_exception.message)
-                raise pipeline_reqs_exception
+        # if there are any processor exceptions, throw an exception to indicate pipeline build failure
+        if pipeline_reqs_exceptions:
+            pipeline_reqs_exception = PipelineRequirementsException(pipeline_reqs_exceptions)
+            print(pipeline_reqs_exception.message)
+            raise pipeline_reqs_exception
 
         print("Done loading processors!")
         print('---')
