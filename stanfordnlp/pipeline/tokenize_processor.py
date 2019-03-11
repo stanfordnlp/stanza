@@ -4,6 +4,7 @@ from stanfordnlp.models.common import conll
 from stanfordnlp.models.tokenize.data import DataLoader
 from stanfordnlp.models.tokenize.trainer import Trainer
 from stanfordnlp.models.tokenize.utils import output_predictions
+from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 
@@ -11,13 +12,23 @@ from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chu
 # class for running the tokenizer
 class TokenizeProcessor(UDProcessor):
 
-    def __init__(self, config, use_gpu):
+    # set of processor requirements this processor fulfills
+    PROVIDES_DEFAULT = set([TOKENIZE])
+    # set of processor requirements for this processor
+    REQUIRES_DEFAULT = set([])
+
+    def __init__(self, config, pipeline, use_gpu):
+        # reference
+        self._pipeline = pipeline
         # set up trainer
         if config.get('pretokenized'):
-            self.trainer = None
+            self._trainer = None
         else:
-            self.trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
-        self.build_final_config(config)
+            self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
+        self._build_final_config(config)
+        self._set_provides()
+        self._set_requires()
+        self._check_requirements()
 
     def process_pre_tokenized_text(self, doc):
         """Assume text is tokenized by whitespace, sentence split by newline, generate CoNLL-U output"""
@@ -35,22 +46,22 @@ class TokenizeProcessor(UDProcessor):
         doc.conll_file = conll.CoNLLFile(input_str=conllu_output_string)
 
     def process(self, doc):
-        if self.config.get('pretokenized'):
+        if self._config.get('pretokenized'):
             self.process_pre_tokenized_text(doc)
         else:
             # set up batches
-            if self.config['lang'] == 'vi':
+            if self._config['lang'] == 'vi':
                 # special processing is due for Vietnamese
                 text = '\n\n'.join([x for x in doc.text.split('\n\n')]).rstrip()
                 dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
                 data = paras_to_chunks(text, dummy_labels)
-                batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
+                batches = DataLoader(self._config, input_data=data, vocab=self._vocab, evaluation=True)
             else:
-                batches = DataLoader(self.config, input_text=doc.text, vocab=self.vocab, evaluation=True)
+                batches = DataLoader(self._config, input_text=doc.text, vocab=self._vocab, evaluation=True)
             # set up StringIO to get conllu data, run output predictions, set doc's conll file
             with io.StringIO() as conll_output_string:
-                output_predictions(conll_output_string, self.trainer, batches, self.vocab, None,
-                                   self.config['max_seqlen'])
+                output_predictions(conll_output_string, self._trainer, batches, self._vocab, None,
+                                   self._config['max_seqlen'])
                 # set conll file for doc
                 doc.conll_file = conll.CoNLLFile(input_str=conll_output_string.getvalue())
 

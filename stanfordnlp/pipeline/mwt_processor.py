@@ -3,30 +3,40 @@ import io
 from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.data import DataLoader
 from stanfordnlp.models.mwt.trainer import Trainer
+from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 
 
 class MWTProcessor(UDProcessor):
 
-    def __init__(self, config, use_gpu):
+    # set of processor requirements this processor fulfills
+    PROVIDES_DEFAULT = set([MWT])
+    # set of processor requirements for this processor
+    REQUIRES_DEFAULT = set([TOKENIZE])
+
+    def __init__(self, config, pipeline, use_gpu):
         # set up configurations
-        self.trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
-        self.build_final_config(config)
+        self._pipeline = pipeline
+        self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
+        self._build_final_config(config)
+        self._set_provides()
+        self._set_requires()
+        self._check_requirements()
 
     def process(self, doc):
-        batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+        batch = DataLoader(doc, self._config['batch_size'], self._config, vocab=self._vocab, evaluation=True)
         if len(batch) > 0:
-            dict_preds = self.trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
+            dict_preds = self._trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
             # decide trainer type and run eval
-            if self.config['dict_only']:
+            if self._config['dict_only']:
                 preds = dict_preds
             else:
                 preds = []
                 for i, b in enumerate(batch):
-                    preds += self.trainer.predict(b)
+                    preds += self._trainer.predict(b)
 
-                if self.config.get('ensemble_dict', False):
-                    preds = self.trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
+                if self._config.get('ensemble_dict', False):
+                    preds = self._trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
         else:
             # skip eval if dev data does not exist
             preds = []
