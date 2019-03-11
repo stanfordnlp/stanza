@@ -32,14 +32,14 @@ class ProcessorRequirementsException(Exception):
     @property
     def requires(self):
         return self._requires
-    
+
     def build_message(self):
         return f"""
         ---
         Pipeline Requirements Error!
         \tProcessor: {self.processor_type}
         \tPipeline processors list: {','.join(self.processors_list)}
-        \tProcessor Requirements: {self.requires)}
+        \tProcessor Requirements: {self.requires}
         \t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}
         \t\t- missing: {self.requires - self.provided_reqs}
         
