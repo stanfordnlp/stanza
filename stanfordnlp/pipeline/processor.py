@@ -96,7 +96,7 @@ class Processor(ABC):
         If not, raise an Exception.
         :return: None
         """
-        provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors])
+        provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors]+[set([])])
         if self.requires - provided_reqs:
             raise ProcessorRequirementsException(self.pipeline.processor_names, self, provided_reqs)
 
