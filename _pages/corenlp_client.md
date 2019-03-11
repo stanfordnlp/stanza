@@ -54,6 +54,11 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner', 'parse',
     print('first subtree of constituency parse')
     print(constituency_parse.child[0])
 
+    # get the value of the first subtree
+    print('---')
+    print('value of first subtree of constituency parse')
+    print(constituency_parse.child[0].value)
+
     # get the dependency parse of the first sentence
     print('---')
     print('dependency parse of first sentence')
