@@ -9,7 +9,7 @@ import torch
 from distutils.util import strtobool
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.doc import Document
-from stanfordnlp.pipeline.processor import ProcessorRequirementsException
+from stanfordnlp.pipeline.processor import Processor, ProcessorRequirementsException
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor
 from stanfordnlp.pipeline.pos_processor import POSProcessor
@@ -106,7 +106,6 @@ class Pipeline:
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
         self.standardize_config_values()
         # set up processors
-        provided_reqs = set([])
         pipeline_reqs_exceptions = []
         for processor_name in self.processor_names:
             if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
@@ -122,11 +121,12 @@ class Pipeline:
                 self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
                                                                                           pipeline=self,
                                                                                           use_gpu=self.use_gpu)
-                provided_reqs.update(self.processors[processor_name].provides)
             except ProcessorRequirementsException as e:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)
-                provided_reqs.update(e.err_proc_provides)
+                # add the broken processor to the loaded processors for the sake of analyzing the validity of the
+                # entire proposed pipeline, but at this point the pipeline will not be built successfully
+                self.processors[processor_name] = e.err_processor
 
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
