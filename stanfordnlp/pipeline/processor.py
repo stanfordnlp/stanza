@@ -15,7 +15,7 @@ class ProcessorRequirementsException(Exception):
         self._processors_list = processors_list
         self._provided_reqs = provided_reqs
         self._requires = err_processor.requires
-        self.message = self.build_message()
+        self.build_message()
 
     @property
     def processor_type(self):
@@ -34,18 +34,14 @@ class ProcessorRequirementsException(Exception):
         return self._requires
 
     def build_message(self):
-        return f"""
-        ---
-        Pipeline Requirements Error!
-        \tProcessor: {self.processor_type}
-        \tPipeline processors list: {','.join(self.processors_list)}
-        \tProcessor Requirements: {self.requires}
-        \t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}
-        \t\t- missing: {self.requires - self.provided_reqs}
-        
-        The processors list provided for this pipeline is invalid.  Please make sure all prerequisites are met for
-        every processor.
-        """.lstrip()
+        self.message = (f"---\nPipeline Requirements Error!\n"
+                        f"\tProcessor: {self.processor_type}\n"
+                        f"\tPipeline processors list: {','.join(self.processors_list)}"
+                        f"Processor Requirements: {self.requires}"
+                        f"\t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}"
+                        f"\t\t- missing: {self.requires - self.provided_reqs}"
+                        f"The processors list provided for this pipeline is invalid.  Please make sure all "
+                        f"prerequisites are met for every processor\n")
 
     def __str__(self):
         return self.message
