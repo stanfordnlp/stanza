@@ -36,10 +36,10 @@ class ProcessorRequirementsException(Exception):
     def build_message(self):
         self.message = (f"---\nPipeline Requirements Error!\n"
                         f"\tProcessor: {self.processor_type}\n"
-                        f"\tPipeline processors list: {','.join(self.processors_list)}"
-                        f"Processor Requirements: {self.requires}"
-                        f"\t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}"
-                        f"\t\t- missing: {self.requires - self.provided_reqs}"
+                        f"\tPipeline processors list: {','.join(self.processors_list)}\n"
+                        f"Processor Requirements: {self.requires}\n"
+                        f"\t\t- fulfilled: {self.requires.intersection(self.provided_reqs)}\n"
+                        f"\t\t- missing: {self.requires - self.provided_reqs}\n"
                         f"The processors list provided for this pipeline is invalid.  Please make sure all "
                         f"prerequisites are met for every processor\n")
 
