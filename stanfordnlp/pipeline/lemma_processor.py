@@ -28,9 +28,9 @@ class LemmaProcessor(UDProcessor):
 
     def _set_requires(self):
         if self._config['pos']:
-            return LemmaProcessor.REQUIRES_DEFAULT.union(set([POS]))
+            self._requires = LemmaProcessor.REQUIRES_DEFAULT.union(set([POS]))
         else:
-            return LemmaProcessor.REQUIRES_DEFAULT
+            self._requires = LemmaProcessor.REQUIRES_DEFAULT
 
     def process(self, doc):
         if not self._use_identity:
