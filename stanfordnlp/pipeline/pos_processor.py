@@ -18,7 +18,7 @@ class POSProcessor(UDProcessor):
         # get pretrained word vectors
         self._pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
-        self.trainer = Trainer(pretrain=self._pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        self._trainer = Trainer(pretrain=self._pretrain, model_file=config['model_path'], use_cuda=use_gpu)
         self._build_final_config(config)
         self._set_provides()
         self._set_requires()
