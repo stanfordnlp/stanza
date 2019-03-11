@@ -34,7 +34,7 @@ class ProcessorRequirementsException(Exception):
     @property
     def provided_reqs(self):
         return self._provided_reqs
-    
+
     def build_message(self):
         self.message = (f"---\nPipeline Requirements Error!\n"
                         f"\tProcessor: {self.processor_type}\n"
