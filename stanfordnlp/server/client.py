@@ -171,7 +171,7 @@ class CoreNLPClient(RobustService):
     def _request(self, buf, properties):
         """Send a request to the CoreNLP server.
 
-        :param (str | unicode) text: raw text for the CoreNLPServer to parse
+        :param (str | bytes) buf: data to be sent with the request
         :param (dict) properties: properties that the server expects
         :return: request result
         """
@@ -310,7 +310,7 @@ class CoreNLPClient(RobustService):
                     'pattern': pattern,
                     'filter': filter,
                     'properties': str(properties)
-                }, data=text,
+                }, data=text.encode('utf-8'),
                     headers={'content-type': ctype},
                     timeout=(self.timeout*2)/1000,
                     )
