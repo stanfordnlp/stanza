@@ -13,4 +13,4 @@ install:
   - mkdir ~/stanfordnlp_test
   - export STANFORDNLP_TEST_HOME=~/stanfordnlp_test
 script:
-  - python -m pytest -m travis
+  - python -m pytest -m travis tests/
