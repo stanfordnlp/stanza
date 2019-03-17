@@ -147,7 +147,7 @@ class Pipeline:
     def loaded_processors(self):
         """
         Return all currently loaded processors in execution order.
-        :return:
+        :return: list of Processor instances
         """
         return [self.processors[processor_name] for processor_name in self.processor_names
                 if self.processors.get(processor_name)]

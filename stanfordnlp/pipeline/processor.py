@@ -6,9 +6,7 @@ from abc import ABC, abstractmethod
 
 
 class ProcessorRequirementsException(Exception):
-    """
-    Exception indicating a processor's requirements will not be met
-    """
+    """ Exception indicating a processor's requirements will not be met """
 
     def __init__(self, processors_list, err_processor, provided_reqs):
         self._err_processor = err_processor
@@ -50,37 +48,24 @@ class ProcessorRequirementsException(Exception):
 
 
 class Processor(ABC):
-    """
-    Base class for all processors
-    """
+    """ Base class for all processors """
 
     @abstractmethod
     def process(self, doc):
-        """
-        Process a Document.  This is the main method of a processor.
-        :param doc: the input Document
-        :return: None
-        """
+        """ Process a Document.  This is the main method of a processor. """
         pass
 
-    def _set_provides(self):
-        """
-        Announce what processor requirements this processor fulfills.  By default this is a hard coded list.
-        Subclasses may fulfill different requirements based on configurations.
-        :return: None
-        """
+    def _set_up_provides(self):
+        """ Set up what processor requirements this processor fulfills.  Default is to use a class defined list. """
         self._provides = self.__class__.PROVIDES_DEFAULT
 
-    def _set_requires(self):
-        """
-        Set up the requirements for this processor.  By default this is a hard coded list.  Subclasses may have
-        different requirements based on configurations and should override this method.
-        :return: None
-        """
+    def _set_up_requires(self):
+        """ Set up requirements for this processor.  Default is to use a class defined list. """
         self._requires = self.__class__.REQUIRES_DEFAULT
 
     @property
     def pipeline(self):
+        """ The pipeline that this processor belongs to """
         return self._pipeline
 
     @property
@@ -92,31 +77,40 @@ class Processor(ABC):
         return self._requires
 
     def _check_requirements(self):
-        """
-        Given a list of fulfilled requirements, check if all of this processor's requirements are met or not.
-        If not, raise an Exception.
-        :return: None
-        """
+        """ Given a list of fulfilled requirements, check if all of this processor's requirements are met or not. """
         provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors]+[set([])])
         if self.requires - provided_reqs:
             raise ProcessorRequirementsException(self.pipeline.processor_names, self, provided_reqs)
 
 
 class UDProcessor(Processor):
-    """
-    Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse)
-    """
+    """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse) """
+    def __init__(self, config, pipeline, use_gpu):
+        # overall config for the processor
+        self._config = None
+        # pipeline building this processor (presently processors are only meant to exist in one pipeline)
+        self._pipeline = pipeline
+        # UD model resources, set up is processor specific
+        self._pretrain = None
+        self._trainer = None
+        self._vocab = None
+        self._set_up_model(config, use_gpu)
+        # run set up process
+        # build the final config for the processor
+        self._set_up_final_config(config)
+        # set up what annotations are required based on config
+        self._set_up_requires()
+        # set up what annotations are provided based on config
+        self._set_up_provides()
+        # given pipeline constructing this processor, check if requirements are met, throw exception if not
+        self._check_requirements()
 
     @abstractmethod
-    def process(self, doc):
+    def _set_up_model(self, config, gpu):
         pass
 
-    def _build_final_config(self, config):
-        """
-        Finalize the configurations for this processor, based off of values from a UD model.
-        :param config: config for the processor
-        :return: None
-        """
+    def _set_up_final_config(self, config):
+        """ Finalize the configurations for this processor, based off of values from a UD model. """
         # set configurations from loaded model
         if self._trainer is not None:
             loaded_args, self._vocab = self._trainer.args, self._trainer.vocab
@@ -142,11 +136,7 @@ class UDProcessor(Processor):
 
     @staticmethod
     def filter_out_option(option):
-        """
-        Filter out non-processor configurations
-        :param option: string to potentially filter out
-        :return: bool representing whether or not this keyword should be filtered out
-        """
+        """ Filter out non-processor configurations """
         options_to_filter = ['cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
         if option.endswith('_file') or option.endswith('_dir'):
             return True

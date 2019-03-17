@@ -1,3 +1,7 @@
+"""
+Processor for performing multi-word-token expansion
+"""
+
 import io
 
 from stanfordnlp.models.common import conll
@@ -14,14 +18,8 @@ class MWTProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
-    def __init__(self, config, pipeline, use_gpu):
-        # set up configurations
-        self._pipeline = pipeline
+    def _set_up_model(self, config, use_gpu):
         self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
-        self._build_final_config(config)
-        self._set_provides()
-        self._set_requires()
-        self._check_requirements()
 
     def process(self, doc):
         batch = DataLoader(doc, self._config['batch_size'], self._config, vocab=self._vocab, evaluation=True)
