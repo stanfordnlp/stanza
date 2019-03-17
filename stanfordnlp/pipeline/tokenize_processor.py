@@ -33,7 +33,7 @@ class TokenizeProcessor(UDProcessor):
         conllu_output_string = ""
         sentences = [sent for sent in doc.text.rstrip('\n').split('\n') if sent]
         for sentence in sentences:
-            tokens = sentence.rstrip(' ').split(' ')
+            tokens = sentence.rstrip(' ').split()
             for token_id, token in enumerate(tokens):
                 conllu_data = ['_'] * conll.FIELD_NUM
                 conllu_data[conll.FIELD_TO_IDX['id']] = str(token_id + 1)
