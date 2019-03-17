@@ -59,12 +59,10 @@ EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
 
 <Token index=1;words=[<Word index=1;text=Joe's>]>
 <Token index=2;words=[<Word index=2;text=favorite>]>
-<Token index=3;words=[<Word index=3;text=>]>
-<Token index=4;words=[<Word index=4;text=food>]>
-<Token index=5;words=[<Word index=5;text=is>]>
-<Token index=6;words=[<Word index=6;text=>]>
-<Token index=7;words=[<Word index=7;text=pizza>]>
-<Token index=8;words=[<Word index=8;text=.>]>
+<Token index=3;words=[<Word index=3;text=food>]>
+<Token index=4;words=[<Word index=4;text=is>]>
+<Token index=5;words=[<Word index=5;text=pizza>]>
+<Token index=6;words=[<Word index=6;text=.>]>
 
 <Token index=1;words=[<Word index=1;text=He>]>
 <Token index=2;words=[<Word index=2;text=enjoys>]>
