@@ -1,3 +1,7 @@
+"""
+Processor for performing tokenization
+"""
+
 import io
 
 from stanfordnlp.models.common import conll
@@ -17,21 +21,15 @@ class TokenizeProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([])
 
-    def __init__(self, config, pipeline, use_gpu):
-        # reference
-        self._pipeline = pipeline
+    def _set_up_model(self, config, use_gpu):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
         else:
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
-        self._build_final_config(config)
-        self._set_provides()
-        self._set_requires()
-        self._check_requirements()
 
     def process_pre_tokenized_text(self, doc):
-        """Assume text is tokenized by whitespace, sentence split by newline, generate CoNLL-U output"""
+        """ Assume text is tokenized by whitespace, sentence split by newline, generate CoNLL-U output """
         conllu_output_string = ""
         sentences = [sent for sent in doc.text.rstrip('\n').split('\n') if sent]
         for sentence in sentences:

@@ -1,3 +1,7 @@
+"""
+Processor for performing lemmatization
+"""
+
 from stanfordnlp.models.common.conll import FIELD_TO_IDX
 from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma.trainer import Trainer
@@ -13,18 +17,17 @@ class LemmaProcessor(UDProcessor):
     REQUIRES_DEFAULT = set([TOKENIZE])
 
     def __init__(self, config, pipeline, use_gpu):
-        # check if in identity mode
-        self._pipeline = pipeline
+        # run lemmatizer in identity mode
+        self._use_identity = None
+        super().__init__(config, pipeline, use_gpu)
+
+    def _set_up_model(self, config, use_gpu):
         if config.get('use_identity') in ['True', True]:
             self._use_identity = True
             self._config = config
         else:
             self._use_identity = False
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
-            self._build_final_config(config)
-        self._set_provides()
-        self._set_requires()
-        self._check_requirements()
 
     def _set_requires(self):
         if self._config['pos']:
