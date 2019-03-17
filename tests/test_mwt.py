@@ -6,6 +6,7 @@ import stanfordnlp
 
 from tests import *
 
+
 def setup_module(module):
     """Set up resources for all tests in this module"""
     safe_rm(FR_MODELS_DIR)
