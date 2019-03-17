@@ -49,6 +49,7 @@ def parse_args():
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--char_num_layers', type=int, default=1)
+    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
@@ -105,7 +106,7 @@ def train(args):
     # load pretrained vectors
     vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
     pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file, vec_file)
+    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
