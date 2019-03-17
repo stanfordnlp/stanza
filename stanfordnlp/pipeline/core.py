@@ -160,7 +160,7 @@ class Pipeline:
         standardized_entries = {}
         for key, val in self.config.items():
             if key in BOOLEAN_PROCESSOR_SETTINGS_LIST and isinstance(val, str):
-                standardized_entries[key] = strtobool(val)
+                standardized_entries[key] = bool(strtobool(val))
         self.config.update(standardized_entries)
 
     def process(self, doc):
