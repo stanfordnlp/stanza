@@ -18,7 +18,7 @@ def teardown_module(module):
     safe_rm(EN_MODELS_DIR)
 
 
-EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He likes the beach."
+EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
 
 EN_DOC_GOLD_TOKENS = """
 <Token index=1;words=[<Word index=1;text=Joe>]>
@@ -46,7 +46,8 @@ EN_DOC_GOLD_TOKENS = """
 """.strip()
 
 
-EN_DOC_PRETOKENIZED = "Joe Smith lives in California .\nJoe's favorite  food is  pizza .\n\nHe likes the beach.\n"
+EN_DOC_PRETOKENIZED = \
+    "Joe Smith lives in California .\nJoe's favorite  food is  pizza .\n\nHe enjoys going to the beach.\n"
 
 EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
 <Token index=1;words=[<Word index=1;text=Joe>]>
