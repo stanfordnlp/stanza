@@ -16,9 +16,10 @@ class PretrainedWordVocab(BaseVocab):
 class Pretrain:
     """ A loader and saver for pretrained embeddings. """
 
-    def __init__(self, filename, vec_filename=None):
+    def __init__(self, filename, vec_filename=None, max_vocab=-1):
         self.filename = filename
-        self.vec_filename = vec_filename
+        self._vec_filename = vec_filename
+        self._max_vocab = max_vocab
 
     @property
     def vocab(self):
@@ -46,21 +47,28 @@ class Pretrain:
 
     def read_and_save(self):
         # load from pretrained filename
-        if self.vec_filename is None:
+        if self._vec_filename is None:
             raise Exception("Vector file is not provided.")
-        print("Reading pretrained vectors from {}...".format(self.vec_filename))
+        print("Reading pretrained vectors from {}...".format(self._vec_filename))
 
         # first try reading as xz file, if failed retry as text file
         try:
-            words, emb, failed = self.read_from_file(self.vec_filename, open_func=lzma.open)
+            words, emb, failed = self.read_from_file(self._vec_filename, open_func=lzma.open)
         except lzma.LZMAError as err:
             print("Cannot decode vector file as xz file. Retrying as text file...")
-            words, emb, failed = self.read_from_file(self.vec_filename, open_func=open)
+            words, emb, failed = self.read_from_file(self._vec_filename, open_func=open)
+
+        if failed > 0: # recover failure
+            emb = emb[:-failed]
+        if len(emb) - len(VOCAB_PREFIX) != len(words):
+            raise Exception("Loaded number of vectors does not match number of words.")
+        
+        # Use a fixed vocab size
+        if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words):
+            words = words[:self._max_vocab - len(VOCAB_PREFIX)]
+            emb = emb[:self._max_vocab]
 
         vocab = PretrainedWordVocab(words, lower=True)
-
-        if failed > 0:
-            emb = emb[:-failed]
 
         # save to file
         data = {'vocab': vocab, 'emb': emb}
