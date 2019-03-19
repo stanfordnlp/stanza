@@ -9,11 +9,12 @@ from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanfordnlp.pipeline.doc import Document
 
 class DataLoader:
-    def __init__(self, input_src, batch_size, args, pretrain, vocab=None, evaluation=False):
+    def __init__(self, input_src, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
+        self.sort_during_eval = sort_during_eval
 
         # check if input source is a file or a Document object
         if isinstance(input_src, str):
@@ -138,6 +139,8 @@ class DataLoader:
         if not self.eval:
             # sort sentences (roughly) by length for better memory utilization
             data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
+        elif self.sort_during_eval:
+            (data, ), self.data_orig_idx = sort_all([data], [len(x[0]) for x in data])
 
         current = []
         currentlen = 0

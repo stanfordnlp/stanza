@@ -3,6 +3,7 @@ Processor for performing dependency parsing
 """
 
 from stanfordnlp.models.common.pretrain import Pretrain
+from stanfordnlp.models.common.utils import unsort
 from stanfordnlp.models.depparse.data import DataLoader
 from stanfordnlp.models.depparse.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
@@ -22,10 +23,9 @@ class DepparseProcessor(UDProcessor):
 
     def process(self, doc):
         batch = DataLoader(
-            doc, self._config['batch_size'], self._config, self._pretrain, vocab=self._vocab, evaluation=True)
+            doc, self._config['batch_size'], self._config, self._pretrain, vocab=self._vocab, evaluation=True, sort_during_eval=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self._trainer.predict(b)
+        preds = unsort(preds, batch.data_orig_idx)
         batch.conll.set(['head', 'deprel'], [y for x in preds for y in x])
-        return batch.conll
-
