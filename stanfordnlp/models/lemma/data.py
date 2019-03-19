@@ -13,7 +13,7 @@ from stanfordnlp.pipeline.doc import Document
 
 
 class DataLoader:
-    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False, conll_only=False):
+    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -31,6 +31,10 @@ class DataLoader:
 
         if conll_only: # only load conll file
             return
+
+        if skip is not None:
+            assert len(data) == len(skip)
+            data = [x for x, y in zip(data, skip) if not y]
 
         # handle vocab
         if vocab is not None:

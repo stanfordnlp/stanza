@@ -149,6 +149,20 @@ class Trainer(object):
                 lemmas += [w]
         return lemmas
 
+    def skip_seq2seq(self, pairs):
+        """ Determine if we can skip the seq2seq module when ensembling with the frequency lexicon. """
+
+        skip = []
+        for p in pairs:
+            w, pos = p
+            if (w,pos) in self.composite_dict:
+                skip.append(True)
+            elif w in self.word_dict:
+                skip.append(True)
+            else:
+                skip.append(False)
+        return skip
+
     def ensemble(self, pairs, other_preds):
         """ Ensemble the dict with statitical model predictions. """
         lemmas = []
