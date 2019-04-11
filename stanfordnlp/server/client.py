@@ -1,23 +1,27 @@
 r"""
-Python CoreNLP: a server based interface to Java CoreNLP.
+Client for accessing Stanford CoreNLP in Python
 """
 import io
 import os
+import re
+import requests
 import logging
 import json
 import shlex
 import subprocess
 import time
 import sys
+import uuid
 
 from six.moves.urllib.parse import urlparse
-
-import requests
 
 from stanfordnlp.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
 logger = logging.getLogger(__name__)
+
+SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
+
 
 class AnnotationException(Exception):
     """
@@ -25,11 +29,13 @@ class AnnotationException(Exception):
     """
     pass
 
+
 class TimeoutException(AnnotationException):
     """
     Exception raised when the CoreNLP server timed out.
     """
     pass
+
 
 class ShouldRetryException(Exception):
     """
@@ -37,11 +43,13 @@ class ShouldRetryException(Exception):
     """
     pass
 
+
 class PermanentlyFailedException(Exception):
     """
     Exception raised if the service should retry the request.
     """
     pass
+
 
 class RobustService(object):
     """
@@ -121,42 +129,99 @@ class RobustService(object):
         # At this point we are guaranteed that the service is alive.
         self.is_active = True
 
+
 class CoreNLPClient(RobustService):
     """
     A CoreNLP client to the Stanford CoreNLP server.
     """
-    DEFAULT_ANNOTATORS = "tokenize ssplit lemma pos ner depparse".split()
+
+    DEFAULT_ENDPOINT = "http://localhost:9000"
+    DEFAULT_TIMEOUT = 60000
+    DEFAULT_THREADS = 5
+    DEFAULT_ANNOTATORS = "tokenize ssplit pos lemma ner depparse".split()
     DEFAULT_PROPERTIES = {}
     DEFAULT_OUTPUT_FORMAT = "serialized"
+    DEFAULT_MEMORY = "4G"
+    DEFAULT_MAX_CHAR_LENGTH = 100000
+    DEFAULT_SERIALIZER = "edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer"
+    DEFAULT_INPUT_FORMAT = "text"
 
     def __init__(self, start_server=True,
-                 endpoint="http://localhost:9000",
-                 timeout=30000,
-                 threads=5,
+                 endpoint=DEFAULT_ENDPOINT,
+                 timeout=DEFAULT_TIMEOUT,
+                 threads=DEFAULT_THREADS,
                  annotators=None,
                  properties=None,
                  output_format=None,
                  stdout=sys.stdout,
                  stderr=sys.stderr,
-                 memory="4G",
+                 memory=DEFAULT_MEMORY,
                  be_quiet=True,
-                 max_char_length=100000
-                ):
-        if isinstance(annotators, str):
-            annotators = annotators.split()
+                 max_char_length=DEFAULT_MAX_CHAR_LENGTH,
+                 preload=True
+                 ):
+
+        # process server options
+        # set up default properties
+        self.server_props_file = {'is_temp': False, 'file_path': None}
+        if properties is None:
+            self.default_properties = dict(CoreNLPClient.DEFAULT_PROPERTIES)
+        elif isinstance(properties, str):
+            if os.path.isfile(properties):
+                # assume properties is a file path with Stanford CoreNLP properties
+                self.default_properties = read_corenlp_props(properties)
+            else:
+                print("Warning: {properties} cannot be found on filesystem")
+            self.server_props_file = {'is_temp': False, 'file_path': properties}
+        elif isinstance(properties, dict):
+            self.default_properties = properties
+        else:
+            raise RuntimeError(f"Error: {properties} is not a valid type for CoreNLPClient properties.")
+        # set up default annotators
+        if annotators is None:
+            if self.default_properties.get('annotators') is None:
+                self.default_annotators = CoreNLPClient.DEFAULT_ANNOTATORS
+            else:
+                self.default_annotators = self.default_properties.get('annotators')
+        else:
+            self.default_annotators = annotators
+        if isinstance(self.default_annotators, str):
+            self.default_annotators = self.default_annotators.split()
+        self.default_properties['annotators'] = self.default_annotators
+        # set up default output format
+        if output_format is None:
+            if self.default_properties.get('outputFormat') is None:
+                self.default_output_format = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
+            else:
+                self.default_output_format = self.default_properties.get('outputFormat')
+        else:
+            self.default_output_format = output_format
+        self.default_properties['outputFormat'] = self.default_output_format
+        # set up default serializer
+        if self.default_properties.get('serializer') is None:
+            self.default_properties['serializer'] = CoreNLPClient.DEFAULT_SERIALIZER
+        # set up default input format
+        if self.default_properties.get('inputFormat') is None:
+            self.default_properties['inputFormat'] = CoreNLPClient.DEFAULT_INPUT_FORMAT
+
+        # if necessary write server props to tmp file
+        if self.server_props_file['file_path'] is None:
+            self.server_props_file['file_path'] = write_corenlp_props(self.default_properties)
+            self.server_props_file['is_temp'] = True
 
         if start_server:
             host, port = urlparse(endpoint).netloc.split(":")
             assert host == "localhost", "If starting a server, endpoint must be localhost"
-
-            assert os.getenv("CORENLP_HOME") is not None, "Please define $CORENLP_HOME where your CoreNLP Java checkout is"
-            start_cmd = "java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length}".format(
-                corenlp_home=os.getenv("CORENLP_HOME"),
-                port=port,
-                memory=memory,
-                timeout=timeout,
-                threads=threads,
-                max_char_length=max_char_length)
+            corenlp_home = os.getenv("CORENLP_HOME")
+            assert corenlp_home is not None, \
+                "Please define $CORENLP_HOME to be location of your CoreNLP Java checkout"
+            start_cmd = f"java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
+                        f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
+                        f"-quiet {be_quiet} -serverProperties {self.server_props_file['file_path']}"
+            print("starting server with command: "+start_cmd)
+            if preload and self.default_annotators:
+                start_cmd += f" -preload {','.join(self.default_annotators)}"
+            print("starting server with command: " + start_cmd)
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
@@ -164,9 +229,15 @@ class CoreNLPClient(RobustService):
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet)
         self.timeout = timeout
-        self.default_annotators = annotators or self.DEFAULT_ANNOTATORS
-        self.default_properties = properties or self.DEFAULT_PROPERTIES
-        self.default_output_format = output_format or self.DEFAULT_OUTPUT_FORMAT
+
+    def stop(self):
+        # check if there is a temp server props file to remove and remove
+        if self.server_props_file['is_temp']:
+            if os.path.isfile(self.server_props_file['file_path']) and \
+                    SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['file_path'])):
+                os.remove(self.server_props_file['file_path'])
+        # run base class stop
+        super(CoreNLPClient, self).stop()
 
     def _request(self, buf, properties):
         """Send a request to the CoreNLP server.
@@ -209,21 +280,17 @@ class CoreNLPClient(RobustService):
         """
         # set properties for server call
         if properties is None:
-            properties = self.default_properties
-            properties.update({
-                'annotators': ','.join(annotators or self.default_annotators),
-                'inputFormat': 'text',
-                'outputFormat': self.default_output_format,
-                'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
-            })
-        elif "annotators" not in properties:
-            properties.update({'annotators': ','.join(annotators or self.default_annotators)})
+            properties = {}
+        # if annotators list is specified, override with that
+        if annotators is not None:
+            if isinstance(annotators, str):
+                annotators = annotators.split()
+            properties['annotators'] = annotators
         # if an output_format is specified, use that to override
         if output_format is not None:
             properties["outputFormat"] = output_format
         # make the request
         r = self._request(text.encode('utf-8'), properties)
-        # customize what is returned based outputFormat
         if properties["outputFormat"] == "serialized":
             doc = Document()
             parseFromDelimitedString(doc, r.content)
@@ -324,6 +391,41 @@ class CoreNLPClient(RobustService):
         except json.JSONDecodeError:
             raise AnnotationException(r.text)
 
+
+def read_corenlp_props(props_path):
+    """ Read a Stanford CoreNLP properties file into a dict """
+    props_dict = {}
+    if os.path.exists(props_path):
+        with open(props_path) as props_file:
+            entry_lines = \
+                [entry_line for entry_line in props_file.read().split('\n')
+                 if entry_line.strip() and not entry_line.startswith('#')]
+            for entry_line in entry_lines:
+                k = entry_line.split('=')[0]
+                v = entry_line.lstrip(k+"=")
+                props_dict[k.strip()] = v
+        return props_dict
+
+    else:
+        raise RuntimeError(f'Error: Properties file at {props_path} does not exist!')
+
+
+def write_corenlp_props(props_dict, file_path=None):
+    """ Write a Stanford CoreNLP properties dict to a file """
+    if file_path is None:
+        file_path = f"corenlp_server-{uuid.uuid4().hex[:16]}.props"
+        # confirm tmp file path matches pattern
+        assert SERVER_PROPS_TMP_FILE_PATTERN.match(file_path)
+    with open(file_path, 'w') as props_file:
+        for k, v in props_dict.items():
+            if isinstance(v, list):
+                writeable_v = ",".join(v)
+            else:
+                writeable_v = v
+            props_file.write(f'{k} = {writeable_v}\n\n')
+    return file_path
+
+
 def regex_matches_to_indexed_words(matches):
     """Transforms tokensregex and semgrex matches to indexed words.
     :param matches: unprocessed regex matches
@@ -333,5 +435,6 @@ def regex_matches_to_indexed_words(matches):
              for i, s in enumerate(matches['sentences'])
              for k, v in s.items() if k != 'length']
     return words
+
 
 __all__ = ["CoreNLPClient", "AnnotationException", "TimeoutException", "to_text"]
