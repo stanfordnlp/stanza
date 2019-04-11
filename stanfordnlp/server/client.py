@@ -218,7 +218,6 @@ class CoreNLPClient(RobustService):
             start_cmd = f"java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['file_path']}"
-            print("starting server with command: "+start_cmd)
             if preload and self.default_annotators:
                 start_cmd += f" -preload {','.join(self.default_annotators)}"
             print("starting server with command: " + start_cmd)
