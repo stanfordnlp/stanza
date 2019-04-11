@@ -290,12 +290,12 @@ class CoreNLPClient(RobustService):
             properties["outputFormat"] = output_format
         # make the request
         r = self._request(text.encode('utf-8'), properties)
-        if properties["outputFormat"] == "serialized":
+        if properties.get("outputFormat") is None or properties["outputFormat"] == "json":
+            return r.json
+        elif properties["outputFormat"] == "serialized":
             doc = Document()
             parseFromDelimitedString(doc, r.content)
             return doc
-        elif properties["outputFormat"] == "json":
-            return r.json()
         elif properties["outputFormat"] in ["text", "conllu", "conll", "xml"]:
             return r.text
         else:
