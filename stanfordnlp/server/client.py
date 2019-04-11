@@ -401,7 +401,8 @@ def read_corenlp_props(props_path):
                  if entry_line.strip() and not entry_line.startswith('#')]
             for entry_line in entry_lines:
                 k = entry_line.split('=')[0]
-                v = entry_line.lstrip(k+"=")
+                k_len = len(k+"=")
+                v = entry_line[k_len:]
                 props_dict[k.strip()] = v
         return props_dict
 
