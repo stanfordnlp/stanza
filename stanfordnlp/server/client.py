@@ -243,7 +243,7 @@ class CoreNLPClient(RobustService):
 
         self.timeout = timeout
 
-        if start_server:
+        if start_server and preload:
             self.start()
 
     def stop(self):
