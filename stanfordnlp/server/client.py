@@ -240,7 +240,11 @@ class CoreNLPClient(RobustService):
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet)
+
         self.timeout = timeout
+
+        if start_server:
+            self.start()
 
     def stop(self):
         # check if there is a temp server props file to remove and remove
@@ -301,6 +305,8 @@ class CoreNLPClient(RobustService):
         # if an output_format is specified, use that to override
         if output_format is not None:
             properties["outputFormat"] = output_format
+        else:
+            properties["outputFormat"] = self.default_output_format
         # make the request
         r = self._request(text.encode('utf-8'), properties)
         if properties.get("outputFormat") is None or properties["outputFormat"] == "json":
