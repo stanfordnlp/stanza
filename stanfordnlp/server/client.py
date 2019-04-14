@@ -55,7 +55,7 @@ class RobustService(object):
     """
     Service that resuscitates itself if it is not available.
     """
-    TIMEOUT = 15
+    CHECK_ALIVE_TIMEOUT = 60
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
                  stderr=sys.stderr, be_quiet=False):
@@ -121,7 +121,7 @@ class RobustService(object):
             except ShouldRetryException:
                 pass
 
-            if time.time() - start_time < self.TIMEOUT:
+            if time.time() - start_time < self.CHECK_ALIVE_TIMEOUT:
                 time.sleep(1)
             else:
                 raise PermanentlyFailedException("Timed out waiting for service to come alive.")
@@ -147,6 +147,7 @@ class CoreNLPClient(RobustService):
     DEFAULT_INPUT_FORMAT = "text"
 
     def __init__(self, start_server=True,
+                 server_id=None,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
@@ -220,6 +221,8 @@ class CoreNLPClient(RobustService):
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['file_path']}"
             if preload and self.default_annotators:
                 start_cmd += f" -preload {','.join(self.default_annotators)}"
+            if server_id:
+                start_cmd += f" -server_id {server_id}"
             print("starting server with command: " + start_cmd)
             stop_cmd = None
         else:
