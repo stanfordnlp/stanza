@@ -22,19 +22,6 @@ logger = logging.getLogger(__name__)
 
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 
-GERMAN_DEFAULT_PROPERTIES = {
-    "annotators": "tokenize,ssplit,pos,ner,parse",
-    "tokenize.language": "de",
-    "pos.model": "edu/stanford/nlp/models/pos-tagger/german/german-hgc.tagger",
-    "ner.model": "edu/stanford/nlp/models/ner/german.conll.germeval2014.hgc_175m_600.crf.ser.gz",
-    "ner.applyNumericClassifiers": "false",
-    "ner.applyFineGrained": "false",
-    "ner.useSUTime": "false",
-    "parse.model": "edu/stanford/nlp/models/lexparser/germanFactored.ser.gz",
-    "depparse.model": "edu/stanford/nlp/models/parser/nndep/UD_German.gz",
-    "depparse.language": "german"
-}
-
 
 class AnnotationException(Exception):
     """
@@ -310,7 +297,7 @@ class CoreNLPClient(RobustService):
         # make the request
         r = self._request(text.encode('utf-8'), properties)
         if properties.get("outputFormat") is None or properties["outputFormat"] == "json":
-            return r.json
+            return r.json()
         elif properties["outputFormat"] == "serialized":
             doc = Document()
             parseFromDelimitedString(doc, r.content)
