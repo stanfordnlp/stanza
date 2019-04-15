@@ -4,12 +4,12 @@ Tests that call a running CoreNLPClient.
 import pytest
 import stanfordnlp.server as corenlp
 
-from time import sleep
-
 # set the marker for this module
 pytestmark = pytest.mark.travis
 
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
+
+MAX_REQUEST_ATTEMPTS = 5
 
 
 def test_connect():
@@ -33,10 +33,16 @@ def test_update():
 
 
 def test_tokensregex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split(), timeout=90000) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split(), timeout=120000) as client:
         # Example pattern from: https://nlp.stanford.edu/software/tokensregex.shtml
         pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
-        matches = client.tokensregex(TEXT, pattern)
+        attempts = 0
+        matches = None
+        while attempts < MAX_REQUEST_ATTEMPTS:
+            try:
+                matches = client.tokensregex(TEXT, pattern)
+            except:
+                attempts += 1
         assert len(matches["sentences"]) == 1
         assert matches["sentences"][0]["length"] == 1
         assert matches == {
@@ -55,9 +61,16 @@ def test_tokensregex():
 
 
 def test_semgrex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=90000) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=120000) as client:
         pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
         matches = client.semgrex(TEXT, pattern, to_words=True)
+        attempts = 0
+        matches = None
+        while attempts < MAX_REQUEST_ATTEMPTS:
+            try:
+                matches = client.semgrex(TEXT, pattern, to_words=True)
+            except:
+                attempts += 1
         assert matches == [
                 {
                     "text": "wrote",
