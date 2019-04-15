@@ -38,9 +38,9 @@ class TokenizeProcessor(UDProcessor):
         generate CoNLL-U output
         """
         conllu_output_string = ""
-        if isinstance(doc, str):
+        if isinstance(doc.text, str):
             sentences = [sent.rstrip(' ').split() for sent in doc.text.rstrip('\n').split('\n') if sent]
-        elif isinstance(doc, list):
+        elif isinstance(doc.text, list):
             sentences = doc
         for sentence in sentences:
             for token_id, token in enumerate(sentence):
