@@ -171,7 +171,7 @@ class Pipeline:
         doc.load_annotations()
 
     def __call__(self, doc):
-        if isinstance(doc, str):
+        if isinstance(doc, str) or isinstance(doc, list):
             doc = Document(doc)
         self.process(doc)
         return doc
