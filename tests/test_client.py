@@ -33,7 +33,7 @@ def test_update():
 
 
 def test_tokensregex():
-    with corenlp.CoreNLPClient(annotators='tokenize ssplit ner depparse'.split(), timeout=120000) as client:
+    with corenlp.CoreNLPClient(annotators='tokenize ssplit pos lemma ner depparse'.split(), timeout=120000) as client:
         # Example pattern from: https://nlp.stanford.edu/software/tokensregex.shtml
         pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
         attempts = 0
