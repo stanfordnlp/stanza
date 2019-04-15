@@ -41,7 +41,7 @@ class TokenizeProcessor(UDProcessor):
         if isinstance(doc.text, str):
             sentences = [sent.rstrip(' ').split() for sent in doc.text.rstrip('\n').split('\n') if sent]
         elif isinstance(doc.text, list):
-            sentences = doc
+            sentences = doc.text
         for sentence in sentences:
             for token_id, token in enumerate(sentence):
                 conllu_data = ['_'] * conll.FIELD_NUM
