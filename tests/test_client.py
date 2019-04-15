@@ -14,7 +14,6 @@ TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 
 def test_connect():
     with corenlp.CoreNLPClient() as client:
-        sleep(10)
         client.ensure_alive()
         assert client.is_active
         assert client.is_alive()
