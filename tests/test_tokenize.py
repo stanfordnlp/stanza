@@ -73,6 +73,23 @@ EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
 """.strip()
 
 
+EN_DOC_PRETOKENIZED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['He', 'loves', 'pizza', '.']]
+
+EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
+<Token index=1;words=[<Word index=1;text=Joe>]>
+<Token index=2;words=[<Word index=2;text=Smith>]>
+<Token index=3;words=[<Word index=3;text=lives>]>
+<Token index=4;words=[<Word index=4;text=in>]>
+<Token index=5;words=[<Word index=5;text=California>]>
+<Token index=6;words=[<Word index=6;text=.>]>
+
+<Token index=1;words=[<Word index=1;text=He>]>
+<Token index=2;words=[<Word index=2;text=loves>]>
+<Token index=3;words=[<Word index=3;text=pizza>]>
+<Token index=4;words=[<Word index=4;text=.>]>
+""".strip()
+
+
 def test_tokenize():
     nlp = stanfordnlp.Pipeline(processors='tokenize', models_dir=TEST_WORKING_DIR, lang='en')
     doc = nlp(EN_DOC)
@@ -84,3 +101,6 @@ def test_pretokenized():
                                   'tokenize_pretokenized': True})
     doc = nlp(EN_DOC_PRETOKENIZED)
     assert EN_DOC_PRETOKENIZED_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    doc = nlp(EN_DOC_PRETOKENIZED_LIST)
+    assert EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+
