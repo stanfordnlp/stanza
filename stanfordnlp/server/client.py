@@ -55,7 +55,7 @@ class RobustService(object):
     """
     Service that resuscitates itself if it is not available.
     """
-    CHECK_ALIVE_TIMEOUT = 60
+    CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
                  stderr=sys.stderr, be_quiet=False):
@@ -141,7 +141,7 @@ class CoreNLPClient(RobustService):
     DEFAULT_ANNOTATORS = "tokenize ssplit pos lemma ner depparse".split()
     DEFAULT_PROPERTIES = {}
     DEFAULT_OUTPUT_FORMAT = "serialized"
-    DEFAULT_MEMORY = "4G"
+    DEFAULT_MEMORY = "5G"
     DEFAULT_MAX_CHAR_LENGTH = 100000
     DEFAULT_SERIALIZER = "edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer"
     DEFAULT_INPUT_FORMAT = "text"
