@@ -29,12 +29,21 @@ class TokenizeProcessor(UDProcessor):
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
     def process_pre_tokenized_text(self, doc):
-        """ Assume text is tokenized by whitespace, sentence split by newline, generate CoNLL-U output """
+        """
+        Pretokenized text can be provided in 2 manners:
+
+        1.) str, tokenized by whitespace, sentence split by newline
+        2.) list of token lists, each token list represents a sentence
+
+        generate CoNLL-U output
+        """
         conllu_output_string = ""
-        sentences = [sent for sent in doc.text.rstrip('\n').split('\n') if sent]
+        if isinstance(doc, str):
+            sentences = [sent.rstrip(' ').split() for sent in doc.text.rstrip('\n').split('\n') if sent]
+        elif isinstance(doc, list):
+            sentences = doc
         for sentence in sentences:
-            tokens = sentence.rstrip(' ').split()
-            for token_id, token in enumerate(tokens):
+            for token_id, token in enumerate(sentence):
                 conllu_data = ['_'] * conll.FIELD_NUM
                 conllu_data[conll.FIELD_TO_IDX['id']] = str(token_id + 1)
                 conllu_data[conll.FIELD_TO_IDX['word']] = token
