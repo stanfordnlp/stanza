@@ -20,6 +20,8 @@ class TokenizeProcessor(UDProcessor):
     PROVIDES_DEFAULT = set([TOKENIZE])
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([])
+    # default max sequence length
+    MAX_SEQ_LENGTH_DEFAULT = 1000
 
     def _set_up_model(self, config, use_gpu):
         # set up trainer
@@ -53,22 +55,22 @@ class TokenizeProcessor(UDProcessor):
         doc.conll_file = conll.CoNLLFile(input_str=conllu_output_string)
 
     def process(self, doc):
-        if self._config.get('pretokenized'):
+        if self.config.get('pretokenized'):
             self.process_pre_tokenized_text(doc)
         else:
             # set up batches
-            if self._config['lang'] == 'vi':
+            if self.config.get('lang') == 'vi':
                 # special processing is due for Vietnamese
                 text = '\n\n'.join([x for x in doc.text.split('\n\n')]).rstrip()
                 dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
                 data = paras_to_chunks(text, dummy_labels)
-                batches = DataLoader(self._config, input_data=data, vocab=self._vocab, evaluation=True)
+                batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
             else:
-                batches = DataLoader(self._config, input_text=doc.text, vocab=self._vocab, evaluation=True)
+                batches = DataLoader(self.config, input_text=doc.text, vocab=self.vocab, evaluation=True)
             # set up StringIO to get conllu data, run output predictions, set doc's conll file
             with io.StringIO() as conll_output_string:
-                output_predictions(conll_output_string, self._trainer, batches, self._vocab, None,
-                                   self._config['max_seqlen'])
+                output_predictions(conll_output_string, self.trainer, batches, self.vocab, None,
+                                   self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT))
                 # set conll file for doc
                 doc.conll_file = conll.CoNLLFile(input_str=conll_output_string.getvalue())
 
