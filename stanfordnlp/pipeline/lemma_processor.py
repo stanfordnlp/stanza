@@ -51,7 +51,7 @@ class LemmaProcessor(UDProcessor):
             if self._config.get('ensemble_dict', False):
                 # skip the seq2seq model when we can
                 skip = self._trainer.skip_seq2seq(batch.conll.get(['word', 'upos']))
-                seq2seq_batch = DataLoader(doc, self._config['batch_size'], self._config, vocab=self.vocab, evaluation=True, skip=skip)
+                seq2seq_batch = DataLoader(doc, self._config['batch_size'], self._config, vocab=self._vocab, evaluation=True, skip=skip)
             else:
                 seq2seq_batch = batch
 
