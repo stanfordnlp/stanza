@@ -15,6 +15,8 @@ class LemmaProcessor(UDProcessor):
     PROVIDES_DEFAULT = set([LEMMA])
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
+    # default batch size
+    DEFAULT_BATCH_SIZE = 5000
 
     def __init__(self, config, pipeline, use_gpu):
         # run lemmatizer in identity mode
@@ -25,6 +27,7 @@ class LemmaProcessor(UDProcessor):
         if config.get('use_identity') in ['True', True]:
             self._use_identity = True
             self._config = config
+            self._config['batch_size'] = LemmaProcessor.DEFAULT_BATCH_SIZE
         else:
             self._use_identity = False
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
