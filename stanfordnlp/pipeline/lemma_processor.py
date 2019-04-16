@@ -30,7 +30,7 @@ class LemmaProcessor(UDProcessor):
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
     def _set_up_requires(self):
-        if self._config['pos']:
+        if self._config.get('pos') and not self._config.get('use_identity'):
             self._requires = LemmaProcessor.REQUIRES_DEFAULT.union(set([POS]))
         else:
             self._requires = LemmaProcessor.REQUIRES_DEFAULT
