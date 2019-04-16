@@ -21,13 +21,14 @@ class POSProcessor(UDProcessor):
         # get pretrained word vectors
         self._pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
-        self._trainer = Trainer(pretrain=self._pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, doc):
         batch = DataLoader(
-            doc, self._config['batch_size'], self._config, self._pretrain, vocab=self._vocab, evaluation=True, sort_during_eval=True)
+            doc, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
+            sort_during_eval=True)
         preds = []
         for i, b in enumerate(batch):
-            preds += self._trainer.predict(b)
+            preds += self.trainer.predict(b)
         preds = unsort(preds, batch.data_orig_idx)
         batch.conll.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
