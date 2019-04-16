@@ -22,19 +22,19 @@ class MWTProcessor(UDProcessor):
         self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, doc):
-        batch = DataLoader(doc, self._config['batch_size'], self._config, vocab=self._vocab, evaluation=True)
+        batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         if len(batch) > 0:
-            dict_preds = self._trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
+            dict_preds = self.trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
             # decide trainer type and run eval
-            if self._config['dict_only']:
+            if self.config['dict_only']:
                 preds = dict_preds
             else:
                 preds = []
                 for i, b in enumerate(batch):
-                    preds += self._trainer.predict(b)
+                    preds += self.trainer.predict(b)
 
-                if self._config.get('ensemble_dict', False):
-                    preds = self._trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
+                if self.config.get('ensemble_dict', False):
+                    preds = self.trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
         else:
             # skip eval if dev data does not exist
             preds = []
