@@ -28,7 +28,7 @@ EN_DOC_IDENTITY_GOLD = """
 <Token index=5;words=[<Word index=5;text=in;lemma=in>]>
 <Token index=6;words=[<Word index=6;text=California;lemma=California>]>
 <Token index=7;words=[<Word index=7;text=.;lemma=.>]>
-"""
+""".strip()
 
 EN_DOC_LEMMATIZER_MODEL_GOLD = """
 <Token index=1;words=[<Word index=1;text=Joe;lemma=Joe;upos=PROPN;xpos=NNP;feats=Number=Sing>]>
@@ -38,7 +38,7 @@ EN_DOC_LEMMATIZER_MODEL_GOLD = """
 <Token index=5;words=[<Word index=5;text=in;lemma=in;upos=ADP;xpos=IN;feats=_>]>
 <Token index=6;words=[<Word index=6;text=California;lemma=California;upos=PROPN;xpos=NNP;feats=Number=Sing>]>
 <Token index=7;words=[<Word index=7;text=.;lemma=.;upos=PUNCT;xpos=.;feats=_>]>
-"""
+""".strip()
 
 
 def test_identity_lemmatizer():
