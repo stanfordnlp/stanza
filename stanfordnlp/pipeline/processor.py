@@ -64,6 +64,11 @@ class Processor(ABC):
         self._requires = self.__class__.REQUIRES_DEFAULT
 
     @property
+    def config(self):
+        """ Configurations for the processor """
+        return self._config
+
+    @property
     def pipeline(self):
         """ The pipeline that this processor belongs to """
         return self._pipeline
@@ -125,6 +130,10 @@ class UDProcessor(Processor):
         """ Drop memory intensive resources if keeping this processor around for reasons other than running it. """
         self._trainer = None
         self._vocab = None
+
+    @property
+    def pretrain(self):
+        return self._pretrain
 
     @property
     def trainer(self):
