@@ -17,7 +17,7 @@ def teardown_module(module):
     safe_rm(EN_MODELS_DIR)
 
 
-EN_DOC = "Joe Smith was born in California."
+EN_DOC = "Joe Smith lives in California."
 
 EN_DOC_GOLD = """
 ('Joe', '3', 'nsubj')
