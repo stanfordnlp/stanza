@@ -1,6 +1,7 @@
-r"""
+"""
 Client for accessing Stanford CoreNLP in Python
 """
+
 import io
 import os
 import re
@@ -24,37 +25,27 @@ SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 
 
 class AnnotationException(Exception):
-    """
-    Exception raised when there was an error communicating with the CoreNLP server.
-    """
+    """ Exception raised when there was an error communicating with the CoreNLP server. """
     pass
 
 
 class TimeoutException(AnnotationException):
-    """
-    Exception raised when the CoreNLP server timed out.
-    """
+    """ Exception raised when the CoreNLP server timed out. """
     pass
 
 
 class ShouldRetryException(Exception):
-    """
-    Exception raised if the service should retry the request.
-    """
+    """ Exception raised if the service should retry the request. """
     pass
 
 
 class PermanentlyFailedException(Exception):
-    """
-    Exception raised if the service should retry the request.
-    """
+    """ Exception raised if the service should retry the request. """
     pass
 
 
 class RobustService(object):
-    """
-    Service that resuscitates itself if it is not available.
-    """
+    """ Service that resuscitates itself if it is not available. """
     CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
@@ -131,9 +122,7 @@ class RobustService(object):
 
 
 class CoreNLPClient(RobustService):
-    """
-    A CoreNLP client to the Stanford CoreNLP server.
-    """
+    """ A CoreNLP client to the Stanford CoreNLP server. """
 
     DEFAULT_ENDPOINT = "http://localhost:9000"
     DEFAULT_TIMEOUT = 60000
@@ -145,6 +134,8 @@ class CoreNLPClient(RobustService):
     DEFAULT_MAX_CHAR_LENGTH = 100000
     DEFAULT_SERIALIZER = "edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer"
     DEFAULT_INPUT_FORMAT = "text"
+    PIPELINE_LANGUAGES = \
+        ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
     def __init__(self, start_server=True,
                  server_id=None,
@@ -163,6 +154,8 @@ class CoreNLPClient(RobustService):
                  ):
 
         # process server options
+        # properties cache maps keys to properties
+        self.properties_cache = {}
         # set up default properties
         self.server_props_file = {'is_temp': False, 'file_path': None}
         if properties is None:
@@ -246,7 +239,8 @@ class CoreNLPClient(RobustService):
         super(CoreNLPClient, self).stop()
 
     def _request(self, buf, properties):
-        """Send a request to the CoreNLP server.
+        """
+        Send a request to the CoreNLP server.
 
         :param (str | bytes) buf: data to be sent with the request
         :param (dict) properties: properties that the server expects
@@ -275,37 +269,70 @@ class CoreNLPClient(RobustService):
             else:
                 raise AnnotationException(r.text)
 
-    def annotate(self, text, annotators=None, output_format=None, properties=None):
-        """Send a request to the CoreNLP server.
+    def register_properties_key(self, key, props):
+        """ Register a properties dictionary with a key in the client's properties_cache """
+        if key in CoreNLPClient.PIPELINE_LANGUAGES:
+            print(f'Key {key} not registered in properties cache.  Names of Stanford CoreNLP supported languages are '
+                  f'reserved for Stanford CoreNLP defaults for that language.  For instance "french" or "fr" '
+                  f'corresponds to using the defaults in StanfordCoreNLP-french.properties which are stored with the '
+                  f'server.  If you want to store custom defaults for that language, it is suggested to use a key like '
+                  f' "fr-custom", etc...'
+                  )
+        else:
+            self.properties_cache[key] = props
+
+    def annotate(self, text, annotators=None, output_format=None, properties_key=None, properties=None):
+        """
+        Send a request to the CoreNLP server.
 
         :param (str | unicode) text: raw text for the CoreNLPServer to parse
         :param (list | string) annotators: list of annotators to use
         :param (str) output_format: output type from server: serialized, json, text, conll, conllu, or xml
-        :param (dict) properties: properties that the server expects
+        :param (str) properties_key: key into properties cache for the client
+        :param (dict) properties: additional request properties (written on top of defaults)
+
+        The properties for a request are written in this order:
+
+        1. Server default properties (server side)
+        2. Properties from client's properties_cache corresponding to properties_key (client side)
+           If the properties_key is the name of a Stanford CoreNLP supported language:
+           [Arabic, Chinese, English, French, German, Spanish], the Stanford CoreNLP defaults will be used (server side)
+        3. Additional properties corresponding to properties (client side)
+        4. Special case specific properties: annotators, output_format (client side)
+
         :return: request result
         """
         # set properties for server call
+        # first look for a cached default properties set
+        # if a Stanford CoreNLP supported language is specified, just pass {pipelineLanguage="french"}
+        if properties_key is not None:
+            if properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
+                request_properties = {'pipelineLanguage': properties_key.lower()}
+            else:
+                request_properties = self.properties_cache.get(properties_key, {})
+        # add on custom properties for this request
         if properties is None:
             properties = {}
+        request_properties.update(properties)
         # if annotators list is specified, override with that
         if annotators is not None:
             if isinstance(annotators, str):
                 annotators = annotators.split()
-            properties['annotators'] = annotators
+            request_properties['annotators'] = annotators
         # if an output_format is specified, use that to override
         if output_format is not None:
-            properties["outputFormat"] = output_format
+            request_properties["outputFormat"] = output_format
         else:
-            properties["outputFormat"] = self.default_output_format
+            request_properties["outputFormat"] = self.default_output_format
         # make the request
-        r = self._request(text.encode('utf-8'), properties)
-        if properties.get("outputFormat") is None or properties["outputFormat"] == "json":
+        r = self._request(text.encode('utf-8'), request_properties)
+        if request_properties.get("outputFormat") is None or request_properties["outputFormat"] == "json":
             return r.json()
-        elif properties["outputFormat"] == "serialized":
+        elif request_properties["outputFormat"] == "serialized":
             doc = Document()
             parseFromDelimitedString(doc, r.content)
             return doc
-        elif properties["outputFormat"] in ["text", "conllu", "conll", "xml"]:
+        elif request_properties["outputFormat"] in ["text", "conllu", "conll", "xml"]:
             return r.text
         else:
             return r
@@ -345,7 +372,8 @@ class CoreNLPClient(RobustService):
         return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
-        """Send a regex-related request to the CoreNLP server.
+        """
+        Send a regex-related request to the CoreNLP server.
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
         :param (str | unicode) pattern: regex pattern
@@ -436,7 +464,8 @@ def write_corenlp_props(props_dict, file_path=None):
 
 
 def regex_matches_to_indexed_words(matches):
-    """Transforms tokensregex and semgrex matches to indexed words.
+    """
+    Transforms tokensregex and semgrex matches to indexed words.
     :param matches: unprocessed regex matches
     :return: flat array of indexed words
     """
