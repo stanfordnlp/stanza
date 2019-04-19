@@ -310,6 +310,8 @@ class CoreNLPClient(RobustService):
                 request_properties = {'pipelineLanguage': properties_key.lower()}
             else:
                 request_properties = self.properties_cache.get(properties_key, {})
+        else:
+            request_properties = {}
         # add on custom properties for this request
         if properties is None:
             properties = {}
