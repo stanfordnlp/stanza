@@ -324,7 +324,7 @@ class CoreNLPClient(RobustService):
         # if an output_format is specified, use that to override
         if output_format is not None:
             request_properties["outputFormat"] = output_format
-        else:
+        elif request_properties.get('outputFormat') is None:
             request_properties["outputFormat"] = self.default_output_format
         # make the request
         r = self._request(text.encode('utf-8'), request_properties)
