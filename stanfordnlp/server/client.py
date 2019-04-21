@@ -318,9 +318,11 @@ class CoreNLPClient(RobustService):
         request_properties.update(properties)
         # if annotators list is specified, override with that
         if annotators is not None:
-            if isinstance(annotators, str):
-                annotators = annotators.split()
             request_properties['annotators'] = annotators
+        # make sure if annotators is in request_properties it is a list before encoding request
+        if request_properties.get('annotators') is not None:
+            if isinstance(request_properties['annotators'], list):
+                request_properties['annotators'] = ",".join(request_properties['annotators'])
         # if an output_format is specified, use that to override
         if output_format is not None:
             request_properties["outputFormat"] = output_format
