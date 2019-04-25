@@ -284,9 +284,9 @@ class CoreNLPClient(RobustService):
     def stop(self):
         # check if there is a temp server props file to remove and remove it
         if self.server_props_file['is_temp']:
-            if os.path.isfile(self.server_props_file['file_path']) and \
-                    SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['file_path'])):
-                os.remove(self.server_props_file['file_path'])
+            if os.path.isfile(self.server_props_file['path']) and \
+                    SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['path'])):
+                os.remove(self.server_props_file['path'])
         # run base class stop
         super(CoreNLPClient, self).stop()
 
