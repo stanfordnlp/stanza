@@ -156,7 +156,6 @@ class CoreNLPClient(RobustService):
         ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
     def __init__(self, start_server=True,
-                 server_id=None,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
@@ -168,8 +167,8 @@ class CoreNLPClient(RobustService):
                  memory=DEFAULT_MEMORY,
                  be_quiet=True,
                  max_char_length=DEFAULT_MAX_CHAR_LENGTH,
-                 preload=True
-                 ):
+                 preload=True,
+                 **kwargs):
 
         # properties cache maps keys to properties dictionaries for convenience
         self.properties_cache = {}
@@ -188,8 +187,22 @@ class CoreNLPClient(RobustService):
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
             if preload and self.server_start_info.get('preload_annotators'):
                 start_cmd += f" -preload {self.server_start_info['preload_annotators']}"
-            if server_id:
-                start_cmd += f" -server_id {server_id}"
+            # additional options for server:
+            # - server_id
+            # - ssl
+            # - status_port
+            # - uriContext
+            # - strict
+            # - key
+            # - username
+            # - password
+            # - blacklist
+            for kw in ['ssl', 'strict']:
+                if kwargs.get(kw) is not None:
+                    start_cmd += f" -{kw}"
+            for kw in ['status_port', 'uriContext', 'key', 'username', 'password', 'blacklist', 'server_id']:
+                if kwargs.get(kw) is not None:
+                    start_cmd += f" -{kw} {kwargs.get(kw)}"
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
