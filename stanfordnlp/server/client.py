@@ -201,9 +201,6 @@ class CoreNLPClient(RobustService):
 
         self.timeout = timeout
 
-        if start_server and preload:
-            self.start()
-
     def _setup_default_server_props(self, properties, annotators, output_format):
         """
         Set up the default properties for the server from either:
