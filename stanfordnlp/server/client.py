@@ -21,7 +21,25 @@ __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
 logger = logging.getLogger(__name__)
 
+# pattern tmp props file should follow
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
+
+# info for Stanford CoreNLP supported languages
+LANGUAGE_SHORTHANDS_TO_FULL = {
+    "ar": "arabic",
+    "zh": "chinese",
+    "fr": "french",
+    "de": "german",
+    "es": "spanish"
+}
+
+LANGUAGE_DEFAULT_ANNOTATORS = {
+    "arabic": "tokenize,ssplit,pos,parse",
+    "chinese": "tokenize,ssplit,pos,lemma,ner,parse,coref",
+    "french": "tokenize,ssplit,pos,depparse",
+    "german": "tokenize,ssplit,pos,ner,parse",
+    "spanish": "tokenize,ssplit,pos,lemma,ner,depparse,kbp"
+}
 
 
 class AnnotationException(Exception):
@@ -73,6 +91,7 @@ class RobustService(object):
                 stderr = open(os.devnull, 'w')
             else:
                 stderr = self.stderr
+            print(f"Starting server with command: {self.start_cmd}")
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
                                            stdout=stderr)
@@ -127,8 +146,7 @@ class CoreNLPClient(RobustService):
     DEFAULT_ENDPOINT = "http://localhost:9000"
     DEFAULT_TIMEOUT = 60000
     DEFAULT_THREADS = 5
-    DEFAULT_ANNOTATORS = "tokenize ssplit pos lemma ner depparse".split()
-    DEFAULT_PROPERTIES = {}
+    DEFAULT_ANNOTATORS = "tokenize,ssplit,pos,lemma,ner,depparse"
     DEFAULT_OUTPUT_FORMAT = "serialized"
     DEFAULT_MEMORY = "5G"
     DEFAULT_MAX_CHAR_LENGTH = 100000
@@ -153,57 +171,13 @@ class CoreNLPClient(RobustService):
                  preload=True
                  ):
 
-        # process server options
-        # properties cache maps keys to properties
+        # properties cache maps keys to properties dictionaries for convenience
         self.properties_cache = {}
-        # set up default properties
-        self.server_props_file = {'is_temp': False, 'file_path': None}
-        if properties is None:
-            self.default_properties = dict(CoreNLPClient.DEFAULT_PROPERTIES)
-        elif isinstance(properties, str):
-            if os.path.isfile(properties):
-                # assume properties is a file path with Stanford CoreNLP properties
-                self.default_properties = read_corenlp_props(properties)
-            else:
-                print("Warning: {properties} cannot be found on filesystem")
-            self.server_props_file = {'is_temp': False, 'file_path': properties}
-        elif isinstance(properties, dict):
-            self.default_properties = properties
-        else:
-            raise RuntimeError(f"Error: {properties} is not a valid type for CoreNLPClient properties.")
-        # set up default annotators
-        if annotators is None:
-            if self.default_properties.get('annotators') is None:
-                self.default_annotators = CoreNLPClient.DEFAULT_ANNOTATORS
-            else:
-                self.default_annotators = self.default_properties.get('annotators')
-        else:
-            self.default_annotators = annotators
-        if isinstance(self.default_annotators, str):
-            self.default_annotators = self.default_annotators.split()
-        self.default_properties['annotators'] = self.default_annotators
-        # set up default output format
-        if output_format is None:
-            if self.default_properties.get('outputFormat') is None:
-                self.default_output_format = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
-            else:
-                self.default_output_format = self.default_properties.get('outputFormat')
-        else:
-            self.default_output_format = output_format
-        self.default_properties['outputFormat'] = self.default_output_format
-        # set up default serializer
-        if self.default_properties.get('serializer') is None:
-            self.default_properties['serializer'] = CoreNLPClient.DEFAULT_SERIALIZER
-        # set up default input format
-        if self.default_properties.get('inputFormat') is None:
-            self.default_properties['inputFormat'] = CoreNLPClient.DEFAULT_INPUT_FORMAT
-
-        # if necessary write server props to tmp file
-        if self.server_props_file['file_path'] is None:
-            self.server_props_file['file_path'] = write_corenlp_props(self.default_properties)
-            self.server_props_file['is_temp'] = True
-
+        # start the server
         if start_server:
+            # set up default properties for server
+            self._setup_default_server_props(properties, annotators, output_format)
+            # at this point self.server_start_info and self.server_props_file should be set
             host, port = urlparse(endpoint).netloc.split(":")
             assert host == "localhost", "If starting a server, endpoint must be localhost"
             corenlp_home = os.getenv("CORENLP_HOME")
@@ -211,15 +185,16 @@ class CoreNLPClient(RobustService):
                 "Please define $CORENLP_HOME to be location of your CoreNLP Java checkout"
             start_cmd = f"java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
-                        f"-quiet {be_quiet} -serverProperties {self.server_props_file['file_path']}"
-            if preload and self.default_annotators:
-                start_cmd += f" -preload {','.join(self.default_annotators)}"
+                        f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
+            if preload and self.server_start_info.get('preload_annotators'):
+                start_cmd += f" -preload {self.server_start_info['preload_annotators']}"
             if server_id:
                 start_cmd += f" -server_id {server_id}"
-            print("starting server with command: " + start_cmd)
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
+            self.server_start_info = {}
+            self.server_props_file = {}
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet)
@@ -229,8 +204,85 @@ class CoreNLPClient(RobustService):
         if start_server and preload:
             self.start()
 
+    def _setup_default_server_props(self, properties, annotators, output_format):
+        """
+        Set up the default properties for the server from either:
+
+        1. File path on system or in CLASSPATH (e.g. /path/to/server.props or StanfordCoreNLP-french.properties
+        2. Stanford CoreNLP supported language (e.g. french)
+        3. Python dictionary (properties written to tmp file for Java server, erased at end)
+        4. Default (just use standard defaults set server side in Java code, with the exception that the default
+                    default outputFormat is changed to serialized)
+
+        If defaults are being set client side, values of annotators and output_format will overwrite the
+        client side properties.  If the defaults are being set server side, those parameters will be ignored.
+
+        Info about the properties used to start the server is stored in self.server_start_info
+        If a file is used, info about the file (path, whether tmp or not) is stored in self.server_props_file
+        """
+        # store information about server start up
+        self.server_start_info = {}
+        self.server_props_file = {'is_temp': False, 'path': None}
+        # ensure properties is str or dict
+        if properties is None or (not isinstance(properties, str) and not isinstance(properties, dict)):
+            if properties is not None:
+                print('Warning: properties passed invalid value (not a str or dict), setting properties = {}')
+            properties = {}
+        # check if properties is a string
+        if isinstance(properties, str):
+            # translate Stanford CoreNLP language name to properties file if properties is a language name
+            if properties.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
+                lang_name = properties.lower()
+                if lang_name in LANGUAGE_SHORTHANDS_TO_FULL:
+                    lang_name = LANGUAGE_SHORTHANDS_TO_FULL[lang_name]
+                self.server_props_file['path'] = f'StanfordCoreNLP-{lang_name}.properties'
+                self.server_start_info['preload_annotators'] = LANGUAGE_DEFAULT_ANNOTATORS[lang_name]
+                print(f"Using Stanford CoreNLP default properties for: {lang_name}.  Make sure to have {lang_name} "
+                      f"models jar (available for download here: https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
+            # otherwise assume properties string is a path
+            else:
+                self.server_props_file['path'] = properties
+                if os.path.isfile(properties):
+                    props_from_file = read_corenlp_props(properties)
+                    self.server_start_info['props'] = props_from_file
+                    self.server_start_info['preload_annotators'] = props_from_file.get('annotators')
+                else:
+                    print(f"Warning: {properties} does not correspond to a file path.")
+            print(f"Setting server defaults from: {self.server_props_file['path']}")
+            self.server_start_info['props_file'] = self.server_props_file['path']
+            self.server_start_info['server_side'] = True
+            if annotators is not None:
+                print(f"Warning: Server defaults being set server side, ignoring annotators={annotators}")
+            if output_format is not None:
+                print(f"Warning: Server defaults being set server side, ignoring output_format={output_format}")
+        # check if client side should set default properties
+        else:
+            # set up properties from client side
+            # the Java Stanford CoreNLP server defaults to "json" for outputFormat
+            # but by default servers started by Python interface will override this to return serialized object
+            client_side_properties = {
+                'annotators': CoreNLPClient.DEFAULT_ANNOTATORS,
+                'outputFormat': CoreNLPClient.DEFAULT_OUTPUT_FORMAT,
+                'serializer': CoreNLPClient.DEFAULT_SERIALIZER
+            }
+            # override if a specific annotators list was specified
+            if annotators:
+                client_side_properties['annotators'] = \
+                    ",".join(annotators) if isinstance(annotators, list) else annotators
+            # override if a specific output format was specified
+            if output_format is not None and isinstance(output_format, str):
+                client_side_properties['outputFormat'] = output_format
+            # write client side props to a tmp file which will be erased at end
+            self.server_props_file['path'] = write_corenlp_props(client_side_properties)
+            self.server_props_file['is_temp'] = True
+            # record server start up info
+            self.server_start_info['client_side'] = True
+            self.server_start_info['props'] = client_side_properties
+            self.server_start_info['props_file'] = self.server_props_file['path']
+            self.server_start_info['preload_annotators'] = client_side_properties['annotators']
+
     def stop(self):
-        # check if there is a temp server props file to remove and remove
+        # check if there is a temp server props file to remove and remove it
         if self.server_props_file['is_temp']:
             if os.path.isfile(self.server_props_file['file_path']) and \
                     SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['file_path'])):
@@ -318,19 +370,18 @@ class CoreNLPClient(RobustService):
         request_properties.update(properties)
         # if annotators list is specified, override with that
         if annotators is not None:
-            request_properties['annotators'] = annotators
-        # make sure if annotators is in request_properties it is a list before encoding request
-        if request_properties.get('annotators') is not None:
-            if isinstance(request_properties['annotators'], list):
-                request_properties['annotators'] = ",".join(request_properties['annotators'])
-        # if an output_format is specified, use that to override
+            request_properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
+        # always send an output format with request
+        # in some scenario's the server's default output format is unknown, so default to serialized
         if output_format is not None:
-            request_properties["outputFormat"] = output_format
-        elif request_properties.get('outputFormat') is None:
-            request_properties["outputFormat"] = self.default_output_format
+            request_properties['outputFormat'] = output_format
+        elif self.server_start_info.get('props', {}).get('outputFormat'):
+            request_properties['outputFormat'] = self.server_start_info['props']['outputFormat']
+        else:
+            request_properties['outputFormat'] = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
         # make the request
         r = self._request(text.encode('utf-8'), request_properties)
-        if request_properties.get("outputFormat") is None or request_properties["outputFormat"] == "json":
+        if request_properties["outputFormat"] == "json":
             return r.json()
         elif request_properties["outputFormat"] == "serialized":
             doc = Document()
@@ -343,13 +394,14 @@ class CoreNLPClient(RobustService):
 
     def update(self, doc, annotators=None, properties=None):
         if properties is None:
-            properties = self.default_properties
+            properties = {}
             properties.update({
-                'annotators': ','.join(annotators or self.default_annotators),
                 'inputFormat': 'serialized',
                 'outputFormat': 'serialized',
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
+        if annotators:
+            properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
         with io.BytesIO() as stream:
             writeToDelimitedString(doc, stream)
             msg = stream.getvalue()
@@ -387,15 +439,16 @@ class CoreNLPClient(RobustService):
         """
         self.ensure_alive()
         if properties is None:
-            properties = self.default_properties
+            properties = {}
             properties.update({
-                'annotators': ','.join(annotators or self.default_annotators),
                 'inputFormat': 'text',
-                'outputFormat': self.default_output_format,
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
-        elif "annotators" not in properties:
-            properties.update({'annotators': ','.join(annotators or self.default_annotators)})
+        if annotators:
+            properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
+
+        # force output for regex requests to be json
+        properties['outputFormat'] = 'json'
 
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
@@ -417,10 +470,11 @@ class CoreNLPClient(RobustService):
                     'pattern': pattern,
                     'filter': filter,
                     'properties': str(properties)
-                }, data=text.encode('utf-8'),
-                    headers={'content-type': ctype},
-                    timeout=(self.timeout*2)/1000,
-                    )
+                },
+                data=text.encode('utf-8'),
+                headers={'content-type': ctype},
+                timeout=(self.timeout*2)/1000,
+            )
             r.raise_for_status()
             return json.loads(r.text)
         except requests.HTTPError as e:
