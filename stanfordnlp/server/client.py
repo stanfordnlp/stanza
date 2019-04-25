@@ -262,6 +262,7 @@ class CoreNLPClient(RobustService):
                 'outputFormat': CoreNLPClient.DEFAULT_OUTPUT_FORMAT,
                 'serializer': CoreNLPClient.DEFAULT_SERIALIZER
             }
+            client_side_properties.update(properties)
             # override if a specific annotators list was specified
             if annotators:
                 client_side_properties['annotators'] = \
