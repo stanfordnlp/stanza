@@ -373,10 +373,11 @@ class CoreNLPClient(RobustService):
         # in some scenario's the server's default output format is unknown, so default to serialized
         if output_format is not None:
             request_properties['outputFormat'] = output_format
-        elif self.server_start_info.get('props', {}).get('outputFormat'):
-            request_properties['outputFormat'] = self.server_start_info['props']['outputFormat']
-        else:
-            request_properties['outputFormat'] = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
+        if request_properties.get('outputFormat') is None:
+            if self.server_start_info.get('props', {}).get('outputFormat'):
+                request_properties['outputFormat'] = self.server_start_info['props']['outputFormat']
+            else:
+                request_properties['outputFormat'] = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
         # make the request
         r = self._request(text.encode('utf-8'), request_properties)
         if request_properties["outputFormat"] == "json":
