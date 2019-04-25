@@ -91,7 +91,7 @@ class RobustService(object):
                 stderr = open(os.devnull, 'w')
             else:
                 stderr = self.stderr
-            print(f"Starting server with command: {self.start_cmd}")
+            print(f"Starting server with command: {' '.join(self.start_cmd)}")
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
                                            stdout=stderr)
