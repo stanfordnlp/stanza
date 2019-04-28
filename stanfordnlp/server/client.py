@@ -301,7 +301,7 @@ class CoreNLPClient(RobustService):
         # run base class stop
         super(CoreNLPClient, self).stop()
 
-    def _request(self, buf, properties):
+    def _request(self, buf, properties, **kwargs):
         """
         Send a request to the CoreNLP server.
 
@@ -319,11 +319,15 @@ class CoreNLPClient(RobustService):
                 ctype = "application/x-protobuf"
             else:
                 raise ValueError("Unrecognized inputFormat " + input_format)
-
+            # handle auth
+            if 'username' in kwargs and 'password' in kwargs:
+                kwargs['auth'] = requests.auth.HTTPBasicAuth(kwargs['username'], kwargs['password'])
+                kwargs.pop('username')
+                kwargs.pop('password')
             r = requests.post(self.endpoint,
                               params={'properties': str(properties)},
                               data=buf, headers={'content-type': ctype},
-                              timeout=(self.timeout*2)/1000)
+                              timeout=(self.timeout*2)/1000, **kwargs)
             r.raise_for_status()
             return r
         except requests.HTTPError as e:
@@ -344,7 +348,7 @@ class CoreNLPClient(RobustService):
         else:
             self.properties_cache[key] = props
 
-    def annotate(self, text, annotators=None, output_format=None, properties_key=None, properties=None):
+    def annotate(self, text, annotators=None, output_format=None, properties_key=None, properties=None, **kwargs):
         """
         Send a request to the CoreNLP server.
 
@@ -392,7 +396,7 @@ class CoreNLPClient(RobustService):
             else:
                 request_properties['outputFormat'] = CoreNLPClient.DEFAULT_OUTPUT_FORMAT
         # make the request
-        r = self._request(text.encode('utf-8'), request_properties)
+        r = self._request(text.encode('utf-8'), request_properties, **kwargs)
         if request_properties["outputFormat"] == "json":
             return r.json()
         elif request_properties["outputFormat"] == "serialized":
