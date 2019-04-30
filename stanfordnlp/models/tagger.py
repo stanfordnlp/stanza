@@ -213,6 +213,7 @@ def evaluate(args):
     pretrain = Pretrain(pretrain_file)
 
     # load model
+    print("Loading model from: {}".format(model_file))
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
