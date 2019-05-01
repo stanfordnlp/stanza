@@ -19,7 +19,7 @@ def corenlp_client():
     client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner,depparse',
                                    server_id='stanfordnlp_main_test_server')
     yield client
-    client.close()
+    client.stop()
 
 
 def test_connect(corenlp_client):
@@ -65,7 +65,7 @@ def test_tokensregex(corenlp_client):
         },]}
 
 
-def test_semgrex():
+def test_semgrex(corenlp_client):
     pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
     matches = corenlp_client.semgrex(TEXT, pattern, to_words=True)
     assert matches == [
