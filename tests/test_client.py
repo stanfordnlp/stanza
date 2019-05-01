@@ -5,6 +5,7 @@ Tests that call a running CoreNLPClient.
 import os
 import pytest
 import stanfordnlp.server as corenlp
+import shlex
 import subprocess
 
 from tests import *
@@ -114,7 +115,8 @@ def test_external_server():
     corenlp_home = os.getenv('CORENLP_HOME')
     start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
                 f'-timeout 60000 -server_id stanfordnlp_external_server -serverProperties {SERVER_TEST_PROPS}'
-    external_server_process = subprocess.Popen(start_cmd, shell=True)
+    start_cmd = start_cmd and shlex.split(start_cmd)
+    external_server_process = subprocess.Popen(start_cmd)
     with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
         assert ann.strip() == EN_GOLD
