@@ -7,6 +7,8 @@ import pytest
 import stanfordnlp.server as corenlp
 import subprocess
 
+from tests import *
+
 # set the marker for this module
 pytestmark = pytest.mark.travis
 
