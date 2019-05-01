@@ -13,22 +13,13 @@ TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 MAX_REQUEST_ATTEMPTS = 5
 
 
-def setup_module(module):
-    """ Make an initital request to the server """
-    corenlp_client().annotate(TEXT)
-
-
-def teardown_module(module):
-    """ Stop the client at the end """
-    corenlp_client().stop()
-
-
 @pytest.fixture(scope="module")
 def corenlp_client():
     """ Client to run tests on """
     client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner,depparse',
                                    server_id='stanfordnlp_main_test_server')
-    return client
+    yield client
+    client.close()
 
 
 def test_connect(corenlp_client):
