@@ -112,7 +112,7 @@ def test_semgrex(corenlp_client):
 def test_external_server():
     """ Test starting up an external server and accessing with a client with start_server=False """
     corenlp_home = os.getenv('CORENLP_HOME')
-    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLP -port 9001 ' \
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
                 f'-timeout 60000 -server_id stanfordnlp_external_server -serverProperties {SERVER_TEST_PROPS}'
     external_server_process = subprocess.Popen(start_cmd, shell=True)
     with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
