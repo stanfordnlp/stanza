@@ -20,7 +20,7 @@ assert os.path.basename(TEST_WORKING_DIR) == TEST_DIR_BASE_NAME, \
     f'Base name of test home dir must be: {TEST_DIR_BASE_NAME}'
 
 # server resources
-SERVER_TEST_PROPS = f'{TEST_DIR_BASE_NAME}/scripts/test.props'
+SERVER_TEST_PROPS = f'{TEST_WORKING_DIR}/scripts/test.props'
 
 # langauge resources
 LANGUAGE_RESOURCES = {}
