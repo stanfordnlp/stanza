@@ -2,9 +2,9 @@
 #
 # Set environment variables for the training and testing of stanfordnlp modules.
 
-# Set UDBASE to the location of CoNLL18 folder
+# Set UDBASE to the location of CoNLL18 folder 
 # For details, see http://universaldependencies.org/conll18/data.html
-export UDBASE=/u/nlp/data/dependency_treebanks/CoNLL18/
+# export UDBASE=/path/to/CoNLL18
 
 # Set directories to store processed training/evaluation files
 export DATA_ROOT=./data
