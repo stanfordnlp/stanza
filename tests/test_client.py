@@ -22,12 +22,13 @@ def teardown_module(module):
     """ Stop the client at the end """
     client.stop()
 
+
 @pytest.fixture(scope="module")
 def client():
     """ Client to run tests on """
-    client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner,depparse',
+    corenlp_client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner,depparse',
                                    server_id='stanfordnlp_main_test_server')
-    return client
+    return corenlp_client
 
 
 def test_connect():
