@@ -1,9 +1,11 @@
 """
 Tests that call a running CoreNLPClient.
 """
+
+import os
 import pytest
 import stanfordnlp.server as corenlp
-
+import subprocess
 
 # set the marker for this module
 pytestmark = pytest.mark.travis
@@ -11,6 +13,25 @@ pytestmark = pytest.mark.travis
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 
 MAX_REQUEST_ATTEMPTS = 5
+
+EN_GOLD = """
+Sentence #1 (12 tokens):
+Chris wrote a simple sentence that he parsed with Stanford CoreNLP.
+
+Tokens:
+[Text=Chris CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=NNP]
+[Text=wrote CharacterOffsetBegin=6 CharacterOffsetEnd=11 PartOfSpeech=VBD]
+[Text=a CharacterOffsetBegin=12 CharacterOffsetEnd=13 PartOfSpeech=DT]
+[Text=simple CharacterOffsetBegin=14 CharacterOffsetEnd=20 PartOfSpeech=JJ]
+[Text=sentence CharacterOffsetBegin=21 CharacterOffsetEnd=29 PartOfSpeech=NN]
+[Text=that CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=IN]
+[Text=he CharacterOffsetBegin=35 CharacterOffsetEnd=37 PartOfSpeech=PRP]
+[Text=parsed CharacterOffsetBegin=38 CharacterOffsetEnd=44 PartOfSpeech=VBD]
+[Text=with CharacterOffsetBegin=45 CharacterOffsetEnd=49 PartOfSpeech=IN]
+[Text=Stanford CharacterOffsetBegin=50 CharacterOffsetEnd=58 PartOfSpeech=NNP]
+[Text=CoreNLP CharacterOffsetBegin=59 CharacterOffsetEnd=66 PartOfSpeech=NNP]
+[Text=. CharacterOffsetBegin=66 CharacterOffsetEnd=67 PartOfSpeech=.]
+""".strip()
 
 
 @pytest.fixture(scope="module")
@@ -85,3 +106,15 @@ def test_semgrex(corenlp_client):
             },
             "sentence": 0,}]
 
+
+def test_external_server():
+    """ Test starting up an external server and accessing with a client with start_server=False """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}" edu.stanford.nlp.pipeline.StanfordCoreNLP -port 9001 ' \
+                f'-timeout 60000 -server_id stanfordnlp_external_server'
+    external_server_process = subprocess.Popen(start_cmd)
+    with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
+        ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+        assert ann.strip() == EN_GOLD
+    assert external_server_process
+    external_server_process.kill()
