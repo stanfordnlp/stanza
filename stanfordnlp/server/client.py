@@ -172,6 +172,7 @@ class CoreNLPClient(RobustService):
 
         # properties cache maps keys to properties dictionaries for convenience
         self.properties_cache = {}
+        self.server_props_file = {'is_temp': False, 'path': None}
         # start the server
         if start_server:
             # set up default properties for server
@@ -207,7 +208,6 @@ class CoreNLPClient(RobustService):
         else:
             start_cmd = stop_cmd = None
             self.server_start_info = {}
-            self.server_props_file = {}
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet)
@@ -232,7 +232,6 @@ class CoreNLPClient(RobustService):
         """
         # store information about server start up
         self.server_start_info = {}
-        self.server_props_file = {'is_temp': False, 'path': None}
         # ensure properties is str or dict
         if properties is None or (not isinstance(properties, str) and not isinstance(properties, dict)):
             if properties is not None:
