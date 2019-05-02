@@ -11,6 +11,10 @@ install:
   - unzip corenlp.zip
   - mv $CORENLP_VERSION $CORENLP_HOME
   - mkdir ~/stanfordnlp_test
+  - mkdir ~/stanfordnlp_test/in
+  - mkdir ~/stanfordnlp_test/out
+  - mkdir ~/stanfordnlp_test/scripts
+  - cp tests/data/external_server.properties ~/stanfordnlp_test/scripts
   - export STANFORDNLP_TEST_HOME=~/stanfordnlp_test
 script:
   - python -m pytest -m travis tests/
