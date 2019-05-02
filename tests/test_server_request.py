@@ -59,6 +59,8 @@ FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.lang
                        'parse.model': 'edu/stanford/nlp/models/lexparser/frenchFactored.ser.gz',
                        'outputFormat': 'text'}
 
+FRENCH_DOC = "Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt."
+
 FRENCH_CUSTOM_GOLD = """
 Sentence #1 (16 tokens):
 Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt.
@@ -109,15 +111,19 @@ def corenlp_client():
 
 
 def test_basic(corenlp_client):
+    """ Basic test of making a request """
     ann = corenlp_client.annotate(EN_DOC, output_format="text")
     assert ann.strip() == EN_DOC_GOLD.strip()
 
 
 def test_properties_key(corenlp_client):
-    ann = corenlp_client.annotate(properties_key='fr-custom')
+    """ Test using the properties_key which was registered with the properties cache """
+    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
     assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
 
 
 def test_lang_setting(corenlp_client):
+    """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
+
