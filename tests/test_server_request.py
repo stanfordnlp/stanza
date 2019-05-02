@@ -5,6 +5,8 @@ Tests for setting request properties of servers
 import pytest
 import stanfordnlp.server as corenlp
 
+from stanfordnlp.protobuf import Document
+
 EN_DOC = "Joe Smith lives in California."
 
 # results with an example properties file
@@ -111,9 +113,11 @@ def corenlp_client():
 
 
 def test_basic(corenlp_client):
-    """ Basic test of making a request """
+    """ Basic test of making a request, test default output format is a Document """
     ann = corenlp_client.annotate(EN_DOC, output_format="text")
     assert ann.strip() == EN_DOC_GOLD.strip()
+    ann = corenlp_client.annotate(EN_DOC)
+    assert isinstance(ann, Document)
 
 
 def test_properties_key(corenlp_client):
@@ -126,4 +130,3 @@ def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
-
