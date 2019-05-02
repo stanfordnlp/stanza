@@ -69,6 +69,6 @@ def test_preload():
 def test_props_file():
     """ Test starting the server with a props file """
     with corenlp.CoreNLPClient(properties=SERVER_TEST_PROPS, server_id='test_server_start_props_file') as client:
-        ann = client.annotate(EN_DOC)
+        ann = client.annotate(EN_DOC, output_format="text")
         assert ann.strip() == EN_PROPS_FILE_GOLD
 
