@@ -2,7 +2,6 @@
 Tests that call a running CoreNLPClient.
 """
 
-import os
 import pytest
 import stanfordnlp.server as corenlp
 import shlex
