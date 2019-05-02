@@ -5,9 +5,11 @@ Tests for starting a server in Python code
 import stanfordnlp.server as corenlp
 import time
 
+from tests import *
+
 EN_DOC = "Joe Smith lives in California."
 
-EN_DOC_DEFAULT_GOLD = """
+EN_PRELOAD_GOLD = """
 Sentence #1 (6 tokens):
 Joe Smith lives in California.
 
@@ -32,6 +34,19 @@ Joe Smith	PERSON
 California	STATE_OR_PROVINCE
 """.strip()
 
+EN_PROPS_FILE_GOLD = """
+Sentence #1 (6 tokens):
+Joe Smith lives in California.
+
+Tokens:
+[Text=Joe CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=NNP]
+[Text=Smith CharacterOffsetBegin=4 CharacterOffsetEnd=9 PartOfSpeech=NNP]
+[Text=lives CharacterOffsetBegin=10 CharacterOffsetEnd=15 PartOfSpeech=VBZ]
+[Text=in CharacterOffsetBegin=16 CharacterOffsetEnd=18 PartOfSpeech=IN]
+[Text=California CharacterOffsetBegin=19 CharacterOffsetEnd=29 PartOfSpeech=NNP]
+[Text=. CharacterOffsetBegin=29 CharacterOffsetEnd=30 PartOfSpeech=.]
+""".strip()
+
 
 def annotate_and_time(client, text, properties={}):
     """ Submit an annotation request and return how long it took """
@@ -41,11 +56,19 @@ def annotate_and_time(client, text, properties={}):
     return {'annotation': ann, 'start_time': start, 'end_time': end}
 
 
-def test_preload(server_id='test_server_start_preload'):
+def test_preload():
     """ Test that the default annotators load fully immediately upon server start """
     with corenlp.CoreNLPClient(server_id='test_server_start_preload') as client:
         # wait for annotators to load
         time.sleep(140)
         results = annotate_and_time(client, EN_DOC)
-        assert results['annotation'].strip() == EN_DOC_DEFAULT_GOLD
+        assert results['annotation'].strip() == EN_PRELOAD_GOLD
         assert results['end_time'] - results['start_time'] < 1.5
+
+
+def test_props_file():
+    """ Test starting the server with a props file """
+    with corenlp.CoreNLPClient(properties=SERVER_TEST_PROPS, server_id='test_server_start_props_file') as client:
+        ann = client.annotate(EN_DOC)
+        assert ann.strip() == EN_PROPS_FILE_GOLD
+
