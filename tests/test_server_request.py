@@ -108,16 +108,16 @@ def corenlp_client():
     client.stop()
 
 
-def test_basic():
+def test_basic(corenlp_client):
     ann = corenlp_client.annotate(EN_DOC, output_format="text")
     assert ann.strip() == EN_DOC_GOLD.strip()
 
 
-def test_properties_key():
+def test_properties_key(corenlp_client):
     ann = corenlp_client.annotate(properties_key='fr-custom')
     assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
 
 
-def test_lang_setting():
+def test_lang_setting(corenlp_client):
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
