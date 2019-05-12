@@ -39,7 +39,7 @@ MODEL_FILES = [TOKENIZE_MODEL, MWT_MODEL, POS_MODEL, POS_PRETRAIN, LEMMA_MODEL, 
 EN_KEY = 'en'
 EN_SHORTHAND = 'en_ewt'
 # models
-EN_MODELS_DIR = f'{TEST_WORKING_DIR}/{EN_SHORTHAND}_models'
+EN_MODELS_DIR = f'{TEST_WORKING_DIR}/models/{EN_SHORTHAND}_models'
 EN_MODEL_FILES = [f'{EN_MODELS_DIR}/{EN_SHORTHAND}_{model_fname}' for model_fname in MODEL_FILES]
 
 # French resources
@@ -50,7 +50,7 @@ FR_TEST_IN = f'{TEST_WORKING_DIR}/in/fr_gsd.test.txt'
 FR_TEST_OUT = f'{TEST_WORKING_DIR}/out/fr_gsd.test.txt.out'
 FR_TEST_GOLD_OUT = f'{TEST_WORKING_DIR}/out/fr_gsd.test.txt.out.gold'
 # models
-FR_MODELS_DIR = f'{TEST_WORKING_DIR}/{FR_SHORTHAND}_models'
+FR_MODELS_DIR = f'{TEST_WORKING_DIR}/models/{FR_SHORTHAND}_models'
 FR_MODEL_FILES = [f'{FR_MODELS_DIR}/{FR_SHORTHAND}_{model_fname}' for model_fname in MODEL_FILES]
 
 
