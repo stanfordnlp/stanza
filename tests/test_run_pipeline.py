@@ -30,5 +30,5 @@ def test_fr_pipeline():
     if os.path.exists(FR_TEST_OUT):
         curr_timestamp = re.sub(' ', '-', str(datetime.now()))
         os.rename(FR_TEST_OUT, f'{FR_TEST_OUT}-{curr_timestamp}')
-    safe_rm(FR_MODELS_DIR)
+    safe_rm(FR_MODELS_DOWNLOAD_DIR)
 
