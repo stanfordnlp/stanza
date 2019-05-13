@@ -12,7 +12,7 @@ from pathlib import Path
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
-DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models/'
+DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 
 # list of language shorthands
