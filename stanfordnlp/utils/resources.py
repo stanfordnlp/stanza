@@ -12,7 +12,8 @@ from pathlib import Path
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
-DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models/latest'
+DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models/'
+DEFAULT_DOWNLOAD_VERSION = 'latest'
 
 # list of language shorthands
 conll_shorthands = ['af_afribooms', 'ar_padt', 'bg_btb', 'bxr_bdt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'cu_proiel', 'da_ddt', 'de_gsd', 'el_gdt', 'en_ewt', 'en_gum', 'en_lines', 'es_ancora', 'et_edt', 'eu_bdt', 'fa_seraji', 'fi_ftb', 'fi_tdt', 'fr_gsd', 'fro_srcmf', 'fr_sequoia', 'fr_spoken', 'ga_idt', 'gl_ctg', 'gl_treegal', 'got_proiel', 'grc_perseus', 'grc_proiel', 'he_htb', 'hi_hdtb', 'hr_set', 'hsb_ufal', 'hu_szeged', 'hy_armtdp', 'id_gsd', 'it_isdt', 'it_postwita', 'ja_gsd', 'kk_ktb', 'kmr_mg', 'ko_gsd', 'ko_kaist', 'la_ittb', 'la_perseus', 'la_proiel', 'lv_lvtb', 'nl_alpino', 'nl_lassysmall', 'no_bokmaal', 'no_nynorsklia', 'no_nynorsk', 'pl_lfg', 'pl_sz', 'pt_bosque', 'ro_rrt', 'ru_syntagrus', 'ru_taiga', 'sk_snk', 'sl_ssj', 'sl_sst', 'sme_giella', 'sr_set', 'sv_lines', 'sv_talbanken', 'tr_imst', 'ug_udt', 'uk_iu', 'ur_udtb', 'vi_vtb', 'zh_gsd']
@@ -59,7 +60,8 @@ def load_config(config_file_path):
 
 
 # download a ud models zip file
-def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False, force=False):
+def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False, force=False,
+                      version=DEFAULT_DOWNLOAD_VERSION):
     # ask if user wants to download
     if resource_dir is not None and os.path.exists(os.path.join(resource_dir, f"{lang_name}_models")):
         if confirm_if_exists:
@@ -91,7 +93,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
         print('')
         print('Downloading models for: '+lang_name)
         model_zip_file_name = f'{lang_name}_models.zip'
-        download_url = f'{DEFAULT_MODELS_URL}/{model_zip_file_name}'
+        download_url = f'{DEFAULT_MODELS_URL}/{version}/{model_zip_file_name}'
         download_file_path = os.path.join(download_dir, model_zip_file_name)
         print('Download location: '+download_file_path)
 
@@ -125,11 +127,13 @@ def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
 
 
 # main download function
-def download(download_label, resource_dir=None, confirm_if_exists=False, force=False):
+def download(download_label, resource_dir=None, confirm_if_exists=False, force=False, version=DEFAULT_DOWNLOAD_VERSION):
     if download_label in conll_shorthands:
-        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force)
+        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force,
+                          version=version)
     elif download_label in default_treebanks:
         print(f'Using the default treebank "{default_treebanks[download_label]}" for language "{download_label}".')
-        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force)
+        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir,
+                          confirm_if_exists=confirm_if_exists, force=force, version=version)
     else:
         raise ValueError(f'The language or treebank "{download_label}" is not currently supported by this function. Please try again with other languages or treebanks.')
