@@ -7,17 +7,6 @@ import stanfordnlp
 from tests import *
 
 
-def setup_module(module):
-    """Set up resources for all tests in this module"""
-    safe_rm(FR_MODELS_DIR)
-    stanfordnlp.download('fr', resource_dir=TEST_WORKING_DIR, force=True)
-
-
-def teardown_module(module):
-    """Clean up resources after tests complete"""
-    safe_rm(FR_MODELS_DIR)
-
-
 # mwt data for testing
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \
                   "l'Industrie et du Numérique."
