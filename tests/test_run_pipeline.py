@@ -24,11 +24,12 @@ def test_fr_pipeline():
         f"python -m stanfordnlp.run_pipeline -l fr -d {DOWNLOAD_TEST_DIR} --force-download -o {FR_TEST_OUT} " \
         f"{FR_TEST_IN}"
     subprocess.call(fr_pipeline_cmd, shell=True)
-    assert open(FR_TEST_GOLD_OUT).read() == open(FR_TEST_OUT).read(), f'Test failure: output does not match gold'
     # cleanup
     # log this test run's final output
     if os.path.exists(FR_TEST_OUT):
         curr_timestamp = re.sub(' ', '-', str(datetime.now()))
         os.rename(FR_TEST_OUT, f'{FR_TEST_OUT}-{curr_timestamp}')
     safe_rm(FR_MODELS_DOWNLOAD_DIR)
+    assert open(FR_TEST_GOLD_OUT).read() == open(f'{FR_TEST_OUT}-{curr_timestamp}').read(), \
+        f'Test failure: output does not match gold'
 
