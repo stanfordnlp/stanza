@@ -8,17 +8,6 @@ import stanfordnlp
 from tests import *
 
 
-def setup_module(module):
-    """Set up resources for all tests in this module"""
-    safe_rm(EN_MODELS_DIR)
-    stanfordnlp.download('en', resource_dir=TEST_WORKING_DIR, force=True)
-
-
-def teardown_module(module):
-    """Clean up resources after tests complete"""
-    safe_rm(EN_MODELS_DIR)
-
-
 # data for testing
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."
 
