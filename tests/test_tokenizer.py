@@ -7,17 +7,6 @@ import stanfordnlp
 from tests import *
 
 
-def setup_module(module):
-    """Set up resources for all tests in this module"""
-    safe_rm(EN_MODELS_DIR)
-    stanfordnlp.download('en', resource_dir=TEST_WORKING_DIR, force=True)
-
-
-def teardown_module(module):
-    """Clean up resources after tests complete"""
-    safe_rm(EN_MODELS_DIR)
-
-
 EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
 
 EN_DOC_GOLD_TOKENS = """
