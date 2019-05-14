@@ -10,17 +10,6 @@ from stanfordnlp.pipeline.processor import ProcessorRequirementsException
 from tests import *
 
 
-def setup_module(module):
-    """ Set up resources for all tests in this module """
-    safe_rm(EN_MODELS_DIR)
-    stanfordnlp.download('en', resource_dir=TEST_WORKING_DIR, force=True)
-
-
-def teardown_module(module):
-    """ Clean up resources after tests complete """
-    safe_rm(EN_MODELS_DIR)
-
-
 def check_exception_vals(req_exception, req_exception_vals):
     """
     Check the values of a ProcessorRequirementsException against a dict of expected values.
