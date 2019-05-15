@@ -37,7 +37,10 @@ if __name__ == '__main__':
     else:
         output_file_path = args.output
     # map language code to treebank shorthand
-    treebank_shorthand = default_treebanks[args.language]
+    if len(args.language.split('_')) == 2:
+        treebank_shorthand = args.language
+    else:
+        treebank_shorthand = default_treebanks[args.language]
     # check for models
     print('checking for models...')
     lang_models_dir = '%s/%s_models' % (args.models_dir, treebank_shorthand)
