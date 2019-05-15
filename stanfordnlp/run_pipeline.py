@@ -17,6 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--models-dir', help='location of models files | default: ~/stanfordnlp_resources',
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--language', help='language of text | default: en', default='en')
+    parser.add_argument('-t', '--treebank', help='treebank to use | default: None', default=None)
     parser.add_argument('-o', '--output', help='output file path', default=None)
     parser.add_argument('-p', '--processors',
                         help='list of processors to run | default: "tokenize,mwt,pos,lemma,depparse"',
@@ -37,8 +38,8 @@ if __name__ == '__main__':
     else:
         output_file_path = args.output
     # map language code to treebank shorthand
-    if len(args.language.split('_')) == 2:
-        treebank_shorthand = args.language
+    if args.treebank is not None:
+        treebank_shorthand = args.treebank
     else:
         treebank_shorthand = default_treebanks[args.language]
     # check for models
@@ -46,11 +47,11 @@ if __name__ == '__main__':
     lang_models_dir = '%s/%s_models' % (args.models_dir, treebank_shorthand)
     if not os.path.exists(lang_models_dir):
         print('could not find: '+lang_models_dir)
-        download(args.language, resource_dir=args.models_dir, force=args.force_download)
+        download(treebank_shorthand, resource_dir=args.models_dir, force=args.force_download)
     # set up pipeline
     pipeline_config = \
         dict([(k, v) for k, v in vars(args).items() if k in PROCESSOR_SETTINGS_LIST and v is not None])
-    pipeline = Pipeline(processors=args.processors, lang=args.language, models_dir=args.models_dir, **pipeline_config)
+    pipeline = Pipeline(processors=args.processors, treebank=treebank_shorthand, models_dir=args.models_dir, **pipeline_config)
     # build document
     print('running pipeline...')
     doc = pipeline(open(args.text_file).read())
