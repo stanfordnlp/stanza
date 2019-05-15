@@ -84,6 +84,9 @@ def safe_rm(path_to_rm):
     2.) only remove things on approved list REMOVABLE_PATHS
     3.) assert no longer exists
     """
+    # just return if path doesn't exist
+    if not os.path.exists(path_to_rm):
+        return
     # handle directory
     if os.path.isdir(path_to_rm):
         files_to_rm = [f'{path_to_rm}/{fname}' for fname in os.listdir(path_to_rm)]
