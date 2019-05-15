@@ -80,7 +80,7 @@ EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 
 
 def test_tokenize():
-    nlp = stanfordnlp.Pipeline(processors='tokenize', models_dir=TEST_WORKING_DIR, lang='en')
+    nlp = stanfordnlp.Pipeline(processors='tokenize', models_dir=TEST_MODELS_DIR, lang='en')
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
