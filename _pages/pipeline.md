@@ -109,3 +109,12 @@ nlp = stanfordnlp.Pipeline(**config)
 doc = nlp('Joe Smith lives in California .\nHe loves pizza .')
 print(doc.conll_file.conll_as_string())
 ```
+
+You can also provide a list of lists representing sentences and tokens.  Make sure to still set the `tokenize_pretokenized` option to `True`.
+Each list will represent the tokens of a sentence.
+
+```
+pretokenized_text = [['hello', 'world'], ['hello', 'world', 'again']]
+doc = nlp(pretokenized_text)
+print(doc.conll_file.conll_as_string())
+```
