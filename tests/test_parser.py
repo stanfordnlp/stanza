@@ -21,6 +21,6 @@ EN_DOC_GOLD = """
 
 def test_parser():
     nlp = stanfordnlp.Pipeline(
-        **{'processors': 'tokenize,pos,lemma,depparse', 'models_dir': TEST_WORKING_DIR, 'lang': 'en'})
+        **{'processors': 'tokenize,pos,lemma,depparse', 'models_dir': TEST_MODELS_DIR, 'lang': 'en'})
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD == '\n\n'.join([sent.dependencies_string() for sent in doc.sentences])
