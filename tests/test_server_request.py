@@ -102,6 +102,41 @@ Constituency parse:
     (PUNC .)))
 """
 
+ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
+
+ES_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse', 'tokenize.language': 'es',
+            'pos.model': 'edu/stanford/nlp/models/pos-tagger/spanish/spanish-ud.tagger',
+            'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_Spanish.gz'}
+
+ES_PROPS_GOLD = """
+Sentence #1 (10 tokens):
+Andrés Manuel López Obrador es el presidente de México.
+
+Tokens:
+[Text=Andrés CharacterOffsetBegin=0 CharacterOffsetEnd=6 PartOfSpeech=PROPN]
+[Text=Manuel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=PROPN]
+[Text=López CharacterOffsetBegin=14 CharacterOffsetEnd=19 PartOfSpeech=PROPN]
+[Text=Obrador CharacterOffsetBegin=20 CharacterOffsetEnd=27 PartOfSpeech=PROPN]
+[Text=es CharacterOffsetBegin=28 CharacterOffsetEnd=30 PartOfSpeech=VERB]
+[Text=el CharacterOffsetBegin=31 CharacterOffsetEnd=33 PartOfSpeech=DET]
+[Text=presidente CharacterOffsetBegin=34 CharacterOffsetEnd=44 PartOfSpeech=NOUN]
+[Text=de CharacterOffsetBegin=45 CharacterOffsetEnd=47 PartOfSpeech=ADP]
+[Text=México CharacterOffsetBegin=48 CharacterOffsetEnd=54 PartOfSpeech=PROPN]
+[Text=. CharacterOffsetBegin=54 CharacterOffsetEnd=55 PartOfSpeech=PUNCT]
+
+Dependency Parse (enhanced plus plus dependencies):
+root(ROOT-0, es-5)
+nsubj(es-5, Andrés-1)
+name(Andrés-1, Manuel-2)
+name(Andrés-1, López-3)
+name(Andrés-1, Obrador-4)
+det(presidente-7, el-6)
+nsubj(es-5, presidente-7)
+case(México-9, de-8)
+nmod:de(presidente-7, México-9)
+punct(es-5, .-10)
+"""
+
 
 @pytest.fixture(scope="module")
 def corenlp_client():
@@ -120,6 +155,12 @@ def test_basic(corenlp_client):
     assert isinstance(ann, Document)
 
 
+def test_python_dict(corenlp_client):
+    """ Test using a Python dictionary to specify all request properties """
+    ann = corenlp_client.annotate(ES_DOC, properties=ES_PROPS, output_format="text")
+    assert ann.strip() == ES_PROPS_GOLD.strip()
+
+
 def test_properties_key(corenlp_client):
     """ Test using the properties_key which was registered with the properties cache """
     ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
@@ -130,3 +171,4 @@ def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
+
