@@ -375,7 +375,7 @@ class CoreNLPClient(RobustService):
             if properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
                 request_properties = {'pipelineLanguage': properties_key.lower()}
             else:
-                request_properties = self.properties_cache.get(properties_key, {})
+                request_properties = dict(self.properties_cache.get(properties_key, {}))
         else:
             request_properties = {}
         # add on custom properties for this request
