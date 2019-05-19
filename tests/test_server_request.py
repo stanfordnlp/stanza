@@ -61,6 +61,10 @@ FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.lang
                        'parse.model': 'edu/stanford/nlp/models/lexparser/frenchFactored.ser.gz',
                        'outputFormat': 'text'}
 
+FRENCH_EXTRA_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse',
+                      'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french-ud.tagger',
+                      'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_French.gz'}
+
 FRENCH_DOC = "Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt."
 
 FRENCH_CUSTOM_GOLD = """
@@ -100,6 +104,47 @@ Constituency parse:
               (NP (DET quelques) (NC jours))
               (ADV plus) (ADV tôt))))))
     (PUNC .)))
+"""
+
+FRENCH_EXTRA_GOLD = """
+Sentence #1 (16 tokens):
+Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt.
+
+Tokens:
+[Text=Cette CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=DET]
+[Text=enquête CharacterOffsetBegin=6 CharacterOffsetEnd=13 PartOfSpeech=NOUN]
+[Text=préliminaire CharacterOffsetBegin=14 CharacterOffsetEnd=26 PartOfSpeech=ADJ]
+[Text=fait CharacterOffsetBegin=27 CharacterOffsetEnd=31 PartOfSpeech=VERB]
+[Text=suite CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=NOUN]
+[Text=à CharacterOffsetBegin=38 CharacterOffsetEnd=39 PartOfSpeech=ADP]
+[Text=les CharacterOffsetBegin=39 CharacterOffsetEnd=41 PartOfSpeech=DET]
+[Text=révélations CharacterOffsetBegin=42 CharacterOffsetEnd=53 PartOfSpeech=NOUN]
+[Text=de CharacterOffsetBegin=54 CharacterOffsetEnd=56 PartOfSpeech=ADP]
+[Text=l' CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=DET]
+[Text=hebdomadaire CharacterOffsetBegin=59 CharacterOffsetEnd=71 PartOfSpeech=NOUN]
+[Text=quelques CharacterOffsetBegin=72 CharacterOffsetEnd=80 PartOfSpeech=DET]
+[Text=jours CharacterOffsetBegin=81 CharacterOffsetEnd=86 PartOfSpeech=NOUN]
+[Text=plus CharacterOffsetBegin=87 CharacterOffsetEnd=91 PartOfSpeech=ADV]
+[Text=tôt CharacterOffsetBegin=92 CharacterOffsetEnd=95 PartOfSpeech=ADV]
+[Text=. CharacterOffsetBegin=95 CharacterOffsetEnd=96 PartOfSpeech=PUNCT]
+
+Dependency Parse (enhanced plus plus dependencies):
+root(ROOT-0, fait-4)
+det(enquête-2, Cette-1)
+nsubj(fait-4, enquête-2)
+amod(enquête-2, préliminaire-3)
+dobj(fait-4, suite-5)
+case(révélations-8, à-6)
+det(révélations-8, les-7)
+nmod:à(suite-5, révélations-8)
+case(hebdomadaire-11, de-9)
+det(hebdomadaire-11, l'-10)
+nmod:de(révélations-8, hebdomadaire-11)
+det(jours-13, quelques-12)
+nmod(fait-4, jours-13)
+advmod(tôt-15, plus-14)
+advmod(jours-13, tôt-15)
+punct(fait-4, .-16)
 """
 
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
@@ -161,6 +206,12 @@ def test_python_dict(corenlp_client):
     assert ann.strip() == ES_PROPS_GOLD.strip()
 
 
+def test_properties_key_and_python_dict(corenlp_client):
+    """ Test using a properties key and additional properties """
+    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom', properties=FRENCH_EXTRA_PROPS)
+    assert ann.strip() == FRENCH_EXTRA_GOLD.strip()
+
+
 def test_properties_key(corenlp_client):
     """ Test using the properties_key which was registered with the properties cache """
     ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
@@ -171,4 +222,5 @@ def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
+
 
