@@ -2,6 +2,7 @@
 Tests for setting request properties of servers
 """
 
+import json
 import pytest
 import stanfordnlp.server as corenlp
 
@@ -147,6 +148,8 @@ advmod(jours-13, tôt-15)
 punct(fait-4, .-16)
 """
 
+FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json').read())
+
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 
 ES_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse', 'tokenize.language': 'es',
@@ -218,9 +221,27 @@ def test_properties_key(corenlp_client):
     assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
 
 
+def test_switching_back_and_forth(corenlp_client):
+    """ Test using a properties key, then properties key with python dict, then back to just properties key """
+    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
+    assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
+    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom', properties=FRENCH_EXTRA_PROPS)
+    assert ann.strip() == FRENCH_EXTRA_GOLD.strip()
+    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
+    assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
+
+
 def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
     assert ann.strip() == GERMAN_DOC_GOLD.strip()
+
+
+def test_annotators_and_output_format(corenlp_client):
+    """ Test setting the annotators and output_format """
+    ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_EXTRA_PROPS,
+                                  annotators="tokenize,ssplit,pos", output_format="json")
+    assert FRENCH_JSON_GOLD == ann
+
 
 
