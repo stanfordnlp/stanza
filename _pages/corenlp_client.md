@@ -175,7 +175,7 @@ with CoreNLPClient(properties='french') as client:
 
 ##### Specify a Python dictionary
 ```
-with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'})
+with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'}) as client:
 ```
 
 ## CoreNLP Client Options
