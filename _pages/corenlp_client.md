@@ -262,6 +262,6 @@ ann = client.annotate(text, properties='german')
 
 #### Specify annotators and output_format
 ```python
-ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json'
+ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json')
 ```
 
