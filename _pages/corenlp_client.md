@@ -251,7 +251,7 @@ During initialization, a `CoreNLPClient` object accepts the following options as
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| annotators | str | "tokenize,ssplit,lemma,pos,ner,depparse" | The default list of CoreNLP annotators the server will use` |
+| annotators | str | "tokenize,ssplit,lemma,pos,ner,depparse" | The default list of CoreNLP annotators the server will use |
 | properties | dict | `empty` | This allows you to specify the detailed CoreNLP annotation properties as a Python `dict` object. For example, setting `{"tokenize.language": "en", "tokenize.options": "ptb3Escaping=false"}` will specify an English tokenizer and disable PTB escaping. For all available properties, please see the [CoreNLP annotators page](https://stanfordnlp.github.io/CoreNLP/annotators.html). |
 | endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on. |
 | timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
