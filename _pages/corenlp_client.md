@@ -182,6 +182,32 @@ with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model':
 with CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner', output_format='text') as client:
 ```
 
+### Stanford CoreNLP Server Settings
+In addition to setting properties for the pipeline used by the Stanford CoreNLP server, there are also a variety of settings
+for the server itself.  The table below describes these settings:
+
+| Option |  Description |
+| --- | --- |
+| server_id | ID for the server, label attached to server's shutdown key file |
+| status_port | port to server status check endpoints |
+| uriContext | URI context for server |
+| strict | obey strict HTTP standards |
+| ssl | if true, start server with (an insecure) SSL connection |
+| key | .jks file to load if ssl is enabled |
+| username | The username component of a username/password basic auth credential |
+| password | The password component of a username/password basic auth credential |
+| preload | load this list of annotators immediately at server launch |
+| blacklist | a list of IPv4 addresses to ban from using the server |
+
+All of these options can be set with `CoreNLPClient`'s `init` method.
+
+There is more documention [here](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html) for the server's start up options.
+
+#### Specify username and password for your server
+```
+with CoreNLPClient(username='myusername', password='1234') as client:
+```
+
 ## CoreNLP Client Options
 During initialization, a `CoreNLPClient` object accepts the following options as arguments:
 
