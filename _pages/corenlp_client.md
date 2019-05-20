@@ -208,12 +208,50 @@ There is more documention [here](https://stanfordnlp.github.io/CoreNLP/corenlp-s
 with CoreNLPClient(username='myusername', password='1234') as client:
 ```
 
+### Request Properties
+
+Properties for the StanfordCoreNLP pipeline run on text can be set for each request.
+If the request has properties, these will override the server's defaults.
+
+The client maintains a `properties_cache` to map keys to particular property settings.
+Or a Stanford CoreNLP support language can be specified to use the language defaults, or
+a full Python dictionary.
+
+The following code examples below show examples of specifying request properties.
+
+#### Register a set of properties with the client's properties_cache, use key
+```
+FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
+                       'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french.tagger',
+                       'parse.model': 'edu/stanford/nlp/models/lexparser/frenchFactored.ser.gz',
+                       'outputFormat': 'text'}
+
+with CoreNLPClient(annotators='tokenize,ssplit,pos') as client:
+    client.register_properties_key('fr-custom', FRENCH_CUSTOM_PROPS)
+    ann = client.annotate(text, properties_key='fr-custom')
+```
+
+#### Set request properties as a Python dictionary
+```
+ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
+```
+
+#### Specify a StanfordCoreNLP supported language
+```
+ann = client.annotate(text, properties='german')
+```
+
+#### Specify annotators and output_format
+```
+ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json'
+```
+
 ## CoreNLP Client Options
 During initialization, a `CoreNLPClient` object accepts the following options as arguments:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| annotators | list | ["tokenize", "ssplit", "lemma", "pos", "ner", "depparse"] | The default list of CoreNLP annotators to run for a request, unless otherwise specified in the call to `annotate()`. |
+| annotators | str | "tokenize,ssplit,lemma,pos,ner,depparse" | The default list of CoreNLP annotators the server will use` |
 | properties | dict | `empty` | This allows you to specify the detailed CoreNLP annotation properties as a Python `dict` object. For example, setting `{"tokenize.language": "en", "tokenize.options": "ptb3Escaping=false"}` will specify an English tokenizer and disable PTB escaping. For all available properties, please see the [CoreNLP annotators page](https://stanfordnlp.github.io/CoreNLP/annotators.html). |
 | endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on. |
 | timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
