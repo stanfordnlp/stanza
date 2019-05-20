@@ -177,6 +177,11 @@ with CoreNLPClient(properties='french') as client:
 with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'}) as client:
 ```
 
+#### Specify annotators and output_format
+```
+with CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner', output_format='text') as client:
+```
+
 ## CoreNLP Client Options
 During initialization, a `CoreNLPClient` object accepts the following options as arguments:
 
