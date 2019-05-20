@@ -144,7 +144,7 @@ the server launches.
 Below are a collection of specific examples to demonstrate different ways to customize the server at start time
 or set specific properties for requests.
 
-#### Customize Server Start
+### Customize Server Start
 
 When a StanfordCoreNLP Server is started it contains a set of default properties that define it's default pipeline.
 This is the pipeline that will run if no request properties are specified.
@@ -162,17 +162,17 @@ If not using the file path or language name option, one can also specify which `
 
 Below are code examples to illustrate all of this:
 
-##### Specify a properties file
+#### Specify a properties file
 ```
 with CoreNLPClient(properties='/path/to/server.props') as client:
 ```
 
-##### Specify a Stanford CoreNLP supported language
+#### Specify a Stanford CoreNLP supported language
 ```
 with CoreNLPClient(properties='french') as client:
 ```
 
-##### Specify a Python dictionary
+#### Specify a Python dictionary
 ```
 with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'}) as client:
 ```
