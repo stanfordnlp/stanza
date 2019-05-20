@@ -17,7 +17,10 @@ StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a serve
 ## Usage
 
 After the above steps have been taken, you can start up the server and make requests in Python code.
-Below is a comprehensive example of starting a server, making requests, and accessing data from the returned object.
+Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object.
+
+Note: It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
+the server is properly shut down when your Python application finishes.
 
 ```python
 from stanfordnlp.server import CoreNLPClient
@@ -114,6 +117,65 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner', 'parse',
     matches["sentences"][1]["0"]["text"] == "wrote"
     matches["sentences"][1]["0"]["$subject"]["text"] == "Chris"
     matches["sentences"][1]["0"]["$object"]["text"] == "sentence"
+```
+
+## Customizing Properties For Server Start And Requests
+
+There are a variety of ways to set properties for the server at start time.  Also, each request can have properties.
+For example, if your application may receive German or French input, you could start the server with the default
+German properties and you could send requests for French text with the default French properties, and alternate
+back and forth depending on the input text language.  You could also imagine having one pipeline
+
+For context, the Java server takes in requests, runs a StanfordCoreNLP pipeline, and sends a response.
+Annotators within a pipeline often use models to perform their work (e.g. a part-of-speech tagging model or
+a dependency parsing model).  For efficiency, the server maintains two caches.  One for the models (so they only
+have to be loaded once) and one for already built StanfordCoreNLP pipelines.  
+
+The server actually maintains two caches, one for the models, and one for pre-built Stanford CoreNLP pipelines.
+Loading models takes a significant amount of time (potentially on the order of a minute in some cases).  But
+building a pipeline can also take some time (on the order of a half second).  So throughput would be significantly
+impacted if pipelines were built per request.  The server will keep around pipelines with particular configurations
+to avoid this penalty.  The first request using a particular model or pipeline configuration will have delay
+associated with loading the model or building the pipeline.  But future requests should not have this delay.
+
+To avoid the first request having a long delay, one can use the `preload` option to load a set of models when
+the server launches.
+
+Below are a collection of specific examples to demonstrate different ways to customize the server at start time
+or set specific properties for requests.
+
+#### Customize Server Start
+
+When a StanfordCoreNLP Server is started it contains a set of default properties that define it's default pipeline.
+This is the pipeline that will run if no request properties are specified.
+
+The following values can be supplied to the `properties` argument for `CoreNLPClient`'s `init` method:
+
+| Option | Example | Description |
+| --- | --- | --- |
+| file path | /path/to/server.props | Path on the file system or CLASSPATH to a properties file |
+| Stanford CoreNLP supported language | french | One of {arabic, chinese, english, french, german, spanish}, this will use Stanford CoreNLP defaults for that language |
+| Python dictionary | {'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'} | A Python dictionary specifying the properties, the properties
+will be written to a tmp file |
+
+If not using the file path or language name option, one can also specify which `annotators` to use and the desired `outputFormat` with the
+`annotators` and `output_format` args to `CoreNLPClient`'s `init` method.
+
+Below are code examples to illustrate all of this:
+
+##### Specify a properties file
+```
+with CoreNLPClient(properties='/path/to/server.props') as client:
+```
+
+##### Specify a Stanford CoreNLP supported language
+```
+with CoreNLPClient(properties='french') as client:
+```
+
+##### Specify a Python dictionary
+```
+with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'})
 ```
 
 ## CoreNLP Client Options
