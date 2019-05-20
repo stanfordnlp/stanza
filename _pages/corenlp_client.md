@@ -155,8 +155,7 @@ The following values can be supplied to the `properties` argument for `CoreNLPCl
 | --- | --- | --- |
 | file path | /path/to/server.props | Path on the file system or CLASSPATH to a properties file |
 | Stanford CoreNLP supported language | french | One of {arabic, chinese, english, french, german, spanish}, this will use Stanford CoreNLP defaults for that language |
-| Python dictionary | {'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'} | A Python dictionary specifying the properties, the properties
-will be written to a tmp file |
+| Python dictionary | {'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'} | A Python dictionary specifying the properties, the properties will be written to a tmp file |
 
 If not using the file path or language name option, one can also specify which `annotators` to use and the desired `outputFormat` with the
 `annotators` and `output_format` args to `CoreNLPClient`'s `init` method.
