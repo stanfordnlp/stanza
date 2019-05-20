@@ -163,22 +163,22 @@ If not using the file path or language name option, one can also specify which `
 Below are code examples to illustrate all of this:
 
 #### Specify a properties file
-```
+```python
 with CoreNLPClient(properties='/path/to/server.props') as client:
 ```
 
 #### Specify a Stanford CoreNLP supported language
-```
+```python
 with CoreNLPClient(properties='french') as client:
 ```
 
 #### Specify a Python dictionary
-```
+```python
 with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'}) as client:
 ```
 
 #### Specify annotators and output_format
-```
+```python
 with CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner', output_format='text') as client:
 ```
 
@@ -204,7 +204,7 @@ All of these options can be set with `CoreNLPClient`'s `init` method.
 There is more documention [here](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html) for the server's start up options.
 
 #### Specify username and password for your server
-```
+```python
 with CoreNLPClient(username='myusername', password='1234') as client:
 ```
 
@@ -220,7 +220,7 @@ a full Python dictionary.
 The following code examples below show examples of specifying request properties.
 
 #### Register a set of properties with the client's properties_cache, use key
-```
+```python
 FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
                        'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french.tagger',
                        'parse.model': 'edu/stanford/nlp/models/lexparser/frenchFactored.ser.gz',
@@ -232,17 +232,17 @@ with CoreNLPClient(annotators='tokenize,ssplit,pos') as client:
 ```
 
 #### Set request properties as a Python dictionary
-```
+```python
 ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
 ```
 
 #### Specify a StanfordCoreNLP supported language
-```
+```python
 ann = client.annotate(text, properties='german')
 ```
 
 #### Specify annotators and output_format
-```
+```python
 ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json'
 ```
 
