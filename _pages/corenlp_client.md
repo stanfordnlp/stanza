@@ -266,3 +266,8 @@ ann = client.annotate(text, properties='german')
 ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json')
 ```
 
+#### Submit a username and password
+
+```python
+ann = client.annotate(text, username='myusername', password='1234')
+```
