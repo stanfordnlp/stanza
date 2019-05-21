@@ -28,6 +28,7 @@ SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 LANGUAGE_SHORTHANDS_TO_FULL = {
     "ar": "arabic",
     "zh": "chinese",
+    "en": "english",
     "fr": "french",
     "de": "german",
     "es": "spanish"
@@ -36,9 +37,32 @@ LANGUAGE_SHORTHANDS_TO_FULL = {
 LANGUAGE_DEFAULT_ANNOTATORS = {
     "arabic": "tokenize,ssplit,pos,parse",
     "chinese": "tokenize,ssplit,pos,lemma,ner,parse,coref",
+    "english": "tokenize,ssplit,pos,lemma,ner,depparse",
     "french": "tokenize,ssplit,pos,depparse",
     "german": "tokenize,ssplit,pos,ner,parse",
     "spanish": "tokenize,ssplit,pos,lemma,ner,depparse,kbp"
+}
+
+ENGLISH_DEFAULT_REQUEST_PROPERTIES = {
+    "annotators": "tokenize,ssplit,pos,lemma,ner,depparse",
+    "tokenize.language": "en",
+    "pos.model": "edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger",
+    "ner.model": "edu/stanford/nlp/models/ner/english.all.3class.distsim.crf.ser.gz,"
+                 "edu/stanford/nlp/models/ner/english.muc.7class.distsim.crf.ser.gz,"
+                 "edu/stanford/nlp/models/ner/english.conll.4class.distsim.crf.ser.gz",
+    "sutime.language": "english",
+    "sutime.rules": "edu/stanford/nlp/models/sutime/defs.sutime.txt,"
+                    "edu/stanford/nlp/models/sutime/english.sutime.txt,"
+                    "edu/stanford/nlp/models/sutime/english.holidays.sutime.txt",
+    "ner.applyNumericClassifiers": "true",
+    "ner.useSUTime": "true",
+
+    "ner.fine.regexner.mapping": "ignorecase=true,validpospattern=^(NN|JJ).*,"
+                                 "edu/stanford/nlp/models/kbp/regexner_caseless.tab;",
+                                 "edu/stanford/nlp/models/kbp/regexner_cased.tab"
+    "ner.fine.regexner.noDefaultOverwriteLabels": "CITY",
+    "ner.language": "en",
+    "depparse.model": "edu/stanford/nlp/models/parser/nndep/english_UD.gz"
 }
 
 
@@ -244,7 +268,10 @@ class CoreNLPClient(RobustService):
                 lang_name = properties.lower()
                 if lang_name in LANGUAGE_SHORTHANDS_TO_FULL:
                     lang_name = LANGUAGE_SHORTHANDS_TO_FULL[lang_name]
-                self.server_props_file['path'] = f'StanfordCoreNLP-{lang_name}.properties'
+                if lang_name in ['en', 'english']:
+                    self.server_props_file['path'] = f'StanfordCoreNLP.properties'
+                else:
+                    self.server_props_file['path'] = f'StanfordCoreNLP-{lang_name}.properties'
                 self.server_start_info['preload_annotators'] = LANGUAGE_DEFAULT_ANNOTATORS[lang_name]
                 print(f"Using Stanford CoreNLP default properties for: {lang_name}.  Make sure to have {lang_name} "
                       f"models jar (available for download here: https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
@@ -372,7 +399,9 @@ class CoreNLPClient(RobustService):
         # first look for a cached default properties set
         # if a Stanford CoreNLP supported language is specified, just pass {pipelineLanguage="french"}
         if properties_key is not None:
-            if properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
+            if properties_key.lower() in ['en', 'english']:
+                request_properties = dict(ENGLISH_DEFAULT_REQUEST_PROPERTIES)
+            elif properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
                 request_properties = {'pipelineLanguage': properties_key.lower()}
             else:
                 request_properties = dict(self.properties_cache.get(properties_key, {}))
