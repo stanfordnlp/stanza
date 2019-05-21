@@ -58,8 +58,8 @@ ENGLISH_DEFAULT_REQUEST_PROPERTIES = {
     "ner.useSUTime": "true",
 
     "ner.fine.regexner.mapping": "ignorecase=true,validpospattern=^(NN|JJ).*,"
-                                 "edu/stanford/nlp/models/kbp/regexner_caseless.tab;",
-                                 "edu/stanford/nlp/models/kbp/regexner_cased.tab"
+                                 "edu/stanford/nlp/models/kbp/english/gazetteers/regexner_caseless.tab;",
+                                 "edu/stanford/nlp/models/kbp/english/gazetteers/regexner_cased.tab"
     "ner.fine.regexner.noDefaultOverwriteLabels": "CITY",
     "ner.language": "en",
     "depparse.model": "edu/stanford/nlp/models/parser/nndep/english_UD.gz"
