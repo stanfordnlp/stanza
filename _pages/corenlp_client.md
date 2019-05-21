@@ -151,7 +151,7 @@ During initialization, a `CoreNLPClient` object accepts the following options as
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | annotators | str | "tokenize,ssplit,lemma,pos,ner,depparse" | The default list of CoreNLP annotators the server will use |
-| properties | dict | `empty` | See "Customize Server Start" section below |
+| properties | - | None | See "Customize Server Start" section below |
 | endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on. |
 | timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
 | threads | int | 5 | The number of threads to hit the server with. If, for example, the server is running on an 8 core machine, you can specify this to be 8, and the client will allow you to make 8 simultaneous requests to the server. |
