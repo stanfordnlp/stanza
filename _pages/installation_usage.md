@@ -1,7 +1,7 @@
 ---
 title: Installation & Model Download
 keywords: installation-download
-permalink: '/installation_download.html'
+permalink: '/installation_usage.html'
 ---
 
 ## Getting started
