@@ -117,7 +117,7 @@ Below is a list of all of the (human) languages supported by StanfordNLP (throug
 ### Models History
 
 Models from earlier releases can be downloaded using the version argument.  Note that not every release
-has a distinct model.
+has a distinct model set.
 
 ```python
 >>> import stanfordnlp
