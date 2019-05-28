@@ -38,7 +38,7 @@ To see StanfordNLP's neural pipeline in action, you can launch the Python intera
 >>> doc.sentences[0].print_dependencies()
 ```
 
-At the end, you should be able to see the dependency parse of the first sentence in the example. For more details, please see our [getting started guide](installation_download.md#getting-started).
+At the end, you should be able to see the dependency parse of the first sentence in the example. For more details, please see our [getting started guide](installation_usage.md#getting-started).
 
 Aside from the neural pipeline, StanfordNLP also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. To use it, you first need to set up the CoreNLP package as follows
 
@@ -48,7 +48,7 @@ Aside from the neural pipeline, StanfordNLP also provides the official Python wr
 
 After CoreNLP is set up, you can follow our [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) to test it out.
 
-**Note**: If you run into issues during installation or when you run the example scripts, please check out [this troubleshooting page](installation_download.md#troubleshooting). If you cannot find your issue there, please report it to us on GitHub.
+**Note**: If you run into issues during installation or when you run the example scripts, please check out [this troubleshooting page](installation_usage.md#troubleshooting). If you cannot find your issue there, please report it to us on GitHub.
 
 
 ## License
