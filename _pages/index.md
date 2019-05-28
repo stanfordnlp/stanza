@@ -72,3 +72,9 @@ If you use the StanfordNLP neural pipeline in your work, please cite this paper:
 > Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch](https://nlp.stanford.edu/pubs/qi2018universal.pdf) In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]
 
 If you use Stanford CoreNLP through the StanfordNLP python client, please follow the instructions [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) to cite the proper publications.
+
+## Links
+
+* [GitHub](https://github.com/stanfordnlp/stanfordnlp)
+* [PyPI](https://pypi.org/project/stanfordnlp/)
+* [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
