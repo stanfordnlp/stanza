@@ -20,7 +20,7 @@ StanfordNLP features:
 * Pretrained neural models supporting [53 (human) languages featured in 73 treebanks](installation_download.md#human-languages-supported-by-stanfordnlp);
 * A stable, officially maintained Python interface to CoreNLP.
 
-## Installation
+## Get Started
 
 We strongly recommend installing StanfordNLP with `pip`, which is as simple as
 
