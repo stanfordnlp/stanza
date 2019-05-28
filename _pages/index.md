@@ -17,7 +17,7 @@ StanfordNLP features:
 
 * Native Python implementation requiring minimal efforts to set up;
 * Full neural network pipeline for robust text analytics, including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
-* Pretrained neural models supporting [53 (human) languages featured in 73 treebanks](installation_download.md#human-languages-supported-by-stanfordnlp);
+* Pretrained neural models supporting [53 (human) languages featured in 73 treebanks](models.md#human-languages-supported-by-stanfordnlp);
 * A stable, officially maintained Python interface to CoreNLP.
 
 ## Get Started
