@@ -116,7 +116,15 @@ Below is a list of all of the (human) languages supported by StanfordNLP (throug
 
 ### Models History
 
-Models from earlier releases can be accessed here.
+Models from earlier releases can be downloaded using the version argument.  Note that not every release
+has a distinct model.
+
+```python
+>>> import stanfordnlp
+>>> stanfordnlp.download('ar', version='0.1.0')  
+```
+
+Models from earlier releases can also be found in the table below.
 
 | Language | Treebank | Language code | Treebank code | Models |
 | :------- | :------- | :------------ | :------------ | :----- | 
