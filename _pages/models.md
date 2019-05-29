@@ -8,16 +8,16 @@ permalink: '/models.html'
 
 ### Downloading and Using Models
 
-Downloading models for human languages of your interest for use in the StanfordNLP pipeline is as simple as
+Downloading a language pack (a set of machine learning models for a human language that you wish to use in the StanfordNLP pipeline) is as simple as
 
 ```python
 >>> import stanfordnlp
 >>> stanfordnlp.download('ar')    # replace "ar" with the language code or treebank code you need, see below
 ```
 
-The language code or treebank code can be looked up in the next section. If only the language code is specified, we will download the default models for that language (indicated by <i class="fas fa-check" style="color:#33a02c"></i> in the table), which are the models trained on the largest treebank available in that language. If you really care about the models of a specific treebank, you can also download the corresponding models with the treebank code.
+The language code or treebank code can be looked up in the next section. If only the language code is specified, we will download the default models for that language. If you are seeking the language pack built from a specific treebank, you can download the corresponding models with the appropriate treebank code.
 
-To use the default model for any language, simply build the pipeline as follows
+To use the default language pack for any language, simply build the pipeline as follows
 
 ```python
 >>> nlp = stanfordnlp.Pipeline(lang="es")    # replace "es" with the language of interest
@@ -31,12 +31,15 @@ If you are using a non-default treebank for the langauge, make sure to also spec
 
 ### Human Languages Supported by StanfordNLP
 
-Below is a list of all of the (human) languages supported by StanfordNLP (through its neural pipeline). The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
+Below is a list of all the (human) languages supported by StanfordNLP (through its neural pipeline). The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
 
-**Note**
+**Notes**
 
-1. Models marked with <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> have significantly low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Any use of these models for serious syntactical analysis is strongly discouraged.
-2. <i class="fas fa-flag" style="color:#fdae61"></i> marks models that are at least 1% absolute UAS worse than the full neural pipeline presented in [our paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf) (which uses the [Tensorflow counterparts](https://github.com/tdozat/Parser-v3) for the tagger and the parser), so that might raise a yellow flag.
+1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
+2. <i class="fas fa-flag" style="color:#fdae61"></i> marks models that are at least 1% absolute UAS worse than the full neural pipeline presented in [our paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf) (which uses the [Tensorflow counterparts](https://github.com/tdozat/Parser-v3) for the tagger and the parser), so that might raise a yellow flag for people wishing to do parser comparison experiments, but in general these models are fine for using in syntactic analysis.
+3. <i class="fas fa-check" style="color:#33a02c"></i> marks the default models for a language, which is the model trained on the largest treebank available in that language.
+4. The copyright and licensing status of machine learning models is not very clear (to us). We list in the table below the Treebank License of the underlying data from which each language pack (set of machine learning models for a treebank) was trained. To the extent that The Trustees of Leland Stanford Junior University have ownership and rights over these language packs, all these StanfordNLP language packs are made available under the [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
+
 
 | Language | Treebank | Language code | Treebank code | Models | Version | Treebank License | Treebank Doc |  Notes |
 | :------- | :------- | :------------ | :------------ | :----- | :------ | :--------------: | :-----------: | :---- |
