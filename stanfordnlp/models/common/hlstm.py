@@ -36,9 +36,9 @@ class HLSTMCell(nn.modules.rnn.RNNCellBase):
         # vanilla LSTM computation
         rec_input = torch.cat([input, hx[0]], 1)
         i = F.sigmoid(self.Wi(rec_input))
-        f = F.sigmoid(self.Wi(rec_input))
-        o = F.sigmoid(self.Wi(rec_input))
-        g = F.tanh(self.Wi(rec_input))
+        f = F.sigmoid(self.Wf(rec_input))
+        o = F.sigmoid(self.Wo(rec_input))
+        g = F.tanh(self.Wg(rec_input))
 
         # highway gates
         gate = F.sigmoid(self.gate(torch.cat([c_l_minus_one, hx[1], input], 1)))
