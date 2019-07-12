@@ -86,7 +86,7 @@ We also provide a multilingual [demo script](https://github.com/stanfordnlp/stan
 python demo/pipeline_demo.py -l zh
 ```
 
-See [our getting started guide](https://stanfordnlp.github.io/stanfordnlp/installation_download.html#getting-started) for more details.
+See [our getting started guide](https://stanfordnlp.github.io/stanfordnlp/installation_usage.html#getting-started) for more details.
 
 ### Access to Java Stanford CoreNLP Server
 
@@ -103,7 +103,7 @@ We provide another [demo script](https://github.com/stanfordnlp/stanfordnlp/blob
 
 ### Trained Models for the Neural Pipeline
 
-We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanfordnlp/installation_download.html#models-for-human-languages).
+We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanfordnlp/models.html).
 
 ### Batching To Maximize Pipeline Speed
 
