@@ -39,11 +39,16 @@ Please use the following channels for questions and issue reports.
 
 ## Setup
 
-StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
+StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run:
 ```bash
 pip install stanfordnlp
 ```
 this should also help resolve all of the dependencies of StanfordNLP, for instance [PyTorch](https://pytorch.org/) 1.0.0 or above.
+
+If you currently have a previous version of `stanfordnlp` installed, use:
+```bash
+pip install stanfordnlp -U
+```
 
 Alternatively, you can also install from source of this git repository, which will give you more flexibility in developing on top of StanfordNLP and training your own models. For this option, run
 ```bash
