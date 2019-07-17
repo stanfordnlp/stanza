@@ -198,7 +198,7 @@ def load_conllu(file):
                 if word.parent is None:
                     head = int(word.columns[HEAD])
                     if head < 0 or head > len(ud.words) - sentence_start:
-                        raise UDError("HEAD '{}' points outside of the sentence".format(_encode(word.columns[HEAD])))
+                        raise UDError(f"HEAD '{_encode(word.columns[HEAD])}' points outside of the sentence")
                     if head:
                         parent = ud.words[sentence_start + head - 1]
                         word.parent = "remapping"
@@ -225,7 +225,7 @@ def load_conllu(file):
         # Read next token/word
         columns = line.split("\t")
         if len(columns) != 10:
-            raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(line)))
+            raise UDError(f"The CoNLL-U line does not contain 10 tab-separated columns: '{_encode(line)}'"
 
         # Skip empty nodes
         if "." in columns[ID]:
@@ -248,28 +248,27 @@ def load_conllu(file):
             try:
                 start, end = map(int, columns[ID].split("-"))
             except:
-                raise UDError("Cannot parse multi-word token ID '{}'".format(_encode(columns[ID])))
+                raise UDError(f"Cannot parse multi-word token ID '{_encode(columns[ID])}'")
 
             for _ in range(start, end + 1):
                 word_line = _decode(file.readline().rstrip("\r\n"))
                 word_columns = word_line.split("\t")
                 if len(word_columns) != 10:
-                    raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(word_line)))
+                    raise UDError(f"The CoNLL-U line does not contain 10 tab-separated columns: '{_encode(word_line)}'")
                 ud.words.append(UDWord(ud.tokens[-1], word_columns, is_multiword=True))
         # Basic tokens/words
         else:
             try:
                 word_id = int(columns[ID])
             except:
-                raise UDError("Cannot parse word ID '{}'".format(_encode(columns[ID])))
+                raise UDError(f"Cannot parse word ID '{_encode(columns[ID])}'")
             if word_id != len(ud.words) - sentence_start + 1:
-                raise UDError("Incorrect word ID '{}' for word '{}', expected '{}'".format(
-                    _encode(columns[ID]), _encode(columns[FORM]), len(ud.words) - sentence_start + 1))
+                raise UDError(f"Incorrect word ID '{_encode(columns[ID])}' for word '{_encode(columns[FORM])}', expected '{len(ud.words) - sentence_start + 1}'")
 
             try:
                 head_id = int(columns[HEAD])
             except:
-                raise UDError("Cannot parse HEAD '{}'".format(_encode(columns[HEAD])))
+                raise UDError(f"Cannot parse HEAD '{_encode(columns[HEAD])}'")
             if head_id < 0:
                 raise UDError("HEAD cannot be negative")
 
@@ -439,11 +438,10 @@ def evaluate(gold_ud, system_ud):
             index += 1
 
         raise UDError(
+            f20char = "".join(map(_encode, gold_ud.characters[index:index + 20]))
+            sfile = "".join(map(_encode, system_ud.characters[index:index + 20]))
             "The concatenation of tokens in gold file and in system file differ!\n" +
-            "First 20 differing characters in gold file: '{}' and system file: '{}'".format(
-                "".join(map(_encode, gold_ud.characters[index:index + 20])),
-                "".join(map(_encode, system_ud.characters[index:index + 20]))
-            )
+            "First 20 differing characters in gold file: '{f20char}' and system file: '{sfile}'"
         )
 
     # Align words
@@ -501,9 +499,9 @@ def main():
 
     # Print the evaluation
     if not args.verbose and not args.counts:
-        print("LAS F1 Score: {:.2f}".format(100 * evaluation["LAS"].f1))
-        print("MLAS Score: {:.2f}".format(100 * evaluation["MLAS"].f1))
-        print("BLEX Score: {:.2f}".format(100 * evaluation["BLEX"].f1))
+        print(f"LAS F1 Score: {100 * evaluation["LAS"].f1 :.2f}")
+        print(f"MLAS Score: {100 * evaluation["MLAS"].f1 :.2f}")
+        print(f"BLEX Score: {100 * evaluation["BLEX"].f1:.2f}")
     else:
         if args.counts:
             print("Metric     | Correct   |      Gold | Predicted | Aligned")
@@ -512,21 +510,12 @@ def main():
         print("-----------+-----------+-----------+-----------+-----------")
         for metric in["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]:
             if args.counts:
-                print("{:11}|{:10} |{:10} |{:10} |{:10}".format(
-                    metric,
-                    evaluation[metric].correct,
-                    evaluation[metric].gold_total,
-                    evaluation[metric].system_total,
-                    evaluation[metric].aligned_total or (evaluation[metric].correct if metric == "Words" else "")
-                ))
+                em = evaluation[metric]
+                print(f"{metric:11}|{em.correct:10} |{em.gold_total:10} |{em.system_total:10} |{em.aligned_total or (em.correct if metric == "Words" else ""):10}")
             else:
-                print("{:11}|{:10.2f} |{:10.2f} |{:10.2f} |{}".format(
-                    metric,
-                    100 * evaluation[metric].precision,
-                    100 * evaluation[metric].recall,
-                    100 * evaluation[metric].f1,
-                    "{:10.2f}".format(100 * evaluation[metric].aligned_accuracy) if evaluation[metric].aligned_accuracy is not None else ""
-                ))
+                em = evaluation[metric]
+                final_str = f"{100 * em.aligned_accuracy if em.aligned_accuracy is not None else ''}"
+                print(f"{metric:11}|{100*em.precision:10.2f} |{100*em.recall:10.2f} |{100*em.f1:10.2f} |{final_str:10.2f}")
 
 if __name__ == "__main__":
     main()
@@ -541,12 +530,12 @@ class TestAlignment(unittest.TestCase):
             parts = w.split(" ")
             if len(parts) == 1:
                 num_words += 1
-                lines.append("{}\t{}\t_\t_\t_\t_\t{}\t_\t_\t_".format(num_words, parts[0], int(num_words>1)))
+                lines.append(f"{num_words}\t{parts[0]}\t_\t_\t_\t_\t{int(num_words>1)}\t_\t_\t_")
             else:
-                lines.append("{}-{}\t{}\t_\t_\t_\t_\t_\t_\t_\t_".format(num_words + 1, num_words + len(parts) - 1, parts[0]))
+                lines.append(f"{num_words+1}-{num_words+len(parts)-1}\t{parts[0]}\t_\t_\t_\t_\t_\t_\t_\t_")
                 for part in parts[1:]:
                     num_words += 1
-                    lines.append("{}\t{}\t_\t_\t_\t_\t{}\t_\t_\t_".format(num_words, part, int(num_words>1)))
+                    lines.append(f"{num_words}\t{part}\t_\t_\t_\t_\t{int(num_words>1)}\t_\t_\t_")
         return load_conllu((io.StringIO if sys.version_info >= (3, 0) else io.BytesIO)("\n".join(lines+["\n"])))
 
     def _test_exception(self, gold, system):

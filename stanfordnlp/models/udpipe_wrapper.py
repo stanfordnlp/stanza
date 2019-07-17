@@ -27,7 +27,7 @@ def main():
     args = parse_args()
 
     args = vars(args)
-    print("Running UDPipe with module {}...".format(args['module']))
+    print(f"Running UDPipe with module {args['module']}...")
 
     # convert names
     short2tb = load_short2tb(args['short2tb'])
@@ -38,13 +38,13 @@ def main():
     lang_short, tb_code = tb_short.split('_')
 
     # look for commands and models
-    udpipe_script = '{}/bin-linux64/udpipe'.format(args['udpipe_dir'])
-    model_name = '{}-{}-ud-2.2-conll18-180430.udpipe'.format(lang_full, tb_code)
-    model_file = '{}/models/{}'.format(args['udpipe_dir'], model_name)
+    udpipe_script = f"{args['udpipe_dir']}/bin-linux64/udpipe"
+    model_name = f"{lang_full}-{tb_code}-ud-2.2-conll18-180430.udpipe"
+    model_file = f"{args['udpipe_dir']}/models/{model_name}"
 
     if not os.path.exists(model_file):
         model_name = "mixed-ud-ud-2.2-conll18-180430.udpipe"
-        model_file = '{}/models/{}'.format(args['udpipe_dir'], model_name)
+        model_file = f"{args['udpipe_dir']}/models/{model_name}"
 
     # check files
     if not args['output_file'].endswith('.conllu'):
@@ -55,7 +55,7 @@ def main():
         if not args['input_file'].endswith('.txt'):
             raise Exception("UDPipe must take txt file as input when module == tokenize.")
         # run tokenizer from txt file
-        udpipe_cmd = "{} --tokenize {} {} --outfile={} --output=conllu".format(udpipe_script, model_file, args['input_file'], args['output_file'])
+        udpipe_cmd = f"{udpipe_script} --tokenize {model_file} {args['input_file']} --outfile={args['output_file']} --output=conllu"
         run_udpipe(udpipe_cmd)
         print("Waiting for filesystem...")
         time.sleep(5)
@@ -68,9 +68,9 @@ def main():
 
         # do udpipe
         if args['module'] == 'parse':
-            udpipe_cmd = "{} --parse {} {} --output=conllu --input=conllu".format(udpipe_script, model_file, args['input_file'])
+            udpipe_cmd = f"{udpipe_script} --parse {model_file} {args['input_file']} --output=conllu --input=conllu"
         else:
-            udpipe_cmd = "{} --tag {} {} --output=conllu --input=conllu".format(udpipe_script, model_file, args['input_file'])
+            udpipe_cmd = f"{udpipe_script} --tag {model_file} {args['input_file']} --output=conllu --input=conllu"
         udpipe_outputs = run_udpipe(udpipe_cmd, return_stdout=True)
         print("Waiting for filesystem...")
         time.sleep(5)
@@ -87,7 +87,7 @@ def main():
         elif args['module'] == 'parse':
             fields = ['head', 'deprel', 'deps']
         else:
-            raise Exception("Module {} not recognized.".format(args['module']))
+            raise Exception(f"Module {args['module']} not recognized.")
 
         input_conll.set(fields, udpipe_conll.get(fields)) # set fields back
         # finally write to file
@@ -95,7 +95,7 @@ def main():
         print("Waiting for filesystem...")
         time.sleep(5)
 
-    print("All done running module {} with UDPipe.".format(args['module']))
+    print(f"All done running module {args['module']} with UDPipe.")
 
 def load_short2tb(filename):
     short2tb = dict()
@@ -110,13 +110,13 @@ def load_short2tb(filename):
     return short2tb
 
 def run_udpipe(cmd, return_stdout=False):
-    print("Running process: {}".format(cmd))
+    print(f"Running process: {cmd}")
     if return_stdout:
         rtn = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     else:
         rtn = subprocess.run(cmd, shell=True)
     if rtn.returncode != 0:
-        raise Exception("Calling UDPipe failed with return code {}.".format(rtn.returncode))
+        raise Exception(f"Calling UDPipe failed with return code {rtn.returncode}.")
     return rtn.stdout
 
 if __name__ == '__main__':

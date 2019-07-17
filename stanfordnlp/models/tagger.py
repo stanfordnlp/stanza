@@ -90,7 +90,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running tagger in {} mode".format(args['mode']))
+    print(f"Running tagger in {args['mode']} mode")
 
     if args['mode'] == 'train':
         train(args)
@@ -100,15 +100,15 @@ def main():
 def train(args):
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
+            else f'{args["save_dir"]}/{args["shorthand"]}_tagger.pt'
 
     # load pretrained vectors
     vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+    pretrain_file = f'{args["save_dir"]}/{args["shorthand"]}.pretrain.pt'
     pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    print(f"Loading data with batch size {args['batch_size']}...")
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
@@ -135,7 +135,7 @@ def train(args):
 
     if args['adapt_eval_interval']:
         args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
-        print("Evaluating the model every {} steps...".format(args['eval_interval']))
+        print(f"Evaluating the model every {args['eval_interval'])} steps...")
 
     using_amsgrad = False
     last_best_step = 0
@@ -150,8 +150,8 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                        max_steps, loss, duration, current_lr))
+                dtn = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f'{dtn}: step {global_step}/{max_steps} (epoch {epoch}/{args["num_epoch"]}), loss = {loss :.6f} ({duration :.3f} sec/batch), lr: {current_lr :.6f}')
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
@@ -165,7 +165,7 @@ def train(args):
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                print(f"step {global_step}: train_loss = {train_loss :.6f}, dev_score = {dev_score :.4f}")
                 train_loss = 0
 
                 # save best model
@@ -196,24 +196,24 @@ def train(args):
 
         train_batch.reshuffle()
 
-    print("Training ended with {} steps.".format(global_step))
+    print(f"Training ended with {global_step} steps.")
 
     best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    print(f"Best dev F1 = {best_f :.2f}, at iteration = {best_eval * args['eval_interval']}")
 
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+            else f"{args['save_dir']}/{args['shorthand']}_tagger.pt"
+    pretrain_file = f"{args['save_dir']}/{args['shorthand']}.pretrain.pt"
     
     # load pretrain
     pretrain = Pretrain(pretrain_file)
 
     # load model
-    print("Loading model from: {}".format(model_file))
+    print(f"Loading model from: {model_file}")
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
@@ -224,7 +224,7 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    print("Loading data with batch size {args['batch_size']}...")
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
     
     if len(batch) > 0:
@@ -244,7 +244,7 @@ def evaluate(args):
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         print("Tagger score:")
-        print("{} {:.2f}".format(args['shorthand'], score*100))
+        print(f"{args['shorthand']} {score*100 :.2f}")
 
 if __name__ == '__main__':
     main()

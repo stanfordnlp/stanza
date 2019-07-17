@@ -6,7 +6,7 @@ from stanfordnlp.models.pos.vocab import XPOSVocab, WordVocab
 from stanfordnlp.models.common.conll import CoNLLFile
 
 if len(sys.argv) != 3:
-    print('Usage: {} short_to_tb_file output_factory_file'.format(sys.argv[0]))
+    print(f'Usage: {sys.argv[0]} short_to_tb_file output_factory_file')
     sys.exit(0)
 
 # Read list of all treebanks of concern
@@ -27,17 +27,17 @@ with open(short_to_tb_file) as f:
 # WordVocab).
 mapping = defaultdict(list)
 for sh, fn in zip(shorthands, fullnames):
-    print('Resolving vocab option for {}...'.format(sh))
-    if not os.path.exists('data/pos/{}.train.in.conllu'.format(sh)):
-        raise UserWarning('Training data for {} not found in the data directory, falling back to using WordVocab. To generate the '
+    print(f'Resolving vocab option for {sh}...')
+    if not os.path.exists(f'data/pos/{sh}.train.in.conllu'):
+        raise UserWarning(f'Training data for {fn} not found in the data directory, falling back to using WordVocab. To generate the '
             'XPOS vocabulary for this treebank properly, please run the following command first:\n'
-            '\tbash scripts/prep_pos_data.sh {}'.format(fn, fn))
+            f'\tbash scripts/prep_pos_data.sh {fn}')
         # without the training file, there's not much we can do
         key = 'WordVocab(data, shorthand, idx=2)'
         mapping[key].append(sh)
         continue
 
-    conll_file = CoNLLFile('data/pos/{}.train.in.conllu'.format(sh))
+    conll_file = CoNLLFile(f'data/pos/{sh}.train.in.conllu')
     data = conll_file.get(['word', 'upos', 'xpos', 'feats'], as_sentences=True)
     vocab = WordVocab(data, sh, idx=2, ignore=["_"])
     key = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
@@ -47,7 +47,7 @@ for sh, fn in zip(shorthands, fullnames):
             vocab = XPOSVocab(data, sh, idx=2, sep=sep)
             length = sum(len(x) - len(VOCAB_PREFIX) for x in vocab._id2unit.values())
             if length < best_size:
-                key = 'XPOSVocab(data, shorthand, idx=2, sep="{}")'.format(sep)
+                key = f'XPOSVocab(data, shorthand, idx=2, sep="{sep}")'
                 best_size = length
     mapping[key].append(sh)
 
@@ -63,11 +63,11 @@ from models.pos.vocab import WordVocab, XPOSVocab
 def xpos_vocab_factory(data, shorthand):''', file=f)
 
     for key in mapping:
-        print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in mapping[key]])), file=f)
-        print("        return {}".format(key), file=f)
+        print(f"    {'if' if first else 'elif'} shorthand in [{', '.join([f'\"{x}\"' for x in mapping[key]])}]:", file=f)
+        print(f"        return {key}", file=f)
 
         first = False
     print('''    else:
-        raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))''', file=f)
+        raise NotImplementedError(f'Language shorthand "{shorthand}" not found!')''', file=f)
 
 print('Done!')

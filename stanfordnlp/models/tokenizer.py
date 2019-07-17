@@ -79,12 +79,12 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running tokenizer in {} mode".format(args['mode']))
+    print(f"Running tokenizer in {args['mode']} mode")
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
-            else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
+    args['save_name'] = f"{args['save_dir']}/{args['save_name']}" if args['save_name'] is not None \
+            else f"{args['save_dir']}/{args['shorthand']}_tokenizer.pt"
     utils.ensure_dir(args['save_dir'])
 
     if args['mode'] == 'train':
@@ -114,7 +114,7 @@ def train(args):
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
-        load_name = "{}/{}".format(args['save_dir'], args['load_name'])
+        load_name = f"{args['save_dir']}/{args['load_name']}"
         trainer.load(load_name)
     trainer.change_lr(args['lr0'])
 
@@ -131,16 +131,16 @@ def train(args):
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:
-            print("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
+            print(f"Step {step :6d}/{steps :6d} Loss: {loss :.3f}")
 
         if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
             train_batches.shuffle()
 
         if step % args['eval_steps'] == 0:
             dev_score = eval_model(args, trainer, dev_batches, vocab, mwt_dict)
-            reports = ['Dev score: {:6.3f}'.format(dev_score * 100)]
+            reports = [f'Dev score: {dev_score*100 :6.3f}']
             if step >= args['anneal_after'] and dev_score < prev_dev_score:
-                reports += ['lr: {:.6f} -> {:.6f}'.format(lr, lr * args['anneal'])]
+                reports += [f'lr: {lr :.6f} -> {lr * args['anneal'] :.6f}']
                 lr *= args['anneal']
                 trainer.change_lr(lr)
 
@@ -153,7 +153,7 @@ def train(args):
                 trainer.save(args['save_name'])
             print('\t'.join(reports))
 
-    print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
+    print(f'Best dev score={best_dev_score} at step {best_dev_step}')
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
@@ -175,7 +175,7 @@ def evaluate(args):
     with open(args['conll_file'], 'w') as conll_output_file:
         oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
-    print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
+    print(f"OOV rate: {oov_count/N*100 :6.3f}% ({oov_count :6d}/{N :6d})")
 
 
 if __name__ == '__main__':
