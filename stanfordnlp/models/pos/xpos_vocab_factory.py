@@ -19,4 +19,4 @@ def xpos_vocab_factory(data, shorthand):
     elif shorthand in ["pl_lfg", "pl_sz"]:
         return XPOSVocab(data, shorthand, idx=2, sep=":")
     else:
-        raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))
+        raise NotImplementedError(f'Language shorthand "{shorthand}" not found!')

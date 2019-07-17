@@ -74,7 +74,7 @@ class DataLoader:
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
             else:
-                assert False, 'Feature function "{}" is undefined.'.format(feat_func)
+                assert False, f'Feature function "{feat_func}" is undefined.'
 
             funcs += [func]
 
@@ -114,7 +114,7 @@ class DataLoader:
             pid, sid = id_pair
             res = copy(self.sentences[pid][sid][offset:])
 
-            assert self.eval or len(res) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(res), ' '.join(["{}/{}".format(*x) for x in self.sentences[pid][sid]]))
+            assert self.eval or len(res) <= self.args['max_seqlen'], f'The maximum sequence length {self.args["max_seqlen"]} is less than that of the longest sentence length ({len(res)}) in the data, consider increasing it! {" ".join(["{}/{}".format(*x) for x in self.sentences[pid][sid]])}'
             for sid1 in range(sid+1, len(self.sentences[pid])):
                 res += self.sentences[pid][sid1]
 

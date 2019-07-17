@@ -55,8 +55,8 @@ class Annotator(Process):
         Defines a Java property to define this anntoator to CoreNLP.
         """
         return {
-            "customAnnotatorClass.{}".format(self.name): "edu.stanford.nlp.pipeline.GenericWebServiceAnnotator",
-            "generic.endpoint": "http://{}:{}".format(self.host, self.port),
+            f"customAnnotatorClass.{self.name}": "edu.stanford.nlp.pipeline.GenericWebServiceAnnotator",
+            "generic.endpoint": f"http://{self.host}:{self.port}",
             "generic.requires": ",".join(self.requires),
             "generic.provides": ",".join(self.provides),
             }
@@ -129,8 +129,8 @@ class Annotator(Process):
         """
         httpd = HTTPServer((self.host, self.port), self._Handler)
         sa = httpd.socket.getsockname()
-        serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
-        print(serve_message.format(host=sa[0], port=sa[1]))
+        serve_message = f"Serving HTTP on {sa[0]} port {sa[1]} (http://{sa[0]}:{sa[1]}/) ..."
+        print(serve_message)
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

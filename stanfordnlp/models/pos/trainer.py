@@ -92,7 +92,7 @@ class Trainer(BaseTrainer):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            print(f"model saved to {filename}")
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
 
@@ -100,7 +100,7 @@ class Trainer(BaseTrainer):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            print(f"Cannot load model from {filename}")
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
