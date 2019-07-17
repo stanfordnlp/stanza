@@ -227,5 +227,5 @@ class CoNLLFile():
             print("", file=output_file)
             idx = 0
 
-        assert count == len(expansions), "{} {} {}".format(count, len(expansions), expansions)
+        assert count == len(expansions), f"{count} {len(expansions)} {expansions}"
         return

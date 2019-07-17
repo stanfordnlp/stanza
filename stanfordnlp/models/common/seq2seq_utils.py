@@ -20,7 +20,7 @@ def get_optimizer(name, parameters, lr):
     elif name == 'adamax':
         return torch.optim.Adamax(parameters) # use default lr
     else:
-        raise Exception("Unsupported optimizer: {}".format(name))
+        raise Exception(f"Unsupported optimizer: {name}")
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:
@@ -51,14 +51,14 @@ def save_config(config, path, verbose=True):
     with open(path, 'w') as outfile:
         json.dump(config, outfile, indent=2)
     if verbose:
-        print("Config saved to file {}".format(path))
+        print(f"Config saved to file {path}")
     return config
 
 def load_config(path, verbose=True):
     with open(path) as f:
         config = json.load(f)
     if verbose:
-        print("Config loaded from file {}".format(path))
+        print(f"Config saved to file {path}")
     return config
 
 def normalize_text(text):

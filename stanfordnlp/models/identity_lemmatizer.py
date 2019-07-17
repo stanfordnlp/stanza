@@ -50,7 +50,7 @@ def main():
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         print("Lemma score:")
-        print("{} {:.2f}".format(args['lang'], score*100))
+        print(f"{args['lang']} {score*100 :.2f}")
 
 if __name__ == '__main__':
     main()

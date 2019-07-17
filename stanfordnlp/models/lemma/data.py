@@ -48,7 +48,7 @@ class DataLoader:
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args['sample_train']))
+            print(f"Subsample training set with rate {args['sample_train'] :g}")
 
         data = self.preprocess(data, self.vocab['char'], self.vocab['pos'], args)
         # shuffle for training

@@ -75,7 +75,7 @@ class Seq2SeqModel(nn.Module):
             if isinstance(self.emb_matrix, np.ndarray):
                 self.emb_matrix = torch.from_numpy(self.emb_matrix)
             assert self.emb_matrix.size() == (self.vocab_size, self.emb_dim), \
-                    "Input embedding matrix must match size: {} x {}".format(self.vocab_size, self.emb_dim)
+                    f"Input embedding matrix must match size: {self.vocab_size} x {self.emb_dim}"
             self.embedding.weight.data.copy_(self.emb_matrix)
         else:
             self.embedding.weight.data.uniform_(-init_range, init_range)
@@ -84,7 +84,7 @@ class Seq2SeqModel(nn.Module):
             print("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            print("Finetune top {} embeddings.".format(self.top))
+            print(f"Finetune top {self.top} embeddings.")
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
             print("Finetune all embeddings.")

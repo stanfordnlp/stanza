@@ -79,7 +79,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running MWT expander in {} mode".format(args['mode']))
+    print(f"Running MWT expander in {args['mode']} mode")
 
     if args['mode'] == 'train':
         train(args)
@@ -89,7 +89,7 @@ def main():
 def train(args):
     # load data
     print('max_dec_len:', args['max_dec_len'])
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    print(f"Loading data with batch size {args['batch_size']}...")
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size

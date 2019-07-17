@@ -23,5 +23,5 @@ def edit_word(word, pred, edit_id):
     elif edit_id == 0:
         return pred
     else:
-        raise Exception("Unrecognized edit ID: {}".format(edit_id))
+        raise Exception(f"Unrecognized edit ID: {edit_id}")
 

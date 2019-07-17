@@ -157,7 +157,7 @@ def chuliu_edmonds_one_root(scores):
         assert best_tree is not None
     except:
         with open('debug.log', 'w') as f:
-            f.write('{}: {}, {}\n'.format(tree, scores, roots_to_try))
-            f.write('{}: {}, {}, {}\n'.format(_tree, _scores, tree_probs, tree_score))
+            f.write(f'{tree}: {scores}, {roots_to_try}\n')
+            f.write(f'{_tree}: {_scores}, {tree_probs}, {tree_score}\n')
         raise
     return best_tree

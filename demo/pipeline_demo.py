@@ -39,8 +39,8 @@ if __name__ == '__main__':
     doc = pipeline(example_sentences[args.lang])
     # access nlp annotations
     print('')
-    print('Input: {}'.format(example_sentences[args.lang]))
-    print("The tokenizer split the input into {} sentences.".format(len(doc.sentences)))
+    print(f'Input: {example_sentences[args.lang]}')
+    print(f"The tokenizer split the input into {len(doc.sentences)} sentences.")
     print('---')
     print('tokens of first sentence: ')
     doc.sentences[0].print_tokens()

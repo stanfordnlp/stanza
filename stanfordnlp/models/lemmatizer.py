@@ -83,7 +83,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running lemmatizer in {} mode".format(args['mode']))
+    print(f"Running lemmatizer in {args['mode']} mode")
 
     # manually correct for training epochs
     if args['lang'] in ['cs_pdt', 'ru_syntagrus']:
@@ -96,7 +96,7 @@ def main():
 
 def train(args):
     # load data
-    print("[Loading data with batch size {}...]".format(args['batch_size']))
+    print(f"[Loading data with batch size {args['batch_size']}...]")
     train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['char'].size
@@ -104,7 +104,7 @@ def train(args):
     dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['model_dir'])
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    model_file = f'{args["model_dir"]}/{args["lang"]}_lemmatizer.pt'
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -126,7 +126,7 @@ def train(args):
     dev_preds = trainer.predict_dict(dev_batch.conll.get(['word', 'upos']))
     dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
-    print("Dev F1 = {:.2f}".format(dev_f * 100))
+    print(f"Dev F1 = {dev_f * 100 :.2f}")
 
     if args.get('dict_only', False):
         # save dictionaries
@@ -174,7 +174,7 @@ def train(args):
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
-            print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+            print(f"epoch {epoch}: train_loss = {train_loss :.6f}, dev_score = {dev_score :.4f}")
 
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
@@ -191,16 +191,16 @@ def train(args):
             dev_score_history += [dev_score]
             print("")
 
-        print("Training ended with {} epochs.".format(epoch))
+        print(f"Training ended with {epoch} epochs.")
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-        print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+        print(f"Best dev F1 = {best_f :.2f}, at epoch = {best_epoch}")
 
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    model_file = f'{args["model_dir"]}/{args["lang"]}_lemmatizer.pt'
 
     # load model
     use_cuda = args['cuda'] and not args['cpu']
@@ -212,14 +212,14 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # laod data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    print(f"Loading data with batch size {args['batch_size']}...")
     batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
         print("Skip evaluation because no dev data is available...")
         print("Lemma score:")
-        print("{} ".format(args['lang']))
+        print(f"{args['lang']} ")
         sys.exit(0)
 
     dict_preds = trainer.predict_dict(batch.conll.get(['word', 'upos']))
@@ -247,7 +247,7 @@ def evaluate(args):
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         print("Lemma score:")
-        print("{} {:.2f}".format(args['lang'], score*100))
+        print(f"{args['lang']} {score*100 :.2f}")
 
 if __name__ == '__main__':
     main()

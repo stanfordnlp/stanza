@@ -20,8 +20,7 @@ def get_wordvec_file(wordvec_dir, shorthand):
     lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shorthand]
     if lcode == 'zh':
         lang = 'ChineseT'
-    return os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(\
-            lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')))
+    return os.path.join(wordvec_dir, lang, f"{lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')}.vectors.xz")
 
 # training schedule
 def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):
@@ -47,7 +46,7 @@ def harmonic_mean(a, weights=None):
     if any([x == 0 for x in a]):
         return 0
     else:
-        assert weights is None or len(weights) == len(a), 'Weights has length {} which is different from that of the array ({}).'.format(len(weights), len(a))
+        assert weights is None or len(weights) == len(a), f'Weights has length {len(weights)} which is different from that of the array ({len(a)}).'
         if weights is None:
             return len(a) / sum([1/x for x in a])
         else:
@@ -64,7 +63,7 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8):
     elif name == 'adamax':
         return torch.optim.Adamax(parameters) # use default lr
     else:
-        raise Exception("Unsupported optimizer: {}".format(name))
+        raise Exception(f"Unsupported optimizer: {name}")
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:
@@ -94,27 +93,27 @@ def keep_partial_grad(grad, topk):
 def ensure_dir(d, verbose=True):
     if not os.path.exists(d):
         if verbose:
-            print("Directory {} do not exist; creating...".format(d))
+            print(f"Directory {d} do not exist; creating...")
         os.makedirs(d)
 
 def save_config(config, path, verbose=True):
     with open(path, 'w') as outfile:
         json.dump(config, outfile, indent=2)
     if verbose:
-        print("Config saved to file {}".format(path))
+        print(f"Config saved to file {path}")
     return config
 
 def load_config(path, verbose=True):
     with open(path) as f:
         config = json.load(f)
     if verbose:
-        print("Config loaded from file {}".format(path))
+        print(f"Config loaded from file {path}")
     return config
 
 def print_config(config):
     info = "Running with the following configs:\n"
     for k,v in config.items():
-        info += "\t{} : {}\n".format(k, str(v))
+        info += f"\t{k} : {str(v)}\n"
     print("\n" + info + "\n")
     return
 

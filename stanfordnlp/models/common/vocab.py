@@ -135,7 +135,7 @@ class CompositeVocab(BaseVocab):
         for v, k in zip(id, self._id2unit.keys()):
             if v == EMPTY_ID: continue
             if self.keyed:
-                items.append("{}={}".format(k, self._id2unit[k][v]))
+                items.append(f"{k}={self._id2unit[k][v]}")
             else:
                 items.append(self._id2unit[k][v])
         res = self.sep.join(items)
