@@ -38,7 +38,7 @@ class DataLoader:
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args['sample_train']))
+            print(f"Subsample training set with rate {args['sample_train'] :g}")
 
         data = self.preprocess(data, self.vocab, args)
         # shuffle for training
@@ -52,7 +52,7 @@ class DataLoader:
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
         if filename is not None:
-            print("{} batches created for {}.".format(len(data), filename))
+            print(f"{len(data)} batches created for {filename}.")
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
