@@ -101,7 +101,7 @@ class Pipeline:
         self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
         # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
         self.use_gpu = torch.cuda.is_available() and use_gpu
-        print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
+        print(f"Use device: {'gpu' if self.use_gpu else 'cpu'}")
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
         self.standardize_config_values()

@@ -32,14 +32,14 @@ def print_sentence(sentence, f, mwt_dict=None):
             elif tok.lower() in mwt_dict:
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
-            f.write("{}-{}\t{}{}\n".format(i+1, i+len(expansion), tok, "\t_" * 8))
+            f.write(f"{i+1}-{i+len(expansion)}\t{tok}{'\t_' * 8}\n")
             for etok in expansion:
-                f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
+                f.write(f"{i+1}\t{etok}{'\t_'*4}\t{i}{'\t_'*3}\n")
                 i += 1
         else:
             if len(tok) <= 0:
                 continue
-            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, "MWT=Yes" if p == 3 or p == 4 else "_"))
+            f.write(f"{i+1}\t{tok}{'t_'*4}\t{i}{'t_'*2}\t{'MWT=Yes' if p == 3 or p == 4 else '_'}\n")
             i += 1
     f.write('\n')
 
