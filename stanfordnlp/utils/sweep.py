@@ -24,7 +24,7 @@ BINARY_PRIOR_STRENGTH = 1
 unitary = {k: [[0.0, PRIOR_STRENGTH] for _ in range(len(config[k])-1)] for k in config}
 
 binary_keys = [k for k in config.keys() if len(config[k]) > 2]
-binary = {f"{}<>{}".format(k1, k2):[[0.0, BINARY_PRIOR_STRENGTH] for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
+binary = {f"{k1}<>{k2}":[[0.0, BINARY_PRIOR_STRENGTH] for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
 
 overall = [0, PRIOR_STRENGTH]
 

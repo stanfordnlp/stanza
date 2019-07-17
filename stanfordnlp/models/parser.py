@@ -147,8 +147,8 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                        max_steps, loss, duration, current_lr))
+                dtn = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f'{dtn}: step {global_step}/{max_steps} (epoch {epoch}/{args["num_epoch"]}), loss = {loss :.6f} ({duration :.3f} sec/batch), lr: {current_lr :.6f}')
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev

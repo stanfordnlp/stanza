@@ -212,16 +212,16 @@ class CoNLLFile():
             for ln in sent:
                 idx += 1
                 if "MWT=Yes" not in ln[-1]:
-                    print("{}\t{}".format(idx, "\t".join(ln[1:6] + [str(idx-1)] + ln[7:])), file=output_file)
+                    print(f"{idx}\t{'\t'.join(ln[1:6] + [str(idx-1)] + ln[7:])}", file=output_file)
                 else:
                     # print MWT expansion
                     expanded = [x for x in expansions[count].split(' ') if len(x) > 0]
                     count += 1
                     endidx = idx + len(expanded) - 1
 
-                    print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=output_file)
+                    print(f"{idx}-{endidx}\t{'\t'.join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])}", file=output_file)
                     for e_i, e_word in enumerate(expanded):
-                        print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=output_file)
+                        print(f"{idx + e_i}\t{e_word}\t{'\t'.join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)}", file=output_file)
                     idx = endidx
 
             print("", file=output_file)

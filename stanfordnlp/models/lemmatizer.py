@@ -140,7 +140,6 @@ def train(args):
         best_dev_preds = []
         current_lr = args['lr']
         global_start_time = time.time()
-        format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
         # start training
         for epoch in range(1, args['num_epoch']+1):
@@ -152,8 +151,8 @@ def train(args):
                 train_loss += loss
                 if global_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                            max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+                    dtn = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(f'{dtn}: step {global_step}/{max_steps} (epoch {epoch}/{args["num_epoch"]}), loss = {loss :.6f} ({duration :.3f} sec/batch), lr: {current_lr :.6f}')
 
             # eval on dev
             print("Evaluating on dev set...")
