@@ -22,9 +22,9 @@ with open(sys.argv[2], 'w') as fout:
             line = line.split('\t')
             if '-' in line[0]:
                 mwt_begin, mwt_end = [int(x) for x in line[0].split('-')]
-                print("{}\t{}\t{}".format(idx, "\t".join(line[1:-1]), "MWT=Yes" if line[-1] == '_' else line[-1] + ",MWT=Yes"), file=fout)
+                print(f"{idx}\t{"\t".join(line[1:-1])}\t{'MWT=Yes' if line[-1] == '_' else line[-1] + ',MWT=Yes'}", file=fout)
                 idx -= 1
             elif mwt_begin <= idx <= mwt_end:
                 continue
             else:
-                print("{}\t{}".format(idx, "\t".join(line[1:])), file=fout)
+                print(f"{idx}\t{'\t'.join(line[1:]))}", file=fout)

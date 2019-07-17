@@ -24,7 +24,7 @@ BINARY_PRIOR_STRENGTH = 1
 unitary = {k: [[0.0, PRIOR_STRENGTH] for _ in range(len(config[k])-1)] for k in config}
 
 binary_keys = [k for k in config.keys() if len(config[k]) > 2]
-binary = {"{}<>{}".format(k1, k2):[[0.0, BINARY_PRIOR_STRENGTH] for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
+binary = {f"{}<>{}".format(k1, k2):[[0.0, BINARY_PRIOR_STRENGTH] for _ in range((len(config[k1]) - 2) * (len(config[k2]) - 2))] for i, k1 in enumerate(binary_keys[:-1]) for k2 in binary_keys[i+1:]}
 
 overall = [0, PRIOR_STRENGTH]
 
@@ -96,7 +96,7 @@ def estimate_params(progress, unitary=unitary, overall=overall, config=config, b
 
     for i, k1 in enumerate(binary_keys[:-1]):
         for k2 in binary_keys[i+1:]:
-            k = "{}<>{}".format(k1, k2)
+            k = f"{k1}<>{k2}"
             for j in range(len(binary[k])):
                 binary[k][j] = params[idx], counts[idx] + BINARY_PRIOR_STRENGTH
                 idx += 1
@@ -125,7 +125,7 @@ def get_proposal(invtemp=1, unitary=unitary, config=config, binary=binary, binar
                 if idx1 < 2:
                     continue
 
-                key = "{}<>{}".format(k1, k)
+                key = f"{k1}<>{k}"
 
                 for j in range(2, len(config[k])):
                     cand = binary[key][(idx1 - 2) * (len(config[k]) - 2) + j - 2]
@@ -148,7 +148,7 @@ def evaluate_proposal(proposal, command=command, config=config):
     for k in config:
         if not k.startswith('conv_filters'):
             if proposal[k] != False or not isinstance(proposal[k], bool):
-                cmd += ["--{}".format(k)]
+                cmd += [f"--{k}"]
                 if proposal[k] != True or not isinstance(proposal[k], bool):
                     cmd += [str(proposal[k])]
         else:
@@ -171,7 +171,7 @@ def evaluate_proposal(proposal, command=command, config=config):
         raise e
 
 def save_load_progress(progress, update=[], filename=SAVED_PROGRESS):
-    print('Saving sweep progress to "{}", please be patient...'.format(filename))
+    print(f'Saving sweep progress to "{filename}", please be patient...')
     if os.path.exists(filename):
         with open(filename, 'rb') as f:
             progress = pickle.load(f)
@@ -192,8 +192,8 @@ try:
     while True:
         #invtemp = min(1, .001 * (1+len(progress)))
         invtemp = 1
-        print('Inv Temp = {}'.format(invtemp))
-        print('Grid size = {}'.format(reduce(mul, [len(config[k]) for k in config], 1)))
+        print(f'Inv Temp = {invtemp}')
+        print(f'Grid size = {reduce(mul, [len(config[k]) for k in config], 1)}')
         proposal = get_proposal(invtemp=invtemp)
         res = evaluate_proposal(proposal)
         progress = save_load_progress(progress, [[proposal, res]])

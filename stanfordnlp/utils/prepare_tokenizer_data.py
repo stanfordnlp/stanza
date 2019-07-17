@@ -27,7 +27,7 @@ def find_next_word(index, text, word, output):
         if text[index] == '\n' and index+1 < len(text) and text[index+1] == '\n':
             # paragraph break
             if len(word_sofar) > 0:
-                assert re.match(r'^\s+$', word_sofar), 'Found non-empty string at the end of a paragraph that doesn\'t match any token: |{}|'.format(word_sofar)
+                assert re.match(r'^\s+$', word_sofar), f'Found non-empty string at the end of a paragraph that doesn\'t match any token: |{word_sofar}|'
                 word_sofar = ''
 
             output.write('\n\n')
@@ -36,7 +36,7 @@ def find_next_word(index, text, word, output):
             word_sofar += text[index]
         else:
             word_sofar += text[index]
-            assert text[index].replace('\n', ' ') == word[idx], "character mismatch: raw text contains |%s| but the next word is |%s|." % (word_sofar, word)
+            assert text[index].replace('\n', ' ') == word[idx], f"character mismatch: raw text contains |{word_sofar}| but the next word is |{word}|."
             idx += 1
         index += 1
     return index, word_sofar
@@ -76,7 +76,7 @@ with open(args.conllu_file, 'r') as f:
                 expanded = [x.lower() for x in expanded] # evaluation doesn't care about case
                 mwt_expansions += [(lastmwt, tuple(expanded))]
                 if lastmwt[0].islower() and not expanded[0][0].islower():
-                    print('Sentence ID with potential wrong MWT expansion: ', last_comments, file=sys.stderr)
+                    print(f'Sentence ID with potential wrong MWT expansion: {last_comments}', file=sys.stderr)
                 mwtbegin = 0
                 mwtend = -1
                 lastmwt = None
@@ -90,7 +90,7 @@ with open(args.conllu_file, 'r') as f:
             # sentence break found
             if len(buf):
                 assert int(buf[-1]) >= 1
-                output.write(buf[:-1] + '{}'.format(int(buf[-1]) + 1))
+                output.write(buf[:-1] + f'{int(buf[-1] + 1)}')
                 buf = ''
 
             last_comments = ''
@@ -106,4 +106,4 @@ else:
     with open(args.mwt_output, 'w') as f:
         json.dump(list(mwts.items()), f)
 
-    print('{} unique MWTs found in data'.format(len(mwts)))
+    print(f'{len(mwts)} unique MWTs found in data')
