@@ -52,7 +52,7 @@ pip install stanfordnlp -U
 
 Alternatively, you can also install from source of this git repository, which will give you more flexibility in developing on top of StanfordNLP and training your own models. For this option, run
 ```bash
-git clone git@github.com:stanfordnlp/stanfordnlp.git
+git clone https://github.com/stanfordnlp/stanfordnlp.git
 cd stanfordnlp
 pip install -e .
 ```
