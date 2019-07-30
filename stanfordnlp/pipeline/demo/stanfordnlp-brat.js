@@ -1012,6 +1012,7 @@ $(document).ready(function() {
       data: encodeURIComponent(currentQuery), //jQuery doesn't automatically URI encode strings
       dataType: 'json',
       contentType: "application/x-www-form-urlencoded;charset=UTF-8",
+      responseType: "application/json",
       success: function(data) {
         $('#submit').prop('disabled', false);
         if (typeof data === 'undefined' || data.sentences == undefined) {
