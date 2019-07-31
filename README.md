@@ -39,15 +39,20 @@ Please use the following channels for questions and issue reports.
 
 ## Setup
 
-StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run
+StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run:
 ```bash
 pip install stanfordnlp
 ```
 this should also help resolve all of the dependencies of StanfordNLP, for instance [PyTorch](https://pytorch.org/) 1.0.0 or above.
 
+If you currently have a previous version of `stanfordnlp` installed, use:
+```bash
+pip install stanfordnlp -U
+```
+
 Alternatively, you can also install from source of this git repository, which will give you more flexibility in developing on top of StanfordNLP and training your own models. For this option, run
 ```bash
-git clone git@github.com:stanfordnlp/stanfordnlp.git
+git clone https://github.com/stanfordnlp/stanfordnlp.git
 cd stanfordnlp
 pip install -e .
 ```
@@ -61,6 +66,8 @@ To run your first StanfordNLP pipeline, simply following these steps in your Pyt
 ```python
 >>> import stanfordnlp
 >>> stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
+# IMPORTANT: The above line prompts you before downloading, which doesn't work well in a Jupyter notebook.
+# To avoid a prompt when using notebooks, instead use: >>> stanfordnlp.download('en', force=True)
 >>> nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
 >>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
 >>> doc.sentences[0].print_dependencies()
@@ -86,7 +93,7 @@ We also provide a multilingual [demo script](https://github.com/stanfordnlp/stan
 python demo/pipeline_demo.py -l zh
 ```
 
-See [our getting started guide](https://stanfordnlp.github.io/stanfordnlp/installation_download.html#getting-started) for more details.
+See [our getting started guide](https://stanfordnlp.github.io/stanfordnlp/installation_usage.html#getting-started) for more details.
 
 ### Access to Java Stanford CoreNLP Server
 
@@ -103,7 +110,7 @@ We provide another [demo script](https://github.com/stanfordnlp/stanfordnlp/blob
 
 ### Trained Models for the Neural Pipeline
 
-We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanfordnlp/installation_download.html#models-for-human-languages).
+We currently provide models for all of the treebanks in the CoNLL 2018 Shared Task. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanfordnlp/models.html).
 
 ### Batching To Maximize Pipeline Speed
 
