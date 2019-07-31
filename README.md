@@ -1,7 +1,8 @@
 # StanfordNLP: A Python NLP Library for Many Human Languages
 
 [![Travis Status](https://travis-ci.com/stanfordnlp/stanfordnlp.svg?token=RPNzRzNDQRoq2x3J2juj&branch=master)](https://travis-ci.com/stanfordnlp/stanfordnlp)
-[![PyPI version](https://img.shields.io/pypi/v/stanfordnlp.svg?colorB=blue)](https://pypi.org/project/stanfordnlp/)
+[![PyPI Version](https://img.shields.io/pypi/v/stanfordnlp.svg?colorB=blue)](https://pypi.org/project/stanfordnlp/)
+![Python Versions](https://img.shields.io/pypi/pyversions/stanfordnlp.svg?colorB=blue)
 
 The Stanford NLP Group's official Python NLP library. It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanfordnlp/).
 
@@ -30,12 +31,7 @@ If you use the CoreNLP server, please cite the CoreNLP software package and the 
 
 ## Issues and Usage Q&A
 
-Please use the following channels for questions and issue reports.
-
-| Purpose | Channel |
-|---|---|
-| Usage Q&A | [Google Group](https://groups.google.com/forum/#!forum/stanfordnlp) |
-| Bug Reports and Feature Requests | [GitHub Issue Tracker](https://github.com/stanfordnlp/stanfordnlp/issues) |
+To ask questions, report issues or request features, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanfordnlp/issues).
 
 ## Setup
 
