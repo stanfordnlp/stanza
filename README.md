@@ -97,12 +97,20 @@ Aside from the neural pipeline, this project also includes an official wrapper f
 
 There are a few initial setup steps.
 
-* Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use.
+* Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use
 * Put the model jars in the distribution folder
 * Tell the python code where Stanford CoreNLP is located: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
 
 We provide another [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) that shows how one can use the CoreNLP client and extract various annotations from it.
 
+### Online Colab Notebooks
+
+To get your started, we also provide interactive Jupyter notebooks in the `demo` folder. You can also open these notebooks and run them interactively on [Google Colab](https://colab.research.google.com). To view all available notebooks, follow these steps:
+
+* Go to the [Google Colab website](https://colab.research.google.com)
+* Navigate to `File` -> `Open notebook`, and choose `GitHub` in the pop-up menu
+* Note that you do **not** need to give Colab access permission to your github account
+* Type `stanfordnlp/stanfordnlp` in the search bar, and click enter
 
 ### Trained Models for the Neural Pipeline
 
