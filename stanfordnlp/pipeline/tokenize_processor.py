@@ -70,7 +70,8 @@ class TokenizeProcessor(UDProcessor):
             # set up StringIO to get conllu data, run output predictions, set doc's conll file
             with io.StringIO() as conll_output_string:
                 output_predictions(conll_output_string, self.trainer, batches, self.vocab, None,
-                                   self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT))
+                                   self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
+                                   orig_text = doc.text)
                 # set conll file for doc
                 doc.conll_file = conll.CoNLLFile(input_str=conll_output_string.getvalue())
 

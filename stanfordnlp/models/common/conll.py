@@ -219,7 +219,8 @@ class CoNLLFile():
                     count += 1
                     endidx = idx + len(expanded) - 1
 
-                    print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 or i == 8 else x for i, x in enumerate(ln[1:])])), file=output_file)
+                    ln[-1] = '_' if ln[-1] == 'MWT=Yes' else '|'.join([x for x in ln[-1].split('|') if x != 'MWT=Yes'])
+                    print("{}-{}\t{}".format(idx, endidx, "\t".join(['_' if i == 5 else x for i, x in enumerate(ln[1:])])), file=output_file)
                     for e_i, e_word in enumerate(expanded):
                         print("{}\t{}\t{}".format(idx + e_i, e_word, "\t".join(['_'] * 4 + [str(idx + e_i - 1)] + ['_'] * 3)), file=output_file)
                     idx = endidx

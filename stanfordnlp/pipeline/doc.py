@@ -49,7 +49,14 @@ class Document:
 
     def load_annotations(self):
         """ Integrate info from the CoNLLFile instance. """
-        self._sentences = [Sentence(token_list) for token_list in self.conll_file.sents]
+        self._sentences = []
+        charoffset = 0
+        for token_list in self.conll_file.sents:
+            s = Sentence(token_list)
+            maxoffset = max(t.end_char_offset for t in s.tokens)
+            s.text = self.text[charoffset:maxoffset]
+            charoffset = maxoffset
+            self._sentences.append(s)
 
     def write_conll_to_file(self, file_path):
         """ Write conll contents to file. """
@@ -113,6 +120,16 @@ class Sentence:
         """ Set the list of words for this sentence. """
         self._words = value
 
+    @property
+    def text(self):
+        """ Access the original text for this sentence. """
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the original text for this sentence. """
+        self._text = value
+
     def build_dependencies(self):
         for word in self.words:
             if word.governor == 0:
@@ -156,6 +173,13 @@ class Token:
     def __init__(self, token_entry, words=None):
         self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
         self._text = token_entry[CONLLU_FIELD_TO_IDX['word']]
+
+        if token_entry[CONLLU_FIELD_TO_IDX['misc']] != '_':
+            for item in token_entry[CONLLU_FIELD_TO_IDX['misc']].split('|'):
+                key, value = item.split('=')
+                if key in ['beginCharOffset', 'endCharOffset']:
+                    value = int(value)
+                setattr(self, f'_{key}', value)
         if words is None:
             self.words = []
         else:
@@ -193,8 +217,16 @@ class Token:
         """ Set the token's text value. Example: 'The'"""
         self._text = value
 
+    @property
+    def begin_char_offset(self):
+        return self._beginCharOffset
+
+    @property
+    def end_char_offset(self):
+        return self._endCharOffset
+
     def __repr__(self):
-        return f"<{self.__class__.__name__} index={self.index};words={self.words}>"
+        return f"<{self.__class__.__name__} index={self.index};words={self.words};begin_char_offset={self.begin_char_offset};end_char_offset={self.end_char_offset}>"
 
 class Word:
 

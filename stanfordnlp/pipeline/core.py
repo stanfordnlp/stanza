@@ -4,6 +4,8 @@ Pipeline that runs tokenize,mwt,pos,lemma,depparse
 
 import io
 import itertools
+import logging
+import sys
 import torch
 
 from distutils.util import strtobool
@@ -84,6 +86,8 @@ class PipelineRequirementsException(Exception):
     def __str__(self):
         return self.message
 
+logging.basicConfig(stream=sys.stderr)
+logger = logging.getLogger()
 
 class Pipeline:
 
@@ -101,7 +105,7 @@ class Pipeline:
         self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
         # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
         self.use_gpu = torch.cuda.is_available() and use_gpu
-        print("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
+        logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
         self.standardize_config_values()
@@ -110,17 +114,18 @@ class Pipeline:
         for processor_name in self.processor_names:
             if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
                 continue
-            print('---')
-            print('Loading: ' + processor_name)
+            logger.info('---')
+            logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
-            print('With settings: ')
-            print(curr_processor_config)
+            logger.debug('With settings: ')
+            logger.debug(curr_processor_config)
             try:
                 # try to build processor, throw an exception if there is a requirements issue
                 self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
                                                                                           pipeline=self,
-                                                                                          use_gpu=self.use_gpu)
+                                                                                          use_gpu=self.use_gpu,
+                                                                                          logger=logger)
             except ProcessorRequirementsException as e:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)
@@ -130,11 +135,11 @@ class Pipeline:
 
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
-            print('\n')
+            logger.info('\n')
             raise PipelineRequirementsException(pipeline_reqs_exceptions)
 
-        print("Done loading processors!")
-        print('---')
+        logger.info("Done loading processors!")
+        logger.info('---')
 
     def filter_config(self, prefix, config_dict):
         filtered_dict = {}

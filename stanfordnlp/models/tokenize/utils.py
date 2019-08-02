@@ -23,7 +23,7 @@ def load_mwt_dict(filename):
 
 def print_sentence(sentence, f, mwt_dict=None):
     i = 0
-    for tok, p in sentence:
+    for tok, p, additional_info in sentence:
         expansion = None
         if (p == 3 or p == 4) and mwt_dict is not None:
             # MWT found, (attempt to) expand it!
@@ -32,18 +32,22 @@ def print_sentence(sentence, f, mwt_dict=None):
             elif tok.lower() in mwt_dict:
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
-            f.write("{}-{}\t{}{}\n".format(i+1, i+len(expansion), tok, "\t_" * 8))
+            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            f.write("{}-{}\t{}{}\t{}\n".format(i+1, i+len(expansion), tok, "\t_" * 7, infostr))
             for etok in expansion:
                 f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
                 i += 1
         else:
             if len(tok) <= 0:
                 continue
-            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, "MWT=Yes" if p == 3 or p == 4 else "_"))
+            if p == 3 or p == 4:
+                additional_info['MWT'] = 'Yes'
+            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, infostr))
             i += 1
     f.write('\n')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -110,6 +114,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     offset = 0
     oov_count = 0
 
+    text = orig_text
+    char_offset = 0
+
     for j in range(len(paragraphs)):
         raw = all_raw[j]
         pred = all_preds[j]
@@ -134,7 +141,15 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 if len(tok) <= 0:
                     current_tok = ''
                     continue
-                current_sent += [(tok, p)]
+                if orig_text is not None:
+                    st0 = text.index(tok)
+                    st = char_offset + st0
+                    text = text[st0 + len(tok):]
+                    char_offset += st0 + len(tok)
+                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                else:
+                    additional_info = dict()
+                current_sent += [(tok, p, additional_info)]
                 current_tok = ''
                 if p == 2 or p == 4:
                     print_sentence(current_sent, output_file, mwt_dict)
@@ -144,7 +159,15 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             tok = vocab.normalize_token(current_tok)
             assert '\t' not in tok, tok
             if len(tok) > 0:
-                current_sent += [(tok, 2)]
+                if orig_text is not None:
+                    st0 = text.index(tok)
+                    st = char_offset + st0
+                    text = text[st0 + len(tok):]
+                    char_offset += st0 + len(tok)
+                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                else:
+                    additional_info = dict()
+                current_sent += [(tok, 2, additional_info)]
 
         if len(current_sent):
             print_sentence(current_sent, output_file, mwt_dict)

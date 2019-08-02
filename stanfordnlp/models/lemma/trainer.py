@@ -26,7 +26,8 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False, logger=None):
+        self.logger = logger if logger is not None else logging.getLogger()
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -42,7 +43,7 @@ class Trainer(object):
         if not self.args['dict_only']:
             if self.args.get('edit', False):
                 self.crit = loss.MixLoss(self.vocab['char'].size, self.args['alpha'])
-                print("[Running seq2seq lemmatizer with edit classifier]")
+                self.logger.debug("[Running seq2seq lemmatizer with edit classifier]")
             else:
                 self.crit = loss.SequenceLoss(self.vocab['char'].size)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
@@ -186,15 +187,15 @@ class Trainer(object):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            self.logger.info("model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            self.logger.warn("[Warning: Saving failed... continuing anyway.]")
 
     def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            self.logger.warn("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']

@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import math
 import numpy as np
+import logging
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 
@@ -186,15 +187,16 @@ class DeepAttention(nn.Module):
 class LSTMAttention(nn.Module):
     r"""A long short-term memory (LSTM) cell with attention."""
 
-    def __init__(self, input_size, hidden_size, batch_first=True, attn_type='soft'):
+    def __init__(self, input_size, hidden_size, batch_first=True, attn_type='soft', logger=None):
         """Initialize params."""
         super(LSTMAttention, self).__init__()
+        self.logger = logger if logger is not None else logging.getLogger()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
 
         self.lstm_cell = nn.LSTMCell(input_size, hidden_size)
-        
+
         if attn_type == 'soft':
             self.attention_layer = SoftDotAttention(hidden_size)
         elif attn_type == 'mlp':
@@ -205,10 +207,10 @@ class LSTMAttention(nn.Module):
             self.attention_layer = DeepAttention(hidden_size)
         else:
             raise Exception("Unsupported LSTM attention type: {}".format(attn_type))
-        print("Using {} attention for LSTM.".format(attn_type))
+        self.logger.debug("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
-        """Propogate input through the network.""" 
+        """Propogate input through the network."""
         if self.batch_first:
             input = input.transpose(0,1)
 
