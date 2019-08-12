@@ -38,8 +38,8 @@ class Pretrain:
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
             except BaseException as e:
-                print("Pretrained file exists but cannot be loaded from {}, due to the following exception:".format(self.filename))
-                print("\t{}".format(e))
+                print(f"Pretrained file exists but cannot be loaded from {self.filename}, due to the following exception:")
+                print(f"\t{e}")
                 return self.read_and_save()
             return data['vocab'], data['emb']
         else:
@@ -49,7 +49,7 @@ class Pretrain:
         # load from pretrained filename
         if self._vec_filename is None:
             raise Exception("Vector file is not provided.")
-        print("Reading pretrained vectors from {}...".format(self._vec_filename))
+        print(f"Reading pretrained vectors from {self._vec_filename}...")
 
         # first try reading as xz file, if failed retry as text file
         try:
@@ -74,10 +74,10 @@ class Pretrain:
         data = {'vocab': vocab, 'emb': emb}
         try:
             torch.save(data, self.filename)
-            print("Saved pretrained vocab and vectors to {}".format(self.filename))
+            print(f"Saved pretrained vocab and vectors to {self.filename}")
         except BaseException as e:
             print("Saving pretrained data failed due to the following exception... continuing anyway")
-            print("\t{}".format(e))
+            print(f"\t{e}")
 
         return vocab, emb
 
