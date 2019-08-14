@@ -1,0 +1,493 @@
+import argparse
+import ast
+import collections
+from enum import Enum
+import logging
+#import sys
+import os
+import random
+import re
+from types import SimpleNamespace
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+
+from stanfordnlp.models.common import utils
+from stanfordnlp.models.common.pretrain import Pretrain
+
+logger = logging.getLogger(__name__)
+
+def convert_fc_shapes(arg):
+    arg = arg.strip()
+    if not arg:
+        return ()
+    arg = ast.literal_eval(arg)
+    if isinstance(arg, int):
+        return (arg,)
+    if isinstance(arg, tuple):
+        return arg
+    return tuple(arg)
+
+class WVType(Enum):
+    WORD2VEC = 1
+    GOOGLE = 2
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--train', dest='train', default=True, action='store_true', help='Train the model (default)')
+    parser.add_argument('--no_train', dest='train', action='store_false', help="Don't train the model")
+
+    parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
+
+    parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
+    parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
+    # TODO: is this the right usage of the second particle?
+    # answer: no, the second particle should in some way describe the dataset itself
+    parser.add_argument('--shorthand', type=str, default='en_w2v100', help="Treebank shorthand, eg 'en' for English")
+    parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
+
+    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
+    parser.add_argument('--wordvec_type', type=lambda x: WVType[x.upper()], default='word2vec', help='Different vector types have different options, such as google 300d replacing numbers with #')
+
+    parser.add_argument('--train_file', type=str, default='extern_data/sentiment/sst-processed/binary/train-binary-phrases.txt', help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
+    parser.add_argument('--dev_file', type=str, default='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt', help='Input file to use as the dev set.')
+    parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
+    parser.add_argument('--max_epochs', type=int, default=100)
+
+    parser.add_argument('--cuda', action='store_true', help='Use CUDA for training/testing', default=torch.cuda.is_available())
+    parser.add_argument('--cpu', action='store_false', help='Ignore CUDA.', dest='cuda')
+
+    parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
+    parser.add_argument('--filter_channels', default=100, type=int, help='Number of channels for layers after the word vectors')
+    parser.add_argument('--fc_shapes', default="100", type=convert_fc_shapes, help='Extra fully connected layers to put after the initial filters.  If set to blank, will FC directly from the max pooling to the output layer.')
+    parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
+
+    parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
+
+    parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
+
+    parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
+
+    args = parser.parse_args()
+    return args
+
+
+class CNNClassifier(nn.Module):
+    def __init__(self, emb_matrix, vocab, num_classes, args):
+        """
+        emb_matrix is a giant matrix of the pretrained embeddings
+        """
+        super(CNNClassifier, self).__init__()
+        self.config = SimpleNamespace(filter_channels = args.filter_channels,
+                                      filter_sizes = args.filter_sizes,
+                                      fc_shapes = args.fc_shapes,
+                                      dropout = args.dropout,
+                                      num_classes = num_classes)
+
+        self.unsaved_modules = []
+
+        # TODO: make retraining vectors an option
+        # TODO: make this trans_pretrained as with the pos model?
+        #   - we could train the trans matrix too
+        #   - for 1 word phrases we could just use the trans matrix and
+        #     label based on that
+        # TODO: freeze everything except pad & unk as an option
+        self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.vocab_size = emb_matrix.shape[0]
+        self.embedding_dim = emb_matrix.shape[1]
+
+        # The Pretrain has PAD and UNK already (indices 0 and 1), but we
+        # possibly want to train UNK while freezing the rest of the embedding
+        self.pad = vocab[0]
+
+        # note that the /10.0 operation has to be inside nn.Parameter unless
+        # you want to spend a long time debugging this
+        self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
+
+        self.vocab_map = { word: i for i, word in enumerate(vocab) }
+
+        # Pytorch is "aware" of the existence of the nn.Modules inside
+        # an nn.ModuleList in terms of parameters() etc
+        self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
+                                                    out_channels=self.config.filter_channels,
+                                                    kernel_size=(filter_size, self.embedding_dim))
+                                          for filter_size in self.config.filter_sizes])
+
+        previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
+        fc_layers = []
+        for shape in self.config.fc_shapes:
+            fc_layers.append(nn.Linear(previous_layer_size, shape))
+            previous_layer_size = shape
+        fc_layers.append(nn.Linear(previous_layer_size, num_classes))
+        self.fc_layers = nn.ModuleList(fc_layers)
+
+        self.max_window = max(self.config.filter_sizes)
+
+        self.dropout = nn.Dropout(self.config.dropout)
+
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
+    def forward(self, inputs, device=None):
+        if not device:
+            # assume all pieces are on the same device
+            device = next(self.parameters()).device
+
+        # pad each phrase so either it matches the longest conv or the
+        # longest phrase in the input, whichever is longer
+        max_phrase_len = max(len(x) for x in inputs)
+        if self.max_window > max_phrase_len:
+            max_phrase_len = self.max_window
+
+        if max_phrase_len > min(len(x) for x in inputs):
+            idx = torch.tensor(self.vocab_map[self.pad], requires_grad=False, device=device)
+            pad_vector = self.embedding(idx)
+
+        input_tensor = []
+        for phrase in inputs:
+            # build a list of the vectors we want for this sentence / phrase
+            input_vectors = []
+            begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
+            end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
+            for i in range(begin_pad_width):
+                input_vectors.append(pad_vector)
+
+            for word in phrase:
+                # our current word vectors are all entirely lowercased
+                word = word.lower()
+                if word in self.vocab_map:
+                    idx = torch.tensor(self.vocab_map[word], requires_grad=False, device=device)
+                    input_vectors.append(self.embedding(idx))
+                    continue
+                new_word = word.replace("-", "")
+                # google vectors have words which are all dashes
+                if len(new_word) == 0:
+                    new_word = word
+                if new_word in self.vocab_map:
+                    idx = torch.tensor(self.vocab_map[new_word], requires_grad=False, device=device)
+                    input_vectors.append(self.embedding(idx))
+                    continue
+
+                if new_word[-1] == "'":
+                    new_word = new_word[:-1]
+                    if new_word in self.vocab_map:
+                        idx = torch.tensor(self.vocab_map[new_word], requires_grad=False, device=device)
+                        input_vectors.append(self.embedding(idx))
+                        continue
+ 
+                # TODO: split UNK based on part of speech?  might be an interesting experiment
+                input_vectors.append(self.unk)
+            for i in range(end_pad_width):
+                input_vectors.append(pad_vector)
+
+            # we will now have an N x emb_size tensor
+            # this is the input to the CNN
+            # there are two ways in which this padding is suboptimal
+            # the first is that for short sentences, smaller windows will
+            #   be padded to the point that some windows are entirely pad
+            # the second is that a sentence S will have more or less padding
+            #   depending on what other sentences are in its batch
+            # we assume these effects are pretty minimal
+            x = torch.stack(input_vectors)
+
+            # reshape x to 1xNxE
+            x = x.unsqueeze(0)
+            input_tensor.append(x)
+        x = torch.stack(input_tensor)
+
+        conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
+                     for conv in self.conv_layers]
+        pool_outs = [F.max_pool1d(out, out.shape[2]).squeeze(2) for out in conv_outs]
+        pooled = torch.cat(pool_outs, dim=1)
+
+        previous_layer = pooled
+        for fc in self.fc_layers[:-1]:
+            previous_layer = self.dropout(F.relu(fc(previous_layer)))
+        out = self.fc_layers[-1](previous_layer)
+        return out
+        
+
+# TODO: all this code is basically the same as for POS and NER.  Should refactor
+def save(filename, model, args, skip_modules=True):
+    model_state = model.state_dict()
+    # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+    if skip_modules:
+        skipped = [k for k in model_state.keys() if k.split('.')[0] in model.unsaved_modules]
+        for k in skipped:
+            del model_state[k]
+    params = {
+        'model': model_state,
+        'config': model.config,
+    }
+    try:
+        torch.save(params, filename)
+        logger.info("Model saved to {}".format(filename))
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException as e:
+        logger.warning("Saving failed to {}... continuing anyway.  Error: {}".format(filename, e))
+
+def print_config(config_name, config):
+    print("-- %s --" % config_name)
+    for k in config.__dict__:
+        print("  --{}: {}".format(k, config.__dict__[k]))
+
+def load(filename, pretrain):
+    try:
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+    except BaseException:
+        logger.exception("Cannot load model from {}".format(filename))
+        raise
+    print("Loaded model {}".format(filename))
+    print_config("SAVED CONFIG", checkpoint['config'])
+    model = CNNClassifier(pretrain.emb, pretrain.vocab, 
+                          checkpoint['config'].num_classes,
+                          checkpoint['config'])
+    model.load_state_dict(checkpoint['model'], strict=False)
+    return model
+
+
+def update_text(sentence, wordvec_type):
+    # TODO: this should be included in the model for when we are in a pipeline
+    if wordvec_type == WVType.WORD2VEC:
+        return sentence
+    elif wordvec_type == WVType.GOOGLE:
+        new_sentence = []
+        for word in sentence:
+            if word != '0' and word != '1':
+                word = re.sub('[0-9]', '#', word)
+            new_sentence.append(word)
+        return new_sentence
+
+def read_dataset(dataset, wordvec_type):
+    """
+    returns a list where the values of the list are
+      label, [token...]
+    TODO: make dataset items a class?
+    """
+    lines = open(dataset).readlines()
+    lines = [x.strip() for x in lines]
+    lines = [x for x in lines if x]
+    # stanford sentiment dataset has a lot of random - and /
+    lines = [x.replace("-", " ") for x in lines]
+    lines = [x.replace("/", " ") for x in lines]
+    lines = [x.split() for x in lines]
+    lines = [(x[0], update_text(x[1:], wordvec_type)) for x in lines]
+
+    return lines
+
+def dataset_labels(dataset):
+    """
+    Returns a sorted list of label name
+
+    TODO: if everything is numeric, sort numerically?
+    """
+    labels = sorted(list(set([x[0] for x in dataset])))
+    return labels
+
+def sort_dataset_by_len(dataset):
+    """
+    returns a dict mapping length -> list of items of that length
+    an OrderedDict is used to that the mapping is sorted from smallest to largest
+    """
+    sorted_dataset = collections.OrderedDict()
+    lengths = sorted(list(set(len(x[1]) for x in dataset)))
+    for l in lengths:
+        sorted_dataset[l] = []
+    for item in dataset:
+        sorted_dataset[len(item[1])].append(item)
+    return sorted_dataset
+
+def shuffle_dataset(sorted_dataset):
+    """
+    Given a dataset sorted by len, sorts within each length to make
+    chunks of roughly the same size.  Returns all items as a single list.
+    """
+    dataset = []
+    for l in sorted_dataset.keys():
+        items = list(sorted_dataset[l])
+        random.shuffle(items)
+        dataset.extend(items)
+    return dataset
+
+
+def score_dataset(model, dataset, label_map, device):
+    model.eval()
+    correct = 0
+    dataset_lengths = sort_dataset_by_len(dataset)
+    
+    for length in dataset_lengths.keys():
+        batch = dataset_lengths[length]
+        text = [x[1] for x in batch]
+        expected_labels = [label_map[x[0]] for x in batch]
+
+        output = model(text, device)
+
+        # TODO: confusion matrix, etc
+        for i in range(len(expected_labels)):
+            predicted = torch.argmax(output[i])
+            if predicted.item() == expected_labels[i]:
+                correct = correct + 1
+    return correct
+
+def check_labels(labels, dataset):
+    new_labels = dataset_labels(dataset)
+    not_found = [i for i in new_labels if i not in labels]
+    if not_found:
+        raise RuntimeError('Found dev labels which do not exist in train:' + str(not_found))
+
+def set_random_seed(seed, cuda):
+    if seed is None:
+        seed = random.randint(0, 1000000000)
+
+    print("Using random seed: %d" % seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if cuda:
+        torch.cuda.manual_seed(seed)
+
+
+def checkpoint_name(filename, epoch, acc):
+    """
+    Build an informative checkpoint name from a base name, epoch #, and accuracy
+    """
+    root, ext = os.path.splitext(filename)
+    return root + ".E{epoch:04d}-ACC{acc:05.2f}".format(**{"epoch": epoch, "acc": acc * 100}) + ext
+
+def train_model(model, model_file, args, train_set, dev_set, labels):
+    # TODO: separate this into a trainer like the other models.
+    # TODO: possibly reuse the trainer code other models have
+    # TODO: use a dataloader to possibly speed up the GPU usage
+    # TODO different loss functions appropriate?
+    loss_function = nn.CrossEntropyLoss()
+
+    if args.cuda:
+        model.cuda()
+        loss_function.cuda()
+
+    device = next(model.parameters()).device
+    print("Current device: %s" % device)
+
+    if args.optim.lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, 
+                              weight_decay=args.weight_decay)
+    elif args.optim.lower() == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+    else:
+        raise ValueError("Unknown optimizer: %s" % args.optim)
+
+    label_map = {x: y for (y, x) in enumerate(labels)}
+    label_tensors = {x: torch.tensor(y, requires_grad=False, device=device) 
+                     for (y, x) in enumerate(labels)}
+
+    train_set_by_len = sort_dataset_by_len(train_set)
+
+    # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+    batch_starts = list(range(0, len(train_set), args.batch_size))
+    for epoch in range(args.max_epochs):
+        running_loss = 0.0
+        epoch_loss = 0.0
+        shuffled = shuffle_dataset(train_set_by_len)
+        model.train()
+        random.shuffle(batch_starts)
+        for batch_num, start_batch in enumerate(batch_starts):
+            #print("Starting batch: %d" % start_batch)
+            batch = shuffled[start_batch:start_batch+args.batch_size]
+            text = [x[1] for x in batch]
+            label = torch.stack([label_tensors[x[0]] for x in batch])
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            outputs = model(text, device)
+            loss = loss_function(outputs, label)
+            loss.backward()
+            optimizer.step()
+
+            # print statistics
+            running_loss += loss.item()
+            if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
+                print('[%d, %5d] average loss: %.3f' %
+                      (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
+                epoch_loss += running_loss
+                running_loss = 0.0
+
+        correct = score_dataset(model, dev_set, label_map, device)
+        print("Finished epoch %d.  Dev set: %d correct of %d examples.  Accuracy: %f  Total loss: %f" % 
+              ((epoch + 1), correct, len(dev_set), correct / len(dev_set), epoch_loss))
+
+        checkpoint_file = checkpoint_name(model_file, epoch + 1, correct / len(dev_set))
+        save(checkpoint_file, model, args)
+ 
+    save(model_file, model, args)
+
+
+def main():
+    args = parse_args()
+    set_random_seed(args.seed, args.cuda)
+
+    utils.ensure_dir(args.save_dir)
+
+    # TODO: maybe the dataset needs to be in a data loader in order to
+    # make cuda operations faster
+    train_set = read_dataset(args.train_file, args.wordvec_type)
+    labels = dataset_labels(train_set)
+    print("Using training set: %s" % args.train_file)
+    print("Training set has %d labels" % len(labels))
+
+    dev_set = read_dataset(args.dev_file, args.wordvec_type)
+    print("Using dev set: %s" % args.dev_file)
+    check_labels(labels, dev_set)
+
+    vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand)
+    pretrain_file = '{}/{}.pretrain.pt'.format(args.save_dir, args.shorthand)
+    pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
+    print("Embedding shape: %s" % str(pretrain.emb.shape))
+
+    if args.load_name:
+        model = load(args.load_name, pretrain)
+    else:
+        model = CNNClassifier(pretrain.emb, pretrain.vocab, len(labels), args)
+
+    print("Filter sizes: %s" % str(model.config.filter_sizes))
+    print("Filter channels: %s" % str(model.config.filter_channels))
+    print("Intermediate layers: %s" % str(model.config.fc_shapes))
+
+    save_name = args.save_name
+    if not(save_name):
+        save_name = args.base_name + "_" + args.shorthand + "_"
+        save_name = save_name + "FS_%s_" % "_".join([str(x) for x in model.config.filter_sizes])
+        save_name = save_name + "C_%d_" % model.config.filter_channels
+        if model.config.fc_shapes:
+            save_name = save_name + "FC_%s_" % "_".join([str(x) for x in model.config.fc_shapes])
+        save_name = save_name + "classifier.pt"
+    model_file = os.path.join(args.save_dir, save_name)
+
+    if args.train:
+        train_model(model, model_file, args, train_set, dev_set, labels)
+
+    # TODO: save the known labels in the model so that when loading
+    # the model back without the training set we can check the labels?
+    test_set = read_dataset(args.test_file, args.wordvec_type)
+    print("Using test set: %s" % args.test_file)
+    check_labels(labels, test_set)
+
+    label_map = {x: y for (y, x) in enumerate(labels)}
+    device = next(model.parameters()).device
+    correct = score_dataset(model, test_set, label_map, device)
+    print("Test set: %d correct of %d examples.  Accuracy: %f" % 
+          (correct, len(test_set), correct / len(test_set)))
+
+
+if __name__ == '__main__':
+    main()
