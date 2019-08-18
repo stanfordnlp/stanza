@@ -22,6 +22,7 @@ from stanfordnlp.models.pos.trainer import Trainer
 from stanfordnlp.models.pos import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
+from stanfordnlp.pipeline.doc import Document
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -109,9 +110,11 @@ def train(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    train_batch = DataLoader(args['train_file'], args['batch_size'], args, pretrain, evaluation=False)
+    train_doc = Document(args['train_file'], from_file=True)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
+    dev_doc = Document(args['eval_file'], from_file=True)
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -160,8 +163,8 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                dev_batch.conll.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
-                dev_batch.conll.write_conll(system_pred_file)
+                dev_batch.doc.set(['upos', 'xpos', 'feats'], [y for x in dev_preds for y in x])
+                dev_batch.doc.write_conll(system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
@@ -225,7 +228,8 @@ def evaluate(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
+    doc = Document(args['eval_file'], from_file=True)
+    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
     
     if len(batch) > 0:
         print("Start evaluation...")
@@ -237,8 +241,8 @@ def evaluate(args):
         preds = []
 
     # write to file and score
-    batch.conll.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
-    batch.conll.write_conll(system_pred_file)
+    batch.doc.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
+    batch.doc.write_conll(system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

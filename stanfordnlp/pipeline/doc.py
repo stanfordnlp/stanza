@@ -9,33 +9,40 @@ from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
 
 multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
 
+FIELD_NUM = 10
+FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
 
 class Document:
 
-    def __init__(self, text):
-        self._text = text
-        self._conll_file = None
+    def __init__(self, input_src, from_file=False):
+        # self._text = text
+        # self._conll_file = None
         self._sentences = []
+        self._num_words = 0
+        self._input_src = input_src
+        self._from_file = from_file
+        if self._from_file:
+            self.load_annotations(self._input_src)
 
-    @property
-    def conll_file(self):
-        """ Access the CoNLLFile of this document. """
-        return self._conll_file
+    # @property
+    # def conll_file(self):
+    #     """ Access the CoNLLFile of this document. """
+    #     return self._conll_file
 
-    @conll_file.setter
-    def conll_file(self, value):
-        """ Set the document's CoNLLFile value. """
-        self._conll_file = value
+    # @conll_file.setter
+    # def conll_file(self, value):
+    #     """ Set the document's CoNLLFile value. """
+    #     self._conll_file = value
 
-    @property
-    def text(self):
-        """ Access text of this document. Example: 'This is a sentence.'"""
-        return self._text
+    # @property
+    # def text(self):
+    #     """ Access text of this document. Example: 'This is a sentence.'"""
+    #     return self._text
 
-    @text.setter
-    def text(self, value):
-        """ Set the document's text value. Example: 'This is a sentence.'"""
-        self._text = value
+    # @text.setter
+    # def text(self, value):
+    #     """ Set the document's text value. Example: 'This is a sentence.'"""
+    #     self._text = value
 
     @property
     def sentences(self):
@@ -47,20 +54,152 @@ class Document:
         """ Set the list of tokens for this document. """
         self._sentences = value
 
-    def load_annotations(self):
-        """ Integrate info from the CoNLLFile instance. """
-        self._sentences = []
-        charoffset = 0
-        for token_list in self.conll_file.sents:
-            s = Sentence(token_list)
-            maxoffset = max(t.end_char_offset for t in s.tokens)
-            s.text = self.text[charoffset:maxoffset]
-            charoffset = maxoffset
-            self._sentences.append(s)
+    @property
+    def num_words(self):
+        """ Access number of words for this document. """
+        return self._num_words
 
-    def write_conll_to_file(self, file_path):
-        """ Write conll contents to file. """
-        self.conll_file.write_conll(file_path)
+    @num_words.setter
+    def num_words(self, value):
+        """ Set the number of words for this document. """
+        self._num_words = value
+
+    def load_annotations(self, file_path):
+        """ Integrate info from the CoNLLFile instance. """
+        conll_sents = self.read_conll(file_path)
+        # self._sentences = []
+        # charoffset = 0
+        for token_list in conll_sents:
+            s = Sentence(token_list)
+            # maxoffset = max(t.end_char_offset for t in s.tokens)
+            # s.text = self.text[charoffset:maxoffset]
+            # charoffset = maxoffset
+            self.sentences.append(s)
+        self.num_words = sum([len(sentence.words) for sentence in self.sentences])
+            
+
+    def get(self, fields, as_sentences=False):
+        """ Get fields from a list of field names. If only one field name is provided, return a list
+        of that field; if more than one, return a list of list. Note that all returned fields are after
+        multi-word expansion.
+        """
+        assert isinstance(fields, list), "Must provide field names as a list."
+        assert len(fields) >= 1, "Must have at least one field."
+
+        results = []
+        for sentence in self.sentences:
+            cursent = []
+            for word in sentence.words:
+                if len(fields) == 1:
+                    cursent += [getattr(word, fields[0])]
+                else:
+                    cursent += [[getattr(word, field) for field in fields]]
+            
+            if as_sentences:
+                results.append(cursent)
+            else:
+                results += cursent
+        return results
+
+        # field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
+        # results = []
+        # for sent in self.sents:
+        #     cursent = []
+        #     for ln in sent:
+        #         if '-' in ln[0]: # skip
+        #             continue
+        #         if len(field_idxs) == 1:
+        #             cursent += [ln[field_idxs[0]]]
+        #         else:
+        #             cursent += [[ln[fid] for fid in field_idxs]]
+
+        #     if as_sentences:
+        #         results.append(cursent)
+        #     else:
+        #         results += cursent
+        # return results
+
+    def set(self, fields, contents):
+        """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be expected; otherwise a list of list of contents will be expected.
+        """
+        assert isinstance(fields, list), "Must provide field names as a list."
+        assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
+        assert len(fields) >= 1, "Must have at least one field."
+        assert self.num_words == len(contents), "Contents must have the same number as the original file."
+        
+        cidx = 0
+        for sentence in self.sentences:
+            for word in sentence.words:
+                if len(fields) == 1:
+                    setattr(word, fields[0], contents[cidx])
+                else:
+                    for field, content in zip(fields, contents[cidx]):
+                        setattr(word, field, content)
+                cidx += 1
+        return
+                       
+        # field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
+        # cidx = 0
+        # for sent in self.sents:
+        #     for ln in sent:
+        #         if '-' in ln[0]:
+        #             continue
+        #         if len(field_idxs) == 1:
+        #             ln[field_idxs[0]] = contents[cidx]
+        #         else:
+        #             for fid, ct in zip(field_idxs, contents[cidx]):
+        #                 ln[fid] = ct
+        #         cidx += 1
+        # return
+
+    def conll_as_string(self):
+        """ Return current conll contents as string
+        """
+        # <TODO>: bug existed, consider mwt
+        return_string = ''
+        fields = ['index', 'text', 'lemma', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation', 'deps', 'misc']
+        data = self.get(fields, as_sentences=True)
+        for sentence in data:
+            for word in sentence:
+                ln = [str(field) if field is not None else '_' for field in word]
+                return_string += ('\t'.join(ln) + '\n')
+            return_string += '\n'
+        return return_string
+
+    def write_conll(self, file_path):
+        conll_string = self.conll_as_string()
+        with open(file_path, 'w') as outfile:
+            outfile.write(conll_string)
+        return
+
+    def read_conll(self, file_path):
+        """
+        Load data into a list of sentences, where each sentence is a list of lines,
+        and each line is a list of conllu fields.
+        """
+        sents, cache = [], []
+        with open(file_path) as infile:
+            for line in infile:
+                line = line.strip()
+                if len(line) == 0:
+                    if len(cache) > 0:
+                        sents.append(cache)
+                        cache = []
+                else:
+                    if line.startswith('#'): # skip comment line
+                        continue
+                    array = line.split('\t')
+                    if '.' in array[0]: # <TODO>: self.ignore_gapping
+                        continue
+                    assert len(array) == FIELD_NUM
+                    cache += [array]
+        if len(cache) > 0:
+            sents.append(cache)
+        return sents
+                
+    # def write_conll_to_file(self, file_path):
+    #     """ Write conll contents to file. """
+    #     self.conll_file.write_conll(file_path)
 
 class Sentence:
 
@@ -176,7 +315,11 @@ class Token:
 
         if token_entry[CONLLU_FIELD_TO_IDX['misc']] != '_':
             for item in token_entry[CONLLU_FIELD_TO_IDX['misc']].split('|'):
-                key, value = item.split('=')
+                key_value = item.split('=')
+                if len(key_value) == 1: 
+                    # print(token_entry) # <COMMENT>: some key_value can not be splited, maybe data error?
+                    continue
+                key, value = key_value
                 if key in ['beginCharOffset', 'endCharOffset']:
                     value = int(value)
                 setattr(self, f'_{key}', value)
@@ -252,6 +395,8 @@ class Word:
         else:
             self._governor = None
             self._dependency_relation = None
+        self._deps = None
+        self._misc = None
 
     @property
     def dependency_relation(self):
@@ -352,6 +497,26 @@ class Word:
     def index(self, value):
         """ Set the word's index value. """
         self._index = value
+
+    @property
+    def deps(self):
+        """ Access deps of this word. """
+        return self._deps
+
+    @deps.setter
+    def deps(self, value):
+        """ Set the word's deps value. """
+        self._deps = value
+
+    @property
+    def misc(self):
+        """ Access misc of this word. """
+        return self._misc
+
+    @misc.setter
+    def misc(self, value):
+        """ Set the word's misc value. """
+        self._misc = value
 
     def __repr__(self):
         features = ['index', 'text', 'lemma', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation']
