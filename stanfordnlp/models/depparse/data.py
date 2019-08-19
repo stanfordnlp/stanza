@@ -11,22 +11,25 @@ from stanfordnlp.pipeline.doc import Document
 
 class DataLoader:
 
-    def __init__(self, input_src, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
 
-        # check if input source is a file or a Document object
-        if isinstance(input_src, str):
-            filename = input_src
-            assert filename.endswith('conllu'), "Loaded file must be conllu file."
-            self.conll, data = self.load_file(filename, evaluation=self.eval)
-        elif isinstance(input_src, Document):
-            filename = None
-            doc = input_src
-            self.conll, data = self.load_doc(doc)
+        # # check if input source is a file or a Document object
+        # if isinstance(input_src, str):
+        #     filename = input_src
+        #     assert filename.endswith('conllu'), "Loaded file must be conllu file."
+        #     self.conll, data = self.load_file(filename, evaluation=self.eval)
+        # elif isinstance(input_src, Document):
+        #     filename = None
+        #     doc = input_src
+        #     self.conll, data = self.load_doc(doc)
+
+        self.doc = doc
+        data = self.load_doc(doc)
 
         # handle vocab
         if vocab is None:
@@ -49,8 +52,8 @@ class DataLoader:
 
         # chunk into batches
         self.data = self.chunk_batches(data)
-        if filename is not None:
-            print("{} batches created for {}.".format(len(self.data), filename))
+        # if filename is not None:
+        #     print("{} batches created for {}.".format(len(self.data), filename))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -135,8 +138,8 @@ class DataLoader:
         return conll_file, data
 
     def load_doc(self, doc):
-        data = doc.conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
-        return doc.conll_file, data
+        data = doc.get(['text', 'upos', 'xpos', 'feats', 'lemma', 'governor', 'dependency_relation'], as_sentences=True)
+        return data
 
     def __iter__(self):
         for i in range(self.__len__()):
