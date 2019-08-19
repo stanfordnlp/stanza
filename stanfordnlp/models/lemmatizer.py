@@ -23,6 +23,7 @@ from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.models.lemma import scorer, edit
 from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
+from stanfordnlp.pipeline.doc import Document
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -97,11 +98,13 @@ def main():
 def train(args):
     # load data
     print("[Loading data with batch size {}...]".format(args['batch_size']))
-    train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
+    train_doc = Document(args['train_file'], from_file=True)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['char'].size
     args['pos_vocab_size'] = vocab['pos'].size
-    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, vocab=vocab, evaluation=True)
+    dev_doc = Document(args['eval_file'], from_file=True)
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['model_dir'])
     model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
@@ -121,10 +124,11 @@ def train(args):
     # train a dictionary-based lemmatizer
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     print("[Training dictionary-based lemmatizer...]")
-    trainer.train_dict(train_batch.conll.get(['word', 'upos', 'lemma']))
+    trainer.train_dict(train_batch.doc.get(['text', 'upos', 'lemma']))
     print("Evaluating on dev set...")
-    dev_preds = trainer.predict_dict(dev_batch.conll.get(['word', 'upos']))
-    dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
+    dev_preds = trainer.predict_dict(dev_batch.doc.get(['text', 'upos']))
+    dev_batch.doc.set(['lemma'], dev_preds)
+    dev_batch.doc.write_conll(system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -164,13 +168,14 @@ def train(args):
                 dev_preds += preds
                 if edits is not None:
                     dev_edits += edits
-            dev_preds = trainer.postprocess(dev_batch.conll.get(['word']), dev_preds, edits=dev_edits)
+            dev_preds = trainer.postprocess(dev_batch.doc.get(['text']), dev_preds, edits=dev_edits)
 
             # try ensembling with dict if necessary
             if args.get('ensemble_dict', False):
                 print("[Ensembling dict with seq2seq model...]")
-                dev_preds = trainer.ensemble(dev_batch.conll.get(['word', 'upos']), dev_preds)
-            dev_batch.conll.write_conll_with_lemmas(dev_preds, system_pred_file)
+                dev_preds = trainer.ensemble(dev_batch.doc.get(['text', 'upos']), dev_preds)
+            dev_batch.doc.set(['lemma'], dev_preds)
+            dev_batch.doc.write_conll(system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -213,7 +218,8 @@ def evaluate(args):
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
+    doc = Document(args['eval_file'], from_file=True)
+    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
@@ -222,7 +228,7 @@ def evaluate(args):
         print("{} ".format(args['lang']))
         sys.exit(0)
 
-    dict_preds = trainer.predict_dict(batch.conll.get(['word', 'upos']))
+    dict_preds = trainer.predict_dict(batch.doc.get(['text', 'upos']))
 
     if loaded_args.get('dict_only', False):
         preds = dict_preds
@@ -235,14 +241,15 @@ def evaluate(args):
             preds += ps
             if es is not None:
                 edits += es
-        preds = trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
+        preds = trainer.postprocess(batch.doc.get(['text']), preds, edits=edits)
 
         if loaded_args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq lemmatizer...]")
-            preds = trainer.ensemble(batch.conll.get(['word', 'upos']), preds)
+            preds = trainer.ensemble(batch.doc.get(['text', 'upos']), preds)
 
     # write to file and score
-    batch.conll.write_conll_with_lemmas(preds, system_pred_file)
+    batch.doc.set(['lemma'], preds)
+    batch.doc.write_conll(system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 

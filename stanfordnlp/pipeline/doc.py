@@ -377,7 +377,7 @@ class Word:
         self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
         self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
         self._lemma = word_entry[CONLLU_FIELD_TO_IDX['lemma']]
-        if self._lemma == '_':
+        if self._lemma == '_' and self._text != '_': # <COMMENT>: Some data likes `_	_	SYM	NFP	_	1	punct	1:punct	_`
             self._lemma = None
         self._upos = word_entry[CONLLU_FIELD_TO_IDX['upos']]
         self._xpos = word_entry[CONLLU_FIELD_TO_IDX['xpos']]

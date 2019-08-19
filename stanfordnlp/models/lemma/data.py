@@ -13,21 +13,25 @@ from stanfordnlp.pipeline.doc import Document
 
 
 class DataLoader:
-    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
+    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
 
-        # check if input source is a file or a Document object
-        if isinstance(input_src, str):
-            filename = input_src
-            assert filename.endswith('conllu'), "Loaded file must be conllu file."
-            self.conll, data = self.load_file(filename)
-        elif isinstance(input_src, Document):
-            filename = None
-            doc = input_src
-            self.conll, data = self.load_doc(doc)
+        # # check if input source is a file or a Document object
+        # if isinstance(input_src, str):
+        #     filename = input_src
+        #     assert filename.endswith('conllu'), "Loaded file must be conllu file."
+        #     self.conll, data = self.load_file(filename)
+        # elif isinstance(input_src, Document):
+        #     filename = None
+        #     doc = input_src
+        #     self.conll, data = self.load_doc(doc)
+
+        self.doc = doc
+
+        data = self.load_doc(self.doc)
 
         if conll_only: # only load conll file
             return
@@ -124,5 +128,5 @@ class DataLoader:
         return conll_file, data
 
     def load_doc(self, doc):
-        data = doc.conll_file.get(['word', 'upos', 'lemma'])
-        return doc.conll_file, data
+        data = doc.get(['text', 'upos', 'lemma'])
+        return data
