@@ -24,7 +24,7 @@ class MWTProcessor(UDProcessor):
     def process(self, doc):
         batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         if len(batch) > 0:
-            dict_preds = self.trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
+            dict_preds = self.trainer.predict_dict(batch.doc.get_mwt_expansions(evaluation=True))
             # decide trainer type and run eval
             if self.config['dict_only']:
                 preds = dict_preds
@@ -34,12 +34,11 @@ class MWTProcessor(UDProcessor):
                     preds += self.trainer.predict(b)
 
                 if self.config.get('ensemble_dict', False):
-                    preds = self.trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
+                    preds = self.trainer.ensemble(batch.doc.get_mwt_expansions(evaluation=True), preds)
         else:
             # skip eval if dev data does not exist
             preds = []
 
-        with io.StringIO() as conll_with_mwt:
-            batch.conll.write_conll_with_mwt_expansions(preds, conll_with_mwt)
-            doc.conll_file = conll.CoNLLFile(input_str=conll_with_mwt.getvalue())
+        batch.doc.set_mwt(preds)
+        return batch.doc
 
