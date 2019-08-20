@@ -24,6 +24,7 @@ from stanfordnlp.models.lemma import scorer, edit
 from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -98,12 +99,12 @@ def main():
 def train(args):
     # load data
     print("[Loading data with batch size {}...]".format(args['batch_size']))
-    train_doc = Document(args['train_file'], from_file=True)
+    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
     train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['char'].size
     args['pos_vocab_size'] = vocab['pos'].size
-    dev_doc = Document(args['eval_file'], from_file=True)
+    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['model_dir'])
@@ -128,7 +129,7 @@ def train(args):
     print("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get(['text', 'upos']))
     dev_batch.doc.set(['lemma'], dev_preds)
-    dev_batch.doc.write_conll(system_pred_file)
+    CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -175,7 +176,7 @@ def train(args):
                 print("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get(['text', 'upos']), dev_preds)
             dev_batch.doc.set(['lemma'], dev_preds)
-            dev_batch.doc.write_conll(system_pred_file)
+            CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -218,7 +219,7 @@ def evaluate(args):
 
     # laod data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(args['eval_file'], from_file=True)
+    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     # skip eval if dev data does not exist
@@ -249,7 +250,7 @@ def evaluate(args):
 
     # write to file and score
     batch.doc.set(['lemma'], preds)
-    batch.doc.write_conll(system_pred_file)
+    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 

@@ -2,7 +2,6 @@ import random
 import torch
 
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
@@ -17,17 +16,6 @@ class DataLoader:
         self.eval = evaluation
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
-
-        # # check if input source is a file or a Document object
-        # if isinstance(input_src, str):
-        #     filename = input_src
-        #     assert filename.endswith('conllu'), "Loaded file must be conllu file."
-        #     self.conll, data = self.load_file(filename, evaluation=self.eval)
-        # elif isinstance(input_src, Document):
-        #     filename = None
-        #     doc = input_src
-        #     self.conll, data = self.load_doc(doc)
-
         self.doc = doc
         data = self.load_doc(doc)
 
@@ -52,8 +40,7 @@ class DataLoader:
 
         # chunk into batches
         self.data = self.chunk_batches(data)
-        # if filename is not None:
-        #     print("{} batches created for {}.".format(len(self.data), filename))
+        print("{} batches created.".format(len(self.data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -132,13 +119,18 @@ class DataLoader:
         deprel = get_long_tensor(batch[8], batch_size)
         return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, orig_idx, word_orig_idx, sentlens, word_lens
 
-    def load_file(self, filename, evaluation=False):
-        conll_file = conll.CoNLLFile(filename)
-        data = conll_file.get(['word', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
-        return conll_file, data
-
     def load_doc(self, doc):
-        data = doc.get(['text', 'upos', 'xpos', 'feats', 'lemma', 'governor', 'dependency_relation'], as_sentences=True)
+        data = doc.get(['text', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
+        data = self.resolve_none(data)
+        return data
+
+    def resolve_none(self, data):
+        # replace None to '_'
+        for sent_idx in range(len(data)):
+            for tok_idx in range(len(data[sent_idx])):
+                for feat_idx in range(len(data[sent_idx][tok_idx])):
+                    if data[sent_idx][tok_idx][feat_idx] is None:
+                        data[sent_idx][tok_idx][feat_idx] = '_'
         return data
 
     def __iter__(self):

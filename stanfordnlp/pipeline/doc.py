@@ -5,44 +5,17 @@ Basic data structures
 import io
 import re
 
-from stanfordnlp.models.common.conll import FIELD_TO_IDX as CONLLU_FIELD_TO_IDX
+from stanfordnlp.models.common.conll import FIELD_TO_IDX
 
 multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
 
-FIELD_NUM = 10
-FIELD_TO_IDX = {'id': 0, 'word': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
 
 class Document:
 
-    def __init__(self, input_src, from_file=False):
-        # self._text = text
-        # self._conll_file = None
+    def __init__(self, sentences):
         self._sentences = []
-        self._num_words = 0
-        self._input_src = input_src
-        self._from_file = from_file
-        if self._from_file:
-            self.load_annotations(self._input_src)
-
-    # @property
-    # def conll_file(self):
-    #     """ Access the CoNLLFile of this document. """
-    #     return self._conll_file
-
-    # @conll_file.setter
-    # def conll_file(self, value):
-    #     """ Set the document's CoNLLFile value. """
-    #     self._conll_file = value
-
-    # @property
-    # def text(self):
-    #     """ Access text of this document. Example: 'This is a sentence.'"""
-    #     return self._text
-
-    # @text.setter
-    # def text(self, value):
-    #     """ Set the document's text value. Example: 'This is a sentence.'"""
-    #     self._text = value
+        self._process_sentences(sentences)
+        self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     @property
     def sentences(self):
@@ -64,19 +37,9 @@ class Document:
         """ Set the number of words for this document. """
         self._num_words = value
 
-    def load_annotations(self, file_path):
-        """ Integrate info from the CoNLLFile instance. """
-        conll_sents = self.read_conll(file_path)
-        # self._sentences = []
-        # charoffset = 0
-        for token_list in conll_sents:
-            s = Sentence(token_list)
-            # maxoffset = max(t.end_char_offset for t in s.tokens)
-            # s.text = self.text[charoffset:maxoffset]
-            # charoffset = maxoffset
-            self.sentences.append(s)
-        self.num_words = sum([len(sentence.words) for sentence in self.sentences])
-            
+    def _process_sentences(self, sentences):
+        for tokens in sentences:
+            self.sentences.append(Sentence(tokens))
 
     def get(self, fields, as_sentences=False):
         """ Get fields from a list of field names. If only one field name is provided, return a list
@@ -101,24 +64,6 @@ class Document:
                 results += cursent
         return results
 
-        # field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
-        # results = []
-        # for sent in self.sents:
-        #     cursent = []
-        #     for ln in sent:
-        #         if '-' in ln[0]: # skip
-        #             continue
-        #         if len(field_idxs) == 1:
-        #             cursent += [ln[field_idxs[0]]]
-        #         else:
-        #             cursent += [[ln[fid] for fid in field_idxs]]
-
-        #     if as_sentences:
-        #         results.append(cursent)
-        #     else:
-        #         results += cursent
-        # return results
-
     def set(self, fields, contents):
         """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be expected; otherwise a list of list of contents will be expected.
         """
@@ -137,97 +82,38 @@ class Document:
                         setattr(word, field, content)
                 cidx += 1
         return
-                       
-        # field_idxs = [FIELD_TO_IDX[f.lower()] for f in fields]
-        # cidx = 0
-        # for sent in self.sents:
-        #     for ln in sent:
-        #         if '-' in ln[0]:
-        #             continue
-        #         if len(field_idxs) == 1:
-        #             ln[field_idxs[0]] = contents[cidx]
-        #         else:
-        #             for fid, ct in zip(field_idxs, contents[cidx]):
-        #                 ln[fid] = ct
-        #         cidx += 1
-        # return
 
-    def conll_as_string(self):
-        """ Return current conll contents as string
-        """
-        # <TODO>: bug existed, consider mwt
-        return_string = ''
-        fields = ['index', 'text', 'lemma', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation', 'deps', 'misc']
-        data = self.get(fields, as_sentences=True)
-        for sentence in data:
-            for word in sentence:
-                ln = [str(field) if field is not None else '_' for field in word]
-                return_string += ('\t'.join(ln) + '\n')
-            return_string += '\n'
-        return return_string
-
-    def write_conll(self, file_path):
-        conll_string = self.conll_as_string()
-        with open(file_path, 'w') as outfile:
-            outfile.write(conll_string)
-        return
-
-    def read_conll(self, file_path):
-        """
-        Load data into a list of sentences, where each sentence is a list of lines,
-        and each line is a list of conllu fields.
-        """
-        sents, cache = [], []
-        with open(file_path) as infile:
-            for line in infile:
-                line = line.strip()
-                if len(line) == 0:
-                    if len(cache) > 0:
-                        sents.append(cache)
-                        cache = []
-                else:
-                    if line.startswith('#'): # skip comment line
-                        continue
-                    array = line.split('\t')
-                    if '.' in array[0]: # <TODO>: self.ignore_gapping
-                        continue
-                    assert len(array) == FIELD_NUM
-                    cache += [array]
-        if len(cache) > 0:
-            sents.append(cache)
-        return sents
+    def to_dict(self):
+        return [sentence.to_dict() for sentence in self.sentences]
                 
-    # def write_conll_to_file(self, file_path):
-    #     """ Write conll contents to file. """
-    #     self.conll_file.write_conll(file_path)
-
 class Sentence:
 
     def __init__(self, tokens):
+        # tokens is a list of dict() containing both token entries and word entries
         self._tokens = []
         self._words = []
         self._process_tokens(tokens)
         self._dependencies = []
         # check if there is dependency info
-        if self.words[0].dependency_relation is not None:
+        if self.words[0].deprel is not None:
             self.build_dependencies()
 
     def _process_tokens(self, tokens):
         st, en = -1, -1
-        for tok in tokens:
-            m = multi_word_token_line.match(tok[CONLLU_FIELD_TO_IDX['id']])
-            if m:
+        for entry in tokens:
+            m = multi_word_token_line.match(entry.get('id'))
+            if m: # if this token is a multi-word token
                 st, en = int(m.group(1)), int(m.group(2))
-                self._tokens.append(Token(tok))
-            else:
-                new_word = Word(tok)
+                self._tokens.append(Token(entry))
+            else: # else this token is a word
+                new_word = Word(entry)
                 self._words.append(new_word)
-                idx = int(tok[CONLLU_FIELD_TO_IDX['id']])
+                idx = int(entry.get('id'))
                 if idx <= en:
                     self._tokens[-1].words.append(new_word)
-                    new_word.parent_token = self._tokens[-1]
                 else:
-                    self.tokens.append(Token(tok, words=[new_word]))
+                    self.tokens.append(Token(entry, words=[new_word]))
+                new_word.parent_token = self._tokens[-1]
 
     @property
     def dependencies(self):
@@ -259,29 +145,20 @@ class Sentence:
         """ Set the list of words for this sentence. """
         self._words = value
 
-    @property
-    def text(self):
-        """ Access the original text for this sentence. """
-        return self._text
-
-    @text.setter
-    def text(self, value):
-        """ Set the original text for this sentence. """
-        self._text = value
-
     def build_dependencies(self):
         for word in self.words:
-            if word.governor == 0:
+            if word.head == 0:
                 # make a word for the ROOT
-                governor = Word(["0", "ROOT", "_", "_", "_", "_", "-1", "_", "_", "_", "_", "_"])
+                word_entry = {"id": "0", "text": "ROOT", "head": -1}
+                head = Word(word_entry)
             else:
                 # id is index in words list + 1
-                governor = self.words[word.governor-1]
-            self.dependencies.append((governor, word.dependency_relation, word))
+                head = self.words[word.head-1]
+            self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
         for dep_edge in self.dependencies:
-            print((dep_edge[2].text, dep_edge[0].index, dep_edge[1]), file=file)
+            print((dep_edge[2].text, dep_edge[0].id, dep_edge[1]), file=file)
 
     def dependencies_string(self):
         dep_string = io.StringIO()
@@ -306,27 +183,36 @@ class Sentence:
         self.print_words(file=wrds_string)
         return wrds_string.getvalue().strip()
 
+    def to_dict(self):
+        ret = []
+        for token in self.tokens:
+            ret += token.to_dict()
+        return ret
+    
 
 class Token:
 
     def __init__(self, token_entry, words=None):
-        self._index = token_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._text = token_entry[CONLLU_FIELD_TO_IDX['word']]
+        # token_entry is a dict() containing multiple fields (must include `id` and `text`)
+        assert token_entry.get('id') and token_entry.get('text'), 'id and text should be included for the token'
+        self._id = token_entry.get('id')
+        self._text = token_entry.get('text')
+        self._misc = token_entry.get('misc')
+        self._words = words if words is not None else []
 
-        if token_entry[CONLLU_FIELD_TO_IDX['misc']] != '_':
-            for item in token_entry[CONLLU_FIELD_TO_IDX['misc']].split('|'):
-                key_value = item.split('=')
-                if len(key_value) == 1: 
-                    # print(token_entry) # <COMMENT>: some key_value can not be splited, maybe data error?
-                    continue
-                key, value = key_value
-                if key in ['beginCharOffset', 'endCharOffset']:
-                    value = int(value)
-                setattr(self, f'_{key}', value)
-        if words is None:
-            self.words = []
-        else:
-            self.words = words
+        if self._misc is not None: 
+            self.init_from_misc()
+
+    def init_from_misc(self):
+        for item in self._misc.split('|'):
+            key_value = item.split('=')
+            if len(key_value) == 1: 
+                # print(token_entry) # <COMMENT>: some key_value can not be splited, maybe data error?
+                continue
+            key, value = key_value
+            if key in ['beginCharOffset', 'endCharOffset']:
+                value = int(value)
+            setattr(self, f'_{key}', value)
 
     @property
     def words(self):
@@ -341,14 +227,14 @@ class Token:
             w.parent_token = self
 
     @property
-    def index(self):
+    def id(self):
         """ Access index of this token. """
-        return self._index
+        return self._id
 
-    @index.setter
-    def index(self, value):
-        """ Set the token's index value. """
-        self._index = value
+    @id.setter
+    def id(self, value):
+        """ Set the token's id value. """
+        self._id = value
 
     @property
     def text(self):
@@ -361,6 +247,16 @@ class Token:
         self._text = value
 
     @property
+    def misc(self):
+        """ Access misc of this word. """
+        return self._misc
+
+    @misc.setter
+    def misc(self, value):
+        """ Set the word's misc value. """
+        self._misc = value
+
+    @property
     def begin_char_offset(self):
         return self._beginCharOffset
 
@@ -371,42 +267,45 @@ class Token:
     def __repr__(self):
         return f"<{self.__class__.__name__} index={self.index};words={self.words};begin_char_offset={self.begin_char_offset};end_char_offset={self.end_char_offset}>"
 
+    def to_dict(self, fields=['id', 'text', 'misc']):
+        ret = []
+        if len(self.words) != 1:
+            token_dict = {}
+            for field in fields:
+                if getattr(self, field) is not None:
+                    token_dict[field] = getattr(self, field)
+            ret.append(token_dict)
+        for word in self.words:
+            ret.append(word.to_dict())
+        return ret
+  
+
 class Word:
 
     def __init__(self, word_entry):
-        self._index = word_entry[CONLLU_FIELD_TO_IDX['id']]
-        self._text = word_entry[CONLLU_FIELD_TO_IDX['word']]
-        self._lemma = word_entry[CONLLU_FIELD_TO_IDX['lemma']]
-        if self._lemma == '_' and self._text != '_': # <COMMENT>: Some data likes `_	_	SYM	NFP	_	1	punct	1:punct	_`
-            self._lemma = None
-        self._upos = word_entry[CONLLU_FIELD_TO_IDX['upos']]
-        self._xpos = word_entry[CONLLU_FIELD_TO_IDX['xpos']]
-        self._feats = word_entry[CONLLU_FIELD_TO_IDX['feats']]
-        if self._upos == '_':
-            self._upos = None
-            self._xpos = None
-            self._feats = None
-        self._governor = word_entry[CONLLU_FIELD_TO_IDX['head']]
-        self._dependency_relation = word_entry[CONLLU_FIELD_TO_IDX['deprel']]
+        # word_entry is a dict() containing multiple fields (must include `id` and `text`)
+        assert word_entry.get('id') and word_entry.get('text'), 'id and text should be included for the word. {}'.format(word_entry)
+        self._id = word_entry.get('id')
+        self._text = word_entry.get('text')
+        self._lemma = word_entry.get('lemma', None)
+        self._upos = word_entry.get('upos', None)
+        self._xpos = word_entry.get('xpos', None)
+        self._feats = word_entry.get('feats', None)
+        self._head = word_entry.get('head', None)
+        self._deprel = word_entry.get('deprel', None)
+        self._deps = word_entry.get('deps', None)
+        self._misc = word_entry.get('misc', None)
         self._parent_token = None
-        # check if there is dependency information
-        if self._dependency_relation != '_':
-            self._governor = int(self._governor)
-        else:
-            self._governor = None
-            self._dependency_relation = None
-        self._deps = None
-        self._misc = None
 
     @property
-    def dependency_relation(self):
+    def deprel(self):
         """ Access dependency relation of this word. Example: 'nmod'"""
-        return self._dependency_relation
+        return self._deprel
 
-    @dependency_relation.setter
-    def dependency_relation(self, value):
+    @deprel.setter
+    def deprel(self, value):
         """ Set the word's dependency relation value. Example: 'nmod'"""
-        self._dependency_relation = value
+        self._deprel = value
 
     @property
     def lemma(self):
@@ -419,14 +318,14 @@ class Word:
         self._lemma = value
 
     @property
-    def governor(self):
+    def head(self):
         """ Access governor of this word. """
-        return self._governor
+        return self._head
 
-    @governor.setter
-    def governor(self, value):
+    @head.setter
+    def head(self, value):
         """ Set the word's governor value. """
-        self._governor = value
+        self._head = value
 
     @property
     def pos(self):
@@ -489,14 +388,14 @@ class Word:
         self._parent_token = value
 
     @property
-    def index(self):
+    def id(self):
         """ Access index of this word. """
-        return self._index
+        return self._id
 
-    @index.setter
-    def index(self, value):
+    @id.setter
+    def id(self, value):
         """ Set the word's index value. """
-        self._index = value
+        self._id = value
 
     @property
     def deps(self):
@@ -519,7 +418,14 @@ class Word:
         self._misc = value
 
     def __repr__(self):
-        features = ['index', 'text', 'lemma', 'upos', 'xpos', 'feats', 'governor', 'dependency_relation']
+        features = ['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel']
         feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
 
         return f"<{self.__class__.__name__} {feature_str}>"
+
+    def to_dict(self, fields=['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']):
+        word_dict = {}
+        for field in fields:
+            if getattr(self, field) is not None:
+                word_dict[field] = getattr(self, field)
+        return word_dict

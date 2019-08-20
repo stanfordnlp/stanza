@@ -26,6 +26,7 @@ from stanfordnlp.models.depparse import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -111,10 +112,10 @@ def train(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(args['train_file'], from_file=True)
+    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    dev_doc = Document(args['eval_file'], from_file=True)
+    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
 
     # pred and gold path
@@ -161,8 +162,8 @@ def train(args):
                     preds = trainer.predict(batch)
                     dev_preds += preds
 
-                dev_batch.doc.set(['governor', 'dependency_relation'], [y for x in dev_preds for y in x])
-                dev_batch.doc.write_conll(system_pred_file)
+                dev_batch.doc.set(['head', 'deprel'], [y for x in dev_preds for y in x])
+                CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
@@ -226,7 +227,7 @@ def evaluate(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(args['eval_file'], from_file=True)
+    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
 
     if len(batch) > 0:
@@ -239,8 +240,8 @@ def evaluate(args):
         preds = []
 
     # write to file and score
-    batch.doc.set(['governor', 'dependency_relation'], [y for x in preds for y in x])
-    batch.doc.write_conll(system_pred_file)
+    batch.doc.set(['head', 'deprel'], [y for x in preds for y in x])
+    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
