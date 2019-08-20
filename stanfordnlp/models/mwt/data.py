@@ -6,27 +6,19 @@ import torch
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.vocab import Vocab
 from stanfordnlp.pipeline.doc import Document
 
 
 class DataLoader:
-    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False):
+    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
+        self.doc = doc
 
-        # check if input source is a file or a Document object
-        if isinstance(input_src, str):
-            filename = input_src
-            assert filename.endswith('conllu'), "Loaded file must be conllu file."
-            self.conll, data = self.load_file(filename, evaluation=self.eval)
-        elif isinstance(input_src, Document):
-            filename = None
-            doc = input_src
-            self.conll, data = self.load_doc(doc)
+        data = self.load_doc(self.doc, evaluation=self.eval)
 
         # handle vocab
         if vocab is None:
@@ -51,8 +43,7 @@ class DataLoader:
         # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
-        if filename is not None:
-            print("{} batches created for {}.".format(len(data), filename))
+        # print("{} batches created.".format(len(data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -106,15 +97,8 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_file(self, filename, evaluation=False):
-        conll_file = conll.CoNLLFile(filename)
-        if evaluation:
-            data = [[c] for c in conll_file.get_mwt_expansion_cands()]
-        else:
-            data = conll_file.get_mwt_expansions()
-        return conll_file, data
-
-    def load_doc(self, doc):
-        data = [[c] for c in doc.conll_file.get_mwt_expansion_cands()]
-        return doc.conll_file, data
+    def load_doc(self, doc, evaluation=False):
+        data = doc.get_mwt_expansions(evaluation)
+        if evaluation: data = [[e] for e in data]
+        return data
 

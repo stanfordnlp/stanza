@@ -8,7 +8,8 @@ import json
 
 from stanfordnlp.models.common.conll import FIELD_TO_IDX
 
-multi_word_token_line = re.compile("([0-9]+)\-([0-9]+)")
+multi_word_token_id = re.compile("([0-9]+)\-([0-9]+)")
+multi_word_token_misc = re.compile("MWT=Yes")
 
 
 class Document:
@@ -84,6 +85,44 @@ class Document:
                 cidx += 1
         return
 
+    def set_mwt(self, expansions):
+        idx_e = 0
+        for sentence in self.sentences:
+            idx_w = 0
+            for token in sentence.tokens:
+                idx_w += 1
+                m = multi_word_token_id.match(token.id)
+                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
+                if not m and not n:
+                    for word in token.words:
+                        word.id = str(idx_w)
+                        word.head = idx_w - 1
+                else:
+                    expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
+                    idx_e += 1
+                    idx_w_end = idx_w + len(expanded) - 1
+                    token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
+                    token.id = f'{idx_w}-{idx_w_end}'
+                    token.words = []
+                    for i, e_word in enumerate(expanded):
+                        token.words.append(Word({'id': str(idx_w + i), 'text': e_word, 'head': idx_w + i - 1})) 
+                    idx_w = idx_w_end
+        assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
+        return
+
+    def get_mwt_expansions(self, evaluation=False):
+        expansions = []
+        for sentence in self.sentences:
+            for token in sentence.tokens:
+                m = multi_word_token_id.match(token.id)
+                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
+                if m or n:
+                    src = token.text
+                    dst = ' '.join([word.text for word in token.words])
+                    expansions.append([src, dst])
+        if evaluation: expansions = [e[0] for e in expansions]
+        return expansions
+
     def to_dict(self):
         return [sentence.to_dict() for sentence in self.sentences]
     
@@ -105,9 +144,10 @@ class Sentence:
     def _process_tokens(self, tokens):
         st, en = -1, -1
         for entry in tokens:
-            m = multi_word_token_line.match(entry.get('id'))
-            if m: # if this token is a multi-word token
-                st, en = int(m.group(1)), int(m.group(2))
+            m = multi_word_token_id.match(entry.get('id'))
+            n = multi_word_token_misc.match(entry.get('misc')) if entry.get('misc', None) is not None else None
+            if m or n: # if this token is a multi-word token
+                if m: st, en = int(m.group(1)), int(m.group(2))
                 self._tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
@@ -156,8 +196,12 @@ class Sentence:
                 word_entry = {"id": "0", "text": "ROOT", "head": -1}
                 head = Word(word_entry)
             else:
-                # id is index in words list + 1
-                head = self.words[word.head-1]
+                # for mwt, can not use word.head - 1 to get index
+                head = None
+                for word_ in self.words:
+                    if word.head == word_.id:
+                        head = word_
+                        break
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
