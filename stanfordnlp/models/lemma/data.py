@@ -112,4 +112,13 @@ class DataLoader:
 
     def load_doc(self, doc):
         data = doc.get(['text', 'upos', 'lemma'])
+        data = self.resolve_none(data)
+        return data
+
+    def resolve_none(self, data):
+        # replace None to '_'
+        for tok_idx in range(len(data)):
+            for feat_idx in range(len(data[tok_idx])):
+                if data[tok_idx][feat_idx] is None:
+                    data[tok_idx][feat_idx] = '_'
         return data

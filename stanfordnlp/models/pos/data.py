@@ -39,7 +39,7 @@ class DataLoader:
 
         # chunk into batches
         self.data = self.chunk_batches(data)
-        print("{} batches created.".format(len(self.data)))
+        # print("{} batches created.".format(len(self.data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist

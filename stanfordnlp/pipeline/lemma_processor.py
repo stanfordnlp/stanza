@@ -2,7 +2,6 @@
 Processor for performing lemmatization
 """
 
-from stanfordnlp.models.common.conll import FIELD_TO_IDX
 from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
@@ -48,13 +47,13 @@ class LemmaProcessor(UDProcessor):
         else:
             batch = DataLoader(doc, self.config['batch_size'], self.config, evaluation=True, conll_only=True)
         if self.use_identity:
-            preds = [ln[FIELD_TO_IDX['word']] for sent in batch.conll.sents for ln in sent if '-' not in ln[0]]
+            preds = [word.text for sent in batch.doc.sentences for word in sent.words]
         elif self.config.get('dict_only', False):
-            preds = self.trainer.predict_dict(batch.conll.get(['word', 'upos']))
+            preds = self.trainer.predict_dict(batch.doc.get(['text', 'upos']))
         else:
             if self.config.get('ensemble_dict', False):
                 # skip the seq2seq model when we can
-                skip = self.trainer.skip_seq2seq(batch.conll.get(['word', 'upos']))
+                skip = self.trainer.skip_seq2seq(batch.doc.get(['text', 'upos']))
                 seq2seq_batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab,
                                            evaluation=True, skip=skip)
             else:
@@ -69,7 +68,7 @@ class LemmaProcessor(UDProcessor):
                     edits += es
 
             if self.config.get('ensemble_dict', False):
-                preds = self.trainer.postprocess([x for x, y in zip(batch.conll.get(['word']), skip) if not y], preds, edits=edits)
+                preds = self.trainer.postprocess([x for x, y in zip(batch.doc.get(['text']), skip) if not y], preds, edits=edits)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
                 preds1 = []
@@ -79,11 +78,12 @@ class LemmaProcessor(UDProcessor):
                     else:
                         preds1.append(preds[i])
                         i += 1
-                preds = self.trainer.ensemble(batch.conll.get(['word', 'upos']), preds1)
+                preds = self.trainer.ensemble(batch.doc.get(['text', 'upos']), preds1)
             else:
-                preds = self.trainer.postprocess(batch.conll.get(['word']), preds, edits=edits)
+                preds = self.trainer.postprocess(batch.doc.get(['text']), preds, edits=edits)
 
         # map empty string lemmas to '_'
         preds = [max([(len(x), x), (0, '_')])[1] for x in preds]
-        batch.conll.set(['lemma'], preds)
+        batch.doc.set(['lemma'], preds)
+        return batch.doc
 

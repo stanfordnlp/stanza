@@ -176,8 +176,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
         if len(current_sent):
             doc.append(process_sentence(current_sent, mwt_dict))
-
-    CoNLL.dict2conll(doc, output_file)
+    if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
