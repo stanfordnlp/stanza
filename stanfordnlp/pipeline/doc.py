@@ -4,6 +4,7 @@ Basic data structures
 
 import io
 import re
+import json
 
 from stanfordnlp.models.common.conll import FIELD_TO_IDX
 
@@ -85,6 +86,9 @@ class Document:
 
     def to_dict(self):
         return [sentence.to_dict() for sentence in self.sentences]
+    
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=2)
                 
 class Sentence:
 
@@ -188,6 +192,9 @@ class Sentence:
         for token in self.tokens:
             ret += token.to_dict()
         return ret
+
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=2)
     
 
 class Token:
@@ -265,7 +272,7 @@ class Token:
         return self._endCharOffset
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} index={self.index};words={self.words};begin_char_offset={self.begin_char_offset};end_char_offset={self.end_char_offset}>"
+        return json.dumps(self.to_dict(), indent=2)
 
     def to_dict(self, fields=['id', 'text', 'misc']):
         ret = []
@@ -418,10 +425,7 @@ class Word:
         self._misc = value
 
     def __repr__(self):
-        features = ['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel']
-        feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
-
-        return f"<{self.__class__.__name__} {feature_str}>"
+        return json.dumps(self.to_dict(), indent=2)
 
     def to_dict(self, fields=['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']):
         word_dict = {}
