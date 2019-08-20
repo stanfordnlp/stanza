@@ -4,6 +4,7 @@ import json
 import numpy as np
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
+from stanfordnlp.models.common.conll import CoNLL
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -21,7 +22,8 @@ def load_mwt_dict(filename):
     else:
         return
 
-def print_sentence(sentence, f, mwt_dict=None):
+def process_sentence(sentence, mwt_dict=None):
+    sent = []
     i = 0
     for tok, p, additional_info in sentence:
         expansion = None
@@ -32,20 +34,22 @@ def print_sentence(sentence, f, mwt_dict=None):
             elif tok.lower() in mwt_dict:
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
-            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            f.write("{}-{}\t{}{}\t{}\n".format(i+1, i+len(expansion), tok, "\t_" * 7, infostr))
+            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            sent.append({'id': f'{i+1}-{i+len(expansion)}', 'text': tok})
+            if infostr is not None: sent[-1]['misc'] = infostr
             for etok in expansion:
-                f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
+                sent.append({'id': f'{i+1}', 'text': etok, 'head': f'{i}'})
                 i += 1
         else:
             if len(tok) <= 0:
                 continue
             if p == 3 or p == 4:
                 additional_info['MWT'] = 'Yes'
-            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, infostr))
+            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            sent.append({'id': f'{i+1}', 'text': tok, 'head': f'{i}'})
+            if infostr is not None: sent[-1]['misc'] = infostr
             i += 1
-    f.write('\n')
+    return sent
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
     paragraphs = []
@@ -113,6 +117,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
     offset = 0
     oov_count = 0
+    doc = []
 
     text = orig_text
     char_offset = 0
@@ -152,7 +157,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 current_sent += [(tok, p, additional_info)]
                 current_tok = ''
                 if p == 2 or p == 4:
-                    print_sentence(current_sent, output_file, mwt_dict)
+                    doc.append(process_sentence(current_sent, mwt_dict))
                     current_sent = []
 
         if len(current_tok):
@@ -170,13 +175,13 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 current_sent += [(tok, 2, additional_info)]
 
         if len(current_sent):
-            print_sentence(current_sent, output_file, mwt_dict)
+            doc.append(process_sentence(current_sent, mwt_dict))
 
-    return oov_count, offset, all_preds
+    CoNLL.dict2conll(doc, output_file)
+    return oov_count, offset, all_preds, doc
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
-    with open(args['conll_file'], 'w') as conll_output:
-        oov_count, N, all_preds = output_predictions(conll_output, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in batches.data for y in x]
