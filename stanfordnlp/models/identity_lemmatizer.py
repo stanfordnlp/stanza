@@ -9,6 +9,8 @@ import random
 from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma import scorer
 from stanfordnlp.models.common import utils
+from stanfordnlp.models.common.doc import *
+from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -36,16 +38,18 @@ def main():
 
     if args['mode'] == 'train':
         print("[No training is required; will only generate evaluation output...]")
-
-    batch = DataLoader(args['eval_file'], args['batch_size'], args, evaluation=True, conll_only=True)
+    
+    document = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    batch = DataLoader(document, args['batch_size'], args, evaluation=True, conll_only=True)
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
     # use identity mapping for prediction
-    preds = batch.conll.get(['word'])
+    preds = batch.doc.get([TEXT])
 
     # write to file and score
-    batch.conll.write_conll_with_lemmas(preds, system_pred_file)
+    batch.doc.set([LEMMA], preds)
+    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
