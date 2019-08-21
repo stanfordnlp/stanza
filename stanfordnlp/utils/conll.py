@@ -53,7 +53,7 @@ class CoNLL:
                     token_dict[field] = int(value)
                 else:
                     token_dict[field] = value
-            # <COMMENT>: A very special case, like `_	_	SYM	NFP	_	1	punct	1:punct	_`
+            # special case if text is '_'
             if token_conll[FIELD_TO_IDX['text']] == '_':
                 token_dict['text'] = token_conll[FIELD_TO_IDX['text']]
                 token_dict['lemma'] = token_conll[FIELD_TO_IDX['lemma']]

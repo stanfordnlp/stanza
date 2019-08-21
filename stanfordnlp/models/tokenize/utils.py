@@ -38,7 +38,7 @@ def process_sentence(sentence, mwt_dict=None):
             sent.append({'id': f'{i+1}-{i+len(expansion)}', 'text': tok})
             if infostr is not None: sent[-1]['misc'] = infostr
             for etok in expansion:
-                sent.append({'id': f'{i+1}', 'text': etok, 'head': f'{i}'})
+                sent.append({'id': f'{i+1}', 'text': etok, 'head': i})
                 i += 1
         else:
             if len(tok) <= 0:
@@ -46,7 +46,7 @@ def process_sentence(sentence, mwt_dict=None):
             if p == 3 or p == 4:
                 additional_info['MWT'] = 'Yes'
             infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            sent.append({'id': f'{i+1}', 'text': tok, 'head': f'{i}'})
+            sent.append({'id': f'{i+1}', 'text': tok, 'head': i})
             if infostr is not None: sent[-1]['misc'] = infostr
             i += 1
     return sent

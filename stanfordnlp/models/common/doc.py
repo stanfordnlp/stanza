@@ -16,6 +16,8 @@ class Document:
 
     def __init__(self, sentences):
         self._sentences = []
+        self._num_words = 0
+
         self._process_sentences(sentences)
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
@@ -129,14 +131,16 @@ class Document:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
                 
+
 class Sentence:
 
     def __init__(self, tokens):
         # tokens is a list of dict() containing both token entries and word entries
         self._tokens = []
         self._words = []
-        self._process_tokens(tokens)
         self._dependencies = []
+
+        self._process_tokens(tokens)
         # check if there is dependency info
         if self.words[0].deprel is not None:
             self.build_dependencies()
@@ -247,36 +251,24 @@ class Token:
     def __init__(self, token_entry, words=None):
         # token_entry is a dict() containing multiple fields (must include `id` and `text`)
         assert token_entry.get('id') and token_entry.get('text'), 'id and text should be included for the token'
-        self._id = token_entry.get('id')
-        self._text = token_entry.get('text')
-        self._misc = token_entry.get('misc')
-        self._words = words if words is not None else []
+        self._id, self._text, self._misc, self._words, self._beginCharOffset, self._endCharOffset = [None] * 6
 
-        if self._misc is not None: 
+        self.id = token_entry.get('id')
+        self.text = token_entry.get('text')
+        self.misc = token_entry.get('misc')
+        self.words = words if words is not None else []
+
+        if self.misc is not None: 
             self.init_from_misc()
 
     def init_from_misc(self):
         for item in self._misc.split('|'):
             key_value = item.split('=')
-            if len(key_value) == 1: 
-                # print(token_entry) # <COMMENT>: some key_value can not be splited, maybe data error?
-                continue
+            if len(key_value) == 1: continue # some key_value can not be splited                
             key, value = key_value
             if key in ['beginCharOffset', 'endCharOffset']:
                 value = int(value)
             setattr(self, f'_{key}', value)
-
-    @property
-    def words(self):
-        """ Access the list of syntactic words underlying this token. """
-        return self._words
-
-    @words.setter
-    def words(self, value):
-        """ Set this token's list of underlying syntactic words. """
-        self._words = value
-        for w in self._words:
-            w.parent_token = self
 
     @property
     def id(self):
@@ -306,7 +298,19 @@ class Token:
     @misc.setter
     def misc(self, value):
         """ Set the word's misc value. """
-        self._misc = value
+        self._misc = value if value != '_' else None
+
+    @property
+    def words(self):
+        """ Access the list of syntactic words underlying this token. """
+        return self._words
+
+    @words.setter
+    def words(self, value):
+        """ Set this token's list of underlying syntactic words. """
+        self._words = value
+        for w in self._words:
+            w.parent_token = self
 
     @property
     def begin_char_offset(self):
@@ -337,107 +341,18 @@ class Word:
     def __init__(self, word_entry):
         # word_entry is a dict() containing multiple fields (must include `id` and `text`)
         assert word_entry.get('id') and word_entry.get('text'), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id = word_entry.get('id')
-        self._text = word_entry.get('text')
-        self._lemma = word_entry.get('lemma', None)
-        self._upos = word_entry.get('upos', None)
-        self._xpos = word_entry.get('xpos', None)
-        self._feats = word_entry.get('feats', None)
-        self._head = word_entry.get('head', None)
-        self._deprel = word_entry.get('deprel', None)
-        self._deps = word_entry.get('deps', None)
-        self._misc = word_entry.get('misc', None)
-        self._parent_token = None
-
-    @property
-    def deprel(self):
-        """ Access dependency relation of this word. Example: 'nmod'"""
-        return self._deprel
-
-    @deprel.setter
-    def deprel(self, value):
-        """ Set the word's dependency relation value. Example: 'nmod'"""
-        self._deprel = value
-
-    @property
-    def lemma(self):
-        """ Access lemma of this word. """
-        return self._lemma
-
-    @lemma.setter
-    def lemma(self, value):
-        """ Set the word's lemma value. """
-        self._lemma = value
-
-    @property
-    def head(self):
-        """ Access governor of this word. """
-        return self._head
-
-    @head.setter
-    def head(self, value):
-        """ Set the word's governor value. """
-        self._head = value
-
-    @property
-    def pos(self):
-        """ Access (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
-        return self._xpos
-
-    @pos.setter
-    def pos(self, value):
-        """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
-        self._xpos = value
-
-    @property
-    def text(self):
-        """ Access text of this word. Example: 'The'"""
-        return self._text
-
-    @text.setter
-    def text(self, value):
-        """ Set the word's text value. Example: 'The'"""
-        self._text = value
-
-    @property
-    def xpos(self):
-        """ Access treebank-specific part-of-speech of this word. Example: 'NNP'"""
-        return self._xpos
-
-    @xpos.setter
-    def xpos(self, value):
-        """ Set the word's treebank-specific part-of-speech value. Example: 'NNP'"""
-        self._xpos = value
-
-    @property
-    def upos(self):
-        """ Access universal part-of-speech of this word. Example: 'DET'"""
-        return self._upos
-
-    @upos.setter
-    def upos(self, value):
-        """ Set the word's universal part-of-speech value. Example: 'DET'"""
-        self._upos = value
-
-    @property
-    def feats(self):
-        """ Access morphological features of this word. Example: 'Gender=Fem'"""
-        return self._feats
-
-    @feats.setter
-    def feats(self, value):
-        """ Set this word's morphological features. Example: 'Gender=Fem'"""
-        self._feats = value
-
-    @property
-    def parent_token(self):
-        """ Access the parent token of this word. """
-        return self._parent_token
-
-    @parent_token.setter
-    def parent_token(self, value):
-        """ Set this word's parent token. """
-        self._parent_token = value
+        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent_token = [None] * 11
+        
+        self.id = word_entry.get('id')
+        self.text = word_entry.get('text')
+        self.lemma = word_entry.get('lemma', None)
+        self.upos = word_entry.get('upos', None)
+        self.xpos = word_entry.get('xpos', None)
+        self.feats = word_entry.get('feats', None)
+        self.head = word_entry.get('head', None)
+        self.deprel = word_entry.get('deprel', None)
+        self.deps = word_entry.get('deps', None)
+        self.misc = word_entry.get('misc', None)
 
     @property
     def id(self):
@@ -450,6 +365,76 @@ class Word:
         self._id = value
 
     @property
+    def text(self):
+        """ Access text of this word. Example: 'The'"""
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the word's text value. Example: 'The'"""
+        self._text = value
+
+    @property
+    def lemma(self):
+        """ Access lemma of this word. """
+        return self._lemma
+
+    @lemma.setter
+    def lemma(self, value):
+        """ Set the word's lemma value. """
+        self._lemma = value if value != '_' or self._text == '_' else None
+
+    @property
+    def upos(self):
+        """ Access universal part-of-speech of this word. Example: 'DET'"""
+        return self._upos
+
+    @upos.setter
+    def upos(self, value):
+        """ Set the word's universal part-of-speech value. Example: 'DET'"""
+        self._upos = value if value != '_' else None
+
+    @property
+    def xpos(self):
+        """ Access treebank-specific part-of-speech of this word. Example: 'NNP'"""
+        return self._xpos
+
+    @xpos.setter
+    def xpos(self, value):
+        """ Set the word's treebank-specific part-of-speech value. Example: 'NNP'"""
+        self._xpos = value if value != '_' else None
+
+    @property
+    def feats(self):
+        """ Access morphological features of this word. Example: 'Gender=Fem'"""
+        return self._feats
+
+    @feats.setter
+    def feats(self, value):
+        """ Set this word's morphological features. Example: 'Gender=Fem'"""
+        self._feats = value if value != '_' else None
+
+    @property
+    def head(self):
+        """ Access governor of this word. """
+        return self._head
+
+    @head.setter
+    def head(self, value):
+        """ Set the word's governor value. """
+        self._head = int(value) if value != '_' else None
+
+    @property
+    def deprel(self):
+        """ Access dependency relation of this word. Example: 'nmod'"""
+        return self._deprel
+
+    @deprel.setter
+    def deprel(self, value):
+        """ Set the word's dependency relation value. Example: 'nmod'"""
+        self._deprel = value if value != '_' else None
+
+    @property
     def deps(self):
         """ Access deps of this word. """
         return self._deps
@@ -457,7 +442,7 @@ class Word:
     @deps.setter
     def deps(self, value):
         """ Set the word's deps value. """
-        self._deps = value
+        self._deps = value if value != '_' else None
 
     @property
     def misc(self):
@@ -467,7 +452,27 @@ class Word:
     @misc.setter
     def misc(self, value):
         """ Set the word's misc value. """
-        self._misc = value
+        self._misc = value if value != '_' else None
+
+    @property
+    def parent_token(self):
+        """ Access the parent token of this word. """
+        return self._parent_token
+
+    @parent_token.setter
+    def parent_token(self, value):
+        """ Set this word's parent token. """
+        self._parent_token = value
+
+    @property
+    def pos(self):
+        """ Access (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
+        return self._xpos
+
+    @pos.setter
+    def pos(self, value):
+        """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
+        self._xpos = value if value != '_' else None
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
