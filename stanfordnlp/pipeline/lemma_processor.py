@@ -2,11 +2,11 @@
 Processor for performing lemmatization
 """
 
+from stanfordnlp.models.common import doc
 from stanfordnlp.models.lemma.data import DataLoader
 from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
-
 
 class LemmaProcessor(UDProcessor):
 
@@ -41,20 +41,20 @@ class LemmaProcessor(UDProcessor):
         else:
             self._requires = LemmaProcessor.REQUIRES_DEFAULT
 
-    def process(self, doc):
+    def process(self, document):
         if not self.use_identity:
-            batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+            batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         else:
-            batch = DataLoader(doc, self.config['batch_size'], self.config, evaluation=True, conll_only=True)
+            batch = DataLoader(document, self.config['batch_size'], self.config, evaluation=True, conll_only=True)
         if self.use_identity:
             preds = [word.text for sent in batch.doc.sentences for word in sent.words]
         elif self.config.get('dict_only', False):
-            preds = self.trainer.predict_dict(batch.doc.get(['text', 'upos']))
+            preds = self.trainer.predict_dict(batch.doc.get([doc.TEXT, doc.UPOS]))
         else:
             if self.config.get('ensemble_dict', False):
                 # skip the seq2seq model when we can
-                skip = self.trainer.skip_seq2seq(batch.doc.get(['text', 'upos']))
-                seq2seq_batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab,
+                skip = self.trainer.skip_seq2seq(batch.doc.get([doc.TEXT, doc.UPOS]))
+                seq2seq_batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab,
                                            evaluation=True, skip=skip)
             else:
                 seq2seq_batch = batch
@@ -68,7 +68,7 @@ class LemmaProcessor(UDProcessor):
                     edits += es
 
             if self.config.get('ensemble_dict', False):
-                preds = self.trainer.postprocess([x for x, y in zip(batch.doc.get(['text']), skip) if not y], preds, edits=edits)
+                preds = self.trainer.postprocess([x for x, y in zip(batch.doc.get([doc.TEXT]), skip) if not y], preds, edits=edits)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
                 preds1 = []
@@ -78,12 +78,12 @@ class LemmaProcessor(UDProcessor):
                     else:
                         preds1.append(preds[i])
                         i += 1
-                preds = self.trainer.ensemble(batch.doc.get(['text', 'upos']), preds1)
+                preds = self.trainer.ensemble(batch.doc.get([doc.TEXT, doc.UPOS]), preds1)
             else:
-                preds = self.trainer.postprocess(batch.doc.get(['text']), preds, edits=edits)
+                preds = self.trainer.postprocess(batch.doc.get([doc.TEXT]), preds, edits=edits)
 
         # map empty string lemmas to '_'
         preds = [max([(len(x), x), (0, '_')])[1] for x in preds]
-        batch.doc.set(['lemma'], preds)
+        batch.doc.set([doc.LEMMA], preds)
         return batch.doc
 

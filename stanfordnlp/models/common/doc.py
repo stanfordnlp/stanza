@@ -6,11 +6,21 @@ import io
 import re
 import json
 
-from stanfordnlp.utils.conll import FIELD_TO_IDX
-
 multi_word_token_id = re.compile("([0-9]+)\-([0-9]+)")
 multi_word_token_misc = re.compile(".*MWT=Yes.*")
 
+ID = 'id'
+TEXT = 'text'
+LEMMA = 'lemma'
+UPOS = 'upos'
+XPOS = 'xpos'
+FEATS = 'feats'
+HEAD = 'head'
+DEPREL = 'deprel'
+DEPS = 'deps'
+MISC = 'misc'
+BEGIN_CHAR_OFFSET = 'beginCharOffset'
+END_CHAR_OFFSET = 'endCharOffset'
 
 class Document:
 
@@ -109,7 +119,7 @@ class Document:
                     token.id = f'{idx_w}-{idx_w_end}'
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({'id': str(idx_w + i), 'text': e_word, 'head': idx_w + i - 1})) 
+                        token.words.append(Word({ID: str(idx_w + i), TEXT: e_word, HEAD: idx_w + i - 1}))
                     idx_w = idx_w_end
             sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
         self._process_sentences(self.to_dict()) # reprocess to update number of words
@@ -150,15 +160,15 @@ class Sentence:
         st, en = -1, -1
         self.tokens, self.words = [], []
         for entry in tokens:
-            m = multi_word_token_id.match(entry.get('id'))
-            n = multi_word_token_misc.match(entry.get('misc')) if entry.get('misc', None) is not None else None
+            m = multi_word_token_id.match(entry.get(ID))
+            n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
             if m or n: # if this token is a multi-word token
                 if m: st, en = int(m.group(1)), int(m.group(2))
                 self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
                 self.words.append(new_word)
-                idx = int(entry.get('id'))
+                idx = int(entry.get(ID))
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
@@ -205,7 +215,7 @@ class Sentence:
             head = None
             if int(word.head) == 0:
                 # make a word for the ROOT
-                word_entry = {"id": "0", "text": "ROOT", "head": -1}
+                word_entry = {ID: "0", TEXT: "ROOT", HEAD: -1}
                 head = Word(word_entry)
             else:
                 # for mwt, can not use word.head - 1 to get index
@@ -256,15 +266,15 @@ class Token:
 
     def __init__(self, token_entry, words=None):
         # token_entry is a dict() containing multiple fields (must include `id` and `text`)
-        assert token_entry.get('id') and token_entry.get('text'), 'id and text should be included for the token'
+        assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
         self._id, self._text, self._misc, self._words, self._beginCharOffset, self._endCharOffset = [None] * 6
 
-        self.id = token_entry.get('id')
-        self.text = token_entry.get('text')
-        self.misc = token_entry.get('misc')
+        self.id = token_entry.get(ID)
+        self.text = token_entry.get(TEXT)
+        self.misc = token_entry.get(MISC)
         self.words = words if words is not None else []
 
-        if self.misc is not None: 
+        if self.misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
@@ -272,7 +282,7 @@ class Token:
             key_value = item.split('=')
             if len(key_value) == 1: continue # some key_value can not be splited                
             key, value = key_value
-            if key in ['beginCharOffset', 'endCharOffset']:
+            if key in [BEGIN_CHAR_OFFSET, END_CHAR_OFFSET]:
                 value = int(value)
             setattr(self, f'_{key}', value)
 
@@ -329,7 +339,7 @@ class Token:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-    def to_dict(self, fields=['id', 'text', 'misc']):
+    def to_dict(self, fields=[ID, TEXT, MISC]):
         ret = []
         if len(self.words) != 1:
             token_dict = {}
@@ -342,26 +352,26 @@ class Token:
         return ret
     
     def pretty_print(self):
-        return f"<{self.__class__.__name__} index={self.id};words={[word.pretty_print() for word in self.words]};begin_char_offset={self.begin_char_offset};end_char_offset={self.end_char_offset}>"
+        return f"<{self.__class__.__name__} index={self.id};words={[word.pretty_print() for word in self.words]};{BEGIN_CHAR_OFFSET}={self.begin_char_offset};{END_CHAR_OFFSET}={self.end_char_offset}>"
   
 
 class Word:
 
     def __init__(self, word_entry):
         # word_entry is a dict() containing multiple fields (must include `id` and `text`)
-        assert word_entry.get('id') and word_entry.get('text'), 'id and text should be included for the word. {}'.format(word_entry)
+        assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
         self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent = [None] * 11
         
-        self.id = word_entry.get('id')
-        self.text = word_entry.get('text')
-        self.lemma = word_entry.get('lemma', None)
-        self.upos = word_entry.get('upos', None)
-        self.xpos = word_entry.get('xpos', None)
-        self.feats = word_entry.get('feats', None)
-        self.head = word_entry.get('head', None)
-        self.deprel = word_entry.get('deprel', None)
-        self.deps = word_entry.get('deps', None)
-        self.misc = word_entry.get('misc', None)
+        self.id = word_entry.get(ID)
+        self.text = word_entry.get(TEXT)
+        self.lemma = word_entry.get(LEMMA, None)
+        self.upos = word_entry.get(UPOS, None)
+        self.xpos = word_entry.get(XPOS, None)
+        self.feats = word_entry.get(FEATS, None)
+        self.head = word_entry.get(HEAD, None)
+        self.deprel = word_entry.get(DEPREL, None)
+        self.deps = word_entry.get(DEPS, None)
+        self.misc = word_entry.get(MISC, None)
 
     @property
     def id(self):
@@ -486,7 +496,7 @@ class Word:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-    def to_dict(self, fields=['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
         word_dict = {}
         for field in fields:
             if getattr(self, field) is not None:
@@ -494,6 +504,6 @@ class Word:
         return word_dict
 
     def pretty_print(self):
-        features = ['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel']
+        features = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL]
         feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
         return f"<{self.__class__.__name__} {feature_str}>"

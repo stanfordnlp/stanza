@@ -20,8 +20,8 @@ class MWTProcessor(UDProcessor):
     def _set_up_model(self, config, use_gpu):
         self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
-    def process(self, doc):
-        batch = DataLoader(doc, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+    def process(self, document):
+        batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         if len(batch) > 0:
             dict_preds = self.trainer.predict_dict(batch.doc.get_mwt_expansions(evaluation=True))
             # decide trainer type and run eval

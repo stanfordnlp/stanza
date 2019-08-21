@@ -10,7 +10,7 @@ from stanfordnlp.models.tokenize.utils import output_predictions
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
-from stanfordnlp.models.common.doc import Document
+from stanfordnlp.models.common import doc
 
 
 # class for running the tokenizer
@@ -40,33 +40,33 @@ class TokenizeProcessor(UDProcessor):
         generate dictionary data structure
         """
 
-        doc = []
+        document = []
         if isinstance(input_src, str):
-            sentences = [sent.rstrip(' ').split() for sent in doc.rstrip('\n').split('\n') if sent]
+            sentences = [sent.rstrip(' ').split() for sent in document.rstrip('\n').split('\n') if sent]
         elif isinstance(input_src, list):
-            sentences = doc
+            sentences = document
         for sentence in sentences:
             sent = []
             for token_id, token in enumerate(sentence):
-                sent.append({'id': str(token_id + 1), 'word': token})
-            doc.append(sent)
-        return doc
+                sent.append({doc.ID: str(token_id + 1), doc.WORD: token})
+            document.append(sent)
+        return document
 
-    def process(self, doc):
+    def process(self, document):
         if self.config.get('pretokenized'):
-            doc = self.process_pre_tokenized_text(doc)
+            document = self.process_pre_tokenized_text(document)
         else:
             # set up batches
             if self.config.get('lang') == 'vi':
                 # special processing is due for Vietnamese
-                text = '\n\n'.join([x for x in doc.split('\n\n')]).rstrip()
+                text = '\n\n'.join([x for x in document.split('\n\n')]).rstrip()
                 dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
                 data = paras_to_chunks(text, dummy_labels)
                 batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
             else:
-                batches = DataLoader(self.config, input_text=doc, vocab=self.vocab, evaluation=True)
+                batches = DataLoader(self.config, input_text=document, vocab=self.vocab, evaluation=True)
             # get dict data
-            _, _, _, doc = output_predictions(None, self.trainer, batches, self.vocab, None,
+            _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
-                                   orig_text = doc)
-        return Document(doc)
+                                   orig_text = document)
+        return doc.Document(document)

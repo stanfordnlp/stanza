@@ -112,7 +112,7 @@ class Pipeline:
         # set up processors
         pipeline_reqs_exceptions = []
         for processor_name in self.processor_names:
-            if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
+            if processor_name == MWT and self.config['shorthand'] not in mwt_languages:
                 continue
             logger.info('---')
             logger.info('Loading: ' + processor_name)

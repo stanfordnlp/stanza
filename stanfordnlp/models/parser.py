@@ -25,7 +25,7 @@ from stanfordnlp.models.depparse.trainer import Trainer
 from stanfordnlp.models.depparse import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.doc import Document
+from stanfordnlp.models.common.doc import *
 from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
@@ -162,7 +162,7 @@ def train(args):
                     preds = trainer.predict(batch)
                     dev_preds += preds
 
-                dev_batch.doc.set(['head', 'deprel'], [y for x in dev_preds for y in x])
+                dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                 CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -240,7 +240,7 @@ def evaluate(args):
         preds = []
 
     # write to file and score
-    batch.doc.set(['head', 'deprel'], [y for x in preds for y in x])
+    batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
     CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
 
     if gold_file is not None:

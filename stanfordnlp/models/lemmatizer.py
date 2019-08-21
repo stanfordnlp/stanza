@@ -23,7 +23,7 @@ from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.models.lemma import scorer, edit
 from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common.doc import Document
+from stanfordnlp.models.common.doc import *
 from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
@@ -125,10 +125,10 @@ def train(args):
     # train a dictionary-based lemmatizer
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     print("[Training dictionary-based lemmatizer...]")
-    trainer.train_dict(train_batch.doc.get(['text', 'upos', 'lemma']))
+    trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
     print("Evaluating on dev set...")
-    dev_preds = trainer.predict_dict(dev_batch.doc.get(['text', 'upos']))
-    dev_batch.doc.set(['lemma'], dev_preds)
+    dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
+    dev_batch.doc.set([LEMMA], dev_preds)
     CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
@@ -169,13 +169,13 @@ def train(args):
                 dev_preds += preds
                 if edits is not None:
                     dev_edits += edits
-            dev_preds = trainer.postprocess(dev_batch.doc.get(['text']), dev_preds, edits=dev_edits)
+            dev_preds = trainer.postprocess(dev_batch.doc.get([TEXT]), dev_preds, edits=dev_edits)
 
             # try ensembling with dict if necessary
             if args.get('ensemble_dict', False):
                 print("[Ensembling dict with seq2seq model...]")
-                dev_preds = trainer.ensemble(dev_batch.doc.get(['text', 'upos']), dev_preds)
-            dev_batch.doc.set(['lemma'], dev_preds)
+                dev_preds = trainer.ensemble(dev_batch.doc.get([TEXT, UPOS]), dev_preds)
+            dev_batch.doc.set([LEMMA], dev_preds)
             CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -229,7 +229,7 @@ def evaluate(args):
         print("{} ".format(args['lang']))
         sys.exit(0)
 
-    dict_preds = trainer.predict_dict(batch.doc.get(['text', 'upos']))
+    dict_preds = trainer.predict_dict(batch.doc.get([TEXT, UPOS]))
 
     if loaded_args.get('dict_only', False):
         preds = dict_preds
@@ -242,14 +242,14 @@ def evaluate(args):
             preds += ps
             if es is not None:
                 edits += es
-        preds = trainer.postprocess(batch.doc.get(['text']), preds, edits=edits)
+        preds = trainer.postprocess(batch.doc.get([TEXT]), preds, edits=edits)
 
         if loaded_args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq lemmatizer...]")
-            preds = trainer.ensemble(batch.doc.get(['text', 'upos']), preds)
+            preds = trainer.ensemble(batch.doc.get([TEXT, UPOS]), preds)
 
     # write to file and score
-    batch.doc.set(['lemma'], preds)
+    batch.doc.set([LEMMA], preds)
     CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
