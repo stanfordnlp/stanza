@@ -23,8 +23,8 @@ from stanfordnlp.models.lemma.trainer import Trainer
 from stanfordnlp.models.lemma import scorer, edit
 from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.pipeline.doc import Document
-from stanfordnlp.models.common.conll import CoNLL
+from stanfordnlp.models.common.doc import Document
+from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()

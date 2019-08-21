@@ -10,7 +10,7 @@ from stanfordnlp.models.tokenize.utils import output_predictions
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import Document
 
 
 # class for running the tokenizer

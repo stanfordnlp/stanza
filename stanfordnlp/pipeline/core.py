@@ -10,7 +10,7 @@ import torch
 
 from distutils.util import strtobool
 from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import Document
 from stanfordnlp.pipeline.processor import Processor, ProcessorRequirementsException
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor

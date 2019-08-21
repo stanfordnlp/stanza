@@ -8,7 +8,7 @@ import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
 from stanfordnlp.models.lemma import edit
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import Document
 
 
 class DataLoader:

@@ -25,8 +25,8 @@ from stanfordnlp.models.depparse.trainer import Trainer
 from stanfordnlp.models.depparse import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.pipeline.doc import Document
-from stanfordnlp.models.common.conll import CoNLL
+from stanfordnlp.models.common.doc import Document
+from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()

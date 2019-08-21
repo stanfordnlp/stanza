@@ -4,7 +4,7 @@ import json
 import numpy as np
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
-from stanfordnlp.models.common.conll import CoNLL
+from stanfordnlp.utils.conll import CoNLL
 
 def load_mwt_dict(filename):
     if filename is not None:

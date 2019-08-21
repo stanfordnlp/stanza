@@ -5,7 +5,7 @@ from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_floa
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import Document
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):

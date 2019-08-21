@@ -4,7 +4,6 @@ Processor for performing multi-word-token expansion
 
 import io
 
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.mwt.data import DataLoader
 from stanfordnlp.models.mwt.trainer import Trainer
 from stanfordnlp.pipeline._constants import *

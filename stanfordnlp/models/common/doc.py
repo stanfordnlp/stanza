@@ -6,7 +6,7 @@ import io
 import re
 import json
 
-from stanfordnlp.models.common.conll import FIELD_TO_IDX
+from stanfordnlp.utils.conll import FIELD_TO_IDX
 
 multi_word_token_id = re.compile("([0-9]+)\-([0-9]+)")
 multi_word_token_misc = re.compile("MWT=Yes")
