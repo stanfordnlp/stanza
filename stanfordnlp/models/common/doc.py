@@ -9,7 +9,7 @@ import json
 from stanfordnlp.utils.conll import FIELD_TO_IDX
 
 multi_word_token_id = re.compile("([0-9]+)\-([0-9]+)")
-multi_word_token_misc = re.compile("MWT=Yes")
+multi_word_token_misc = re.compile(".*MWT=Yes.*")
 
 
 class Document:
@@ -19,7 +19,6 @@ class Document:
         self._num_words = 0
 
         self._process_sentences(sentences)
-        self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     @property
     def sentences(self):
@@ -42,8 +41,11 @@ class Document:
         self._num_words = value
 
     def _process_sentences(self, sentences):
+        self.sentences = []
+        self.num_words = 0
         for tokens in sentences:
             self.sentences.append(Sentence(tokens))
+        self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False):
         """ Get fields from a list of field names. If only one field name is provided, return a list
@@ -109,6 +111,8 @@ class Document:
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word({'id': str(idx_w + i), 'text': e_word, 'head': idx_w + i - 1})) 
                     idx_w = idx_w_end
+            sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
+        self._process_sentences(self.to_dict()) # reprocess to update number of words
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
         return
 
@@ -141,27 +145,29 @@ class Sentence:
         self._dependencies = []
 
         self._process_tokens(tokens)
-        # check if there is dependency info
-        if self.words[0].deprel is not None:
-            self.build_dependencies()
 
     def _process_tokens(self, tokens):
         st, en = -1, -1
+        self.tokens, self.words = [], []
         for entry in tokens:
             m = multi_word_token_id.match(entry.get('id'))
             n = multi_word_token_misc.match(entry.get('misc')) if entry.get('misc', None) is not None else None
             if m or n: # if this token is a multi-word token
                 if m: st, en = int(m.group(1)), int(m.group(2))
-                self._tokens.append(Token(entry))
+                self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
-                self._words.append(new_word)
+                self.words.append(new_word)
                 idx = int(entry.get('id'))
                 if idx <= en:
-                    self._tokens[-1].words.append(new_word)
+                    self.tokens[-1].words.append(new_word)
                 else:
                     self.tokens.append(Token(entry, words=[new_word]))
-                new_word.parent_token = self._tokens[-1]
+                new_word.parent_token = self.tokens[-1]
+        
+        # check if there is dependency info
+        if self.words[0].deprel is not None:
+            self.build_dependencies()
 
     @property
     def dependencies(self):
@@ -220,7 +226,7 @@ class Sentence:
 
     def print_tokens(self, file=None):
         for tok in self.tokens:
-            print(tok, file=file)
+            print(tok.pretty_print(), file=file)
 
     def tokens_string(self):
         toks_string = io.StringIO()
@@ -229,7 +235,7 @@ class Sentence:
 
     def print_words(self, file=None):
         for word in self.words:
-            print(word, file=file)
+            print(word.pretty_print(), file=file)
 
     def words_string(self):
         wrds_string = io.StringIO()
@@ -334,6 +340,9 @@ class Token:
         for word in self.words:
             ret.append(word.to_dict())
         return ret
+    
+    def pretty_print(self):
+        return f"<{self.__class__.__name__} index={self.id};words={[word.pretty_print() for word in self.words]};begin_char_offset={self.begin_char_offset};end_char_offset={self.end_char_offset}>"
   
 
 class Word:
@@ -483,3 +492,8 @@ class Word:
             if getattr(self, field) is not None:
                 word_dict[field] = getattr(self, field)
         return word_dict
+
+    def pretty_print(self):
+        features = ['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel']
+        feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
+        return f"<{self.__class__.__name__} {feature_str}>"
