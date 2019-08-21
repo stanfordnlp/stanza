@@ -86,4 +86,3 @@ class LemmaProcessor(UDProcessor):
         preds = [max([(len(x), x), (0, '_')])[1] for x in preds]
         batch.doc.set([doc.LEMMA], preds)
         return batch.doc
-

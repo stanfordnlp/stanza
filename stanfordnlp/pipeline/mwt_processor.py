@@ -40,4 +40,3 @@ class MWTProcessor(UDProcessor):
 
         batch.doc.set_mwt_expansions(preds)
         return batch.doc
-
