@@ -163,7 +163,7 @@ class Sentence:
                     self.tokens[-1].words.append(new_word)
                 else:
                     self.tokens.append(Token(entry, words=[new_word]))
-                new_word.parent_token = self.tokens[-1]
+                new_word.parent = self.tokens[-1]
         
         # check if there is dependency info
         if self.words[0].deprel is not None:
@@ -316,7 +316,7 @@ class Token:
         """ Set this token's list of underlying syntactic words. """
         self._words = value
         for w in self._words:
-            w.parent_token = self
+            w.parent = self
 
     @property
     def begin_char_offset(self):
@@ -350,7 +350,7 @@ class Word:
     def __init__(self, word_entry):
         # word_entry is a dict() containing multiple fields (must include `id` and `text`)
         assert word_entry.get('id') and word_entry.get('text'), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent_token = [None] * 11
+        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent = [None] * 11
         
         self.id = word_entry.get('id')
         self.text = word_entry.get('text')
@@ -464,14 +464,14 @@ class Word:
         self._misc = value if value != '_' else None
 
     @property
-    def parent_token(self):
-        """ Access the parent token of this word. """
-        return self._parent_token
+    def parent(self):
+        """ Access the parent word of this word. """
+        return self._parent
 
-    @parent_token.setter
-    def parent_token(self, value):
-        """ Set this word's parent token. """
-        self._parent_token = value
+    @parent.setter
+    def parent(self, value):
+        """ Set this word's parent word. """
+        self._parent = value
 
     @property
     def pos(self):
