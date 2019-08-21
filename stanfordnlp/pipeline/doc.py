@@ -190,16 +190,17 @@ class Sentence:
         self._words = value
 
     def build_dependencies(self):
+        self.dependencies = []
         for word in self.words:
-            if word.head == 0:
+            head = None
+            if int(word.head) == 0:
                 # make a word for the ROOT
                 word_entry = {"id": "0", "text": "ROOT", "head": -1}
                 head = Word(word_entry)
             else:
                 # for mwt, can not use word.head - 1 to get index
-                head = None
                 for word_ in self.words:
-                    if word.head == word_.id:
+                    if int(word.head) == int(word_.id):
                         head = word_
                         break
             self.dependencies.append((head, word.deprel, word))
