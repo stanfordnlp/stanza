@@ -33,8 +33,8 @@ class Seq2SeqModel(nn.Module):
         self.args = args
         self.emb_matrix = emb_matrix
 
-        logging.debug("Building an attentional Seq2Seq model...")
-        logging.debug("Using a Bi-LSTM encoder")
+        self.logger.debug("Building an attentional Seq2Seq model...")
+        self.logger.debug("Using a Bi-LSTM encoder")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -55,7 +55,7 @@ class Seq2SeqModel(nn.Module):
                 batch_first=True, attn_type=self.args['attn_type'])
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.use_pos and self.pos_dim > 0:
-            logging.debug("Using POS in encoder")
+            self.logger.debug("Using POS in encoder")
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
         if self.edit:
@@ -83,13 +83,13 @@ class Seq2SeqModel(nn.Module):
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            logging.debug("Do not finetune embedding layer.")
+            self.logger.debug("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            logging.debug("Finetune top {} embeddings.".format(self.top))
+            self.logger.debug("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            logging.debug("Finetune all embeddings.")
+            self.logger.debug("Finetune all embeddings.")
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)
