@@ -120,7 +120,7 @@ def train(args):
     print("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
-    doc.set_mwt(dev_preds)
+    doc.set_mwt_expansions(dev_preds)
     CoNLL.dict2conll(doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
@@ -162,7 +162,7 @@ def train(args):
                 print("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt(dev_preds)
+            doc.set_mwt_expansions(dev_preds)
             CoNLL.dict2conll(doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
@@ -193,7 +193,7 @@ def train(args):
             print("[Ensembling dict with seq2seq model...]")
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt(dev_preds)
+            doc.set_mwt_expansions(dev_preds)
             CoNLL.dict2conll(doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
@@ -240,7 +240,7 @@ def evaluate(args):
 
     # write to file and score
     doc = copy.deepcopy(batch.doc)
-    doc.set_mwt(preds)
+    doc.set_mwt_expansions(preds)
     CoNLL.dict2conll(doc.to_dict(), system_pred_file)
 
     if gold_file is not None:

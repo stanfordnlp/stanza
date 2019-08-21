@@ -38,6 +38,6 @@ class MWTProcessor(UDProcessor):
             # skip eval if dev data does not exist
             preds = []
 
-        batch.doc.set_mwt(preds)
+        batch.doc.set_mwt_expansions(preds)
         return batch.doc
 

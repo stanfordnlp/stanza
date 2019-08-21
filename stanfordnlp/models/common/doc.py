@@ -85,7 +85,7 @@ class Document:
                 cidx += 1
         return
 
-    def set_mwt(self, expansions):
+    def set_mwt_expansions(self, expansions):
         idx_e = 0
         for sentence in self.sentences:
             idx_w = 0
