@@ -23,8 +23,12 @@ BEGIN_CHAR_OFFSET = 'beginCharOffset'
 END_CHAR_OFFSET = 'endCharOffset'
 
 class Document:
+    """ A document class that stores attributes of a document and carries a list of sentences.
+    """
 
     def __init__(self, sentences, text=None):
+        """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
+        """
         self._sentences = []
         self._text = None
         self._num_words = 0
@@ -171,9 +175,12 @@ class Document:
                 
 
 class Sentence:
+    """ A sentence class that stores attributes of a sentence and carries a list of tokens.
+    """
 
     def __init__(self, tokens):
-        # tokens is a list of dict() containing both token entries and word entries
+        """ Construct a setence given a list of tokens in the form of CoNLL-U dicts.
+        """
         self._tokens = []
         self._words = []
         self._dependencies = []
@@ -307,9 +314,13 @@ class Sentence:
     
 
 class Token:
+    """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
+    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
+    """
 
     def __init__(self, token_entry, words=None):
-        # token_entry is a dict() containing multiple fields (must include `id` and `text`)
+        """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
+        """
         assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
         self._id, self._text, self._misc, self._words, self._beginCharOffset, self._endCharOffset = [None] * 6
 
@@ -322,6 +333,8 @@ class Token:
             self.init_from_misc()
 
     def init_from_misc(self):
+        """ Create attributes by parsing from the `misc` field.
+        """
         for item in self._misc.split('|'):
             key_value = item.split('=')
             if len(key_value) == 1: continue # some key_value can not be splited                
@@ -408,9 +421,12 @@ class Token:
         return (value is None) or (value == '_')
 
 class Word:
+    """ A word class that stores attributes of a word.
+    """
 
     def __init__(self, word_entry):
-        # word_entry is a dict() containing multiple fields (must include `id` and `text`)
+        """ Construct a word given a dictionary format word entry.
+        """
         assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
         self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent = [None] * 11
         
