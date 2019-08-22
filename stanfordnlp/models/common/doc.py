@@ -6,8 +6,8 @@ import io
 import re
 import json
 
-multi_word_token_id = re.compile("([0-9]+)\-([0-9]+)")
-multi_word_token_misc = re.compile(".*MWT=Yes.*")
+multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
+multi_word_token_misc = re.compile(r".*MWT=Yes.*")
 
 ID = 'id'
 TEXT = 'text'
@@ -110,7 +110,6 @@ class Document:
                 if not m and not n:
                     for word in token.words:
                         word.id = str(idx_w)
-                        word.head = idx_w - 1
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
@@ -212,17 +211,14 @@ class Sentence:
     def build_dependencies(self):
         self.dependencies = []
         for word in self.words:
-            head = None
             if int(word.head) == 0:
                 # make a word for the ROOT
                 word_entry = {ID: "0", TEXT: "ROOT"}
                 head = Word(word_entry)
             else:
-                # for mwt, can not use word.head - 1 to get index
-                for word_ in self.words:
-                    if int(word.head) == int(word_.id):
-                        head = word_
-                        break
+                # id is index in words list + 1
+                head = self.words[int(word.head) - 1]
+                assert(int(word.head) == int(head.id))
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
