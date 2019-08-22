@@ -119,7 +119,7 @@ class Document:
                     token.id = f'{idx_w}-{idx_w_end}'
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({ID: str(idx_w + i), TEXT: e_word, HEAD: idx_w + i - 1}))
+                        token.words.append(Word({ID: str(idx_w + i), TEXT: e_word}))
                     idx_w = idx_w_end
             sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
         self._process_sentences(self.to_dict()) # reprocess to update number of words
@@ -176,8 +176,8 @@ class Sentence:
                 new_word.parent = self.tokens[-1]
         
         # check if there is dependency info
-        if self.words[0].deprel is not None:
-            self.build_dependencies()
+        is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
+        if is_complete_dependencies: self.build_dependencies()
 
     @property
     def dependencies(self):
@@ -215,7 +215,7 @@ class Sentence:
             head = None
             if int(word.head) == 0:
                 # make a word for the ROOT
-                word_entry = {ID: "0", TEXT: "ROOT", HEAD: -1}
+                word_entry = {ID: "0", TEXT: "ROOT"}
                 head = Word(word_entry)
             else:
                 # for mwt, can not use word.head - 1 to get index
@@ -314,7 +314,7 @@ class Token:
     @misc.setter
     def misc(self, value):
         """ Set the word's misc value. """
-        self._misc = value if value != '_' else None
+        self._misc = value if self._is_null(value) == False else None
 
     @property
     def words(self):
@@ -352,8 +352,10 @@ class Token:
         return ret
     
     def pretty_print(self):
-        return f"<{self.__class__.__name__} index={self.id};words={[word.pretty_print() for word in self.words]};{BEGIN_CHAR_OFFSET}={self.begin_char_offset};{END_CHAR_OFFSET}={self.end_char_offset}>"
-  
+        return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}];{BEGIN_CHAR_OFFSET}={self.begin_char_offset};{END_CHAR_OFFSET}={self.end_char_offset}>"
+    
+    def _is_null(self, value):
+        return (value is None) or (value == '_')
 
 class Word:
 
@@ -401,7 +403,7 @@ class Word:
     @lemma.setter
     def lemma(self, value):
         """ Set the word's lemma value. """
-        self._lemma = value if value != '_' or self._text == '_' else None
+        self._lemma = value if self._is_null(value) == False or self._text == '_' else None
 
     @property
     def upos(self):
@@ -411,7 +413,7 @@ class Word:
     @upos.setter
     def upos(self, value):
         """ Set the word's universal part-of-speech value. Example: 'DET'"""
-        self._upos = value if value != '_' else None
+        self._upos = value if self._is_null(value) == False else None
 
     @property
     def xpos(self):
@@ -421,7 +423,7 @@ class Word:
     @xpos.setter
     def xpos(self, value):
         """ Set the word's treebank-specific part-of-speech value. Example: 'NNP'"""
-        self._xpos = value if value != '_' else None
+        self._xpos = value if self._is_null(value) == False else None
 
     @property
     def feats(self):
@@ -431,7 +433,7 @@ class Word:
     @feats.setter
     def feats(self, value):
         """ Set this word's morphological features. Example: 'Gender=Fem'"""
-        self._feats = value if value != '_' else None
+        self._feats = value if self._is_null(value) == False else None
 
     @property
     def head(self):
@@ -441,7 +443,7 @@ class Word:
     @head.setter
     def head(self, value):
         """ Set the word's governor value. """
-        self._head = int(value) if value != '_' else None
+        self._head = int(value) if self._is_null(value) == False else None
 
     @property
     def deprel(self):
@@ -451,7 +453,7 @@ class Word:
     @deprel.setter
     def deprel(self, value):
         """ Set the word's dependency relation value. Example: 'nmod'"""
-        self._deprel = value if value != '_' else None
+        self._deprel = value if self._is_null(value) == False else None
 
     @property
     def deps(self):
@@ -461,7 +463,7 @@ class Word:
     @deps.setter
     def deps(self, value):
         """ Set the word's deps value. """
-        self._deps = value if value != '_' else None
+        self._deps = value if self._is_null(value) == False else None
 
     @property
     def misc(self):
@@ -471,7 +473,7 @@ class Word:
     @misc.setter
     def misc(self, value):
         """ Set the word's misc value. """
-        self._misc = value if value != '_' else None
+        self._misc = value if self._is_null(value) == False else None
 
     @property
     def parent(self):
@@ -491,7 +493,7 @@ class Word:
     @pos.setter
     def pos(self, value):
         """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
-        self._xpos = value if value != '_' else None
+        self._xpos = value if self._is_null(value) == False else None
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -507,3 +509,6 @@ class Word:
         features = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL]
         feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
         return f"<{self.__class__.__name__} {feature_str}>"
+
+    def _is_null(self, value):
+        return (value is None) or (value == '_')

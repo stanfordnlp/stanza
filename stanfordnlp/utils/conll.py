@@ -6,7 +6,17 @@ import io
 
 FIELD_NUM = 10
 
-FIELD_TO_IDX = {'id': 0, 'text': 1, 'lemma': 2, 'upos': 3, 'xpos': 4, 'feats': 5, 'head': 6, 'deprel': 7, 'deps': 8, 'misc': 9}
+ID = 'id'
+TEXT = 'text'
+LEMMA = 'lemma'
+UPOS = 'upos'
+XPOS = 'xpos'
+FEATS = 'feats'
+HEAD = 'head'
+DEPREL = 'deprel'
+DEPS = 'deps'
+MISC = 'misc'
+FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 
 class CoNLL:
 
@@ -50,14 +60,14 @@ class CoNLL:
         for field in FIELD_TO_IDX:
             value = token_conll[FIELD_TO_IDX[field]]
             if value != '_':
-                if field == 'head':
+                if field == HEAD:
                     token_dict[field] = int(value)
                 else:
                     token_dict[field] = value
             # special case if text is '_'
-            if token_conll[FIELD_TO_IDX['text']] == '_':
-                token_dict['text'] = token_conll[FIELD_TO_IDX['text']]
-                token_dict['lemma'] = token_conll[FIELD_TO_IDX['lemma']]
+            if token_conll[FIELD_TO_IDX[TEXT]] == '_':
+                token_dict[TEXT] = token_conll[FIELD_TO_IDX[TEXT]]
+                token_dict[LEMMA] = token_conll[FIELD_TO_IDX[LEMMA]]
         return token_dict
         
     @staticmethod
@@ -87,6 +97,8 @@ class CoNLL:
         token_conll = ['_' for i in range(FIELD_NUM)]
         for key in token_dict:
             token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+        if '-' not in token_dict[ID] and HEAD not in token_dict: # word (not mwt token) without head
+            token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID]) - 1) # evaluation script requires head: int
         return token_conll
 
     @staticmethod

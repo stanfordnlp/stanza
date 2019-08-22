@@ -5,7 +5,7 @@ from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_floa
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
-from stanfordnlp.models.common.doc import Document
+from stanfordnlp.models.common.doc import *
 
 
 class DataLoader:
@@ -120,7 +120,7 @@ class DataLoader:
         return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, orig_idx, word_orig_idx, sentlens, word_lens
 
     def load_doc(self, doc):
-        data = doc.get(['text', 'upos', 'xpos', 'feats', 'lemma', 'head', 'deprel'], as_sentences=True)
+        data = doc.get([TEXT, UPOS, XPOS, FEATS, LEMMA, HEAD, DEPREL], as_sentences=True)
         data = self.resolve_none(data)
         return data
 

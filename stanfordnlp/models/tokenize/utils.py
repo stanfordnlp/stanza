@@ -5,6 +5,7 @@ import numpy as np
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
 from stanfordnlp.utils.conll import CoNLL
+from stanfordnlp.models.common.doc import *
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -35,10 +36,10 @@ def process_sentence(sentence, mwt_dict=None):
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
             infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            sent.append({'id': f'{i+1}-{i+len(expansion)}', 'text': tok})
-            if infostr is not None: sent[-1]['misc'] = infostr
+            sent.append({ID: f'{i+1}-{i+len(expansion)}', TEXT: tok})
+            if infostr is not None: sent[-1][MISC] = infostr
             for etok in expansion:
-                sent.append({'id': f'{i+1}', 'text': etok, 'head': i})
+                sent.append({ID: f'{i+1}', TEXT: etok})
                 i += 1
         else:
             if len(tok) <= 0:
@@ -46,8 +47,8 @@ def process_sentence(sentence, mwt_dict=None):
             if p == 3 or p == 4:
                 additional_info['MWT'] = 'Yes'
             infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            sent.append({'id': f'{i+1}', 'text': tok, 'head': i})
-            if infostr is not None: sent[-1]['misc'] = infostr
+            sent.append({ID: f'{i+1}', TEXT: tok})
+            if infostr is not None: sent[-1][MISC] = infostr
             i += 1
     return sent
 
