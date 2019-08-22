@@ -42,13 +42,13 @@ class TokenizeProcessor(UDProcessor):
 
         document = []
         if isinstance(input_src, str):
-            sentences = [sent.rstrip(' ').split() for sent in document.rstrip('\n').split('\n') if sent]
+            sentences = [sent.rstrip(' ').split() for sent in input_src.rstrip('\n').split('\n') if sent]
         elif isinstance(input_src, list):
-            sentences = document
+            sentences = input_src
         for sentence in sentences:
             sent = []
             for token_id, token in enumerate(sentence):
-                sent.append({doc.ID: str(token_id + 1), doc.WORD: token})
+                sent.append({doc.ID: str(token_id + 1), doc.TEXT: token})
             document.append(sent)
         return document
 

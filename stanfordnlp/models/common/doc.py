@@ -352,7 +352,7 @@ class Token:
         return ret
     
     def pretty_print(self):
-        return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}];{BEGIN_CHAR_OFFSET}={self.begin_char_offset};{END_CHAR_OFFSET}={self.end_char_offset}>"
+        return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
     
     def _is_null(self, value):
         return (value is None) or (value == '_')
