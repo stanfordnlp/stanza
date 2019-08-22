@@ -10,7 +10,7 @@ import torch
 
 from distutils.util import strtobool
 from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import Document
 from stanfordnlp.pipeline.processor import Processor, ProcessorRequirementsException
 from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
 from stanfordnlp.pipeline.mwt_processor import MWTProcessor
@@ -112,7 +112,7 @@ class Pipeline:
         # set up processors
         pipeline_reqs_exceptions = []
         for processor_name in self.processor_names:
-            if processor_name == 'mwt' and self.config['shorthand'] not in mwt_languages:
+            if processor_name == MWT and self.config['shorthand'] not in mwt_languages:
                 continue
             logger.info('---')
             logger.info('Loading: ' + processor_name)
@@ -172,11 +172,10 @@ class Pipeline:
         # run the pipeline
         for processor_name in self.processor_names:
             if self.processors[processor_name] is not None:
-                self.processors[processor_name].process(doc)
-        doc.load_annotations()
+                doc = self.processors[processor_name].process(doc)
+        return doc
 
     def __call__(self, doc):
-        if isinstance(doc, str) or isinstance(doc, list):
-            doc = Document(doc)
-        self.process(doc)
+        assert any([isinstance(doc, str), isinstance(doc, list)]), 'input should be either str or list'
+        doc = self.process(doc)
         return doc

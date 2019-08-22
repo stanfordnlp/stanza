@@ -2,6 +2,7 @@
 Processor for performing part-of-speech tagging
 """
 
+from stanfordnlp.models.common import doc
 from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.models.common.utils import unsort
 from stanfordnlp.models.pos.data import DataLoader
@@ -23,12 +24,13 @@ class POSProcessor(UDProcessor):
         # set up trainer
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
-    def process(self, doc):
+    def process(self, document):
         batch = DataLoader(
-            doc, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
+            document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
             sort_during_eval=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
         preds = unsort(preds, batch.data_orig_idx)
-        batch.conll.set(['upos', 'xpos', 'feats'], [y for x in preds for y in x])
+        batch.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])
+        return batch.doc

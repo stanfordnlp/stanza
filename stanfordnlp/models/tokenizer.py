@@ -172,8 +172,7 @@ def evaluate(args):
 
     batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
 
-    with open(args['conll_file'], 'w') as conll_output_file:
-        oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 

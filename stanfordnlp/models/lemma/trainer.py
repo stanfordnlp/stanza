@@ -8,6 +8,7 @@ from collections import Counter
 import torch
 from torch import nn
 import torch.nn.init as init
+import logging
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel

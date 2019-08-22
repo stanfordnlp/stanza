@@ -16,6 +16,7 @@ import numpy as np
 import random
 import torch
 from torch import nn, optim
+import copy
 
 from stanfordnlp.models.mwt.data import DataLoader
 from stanfordnlp.models.mwt.vocab import Vocab
@@ -23,6 +24,8 @@ from stanfordnlp.models.mwt.trainer import Trainer
 from stanfordnlp.models.mwt import scorer
 from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
+from stanfordnlp.models.common.doc import Document
+from stanfordnlp.utils.conll import CoNLL
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -90,10 +93,12 @@ def train(args):
     # load data
     print('max_dec_len:', args['max_dec_len'])
     print("Loading data with batch size {}...".format(args['batch_size']))
-    train_batch = DataLoader(args['train_file'], args['batch_size'], args, evaluation=False)
+    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
-    dev_batch = DataLoader(args['eval_file'], args['batch_size'], args, vocab=vocab, evaluation=True)
+    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
     
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
@@ -111,10 +116,12 @@ def train(args):
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     print("Training dictionary-based MWT expander...")
-    trainer.train_dict(train_batch.conll.get_mwt_expansions())
+    trainer.train_dict(train_batch.doc.get_mwt_expansions(evaluation=False))
     print("Evaluating on dev set...")
-    dev_preds = trainer.predict_dict(dev_batch.conll.get_mwt_expansion_cands())
-    dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
+    dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
+    doc = copy.deepcopy(dev_batch.doc)
+    doc.set_mwt_expansions(dev_preds)
+    CoNLL.dict2conll(doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     print("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -153,8 +160,10 @@ def train(args):
                 dev_preds += preds
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
                 print("[Ensembling dict with seq2seq model...]")
-                dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), dev_preds)
-            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
+                dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
+            doc = copy.deepcopy(dev_batch.doc)
+            doc.set_mwt_expansions(dev_preds)
+            CoNLL.dict2conll(doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -182,8 +191,10 @@ def train(args):
         # try ensembling with dict if necessary
         if args.get('ensemble_dict', False):
             print("[Ensembling dict with seq2seq model...]")
-            dev_preds = trainer.ensemble(dev_batch.conll.get_mwt_expansion_cands(), best_dev_preds)
-            dev_batch.conll.write_conll_with_mwt_expansions(dev_preds, open(system_pred_file, 'w'))
+            dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
+            doc = copy.deepcopy(dev_batch.doc)
+            doc.set_mwt_expansions(dev_preds)
+            CoNLL.dict2conll(doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
@@ -207,10 +218,11 @@ def evaluate(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    batch = DataLoader(args['eval_file'], args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
+    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     if len(batch) > 0:
-        dict_preds = trainer.predict_dict(batch.conll.get_mwt_expansion_cands())
+        dict_preds = trainer.predict_dict(batch.doc.get_mwt_expansions(evaluation=True))
         # decide trainer type and run eval
         if loaded_args['dict_only']:
             preds = dict_preds
@@ -221,13 +233,15 @@ def evaluate(args):
                 preds += trainer.predict(b)
 
             if loaded_args.get('ensemble_dict', False):
-                preds = trainer.ensemble(batch.conll.get_mwt_expansion_cands(), preds)
+                preds = trainer.ensemble(batch.doc.get_mwt_expansions(evaluation=True), preds)
     else:
         # skip eval if dev data does not exist
         preds = []
 
     # write to file and score
-    batch.conll.write_conll_with_mwt_expansions(preds, open(system_pred_file, 'w'))
+    doc = copy.deepcopy(batch.doc)
+    doc.set_mwt_expansions(preds)
+    CoNLL.dict2conll(doc.to_dict(), system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

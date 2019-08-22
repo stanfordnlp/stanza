@@ -154,9 +154,3 @@ class UDProcessor(Processor):
             return True
         else:
             return False
-
-
-
-
-
-
