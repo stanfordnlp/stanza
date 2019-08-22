@@ -26,7 +26,8 @@ class CoNLL:
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
                     continue
-                assert len(array) == FIELD_NUM
+                assert len(array) == FIELD_NUM, \
+                        f"Cannot parse CoNLL line: expecting {FIELD_NUM} fields, {len(array)} found."
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
