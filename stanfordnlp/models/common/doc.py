@@ -24,11 +24,23 @@ END_CHAR_OFFSET = 'endCharOffset'
 
 class Document:
 
-    def __init__(self, sentences):
+    def __init__(self, sentences, text=None):
         self._sentences = []
+        self._text = None
         self._num_words = 0
 
+        self.text = text
         self._process_sentences(sentences)
+
+    @property
+    def text(self):
+        """ Access the raw text for this document. """
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the raw text for this document. """
+        self._text = value
 
     @property
     def sentences(self):
@@ -52,9 +64,11 @@ class Document:
 
     def _process_sentences(self, sentences):
         self.sentences = []
-        self.num_words = 0
         for tokens in sentences:
             self.sentences.append(Sentence(tokens))
+            begin_idx, end_idx = self.sentences[-1].tokens[0].begin_char_offset, self.sentences[-1].tokens[-1].end_char_offset
+            if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
+        
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False):
@@ -110,6 +124,7 @@ class Document:
                 if not m and not n:
                     for word in token.words:
                         word.id = str(idx_w)
+                        word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
@@ -152,6 +167,7 @@ class Sentence:
         self._tokens = []
         self._words = []
         self._dependencies = []
+        self._text = None
 
         self._process_tokens(tokens)
 
@@ -176,7 +192,18 @@ class Sentence:
         
         # check if there is dependency info
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
-        if is_complete_dependencies: self.build_dependencies()
+        is_complete_words = len(self.words) == int(self.words[-1].id)
+        if is_complete_dependencies and is_complete_words: self.build_dependencies()
+
+    @property
+    def text(self):
+        """ Access the raw text for this sentence. """
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the raw text for this sentence. """
+        self._text = value
 
     @property
     def dependencies(self):

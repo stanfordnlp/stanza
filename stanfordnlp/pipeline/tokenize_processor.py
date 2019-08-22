@@ -54,8 +54,10 @@ class TokenizeProcessor(UDProcessor):
 
     def process(self, document):
         if self.config.get('pretokenized'):
+            raw_text = None
             document = self.process_pre_tokenized_text(document)
         else:
+            raw_text = document
             # set up batches
             if self.config.get('lang') == 'vi':
                 # special processing is due for Vietnamese
@@ -69,4 +71,4 @@ class TokenizeProcessor(UDProcessor):
             _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
                                    orig_text = document)
-        return doc.Document(document)
+        return doc.Document(document, raw_text)
