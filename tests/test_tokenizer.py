@@ -10,28 +10,28 @@ from tests import *
 EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
 
 EN_DOC_GOLD_TOKENS = """
-<Token index=1;words=[<Word index=1;text=Joe>]>
-<Token index=2;words=[<Word index=2;text=Smith>]>
-<Token index=3;words=[<Word index=3;text=lives>]>
-<Token index=4;words=[<Word index=4;text=in>]>
-<Token index=5;words=[<Word index=5;text=California>]>
-<Token index=6;words=[<Word index=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
 
-<Token index=1;words=[<Word index=1;text=Joe>]>
-<Token index=2;words=[<Word index=2;text='s>]>
-<Token index=3;words=[<Word index=3;text=favorite>]>
-<Token index=4;words=[<Word index=4;text=food>]>
-<Token index=5;words=[<Word index=5;text=is>]>
-<Token index=6;words=[<Word index=6;text=pizza>]>
-<Token index=7;words=[<Word index=7;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text='s>]>
+<Token id=3;words=[<Word id=3;text=favorite>]>
+<Token id=4;words=[<Word id=4;text=food>]>
+<Token id=5;words=[<Word id=5;text=is>]>
+<Token id=6;words=[<Word id=6;text=pizza>]>
+<Token id=7;words=[<Word id=7;text=.>]>
 
-<Token index=1;words=[<Word index=1;text=He>]>
-<Token index=2;words=[<Word index=2;text=enjoys>]>
-<Token index=3;words=[<Word index=3;text=going>]>
-<Token index=4;words=[<Word index=4;text=to>]>
-<Token index=5;words=[<Word index=5;text=the>]>
-<Token index=6;words=[<Word index=6;text=beach>]>
-<Token index=7;words=[<Word index=7;text=.>]>
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=enjoys>]>
+<Token id=3;words=[<Word id=3;text=going>]>
+<Token id=4;words=[<Word id=4;text=to>]>
+<Token id=5;words=[<Word id=5;text=the>]>
+<Token id=6;words=[<Word id=6;text=beach>]>
+<Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
 
 
@@ -39,43 +39,43 @@ EN_DOC_PRETOKENIZED = \
     "Joe Smith lives in California .\nJoe's favorite  food is  pizza .\n\nHe enjoys going to the beach.\n"
 
 EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
-<Token index=1;words=[<Word index=1;text=Joe>]>
-<Token index=2;words=[<Word index=2;text=Smith>]>
-<Token index=3;words=[<Word index=3;text=lives>]>
-<Token index=4;words=[<Word index=4;text=in>]>
-<Token index=5;words=[<Word index=5;text=California>]>
-<Token index=6;words=[<Word index=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
 
-<Token index=1;words=[<Word index=1;text=Joe's>]>
-<Token index=2;words=[<Word index=2;text=favorite>]>
-<Token index=3;words=[<Word index=3;text=food>]>
-<Token index=4;words=[<Word index=4;text=is>]>
-<Token index=5;words=[<Word index=5;text=pizza>]>
-<Token index=6;words=[<Word index=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe's>]>
+<Token id=2;words=[<Word id=2;text=favorite>]>
+<Token id=3;words=[<Word id=3;text=food>]>
+<Token id=4;words=[<Word id=4;text=is>]>
+<Token id=5;words=[<Word id=5;text=pizza>]>
+<Token id=6;words=[<Word id=6;text=.>]>
 
-<Token index=1;words=[<Word index=1;text=He>]>
-<Token index=2;words=[<Word index=2;text=enjoys>]>
-<Token index=3;words=[<Word index=3;text=going>]>
-<Token index=4;words=[<Word index=4;text=to>]>
-<Token index=5;words=[<Word index=5;text=the>]>
-<Token index=6;words=[<Word index=6;text=beach.>]>
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=enjoys>]>
+<Token id=3;words=[<Word id=3;text=going>]>
+<Token id=4;words=[<Word id=4;text=to>]>
+<Token id=5;words=[<Word id=5;text=the>]>
+<Token id=6;words=[<Word id=6;text=beach.>]>
 """.strip()
 
 
 EN_DOC_PRETOKENIZED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['He', 'loves', 'pizza', '.']]
 
 EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
-<Token index=1;words=[<Word index=1;text=Joe>]>
-<Token index=2;words=[<Word index=2;text=Smith>]>
-<Token index=3;words=[<Word index=3;text=lives>]>
-<Token index=4;words=[<Word index=4;text=in>]>
-<Token index=5;words=[<Word index=5;text=California>]>
-<Token index=6;words=[<Word index=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
 
-<Token index=1;words=[<Word index=1;text=He>]>
-<Token index=2;words=[<Word index=2;text=loves>]>
-<Token index=3;words=[<Word index=3;text=pizza>]>
-<Token index=4;words=[<Word index=4;text=.>]>
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=loves>]>
+<Token id=3;words=[<Word id=3;text=pizza>]>
+<Token id=4;words=[<Word id=4;text=.>]>
 """.strip()
 
 
