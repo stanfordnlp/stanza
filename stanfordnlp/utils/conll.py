@@ -22,6 +22,10 @@ class CoNLL:
 
     @staticmethod
     def load_conll(f, ignore_gapping=True):
+        """ Load the file or string into the CoNLL-U format data.
+        Input: file or string reader.
+        Output: CoNLL-U format data, which is a list of list of list for each token in each sentence in the data.
+        """
         # f is open() or io.StringIO()
         doc, sent = [], []
         for line in f:
@@ -45,6 +49,10 @@ class CoNLL:
 
     @staticmethod
     def convert_conll(doc_conll):
+        """ Convert the CoNLL-U format input data to the dictionary format output data.
+        Input: CoNLL-U format data, which is a list of list of list for each token in each sentence in the data.
+        Output: dictionary format data, which is a list of list of dictionaries for each token in each sentence in the data.
+        """
         doc_dict = []
         for sent_conll in doc_conll:
             sent_dict = []
@@ -56,6 +64,10 @@ class CoNLL:
     
     @staticmethod
     def convert_conll_token(token_conll):
+        """ Convert the CoNLL-U format input token to the dictionary format output token.
+        Input: CoNLL-U format token, which is a list for the token.
+        Output: dictionary format token, which is a dictionaries for the token.
+        """
         token_dict = {}
         for field in FIELD_TO_IDX:
             value = token_conll[FIELD_TO_IDX[field]]
@@ -72,6 +84,9 @@ class CoNLL:
         
     @staticmethod
     def conll2dict(input_file=None, input_str=None, ignore_gapping=True):
+        """ Read the CoNLL-U format data from file or string. 
+        Convert the CoNLL-U format input data to the dictionary format output data.
+        """
         assert any([input_file, input_str]) and not all([input_file, input_str]), 'either input input file or input string'
         if input_str:
             infile = io.StringIO(input_str)
@@ -83,6 +98,10 @@ class CoNLL:
 
     @staticmethod
     def convert_dict(doc_dict):
+        """ Convert the dictionary format input data to the CoNLL-U format output data.
+        Input: dictionary format data, which is a list of list of dictionaries for each token in each sentence in the data.
+        Output: CoNLL-U format data, which is a list of list of list for each token in each sentence in the data.
+        """
         doc_conll = []
         for sent_dict in doc_dict:
             sent_conll = []
@@ -94,6 +113,10 @@ class CoNLL:
             
     @staticmethod
     def convert_token_dict(token_dict):
+        """ Convert the dictionary format input token to the CoNLL-U format output token.
+        Input: dictionary format token, which is a dictionaries for the token.
+        Output: CoNLL-U format token, which is a list for the token.
+        """
         token_conll = ['_' for i in range(FIELD_NUM)]
         for key in token_dict:
             token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
@@ -103,8 +126,7 @@ class CoNLL:
 
     @staticmethod
     def conll_as_string(doc):
-        """ Return current conll contents as string
-        """
+        """ Dump the CoNLL-U format data to string. """
         return_string = ""
         for sent in doc:
             for ln in sent:
@@ -114,6 +136,9 @@ class CoNLL:
     
     @staticmethod
     def dict2conll(doc_dict, filename):
+        """ Convert the dictionary format input data to the CoNLL-U format output data. 
+        Save the CoNLL-U format data to file. 
+        """
         doc_conll = CoNLL.convert_dict(doc_dict)
         conll_string = CoNLL.conll_as_string(doc_conll)
         with open(filename, 'w') as outfile:

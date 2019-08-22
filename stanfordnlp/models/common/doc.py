@@ -44,7 +44,7 @@ class Document:
 
     @property
     def sentences(self):
-        """ Access list of sentences for this document. """
+        """ Access the list of sentences for this document. """
         return self._sentences
 
     @sentences.setter
@@ -54,7 +54,7 @@ class Document:
 
     @property
     def num_words(self):
-        """ Access number of words for this document. """
+        """ Access the number of words for this document. """
         return self._num_words
 
     @num_words.setter
@@ -95,7 +95,8 @@ class Document:
         return results
 
     def set(self, fields, contents):
-        """ Set fields based on contents. If only one field (singleton list) is provided, then a list of content will be expected; otherwise a list of list of contents will be expected.
+        """ Set fields based on contents. If only one field (singleton list) is provided, then a list 
+        of content will be expected; otherwise a list of list of contents will be expected.
         """
         assert isinstance(fields, list), "Must provide field names as a list."
         assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
@@ -114,6 +115,9 @@ class Document:
         return
 
     def set_mwt_expansions(self, expansions):
+        """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
+        will be expected for each multi-word token.
+        """
         idx_e = 0
         for sentence in self.sentences:
             idx_w = 0
@@ -141,6 +145,10 @@ class Document:
         return
 
     def get_mwt_expansions(self, evaluation=False):
+        """ Get the multi-word tokens. For training, return a list of 
+        (multi-word token, extended multi-word token); otherwise, return a list of 
+        multi-word token only.
+        """
         expansions = []
         for sentence in self.sentences:
             for token in sentence.tokens:
@@ -154,6 +162,8 @@ class Document:
         return expansions
 
     def to_dict(self):
+        """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
+        """
         return [sentence.to_dict() for sentence in self.sentences]
     
     def __repr__(self):
@@ -217,7 +227,7 @@ class Sentence:
 
     @property
     def tokens(self):
-        """ Access list of tokens for this sentence. """
+        """ Access the list of tokens for this sentence. """
         return self._tokens
 
     @tokens.setter
@@ -227,7 +237,7 @@ class Sentence:
 
     @property
     def words(self):
-        """ Access list of words for this sentence. """
+        """ Access the list of words for this sentence. """
         return self._words
 
     @words.setter
@@ -236,6 +246,9 @@ class Sentence:
         self._words = value
 
     def build_dependencies(self):
+        """ Build the dependencies for this sentence. 
+        Dependencies is a list of (head, deprel, word).
+        """
         self.dependencies = []
         for word in self.words:
             if int(word.head) == 0:
@@ -249,33 +262,41 @@ class Sentence:
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
+        """ Print the dependencies for this sentence. """
         for dep_edge in self.dependencies:
             print((dep_edge[2].text, dep_edge[0].id, dep_edge[1]), file=file)
 
     def dependencies_string(self):
+        """ Dump the dependencies for this sentence into string. """
         dep_string = io.StringIO()
         self.print_dependencies(file=dep_string)
         return dep_string.getvalue().strip()
 
     def print_tokens(self, file=None):
+        """ Print the tokens for this sentence. """
         for tok in self.tokens:
             print(tok.pretty_print(), file=file)
 
     def tokens_string(self):
+        """ Dump the tokens for this sentence into string. """
         toks_string = io.StringIO()
         self.print_tokens(file=toks_string)
         return toks_string.getvalue().strip()
 
     def print_words(self, file=None):
+        """ Print the words for this sentence. """
         for word in self.words:
             print(word.pretty_print(), file=file)
 
     def words_string(self):
+        """ Dump the words for this sentence into string. """
         wrds_string = io.StringIO()
         self.print_words(file=wrds_string)
         return wrds_string.getvalue().strip()
 
     def to_dict(self):
+        """ Dumps the sentence into a list of dictionary for each token in the sentence.
+        """
         ret = []
         for token in self.tokens:
             ret += token.to_dict()
@@ -311,7 +332,7 @@ class Token:
 
     @property
     def id(self):
-        """ Access index of this token. """
+        """ Access the index of this token. """
         return self._id
 
     @id.setter
@@ -321,22 +342,22 @@ class Token:
 
     @property
     def text(self):
-        """ Access text of this token. Example: 'The'"""
+        """ Access the text of this token. Example: 'The' """
         return self._text
 
     @text.setter
     def text(self, value):
-        """ Set the token's text value. Example: 'The'"""
+        """ Set the token's text value. Example: 'The' """
         self._text = value
 
     @property
     def misc(self):
-        """ Access misc of this word. """
+        """ Access the miscellaneousness of this token. """
         return self._misc
 
     @misc.setter
     def misc(self, value):
-        """ Set the word's misc value. """
+        """ Set the token's miscellaneousness value. """
         self._misc = value if self._is_null(value) == False else None
 
     @property
@@ -353,16 +374,21 @@ class Token:
 
     @property
     def begin_char_offset(self):
+        """ Access the begin index for this token in the raw text. """
         return self._beginCharOffset
 
     @property
     def end_char_offset(self):
+        """ Access the end index for this token in the raw text. """
         return self._endCharOffset
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
     def to_dict(self, fields=[ID, TEXT, MISC]):
+        """ Dumps the token into a list of dictionary for this token with its extended words 
+        if the token is a multi-word token.
+        """
         ret = []
         if len(self.words) != 1:
             token_dict = {}
@@ -375,6 +401,7 @@ class Token:
         return ret
     
     def pretty_print(self):
+        """ Print this token with its extended words in one line. """
         return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
     
     def _is_null(self, value):
@@ -400,7 +427,7 @@ class Word:
 
     @property
     def id(self):
-        """ Access index of this word. """
+        """ Access the index of this word. """
         return self._id
 
     @id.setter
@@ -410,7 +437,7 @@ class Word:
 
     @property
     def text(self):
-        """ Access text of this word. Example: 'The'"""
+        """ Access the text of this word. Example: 'The'"""
         return self._text
 
     @text.setter
@@ -420,7 +447,7 @@ class Word:
 
     @property
     def lemma(self):
-        """ Access lemma of this word. """
+        """ Access the lemma of this word. """
         return self._lemma
 
     @lemma.setter
@@ -430,7 +457,7 @@ class Word:
 
     @property
     def upos(self):
-        """ Access universal part-of-speech of this word. Example: 'DET'"""
+        """ Access the universal part-of-speech of this word. Example: 'DET'"""
         return self._upos
 
     @upos.setter
@@ -440,7 +467,7 @@ class Word:
 
     @property
     def xpos(self):
-        """ Access treebank-specific part-of-speech of this word. Example: 'NNP'"""
+        """ Access the treebank-specific part-of-speech of this word. Example: 'NNP'"""
         return self._xpos
 
     @xpos.setter
@@ -450,7 +477,7 @@ class Word:
 
     @property
     def feats(self):
-        """ Access morphological features of this word. Example: 'Gender=Fem'"""
+        """ Access the morphological features of this word. Example: 'Gender=Fem'"""
         return self._feats
 
     @feats.setter
@@ -460,7 +487,7 @@ class Word:
 
     @property
     def head(self):
-        """ Access governor of this word. """
+        """ Access the governor of this word. """
         return self._head
 
     @head.setter
@@ -470,7 +497,7 @@ class Word:
 
     @property
     def deprel(self):
-        """ Access dependency relation of this word. Example: 'nmod'"""
+        """ Access the dependency relation of this word. Example: 'nmod'"""
         return self._deprel
 
     @deprel.setter
@@ -480,22 +507,22 @@ class Word:
 
     @property
     def deps(self):
-        """ Access deps of this word. """
+        """ Access the dependencies of this word. """
         return self._deps
 
     @deps.setter
     def deps(self, value):
-        """ Set the word's deps value. """
+        """ Set the word's dependencies value. """
         self._deps = value if self._is_null(value) == False else None
 
     @property
     def misc(self):
-        """ Access misc of this word. """
+        """ Access the miscellaneousness of this word. """
         return self._misc
 
     @misc.setter
     def misc(self, value):
-        """ Set the word's misc value. """
+        """ Set the word's miscellaneousness value. """
         self._misc = value if self._is_null(value) == False else None
 
     @property
@@ -510,7 +537,7 @@ class Word:
 
     @property
     def pos(self):
-        """ Access (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
+        """ Access the (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
         return self._xpos
 
     @pos.setter
@@ -522,6 +549,8 @@ class Word:
         return json.dumps(self.to_dict(), indent=2)
 
     def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
+        """ Dumps the word into a dictionary.
+        """
         word_dict = {}
         for field in fields:
             if getattr(self, field) is not None:
@@ -529,6 +558,7 @@ class Word:
         return word_dict
 
     def pretty_print(self):
+        """ Print the word in one line. """
         features = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL]
         feature_str = ";".join(["{}={}".format(k, getattr(self, k)) for k in features if getattr(self, k) is not None])
         return f"<{self.__class__.__name__} {feature_str}>"
