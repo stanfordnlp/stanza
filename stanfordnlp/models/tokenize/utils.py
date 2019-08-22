@@ -218,6 +218,6 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     f1tok = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
     f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
     f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
-    print(args['shorthand'], f1tok, f1sent, f1mwt)
+    print(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
     return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
 
