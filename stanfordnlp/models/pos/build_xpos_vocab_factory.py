@@ -3,7 +3,8 @@ import os
 import sys
 from stanfordnlp.models.common.vocab import VOCAB_PREFIX
 from stanfordnlp.models.pos.vocab import XPOSVocab, WordVocab
-from stanfordnlp.models.common.conll import CoNLLFile
+from stanfordnlp.models.common.doc import *
+from stanfordnlp.utils.conll import CoNLL
 
 if len(sys.argv) != 3:
     print('Usage: {} short_to_tb_file output_factory_file'.format(sys.argv[0]))
@@ -37,8 +38,8 @@ for sh, fn in zip(shorthands, fullnames):
         mapping[key].append(sh)
         continue
 
-    conll_file = CoNLLFile('data/pos/{}.train.in.conllu'.format(sh))
-    data = conll_file.get(['word', 'upos', 'xpos', 'feats'], as_sentences=True)
+    doc = Document(CoNLL.conll2dict(input_file='data/pos/{}.train.in.conllu'.format(sh)))
+    data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
     vocab = WordVocab(data, sh, idx=2, ignore=["_"])
     key = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
     best_size = len(vocab) - len(VOCAB_PREFIX)
