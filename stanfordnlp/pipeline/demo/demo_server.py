@@ -23,9 +23,9 @@ def annotate():
         tokens = []
         deps = []
         for word in sentence.words:
-            tokens.append({'index': word.index, 'word': word.text, 'lemma': word.lemma, 'pos': word.xpos, 'upos': word.upos, 'feats': word.feats})
-            deps.append({'dep': word.dependency_relation, 'governor': word.governor, 'governorGloss': sentence.words[word.governor-1].text,
-                'dependent': word.index, 'dependentGloss': word.text})
+            tokens.append({'index': word.id, 'word': word.text, 'lemma': word.lemma, 'pos': word.xpos, 'upos': word.upos, 'feats': word.feats})
+            deps.append({'dep': word.deprel, 'governor': word.head, 'governorGloss': sentence.words[word.head-1].text,
+                'dependent': word.id, 'dependentGloss': word.text})
         annotated_sentences.append({'basicDependencies': deps, 'tokens': tokens})
 
     return json.dumps({'sentences': annotated_sentences})
