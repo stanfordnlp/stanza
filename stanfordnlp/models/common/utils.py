@@ -54,9 +54,9 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8):
+def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0):
     if name == 'sgd':
-        return torch.optim.SGD(parameters, lr=lr)
+        return torch.optim.SGD(parameters, lr=lr, momentum=momentum)
     elif name == 'adagrad':
         return torch.optim.Adagrad(parameters, lr=lr)
     elif name == 'adam':

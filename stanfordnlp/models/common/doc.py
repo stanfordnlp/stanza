@@ -19,6 +19,7 @@ HEAD = 'head'
 DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
+NER = 'ner'
 BEGIN_CHAR_OFFSET = 'beginCharOffset'
 END_CHAR_OFFSET = 'endCharOffset'
 
@@ -341,7 +342,10 @@ class Token:
             key, value = key_value
             if key in [BEGIN_CHAR_OFFSET, END_CHAR_OFFSET]:
                 value = int(value)
-            setattr(self, f'_{key}', value)
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(self, attr):
+                setattr(self, attr, value)
 
     @property
     def id(self):
@@ -428,7 +432,8 @@ class Word:
         """ Construct a word given a dictionary format word entry.
         """
         assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent = [None] * 11
+        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, \
+                self._parent, self._ner = [None] * 12
         
         self.id = word_entry.get(ID)
         self.text = word_entry.get(TEXT)
@@ -440,6 +445,22 @@ class Word:
         self.deprel = word_entry.get(DEPREL, None)
         self.deps = word_entry.get(DEPS, None)
         self.misc = word_entry.get(MISC, None)
+        self.ner = word_entry.get(NER, None)
+
+        if self.misc is not None:
+            self.init_from_misc()
+    
+    def init_from_misc(self):
+        """ Create attributes by parsing from the `misc` field.
+        """
+        for item in self._misc.split('|'):
+            key_value = item.split('=')
+            if len(key_value) == 1: continue # some key_value can not be splited                
+            key, value = key_value
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(self, attr):
+                setattr(self, attr, value)
 
     @property
     def id(self):
@@ -560,6 +581,16 @@ class Word:
     def pos(self, value):
         """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
         self._xpos = value if self._is_null(value) == False else None
+    
+    @property
+    def ner(self):
+        """ Access the NER tag of this word. Example: 'B-ORG'"""
+        return self._ner
+
+    @ner.setter
+    def ner(self, value):
+        """ Set the word's NER tag. Example: 'B-ORG'"""
+        self._ner = value if self._is_null(value) == False else None
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
