@@ -130,23 +130,6 @@ class DataLoader:
         random.shuffle(self.data)
 
     def chunk_batches(self, data):
-        res = []
+        data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
+        return data
 
-        #if not self.eval:
-        #    # sort sentences (roughly) by length for better memory utilization
-        #    data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
-
-        current = []
-        currentlen = 0
-        for x in data:
-            if len(x[0]) + currentlen > self.batch_size:
-                res.append(current)
-                current = []
-                currentlen = 0
-            current.append(x)
-            currentlen += len(x[0])
-
-        if currentlen > 0:
-            res.append(current)
-
-        return res

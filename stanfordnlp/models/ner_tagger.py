@@ -60,8 +60,8 @@ def parse_args():
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
     parser.add_argument('--max_steps', type=int, default=50000)
-    parser.add_argument('--eval_interval', type=int, default=200)
-    parser.add_argument('--batch_size', type=int, default=1000)
+    parser.add_argument('--eval_interval', type=int, default=500)
+    parser.add_argument('--batch_size', type=int, default=20)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
