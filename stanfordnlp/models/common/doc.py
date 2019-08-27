@@ -167,6 +167,16 @@ class Document:
         if evaluation: expansions = [e[0] for e in expansions]
         return expansions
 
+    def iter_words(self):
+        """ An iterator that returns all of the words in this Document. """
+        for s in self.sentences:
+            yield from s.words
+
+    def iter_tokens(self):
+        """ An iterator that returns all of the tokens in this Document. """
+        for s in self.sentences:
+            yield from s.tokens
+
     def to_dict(self):
         """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
         """
@@ -257,8 +267,8 @@ class Sentence:
         self._words = value
 
     def build_dependencies(self):
-        """ Build the dependencies for this sentence. 
-        Dependencies is a list of (head, deprel, word).
+        """ Build the dependency graph for this sentence. Each dependency graph entry is 
+        a list of (head, deprel, word).
         """
         self.dependencies = []
         for word in self.words:
@@ -498,12 +508,12 @@ class Word:
 
     @property
     def upos(self):
-        """ Access the universal part-of-speech of this word. Example: 'DET'"""
+        """ Access the universal part-of-speech of this word. Example: 'NOUN'"""
         return self._upos
 
     @upos.setter
     def upos(self, value):
-        """ Set the word's universal part-of-speech value. Example: 'DET'"""
+        """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
 
     @property
@@ -528,12 +538,12 @@ class Word:
 
     @property
     def head(self):
-        """ Access the governor of this word. """
+        """ Access the id of the governer of this word. """
         return self._head
 
     @head.setter
     def head(self, value):
-        """ Set the word's governor value. """
+        """ Set the word's governor id value. """
         self._head = int(value) if self._is_null(value) == False else None
 
     @property
@@ -568,23 +578,27 @@ class Word:
 
     @property
     def parent(self):
-        """ Access the parent word of this word. """
+        """ Access the parent token of this word. In the case of a multi-word token, a token can be a parent of
+        multiple words. Note that this should return a reference to the parent token object.
+        """
         return self._parent
 
     @parent.setter
     def parent(self, value):
-        """ Set this word's parent word. """
+        """ Set this word's parent token. In the case of a multi-word token, a token can be a parent of
+        multiple words. Note that value here should be a reference to the parent token object.
+        """
         self._parent = value
 
     @property
     def pos(self):
-        """ Access the (treebank-specific) part-of-speech of this word. Example: 'NNP'"""
-        return self._xpos
+        """ Access the universal part-of-speech of this word. Example: 'NOUN'"""
+        return self._upos
 
     @pos.setter
     def pos(self, value):
-        """ Set the word's (treebank-specific) part-of-speech value. Example: 'NNP'"""
-        self._xpos = value if self._is_null(value) == False else None
+        """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
+        self._upos = value if self._is_null(value) == False else None
     
     @property
     def ner(self):

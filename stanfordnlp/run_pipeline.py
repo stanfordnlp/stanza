@@ -8,6 +8,7 @@ import os
 from stanfordnlp import download, Pipeline
 from stanfordnlp.pipeline.core import BOOLEAN_PROCESSOR_SETTINGS_LIST, PROCESSOR_SETTINGS_LIST
 from stanfordnlp.utils.resources import default_treebanks, DEFAULT_MODEL_DIR
+from stanfordnlp.utils.conll import CoNLL
 
 
 if __name__ == '__main__':
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     print('running pipeline...')
     doc = pipeline(open(args.text_file).read())
     # write conll to file
-    doc.write_conll_to_file(output_file_path)
+    CoNLL.dict2conll(doc.to_dict(), output_file_path)
     print('done.')
     print('results written to: '+output_file_path)
 
