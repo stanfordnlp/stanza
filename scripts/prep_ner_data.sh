@@ -23,9 +23,9 @@ train_file=$NER_DIR/${lang}.train
 dev_file=$NER_DIR/${lang}.testa
 test_file=$NER_DIR/${lang}.testb
 
-train_conllu_file=$NER_DATA_DIR/${lang}.train.in.conllu
-dev_conllu_file=$NER_DATA_DIR/${lang}.dev.in.conllu
-test_conllu_file=$NER_DATA_DIR/${lang}.test.in.conllu
+train_conllu_file=$NER_DATA_DIR/${lang}.train.json
+dev_conllu_file=$NER_DATA_DIR/${lang}.dev.json
+test_conllu_file=$NER_DATA_DIR/${lang}.test.json
 
 # create conllu file if exists; otherwise create empty files
 if [ -e $train_file ]; then

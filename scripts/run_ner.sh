@@ -12,10 +12,9 @@ args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
-train_file=${NER_DATA_DIR}/${lang}.train.in.conllu
-dev_file=${NER_DATA_DIR}/${lang}.dev.in.conllu
-test_file=${NER_DATA_DIR}/${lang}.test.in.conllu
-output_file=${NER_DATA_DIR}/${lang}.dev.pred.conllu
+train_file=${NER_DATA_DIR}/${lang}.train.json
+dev_file=${NER_DATA_DIR}/${lang}.dev.json
+test_file=${NER_DATA_DIR}/${lang}.test.json
 
 if [ ! -e $train_file ]; then
     bash scripts/prep_ner_data.sh $treebank
@@ -23,9 +22,9 @@ fi
 
 echo "Running tagger with $args..."
 python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $dev_file \
-    --output_file $output_file --lang $lang --shorthand $short --mode train $args
+    --lang $lang --shorthand $short --mode train $args
 python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $dev_file \
-    --output_file $output_file --lang $lang --shorthand $short --mode predict $args
+    --lang $lang --shorthand $short --mode predict $args
 python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $test_file \
-    --output_file $output_file --lang $lang --shorthand $short --mode predict $args
+    --lang $lang --shorthand $short --mode predict $args
 

@@ -3,6 +3,7 @@ This script converts NER data from the CoNLL03 format to the latest CoNLL-U form
 """
 
 import argparse
+import json
 
 MIN_NUM_FIELD = 4
 MAX_NUM_FIELD = 5
@@ -10,9 +11,9 @@ MAX_NUM_FIELD = 5
 DOC_START_TOKEN = '-DOCSTART-'
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Convert the conll03 data into conllu format.")
-    parser.add_argument('input', help='Input filename.')
-    parser.add_argument('output', help='Output filename.')
+    parser = argparse.ArgumentParser(description="Convert the conll03 format data into conllu format.")
+    parser.add_argument('input', help='Input conll03 format data filename.')
+    parser.add_argument('output', help='Output json filename.')
     args = parser.parse_args()
     return args
 
@@ -22,13 +23,16 @@ def main():
     sentences = load_conll03(args.input)
     print("{} examples loaded from {}".format(len(sentences), args.input))
     
-    filler = "_"
+    document = []
+    for (words, tags) in sentences:
+        sent = []
+        for w, t in zip(words, tags):
+            sent += [{'text': w, 'ner': t}]
+        document += [sent]
+
     with open(args.output, 'w') as outfile:
-        for (words, tags) in sentences:
-            for i, (w, t) in enumerate(zip(words, tags)):
-                print("{}\t{}\t{}\tner={}".format(i+1, w, "\t".join([filler]*7), t), file=outfile)
-            print("", file=outfile)
-    print("Generated conllu file {}.".format(args.output))
+        json.dump(document, outfile)
+    print("Generated json file {}.".format(args.output))
 
 def load_conll03(filename, skip_doc_start=True):
     cached_lines = []

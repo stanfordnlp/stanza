@@ -8,12 +8,12 @@ For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal
 
 import sys
 import os
-import shutil
 import time
 from datetime import datetime
 import argparse
 import numpy as np
 import random
+import json
 import torch
 from torch import nn, optim
 
@@ -32,8 +32,6 @@ def parse_args():
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -109,15 +107,11 @@ def train(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    train_doc = Document(json.load(open(args['train_file'])))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    dev_doc = Document(json.load(open(args['eval_file'])))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
-
-    # pred and gold path
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     dev_gold_tags = dev_batch.tags
 
     # skip training if the language does not have training or dev data
@@ -201,8 +195,6 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
     pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
@@ -222,7 +214,7 @@ def evaluate(args):
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    doc = Document(json.load(open(args['eval_file'])))
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
     
     if len(batch) > 0:
@@ -234,7 +226,6 @@ def evaluate(args):
         # skip eval if dev data does not exist
         preds = []
 
-    #if gold_file is not None:
     gold_tags = batch.tags
     _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower())
 
