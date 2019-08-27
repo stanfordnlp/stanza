@@ -192,7 +192,9 @@ class Sentence:
     def _process_tokens(self, tokens):
         st, en = -1, -1
         self.tokens, self.words = [], []
-        for entry in tokens:
+        for i, entry in enumerate(tokens):
+            if ID not in entry: # manually set a 1-based id for word if not exist
+                entry[ID] = str(i+1)
             m = multi_word_token_id.match(entry.get(ID))
             n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
             if m or n: # if this token is a multi-word token
@@ -327,7 +329,7 @@ class Token:
 
         self.id = token_entry.get(ID)
         self.text = token_entry.get(TEXT)
-        self.misc = token_entry.get(MISC)
+        self.misc = token_entry.get(MISC, None)
         self.words = words if words is not None else []
 
         if self.misc is not None:
