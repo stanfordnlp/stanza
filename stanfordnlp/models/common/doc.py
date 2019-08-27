@@ -165,6 +165,16 @@ class Document:
         if evaluation: expansions = [e[0] for e in expansions]
         return expansions
 
+    def iter_words(self):
+        """ An iterator that returns all of the words in this Document. """
+        for s in self.sentences:
+            yield from s.words
+
+    def iter_tokens(self):
+        """ An iterator that returns all of the tokens in this Document. """
+        for s in self.sentences:
+            yield from s.tokens
+
     def to_dict(self):
         """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
         """
