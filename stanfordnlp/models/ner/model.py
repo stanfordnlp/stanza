@@ -31,7 +31,7 @@ class NERTagger(nn.Module):
             input_size += self.args['word_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=True)
+            self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
             input_size += self.args['char_hidden_dim']*2
        
         # recurrent layers
