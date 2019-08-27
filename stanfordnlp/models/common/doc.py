@@ -37,6 +37,7 @@ class Document:
 
         self.text = text
         self._process_sentences(sentences)
+        self._ents = []
 
     @property
     def text(self):
@@ -67,6 +68,16 @@ class Document:
     def num_words(self, value):
         """ Set the number of words for this document. """
         self._num_words = value
+
+    @property
+    def ents(self):
+        """ Access the list of entities in this document. """
+        return self._ents
+
+    @ents.setter
+    def ents(self, value):
+        """ Set the list of entities in this document. """
+        self._ents = value
 
     def _process_sentences(self, sentences):
         self.sentences = []
@@ -166,6 +177,43 @@ class Document:
                     expansions.append([src, dst])
         if evaluation: expansions = [e[0] for e in expansions]
         return expansions
+
+    def build_ents(self):
+        """ Build the list of entities by iterating over all words. Return total number of entities. """
+        self.ents = []
+        ent_words = []
+        cur_type = None
+        
+        def flush():
+            if len(ent_words) > 0:
+                self.ents.append(Span(words=ent_words, type=cur_type))
+
+        for s in self.sentences:
+            for w in s.words:
+                if w.ner is None:
+                    continue
+                elif w.ner == 'O':
+                    flush()
+                    end_words = []
+                elif w.ner.startswith('B-'): # start of new ent
+                    flush()
+                    ent_words = [w]
+                    cur_type = w.ner[2:]
+                elif w.ner.startswith('I-'): # continue last ent
+                    ent_words.append(w)
+                    cur_type = w.ner[2:]
+                elif w.ner.startswith('E-'): # end last ent
+                    ent_words.append(w)
+                    cur_type = w.ner[2:]
+                    flush()
+                    ent_words = []
+                elif w.ner.startswith('S-'): # start single word ent
+                    flush()
+                    ent_words = [w]
+                    cur_type = w.ner[2:]
+                    flush()
+                    ent_words = []
+        return len(self.ents)
 
     def iter_words(self):
         """ An iterator that returns all of the words in this Document. """
@@ -578,14 +626,14 @@ class Word:
 
     @property
     def parent(self):
-        """ Access the parent token of this word. In the case of a multi-word token, a token can be a parent of
+        """ Access the parent token of this word. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that this should return a reference to the parent token object.
         """
         return self._parent
 
     @parent.setter
     def parent(self, value):
-        """ Set this word's parent token. In the case of a multi-word token, a token can be a parent of
+        """ Set this word's parent token. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that value here should be a reference to the parent token object.
         """
         self._parent = value
@@ -637,28 +685,30 @@ class Span:
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
 
-    def __init__(self, span_entry=None, word_list=None, type=None):
+    def __init__(self, span_entry=None, words=None, type=None):
         """ Construct a span given a span entry or a list of words.
         """
-        assert span_entry is not None or (word_list is not None and type is not None), \
+        assert span_entry is not None or (words is not None and type is not None), \
                 'Either a span_entry or a word list needs to be provided to construct a span.'
-        self._text, self._type, self._words = [None] * 3
+        self._text, self._type = [None] * 2
+        self._words = []
         
         if span_entry is not None:
             self.init_from_entry(span_entry)
 
-        if word_list is not None:
-            self.init_from_words(word_list, type)
+        if words is not None:
+            self.init_from_words(words, type)
         
     def init_from_entry(self, span_entry):
         self.text = span_entry.get(TEXT, None)
         self.type = span_entry.get(TYPE, None)
 
-    def init_from_words(self, word_list, type):
-        assert isinstance(word_list, list), 'Words must be provided as a list to construct a span.'
-        self.words = word_list
+    def init_from_words(self, words, type):
+        assert isinstance(words, list), 'Words must be provided as a list to construct a span.'
+        self.words = words
         self.type = type
         # TODO: look for textual offset from words and determine the text
+        self.text = " ".join([w.text for w in self.words])
     
     @property
     def text(self):
@@ -673,7 +723,7 @@ class Span:
     @property
     def words(self):
         """ Access reference to a list of words that correspond to this span. """
-        return self._word
+        return self._words
 
     @words.setter
     def words(self, value):
