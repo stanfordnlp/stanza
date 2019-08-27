@@ -217,14 +217,10 @@ def evaluate(args):
     doc = Document(json.load(open(args['eval_file'])))
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
     
-    if len(batch) > 0:
-        print("Start evaluation...")
-        preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-    else:
-        # skip eval if dev data does not exist
-        preds = []
+    print("Start evaluation...")
+    preds = []
+    for i, b in enumerate(batch):
+        preds += trainer.predict(b)
 
     gold_tags = batch.tags
     _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower())

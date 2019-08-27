@@ -22,6 +22,7 @@ MISC = 'misc'
 NER = 'ner'
 BEGIN_CHAR_OFFSET = 'beginCharOffset'
 END_CHAR_OFFSET = 'endCharOffset'
+TYPE = 'type'
 
 class Document:
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -318,7 +319,8 @@ class Sentence:
 
 class Token:
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
-    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
+    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, 
+    a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
     """
 
     def __init__(self, token_entry, words=None):
@@ -614,3 +616,63 @@ class Word:
 
     def _is_null(self, value):
         return (value is None) or (value == '_')
+
+
+class Span:
+    """ A span class that stores attributes of a textual span. A span is usually typed.
+    A range of objects (e.g., entity mentions) can be represented as spans.
+    """
+
+    def __init__(self, span_entry=None, word_list=None, type=None):
+        """ Construct a span given a span entry or a list of words.
+        """
+        assert span_entry is not None or (word_list is not None and type is not None), \
+                'Either a span_entry or a word list needs to be provided to construct a span.'
+        self._text, self._type, self._words = [None] * 3
+        
+        if span_entry is not None:
+            self.init_from_entry(span_entry)
+
+        if word_list is not None:
+            self.init_from_words(word_list, type)
+        
+    def init_from_entry(self, span_entry):
+        self.text = span_entry.get(TEXT, None)
+        self.type = span_entry.get(TYPE, None)
+
+    def init_from_words(self, word_list, type):
+        assert isinstance(word_list, list), 'Words must be provided as a list to construct a span.'
+        self.words = word_list
+        self.type = type
+        # TODO: look for textual offset from words and determine the text
+    
+    @property
+    def text(self):
+        """ Access the text of this word. Example: 'The'"""
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the word's text value. Example: 'The'"""
+        self._text = value
+
+    @property
+    def words(self):
+        """ Access reference to a list of words that correspond to this span. """
+        return self._word
+
+    @words.setter
+    def words(self, value):
+        """ Set the span's list of words. """
+        self._words = value
+
+    @property
+    def type(self):
+        """ Access the type of this span. Example: 'PERSON'"""
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        """ Set the span's type. """
+        self._type = value
+

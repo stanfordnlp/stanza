@@ -17,38 +17,40 @@ from stanfordnlp.pipeline.mwt_processor import MWTProcessor
 from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
+from stanfordnlp.pipeline.ner_processor import NERProcessor
 from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, default_treebanks, mwt_languages, build_default_config
 
 DEFAULT_PROCESSORS_LIST = f'{TOKENIZE},{MWT},{POS},{LEMMA},{DEPPARSE}'
 
 NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
-                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor}
+        LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}
 
 PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 
 # list of settings for each processor
 PROCESSOR_SETTINGS = {
-    'tokenize': ['anneal', 'anneal_after', 'batch_size', 'conv_filters', 'conv_res', 'dropout', 'emb_dim', 'feat_dim',
+    TOKENIZE: ['anneal', 'anneal_after', 'batch_size', 'conv_filters', 'conv_res', 'dropout', 'emb_dim', 'feat_dim',
                  'feat_funcs', 'hidden_dim', 'hier_invtemp', 'hierarchical', 'input_dropout', 'lr0', 'max_grad_norm',
                  'max_seqlen', 'pretokenized', 'report_steps', 'residual', 'rnn_layers', 'seed', 'shuffle_steps',
                  'steps', 'tok_noise', 'unit_dropout', 'vocab_size', 'weight_decay'],
-    'mwt': ['attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'emb_dim', 'emb_dropout',
+    MWT: ['attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'emb_dim', 'emb_dropout',
             'ensemble_dict', 'ensemble_early_stop', 'hidden_dim', 'log_step', 'lr', 'lr_decay', 'max_dec_len',
             'max_grad_norm', 'num_epoch', 'num_layers', 'optim', 'seed', 'vocab_size'],
-    'pos': ['adapt_eval_interval', 'batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
+    POS: ['adapt_eval_interval', 'batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
             'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'dropout', 'eval_interval',
             'hidden_dim', 'log_step', 'lr', 'max_grad_norm', 'max_steps', 'max_steps_before_stop', 'num_layers',
             'optim', 'pretrain', 'rec_dropout', 'seed', 'share_hid', 'tag_emb_dim', 'transformed_dim', 'word_dropout',
             'word_emb_dim', 'wordvec_dir'],
-    'lemma': ['alpha', 'attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'edit', 'emb_dim',
+    LEMMA: ['alpha', 'attn_type', 'batch_size', 'beam_size', 'decay_epoch', 'dict_only', 'dropout', 'edit', 'emb_dim',
               'emb_dropout', 'ensemble_dict', 'hidden_dim', 'log_step', 'lr', 'lr_decay', 'max_dec_len',
               'max_grad_norm', 'num_edit', 'num_epoch', 'num_layers', 'optim', 'pos', 'pos_dim', 'pos_dropout',
               'pos_vocab_size', 'seed', 'use_identity', 'vocab_size'],
-    'depparse': ['batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
+    DEPPARSE: ['batch_size', 'beta2', 'char', 'char_emb_dim', 'char_hidden_dim', 'char_num_layers',
                  'char_rec_dropout', 'composite_deep_biaff_hidden_dim', 'deep_biaff_hidden_dim', 'distance', 'dropout',
                  'eval_interval', 'hidden_dim', 'linearization', 'log_step', 'lr', 'max_grad_norm', 'max_steps',
                  'max_steps_before_stop', 'num_layers', 'optim', 'pretrain', 'rec_dropout', 'sample_train', 'seed',
-                 'shorthand', 'tag_emb_dim', 'transformed_dim', 'word_dropout', 'word_emb_dim', 'wordvec_dir']
+                 'shorthand', 'tag_emb_dim', 'transformed_dim', 'word_dropout', 'word_emb_dim', 'wordvec_dir'],
+    NER: ['batch_size', 'hidden_dim', 'char_hidden_dim', 'word_emb_dim', 'char_emb_dim', 'num_layers', 'char_num_layers', 'word_dropout', 'dropout', 'rec_dropout', 'char_rec_dropout']
 }
 
 PROCESSOR_SETTINGS_LIST = \

@@ -40,7 +40,7 @@ class DataLoader:
 
         # chunk into batches
         self.data = self.chunk_batches(data)
-        print("{} batches created.".format(len(self.data)))
+        #print("{} batches created.".format(len(self.data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
@@ -109,7 +109,8 @@ class DataLoader:
 
     def load_doc(self, doc):
         data = doc.get([TEXT, NER], as_sentences=True)
-        data = self.process_tags(data)
+        if not self.eval:
+            data = self.process_tags(data)
         return data
 
     def process_tags(self, sentences):
@@ -117,8 +118,8 @@ class DataLoader:
         for sent in sentences:
             words, tags = zip(*sent)
             # NER field sanity checking
-            if any([x is None or x == '_' for x in tags]):
-                raise Exception("NER tag not found for some input data.")
+            if self.eval and any([x is None or x == '_' for x in tags]):
+                raise Exception("NER tag not found for some input data during training.")
             if self.args.get('scheme', 'bio').lower() == 'bioes':
                 tags = convert_tags_to_bioes(tags)
             res.append([[w,t] for w,t in zip(words, tags)])
