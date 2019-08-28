@@ -86,7 +86,7 @@ class Pipeline:
         self.config['lang'] = lang
         self.config['shorthand'] = shorthand
         self.config['models_dir'] = models_dir
-        self.processor_names = self.config['processors'].split(',')
+        self.processor_names = [n.strip() for n in self.config['processors'].split(',')]
         self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
         # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
         self.use_gpu = torch.cuda.is_available() and use_gpu
