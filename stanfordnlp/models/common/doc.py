@@ -20,8 +20,8 @@ DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
 NER = 'ner'
-BEGIN_CHAR_OFFSET = 'beginCharOffset'
-END_CHAR_OFFSET = 'endCharOffset'
+START_CHAR = 'start_char'
+END_CHAR = 'end_char'
 TYPE = 'type'
 
 class Document:
@@ -93,7 +93,7 @@ class Document:
         self.sentences = []
         for tokens in sentences:
             self.sentences.append(Sentence(tokens))
-            begin_idx, end_idx = self.sentences[-1].tokens[0].begin_char_offset, self.sentences[-1].tokens[-1].end_char_offset
+            begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
         
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
@@ -398,7 +398,7 @@ class Token:
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
         assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._beginCharOffset, self._endCharOffset = [None] * 6
+        self._id, self._text, self._misc, self._words, self._start_char, self._end_char = [None] * 6
 
         self.id = token_entry.get(ID)
         self.text = token_entry.get(TEXT)
@@ -415,7 +415,7 @@ class Token:
             key_value = item.split('=')
             if len(key_value) == 1: continue # some key_value can not be splited                
             key, value = key_value
-            if key in [BEGIN_CHAR_OFFSET, END_CHAR_OFFSET]:
+            if key in [START_CHAR, END_CHAR]:
                 value = int(value)
             # set attribute
             attr = f'_{key}'
@@ -465,14 +465,14 @@ class Token:
             w.parent = self
 
     @property
-    def begin_char_offset(self):
-        """ Access the begin index for this token in the raw text. """
-        return self._beginCharOffset
+    def start_char(self):
+        """ Access the start character index for this token in the raw text. """
+        return self._start_char
 
     @property
-    def end_char_offset(self):
-        """ Access the end index for this token in the raw text. """
-        return self._endCharOffset
+    def end_char(self):
+        """ Access the end character index for this token in the raw text. """
+        return self._end_char
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)

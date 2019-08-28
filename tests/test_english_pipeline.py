@@ -82,26 +82,26 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 """.strip()
 
 EN_DOC_CONLLU_GOLD = """
-1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	beginCharOffset=0|endCharOffset=6
-2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	beginCharOffset=7|endCharOffset=12
-3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	beginCharOffset=13|endCharOffset=16
-4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	beginCharOffset=17|endCharOffset=21
-5	in	in	ADP	IN	_	6	case	_	beginCharOffset=22|endCharOffset=24
-6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	beginCharOffset=25|endCharOffset=31
-7	.	.	PUNCT	.	_	4	punct	_	beginCharOffset=31|endCharOffset=32
+1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6
+2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16
+4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21
+5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32
 
-1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	beginCharOffset=34|endCharOffset=36
-2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	beginCharOffset=37|endCharOffset=40
-3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	beginCharOffset=41|endCharOffset=48
-4	president	president	PROPN	NNP	Number=Sing	3	xcomp	_	beginCharOffset=49|endCharOffset=58
-5	in	in	ADP	IN	_	6	case	_	beginCharOffset=59|endCharOffset=61
-6	2008	2008	NUM	CD	NumType=Card	3	obl	_	beginCharOffset=62|endCharOffset=66
-7	.	.	PUNCT	.	_	3	punct	_	beginCharOffset=66|endCharOffset=67
+1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=34|end_char=36
+2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=37|end_char=40
+3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48
+4	president	president	PROPN	NNP	Number=Sing	3	xcomp	_	start_char=49|end_char=58
+5	in	in	ADP	IN	_	6	case	_	start_char=59|end_char=61
+6	2008	2008	NUM	CD	NumType=Card	3	obl	_	start_char=62|end_char=66
+7	.	.	PUNCT	.	_	3	punct	_	start_char=66|end_char=67
 
-1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	beginCharOffset=69|endCharOffset=74
-2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	beginCharOffset=75|endCharOffset=83
-3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	beginCharOffset=84|endCharOffset=91
-4	.	.	PUNCT	.	_	2	punct	_	beginCharOffset=91|endCharOffset=92
+1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74
+2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91
+4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92
 
 """.lstrip()
 

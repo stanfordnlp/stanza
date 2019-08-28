@@ -152,7 +152,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     st = char_offset + st0
                     text = text[st0 + len(tok):]
                     char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
@@ -170,7 +170,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     st = char_offset + st0
                     text = text[st0 + len(tok):]
                     char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, 2, additional_info)]
