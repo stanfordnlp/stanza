@@ -196,7 +196,7 @@ class Document:
         
         def flush():
             if len(ent_words) > 0:
-                self.ents.append(Span(words=ent_words, type=cur_type))
+                self.ents.append(Span(words=ent_words, type=cur_type, doc=self))
 
         for s in self.sentences:
             for w in s.words:
@@ -694,34 +694,52 @@ class Word:
 
 
 class Span:
-    """ A span class that stores attributes of a textual span. A span is usually typed.
+    """ A span class that stores attributes of a textual span. A span can be typed.
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
 
-    def __init__(self, span_entry=None, words=None, type=None):
+    def __init__(self, span_entry=None, words=None, type=None, doc=None):
         """ Construct a span given a span entry or a list of words.
         """
         assert span_entry is not None or (words is not None and type is not None), \
                 'Either a span_entry or a word list needs to be provided to construct a span.'
-        self._text, self._type = [None] * 2
+        assert doc is not None, 'A parent doc must be provided to construct a span.'
+        self._doc,  self._text, self._type, self._start_char, self._end_char = [None] * 5
         self._words = []
         
         if span_entry is not None:
-            self.init_from_entry(span_entry)
+            self.init_from_entry(span_entry, doc)
 
         if words is not None:
-            self.init_from_words(words, type)
+            self.init_from_words(words, type, doc)
         
-    def init_from_entry(self, span_entry):
+    def init_from_entry(self, span_entry, doc):
+        self.doc = doc
         self.text = span_entry.get(TEXT, None)
         self.type = span_entry.get(TYPE, None)
+        self.start_char = span_entry.get(START_CHAR, None)
+        self.end_char = span_entry.get(END_CHAR, None)
 
-    def init_from_words(self, words, type):
+    def init_from_words(self, words, type, doc):
         assert isinstance(words, list), 'Words must be provided as a list to construct a span.'
+        assert len(words) > 0, "Words of a span cannot be an empty list."
+        self.doc = doc
         self.words = words
         self.type = type
-        # TODO: look for textual offset from words and determine the text
-        self.text = " ".join([w.text for w in self.words])
+        # load start and end char offsets from words' parent tokens
+        self.start_char = self.words[0].parent.start_char
+        self.end_char = self.words[-1].parent.end_char
+        self.text = self.doc.text[self.start_char:self.end_char]
+
+    @property
+    def doc(self):
+        """ Access the parent doc of this span. """
+        return self._doc
+
+    @doc.setter
+    def doc(self, value):
+        """ Set the parent doc of this span. """
+        self._doc = value
     
     @property
     def text(self):
@@ -750,6 +768,26 @@ class Span:
 
     @type.setter
     def type(self, value):
-        """ Set the span's type. """
+        """ Set the type of this span. """
         self._type = value
+
+    @property
+    def start_char(self):
+        """ Access the start character offset of this span. """
+        return self._start_char
+
+    @start_char.setter
+    def start_char(self, value):
+        """ Set the start character offset of this span. """
+        self._start_char = value
+
+    @property
+    def end_char(self):
+        """ Access the end character offset of this span. """
+        return self._end_char
+
+    @end_char.setter
+    def end_char(self, value):
+        """ Set the end character offset of this span. """
+        self._end_char = value
 
