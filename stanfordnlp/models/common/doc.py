@@ -79,6 +79,16 @@ class Document:
         """ Set the list of entities in this document. """
         self._ents = value
 
+    @property
+    def entities(self):
+        """ Access the list of entities. This is just an alias of `ents`. """
+        return self._ents
+
+    @entities.setter
+    def entities(self, value):
+        """ Set the list of entities in this document. """
+        self._ents = value
+
     def _process_sentences(self, sentences):
         self.sentences = []
         for tokens in sentences:
@@ -213,6 +223,9 @@ class Document:
                     cur_type = w.ner[2:]
                     flush()
                     ent_words = []
+            # flush after sentence, since entity won't cross sentence boundary
+            flush()
+            end_words = []
         return len(self.ents)
 
     def iter_words(self):

@@ -89,12 +89,11 @@ class PipelineRequirementsException(Exception):
         return self.message
 
 logging.basicConfig(stream=sys.stderr)
-logger = logging.getLogger()
 
 class Pipeline:
 
     def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, treebank=None,
-                 use_gpu=True, **kwargs):
+                 use_gpu=True, logger=None, **kwargs):
         shorthand = default_treebanks[lang] if treebank is None else treebank
         config = build_default_config(shorthand, models_dir)
         config.update(kwargs)
@@ -107,6 +106,7 @@ class Pipeline:
         self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
         # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
         self.use_gpu = torch.cuda.is_available() and use_gpu
+        logger = logging.getLogger() if logger is None else logger
         logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
