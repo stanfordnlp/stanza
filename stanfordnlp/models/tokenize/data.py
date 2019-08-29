@@ -65,6 +65,9 @@ class DataLoader:
         res = []
         funcs = []
         for feat_func in self.args['feat_funcs']:
+            if feat_func == 'end_of_para' or feat_func == 'start_of_para':
+                # skip for position-dependent features
+                continue
             if feat_func == 'space_before':
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
@@ -74,28 +77,37 @@ class DataLoader:
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
             else:
-                assert False, 'Feature function "{}" is undefined.'.format(feat_func)
+                raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
-            funcs += [func]
-
+            funcs.append(func)
+        
+        # stacking all featurize functions
         composite_func = lambda x: list(map(lambda f: f(x), funcs))
 
-        def process_and_featurize(sent):
-            return [(self.vocab.unit2id(y[0]), y[1], composite_func(y[0]), y[0]) for y in sent]
+        def process_sentence(sent):
+            return [(self.vocab.unit2id(y[0]), y[1], y[2], y[0]) for y in sent]
 
         current = []
-        for unit, label in para:
+        for i, (unit, label) in enumerate(para):
             label1 = label if not self.eval else 0
-            current += [[unit, label]]
+            feats = composite_func(unit)
+            # position-dependent features
+            if 'end_of_para' in self.args['feat_funcs']:
+                f = 1 if i == len(para)-1 else 0
+                feats.append(f)
+            if 'start_of_para' in self.args['feat_funcs']:
+                f = 1 if i == 0 else 0
+                feats.append(f)
+            current += [[unit, label, feats]]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res += [process_and_featurize(current)]
+                    res += [process_sentence(current)]
                 current = []
 
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
-                res += [process_and_featurize(current)]
+                res += [process_sentence(current)]
 
         return res
 
