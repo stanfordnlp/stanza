@@ -20,7 +20,7 @@ if [ ! -e $train_file ]; then
     bash scripts/prep_ner_data.sh $treebank
 fi
 
-echo "Running tagger with $args..."
+echo "Running ner with $args..."
 python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $dev_file \
     --lang $lang --shorthand $short --mode train $args
 python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $dev_file \
