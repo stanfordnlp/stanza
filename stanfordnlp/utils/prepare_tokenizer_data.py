@@ -2,6 +2,8 @@ import argparse
 import re
 import sys
 
+PARAGRAPH_BREAK = re.compile('\n\s*\n')
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
@@ -19,24 +21,39 @@ output = sys.stdout if args.output is None else open(args.output, 'w')
 
 index = 0 # character offset in rawtext
 
+def is_para_break(index, text):
+    """ Detect if a paragraph break can be found, and return the length of the paragraph break sequence. """
+    if text[index] == '\n':
+        para_break = PARAGRAPH_BREAK.match(text[index:])
+        if para_break:
+            break_len = len(para_break.group(0))
+        return True, break_len
+    return False, 0
+
 def find_next_word(index, text, word, output):
+    """
+    Locate the next word in the text. In case a paragraph break is found, also write paragraph break to labels.
+    """
     idx = 0
     word_sofar = ''
     yeah=False
     while index < len(text) and idx < len(word):
-        if text[index] == '\n' and index+1 < len(text) and text[index+1] == '\n':
-            # paragraph break
+        para_break, break_len = is_para_break(index, text)
+        if para_break:
+            # multiple newlines found, paragraph break
             if len(word_sofar) > 0:
                 assert re.match(r'^\s+$', word_sofar), 'Found non-empty string at the end of a paragraph that doesn\'t match any token: |{}|'.format(word_sofar)
                 word_sofar = ''
 
             output.write('\n\n')
-            index += 1
+            index += break_len - 1
         elif re.match(r'^\s$', text[index]) and not re.match(r'^\s$', word[idx]):
+            # whitespace found, and whitespace is not part of a word
             word_sofar += text[index]
         else:
+            # non-whitespace char, or a whitespace char that's part of a word
             word_sofar += text[index]
-            assert text[index].replace('\n', ' ') == word[idx], "character mismatch: raw text contains |%s| but the next word is |%s|." % (word_sofar, word)
+            assert text[index].replace('\n', ' ') == word[idx], "Character mismatch: raw text contains |%s| but the next word is |%s|." % (word_sofar, word)
             idx += 1
         index += 1
     return index, word_sofar
