@@ -27,7 +27,7 @@ def is_para_break(index, text):
         para_break = PARAGRAPH_BREAK.match(text[index:])
         if para_break:
             break_len = len(para_break.group(0))
-        return True, break_len
+            return True, break_len
     return False, 0
 
 def find_next_word(index, text, word, output):
