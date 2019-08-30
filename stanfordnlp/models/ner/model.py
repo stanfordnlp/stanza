@@ -10,6 +10,7 @@ from stanfordnlp.models.common.packed_lstm import PackedLSTM
 from stanfordnlp.models.common.dropout import WordDropout
 from stanfordnlp.models.common.char_model import CharacterModel
 from stanfordnlp.models.common.crf import CRFLoss
+from stanfordnlp.models.common.vocab import PAD_ID
 
 class NERTagger(nn.Module):
     def __init__(self, args, vocab, emb_matrix=None):
@@ -26,8 +27,10 @@ class NERTagger(nn.Module):
         # input layers
         input_size = 0
         if self.args['word_emb_dim'] > 0:
-            # frequent word embeddings
-            self.word_emb = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)
+            self.word_emb = nn.Embedding(len(self.vocab['word']), self.args['word_emb_dim'], PAD_ID)
+            # load pretrained embeddings if specified
+            if emb_matrix is not None:
+                self.init_emb(emb_matrix)
             input_size += self.args['word_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
@@ -52,14 +55,23 @@ class NERTagger(nn.Module):
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, pretrained, word_orig_idx, sentlens, wordlens):
+    def init_emb(self, emb_matrix):
+        if isinstance(emb_matrix, np.ndarray):
+            emb_matrix = torch.from_numpy(emb_matrix)
+        vocab_size = len(self.vocab['word'])
+        dim = self.args['word_emb_dim']
+        assert emb_matrix.size() == (vocab_size, dim), \
+            "Input embedding matrix must match size: {} x {}".format(vocab_size, dim)
+        self.word_emb.weight.data.copy_(emb_matrix)
+
+    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens):
         
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
         
         inputs = []
         if self.args['word_emb_dim'] > 0:
-            word_emb = self.word_emb(pretrained)
+            word_emb = self.word_emb(word)
             word_emb = pack(word_emb)
             inputs += [word_emb]
 

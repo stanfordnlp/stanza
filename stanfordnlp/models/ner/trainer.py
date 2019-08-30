@@ -15,13 +15,13 @@ from stanfordnlp.models.common.crf import viterbi_decode
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
     if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:6]]
+        inputs = [b.cuda() if b is not None else None for b in batch[:5]]
     else:
-        inputs = batch[:6]
-    orig_idx = batch[6]
-    word_orig_idx = batch[7]
-    sentlens = batch[8]
-    wordlens = batch[9]
+        inputs = batch[:5]
+    orig_idx = batch[5]
+    word_orig_idx = batch[6]
+    sentlens = batch[7]
+    wordlens = batch[8]
     return inputs, orig_idx, word_orig_idx, sentlens, wordlens
 
 class Trainer(BaseTrainer):
@@ -30,7 +30,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(pretrain, model_file)
+            self.load(model_file)
         else:
             assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
@@ -46,14 +46,14 @@ class Trainer(BaseTrainer):
 
     def update(self, batch, eval=False):
         inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags, pretrained = inputs
+        word, word_mask, wordchars, wordchars_mask, tags = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, pretrained, word_orig_idx, sentlens, wordlens)
+        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -65,11 +65,11 @@ class Trainer(BaseTrainer):
 
     def predict(self, batch, unsort=True):
         inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags, pretrained = inputs
+        word, word_mask, wordchars, wordchars_mask, tags = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, pretrained, word_orig_idx, sentlens, wordlens)
+        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
 
         # decode
         trans = trans.data.cpu().numpy()
@@ -103,7 +103,7 @@ class Trainer(BaseTrainer):
         except BaseException:
             print("[Warning: Saving failed... continuing anyway.]")
 
-    def load(self, pretrain, filename):
+    def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -111,6 +111,6 @@ class Trainer(BaseTrainer):
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=pretrain.emb)
+        self.model = NERTagger(self.args, self.vocab)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 

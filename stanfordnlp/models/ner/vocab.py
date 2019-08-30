@@ -2,6 +2,7 @@ from collections import Counter, OrderedDict
 
 from stanfordnlp.models.common.vocab import BaseVocab, BaseMultiVocab
 from stanfordnlp.models.common.vocab import VOCAB_PREFIX
+from stanfordnlp.models.common.pretrain import PretrainedWordVocab
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
 
 class TagVocab(BaseVocab):
@@ -26,7 +27,7 @@ class MultiVocab(BaseMultiVocab):
     @classmethod
     def load_state_dict(cls, state_dict):
         class_dict = {'CharVocab': CharVocab,
-                'WordVocab': WordVocab,
+                'PretrainedWordVocab': PretrainedWordVocab,
                 'TagVocab': TagVocab}
         new = cls()
         assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"

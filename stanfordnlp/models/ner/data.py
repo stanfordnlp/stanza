@@ -9,7 +9,7 @@ from stanfordnlp.models.common.doc import *
 from stanfordnlp.models.ner.utils import convert_tags_to_bioes
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -20,11 +20,11 @@ class DataLoader:
         self.tags = [[w[1] for w in sent] for sent in data]
 
         # handle vocab
+        self.pretrain = pretrain
         if vocab is None:
             self.vocab = self.init_vocab(data)
         else:
             self.vocab = vocab
-        self.pretrain_vocab = pretrain.vocab
 
         # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -32,7 +32,7 @@ class DataLoader:
             data = random.sample(data, keep)
             print("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
+        data = self.preprocess(data, self.vocab, args)
         # shuffle for training
         if self.shuffled:
             random.shuffle(data)
@@ -45,14 +45,14 @@ class DataLoader:
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
         charvocab = CharVocab(data, self.args['shorthand'])
-        wordvocab = WordVocab(data, self.args['shorthand'], cutoff=2, lower=self.args['lowercase'])
+        wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
                             'tag': tagvocab})
         return vocab
 
-    def preprocess(self, data, vocab, pretrain_vocab, args):
+    def preprocess(self, data, vocab, args):
         processed = []
         if args['lowercase']: # handle word case
             case = lambda x: x.lower()
@@ -62,7 +62,6 @@ class DataLoader:
             processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
             processed_sent += [[vocab['char'].map([x for x in w[0]]) for w in sent]]
             processed_sent += [vocab['tag'].map([w[1] for w in sent])]
-            processed_sent += [pretrain_vocab.map([case(w[0]) for w in sent])]
             processed.append(processed_sent)
         return processed
 
@@ -78,7 +77,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 4
+        assert len(batch) == 3
 
         # sort sentences by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -99,9 +98,8 @@ class DataLoader:
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
         tags = get_long_tensor(batch[2], batch_size)
-        pretrained = get_long_tensor(batch[3], batch_size)
         sentlens = [len(x) for x in batch[0]]
-        return words, words_mask, wordchars, wordchars_mask, tags, pretrained, orig_idx, word_orig_idx, sentlens, word_lens
+        return words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens
 
     def __iter__(self):
         for i in range(self.__len__()):
