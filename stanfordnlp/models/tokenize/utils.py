@@ -58,7 +58,7 @@ def find_token(token, text):
     Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
     Ignores whitespace mismatches between the text and the token.
     """
-    m = re.search('\s*'.join([re.escape(x) for x in token]), text)
+    m = re.search('\s*'.join(['\s' if re.match('\s', x) else re.escape(x) for x in token]), text)
     return m.start(), m.group()
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
