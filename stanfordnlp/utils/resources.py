@@ -98,7 +98,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
         r = requests.get(download_url, stream=True)
         with open(download_file_path, 'wb') as f:
             file_size = int(r.headers.get('content-length'))
-            default_chunk_size = 67108864
+            default_chunk_size = 131072
             with tqdm(total=file_size, unit='B', unit_scale=True) as pbar:
                 for chunk in r.iter_content(chunk_size=default_chunk_size):
                     if chunk:
