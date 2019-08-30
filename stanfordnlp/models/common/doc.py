@@ -19,8 +19,10 @@ HEAD = 'head'
 DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
-BEGIN_CHAR_OFFSET = 'beginCharOffset'
-END_CHAR_OFFSET = 'endCharOffset'
+NER = 'ner'
+START_CHAR = 'start_char'
+END_CHAR = 'end_char'
+TYPE = 'type'
 
 class Document:
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -35,6 +37,7 @@ class Document:
 
         self.text = text
         self._process_sentences(sentences)
+        self._ents = []
 
     @property
     def text(self):
@@ -66,11 +69,31 @@ class Document:
         """ Set the number of words for this document. """
         self._num_words = value
 
+    @property
+    def ents(self):
+        """ Access the list of entities in this document. """
+        return self._ents
+
+    @ents.setter
+    def ents(self, value):
+        """ Set the list of entities in this document. """
+        self._ents = value
+
+    @property
+    def entities(self):
+        """ Access the list of entities. This is just an alias of `ents`. """
+        return self._ents
+
+    @entities.setter
+    def entities(self, value):
+        """ Set the list of entities in this document. """
+        self._ents = value
+
     def _process_sentences(self, sentences):
         self.sentences = []
         for tokens in sentences:
             self.sentences.append(Sentence(tokens))
-            begin_idx, end_idx = self.sentences[-1].tokens[0].begin_char_offset, self.sentences[-1].tokens[-1].end_char_offset
+            begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
         
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
@@ -165,6 +188,46 @@ class Document:
         if evaluation: expansions = [e[0] for e in expansions]
         return expansions
 
+    def build_ents(self):
+        """ Build the list of entities by iterating over all words. Return total number of entities. """
+        self.ents = []
+        ent_words = []
+        cur_type = None
+        
+        def flush():
+            if len(ent_words) > 0:
+                self.ents.append(Span(words=ent_words, type=cur_type, doc=self))
+
+        for s in self.sentences:
+            for w in s.words:
+                if w.ner is None:
+                    continue
+                elif w.ner == 'O':
+                    flush()
+                    end_words = []
+                elif w.ner.startswith('B-'): # start of new ent
+                    flush()
+                    ent_words = [w]
+                    cur_type = w.ner[2:]
+                elif w.ner.startswith('I-'): # continue last ent
+                    ent_words.append(w)
+                    cur_type = w.ner[2:]
+                elif w.ner.startswith('E-'): # end last ent
+                    ent_words.append(w)
+                    cur_type = w.ner[2:]
+                    flush()
+                    ent_words = []
+                elif w.ner.startswith('S-'): # start single word ent
+                    flush()
+                    ent_words = [w]
+                    cur_type = w.ner[2:]
+                    flush()
+                    ent_words = []
+            # flush after sentence, since entity won't cross sentence boundary
+            flush()
+            end_words = []
+        return len(self.ents)
+
     def iter_words(self):
         """ An iterator that returns all of the words in this Document. """
         for s in self.sentences:
@@ -201,7 +264,9 @@ class Sentence:
     def _process_tokens(self, tokens):
         st, en = -1, -1
         self.tokens, self.words = [], []
-        for entry in tokens:
+        for i, entry in enumerate(tokens):
+            if ID not in entry: # manually set a 1-based id for word if not exist
+                entry[ID] = str(i+1)
             m = multi_word_token_id.match(entry.get(ID))
             n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
             if m or n: # if this token is a multi-word token
@@ -325,18 +390,19 @@ class Sentence:
 
 class Token:
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
-    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
+    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, 
+    a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
     """
 
     def __init__(self, token_entry, words=None):
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
         assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._beginCharOffset, self._endCharOffset = [None] * 6
+        self._id, self._text, self._misc, self._words, self._start_char, self._end_char = [None] * 6
 
         self.id = token_entry.get(ID)
         self.text = token_entry.get(TEXT)
-        self.misc = token_entry.get(MISC)
+        self.misc = token_entry.get(MISC, None)
         self.words = words if words is not None else []
 
         if self.misc is not None:
@@ -349,9 +415,12 @@ class Token:
             key_value = item.split('=')
             if len(key_value) == 1: continue # some key_value can not be splited                
             key, value = key_value
-            if key in [BEGIN_CHAR_OFFSET, END_CHAR_OFFSET]:
+            if key in [START_CHAR, END_CHAR]:
                 value = int(value)
-            setattr(self, f'_{key}', value)
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(self, attr):
+                setattr(self, attr, value)
 
     @property
     def id(self):
@@ -396,14 +465,14 @@ class Token:
             w.parent = self
 
     @property
-    def begin_char_offset(self):
-        """ Access the begin index for this token in the raw text. """
-        return self._beginCharOffset
+    def start_char(self):
+        """ Access the start character index for this token in the raw text. """
+        return self._start_char
 
     @property
-    def end_char_offset(self):
-        """ Access the end index for this token in the raw text. """
-        return self._endCharOffset
+    def end_char(self):
+        """ Access the end character index for this token in the raw text. """
+        return self._end_char
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -438,7 +507,8 @@ class Word:
         """ Construct a word given a dictionary format word entry.
         """
         assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, self._parent = [None] * 11
+        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, \
+                self._parent, self._ner = [None] * 12
         
         self.id = word_entry.get(ID)
         self.text = word_entry.get(TEXT)
@@ -450,6 +520,22 @@ class Word:
         self.deprel = word_entry.get(DEPREL, None)
         self.deps = word_entry.get(DEPS, None)
         self.misc = word_entry.get(MISC, None)
+        self.ner = word_entry.get(NER, None)
+
+        if self.misc is not None:
+            self.init_from_misc()
+    
+    def init_from_misc(self):
+        """ Create attributes by parsing from the `misc` field.
+        """
+        for item in self._misc.split('|'):
+            key_value = item.split('=')
+            if len(key_value) == 1: continue # some key_value can not be splited                
+            key, value = key_value
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(self, attr):
+                setattr(self, attr, value)
 
     @property
     def id(self):
@@ -553,14 +639,14 @@ class Word:
 
     @property
     def parent(self):
-        """ Access the parent token of this word. In the case of a multi-word token, a token can be a parent of
+        """ Access the parent token of this word. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that this should return a reference to the parent token object.
         """
         return self._parent
 
     @parent.setter
     def parent(self, value):
-        """ Set this word's parent token. In the case of a multi-word token, a token can be a parent of
+        """ Set this word's parent token. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that value here should be a reference to the parent token object.
         """
         self._parent = value
@@ -574,6 +660,16 @@ class Word:
     def pos(self, value):
         """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
+    
+    @property
+    def ner(self):
+        """ Access the NER tag of this word. Example: 'B-ORG'"""
+        return self._ner
+
+    @ner.setter
+    def ner(self, value):
+        """ Set the word's NER tag. Example: 'B-ORG'"""
+        self._ner = value if self._is_null(value) == False else None
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -595,3 +691,103 @@ class Word:
 
     def _is_null(self, value):
         return (value is None) or (value == '_')
+
+
+class Span:
+    """ A span class that stores attributes of a textual span. A span can be typed.
+    A range of objects (e.g., entity mentions) can be represented as spans.
+    """
+
+    def __init__(self, span_entry=None, words=None, type=None, doc=None):
+        """ Construct a span given a span entry or a list of words.
+        """
+        assert span_entry is not None or (words is not None and type is not None), \
+                'Either a span_entry or a word list needs to be provided to construct a span.'
+        assert doc is not None, 'A parent doc must be provided to construct a span.'
+        self._doc,  self._text, self._type, self._start_char, self._end_char = [None] * 5
+        self._words = []
+        
+        if span_entry is not None:
+            self.init_from_entry(span_entry, doc)
+
+        if words is not None:
+            self.init_from_words(words, type, doc)
+        
+    def init_from_entry(self, span_entry, doc):
+        self.doc = doc
+        self.text = span_entry.get(TEXT, None)
+        self.type = span_entry.get(TYPE, None)
+        self.start_char = span_entry.get(START_CHAR, None)
+        self.end_char = span_entry.get(END_CHAR, None)
+
+    def init_from_words(self, words, type, doc):
+        assert isinstance(words, list), 'Words must be provided as a list to construct a span.'
+        assert len(words) > 0, "Words of a span cannot be an empty list."
+        self.doc = doc
+        self.words = words
+        self.type = type
+        # load start and end char offsets from words' parent tokens
+        self.start_char = self.words[0].parent.start_char
+        self.end_char = self.words[-1].parent.end_char
+        self.text = self.doc.text[self.start_char:self.end_char]
+
+    @property
+    def doc(self):
+        """ Access the parent doc of this span. """
+        return self._doc
+
+    @doc.setter
+    def doc(self, value):
+        """ Set the parent doc of this span. """
+        self._doc = value
+    
+    @property
+    def text(self):
+        """ Access the text of this word. Example: 'The'"""
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        """ Set the word's text value. Example: 'The'"""
+        self._text = value
+
+    @property
+    def words(self):
+        """ Access reference to a list of words that correspond to this span. """
+        return self._words
+
+    @words.setter
+    def words(self, value):
+        """ Set the span's list of words. """
+        self._words = value
+
+    @property
+    def type(self):
+        """ Access the type of this span. Example: 'PERSON'"""
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        """ Set the type of this span. """
+        self._type = value
+
+    @property
+    def start_char(self):
+        """ Access the start character offset of this span. """
+        return self._start_char
+
+    @start_char.setter
+    def start_char(self, value):
+        """ Set the start character offset of this span. """
+        self._start_char = value
+
+    @property
+    def end_char(self):
+        """ Access the end character offset of this span. """
+        return self._end_char
+
+    @end_char.setter
+    def end_char(self, value):
+        """ Set the end character offset of this span. """
+        self._end_char = value
+

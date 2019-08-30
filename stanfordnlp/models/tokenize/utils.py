@@ -2,6 +2,7 @@ from collections import Counter
 from copy import copy
 import json
 import numpy as np
+import re
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
 from stanfordnlp.utils.conll import CoNLL
@@ -148,11 +149,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    st0 = text.index(tok)
+                    st0 = re.sub('\s', ' ', text).index(current_tok)
                     st = char_offset + st0
                     text = text[st0 + len(tok):]
                     char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
@@ -166,11 +167,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             assert '\t' not in tok, tok
             if len(tok) > 0:
                 if orig_text is not None:
-                    st0 = text.index(tok)
+                    st0 = re.sub('\s', ' ', text).index(current_tok)
                     st = char_offset + st0
                     text = text[st0 + len(tok):]
                     char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, 2, additional_info)]

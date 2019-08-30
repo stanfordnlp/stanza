@@ -16,10 +16,11 @@ class PretrainedWordVocab(BaseVocab):
 class Pretrain:
     """ A loader and saver for pretrained embeddings. """
 
-    def __init__(self, filename, vec_filename=None, max_vocab=-1):
+    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True):
         self.filename = filename
         self._vec_filename = vec_filename
         self._max_vocab = max_vocab
+        self._save_to_file = save_to_file
 
     @property
     def vocab(self):
@@ -34,18 +35,18 @@ class Pretrain:
         return self._emb
 
     def load(self):
-        if os.path.exists(self.filename):
+        if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
             except BaseException as e:
                 print("Pretrained file exists but cannot be loaded from {}, due to the following exception:".format(self.filename))
                 print("\t{}".format(e))
-                return self.read_and_save()
+                return self.read_pretrain()
             return data['vocab'], data['emb']
         else:
-            return self.read_and_save()
+            return self.read_pretrain()
 
-    def read_and_save(self):
+    def read_pretrain(self):
         # load from pretrained filename
         if self._vec_filename is None:
             raise Exception("Vector file is not provided.")
@@ -69,15 +70,17 @@ class Pretrain:
             emb = emb[:self._max_vocab]
 
         vocab = PretrainedWordVocab(words, lower=True)
-
-        # save to file
-        data = {'vocab': vocab, 'emb': emb}
-        try:
-            torch.save(data, self.filename)
-            print("Saved pretrained vocab and vectors to {}".format(self.filename))
-        except BaseException as e:
-            print("Saving pretrained data failed due to the following exception... continuing anyway")
-            print("\t{}".format(e))
+        
+        if self._save_to_file:
+            assert self.filename is not None, "Filename must be provided to save pretrained vector to file."
+            # save to file
+            data = {'vocab': vocab, 'emb': emb}
+            try:
+                torch.save(data, self.filename)
+                print("Saved pretrained vocab and vectors to {}".format(self.filename))
+            except BaseException as e:
+                print("Saving pretrained data failed due to the following exception... continuing anyway")
+                print("\t{}".format(e))
 
         return vocab, emb
 
