@@ -41,7 +41,7 @@ def build_default_config(treebank, models_path):
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
         default_config[f"{processor}_model_path"] = os.path.join(treebank_dir, f"{treebank}_{model_file_ending}")
-        if processor in ['pos', 'depparse', 'ner']:
+        if processor in ['pos', 'depparse']:
             default_config[f"{processor}_pretrain_path"] = os.path.join(treebank_dir, f"{treebank}.pretrain.pt")
     return default_config
 
