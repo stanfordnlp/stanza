@@ -53,6 +53,14 @@ def process_sentence(sentence, mwt_dict=None):
             i += 1
     return sent
 
+def find_token(token, text):
+    """
+    Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
+    Ignores whitespace mismatches between the text and the token.
+    """
+    m = re.search('\s*'.join(token), text)
+    return m.start(), m.group()
+
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
@@ -149,11 +157,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    st0 = re.sub('\s', ' ', text).index(current_tok)
+                    st0, tok0 = find_token(tok, text)
                     st = char_offset + st0
-                    text = text[st0 + len(tok):]
-                    char_offset += st0 + len(tok)
-                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok)}
+                    text = text[st0 + len(tok0):]
+                    char_offset += st0 + len(tok0)
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok0)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
@@ -167,11 +175,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             assert '\t' not in tok, tok
             if len(tok) > 0:
                 if orig_text is not None:
-                    st0 = re.sub('\s', ' ', text).index(current_tok)
+                    st0, tok0 = find_token(tok, text)
                     st = char_offset + st0
-                    text = text[st0 + len(tok):]
-                    char_offset += st0 + len(tok)
-                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok)}
+                    text = text[st0 + len(tok0):]
+                    char_offset += st0 + len(tok0)
+                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok0)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, 2, additional_info)]
