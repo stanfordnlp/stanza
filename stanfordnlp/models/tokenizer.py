@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--skip_newline', action='store_true', help="Whether to skip newline characters in input. Particularly useful for languages like Chinese.")
 
     parser.add_argument('--emb_dim', type=int, default=32, help="Dimension of unit embeddings")
     parser.add_argument('--hidden_dim', type=int, default=64, help="Dimension of hidden units")
