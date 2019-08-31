@@ -31,9 +31,9 @@ processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 't
 def build_default_config(treebank, models_path):
     default_config = {}
     if treebank in mwt_languages:
-        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
+        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse,ner'
     else:
-        default_config['processors'] = 'tokenize,pos,lemma,depparse'
+        default_config['processors'] = 'tokenize,pos,lemma,depparse,ner'
     if treebank == 'vi_vtb':
         default_config['lemma_use_identity'] = True
         default_config['lemma_batch_size'] = 5000
