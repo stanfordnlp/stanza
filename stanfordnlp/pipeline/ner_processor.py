@@ -19,14 +19,12 @@ class NERProcessor(UDProcessor):
     REQUIRES_DEFAULT = set([TOKENIZE])
 
     def _set_up_model(self, config, use_gpu):
-        # get pretrained word vectors
-        self._pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
         batch = DataLoader(
-            document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True)
+            document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
