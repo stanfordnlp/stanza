@@ -2,6 +2,8 @@
 Supports for pretrained data.
 """
 import os
+import re
+
 import lzma
 import logging
 import numpy as np
@@ -89,6 +91,8 @@ class Pretrain:
         """
         Open a vector file using the provided function and read from it.
         """
+        # some vector files, such as Google News, use tabs
+        tab_space_pattern = re.compile("[ \t]+")
         first = True
         words = []
         failed = 0
@@ -107,7 +111,7 @@ class Pretrain:
                     emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
                     continue
 
-                line = line.rstrip().split(' ')
+                line = tab_space_pattern.split((line.rstrip()))
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
         return words, emb, failed
