@@ -77,11 +77,38 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 3
+        assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[int]]
 
         # sort sentences by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
+
+        # get char-LM representations
+        # print(self.vocab['char']._unit2id)
+        start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # TODO: vocab['char'] does not contain ' ' and '\n'
+        start_offset, end_offset = 1, 1
+        chars_forward, chars_backward, charlens, charoffsets_forward, charoffsets_backward = [], [], [], [], []
+        for sent in batch[1]:
+            chars_forward_tmp, chars_backward_tmp = [start_id], [start_id]
+            charoffsets_forward_tmp, charoffsets_backward_tmp = [], []
+            for word in sent:
+                chars_forward_tmp += word
+                charoffsets_forward_tmp += [len(chars_forward_tmp)]
+                chars_forward_tmp += [end_id]
+            for word in sent[::-1]:
+                chars_backward_tmp += word[::-1]
+                charoffsets_backward_tmp += [len(chars_backward_tmp)]
+                chars_backward_tmp += [end_id]
+            chars_forward.append(chars_forward_tmp)
+            chars_backward.append(chars_backward_tmp)
+            charoffsets_forward.append(charoffsets_forward_tmp)
+            charoffsets_backward.append(charoffsets_backward_tmp)
+        charlens = [len(sent) - start_offset - end_offset for sent in chars_forward]
+        chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
+        chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
+        chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)])
+        charoffsets = [charoffsets_forward, charoffsets_backward]
+        # print(chars, charoffsets, charlens)
 
         # sort words by lens for easy char-RNN operations
         batch_words = [w for sent in batch[1] for w in sent]
@@ -99,6 +126,22 @@ class DataLoader:
 
         tags = get_long_tensor(batch[2], batch_size)
         sentlens = [len(x) for x in batch[0]]
+        # >>> x = nlp('I love China Town')
+        # tensor([[ 21, 183, 922, 504]]) 
+        # tensor([[False, False, False, False]]) 
+        # tensor([[35, 12,  9,  8,  6],
+        # [30,  7, 22,  8,  0],
+        # [13,  7, 26,  4,  0],
+        # [31,  0,  0,  0,  0]]) 
+        # tensor([[False, False, False, False, False],
+        # [False, False, False, False,  True],
+        # [False, False, False, False,  True],
+        # [False,  True,  True,  True,  True]]) 
+        # tensor([[1, 1, 1, 1]]) 
+        # [0] 
+        # [2, 3, 1, 0] 
+        # [4] 
+        # [5, 4, 4, 1]
         return words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens
 
     def __iter__(self):
@@ -116,7 +159,7 @@ class DataLoader:
         for sent in sentences:
             words, tags = zip(*sent)
             # NER field sanity checking
-            if self.eval and any([x is None or x == '_' for x in tags]):
+            if self.eval and any([x is None or x == '_' for x in tags]): # if not self.eval
                 raise Exception("NER tag not found for some input data during training.")
             if self.args.get('scheme', 'bio').lower() == 'bioes':
                 tags = convert_tags_to_bioes(tags)
