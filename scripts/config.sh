@@ -14,6 +14,7 @@ export LEMMA_DATA_DIR=$DATA_ROOT/lemma
 export POS_DATA_DIR=$DATA_ROOT/pos
 export DEPPARSE_DATA_DIR=$DATA_ROOT/depparse
 export ETE_DATA_DIR=$DATA_ROOT/ete
+export NER_DATA_DIR=$DATA_ROOT/ner
 
 # Set directories to store external word vector data
 export WORDVEC_DIR=./extern_data/word2vec
