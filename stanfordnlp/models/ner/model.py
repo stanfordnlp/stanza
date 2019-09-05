@@ -8,7 +8,7 @@ from stanfordnlp.models.common.biaffine import BiaffineScorer
 from stanfordnlp.models.common.hlstm import HighwayLSTM
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
 from stanfordnlp.models.common.dropout import WordDropout
-from stanfordnlp.models.common.char_model import CharacterModel
+from stanfordnlp.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanfordnlp.models.common.crf import CRFLoss
 from stanfordnlp.models.common.vocab import PAD_ID
 
@@ -34,8 +34,12 @@ class NERTagger(nn.Module):
             input_size += self.args['word_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
-            input_size += self.args['char_hidden_dim']*2
+            if self.args.get('char_context', None):
+                self.charmodel_forward = CharacterLanguageModel(args, vocab, forward=True)
+                self.charmodel_backward = CharacterLanguageModel(args, vocab, forward=False)
+            else:
+                self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
+            input_size += self.args['char_hidden_dim'] * 2
        
         # recurrent layers
         self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, \
@@ -64,7 +68,7 @@ class NERTagger(nn.Module):
             "Input embedding matrix must match size: {} x {}".format(vocab_size, dim)
         self.word_emb.weight.data.copy_(emb_matrix)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens):
         
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
@@ -79,9 +83,16 @@ class NERTagger(nn.Module):
             return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
-            char_reps = PackedSequence(char_reps.data, char_reps.batch_sizes)
-            inputs += [char_reps]
+            if self.args.get('char_context', None):
+                char_reps_forward = self.charmodel_forward(chars[0], charoffsets[0], charlens)
+                char_reps_forward = PackedSequence(char_reps_forward.data, char_reps_forward.batch_sizes)
+                char_reps_backward = self.charmodel_backward(chars[1], charoffsets[1], charlens)
+                char_reps_backward = PackedSequence(char_reps_backward.data, char_reps_backward.batch_sizes)
+                inputs += [char_reps_forward, char_reps_backward]
+            else:
+                char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+                char_reps = PackedSequence(char_reps.data, char_reps.batch_sizes)
+                inputs += [char_reps]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
         if self.args['word_dropout'] > 0:

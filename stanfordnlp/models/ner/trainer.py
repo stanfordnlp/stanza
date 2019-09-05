@@ -15,14 +15,17 @@ from stanfordnlp.models.common.crf import viterbi_decode
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
     if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:5]]
+        inputs = [b.cuda() if b is not None else None for b in batch[:6]]
     else:
-        inputs = batch[:5]
-    orig_idx = batch[5]
-    word_orig_idx = batch[6]
-    sentlens = batch[7]
-    wordlens = batch[8]
-    return inputs, orig_idx, word_orig_idx, sentlens, wordlens
+        inputs = batch[:6]
+    orig_idx = batch[6]
+    word_orig_idx = batch[7]
+    sentlens = batch[8]
+    wordlens = batch[9]
+    charoffsets = batch[10]
+    charlens = batch[11]
+    
+    return inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -45,15 +48,15 @@ class Trainer(BaseTrainer):
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags = inputs
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens = unpack_batch(batch, self.use_cuda)
+        word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
+        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -64,12 +67,12 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags = inputs
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens = unpack_batch(batch, self.use_cuda)
+        word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
+        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens)
 
         # decode
         trans = trans.data.cpu().numpy()

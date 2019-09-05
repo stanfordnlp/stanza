@@ -87,7 +87,7 @@ class DataLoader:
         # print(self.vocab['char']._unit2id)
         start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # TODO: vocab['char'] does not contain ' ' and '\n'
         start_offset, end_offset = 1, 1
-        chars_forward, chars_backward, charlens, charoffsets_forward, charoffsets_backward = [], [], [], [], []
+        chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = [], [], [], []
         for sent in batch[1]:
             chars_forward_tmp, chars_backward_tmp = [start_id], [start_id]
             charoffsets_forward_tmp, charoffsets_backward_tmp = [], []
@@ -107,6 +107,7 @@ class DataLoader:
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
         chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
         chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)])
+        # chars_mask = torch.eq(chars, end_id) #TODO: correct mask
         charoffsets = [charoffsets_forward, charoffsets_backward]
         # print(chars, charoffsets, charlens)
 
@@ -142,7 +143,8 @@ class DataLoader:
         # [2, 3, 1, 0] 
         # [4] 
         # [5, 4, 4, 1]
-        return words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens
+        # print(words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens)
+        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, sentlens, word_lens, charoffsets, charlens
 
     def __iter__(self):
         for i in range(self.__len__()):
