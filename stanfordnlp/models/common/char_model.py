@@ -56,10 +56,11 @@ class CharacterModel(nn.Module):
 
 class CharacterLanguageModel(nn.Module):
 
-    def __init__(self, args, vocab, forward=True):
+    def __init__(self, args, vocab, pad=False, is_forward_lm=True):
         super().__init__()
         self.args = args
-        self.forward = forward
+        self.is_forward_lm = is_forward_lm
+        self.pad = pad
 
         # char embeddings
         self.char_emb = nn.Embedding(len(vocab['char']), self.args['char_emb_dim'], padding_idx=None) # TODO: determine if padding_idx necessary
@@ -79,8 +80,11 @@ class CharacterLanguageModel(nn.Module):
         output, _ = self.charlstm(embs, charlens, hx=(\
                 self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
                 self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
+        output = pad_packed_sequence(output, batch_first=True)[0]
 
         res = [output[i, offsets] for i, offsets in enumerate(charoffsets)]
         res = pack_sequence(res)
-        res = pad_packed_sequence(res, batch_first=True)[0]
+        if self.pad:
+            res = pad_packed_sequence(res, batch_first=True)[0]
+        
         return res

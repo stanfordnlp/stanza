@@ -35,8 +35,8 @@ class NERTagger(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('char_context', None):
-                self.charmodel_forward = CharacterLanguageModel(args, vocab, forward=True)
-                self.charmodel_backward = CharacterLanguageModel(args, vocab, forward=False)
+                self.charmodel_forward = CharacterLanguageModel(args, vocab, is_forward_lm=True)
+                self.charmodel_backward = CharacterLanguageModel(args, vocab, is_forward_lm=False)
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
             input_size += self.args['char_hidden_dim'] * 2

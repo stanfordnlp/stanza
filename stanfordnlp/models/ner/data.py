@@ -103,7 +103,7 @@ class DataLoader:
             chars_backward.append(chars_backward_tmp)
             charoffsets_forward.append(charoffsets_forward_tmp)
             charoffsets_backward.append(charoffsets_backward_tmp)
-        charlens = [len(sent) - start_offset - end_offset for sent in chars_forward]
+        charlens = [len(sent) for sent in chars_forward] #TODO: correct lens
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
         chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
         chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)])
