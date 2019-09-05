@@ -1,7 +1,11 @@
 """
 Utils and wrappers for scoring parsers.
 """
+import logging
+
 from stanfordnlp.models.common.utils import ud_scores
+
+logger = logging.getLogger(__name__)
 
 def score(system_conllu_file, gold_conllu_file, verbose=True):
     """ Wrapper for UD parser scorer. """
@@ -12,7 +16,7 @@ def score(system_conllu_file, gold_conllu_file, verbose=True):
     f = el.f1
     if verbose:
         scores = [evaluation[k].f1 * 100 for k in ['LAS', 'MLAS', 'BLEX']]
-        print("LAS\tMLAS\tBLEX")
-        print("{:.2f}\t{:.2f}\t{:.2f}".format(*scores))
+        logger.info("LAS\tMLAS\tBLEX")
+        logger.info("{:.2f}\t{:.2f}\t{:.2f}".format(*scores))
     return p, r, f
 

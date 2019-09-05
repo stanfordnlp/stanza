@@ -1,4 +1,5 @@
 import random
+import logging
 import torch
 
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
@@ -7,6 +8,8 @@ from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
 from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models.ner.utils import convert_tags_to_bioes
+
+logger = logging.getLogger(__name__)
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False):
@@ -30,7 +33,7 @@ class DataLoader:
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args['sample_train']))
+            logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
         data = self.preprocess(data, self.vocab, args)
         # shuffle for training
@@ -40,7 +43,7 @@ class DataLoader:
 
         # chunk into batches
         self.data = self.chunk_batches(data)
-        #print("{} batches created.".format(len(self.data)))
+        logger.debug("{} batches created.".format(len(self.data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist

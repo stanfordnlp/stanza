@@ -1,4 +1,5 @@
 import sys
+import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,6 +8,8 @@ from stanfordnlp.models.common.trainer import Trainer
 
 from .model import Tokenizer
 from .vocab import Vocab
+
+logger = logging.getLogger(__name__)
 
 class Trainer(Trainer):
     def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):
@@ -73,15 +76,15 @@ class Trainer(Trainer):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            logger.info("Model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])

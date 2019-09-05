@@ -5,6 +5,7 @@ A trainer class to handle training and testing of models.
 import sys
 import numpy as np
 from collections import Counter
+import logging
 import torch
 from torch import nn
 import torch.nn.init as init
@@ -14,6 +15,8 @@ from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
 from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel
 from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.mwt.vocab import Vocab
+
+logger = logging.getLogger(__name__)
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
@@ -129,15 +132,15 @@ class Trainer(object):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            logger.info("Model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']

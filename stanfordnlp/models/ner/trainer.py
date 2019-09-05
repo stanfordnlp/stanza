@@ -3,6 +3,7 @@ A trainer class to handle training and testing of models.
 """
 
 import sys
+import logging
 import torch
 from torch import nn
 
@@ -11,6 +12,8 @@ from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.ner.model import NERTagger
 from stanfordnlp.models.ner.vocab import MultiVocab
 from stanfordnlp.models.common.crf import viterbi_decode
+
+logger = logging.getLogger(__name__)
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
@@ -99,15 +102,15 @@ class Trainer(BaseTrainer):
                 }
         try:
             torch.save(params, filename)
-            print("model saved to {}".format(filename))
+            logger.info("Model saved to {}".format(filename))
         except BaseException:
-            print("[Warning: Saving failed... continuing anyway.]")
+            logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            print("Cannot load model from {}".format(filename))
+            logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])

@@ -3,11 +3,13 @@ from copy import copy
 import json
 import numpy as np
 import random
+import logging
 import re
 import torch
 
 from .vocab import Vocab
 
+logger = logging.getLogger(__name__)
 
 class DataLoader:
     def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
@@ -50,6 +52,7 @@ class DataLoader:
         self.sentences = [self.para_to_sentences(para) for para in self.data]
 
         self.init_sent_ids()
+        logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
 
     def init_vocab(self):
         vocab = Vocab(self.data, self.args['lang'])

@@ -1,6 +1,7 @@
 """
 Processor for performing named entity tagging.
 """
+import logging
 
 from stanfordnlp.models.common import doc
 from stanfordnlp.models.common.pretrain import Pretrain
@@ -10,6 +11,7 @@ from stanfordnlp.models.ner.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 
+logger = logging.getLogger(__name__)
 
 class NERProcessor(UDProcessor):
 
@@ -31,5 +33,5 @@ class NERProcessor(UDProcessor):
         batch.doc.set([doc.NER], [y for x in preds for y in x])
         # collect entities into document attribute
         total = batch.doc.build_ents()
-        self.logger.info(f'{total} entities found.')
+        logger.debug(f'{total} entities found in document.')
         return batch.doc
