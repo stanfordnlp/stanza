@@ -204,7 +204,7 @@ class Document:
                     continue
                 elif w.ner == 'O':
                     flush()
-                    end_words = []
+                    ent_words = []
                 elif w.ner.startswith('B-'): # start of new ent
                     flush()
                     ent_words = [w]
@@ -225,7 +225,7 @@ class Document:
                     ent_words = []
             # flush after sentence, since entity won't cross sentence boundary
             flush()
-            end_words = []
+            ent_words = []
         return len(self.ents)
 
     def iter_words(self):

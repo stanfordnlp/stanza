@@ -1,11 +1,12 @@
 """
-This script converts NER data from the CoNLL03 format to the latest CoNLL-U format.
+This script converts NER data from the CoNLL03 format to the latest CoNLL-U format. The script assumes that in the 
+input column format data, the token is always in the first column, while the NER tag is always in the last column.
 """
 
 import argparse
 import json
 
-MIN_NUM_FIELD = 4
+MIN_NUM_FIELD = 2
 MAX_NUM_FIELD = 5
 
 DOC_START_TOKEN = '-DOCSTART-'
