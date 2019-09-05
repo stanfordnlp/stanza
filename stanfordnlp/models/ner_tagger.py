@@ -49,6 +49,7 @@ def parse_args():
     parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
+    parser.add_argument('--char_context', action='store_true', help="Turn on contextualized char embedding model.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
@@ -93,6 +94,18 @@ def main():
         evaluate(args)
 
 def train(args):
+
+    ##############FOR DEBUG###############
+    if args['char_context']:
+        print('use contextualized char embedding')
+        args['char_emb_dim'] = 100
+        args['char_hidden_dim'] = 2048
+        args['char_num_layers'] = 1
+        args['char_rec_dropout'] = 0
+        args['char_dropout'] = 0.05
+        args['lm_state_dict_file'] = 'lm_state_dict.pt'
+    ##############FOR DEBUG###############
+
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
@@ -103,7 +116,9 @@ def train(args):
     else:
         vec_file = args['wordvec_file']
     # do not save pretrained embeddings individually
-    pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+
+    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
@@ -121,6 +136,15 @@ def train(args):
 
     print("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+
+    ##############FOR DEBUG###############
+    if args['char_context']:
+        print('load contextualized char embedding state_dict')
+        lm_state_dict = torch.load(args['lm_state_dict_file'])
+        trainer.model.load_state_dict(lm_state_dict, strict=False)
+        # for key in lm_state_dict: getattr(trainer.model, key).requires_grad = False # TODO: correct
+        print(trainer.model)
+    ##############FOR DEBUG###############
 
     global_step = 0
     max_steps = args['max_steps']

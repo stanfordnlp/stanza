@@ -3,7 +3,7 @@ import torch
 
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
+from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, CommonCharVocab
 from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models.ner.utils import convert_tags_to_bioes
@@ -44,7 +44,7 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        charvocab = CharVocab(data, self.args['shorthand'])
+        charvocab = CommonCharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
         vocab = MultiVocab({'char': charvocab,
@@ -104,6 +104,11 @@ class DataLoader:
             charoffsets_forward.append(charoffsets_forward_tmp)
             charoffsets_backward.append(charoffsets_backward_tmp)
         charlens = [len(sent) for sent in chars_forward] #TODO: correct lens
+
+        chars_sorted, char_orig_idx = sort_all([chars_forward, chars_backward, charoffsets_forward, charoffsets_backward], charlens)
+        chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = chars_sorted
+        charlens = [len(sent) for sent in chars_forward]
+
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
         chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
         chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)])
@@ -143,8 +148,8 @@ class DataLoader:
         # [2, 3, 1, 0] 
         # [4] 
         # [5, 4, 4, 1]
-        # print(words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens)
-        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, sentlens, word_lens, charoffsets, charlens
+        # print(words, wordchars, orig_idx, word_orig_idx, sentlens, word_lens, chars, charoffsets, charlens, char_orig_idx)
+        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, sentlens, word_lens, charoffsets, charlens, char_orig_idx
 
     def __iter__(self):
         for i in range(self.__len__()):

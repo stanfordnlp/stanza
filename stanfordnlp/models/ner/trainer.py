@@ -24,8 +24,9 @@ def unpack_batch(batch, use_cuda):
     wordlens = batch[9]
     charoffsets = batch[10]
     charlens = batch[11]
+    char_orig_idx = batch[12]
     
-    return inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens
+    return inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -48,7 +49,7 @@ class Trainer(BaseTrainer):
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens = unpack_batch(batch, self.use_cuda)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx = unpack_batch(batch, self.use_cuda)
         word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         if eval:
@@ -56,7 +57,7 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens)
+        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -67,12 +68,12 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens = unpack_batch(batch, self.use_cuda)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx = unpack_batch(batch, self.use_cuda)
         word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens)
+        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx)
 
         # decode
         trans = trans.data.cpu().numpy()

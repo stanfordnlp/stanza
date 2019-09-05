@@ -68,7 +68,7 @@ class NERTagger(nn.Module):
             "Input embedding matrix must match size: {} x {}".format(vocab_size, dim)
         self.word_emb.weight.data.copy_(emb_matrix)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
         
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
@@ -84,9 +84,9 @@ class NERTagger(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('char_context', None):
-                char_reps_forward = self.charmodel_forward(chars[0], charoffsets[0], charlens)
+                char_reps_forward = self.charmodel_forward(chars[0], charoffsets[0], charlens, char_orig_idx)
                 char_reps_forward = PackedSequence(char_reps_forward.data, char_reps_forward.batch_sizes)
-                char_reps_backward = self.charmodel_backward(chars[1], charoffsets[1], charlens)
+                char_reps_backward = self.charmodel_backward(chars[1], charoffsets[1], charlens, char_orig_idx)
                 char_reps_backward = PackedSequence(char_reps_backward.data, char_reps_backward.batch_sizes)
                 inputs += [char_reps_forward, char_reps_backward]
             else:

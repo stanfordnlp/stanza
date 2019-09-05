@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_sequence, PackedSequence
 
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
-from stanfordnlp.models.common.utils import tensor_unsort
+from stanfordnlp.models.common.utils import tensor_unsort, unsort
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=False, bidirectional=False, attention=True):
@@ -67,24 +67,25 @@ class CharacterLanguageModel(nn.Module):
         
         # modules
         self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, \
-                dropout=0 if self.args['char_num_layers'] == 1 else args['dropout'], rec_dropout = self.args['char_rec_dropout'], bidirectional=False)
+                dropout=0 if self.args['char_num_layers'] == 1 else args['char_dropout'], rec_dropout = self.args['char_rec_dropout'], bidirectional=False)
         self.charlstm_h_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
         self.charlstm_c_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
 
-        self.dropout = nn.Dropout(args['dropout'])
+        self.dropout = nn.Dropout(args['char_dropout'])
 
-    def forward(self, chars, charoffsets, charlens):
-        embs = self.dropout(self.char_emb(chars))
-        batch_size = embs.size(0)
-        embs = pack_padded_sequence(embs, charlens, batch_first=True)
-        output, _ = self.charlstm(embs, charlens, hx=(\
-                self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
-                self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
-        output = pad_packed_sequence(output, batch_first=True)[0]
-
-        res = [output[i, offsets] for i, offsets in enumerate(charoffsets)]
-        res = pack_sequence(res)
-        if self.pad:
-            res = pad_packed_sequence(res, batch_first=True)[0]
+    def forward(self, chars, charoffsets, charlens, char_orig_idx):
+        with torch.no_grad(): #TODO: remove
+            embs = self.dropout(self.char_emb(chars))
+            batch_size = embs.size(0)
+            embs = pack_padded_sequence(embs, charlens, batch_first=True)
+            output, _ = self.charlstm(embs, charlens, hx=(\
+                    self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
+                    self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
+            output = pad_packed_sequence(output, batch_first=True)[0]
+            res = [output[i, offsets] for i, offsets in enumerate(charoffsets)]
+            res = unsort(res, char_orig_idx)
+            res = pack_sequence(res)
+            if self.pad:
+                res = pad_packed_sequence(res, batch_first=True)[0]
         
         return res
