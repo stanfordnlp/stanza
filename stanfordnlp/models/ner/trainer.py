@@ -103,7 +103,9 @@ class Trainer(BaseTrainer):
         try:
             torch.save(params, filename)
             logger.info("Model saved to {}".format(filename))
-        except BaseException:
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
             logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename):
