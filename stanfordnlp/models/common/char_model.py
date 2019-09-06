@@ -59,11 +59,12 @@ class CharacterLanguageModel(nn.Module):
     def __init__(self, args, vocab, pad=False, is_forward_lm=True):
         super().__init__()
         self.args = args
+        self.vocab = vocab
         self.is_forward_lm = is_forward_lm
         self.pad = pad
 
         # char embeddings
-        self.char_emb = nn.Embedding(len(vocab['char']), self.args['char_emb_dim'], padding_idx=None) # TODO: determine if padding_idx necessary
+        self.char_emb = nn.Embedding(len(self.vocab['char']), self.args['char_emb_dim'], padding_idx=None) # TODO: determine if padding_idx necessary
         
         # modules
         self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, \
@@ -71,21 +72,44 @@ class CharacterLanguageModel(nn.Module):
         self.charlstm_h_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
         self.charlstm_c_init = nn.Parameter(torch.zeros(self.args['char_num_layers'], 1, self.args['char_hidden_dim']))
 
+        # decoder
+        self.decoder = nn.Linear(self.args['char_hidden_dim'], len(self.vocab['char']))
         self.dropout = nn.Dropout(args['char_dropout'])
 
-    def forward(self, chars, charoffsets, charlens, char_orig_idx):
+    def forward(self, chars, charlens, hidden=None):
+        embs = self.dropout(self.char_emb(chars))
+        batch_size = embs.size(0)
+        embs = pack_padded_sequence(embs, charlens, batch_first=True)
+        if hidden is None: 
+            hidden = (self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(),
+                      self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous())
+        output, hidden = self.charlstm(embs, charlens, hx=hidden)
+        output = self.dropout(pad_packed_sequence(output, batch_first=True)[0])
+        decoded = self.decoder(output)
+        return output, hidden, decoded
+
+    def get_representation(self, chars, charoffsets, charlens, char_orig_idx):
         with torch.no_grad(): #TODO: remove
-            embs = self.dropout(self.char_emb(chars))
-            batch_size = embs.size(0)
-            embs = pack_padded_sequence(embs, charlens, batch_first=True)
-            output, _ = self.charlstm(embs, charlens, hx=(\
-                    self.charlstm_h_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
-                    self.charlstm_c_init.expand(self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
-            output = pad_packed_sequence(output, batch_first=True)[0]
+            output, _, _ = self.forward(chars, charlens)
             res = [output[i, offsets] for i, offsets in enumerate(charoffsets)]
             res = unsort(res, char_orig_idx)
             res = pack_sequence(res)
             if self.pad:
                 res = pad_packed_sequence(res, batch_first=True)[0]
-        
         return res
+
+    def save(self, filename):
+        state = {
+            'vocab': self.vocab,
+            'args': self.args,
+            'state_dict': self.get_state_dict(),
+            'pad': self.pad,
+            'is_forward_lm': self.is_forward_lm
+        }
+        torch.save(state, filename)
+
+    def load(self, filename):
+        state = torch.load(filename, map_location='cpu')
+        model = CharacterLanguageModel(state['args'], state['vocab'], state['pad'], state['is_forward_lm'])
+        model.load_state_dict(state['state_dict'])
+        return model

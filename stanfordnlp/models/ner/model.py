@@ -84,9 +84,9 @@ class NERTagger(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('char_context', None):
-                char_reps_forward = self.charmodel_forward(chars[0], charoffsets[0], charlens, char_orig_idx)
+                char_reps_forward = self.charmodel_forward.get_representation(chars[0], charoffsets[0], charlens, char_orig_idx)
                 char_reps_forward = PackedSequence(char_reps_forward.data, char_reps_forward.batch_sizes)
-                char_reps_backward = self.charmodel_backward(chars[1], charoffsets[1], charlens, char_orig_idx)
+                char_reps_backward = self.charmodel_backward.get_representation(chars[1], charoffsets[1], charlens, char_orig_idx)
                 char_reps_backward = PackedSequence(char_reps_backward.data, char_reps_backward.batch_sizes)
                 inputs += [char_reps_forward, char_reps_backward]
             else:
