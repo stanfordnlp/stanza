@@ -43,6 +43,8 @@ class Pretrain:
         if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except BaseException as e:
                 logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
                 return self.read_pretrain()
@@ -82,6 +84,8 @@ class Pretrain:
             try:
                 torch.save(data, self.filename)
                 logger.info("Saved pretrained vocab and vectors to {}".format(self.filename))
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except BaseException as e:
                 logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
 
