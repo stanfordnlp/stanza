@@ -2,8 +2,14 @@ from collections import Counter
 from copy import copy
 import json
 import numpy as np
+import re
+import logging
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
+from stanfordnlp.utils.conll import CoNLL
+from stanfordnlp.models.common.doc import *
+
+logger = logging.getLogger(__name__)
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -21,7 +27,8 @@ def load_mwt_dict(filename):
     else:
         return
 
-def print_sentence(sentence, f, mwt_dict=None):
+def process_sentence(sentence, mwt_dict=None):
+    sent = []
     i = 0
     for tok, p, additional_info in sentence:
         expansion = None
@@ -32,20 +39,30 @@ def print_sentence(sentence, f, mwt_dict=None):
             elif tok.lower() in mwt_dict:
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
-            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            f.write("{}-{}\t{}{}\t{}\n".format(i+1, i+len(expansion), tok, "\t_" * 7, infostr))
+            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            sent.append({ID: f'{i+1}-{i+len(expansion)}', TEXT: tok})
+            if infostr is not None: sent[-1][MISC] = infostr
             for etok in expansion:
-                f.write("{}\t{}{}\t{}{}\n".format(i+1, etok, "\t_" * 4, i, "\t_" * 3))
+                sent.append({ID: f'{i+1}', TEXT: etok})
                 i += 1
         else:
             if len(tok) <= 0:
                 continue
             if p == 3 or p == 4:
                 additional_info['MWT'] = 'Yes'
-            infostr = '_' if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            f.write("{}\t{}{}\t{}{}\t{}\n".format(i+1, tok, "\t_" * 4, i, "\t_" * 2, infostr))
+            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
+            sent.append({ID: f'{i+1}', TEXT: tok})
+            if infostr is not None: sent[-1][MISC] = infostr
             i += 1
-    f.write('\n')
+    return sent
+
+def find_token(token, text):
+    """
+    Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
+    Ignores whitespace mismatches between the text and the token.
+    """
+    m = re.search('\s*'.join(['\s' if re.match('\s', x) else re.escape(x) for x in token]), text)
+    return m.start(), m.group()
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
     paragraphs = []
@@ -113,6 +130,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
     offset = 0
     oov_count = 0
+    doc = []
 
     text = orig_text
     char_offset = 0
@@ -142,17 +160,17 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    st0 = text.index(tok)
+                    st0, tok0 = find_token(tok, text)
                     st = char_offset + st0
-                    text = text[st0 + len(tok):]
-                    char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    text = text[st0 + len(tok0):]
+                    char_offset += st0 + len(tok0)
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok0)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
                 current_tok = ''
                 if p == 2 or p == 4:
-                    print_sentence(current_sent, output_file, mwt_dict)
+                    doc.append(process_sentence(current_sent, mwt_dict))
                     current_sent = []
 
         if len(current_tok):
@@ -160,23 +178,22 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             assert '\t' not in tok, tok
             if len(tok) > 0:
                 if orig_text is not None:
-                    st0 = text.index(tok)
+                    st0, tok0 = find_token(tok, text)
                     st = char_offset + st0
-                    text = text[st0 + len(tok):]
-                    char_offset += st0 + len(tok)
-                    additional_info = {'beginCharOffset': st, 'endCharOffset': st + len(tok)}
+                    text = text[st0 + len(tok0):]
+                    char_offset += st0 + len(tok0)
+                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok0)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, 2, additional_info)]
 
         if len(current_sent):
-            print_sentence(current_sent, output_file, mwt_dict)
-
-    return oov_count, offset, all_preds
+            doc.append(process_sentence(current_sent, mwt_dict))
+    if output_file: CoNLL.dict2conll(doc, output_file)
+    return oov_count, offset, all_preds, doc
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
-    with open(args['conll_file'], 'w') as conll_output:
-        oov_count, N, all_preds = output_predictions(conll_output, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in batches.data for y in x]
@@ -214,6 +231,6 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     f1tok = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
     f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
     f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
-    print(args['shorthand'], f1tok, f1sent, f1mwt)
+    logger.info(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
     return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
 

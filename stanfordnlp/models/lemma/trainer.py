@@ -5,6 +5,7 @@ A trainer class to handle training and testing of models.
 import sys
 import numpy as np
 from collections import Counter
+import logging
 import torch
 from torch import nn
 import torch.nn.init as init
@@ -14,6 +15,8 @@ from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel
 from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.lemma import edit
 from stanfordnlp.models.lemma.vocab import MultiVocab
+
+logger = logging.getLogger(__name__)
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
@@ -26,8 +29,7 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False, logger=None):
-        self.logger = logger if logger is not None else logging.getLogger()
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -43,7 +45,7 @@ class Trainer(object):
         if not self.args['dict_only']:
             if self.args.get('edit', False):
                 self.crit = loss.MixLoss(self.vocab['char'].size, self.args['alpha'])
-                self.logger.debug("[Running seq2seq lemmatizer with edit classifier]")
+                logger.debug("Running seq2seq lemmatizer with edit classifier...")
             else:
                 self.crit = loss.SequenceLoss(self.vocab['char'].size)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
@@ -187,15 +189,15 @@ class Trainer(object):
                 }
         try:
             torch.save(params, filename)
-            self.logger.info("model saved to {}".format(filename))
+            logger.info("Model saved to {}".format(filename))
         except BaseException:
-            self.logger.warn("[Warning: Saving failed... continuing anyway.]")
+            logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename, use_cuda=False):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            self.logger.warn("Cannot load model from {}".format(filename))
+            logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
@@ -205,4 +207,3 @@ class Trainer(object):
         else:
             self.model = None
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-

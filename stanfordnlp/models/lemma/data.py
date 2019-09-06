@@ -2,32 +2,26 @@ import random
 import numpy as np
 import os
 from collections import Counter
+import logging
 import torch
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common import conll
 from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
 from stanfordnlp.models.lemma import edit
-from stanfordnlp.pipeline.doc import Document
+from stanfordnlp.models.common.doc import *
 
+logger = logging.getLogger(__name__)
 
 class DataLoader:
-    def __init__(self, input_src, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
+    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
+        self.doc = doc
 
-        # check if input source is a file or a Document object
-        if isinstance(input_src, str):
-            filename = input_src
-            assert filename.endswith('conllu'), "Loaded file must be conllu file."
-            self.conll, data = self.load_file(filename)
-        elif isinstance(input_src, Document):
-            filename = None
-            doc = input_src
-            self.conll, data = self.load_doc(doc)
+        data = self.load_doc(self.doc)
 
         if conll_only: # only load conll file
             return
@@ -48,7 +42,7 @@ class DataLoader:
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args['sample_train']))
+            logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
         data = self.preprocess(data, self.vocab['char'], self.vocab['pos'], args)
         # shuffle for training
@@ -61,6 +55,7 @@ class DataLoader:
         # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
+        logger.debug("{} batches created.".format(len(data)))
 
     def init_vocab(self, data):
         assert self.eval is False, "Vocab file must exist for evaluation"
@@ -118,11 +113,15 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_file(self, filename):
-        conll_file = conll.CoNLLFile(filename)
-        data = conll_file.get(['word', 'upos', 'lemma'])
-        return conll_file, data
-
     def load_doc(self, doc):
-        data = doc.conll_file.get(['word', 'upos', 'lemma'])
-        return doc.conll_file, data
+        data = doc.get([TEXT, UPOS, LEMMA])
+        data = self.resolve_none(data)
+        return data
+
+    def resolve_none(self, data):
+        # replace None to '_'
+        for tok_idx in range(len(data)):
+            for feat_idx in range(len(data[tok_idx])):
+                if data[tok_idx][feat_idx] is None:
+                    data[tok_idx][feat_idx] = '_'
+        return data

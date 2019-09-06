@@ -1,79 +1,71 @@
 """
-Entry point for training and evaluating a dependency parser.
+Entry point for training and evaluating an NER tagger.
 
-This implementation combines a deep biaffine graph-based parser with linearization and distance features.
+This tagger uses BiLSTM layers with character and word-level representations, and a CRF decoding layer 
+to produce NER predictions.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
-"""
-
-"""
-Training and evaluation for the parser.
 """
 
 import sys
 import os
-import shutil
 import time
 from datetime import datetime
 import argparse
 import numpy as np
 import random
+import json
 import torch
 from torch import nn, optim
 
-from stanfordnlp.models.depparse.data import DataLoader
-from stanfordnlp.models.depparse.trainer import Trainer
-from stanfordnlp.models.depparse import scorer
+from stanfordnlp.models.ner.data import DataLoader
+from stanfordnlp.models.ner.trainer import Trainer
+from stanfordnlp.models.ner import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.doc import *
 from stanfordnlp.utils.conll import CoNLL
+from stanfordnlp.models.common.doc import *
 from stanfordnlp.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/depparse', help='Root dir for saving models.')
+    parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
+    parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
-    parser.add_argument('--hidden_dim', type=int, default=400)
-    parser.add_argument('--char_hidden_dim', type=int, default=400)
-    parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
-    parser.add_argument('--composite_deep_biaff_hidden_dim', type=int, default=100)
-    parser.add_argument('--word_emb_dim', type=int, default=75)
-    parser.add_argument('--char_emb_dim', type=int, default=100)
-    parser.add_argument('--tag_emb_dim', type=int, default=50)
-    parser.add_argument('--transformed_dim', type=int, default=125)
-    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--hidden_dim', type=int, default=100)
+    parser.add_argument('--char_hidden_dim', type=int, default=25)
+    parser.add_argument('--word_emb_dim', type=int, default=100)
+    parser.add_argument('--char_emb_dim', type=int, default=25)
+    parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
-    parser.add_argument('--word_dropout', type=float, default=0.33)
+    parser.add_argument('--word_dropout', type=float, default=0)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
-    parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
+    parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
+    parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
-    parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
-    parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
-    parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
+    parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
+    parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
-    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
-    parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
-    parser.add_argument('--beta2', type=float, default=0.95)
+    parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
+    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD.')
+    parser.add_argument('--lr_decay', type=float, default=0.9, help="LR decay rate.")
+    parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
     parser.add_argument('--max_steps', type=int, default=50000)
-    parser.add_argument('--eval_interval', type=int, default=100)
-    parser.add_argument('--max_steps_before_stop', type=int, default=3000)
-    parser.add_argument('--batch_size', type=int, default=5000)
-    parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
+    parser.add_argument('--eval_interval', type=int, default=500)
+    parser.add_argument('--batch_size', type=int, default=20)
+    parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
-    parser.add_argument('--save_dir', type=str, default='saved_models/depparse', help='Root dir for saving models.')
+    parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -94,7 +86,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running parser in {} mode".format(args['mode']))
+    print("Running tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -104,53 +96,59 @@ def main():
 def train(args):
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_parser.pt'.format(args['save_dir'], args['shorthand'])
+            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     # load pretrained vectors
-    vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    if len(args['wordvec_file']) == 0:
+        vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+    else:
+        vec_file = args['wordvec_file']
+    # do not save pretrained embeddings individually
+    pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    train_doc = Document(json.load(open(args['train_file'])))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    dev_doc = Document(json.load(open(args['eval_file'])))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
-
-    # pred and gold path
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
+    dev_gold_tags = dev_batch.tags
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         print("Skip training because no data available...")
         sys.exit(0)
 
-    print("Training parser...")
+    print("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
 
     global_step = 0
     max_steps = args['max_steps']
     dev_score_history = []
     best_dev_preds = []
-    current_lr = args['lr']
+    current_lr = trainer.optimizer.param_groups[0]['lr']
     global_start_time = time.time()
     format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
-    using_amsgrad = False
-    last_best_step = 0
+    # LR scheduling
+    if args['lr_decay'] > 0:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'], \
+            patience=args['patience'], verbose=True, min_lr=1e-6)
+    else:
+        scheduler = None
+
     # start training
     train_loss = 0
     while True:
-        do_break = False
+        should_stop = False
         for i, batch in enumerate(train_batch):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
             train_loss += loss
             if global_step % args['log_step'] == 0:
+                current_lr = trainer.optimizer.param_groups[0]['lr']
                 duration = time.time() - start_time
                 print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
                         max_steps, loss, duration, current_lr))
@@ -162,10 +160,7 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-
-                dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                _, _, dev_score = scorer.score_by_chunk(dev_gold_tags, dev_preds, scheme=args['scheme'].lower())
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -173,7 +168,6 @@ def train(args):
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
-                    last_best_step = global_step
                     trainer.save(model_file)
                     print("new best model saved.")
                     best_dev_preds = dev_preds
@@ -181,21 +175,17 @@ def train(args):
                 dev_score_history += [dev_score]
                 print("")
 
-            if global_step - last_best_step >= args['max_steps_before_stop']:
-                if not using_amsgrad:
-                    print("Switching to AMSGrad")
-                    last_best_step = global_step
-                    using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
-                else:
-                    do_break = True
-                    break
-
+                # lr schedule
+                if scheduler is not None:
+                    scheduler.step(dev_score)
+            
+            # check stopping
             if global_step >= args['max_steps']:
-                do_break = True
+                should_stop = True
                 break
 
-        if do_break: break
+        if should_stop:
+            break
 
         train_batch.reshuffle()
 
@@ -206,49 +196,34 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_parser.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    
-    # load pretrain
-    pretrain = Pretrain(pretrain_file)
+            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     # load model
-    print("Loading model from: {}".format(model_file))
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
     for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand'] or k == 'mode':
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
             loaded_args[k] = args[k]
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
+    doc = Document(json.load(open(args['eval_file'])))
+    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
+    
+    print("Start evaluation...")
+    preds = []
+    for i, b in enumerate(batch):
+        preds += trainer.predict(b)
 
-    if len(batch) > 0:
-        print("Start evaluation...")
-        preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-    else:
-        # skip eval if dev data does not exist
-        preds = []
+    gold_tags = batch.tags
+    _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower())
 
-    # write to file and score
-    batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
-    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
-
-    if gold_file is not None:
-        _, _, score = scorer.score(system_pred_file, gold_file)
-
-        print("Parser score:")
-        print("{} {:.2f}".format(args['shorthand'], score*100))
+    print("Tagger score:")
+    print("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

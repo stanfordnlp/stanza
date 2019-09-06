@@ -25,18 +25,15 @@ mwt_languages = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_g
 default_treebanks = {'af': 'af_afribooms', 'grc': 'grc_proiel', 'ar': 'ar_padt', 'hy': 'hy_armtdp', 'eu': 'eu_bdt', 'bg': 'bg_btb', 'bxr': 'bxr_bdt', 'ca': 'ca_ancora', 'zh': 'zh_gsd', 'hr': 'hr_set', 'cs': 'cs_pdt', 'da': 'da_ddt', 'nl': 'nl_alpino', 'en': 'en_ewt', 'et': 'et_edt', 'fi': 'fi_tdt', 'fr': 'fr_gsd', 'gl': 'gl_ctg', 'de': 'de_gsd', 'got': 'got_proiel', 'el': 'el_gdt', 'he': 'he_htb', 'hi': 'hi_hdtb', 'hu': 'hu_szeged', 'id': 'id_gsd', 'ga': 'ga_idt', 'it': 'it_isdt', 'ja': 'ja_gsd', 'kk': 'kk_ktb', 'ko': 'ko_kaist', 'kmr': 'kmr_mg', 'la': 'la_ittb', 'lv': 'lv_lvtb', 'sme': 'sme_giella', 'no_bokmaal': 'no_bokmaal', 'no_nynorsk': 'no_nynorsk', 'cu': 'cu_proiel', 'fro': 'fro_srcmf', 'fa': 'fa_seraji', 'pl': 'pl_lfg', 'pt': 'pt_bosque', 'ro': 'ro_rrt', 'ru': 'ru_syntagrus', 'sr': 'sr_set', 'sk': 'sk_snk', 'sl': 'sl_ssj', 'es': 'es_ancora', 'sv': 'sv_talbanken', 'tr': 'tr_imst', 'uk': 'uk_iu', 'hsb': 'hsb_ufal', 'ur': 'ur_udtb', 'ug': 'ug_udt', 'vi': 'vi_vtb'}
 
 # map processor name to file ending
-processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 'tagger', 'lemma': 'lemmatizer', 'depparse': 'parser'}
-
-# functions for handling configs
-
+processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 'tagger', 'lemma': 'lemmatizer', 'depparse': 'parser', 'ner': 'nertagger'}
 
 # given a language and models path, build a default configuration
 def build_default_config(treebank, models_path):
     default_config = {}
     if treebank in mwt_languages:
-        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse'
+        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse,ner'
     else:
-        default_config['processors'] = 'tokenize,pos,lemma,depparse'
+        default_config['processors'] = 'tokenize,pos,lemma,depparse,ner'
     if treebank == 'vi_vtb':
         default_config['lemma_use_identity'] = True
         default_config['lemma_batch_size'] = 5000
@@ -101,7 +98,7 @@ def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_i
         r = requests.get(download_url, stream=True)
         with open(download_file_path, 'wb') as f:
             file_size = int(r.headers.get('content-length'))
-            default_chunk_size = 67108864
+            default_chunk_size = 131072
             with tqdm(total=file_size, unit='B', unit_scale=True) as pbar:
                 for chunk in r.iter_content(chunk_size=default_chunk_size):
                     if chunk:

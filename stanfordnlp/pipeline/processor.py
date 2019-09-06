@@ -90,7 +90,7 @@ class Processor(ABC):
 
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse) """
-    def __init__(self, config, pipeline, use_gpu, logger=None):
+    def __init__(self, config, pipeline, use_gpu):
         # overall config for the processor
         self._config = None
         # pipeline building this processor (presently processors are only meant to exist in one pipeline)
@@ -99,7 +99,6 @@ class UDProcessor(Processor):
         self._pretrain = None
         self._trainer = None
         self._vocab = None
-        self.logger = logger
         self._set_up_model(config, use_gpu)
         # run set up process
         # build the final config for the processor
@@ -154,9 +153,3 @@ class UDProcessor(Processor):
             return True
         else:
             return False
-
-
-
-
-
-

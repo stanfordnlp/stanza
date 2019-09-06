@@ -16,6 +16,7 @@ from stanfordnlp.models.common import utils
 from stanfordnlp.models.tokenize.trainer import Trainer
 from stanfordnlp.models.tokenize.data import DataLoader
 from stanfordnlp.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
+from stanfordnlp.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -32,6 +33,7 @@ def parse_args():
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--skip_newline', action='store_true', help="Whether to skip newline characters in input. Particularly useful for languages like Chinese.")
 
     parser.add_argument('--emb_dim', type=int, default=32, help="Dimension of unit embeddings")
     parser.add_argument('--hidden_dim', type=int, default=64, help="Dimension of hidden units")
@@ -81,7 +83,7 @@ def main():
     args = vars(args)
     print("Running tokenizer in {} mode".format(args['mode']))
 
-    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
+    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric', 'end_of_para']
     args['feat_dim'] = len(args['feat_funcs'])
     args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
             else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
@@ -172,8 +174,7 @@ def evaluate(args):
 
     batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
 
-    with open(args['conll_file'], 'w') as conll_output_file:
-        oov_count, N, _ = output_predictions(conll_output_file, trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 

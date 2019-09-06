@@ -4,29 +4,30 @@ import torch
 
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
-from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
+from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
+from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
+from stanfordnlp.models.ner.utils import convert_tags_to_bioes
 
 logger = logging.getLogger(__name__)
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
-        self.sort_during_eval = sort_during_eval        
         self.doc = doc
 
         data = self.load_doc(self.doc)
+        self.tags = [[w[1] for w in sent] for sent in data]
 
         # handle vocab
+        self.pretrain = pretrain
         if vocab is None:
             self.vocab = self.init_vocab(data)
         else:
             self.vocab = vocab
-        self.pretrain_vocab = pretrain.vocab
 
         # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -34,7 +35,7 @@ class DataLoader:
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
+        data = self.preprocess(data, self.vocab, args)
         # shuffle for training
         if self.shuffled:
             random.shuffle(data)
@@ -47,26 +48,23 @@ class DataLoader:
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
         charvocab = CharVocab(data, self.args['shorthand'])
-        wordvocab = WordVocab(data, self.args['shorthand'], cutoff=7, lower=True)
-        uposvocab = WordVocab(data, self.args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(data, self.args['shorthand'])
-        featsvocab = FeatureVocab(data, self.args['shorthand'], idx=3)
+        wordvocab = self.pretrain.vocab
+        tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
-                            'upos': uposvocab,
-                            'xpos': xposvocab,
-                            'feats': featsvocab})
+                            'tag': tagvocab})
         return vocab
 
-    def preprocess(self, data, vocab, pretrain_vocab, args):
+    def preprocess(self, data, vocab, args):
         processed = []
+        if args['lowercase']: # handle word case
+            case = lambda x: x.lower()
+        else:
+            case = lambda x: x
         for sent in data:
-            processed_sent = [vocab['word'].map([w[0] for w in sent])]
+            processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
             processed_sent += [[vocab['char'].map([x for x in w[0]]) for w in sent]]
-            processed_sent += [vocab['upos'].map([w[1] for w in sent])]
-            processed_sent += [vocab['xpos'].map([w[2] for w in sent])]
-            processed_sent += [vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [pretrain_vocab.map([w[0] for w in sent])]
+            processed_sent += [vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
         return processed
 
@@ -82,7 +80,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 6
+        assert len(batch) == 3
 
         # sort sentences by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -102,30 +100,31 @@ class DataLoader:
         wordchars = get_long_tensor(batch_words, len(word_lens))
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
-        upos = get_long_tensor(batch[2], batch_size)
-        xpos = get_long_tensor(batch[3], batch_size)
-        ufeats = get_long_tensor(batch[4], batch_size)
-        pretrained = get_long_tensor(batch[5], batch_size)
+        tags = get_long_tensor(batch[2], batch_size)
         sentlens = [len(x) for x in batch[0]]
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens, word_lens
+        return words, words_mask, wordchars, wordchars_mask, tags, orig_idx, word_orig_idx, sentlens, word_lens
 
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
     def load_doc(self, doc):
-        data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
-        data = self.resolve_none(data)
+        data = doc.get([TEXT, NER], as_sentences=True)
+        if not self.eval:
+            data = self.process_tags(data)
         return data
-    
-    def resolve_none(self, data):
-        # replace None to '_'
-        for sent_idx in range(len(data)):
-            for tok_idx in range(len(data[sent_idx])):
-                for feat_idx in range(len(data[sent_idx][tok_idx])):
-                    if data[sent_idx][tok_idx][feat_idx] is None:
-                        data[sent_idx][tok_idx][feat_idx] = '_'
-        return data
+
+    def process_tags(self, sentences):
+        res = []
+        for sent in sentences:
+            words, tags = zip(*sent)
+            # NER field sanity checking
+            if self.eval and any([x is None or x == '_' for x in tags]):
+                raise Exception("NER tag not found for some input data during training.")
+            if self.args.get('scheme', 'bio').lower() == 'bioes':
+                tags = convert_tags_to_bioes(tags)
+            res.append([[w,t] for w,t in zip(words, tags)])
+        return res
 
     def reshuffle(self):
         data = [y for x in self.data for y in x]
@@ -133,25 +132,6 @@ class DataLoader:
         random.shuffle(self.data)
 
     def chunk_batches(self, data):
-        res = []
+        data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
+        return data
 
-        if not self.eval:
-            # sort sentences (roughly) by length for better memory utilization
-            data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
-        elif self.sort_during_eval:
-            (data, ), self.data_orig_idx = sort_all([data], [len(x[0]) for x in data])
-
-        current = []
-        currentlen = 0
-        for x in data:
-            if len(x[0]) + currentlen > self.batch_size:
-                res.append(current)
-                current = []
-                currentlen = 0
-            current.append(x)
-            currentlen += len(x[0])
-
-        if currentlen > 0:
-            res.append(current)
-
-        return res

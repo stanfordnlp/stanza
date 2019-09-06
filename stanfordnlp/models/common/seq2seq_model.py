@@ -2,24 +2,25 @@
 The full encoder-decoder model, built on top of the base seq2seq modules.
 """
 
+import logging
 import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-import logging
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.seq2seq_modules import LSTMAttention
 from stanfordnlp.models.common.beam import Beam
 
+logger = logging.getLogger(__name__)
+
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
     """
-    def __init__(self, args, emb_matrix=None, use_cuda=False, logger=None):
+    def __init__(self, args, emb_matrix=None, use_cuda=False):
         super().__init__()
-        self.logger = logger if logger is not None else logging.getLogger()
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
         self.hidden_dim = args['hidden_dim']
@@ -33,8 +34,8 @@ class Seq2SeqModel(nn.Module):
         self.args = args
         self.emb_matrix = emb_matrix
 
-        logging.debug("Building an attentional Seq2Seq model...")
-        logging.debug("Using a Bi-LSTM encoder")
+        logger.debug("Building an attentional Seq2Seq model...")
+        logger.debug("Using a Bi-LSTM encoder")
         self.num_directions = 2
         self.enc_hidden_dim = self.hidden_dim // 2
         self.dec_hidden_dim = self.hidden_dim
@@ -55,7 +56,7 @@ class Seq2SeqModel(nn.Module):
                 batch_first=True, attn_type=self.args['attn_type'])
         self.dec2vocab = nn.Linear(self.dec_hidden_dim, self.vocab_size)
         if self.use_pos and self.pos_dim > 0:
-            logging.debug("Using POS in encoder")
+            logger.debug("Using POS in encoder")
             self.pos_embedding = nn.Embedding(self.pos_vocab_size, self.pos_dim, self.pad_token)
             self.pos_drop = nn.Dropout(self.pos_dropout)
         if self.edit:
@@ -83,13 +84,13 @@ class Seq2SeqModel(nn.Module):
             self.embedding.weight.data.uniform_(-init_range, init_range)
         # decide finetuning
         if self.top <= 0:
-            logging.debug("Do not finetune embedding layer.")
+            logger.debug("Do not finetune embedding layer.")
             self.embedding.weight.requires_grad = False
         elif self.top < self.vocab_size:
-            logging.debug("Finetune top {} embeddings.".format(self.top))
+            logger.debug("Finetune top {} embeddings.".format(self.top))
             self.embedding.weight.register_hook(lambda x: utils.keep_partial_grad(x, self.top))
         else:
-            logging.debug("Finetune all embeddings.")
+            logger.debug("Finetune all embeddings.")
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)

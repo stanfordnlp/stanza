@@ -3,11 +3,13 @@ from copy import copy
 import json
 import numpy as np
 import random
+import logging
 import re
 import torch
 
 from .vocab import Vocab
 
+logger = logging.getLogger(__name__)
 
 class DataLoader:
     def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
@@ -40,7 +42,9 @@ class DataLoader:
             else:
                 labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in re.split('\n\s*\n', text)])
 
-            self.data = [list(zip(re.sub('\s', ' ', pt.rstrip()), [int(x) for x in pc])) for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.rstrip()) > 0]
+            self.data = [[(re.sub('\s', ' ', char), int(label)) # substitute special whitespaces
+                    for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
+                    for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.rstrip()) > 0]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
@@ -48,6 +52,7 @@ class DataLoader:
         self.sentences = [self.para_to_sentences(para) for para in self.data]
 
         self.init_sent_ids()
+        logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
 
     def init_vocab(self):
         vocab = Vocab(self.data, self.args['lang'])
@@ -65,6 +70,9 @@ class DataLoader:
         res = []
         funcs = []
         for feat_func in self.args['feat_funcs']:
+            if feat_func == 'end_of_para' or feat_func == 'start_of_para':
+                # skip for position-dependent features
+                continue
             if feat_func == 'space_before':
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
@@ -74,28 +82,37 @@ class DataLoader:
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
             else:
-                assert False, 'Feature function "{}" is undefined.'.format(feat_func)
+                raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
-            funcs += [func]
-
+            funcs.append(func)
+        
+        # stacking all featurize functions
         composite_func = lambda x: list(map(lambda f: f(x), funcs))
 
-        def process_and_featurize(sent):
-            return [(self.vocab.unit2id(y[0]), y[1], composite_func(y[0]), y[0]) for y in sent]
+        def process_sentence(sent):
+            return [(self.vocab.unit2id(y[0]), y[1], y[2], y[0]) for y in sent]
 
         current = []
-        for unit, label in para:
+        for i, (unit, label) in enumerate(para):
             label1 = label if not self.eval else 0
-            current += [[unit, label]]
+            feats = composite_func(unit)
+            # position-dependent features
+            if 'end_of_para' in self.args['feat_funcs']:
+                f = 1 if i == len(para)-1 else 0
+                feats.append(f)
+            if 'start_of_para' in self.args['feat_funcs']:
+                f = 1 if i == 0 else 0
+                feats.append(f)
+            current += [[unit, label, feats]]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res += [process_and_featurize(current)]
+                    res += [process_sentence(current)]
                 current = []
 
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
-                res += [process_and_featurize(current)]
+                res += [process_sentence(current)]
 
         return res
 

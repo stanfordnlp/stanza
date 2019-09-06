@@ -1,36 +1,37 @@
 """
-Processor for performing part-of-speech tagging
+Processor for performing named entity tagging.
 """
+import logging
 
 from stanfordnlp.models.common import doc
 from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.models.common.utils import unsort
-from stanfordnlp.models.pos.data import DataLoader
-from stanfordnlp.models.pos.trainer import Trainer
+from stanfordnlp.models.ner.data import DataLoader
+from stanfordnlp.models.ner.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 
+logger = logging.getLogger(__name__)
 
-class POSProcessor(UDProcessor):
+class NERProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
-    PROVIDES_DEFAULT = set([POS])
+    PROVIDES_DEFAULT = set([NER])
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
     def _set_up_model(self, config, use_gpu):
-        # get pretrained word vectors
-        self._pretrain = Pretrain(config['pretrain_path'])
         # set up trainer
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
         batch = DataLoader(
-            document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
-            sort_during_eval=True)
+            document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
-        preds = unsort(preds, batch.data_orig_idx)
-        batch.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])
+        batch.doc.set([doc.NER], [y for x in preds for y in x])
+        # collect entities into document attribute
+        total = batch.doc.build_ents()
+        logger.debug(f'{total} entities found in document.')
         return batch.doc

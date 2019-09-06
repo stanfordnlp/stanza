@@ -101,13 +101,13 @@ function posColor(posTag) {
  * visualization color
  */
 function nerColor(nerTag) {
-  if (nerTag === 'PERSON') {
+  if (nerTag === 'PERSON' || nerTag === 'PER') {
     return '#FFCCAA';
-  } else if (nerTag === 'ORGANIZATION') {
+  } else if (nerTag === 'ORGANIZATION' || nerTag === 'ORG') {
     return '#8FB2FF';
   } else if (nerTag === 'MISC') {
     return '#F1F447';
-  } else if (nerTag === 'LOCATION') {
+  } else if (nerTag === 'LOCATION' || nerTag == 'LOC') {
     return '#95DFFF';
   } else if (nerTag === 'DATE' || nerTag === 'TIME' || nerTag === 'SET') {
     return '#9AFFE6';
@@ -1055,7 +1055,7 @@ $(document).ready(function() {
           createAnnotationDiv('pos',      'pos',        'pos',                                 'Part-of-Speech'          );
           createAnnotationDiv('upos',     'upos',       'upos',                                'Universal Part-of-Speech');
           createAnnotationDiv('lemma',    'lemma',      'lemma',                               'Lemmas'                  );
-          //createAnnotationDiv('ner',      'ner',        'ner',                                 'Named Entity Recognition');
+          createAnnotationDiv('ner',      'ner',        'ner',                                 'Named Entity Recognition');
           //createAnnotationDiv('parse',    'parse',      'parseTree',                           'Constituency Parse'      );
           createAnnotationDiv('deps',     'depparse',   'basicDependencies',                   'Basic Dependencies'      );
           //createAnnotationDiv('deps2',    'depparse',   'enhancedPlusPlusDependencies',        'Enhanced++ Dependencies' );

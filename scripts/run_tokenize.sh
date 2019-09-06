@@ -25,6 +25,10 @@ else
     label_type=label_file
     eval_file="--txt_file ${TOKENIZE_DATA_DIR}/${short}.dev.txt"
     train_eval_file="--dev_txt_file ${TOKENIZE_DATA_DIR}/${short}.dev.txt --dev_label_file ${TOKENIZE_DATA_DIR}/${short}-ud-dev.toklabels"
+    
+    if [ $lang == "zh" ]; then
+        args="$args --skip_newline"
+    fi
 fi
 
 if [ ! -e $labels ]; then
