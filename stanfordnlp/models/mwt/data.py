@@ -2,6 +2,7 @@ import random
 import numpy as np
 import os
 from collections import Counter
+import logging
 import torch
 
 import stanfordnlp.models.common.seq2seq_constant as constant
@@ -9,6 +10,7 @@ from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_floa
 from stanfordnlp.models.mwt.vocab import Vocab
 from stanfordnlp.models.common.doc import Document
 
+logger = logging.getLogger(__name__)
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False):
@@ -30,7 +32,7 @@ class DataLoader:
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
-            print("Subsample training set with rate {:g}".format(args['sample_train']))
+            logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
         data = self.preprocess(data, self.vocab, args)
         # shuffle for training
@@ -43,7 +45,7 @@ class DataLoader:
         # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
-        # print("{} batches created.".format(len(data)))
+        logger.debug("{} batches created.".format(len(data)))
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist

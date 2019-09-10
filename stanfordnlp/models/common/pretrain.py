@@ -2,11 +2,16 @@
 Supports for pretrained data.
 """
 import os
+import re
+
 import lzma
+import logging
 import numpy as np
 import torch
 
 from .vocab import BaseVocab, VOCAB_PREFIX
+
+logger = logging.getLogger(__name__)
 
 class PretrainedWordVocab(BaseVocab):
     def build_vocab(self):
@@ -38,9 +43,10 @@ class Pretrain:
         if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except BaseException as e:
-                print("Pretrained file exists but cannot be loaded from {}, due to the following exception:".format(self.filename))
-                print("\t{}".format(e))
+                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
                 return self.read_pretrain()
             return data['vocab'], data['emb']
         else:
@@ -50,13 +56,13 @@ class Pretrain:
         # load from pretrained filename
         if self._vec_filename is None:
             raise Exception("Vector file is not provided.")
-        print("Reading pretrained vectors from {}...".format(self._vec_filename))
+        logger.info("Reading pretrained vectors from {}...".format(self._vec_filename))
 
         # first try reading as xz file, if failed retry as text file
         try:
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=lzma.open)
         except lzma.LZMAError as err:
-            print("Cannot decode vector file as xz file. Retrying as text file...")
+            logging.warning("Cannot decode vector file as xz file. Retrying as text file...")
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=open)
 
         if failed > 0: # recover failure
@@ -77,10 +83,11 @@ class Pretrain:
             data = {'vocab': vocab, 'emb': emb}
             try:
                 torch.save(data, self.filename)
-                print("Saved pretrained vocab and vectors to {}".format(self.filename))
+                logger.info("Saved pretrained vocab and vectors to {}".format(self.filename))
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except BaseException as e:
-                print("Saving pretrained data failed due to the following exception... continuing anyway")
-                print("\t{}".format(e))
+                logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
 
         return vocab, emb
 
@@ -88,6 +95,8 @@ class Pretrain:
         """
         Open a vector file using the provided function and read from it.
         """
+        # some vector files, such as Google News, use tabs
+        tab_space_pattern = re.compile("[ \t]+")
         first = True
         words = []
         failed = 0
@@ -106,7 +115,7 @@ class Pretrain:
                     emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
                     continue
 
-                line = line.rstrip().split(' ')
+                line = tab_space_pattern.split((line.rstrip()))
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
         return words, emb, failed

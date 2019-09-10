@@ -3,10 +3,13 @@ from copy import copy
 import json
 import numpy as np
 import re
+import logging
 
 from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
 from stanfordnlp.utils.conll import CoNLL
 from stanfordnlp.models.common.doc import *
+
+logger = logging.getLogger(__name__)
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -228,6 +231,6 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     f1tok = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
     f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
     f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
-    print(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
+    logger.info(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
     return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
 

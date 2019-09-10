@@ -11,6 +11,7 @@ from stanfordnlp.models.lemma import scorer
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.utils.conll import CoNLL
+from stanfordnlp.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

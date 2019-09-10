@@ -20,8 +20,13 @@ def get_wordvec_file(wordvec_dir, shorthand):
     lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shorthand]
     if lcode == 'zh':
         lang = 'ChineseT'
-    return os.path.join(wordvec_dir, lang, '{}.vectors.xz'.format(\
+    filename = os.path.join(wordvec_dir, lang, '{}.vectors'.format(\
             lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')))
+    if os.path.exists(filename + ".xz"):
+        filename = filename + ".xz"
+    elif os.path.exists(filename + ".txt"):
+        filename = filename + ".txt"
+    return filename
 
 # training schedule
 def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):

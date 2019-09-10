@@ -26,6 +26,7 @@ from stanfordnlp.models.common import utils
 import stanfordnlp.models.common.seq2seq_constant as constant
 from stanfordnlp.models.common.doc import Document
 from stanfordnlp.utils.conll import CoNLL
+from stanfordnlp.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()
