@@ -62,19 +62,16 @@ def parse_args():
     parser.add_argument('--char_rec_dropout', type=float, default=0.0, help="Recurrent dropout probability")
 
     parser.add_argument('--batch_size', type=int, default=100, help="Batch size to use")
-    parser.add_argument('--bptt_size', type=int, default=70, help="Sequence length to consider at a time") # TODO: determine
-    parser.add_argument('--epochs', type=int, default=20, help="Total epochs to train the model for")
+    parser.add_argument('--bptt_size', type=int, default=250, help="Sequence length to consider at a time")
+    parser.add_argument('--epochs', type=int, default=50, help="Total epochs to train the model for")
     parser.add_argument('--max_grad_norm', type=float, default=0.25, help="Maximum gradient norm to clip to")
     parser.add_argument('--lr0', type=float, default=20, help="Initial learning rate")
-
-    parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
-    parser.add_argument('--anneal_after', type=int, default=2000, help="Anneal the learning rate no earlier than this step")
-    
+    parser.add_argument('--anneal', type=float, default=0.25, help="Anneal the learning rate by this amount when dev performance deteriorate")
+    parser.add_argument('--anneal_after', type=int, default=10, help="Anneal the learning rate no earlier than this epoch")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
-    parser.add_argument('--steps', type=int, default=20000, help="Steps to train the model for, if unspecified use epochs")
-    parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
-    parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragragraph in the generator")
-    parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
+    parser.add_argument('--momentum', type=float, default=0.0, help='Momentum for SGD.')
+    
+    parser.add_argument('--report_steps', type=int, default=50, help="Update step interval to report loss")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -106,12 +103,11 @@ def main():
 
 def train_epoch(args, vocab, batches, model, params, optimizer, criterion):
     # TODO: shuffle the data
-    # TODO: decrease lr
     model.train()
     hidden = None
     total_loss = 0.0
-
-    for iteration, i in enumerate(range(0, batches.size(1), args['bptt_size'])):
+    total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
+    for iteration, i in enumerate(range(0, batches.size(1) - 1, args['bptt_size'])):
         data, target = get_batch(batches, i, args['bptt_size'])
         lens = [data.size(1) for i in range(data.size(0))]
         if args['cuda']: 
@@ -131,12 +127,12 @@ def train_epoch(args, vocab, batches, model, params, optimizer, criterion):
 
         hidden = repackage_hidden(hidden)
 
-        if iteration % args['report_steps'] == 0 and iteration > 0:
+        if args['report_steps'] == 1 or iteration % args['report_steps'] == -1:
             cur_loss = total_loss / args['report_steps']
             print(
                 "| {:5d}/{:5d} batches | loss {:5.2f} | ppl {:8.2f}".format(
-                    iteration,
-                    batches.size(1) // args['bptt_size'],
+                    iteration + 1,
+                    total_batches,
                     cur_loss,
                     math.exp(cur_loss),
                 )
@@ -150,7 +146,7 @@ def evaluate_epoch(args, vocab, batches, model, criterion):
     total_loss = 0
 
     with torch.no_grad():
-        for i in range(0, batches.size(1), args['bptt_size']):
+        for i in range(0, batches.size(1) - 1, args['bptt_size']):
             data, target = get_batch(batches, i, args['bptt_size'])
             lens = [data.size(1) for i in range(data.size(0))]
             if args['cuda']: 
@@ -179,16 +175,18 @@ def train(args):
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
     if args['cuda']: model.cuda()
     params = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=args['lr0'])
+    optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss()
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['anneal_after'])
 
     best_loss = None
     for epoch in range(args['epochs']):
         train_epoch(args, vocab, train_batches, model, params, optimizer, criterion)
         loss = evaluate_epoch(args, vocab, dev_batches, model, criterion)
+        scheduler.step(loss)
         print(
             "| {:5d}/{:5d} epochs | loss {:5.2f} | ppl {:8.2f}".format(
-                epoch,
+                epoch + 1,
                 args['epochs'],
                 loss,
                 math.exp(loss),
@@ -198,7 +196,7 @@ def train(args):
             best_loss = loss
             model.save(model_file)
             print('new best model saved.')
-    
+    return
 
 def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
@@ -217,6 +215,7 @@ def evaluate(args):
             math.exp(loss),
         )
     )
+    return
 
 if __name__ == '__main__':
     main()

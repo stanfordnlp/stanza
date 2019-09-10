@@ -64,7 +64,7 @@ class CharacterLanguageModel(nn.Module):
         self.pad = pad
 
         # char embeddings
-        self.char_emb = nn.Embedding(len(self.vocab['char']), self.args['char_emb_dim'], padding_idx=None) # TODO: determine if padding_idx necessary
+        self.char_emb = nn.Embedding(len(self.vocab['char']), self.args['char_emb_dim'], padding_idx=None) # we use space as padding, so padding_idx is not necessary
         
         # modules
         self.charlstm = PackedLSTM(self.args['char_emb_dim'], self.args['char_hidden_dim'], self.args['char_num_layers'], batch_first=True, \
