@@ -102,14 +102,15 @@ class CharacterLanguageModel(nn.Module):
         state = {
             'vocab': self.vocab,
             'args': self.args,
-            'state_dict': self.get_state_dict(),
+            'state_dict': self.state_dict(),
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
         }
         torch.save(state, filename)
 
-    def load(self, filename):
+    @classmethod
+    def load(cls, filename):
         state = torch.load(filename, map_location='cpu')
-        model = CharacterLanguageModel(state['args'], state['vocab'], state['pad'], state['is_forward_lm'])
+        model = cls(state['args'], state['vocab'], state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
         return model
