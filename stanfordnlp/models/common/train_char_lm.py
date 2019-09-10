@@ -70,14 +70,12 @@ def parse_args():
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
     parser.add_argument('--anneal_after', type=int, default=2000, help="Anneal the learning rate no earlier than this step")
     
-
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--steps', type=int, default=20000, help="Steps to train the model for, if unspecified use epochs")
     parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
     parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragragraph in the generator")
     parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
-    parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
@@ -97,7 +95,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running character-level language model in {} mode".format(args['mode']))
+    print("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
     
     utils.ensure_dir(args['save_dir'])
 
@@ -168,7 +166,7 @@ def evaluate_epoch(args, vocab, batches, model, criterion):
            
 def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-        else '{}/{}_charlm.pt'.format(args['save_dir'], args['shorthand'])
+        else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
     vocab = {'char': CommonCharVocab([])}
 
@@ -204,7 +202,7 @@ def train(args):
 
 def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-        else '{}/{}_charlm.pt'.format(args['save_dir'], args['shorthand'])
+        else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
     model = CharacterLanguageModel.load(model_file)
     vocab = model.vocab
