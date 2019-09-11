@@ -7,7 +7,7 @@ from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
 from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
-from stanfordnlp.models.ner.utils import convert_tags_to_bioes
+from stanfordnlp.models.ner.utils import is_bio_scheme, convert_tags_to_bioes
 
 logger = logging.getLogger(__name__)
 
@@ -116,12 +116,19 @@ class DataLoader:
 
     def process_tags(self, sentences):
         res = []
+        # check if tag conversion is needed
+        convert_to_bioes = False
+        is_bio = is_bio_scheme([x[1] for sent in sentences for x in sent])
+        if is_bio and self.args.get('scheme', 'bio').lower() == 'bioes':
+            convert_to_bioes = True
+            logger.debug("BIO tagging scheme found in input; converting into BIOES scheme...")
+        # process tags
         for sent in sentences:
             words, tags = zip(*sent)
             # NER field sanity checking
             if self.eval and any([x is None or x == '_' for x in tags]):
                 raise Exception("NER tag not found for some input data during training.")
-            if self.args.get('scheme', 'bio').lower() == 'bioes':
+            if convert_to_bioes:
                 tags = convert_tags_to_bioes(tags)
             res.append([[w,t] for w,t in zip(words, tags)])
         return res
