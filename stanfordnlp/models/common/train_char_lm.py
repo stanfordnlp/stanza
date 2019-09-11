@@ -9,11 +9,32 @@ import numpy as np
 import torch
 import math
 import logging
-logging.basicConfig(format='%(asctime)s: %(message)s', level=logging.DEBUG)
 
 from stanfordnlp.models.common.char_model import CharacterLanguageModel
 from stanfordnlp.models.pos.vocab import CharVocab, CommonCharVocab
 from stanfordnlp.models.common import utils
+
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "minimal": {
+                "format": "%(asctime)s: %(message)s",
+                }
+            },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "minimal",
+            }
+        },
+        "loggers": {
+            "": {"handlers": ["console"], "level": "DEBUG"}
+        },
+    }
+)
+logger = logging.getLogger(__name__)
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors,
@@ -92,7 +113,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
+    logger.info("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
     
     utils.ensure_dir(args['save_dir'])
 
@@ -111,8 +132,8 @@ def train_epoch(args, vocab, batches, model, params, optimizer, criterion):
         data, target = get_batch(batches, i, args['bptt_size'])
         lens = [data.size(1) for i in range(data.size(0))]
         if args['cuda']: 
-            data.cuda()
-            target.cuda()        
+            data = data.cuda()
+            target = target.cuda()        
         
         optimizer.zero_grad()
 
@@ -127,9 +148,9 @@ def train_epoch(args, vocab, batches, model, params, optimizer, criterion):
 
         hidden = repackage_hidden(hidden)
 
-        if args['report_steps'] == 1 or iteration % args['report_steps'] == -1:
+        if (iteration + 1) % args['report_steps'] == 0:
             cur_loss = total_loss / args['report_steps']
-            print(
+            logger.info(
                 "| {:5d}/{:5d} batches | loss {:5.2f} | ppl {:8.2f}".format(
                     iteration + 1,
                     total_batches,
@@ -150,8 +171,8 @@ def evaluate_epoch(args, vocab, batches, model, criterion):
             data, target = get_batch(batches, i, args['bptt_size'])
             lens = [data.size(1) for i in range(data.size(0))]
             if args['cuda']: 
-                data.cuda()
-                target.cuda()     
+                data = data.cuda()
+                target = target.cuda()     
 
             output, hidden, decoded = model.forward(data, lens, hidden)
             loss = criterion(decoded.view(-1, len(vocab['char'])), target)
@@ -173,7 +194,7 @@ def train(args):
     dev_batches = batchify(dev_data, args['batch_size'])
 
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
-    if args['cuda']: model.cuda()
+    if args['cuda']: model = model.cuda()
     params = [param for param in model.parameters() if param.requires_grad]
     optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss()
@@ -184,7 +205,7 @@ def train(args):
         train_epoch(args, vocab, train_batches, model, params, optimizer, criterion)
         loss = evaluate_epoch(args, vocab, dev_batches, model, criterion)
         scheduler.step(loss)
-        print(
+        logger.info(
             "| {:5d}/{:5d} epochs | loss {:5.2f} | ppl {:8.2f}".format(
                 epoch + 1,
                 args['epochs'],
@@ -195,7 +216,7 @@ def train(args):
         if best_loss is None or loss < best_loss:
             best_loss = loss
             model.save(model_file)
-            print('new best model saved.')
+            logger.info('new best model saved.')
     return
 
 def evaluate(args):
@@ -203,13 +224,14 @@ def evaluate(args):
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
     model = CharacterLanguageModel.load(model_file)
+    if args['cuda']: model = model.cuda()
     vocab = model.vocab
     data = load_data(args['eval_file'], vocab, args['direction'])
     batches = batchify(data, args['batch_size'])
     criterion = torch.nn.CrossEntropyLoss()
 
     loss = evaluate_epoch(args, vocab, batches, model, criterion)
-    print(
+    logger.info(
         "| best model | loss {:5.2f} | ppl {:8.2f}".format(
             loss,
             math.exp(loss),
