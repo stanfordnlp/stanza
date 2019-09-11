@@ -11,7 +11,7 @@ import math
 import logging
 
 from stanfordnlp.models.common.char_model import CharacterLanguageModel
-from stanfordnlp.models.pos.vocab import CharVocab, CommonCharVocab
+from stanfordnlp.models.pos.vocab import CharVocab
 from stanfordnlp.models.common import utils
 
 logging.config.dictConfig(
@@ -185,7 +185,7 @@ def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
-    vocab = {'char': CommonCharVocab([])}
+    vocab = {'char': CharVocab([], predefined=True)}
 
     train_data = load_data(args['train_file'], vocab, args['direction'])
     train_batches = batchify(train_data, args['batch_size'])

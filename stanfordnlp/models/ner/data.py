@@ -4,7 +4,7 @@ import torch
 
 from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, CommonCharVocab
+from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
 from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models.ner.utils import convert_tags_to_bioes
@@ -47,7 +47,7 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        charvocab = CommonCharVocab(data, self.args['shorthand'])
+        charvocab = CharVocab(data, self.args['shorthand'], predefined=self.args['char_context'])
         wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
         vocab = MultiVocab({'char': charvocab,
@@ -87,7 +87,6 @@ class DataLoader:
         batch, orig_idx = sort_all(batch, lens)
 
         # get char-LM representations
-        # print(self.vocab['char']._unit2id)
         start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # TODO: vocab['char'] does not contain ' ' and '\n'
         start_offset, end_offset = 1, 1
         chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = [], [], [], []
@@ -106,18 +105,16 @@ class DataLoader:
             chars_backward.append(chars_backward_tmp)
             charoffsets_forward.append(charoffsets_forward_tmp)
             charoffsets_backward.append(charoffsets_backward_tmp)
-        charlens = [len(sent) for sent in chars_forward] #TODO: correct lens
+        charlens = [len(sent) for sent in chars_forward]
 
         chars_sorted, char_orig_idx = sort_all([chars_forward, chars_backward, charoffsets_forward, charoffsets_backward], charlens)
         chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = chars_sorted
-        charlens = [len(sent) for sent in chars_forward]
+        charlens = [len(sent) for sent in chars_forward] # actual char length
 
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
         chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
-        chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)])
-        # chars_mask = torch.eq(chars, end_id) #TODO: correct mask
-        charoffsets = [charoffsets_forward, charoffsets_backward]
-        # print(chars, charoffsets, charlens)
+        chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)]) # padded forward and backward char idx
+        charoffsets = [charoffsets_forward, charoffsets_backward] # idx for forward and backward lm to get word representation
 
         # sort words by lens for easy char-RNN operations
         batch_words = [w for sent in batch[1] for w in sent]
@@ -135,24 +132,7 @@ class DataLoader:
 
         tags = get_long_tensor(batch[2], batch_size)
         sentlens = [len(x) for x in batch[0]]
-        # >>> x = nlp('I love China Town')
-        # tensor([[ 21, 183, 922, 504]]) 
-        # tensor([[False, False, False, False]]) 
-        # tensor([[35, 12,  9,  8,  6],
-        # [30,  7, 22,  8,  0],
-        # [13,  7, 26,  4,  0],
-        # [31,  0,  0,  0,  0]]) 
-        # tensor([[False, False, False, False, False],
-        # [False, False, False, False,  True],
-        # [False, False, False, False,  True],
-        # [False,  True,  True,  True,  True]]) 
-        # tensor([[1, 1, 1, 1]]) 
-        # [0] 
-        # [2, 3, 1, 0] 
-        # [4] 
-        # [5, 4, 4, 1]
-        # print(words, wordchars, orig_idx, word_orig_idx, sentlens, word_lens, chars, charoffsets, charlens, char_orig_idx)
-        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, sentlens, word_lens, charoffsets, charlens, char_orig_idx
+        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, word_lens, charlens, charoffsets
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -169,7 +149,7 @@ class DataLoader:
         for sent in sentences:
             words, tags = zip(*sent)
             # NER field sanity checking
-            if self.eval and any([x is None or x == '_' for x in tags]): # if not self.eval
+            if not self.eval and any([x is None or x == '_' for x in tags]):
                 raise Exception("NER tag not found for some input data during training.")
             if self.args.get('scheme', 'bio').lower() == 'bioes':
                 tags = convert_tags_to_bioes(tags)

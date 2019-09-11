@@ -23,13 +23,12 @@ def unpack_batch(batch, use_cuda):
         inputs = batch[:6]
     orig_idx = batch[6]
     word_orig_idx = batch[7]
-    sentlens = batch[8]
-    wordlens = batch[9]
-    charoffsets = batch[10]
+    char_orig_idx = batch[8]
+    sentlens = batch[9]
+    wordlens = batch[10]
     charlens = batch[11]
-    char_orig_idx = batch[12]
-    
-    return inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx
+    charoffsets = batch[12]
+    return inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -52,7 +51,7 @@ class Trainer(BaseTrainer):
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx = unpack_batch(batch, self.use_cuda)
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
         word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         if eval:
@@ -71,7 +70,7 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, charoffsets, charlens, char_orig_idx = unpack_batch(batch, self.use_cuda)
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
         word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         self.model.eval()
