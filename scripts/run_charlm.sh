@@ -18,9 +18,9 @@ dev_file=${CHARLM_DATA_DIR}/${short}.dev.txt
 test_file=${CHARLM_DATA_DIR}/${short}.test.txt
 
 echo "Running charlm with $args..."
-python -m stanfordnlp.models.common.train_char_lm --train_file $train_file --eval_file $dev_file \
+python -m stanfordnlp.models.train_charlm --train_file $train_file --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode train $args
-python -m stanfordnlp.models.common.train_char_lm --eval_file $dev_file \
+python -m stanfordnlp.models.train_charlm --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode predict $args
-python -m stanfordnlp.models.common.train_char_lm --eval_file $test_file \
+python -m stanfordnlp.models.train_charlm --eval_file $test_file \
     --direction $direction --lang $lang --shorthand $short --mode predict $args
