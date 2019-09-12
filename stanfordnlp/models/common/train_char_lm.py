@@ -88,7 +88,7 @@ def parse_args():
     parser.add_argument('--max_grad_norm', type=float, default=0.25, help="Maximum gradient norm to clip to")
     parser.add_argument('--lr0', type=float, default=20, help="Initial learning rate")
     parser.add_argument('--anneal', type=float, default=0.25, help="Anneal the learning rate by this amount when dev performance deteriorate")
-    parser.add_argument('--anneal_after', type=int, default=10, help="Anneal the learning rate no earlier than this epoch")
+    parser.add_argument('--patience', type=int, default=10, help="Patience for annealing the learning rate")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--momentum', type=float, default=0.0, help='Momentum for SGD.')
     
@@ -198,7 +198,7 @@ def train(args):
     params = [param for param in model.parameters() if param.requires_grad]
     optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['anneal_after'])
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
 
     best_loss = None
     for epoch in range(args['epochs']):
