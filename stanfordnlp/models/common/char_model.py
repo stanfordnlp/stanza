@@ -89,7 +89,7 @@ class CharacterLanguageModel(nn.Module):
         return output, hidden, decoded
 
     def get_representation(self, chars, charoffsets, charlens, char_orig_idx):
-        with torch.no_grad(): #TODO: remove
+        with torch.no_grad():
             output, _, _ = self.forward(chars, charlens)
             res = [output[i, offsets] for i, offsets in enumerate(charoffsets)]
             res = unsort(res, char_orig_idx)

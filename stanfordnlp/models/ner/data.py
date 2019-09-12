@@ -87,7 +87,7 @@ class DataLoader:
         batch, orig_idx = sort_all(batch, lens)
 
         # get char-LM representations
-        start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # TODO: vocab['char'] does not contain ' ' and '\n'
+        start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ')
         start_offset, end_offset = 1, 1
         chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = [], [], [], []
         for sent in batch[1]:
