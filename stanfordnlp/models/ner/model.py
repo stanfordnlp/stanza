@@ -34,7 +34,7 @@ class NERTagger(nn.Module):
             input_size += self.args['word_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            if self.args['char_context']:
+            if self.args['charlm']:
                 self.charmodel_forward = CharacterLanguageModel.load(args['charlm_forward_file'])
                 self.charmodel_backward = CharacterLanguageModel.load(args['charlm_backward_file'])
                 self.charmodel_forward.eval()
@@ -85,7 +85,7 @@ class NERTagger(nn.Module):
             return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            if self.args.get('char_context', None):
+            if self.args.get('charlm', None):
                 char_reps_forward = self.charmodel_forward.get_representation(chars[0], charoffsets[0], charlens, char_orig_idx)
                 char_reps_forward = PackedSequence(char_reps_forward.data, char_reps_forward.batch_sizes)
                 char_reps_backward = self.charmodel_backward.get_representation(chars[1], charoffsets[1], charlens, char_orig_idx)

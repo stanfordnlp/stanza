@@ -47,7 +47,7 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        if self.args['char_context']:
+        if self.args['charlm']:
             charvocab = CharVocab.load_state_dict(torch.load(self.args['charlm_vocab_file'], lambda storage, loc: storage))
         else: 
             charvocab = CharVocab(data, self.args['shorthand'])

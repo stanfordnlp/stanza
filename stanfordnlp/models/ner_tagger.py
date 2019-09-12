@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")
     parser.add_argument('--char_dropout', type=float, default=0, help="Character-level language model dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
-    parser.add_argument('--char_context', action='store_true', help="Turn on contextualized char embedding model.")
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using character-level language model.")
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
@@ -113,7 +113,7 @@ def train(args):
     pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
     pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
-    if args['char_context']:
+    if args['charlm']:
         if args['charlm_shorthand'] is None: 
             print("CharLM Shorthand is required for loading pretrained CharLM model...")
             sys.exit(0)
