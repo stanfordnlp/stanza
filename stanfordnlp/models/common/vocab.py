@@ -16,13 +16,12 @@ VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
 class BaseVocab:
     """ A base class for common vocabulary operations. Each subclass should at least 
     implement its own build_vocab() function."""
-    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, predefined=False):
+    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False):
         self.data = data
         self.lang = lang
         self.idx = idx
         self.cutoff = cutoff
         self.lower = lower
-        self.predefined = predefined
         if data is not None:
             self.build_vocab()
         self.state_attrs = ['lang', 'idx', 'cutoff', 'lower', '_unit2id', '_id2unit']

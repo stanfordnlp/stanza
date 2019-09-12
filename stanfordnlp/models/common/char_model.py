@@ -4,6 +4,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
 from stanfordnlp.models.common.utils import tensor_unsort, unsort
+from stanfordnlp.models.pos.vocab import CharVocab
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=False, bidirectional=False, attention=True):
@@ -100,7 +101,7 @@ class CharacterLanguageModel(nn.Module):
 
     def save(self, filename):
         state = {
-            'vocab': self.vocab,
+            'vocab': self.vocab['char'].state_dict(),
             'args': self.args,
             'state_dict': self.state_dict(),
             'pad': self.pad,
@@ -110,7 +111,8 @@ class CharacterLanguageModel(nn.Module):
 
     @classmethod
     def load(cls, filename):
-        state = torch.load(filename, map_location='cpu')
-        model = cls(state['args'], state['vocab'], state['pad'], state['is_forward_lm'])
+        state = torch.load(filename, lambda storage, loc: storage)
+        vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
+        model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
         return model

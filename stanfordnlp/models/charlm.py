@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import math
 import logging
+import os
 
 from stanfordnlp.models.common.char_model import CharacterLanguageModel
 from stanfordnlp.models.pos.vocab import CharVocab
@@ -59,11 +60,11 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def build_vocab(path, predefined=False):
+def build_vocab(path):
     lines = open(path).readlines() # reserve '\n'
     data = [list(line) for line in lines]
-    vocab = CharVocab(data, predefined=predefined)
-    return {'char': vocab}
+    vocab = CharVocab(data)
+    return vocab
 
 def load_data(path, vocab, direction):
     lines = open(path).readlines() # reserve '\n'
@@ -81,7 +82,6 @@ def parse_args():
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
-    parser.add_argument('--predefined_vocab', action='store_true', help="Use predefined char vocab for English")
 
     parser.add_argument('--char_emb_dim', type=int, default=100, help="Dimension of unit embeddings")
     parser.add_argument('--char_hidden_dim', type=int, default=2048, help="Dimension of hidden units")
@@ -101,6 +101,7 @@ def parse_args():
     
     parser.add_argument('--report_steps', type=int, default=50, help="Update step interval to report loss")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--vocab_save_name', type=str, default=None, help="File name to save the vocab")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
@@ -191,8 +192,16 @@ def evaluate_epoch(args, vocab, batches, model, criterion):
 def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
+    vocab_file = args['save_dir'] + '/' + args['vocab_save_name'] if args['vocab_save_name'] is not None \
+        else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
 
-    vocab = build_vocab(args['train_file'], predefined=args['predefined_vocab'])
+    if os.path.exists(vocab_file):
+        logging.info('Loading existed vocab file')
+        vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
+    else:
+        logging.info('Building and saving vocab')
+        vocab = {'char': build_vocab(args['train_file'])}
+        torch.save(vocab['char'].state_dict(), vocab_file)
 
     train_data = load_data(args['train_file'], vocab, args['direction'])
     train_batches = batchify(train_data, args['batch_size'])

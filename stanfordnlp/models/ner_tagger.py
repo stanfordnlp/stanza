@@ -53,6 +53,7 @@ def parse_args():
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
     parser.add_argument('--char_context', action='store_true', help="Turn on contextualized char embedding model.")
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
@@ -113,9 +114,13 @@ def train(args):
     pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
     if args['char_context']:
+        if args['charlm_shorthand'] is None: 
+            print("CharLM Shorthand is required for loading pretrained CharLM model...")
+            sys.exit(0)
         print('Use pretrained contextualized char embedding')
-        args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['lang'])
-        args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['lang'])
+        args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        args['charlm_vocab_file'] = '{}/{}_vocab.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
