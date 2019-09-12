@@ -12,9 +12,9 @@ args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
-train_file=${NER_DATA_DIR}/${lang}.train.json
-dev_file=${NER_DATA_DIR}/${lang}.dev.json
-test_file=${NER_DATA_DIR}/${lang}.test.json
+train_file=${NER_DATA_DIR}/${short}.train.json
+dev_file=${NER_DATA_DIR}/${short}.dev.json
+test_file=${NER_DATA_DIR}/${short}.test.json
 
 if [ ! -e $train_file ]; then
     bash scripts/prep_ner_data.sh $treebank
