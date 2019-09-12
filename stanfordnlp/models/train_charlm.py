@@ -59,6 +59,12 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
+def build_vocab(path, predefined=False):
+    lines = open(path).readlines() # reserve '\n'
+    data = [list(line) for line in lines]
+    vocab = CharVocab(data, predefined=predefined)
+    return {'char': vocab}
+
 def load_data(path, vocab, direction):
     lines = open(path).readlines() # reserve '\n'
     data = list(''.join(lines))
@@ -75,6 +81,7 @@ def parse_args():
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
+    parser.add_argument('--predefined_vocab', action='store_true', help="Use predefined char vocab for English")
 
     parser.add_argument('--char_emb_dim', type=int, default=100, help="Dimension of unit embeddings")
     parser.add_argument('--char_hidden_dim', type=int, default=2048, help="Dimension of hidden units")
@@ -185,7 +192,7 @@ def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
-    vocab = {'char': CharVocab([], predefined=True)}
+    vocab = build_vocab(args['train_file'], predefined=args['predefined_vocab'])
 
     train_data = load_data(args['train_file'], vocab, args['direction'])
     train_batches = batchify(train_data, args['batch_size'])
