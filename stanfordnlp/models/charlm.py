@@ -5,6 +5,7 @@ Entry point for training and evaluating a character-level neural language model.
 import random
 import argparse
 from copy import copy
+from collections import Counter
 import numpy as np
 import torch
 import math
@@ -50,13 +51,20 @@ def get_batch(source, i, seq_len):
 def build_vocab(path): 
     # Requires a large amount of memeory, but only need to build once
     if os.path.isdir(path):
-        lines = []
+        # here we need some trick to deal with excessively large files
+        # for each file we accumulate the counter of characters, and 
+        # at the end we simply pass a list of chars to the vocab builder
+        counter = Counter()
         filenames = sorted(os.listdir(path))
         for filename in filenames:
-            lines += open(path + '/' + filename).readlines()
+            lines = open(path + '/' + filename).readlines()
+            for line in lines:
+                counter.update(list(line))
+        # a singleton list of all characters
+        data = [[x[0] for x in counter.most_common()]]
     else:
         lines = open(path).readlines() # reserve '\n'
-    data = [list(line) for line in lines]
+        data = [list(line) for line in lines]
     vocab = CharVocab(data)
     return vocab
 
