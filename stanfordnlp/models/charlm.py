@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import math
 import logging
+import time
 import os
 
 from stanfordnlp.models.common.char_model import CharacterLanguageModel
@@ -80,6 +81,7 @@ def load_data(path, vocab, direction):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
+    parser.add_argument('--train_dir', type=str, help="If non-emtpy, load from directory with multiple training files")
     parser.add_argument('--eval_file', type=str, help="Input plaintext file for the dev/test set")
     parser.add_argument('--lang', type=str, help="Language")
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
@@ -134,16 +136,22 @@ def main():
     else:
         evaluate(args)
 
-def train_epoch(args, vocab, data, model, params, optimizer, criterion):
-    # TODO: shuffle the data
+def train_epoch(args, vocab, data, model, params, optimizer, criterion, epoch):
     model.train()
     for data_chunk in data:
         batches = batchify(data_chunk, args['batch_size'])
         hidden = None
         total_loss = 0.0
         total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
-        for iteration, i in enumerate(range(0, batches.size(1) - 1, args['bptt_size'])):
-            data, target = get_batch(batches, i, args['bptt_size'])
+        iteration, i = 0, 0
+        while i < batches.size(1) - 1 - 1:
+            start_time = time.time()
+            bptt = args['bptt_size'] if np.random.random() < 0.95 else args['bptt_size']/ 2.
+            # prevent excessively small or negative sequence lengths
+            seq_len = max(5, int(np.random.normal(bptt, 5)))
+            # prevent very large sequence length, must be <= 1.2 x bptt
+            seq_len = min(seq_len, int(args['bptt_size'] * 1.2))
+            data, target = get_batch(batches, i, seq_len)
             lens = [data.size(1) for i in range(data.size(0))]
             if args['cuda']: 
                 data = data.cuda()
@@ -164,15 +172,21 @@ def train_epoch(args, vocab, data, model, params, optimizer, criterion):
 
             if (iteration + 1) % args['report_steps'] == 0:
                 cur_loss = total_loss / args['report_steps']
+                elapsed = time.time() - start_time
                 logger.info(
-                    "| {:5d}/{:5d} batches | loss {:5.2f} | ppl {:8.2f}".format(
+                    "| epoch {:5d} | {:5d}/{:5d} batches | sec/batch {:.6f} | loss {:5.2f} | ppl {:8.2f}".format(
+                        epoch,
                         iteration + 1,
                         total_batches,
+                        elapsed / args['report_steps'],
                         cur_loss,
                         math.exp(cur_loss),
                     )
                 )
                 total_loss = 0.0
+
+            iteration += 1
+            i += seq_len
     return
 
 def evaluate_epoch(args, vocab, data, model, criterion):
@@ -204,11 +218,11 @@ def train(args):
         else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
 
     if os.path.exists(vocab_file):
-        logging.info('Loading existed vocab file')
+        logging.info('Loading existing vocab file')
         vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
     else:
         logging.info('Building and saving vocab')
-        vocab = {'char': build_vocab(args['train_file'])}
+        vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
 
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
@@ -220,15 +234,24 @@ def train(args):
 
     best_loss = None
     for epoch in range(args['epochs']):
-        train_data = load_data(args['train_file'], vocab, args['direction'])
+        # load train data from train_dir if not empty, otherwise load from file
+        if args['train_dir'] is not None:
+            train_path = args['train_dir']
+        else:
+            train_path = args['train_file']
+        train_data = load_data(train_path, vocab, args['direction'])
         dev_data = load_data(args['eval_file'], vocab, args['direction'])
-        train_epoch(args, vocab, train_data, model, params, optimizer, criterion)
+        train_epoch(args, vocab, train_data, model, params, optimizer, criterion, epoch+1)
+
+        start_time = time.time()
         loss = evaluate_epoch(args, vocab, dev_data, model, criterion)
+        elapsed = int(time.time() - start_time)
         scheduler.step(loss)
         logger.info(
-            "| {:5d}/{:5d} epochs | loss {:5.2f} | ppl {:8.2f}".format(
+            "| {:5d}/{:5d} epochs | time elapsed {:5d}s | loss {:5.2f} | ppl {:8.2f}".format(
                 epoch + 1,
                 args['epochs'],
+                elapsed,
                 loss,
                 math.exp(loss),
             )
@@ -248,7 +271,7 @@ def evaluate(args):
     vocab = model.vocab
     data = load_data(args['eval_file'], vocab, args['direction'])
     criterion = torch.nn.CrossEntropyLoss()
-
+    
     loss = evaluate_epoch(args, vocab, data, model, criterion)
     logger.info(
         "| best model | loss {:5.2f} | ppl {:8.2f}".format(
