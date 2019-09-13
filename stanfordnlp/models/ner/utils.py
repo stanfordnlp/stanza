@@ -2,10 +2,20 @@
 Utility functions for NER.
 """
 
+def is_bio_scheme(all_tags):
+    """
+    Check all tags to see if BIO tagging scheme is used. Return True if so.
+    """
+    all_prefix = set([t[0].lower() for t in all_tags])
+    if all_prefix == set(['b', 'i', 'o']):
+        return True
+    else:
+        return False
+
 def convert_tags_to_bioes(tags):
-    '''
+    """
     Convert the original BIO tag sequence into an BIOES scheme.
-    '''
+    """
     new_tags = []
     pre, cur, nex = '', '', ''
     new_t = ''
@@ -62,7 +72,7 @@ def convert_tags_to_bioes(tags):
     return new_tags
 
 def is_different_chunk(tag1, tag2):
-    '''tag1 must come before tag2 in sequence'''
+    """ tag1 must come before tag2 in sequence. """
     if tag1 == 'O' and tag2 == 'O':
         return False
     if tag1 == 'O' and tag2 != 'O':
