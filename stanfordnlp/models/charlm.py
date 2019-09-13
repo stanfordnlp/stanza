@@ -14,27 +14,13 @@ import os
 from stanfordnlp.models.common.char_model import CharacterLanguageModel
 from stanfordnlp.models.pos.vocab import CharVocab
 from stanfordnlp.models.common import utils
+from stanfordnlp.models import _training_logging
 
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "minimal": {
-                "format": "%(asctime)s: %(message)s",
-                }
-            },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "formatter": "minimal",
-            }
-        },
-        "loggers": {
-            "": {"handlers": ["console"], "level": "DEBUG"}
-        },
-    }
-)
+# modify logging format
+formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+for h in logging.getLogger().handlers:
+    h.setFormatter(formatter)
+
 logger = logging.getLogger(__name__)
 
 def repackage_hidden(h):
