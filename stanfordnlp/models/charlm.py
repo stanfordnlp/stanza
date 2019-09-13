@@ -46,36 +46,18 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def build_vocab(path): 
-    # Requires a large amount of memeory, but only need to build once
-    if os.path.isdir(path):
-        lines = []
-        filenames = sorted(os.listdir(path))
-        for filename in filenames:
-            lines += open(path + '/' + filename).readlines()
-    else:
-        lines = open(path).readlines() # reserve '\n'
+def build_vocab(path):
+    lines = open(path).readlines() # reserve '\n'
     data = [list(line) for line in lines]
     vocab = CharVocab(data)
     return vocab
 
-def load_file(path, vocab, direction):
+def load_data(path, vocab, direction):
     lines = open(path).readlines() # reserve '\n'
     data = list(''.join(lines))
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]
     return torch.tensor(idx)
-
-def load_data(path, vocab, direction):
-    if os.path.isdir(path):
-        filenames = sorted(os.listdir(path))
-        for filename in filenames:
-            logging.info('Loading data from {}'.format(filename))
-            data = load_file(path + '/' + filename, vocab, direction)
-            yield data
-    else:
-        data = load_file(path, vocab, direction)
-        yield data
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -134,62 +116,50 @@ def main():
     else:
         evaluate(args)
 
-def train_epoch(args, vocab, data, model, params, optimizer, criterion):
+def train_epoch(args, vocab, batches, model, params, optimizer, criterion):
     # TODO: shuffle the data
     model.train()
-    for data_chunk in data:
-        batches = batchify(data_chunk, args['batch_size'])
-        hidden = None
-        total_loss = 0.0
-        total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
-        for iteration, i in enumerate(range(0, batches.size(1) - 1, args['bptt_size'])):
-            data, target = get_batch(batches, i, args['bptt_size'])
-            lens = [data.size(1) for i in range(data.size(0))]
-            if args['cuda']: 
+    hidden = None
+    total_loss = 0.0
+    total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
+    for iteration, i in enumerate(range(0, batches.size(1) - 1, args['bptt_size'])):
+        data, target = get_batch(batches, i, args['bptt_size'])
+        lens = [data.size(1) for i in range(data.size(0))]
         if args['cuda']: 
-            if args['cuda']: 
-        if args['cuda']: 
-            if args['cuda']: 
-                data = data.cuda()
-                target = target.cuda()        
+            data = data.cuda()
             target = target.cuda()        
-                target = target.cuda()        
-            target = target.cuda()        
-                target = target.cuda()        
-            
-            optimizer.zero_grad()
+        
+        optimizer.zero_grad()
 
-            output, hidden, decoded = model.forward(data, lens, hidden)
+        output, hidden, decoded = model.forward(data, lens, hidden)
 
-            loss = criterion(decoded.view(-1, len(vocab['char'])), target)
-            total_loss += loss.data.item()
-            loss.backward()
+        loss = criterion(decoded.view(-1, len(vocab['char'])), target)
+        total_loss += loss.data.item()
+        loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(params, args['max_grad_norm'])
-            optimizer.step()
+        torch.nn.utils.clip_grad_norm_(params, args['max_grad_norm'])
+        optimizer.step()
 
-            hidden = repackage_hidden(hidden)
+        hidden = repackage_hidden(hidden)
 
-            if (iteration + 1) % args['report_steps'] == 0:
-                cur_loss = total_loss / args['report_steps']
-                logger.info(
-                    "| {:5d}/{:5d} batches | loss {:5.2f} | ppl {:8.2f}".format(
-                        iteration + 1,
-                        total_batches,
-                        cur_loss,
-                        math.exp(cur_loss),
-                    )
+        if (iteration + 1) % args['report_steps'] == 0:
+            cur_loss = total_loss / args['report_steps']
+            logger.info(
+                "| {:5d}/{:5d} batches | loss {:5.2f} | ppl {:8.2f}".format(
+                    iteration + 1,
+                    total_batches,
+                    cur_loss,
+                    math.exp(cur_loss),
                 )
-                total_loss = 0.0
+            )
+            total_loss = 0.0
     return
 
-def evaluate_epoch(args, vocab, data, model, criterion):
+def evaluate_epoch(args, vocab, batches, model, criterion):
     model.eval()
     hidden = None
     total_loss = 0
-    data = list(data)
-    assert len(data) == 1, 'Only support single dev/test file'
-    batches = batchify(data[0], args['batch_size'])
+
     with torch.no_grad():
         for i in range(0, batches.size(1) - 1, args['bptt_size']):
             data, target = get_batch(batches, i, args['bptt_size'])
@@ -219,6 +189,12 @@ def train(args):
         vocab = {'char': build_vocab(args['train_file'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
 
+    train_data = load_data(args['train_file'], vocab, args['direction'])
+    train_batches = batchify(train_data, args['batch_size'])
+
+    dev_data = load_data(args['eval_file'], vocab, args['direction'])
+    dev_batches = batchify(dev_data, args['batch_size'])
+
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
     if args['cuda']: model = model.cuda()
     params = [param for param in model.parameters() if param.requires_grad]
@@ -228,10 +204,8 @@ def train(args):
 
     best_loss = None
     for epoch in range(args['epochs']):
-        train_data = load_data(args['train_file'], vocab, args['direction'])
-        dev_data = load_data(args['eval_file'], vocab, args['direction'])
-        train_epoch(args, vocab, train_data, model, params, optimizer, criterion)
-        loss = evaluate_epoch(args, vocab, dev_data, model, criterion)
+        train_epoch(args, vocab, train_batches, model, params, optimizer, criterion)
+        loss = evaluate_epoch(args, vocab, dev_batches, model, criterion)
         scheduler.step(loss)
         logger.info(
             "| {:5d}/{:5d} epochs | loss {:5.2f} | ppl {:8.2f}".format(
@@ -255,9 +229,10 @@ def evaluate(args):
     if args['cuda']: model = model.cuda()
     vocab = model.vocab
     data = load_data(args['eval_file'], vocab, args['direction'])
+    batches = batchify(data, args['batch_size'])
     criterion = torch.nn.CrossEntropyLoss()
 
-    loss = evaluate_epoch(args, vocab, data, model, criterion)
+    loss = evaluate_epoch(args, vocab, batches, model, criterion)
     logger.info(
         "| best model | loss {:5.2f} | ppl {:8.2f}".format(
             loss,
