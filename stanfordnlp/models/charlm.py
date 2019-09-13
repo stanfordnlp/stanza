@@ -101,6 +101,7 @@ def parse_args():
     parser.add_argument('--char_hidden_dim', type=int, default=2048, help="Dimension of hidden units")
     parser.add_argument('--char_num_layers', type=int, default=1, help="Layers of RNN in the language model")
     parser.add_argument('--char_dropout', type=float, default=0.05, help="Dropout probability")
+    parser.add_argument('--char_unit_dropout', type=float, default=1e-5, help="Randomly set an input char to UNK during training")
     parser.add_argument('--char_rec_dropout', type=float, default=0.0, help="Recurrent dropout probability")
 
     parser.add_argument('--batch_size', type=int, default=100, help="Batch size to use")
@@ -163,7 +164,7 @@ def train_epoch(args, vocab, data, model, params, optimizer, criterion, epoch):
             lens = [data.size(1) for i in range(data.size(0))]
             if args['cuda']: 
                 data = data.cuda()
-                target = target.cuda()        
+                target = target.cuda()
             
             optimizer.zero_grad()
 
@@ -210,7 +211,7 @@ def evaluate_epoch(args, vocab, data, model, criterion):
             lens = [data.size(1) for i in range(data.size(0))]
             if args['cuda']: 
                 data = data.cuda()
-                target = target.cuda()     
+                target = target.cuda()
 
             output, hidden, decoded = model.forward(data, lens, hidden)
             loss = criterion(decoded.view(-1, len(vocab['char'])), target)
@@ -256,7 +257,7 @@ def train(args):
         elapsed = int(time.time() - start_time)
         scheduler.step(loss)
         logger.info(
-            "| {:5d}/{:5d} epochs | time elapsed {:5d}s | loss {:5.2f} | ppl {:8.2f}".format(
+            "| {:5d}/{:5d} epochs | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
                 epoch + 1,
                 args['epochs'],
                 elapsed,

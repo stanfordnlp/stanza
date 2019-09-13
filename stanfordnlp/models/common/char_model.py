@@ -4,6 +4,8 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
 from stanfordnlp.models.common.utils import tensor_unsort, unsort
+from stanfordnlp.models.common.dropout import SequenceUnitDropout
+from stanfordnlp.models.common.vocab import UNK_ID
 from stanfordnlp.models.pos.vocab import CharVocab
 
 class CharacterModel(nn.Module):
@@ -76,8 +78,10 @@ class CharacterLanguageModel(nn.Module):
         # decoder
         self.decoder = nn.Linear(self.args['char_hidden_dim'], len(self.vocab['char']))
         self.dropout = nn.Dropout(args['char_dropout'])
+        self.char_dropout = SequenceUnitDropout(args.get('char_unit_dropout', 0), UNK_ID)
 
     def forward(self, chars, charlens, hidden=None):
+        chars = self.char_dropout(chars)
         embs = self.dropout(self.char_emb(chars))
         batch_size = embs.size(0)
         embs = pack_padded_sequence(embs, charlens, batch_first=True)
