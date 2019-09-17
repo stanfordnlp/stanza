@@ -110,9 +110,7 @@ def train(args):
     else:
         vec_file = args['wordvec_file']
     # do not save pretrained embeddings individually
-
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
     if args['charlm']:
         if args['charlm_shorthand'] is None: 
