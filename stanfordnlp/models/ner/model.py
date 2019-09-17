@@ -42,6 +42,12 @@ class NERTagger(nn.Module):
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
             input_size += self.args['char_hidden_dim'] * 2
+        
+        # optionally add a input transformation layer for charlm
+        if self.args.get('input_transform', False) and self.args['charlm']:
+            self.input_transform = nn.Linear(input_size, input_size)
+        else:
+            self.input_transform = None
        
         # recurrent layers
         self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, \
@@ -100,8 +106,11 @@ class NERTagger(nn.Module):
         if self.args['word_dropout'] > 0:
             lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
         lstm_inputs = self.drop(lstm_inputs)
-        lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
 
+        if self.input_transform:
+            lstm_inputs = self.input_transform(lstm_inputs)
+
+        lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
         lstm_outputs, _ = self.taggerlstm(lstm_inputs, sentlens, hx=(\
                 self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), \
                 self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
