@@ -3,7 +3,6 @@ import ast
 import collections
 from enum import Enum
 import logging
-#import sys
 import os
 import random
 import re
@@ -15,6 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
+import classifier_args
 from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.pretrain import Pretrain
 
@@ -31,36 +31,25 @@ def convert_fc_shapes(arg):
         return arg
     return tuple(arg)
 
-class WVType(Enum):
-    WORD2VEC = 1
-    GOOGLE = 2
-
 def parse_args():
     parser = argparse.ArgumentParser()
+
+    classifier_args.add_pretrain_args(parser)
+    classifier_args.add_device_args(parser)
 
     parser.add_argument('--train', dest='train', default=True, action='store_true', help='Train the model (default)')
     parser.add_argument('--no_train', dest='train', action='store_false', help="Don't train the model")
 
     parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
 
-    parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
-    # TODO: is this the right usage of the second particle?
-    # answer: no, the second particle should in some way describe the dataset itself
-    parser.add_argument('--shorthand', type=str, default='en_w2v100', help="Treebank shorthand, eg 'en' for English")
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
-    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
-    parser.add_argument('--wordvec_type', type=lambda x: WVType[x.upper()], default='word2vec', help='Different vector types have different options, such as google 300d replacing numbers with #')
 
     parser.add_argument('--train_file', type=str, default='extern_data/sentiment/sst-processed/binary/train-binary-phrases.txt', help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
     parser.add_argument('--dev_file', type=str, default='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt', help='Input file to use as the dev set.')
     parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
-
-    parser.add_argument('--cuda', action='store_true', help='Use CUDA for training/testing', default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_false', help='Ignore CUDA.', dest='cuda')
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
     parser.add_argument('--filter_channels', default=100, type=int, help='Number of channels for layers after the word vectors')
@@ -258,9 +247,9 @@ def load(filename, pretrain):
 
 def update_text(sentence, wordvec_type):
     # TODO: this should be included in the model for when we are in a pipeline
-    if wordvec_type == WVType.WORD2VEC:
+    if wordvec_type == classifier_args.WVType.WORD2VEC:
         return sentence
-    elif wordvec_type == WVType.GOOGLE:
+    elif wordvec_type == classifier_args.WVType.GOOGLE:
         new_sentence = []
         for word in sentence:
             if word != '0' and word != '1':
