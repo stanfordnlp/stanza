@@ -144,7 +144,7 @@ class DataLoader:
         current = []
         currentlen = 0
         for x in data:
-            if len(x[0]) + currentlen > self.batch_size:
+            if len(x[0]) + currentlen > self.batch_size and currentlen > 0:
                 res.append(current)
                 current = []
                 currentlen = 0
