@@ -75,7 +75,7 @@ class Pretrain:
             words = words[:self._max_vocab - len(VOCAB_PREFIX)]
             emb = emb[:self._max_vocab]
 
-        vocab = PretrainedWordVocab(words, lower=True)
+        vocab = PretrainedWordVocab(words)
         
         if self._save_to_file:
             assert self.filename is not None, "Filename must be provided to save pretrained vector to file."

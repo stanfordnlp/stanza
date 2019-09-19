@@ -72,7 +72,8 @@ class DataLoader:
             processed_sent += [[ROOT_ID] + vocab['upos'].map([w[1] for w in sent])]
             processed_sent += [xpos_replacement + vocab['xpos'].map([w[2] for w in sent])]
             processed_sent += [feats_replacement + vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [[ROOT_ID] + pretrain_vocab.map([w[0] for w in sent])]
+            # always use lowercase lookup in pretrained vocab
+            processed_sent += [[ROOT_ID] + pretrain_vocab.map([w[0].lower() for w in sent])]
             processed_sent += [[ROOT_ID] + vocab['lemma'].map([w[4] for w in sent])]
             processed_sent += [[to_int(w[5], ignore_error=self.eval) for w in sent]]
             processed_sent += [vocab['deprel'].map([w[6] for w in sent])]
