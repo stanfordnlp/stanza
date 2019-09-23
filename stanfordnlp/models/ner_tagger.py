@@ -56,6 +56,7 @@ def parse_args():
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
+    parser.add_argument('--no_emb_finetune', dest='emb_finetune', action='store_false', help="Turn off finetuning of the embedding matrix.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')

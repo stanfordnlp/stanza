@@ -31,6 +31,8 @@ class NERTagger(nn.Module):
             # load pretrained embeddings if specified
             if emb_matrix is not None:
                 self.init_emb(emb_matrix)
+            if not self.args.get('emb_finetune', True):
+                self.word_emb.weight.detach_()
             input_size += self.args['word_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
