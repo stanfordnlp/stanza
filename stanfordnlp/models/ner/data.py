@@ -60,13 +60,17 @@ class DataLoader:
 
     def preprocess(self, data, vocab, args):
         processed = []
-        if args['lowercase']: # handle word case
+        if args.get('lowercase', True): # handle word case
             case = lambda x: x.lower()
         else:
             case = lambda x: x
+        if args.get('char_lowercase', False): # handle character case
+            char_case = lambda x: x.lower()
+        else:
+            char_case = lambda x: x
         for sent in data:
             processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
-            processed_sent += [[vocab['char'].map([x for x in w[0]]) for w in sent]]
+            processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
             processed_sent += [vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
         return processed
