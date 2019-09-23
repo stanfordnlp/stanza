@@ -117,7 +117,7 @@ def train(args):
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -162,6 +162,7 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
+                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                 CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
@@ -229,7 +230,7 @@ def evaluate(args):
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True)
+    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     if len(batch) > 0:
         print("Start evaluation...")
@@ -239,6 +240,7 @@ def evaluate(args):
     else:
         # skip eval if dev data does not exist
         preds = []
+    preds = utils.unsort(preds, batch.data_orig_idx)
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
