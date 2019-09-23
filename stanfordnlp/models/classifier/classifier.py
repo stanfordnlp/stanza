@@ -78,6 +78,7 @@ def save(filename, model, args, skip_modules=True):
     params = {
         'model': model_state,
         'config': model.config,
+        'labels': model.labels,
     }
     try:
         torch.save(params, filename)
@@ -92,6 +93,10 @@ def print_config(config_name, config):
     for k in config.__dict__:
         print("  --{}: {}".format(k, config.__dict__[k]))
 
+def print_labels(labels):
+    print("-- MODEL LABELS --")
+    print("  {}".format(" ".join(labels)))
+
 def load(filename, pretrain):
     try:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
@@ -99,9 +104,10 @@ def load(filename, pretrain):
         logger.exception("Cannot load model from {}".format(filename))
         raise
     print("Loaded model {}".format(filename))
+    print_labels(checkpoint['labels'])
     print_config("SAVED CONFIG", checkpoint['config'])
     model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, 
-                                         checkpoint['config'].num_classes,
+                                         checkpoint['labels'],
                                          checkpoint['config'])
     model.load_state_dict(checkpoint['model'], strict=False)
     return model
@@ -171,8 +177,12 @@ def shuffle_dataset(sorted_dataset):
     return dataset
 
 
-def score_dataset(model, dataset, label_map, device):
+def score_dataset(model, dataset, label_map=None, device=None):
     model.eval()
+    if label_map is None:
+        label_map = {x: y for (y, x) in enumerate(model.labels)}
+    if device is None:
+        device = next(model.parameters()).device
     correct = 0
     dataset_lengths = sort_dataset_by_len(dataset)
     
@@ -222,6 +232,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO different loss functions appropriate?
     loss_function = nn.CrossEntropyLoss()
 
+    # TODO: move this out of train_model so that if we are just testing, it goes on cuda
     if args.cuda:
         model.cuda()
         loss_function.cuda()
@@ -296,10 +307,6 @@ def main():
     print("Using training set: %s" % args.train_file)
     print("Training set has %d labels" % len(labels))
 
-    dev_set = read_dataset(args.dev_file, args.wordvec_type)
-    print("Using dev set: %s" % args.dev_file)
-    check_labels(labels, dev_set)
-
     vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand)
     pretrain_file = '{}/{}.pretrain.pt'.format(args.save_dir, args.shorthand)
     pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
@@ -308,11 +315,15 @@ def main():
     if args.load_name:
         model = load(args.load_name, pretrain)
     else:
-        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, len(labels), args)
+        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, labels, args)
 
     print("Filter sizes: %s" % str(model.config.filter_sizes))
     print("Filter channels: %s" % str(model.config.filter_channels))
     print("Intermediate layers: %s" % str(model.config.fc_shapes))
+
+    dev_set = read_dataset(args.dev_file, args.wordvec_type)
+    print("Using dev set: %s" % args.dev_file)
+    check_labels(model.labels, dev_set)
 
     save_name = args.save_name
     if not(save_name):
@@ -325,17 +336,13 @@ def main():
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
-        train_model(model, model_file, args, train_set, dev_set, labels)
+        train_model(model, model_file, args, train_set, dev_set, model.labels)
 
-    # TODO: save the known labels in the model so that when loading
-    # the model back without the training set we can check the labels?
     test_set = read_dataset(args.test_file, args.wordvec_type)
     print("Using test set: %s" % args.test_file)
-    check_labels(labels, test_set)
+    check_labels(model.labels, test_set)
 
-    label_map = {x: y for (y, x) in enumerate(labels)}
-    device = next(model.parameters()).device
-    correct = score_dataset(model, test_set, label_map, device)
+    correct = score_dataset(model, test_set)
     print("Test set: %d correct of %d examples.  Accuracy: %f" % 
           (correct, len(test_set), correct / len(test_set)))
 

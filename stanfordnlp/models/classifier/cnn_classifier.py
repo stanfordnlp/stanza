@@ -7,11 +7,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CNNClassifier(nn.Module):
-    def __init__(self, emb_matrix, vocab, num_classes, args):
+    def __init__(self, emb_matrix, vocab, labels, args):
         """
         emb_matrix is a giant matrix of the pretrained embeddings
         """
         super(CNNClassifier, self).__init__()
+        num_classes = len(labels)
+        self.labels = labels
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
                                       filter_sizes = args.filter_sizes,
                                       fc_shapes = args.fc_shapes,

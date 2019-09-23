@@ -30,10 +30,6 @@ model_files = sorted(set(model_files))
 test_set = classifier.read_dataset(args.test_file, args.wordvec_type)
 print("Using test set: %s" % args.test_file)
 
-# TODO: fails horribly if the dev set doesn't have all the labels of the train set
-labels = classifier.dataset_labels(test_set)
-label_map = {x: y for (y, x) in enumerate(labels)}
-
 vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand)
 pretrain_file = '{}/{}.pretrain.pt'.format(args.save_dir, args.shorthand)
 pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
@@ -49,6 +45,9 @@ for load_name in model_files:
         device = next(model.parameters()).device
         print("Current device: %s" % device)
 
-    correct = classifier.score_dataset(model, test_set, label_map, device)
+    labels = model.labels
+    classifier.check_labels(labels, test_set)
+
+    correct = classifier.score_dataset(model, test_set, device=device)
     print("  Results: %d correct of %d examples.  Accuracy: %f" % 
           (correct, len(test_set), correct / len(test_set)))
