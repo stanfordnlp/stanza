@@ -232,9 +232,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO different loss functions appropriate?
     loss_function = nn.CrossEntropyLoss()
 
-    # TODO: move this out of train_model so that if we are just testing, it goes on cuda
     if args.cuda:
-        model.cuda()
         loss_function.cuda()
 
     device = next(model.parameters()).device
@@ -316,6 +314,9 @@ def main():
         model = load(args.load_name, pretrain)
     else:
         model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, labels, args)
+
+    if args.cuda:
+        model.cuda()
 
     print("Filter sizes: %s" % str(model.config.filter_sizes))
     print("Filter channels: %s" % str(model.config.filter_channels))
