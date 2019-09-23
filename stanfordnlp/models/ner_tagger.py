@@ -121,7 +121,6 @@ def train(args):
         print('Use pretrained contextualized char embedding')
         args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
         args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-        args['charlm_vocab_file'] = '{}/{}_vocab.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))

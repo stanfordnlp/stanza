@@ -46,9 +46,15 @@ class DataLoader:
         logger.debug("{} batches created.".format(len(self.data)))
 
     def init_vocab(self, data):
+        def from_model(model_filename):
+            """ Try loading vocab from charLM model file. """
+            state_dict = torch.load(model_filename, lambda storage, loc: storage)
+            assert 'vocab' in state_dict, "Cannot find vocab in charLM model file."
+            return state_dict['vocab']
+
         assert self.eval == False # for eval vocab must exist
         if self.args['charlm']:
-            charvocab = CharVocab.load_state_dict(torch.load(self.args['charlm_vocab_file'], lambda storage, loc: storage))
+            charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
         else: 
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
