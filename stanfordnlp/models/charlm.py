@@ -61,7 +61,7 @@ def build_vocab(path):
             for line in lines:
                 counter.update(list(line))
         # a singleton list of all characters
-        data = [[x[0] for x in counter.most_common()]]
+        data = [sorted([x[0] for x in counter.most_common()])]
     else:
         lines = open(path).readlines() # reserve '\n'
         data = [list(line) for line in lines]
