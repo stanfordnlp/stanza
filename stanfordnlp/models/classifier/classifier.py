@@ -19,6 +19,16 @@ import cnn_classifier
 
 logger = logging.getLogger(__name__)
 
+#DEFAULT_TRAIN='extern_data/sentiment/sst-processed/binary/train-binary-phrases.txt'
+#DEFAULT_DEV='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt'
+#DEFAULT_TEST='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt'
+
+DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
+DEFAULT_DEV='extern_data/sentiment/sst-processed/fiveclass/dev-roots.txt'
+DEFAULT_TEST='extern_data/sentiment/sst-processed/fiveclass/test-roots.txt'
+
+
+
 def convert_fc_shapes(arg):
     arg = arg.strip()
     if not arg:
@@ -45,9 +55,9 @@ def parse_args():
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
 
-    parser.add_argument('--train_file', type=str, default='extern_data/sentiment/sst-processed/binary/train-binary-phrases.txt', help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
-    parser.add_argument('--dev_file', type=str, default='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt', help='Input file to use as the dev set.')
-    parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
+    parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
+    parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file to use as the dev set.')
+    parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
