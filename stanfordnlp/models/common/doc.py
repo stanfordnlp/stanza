@@ -23,6 +23,7 @@ NER = 'ner'
 START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 TYPE = 'type'
+SENTIMENT = 'sentiment'
 
 class Document:
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -326,6 +327,16 @@ class Sentence:
     def words(self, value):
         """ Set the list of words for this sentence. """
         self._words = value
+
+    @property
+    def sentiment(self):
+        """ Returns the sentiment value for this sentence """
+        return self._sentiment
+
+    @sentiment.setter
+    def sentiment(self, value):
+        """ Set the sentiment value """
+        self._sentiment = value
 
     def build_dependencies(self):
         """ Build the dependency graph for this sentence. Each dependency graph entry is 
