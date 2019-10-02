@@ -36,7 +36,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file)
+            self.load(model_file, args)
         else:
             assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
@@ -111,13 +111,14 @@ class Trainer(BaseTrainer):
         except:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename):
+    def load(self, filename, args=None):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
+        if args: self.args.update(args)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = NERTagger(self.args, self.vocab)
         self.model.load_state_dict(checkpoint['model'], strict=False)

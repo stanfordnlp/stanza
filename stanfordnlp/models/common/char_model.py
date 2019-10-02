@@ -119,4 +119,5 @@ class CharacterLanguageModel(nn.Module):
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
         model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
+        model.eval()
         return model
