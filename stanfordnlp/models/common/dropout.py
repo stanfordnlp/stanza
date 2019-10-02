@@ -24,6 +24,29 @@ class WordDropout(nn.Module):
 
         return res
 
+class LockedDropout(nn.Module):
+    """
+    Implementation of locked (or variational) dropout. Randomly drops out entire parameters in embedding space.
+    """
+    def __init__(self, dropprob, batch_first=True, inplace=False):
+        super().__init__()
+        self.dropprob = dropprob
+        self.batch_first = batch_first
+        self.inplace = inplace
+
+    def forward(self, x):
+        if not self.training or self.dropprob == 0:
+            return x
+
+        if not self.batch_first:
+            m = x.data.new(1, x.size(1), x.size(2)).bernoulli_(1 - self.dropprob)
+        else:
+            m = x.data.new(x.size(0), 1, x.size(2)).bernoulli_(1 - self.dropprob)
+
+        mask = torch.autograd.Variable(m, requires_grad=False) / (1 - self.dropprob)
+        mask = mask.expand_as(x)
+        return mask * x
+
 class SequenceUnitDropout(nn.Module):
     """ A unit dropout layer that's designed for input of sequence units (e.g., word sequence, char sequence, etc.).
     Given a sequence of unit indices, this layer randomly set some of them to be a replacement id (usually set to be <UNK>).

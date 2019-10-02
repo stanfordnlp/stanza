@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
     parser.add_argument('--word_dropout', type=float, default=0)
+    parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")

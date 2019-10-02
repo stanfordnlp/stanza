@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_s
 from stanfordnlp.models.common.biaffine import BiaffineScorer
 from stanfordnlp.models.common.hlstm import HighwayLSTM
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
-from stanfordnlp.models.common.dropout import WordDropout
+from stanfordnlp.models.common.dropout import WordDropout, LockedDropout
 from stanfordnlp.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanfordnlp.models.common.crf import CRFLoss
 from stanfordnlp.models.common.vocab import PAD_ID
@@ -37,10 +37,8 @@ class NERTagger(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
-                self.charmodel_forward = CharacterLanguageModel.load(args['charlm_forward_file'])
-                self.charmodel_backward = CharacterLanguageModel.load(args['charlm_backward_file'])
-                self.charmodel_forward.eval()
-                self.charmodel_backward.eval()
+                add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file']))
+                add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file']))
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
             input_size += self.args['char_hidden_dim'] * 2
@@ -68,6 +66,7 @@ class NERTagger(nn.Module):
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
+        self.lockeddrop = LockedDropout(args['locked_dropout'])
 
     def init_emb(self, emb_matrix):
         if isinstance(emb_matrix, np.ndarray):
@@ -108,6 +107,9 @@ class NERTagger(nn.Module):
         if self.args['word_dropout'] > 0:
             lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
         lstm_inputs = self.drop(lstm_inputs)
+        lstm_inputs = pad(lstm_inputs)
+        lstm_inputs = self.lockeddrop(lstm_inputs) # TODO: flair: drop -> worddrop -> lockeddrop
+        lstm_inputs = pack(lstm_inputs).data
 
         if self.input_transform:
             lstm_inputs = self.input_transform(lstm_inputs)
@@ -121,7 +123,10 @@ class NERTagger(nn.Module):
 
         # prediction layer
         lstm_outputs = self.drop(lstm_outputs)
+        lstm_outputs = pad(lstm_outputs)
+        lstm_outputs = self.lockeddrop(lstm_outputs)
+        lstm_outputs = pack(lstm_outputs).data
         logits = pad(self.tag_clf(lstm_outputs)).contiguous()
         loss, trans = self.crit(logits, word_mask, tags)
-
+        
         return loss, logits, trans
