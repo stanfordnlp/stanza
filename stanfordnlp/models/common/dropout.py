@@ -26,7 +26,8 @@ class WordDropout(nn.Module):
 
 class LockedDropout(nn.Module):
     """
-    Implementation of locked (or variational) dropout. Randomly drops out entire parameters in embedding space.
+    A variant of dropout layer that consistently drops out the same parameters over time. Also known as the variational dropout. 
+    This implentation was modified from the LockedDropout implementation in the flair library (https://github.com/zalandoresearch/flair).
     """
     def __init__(self, dropprob, batch_first=True, inplace=False):
         super().__init__()
@@ -39,12 +40,11 @@ class LockedDropout(nn.Module):
             return x
 
         if not self.batch_first:
-            m = x.data.new(1, x.size(1), x.size(2)).bernoulli_(1 - self.dropprob)
+            m = x.new_empty(1, x.size(1), x.size(2), requires_grad=False).bernoulli_(1 - self.dropprob)
         else:
-            m = x.data.new(x.size(0), 1, x.size(2)).bernoulli_(1 - self.dropprob)
+            m = x.new_empty(x.size(0), 1, x.size(2), requires_grad=False).bernoulli_(1 - self.dropprob)
 
-        mask = torch.autograd.Variable(m, requires_grad=False) / (1 - self.dropprob)
-        mask = mask.expand_as(x)
+        mask = m.div(1 - self.dropprob).expand_as(x)
         return mask * x
 
 class SequenceUnitDropout(nn.Module):

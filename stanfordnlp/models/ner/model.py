@@ -108,7 +108,7 @@ class NERTagger(nn.Module):
             lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
         lstm_inputs = self.drop(lstm_inputs)
         lstm_inputs = pad(lstm_inputs)
-        lstm_inputs = self.lockeddrop(lstm_inputs) # TODO: flair: drop -> worddrop -> lockeddrop
+        lstm_inputs = self.lockeddrop(lstm_inputs)
         lstm_inputs = pack(lstm_inputs).data
 
         if self.input_transform:
