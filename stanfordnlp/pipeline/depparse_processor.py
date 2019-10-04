@@ -18,7 +18,18 @@ class DepparseProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE, POS])
 
+    def __init__(self, config, pipeline, use_gpu):
+        self._preanalyzed = None
+        super().__init__(config, pipeline, use_gpu)
+
+    def _set_up_requires(self):
+        if self._preanalyzed:
+            self._requires = set()
+        else:
+            self._requires = self.__class__.REQUIRES_DEFAULT
+
     def _set_up_model(self, config, use_gpu):
+        self._preanalyzed = config.get('preanalyzed')
         self._pretrain = Pretrain(config['pretrain_path'])
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
