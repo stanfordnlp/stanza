@@ -23,7 +23,7 @@ EN_DOC_TOKENS_GOLD = """
 <Token index=1;words=[<Word index=1;text=He;lemma=he;upos=PRON;xpos=PRP;feats=Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs;governor=3;dependency_relation=nsubj:pass>]>
 <Token index=2;words=[<Word index=2;text=was;lemma=be;upos=AUX;xpos=VBD;feats=Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin;governor=3;dependency_relation=aux:pass>]>
 <Token index=3;words=[<Word index=3;text=elected;lemma=elect;upos=VERB;xpos=VBN;feats=Tense=Past|VerbForm=Part|Voice=Pass;governor=0;dependency_relation=root>]>
-<Token index=4;words=[<Word index=4;text=president;lemma=president;upos=NOUN;xpos=NN;feats=Number=Sing;governor=3;dependency_relation=obj>]>
+<Token index=4;words=[<Word index=4;text=president;lemma=president;upos=PROPN;xpos=NNP;feats=Number=Sing;governor=3;dependency_relation=xcomp>]>
 <Token index=5;words=[<Word index=5;text=in;lemma=in;upos=ADP;xpos=IN;feats=_;governor=6;dependency_relation=case>]>
 <Token index=6;words=[<Word index=6;text=2008;lemma=2008;upos=NUM;xpos=CD;feats=NumType=Card;governor=3;dependency_relation=obl>]>
 <Token index=7;words=[<Word index=7;text=.;lemma=.;upos=PUNCT;xpos=.;feats=_;governor=3;dependency_relation=punct>]>
@@ -46,7 +46,7 @@ EN_DOC_WORDS_GOLD = """
 <Word index=1;text=He;lemma=he;upos=PRON;xpos=PRP;feats=Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs;governor=3;dependency_relation=nsubj:pass>
 <Word index=2;text=was;lemma=be;upos=AUX;xpos=VBD;feats=Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin;governor=3;dependency_relation=aux:pass>
 <Word index=3;text=elected;lemma=elect;upos=VERB;xpos=VBN;feats=Tense=Past|VerbForm=Part|Voice=Pass;governor=0;dependency_relation=root>
-<Word index=4;text=president;lemma=president;upos=NOUN;xpos=NN;feats=Number=Sing;governor=3;dependency_relation=obj>
+<Word index=4;text=president;lemma=president;upos=PROPN;xpos=NNP;feats=Number=Sing;governor=3;dependency_relation=xcomp>
 <Word index=5;text=in;lemma=in;upos=ADP;xpos=IN;feats=_;governor=6;dependency_relation=case>
 <Word index=6;text=2008;lemma=2008;upos=NUM;xpos=CD;feats=NumType=Card;governor=3;dependency_relation=obl>
 <Word index=7;text=.;lemma=.;upos=PUNCT;xpos=.;feats=_;governor=3;dependency_relation=punct>
@@ -69,7 +69,7 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 ('He', '3', 'nsubj:pass')
 ('was', '3', 'aux:pass')
 ('elected', '0', 'root')
-('president', '3', 'obj')
+('president', '3', 'xcomp')
 ('in', '6', 'case')
 ('2008', '3', 'obl')
 ('.', '3', 'punct')
@@ -92,7 +92,7 @@ EN_DOC_CONLLU_GOLD = """
 1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	_
 2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	_
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	_
-4	president	president	NOUN	NN	Number=Sing	3	obj	_	_
+4	president	president	PROPN	NNP	Number=Sing	3	xcomp	_	_
 5	in	in	ADP	IN	_	6	case	_	_
 6	2008	2008	NUM	CD	NumType=Card	3	obl	_	_
 7	.	.	PUNCT	.	_	3	punct	_	_
