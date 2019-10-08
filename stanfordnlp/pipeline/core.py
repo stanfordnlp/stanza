@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_PROCESSORS_LIST = f'{TOKENIZE},{MWT},{POS},{LEMMA},{DEPPARSE}'
 
 NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
-        LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}
+                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}
 
 PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 
@@ -74,6 +74,7 @@ class PipelineRequirementsException(Exception):
 
     def __str__(self):
         return self.message
+
 
 class Pipeline:
 
@@ -159,6 +160,7 @@ class Pipeline:
         return doc
 
     def __call__(self, doc):
-        assert any([isinstance(doc, str), isinstance(doc, list)]), 'input should be either str or list'
+        assert any([isinstance(doc, str), isinstance(doc, list),
+                    isinstance(doc, Document)]), 'input should be either str, list or Document'
         doc = self.process(doc)
         return doc

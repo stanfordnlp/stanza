@@ -71,7 +71,7 @@ def test_depparse_with_preanalyzed_doc():
                                   'depparse_preanalyzed': True})
 
     doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PREANALYZED))
-    processed_doc = nlp.process(doc)
+    processed_doc = nlp(doc)
 
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join(
         [sent.dependencies_string() for sent in processed_doc.sentences])
