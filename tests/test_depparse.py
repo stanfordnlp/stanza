@@ -4,8 +4,8 @@ Basic tests of the depparse processor boolean flags
 import pytest
 
 import stanfordnlp
-from stanfordnlp.models.common.conll import CoNLLFile
 from stanfordnlp.pipeline.core import PipelineRequirementsException
+from stanfordnlp.utils.conll import CoNLL
 from tests import *
 
 # data for testing
@@ -70,10 +70,9 @@ def test_depparse_with_preanalyzed_doc():
     nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en',
                                   'depparse_preanalyzed': True})
 
-    doc = stanfordnlp.Document('')
-    doc.conll_file = CoNLLFile(input_str=EN_DOC_CONLLU_PREANALYZED)
+    doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PREANALYZED))
+    processed_doc = nlp.process(doc)
 
-    processed_doc = nlp(doc)
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join(
         [sent.dependencies_string() for sent in processed_doc.sentences])
 
