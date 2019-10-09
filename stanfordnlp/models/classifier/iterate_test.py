@@ -30,10 +30,7 @@ model_files = sorted(set(model_files))
 test_set = classifier.read_dataset(args.test_file, args.wordvec_type)
 print("Using test set: %s" % args.test_file)
 
-vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand)
-pretrain_file = '{}/{}.pretrain.pt'.format(args.save_dir, args.shorthand)
-pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
-print("Embedding shape: %s" % str(pretrain.emb.shape))
+pretrain = classifier.load_pretrain(args)
 
 device = None
 for load_name in model_files:
