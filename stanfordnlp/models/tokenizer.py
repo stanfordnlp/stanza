@@ -83,7 +83,7 @@ def main():
     args = vars(args)
     print("Running tokenizer in {} mode".format(args['mode']))
 
-    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric', 'end_of_para']
+    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
     args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
             else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
