@@ -62,7 +62,7 @@ class Pretrain:
         try:
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=lzma.open)
         except lzma.LZMAError as err:
-            logging.warning("Cannot decode vector file as xz file. Retrying as text file...")
+            logging.warning("Cannot decode vector file %s as xz file. Retrying as text file..." % self._vec_filename)
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=open)
 
         if failed > 0: # recover failure
