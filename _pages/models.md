@@ -31,7 +31,8 @@ If you are using a non-default treebank for the langauge, make sure to also spec
 
 ### Human Languages Supported by StanfordNLP
 
-Below is a list of all the (human) languages supported by StanfordNLP (through this Python neural pipeline). The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
+Below is a list of all the (human) languages supported by StanfordNLP (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
+The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
 
 **Notes**
 
