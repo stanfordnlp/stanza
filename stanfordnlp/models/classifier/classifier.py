@@ -316,7 +316,7 @@ def main():
     print("Training set has %d labels" % len(labels))
 
     vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand)
-    pretrain_file = '{}/{}.pretrain.pt'.format(args.save_dir, args.shorthand)
+    pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
     pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
     print("Embedding shape: %s" % str(pretrain.emb.shape))
 
