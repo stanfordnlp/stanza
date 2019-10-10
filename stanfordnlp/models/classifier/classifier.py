@@ -73,6 +73,9 @@ def parse_args():
 
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
 
+    parser.add_argument('--test_remap_labels', default=None, type=ast.literal_eval,
+                        help='Map of which label each classifier label should map to.  For example, "{0:0, 1:0, 3:1, 4:1}" to map a 5 class sentiment test to a 2 class.  Any labels not mapped will be considered wrong')
+
     args = parser.parse_args()
     return args
 
@@ -187,7 +190,8 @@ def shuffle_dataset(sorted_dataset):
     return dataset
 
 
-def score_dataset(model, dataset, label_map=None, device=None):
+def score_dataset(model, dataset, label_map=None, device=None,
+                  remap_labels=None):
     model.eval()
     if label_map is None:
         label_map = {x: y for (y, x) in enumerate(model.labels)}
@@ -206,7 +210,14 @@ def score_dataset(model, dataset, label_map=None, device=None):
         # TODO: confusion matrix, etc
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
-            if predicted.item() == expected_labels[i]:
+            predicted_label = predicted.item()
+            if remap_labels:
+                if predicted_label in remap_labels:
+                    predicted_label = remap_labels[predicted_label]
+                else:
+                    # if the label isn't something you're allow to predict, ocunt it wrong
+                    continue
+            if predicted_label == expected_labels[i]:
                 correct = correct + 1
     return correct
 
@@ -358,7 +369,7 @@ def main():
     print("Using test set: %s" % args.test_file)
     check_labels(model.labels, test_set)
 
-    correct = score_dataset(model, test_set)
+    correct = score_dataset(model, test_set, remap_labels=args.test_remap_labels)
     print("Test set: %d correct of %d examples.  Accuracy: %f" % 
           (correct, len(test_set), correct / len(test_set)))
 
