@@ -23,11 +23,47 @@ logger = logging.getLogger(__name__)
 #DEFAULT_DEV='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt'
 #DEFAULT_TEST='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt'
 
+#DEFAULT_TRAIN='extern_data/sentiment/sst-processed/threeclass/train-3class-phrases.txt'
+#DEFAULT_DEV='extern_data/sentiment/sst-processed/threeclass/dev-3class-roots.txt'
+#DEFAULT_TEST='extern_data/sentiment/sst-processed/threeclass/test-3class-roots.txt'
+
 DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
 DEFAULT_DEV='extern_data/sentiment/sst-processed/fiveclass/dev-roots.txt'
 DEFAULT_TEST='extern_data/sentiment/sst-processed/fiveclass/test-roots.txt'
 
+"""A script for training and testing classifier models, especially on the SST.
 
+If you run the script with no arguments, it will start trying to train
+a sentiment model.
+
+python stanfordnlp/models/classifier/classifier.py
+
+This requires the sentiment dataset to be in an `extern_data`
+directory, such as by symlinking it from somewhere else.
+
+The default model is a CNN where the word vectors are first mapped to
+channels with filters of a few different widths, those channels are
+maxpooled over the entire sentence, and then the resulting pools have
+fully connected layers until they reach the number of classes in the
+training data.  You can see the defaults in the options below.
+
+https://arxiv.org/abs/1408.5882
+
+(Currently the CNN is the only sentence classifier implemented.)
+
+You can train models with word vectors other than the default word2vec.  For example:
+
+ nohup python -u stanfordnlp/models/classifier/classifier.py  --wordvec_type google --wordvec_dir extern_data/google --max_epochs 200 --filter_channels 1000 --fc_shapes 200,100 --base_name FC21_google > FC21_google.out 2>&1 &
+
+A model trained on the 5 class dataset can be tested on the 2 class dataset with a command line like this:
+
+python -u stanfordnlp/models/classifier/classifier.py  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0189-ACC45.87.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
+
+A model trained on the 3 class dataset can be tested on the 2 class dataset with a command line like this:
+
+python -u stanfordnlp/models/classifier/classifier.py  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 2:1}"
+
+"""
 
 def convert_fc_shapes(arg):
     arg = arg.strip()
