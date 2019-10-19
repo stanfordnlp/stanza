@@ -66,9 +66,9 @@ def test_depparse():
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join([sent.dependencies_string() for sent in doc.sentences])
 
 
-def test_depparse_with_preanalyzed_doc():
+def test_depparse_with_pretagged_doc():
     nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en',
-                                  'depparse_preanalyzed': True})
+                                  'depparse_pretagged': True})
 
     doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PREANALYZED))
     processed_doc = nlp(doc)
@@ -77,6 +77,6 @@ def test_depparse_with_preanalyzed_doc():
         [sent.dependencies_string() for sent in processed_doc.sentences])
 
 
-def test_raises_requirements_exception_if_preanalyzed_not_passed():
+def test_raises_requirements_exception_if_pretagged_not_passed():
     with pytest.raises(PipelineRequirementsException):
         stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en'})

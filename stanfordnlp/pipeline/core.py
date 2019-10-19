@@ -35,7 +35,7 @@ PROCESSOR_SETTINGS = {
     MWT: ['batch_size', 'dict_only', 'ensemble_dict'],
     POS: ['batch_size'],
     LEMMA: ['batch_size', 'beam_size', 'dict_only', 'ensemble_dict', 'use_identity'],
-    DEPPARSE: ['batch_size', 'preanalyzed'],
+    DEPPARSE: ['batch_size', 'pretagged'],
     NER: ['batch_size']
 }
 
@@ -46,7 +46,7 @@ BOOLEAN_PROCESSOR_SETTINGS = {
     TOKENIZE: ['pretokenized'],
     MWT: ['dict_only', 'ensemble_dict'],
     LEMMA: ['dict_only', 'edit', 'ensemble_dict', 'use_identity'],
-    DEPPARSE: ['preanalyzed']
+    DEPPARSE: ['pretagged']
 }
 
 BOOLEAN_PROCESSOR_SETTINGS_LIST = \
