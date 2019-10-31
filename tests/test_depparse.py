@@ -11,7 +11,7 @@ from tests import *
 # data for testing
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."
 
-EN_DOC_CONLLU_PREANALYZED = """
+EN_DOC_CONLLU_PRETAGGED = """
 1	Barack	_	PROPN	NNP	Number=Sing	0	_	_	_
 2	Obama	_	PROPN	NNP	Number=Sing	1	_	_	_
 3	was	_	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	2	_	_	_
@@ -70,7 +70,7 @@ def test_depparse_with_pretagged_doc():
     nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en',
                                   'depparse_pretagged': True})
 
-    doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PREANALYZED))
+    doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PRETAGGED))
     processed_doc = nlp(doc)
 
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join(
