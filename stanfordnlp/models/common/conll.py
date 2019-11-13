@@ -34,7 +34,7 @@ class CoNLLFile():
         Load data into a list of sentences, where each sentence is a list of lines,
         and each line is a list of conllu fields.
         """
-        sents, cache = [], []
+        sents, cache, comments, comment_cache = [], [], [], []
         if self._from_str:
             infile = io.StringIO(self.file)
         else:
@@ -46,8 +46,11 @@ class CoNLLFile():
                     if len(cache) > 0:
                         sents.append(cache)
                         cache = []
+                        comments.append(comment_cache)
+                        comment_cache = []
                 else:
-                    if line.startswith('#'): # skip comment line
+                    if line.startswith('#'): # read comment line
+                        comment_cache.append(line)
                         continue
                     array = line.split('\t')
                     if self.ignore_gapping and '.' in array[0]:
@@ -56,7 +59,8 @@ class CoNLLFile():
                     cache += [array]
         if len(cache) > 0:
             sents.append(cache)
-        return sents
+            comments.append(comment_cache)
+        return sents, comments
 
     @property
     def file(self):
@@ -65,8 +69,14 @@ class CoNLLFile():
     @property
     def sents(self):
         if not hasattr(self, '_sents'):
-            self._sents = self.load_conll()
+            self._sents, self._comments = self.load_conll()
         return self._sents
+
+    @property
+    def comments(self):
+        if not hasattr(self, '_comments'):
+            self._sents, self._comments = self.load_conll()
+        return self._comments
 
     def __len__(self):
         return len(self.sents)
@@ -129,31 +139,37 @@ class CoNLLFile():
                 cidx += 1
         return
 
-    def write_conll(self, filename):
+    def write_conll(self, filename, include_comments=False):
         """ Write current conll contents to file.
         """
-        conll_string = self.conll_as_string()
+        conll_string = self.conll_as_string(include_comments=include_comments)
         with open(filename, 'w') as outfile:
             outfile.write(conll_string)
         return
 
-    def conll_as_string(self):
+    def conll_as_string(self, include_comments=False):
         """ Return current conll contents as string
         """
         return_string = ""
-        for sent in self.sents:
+        for sent, comments in zip(self.sents, self.comments):
+            if include_comments:
+                for ln in comments:
+                    return_string += ln+"\n"
             for ln in sent:
                 return_string += ("\t".join(ln)+"\n")
             return_string += "\n"
         return return_string
 
-    def write_conll_with_lemmas(self, lemmas, filename):
+    def write_conll_with_lemmas(self, lemmas, filename, include_comments=False):
         """ Write a new conll file, but use the new lemmas to replace the old ones."""
         assert self.num_words == len(lemmas), "Num of lemmas does not match the number in original data file."
         lemma_idx = FIELD_TO_IDX['lemma']
         idx = 0
         with open(filename, 'w') as outfile:
-            for sent in self.sents:
+            for sent, comments in zip(self.sents, self.comments):
+                if include_comments:
+                    for ln in comments:
+                        print(ln, file=outfile)
                 for ln in sent:
                     if '-' not in ln[0]: # do not process if it is a mwt line
                         lm = lemmas[idx]
@@ -203,12 +219,15 @@ class CoNLLFile():
 
         return cands
 
-    def write_conll_with_mwt_expansions(self, expansions, output_file):
+    def write_conll_with_mwt_expansions(self, expansions, output_file, include_comments=False):
         """ Expands MWTs predicted by the tokenizer and write to file. This method replaces the head column with a right branching tree. """
         idx = 0
         count = 0
 
-        for sent in self.sents:
+        for sent, comments in zip(self.sents, self.comments):
+            if include_comments:
+                for ln in comments:
+                    print(ln, file=output_file)
             for ln in sent:
                 idx += 1
                 if "MWT=Yes" not in ln[-1]:

@@ -51,9 +51,9 @@ class Document:
         """ Integrate info from the CoNLLFile instance. """
         self._sentences = [Sentence(token_list) for token_list in self.conll_file.sents]
 
-    def write_conll_to_file(self, file_path):
+    def write_conll_to_file(self, file_path, include_comments=False):
         """ Write conll contents to file. """
-        self.conll_file.write_conll(file_path)
+        self.conll_file.write_conll(file_path, include_comments=include_comments)
 
 class Sentence:
 

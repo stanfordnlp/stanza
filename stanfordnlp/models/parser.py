@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--include_comments', action="store_true", help='Copy comment lines from eval_file to output_file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -236,7 +237,7 @@ def evaluate(args):
 
     # write to file and score
     batch.conll.set(['head', 'deprel'], [y for x in preds for y in x])
-    batch.conll.write_conll(system_pred_file)
+    batch.conll.write_conll(system_pred_file, include_comments=args['include_comments'])
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

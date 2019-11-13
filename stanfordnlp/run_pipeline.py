@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--processors',
                         help='list of processors to run | default: "tokenize,mwt,pos,lemma,depparse"',
                         default='tokenize,mwt,pos,lemma,depparse')
+    parser.add_argument('--include_comments', action="store_true", help='Copy comment lines from eval_file to output_file.')
     # misc arguments
     parser.add_argument('--force-download', help='force download of models', action='store_true')
     # processor related arguments
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     print('running pipeline...')
     doc = pipeline(open(args.text_file).read())
     # write conll to file
-    doc.write_conll_to_file(output_file_path)
+    doc.write_conll_to_file(output_file_path, include_comments=args.include_comments)
     print('done.')
     print('results written to: '+output_file_path)
 
