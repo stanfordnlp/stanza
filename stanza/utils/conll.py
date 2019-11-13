@@ -3,6 +3,7 @@ Utility functions for the loading and conversion of CoNLL-format files.
 """
 import os
 import io
+from itertools import repeat
 
 FIELD_NUM = 10
 
@@ -24,19 +25,23 @@ class CoNLL:
     def load_conll(f, ignore_gapping=True):
         """ Load the file or string into the CoNLL-U format data.
         Input: file or string reader, where the data is in CoNLL-U format.
-        Output: a list of list of list for each token in each sentence in the data, where the innermost list represents 
-        all fields of a token.
+        Output: a tuple whose first element is a list of list of list for each token in each sentence in the data,
+        where the innermost list represents all fields of a token; and whose second element is a list of lists for each
+        comment in each sentence in the data.
         """
         # f is open() or io.StringIO()
-        doc, sent = [], []
+        doc, sent, doc_comments, sent_comments = [], [], [], []
         for line in f:
             line = line.strip()
             if len(line) == 0:
                 if len(sent) > 0:
                     doc.append(sent)
                     sent = []
+                    doc_comments.append(sent_comments)
+                    sent_comments = []
             else:
-                if line.startswith('#'): # skip comment line
+                if line.startswith('#'):  # read comment line
+                    sent_comments.append(line)
                     continue
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
@@ -46,7 +51,8 @@ class CoNLL:
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
-        return doc
+            doc_comments.append(sent_comments)
+        return doc, doc_comments
 
     @staticmethod
     def convert_conll(doc_conll):
@@ -92,9 +98,9 @@ class CoNLL:
             infile = io.StringIO(input_str)
         else:
             infile = open(input_file)
-        doc_conll = CoNLL.load_conll(infile, ignore_gapping)
+        doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
         doc_dict = CoNLL.convert_conll(doc_conll)
-        return doc_dict
+        return doc_dict, doc_comments
 
     @staticmethod
     def convert_dict(doc_dict):
@@ -129,21 +135,23 @@ class CoNLL:
         return token_conll
 
     @staticmethod
-    def conll_as_string(doc):
+    def conll_as_string(doc, comments=None):
         """ Dump the loaded CoNLL-U format list data to string. """
         return_string = ""
-        for sent in doc:
+        for sent, comments in zip(doc, comments or repeat([])):
+            for ln in comments:
+                return_string += (ln+"\n")
             for ln in sent:
                 return_string += ("\t".join(ln)+"\n")
             return_string += "\n"
         return return_string
     
     @staticmethod
-    def dict2conll(doc_dict, filename):
+    def dict2conll(doc_dict, filename, doc_comments=None):
         """ Convert the dictionary format input data to the CoNLL-U format output data and write to a file.
         """
         doc_conll = CoNLL.convert_dict(doc_dict)
-        conll_string = CoNLL.conll_as_string(doc_conll)
+        conll_string = CoNLL.conll_as_string(doc_conll, doc_comments)
         with open(filename, 'w') as outfile:
             outfile.write(conll_string)
         return
