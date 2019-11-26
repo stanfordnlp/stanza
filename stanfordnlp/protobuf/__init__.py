@@ -1,9 +1,11 @@
 from __future__ import absolute_import
 
 from io import BytesIO
+import warnings
 
 from google.protobuf.internal.encoder import _EncodeVarint
 from google.protobuf.internal.decoder import _DecodeVarint
+from google.protobuf.message import DecodeError
 from .CoreNLP_pb2 import *
 
 def parseFromDelimitedString(obj, buf, offset=0):
@@ -15,7 +17,11 @@ def parseFromDelimitedString(obj, buf, offset=0):
     @returns how many bytes of @buf were consumed.
     """
     size, pos = _DecodeVarint(buf, offset)
-    obj.ParseFromString(buf[offset+pos:offset+pos+size])
+    try:
+        obj.ParseFromString(buf[offset+pos:offset+pos+size])
+    except DecodeError as e:
+        warnings.warn("Failed to decode a serialized output from CoreNLP server. An incomplete or empty object will be returned.", \
+            RuntimeWarning)
     return pos+size
 
 def writeToDelimitedString(obj, stream=None):
