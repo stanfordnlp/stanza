@@ -529,7 +529,7 @@ class CoreNLPClient(RobustService):
         except json.JSONDecodeError:
             raise AnnotationException(r.text)
 
-                  
+
 def read_corenlp_props(props_path):
     """ Read a Stanford CoreNLP properties file into a dict """
     props_dict = {}
@@ -542,7 +542,6 @@ def read_corenlp_props(props_path):
                 k, v = entry_line.split('=', 1)
                 k, v= re.sub(r'\s', '', k), re.sub(r'\s', '', v)
                 props_dict[k] = v
-        print(props_dict)
         return props_dict
 
     else:
