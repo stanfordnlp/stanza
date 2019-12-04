@@ -540,7 +540,7 @@ def read_corenlp_props(props_path):
                  if entry_line.strip() and not entry_line.startswith('#')]
             for entry_line in entry_lines:
                 k, v = entry_line.split('=', 1)
-                k, v= re.sub(r'\s', '', k), re.sub(r'\s', '', v)
+                k, v = re.sub(r'\s', '', k), re.sub(r'\s', '', v)
                 props_dict[k] = v
         return props_dict
 
