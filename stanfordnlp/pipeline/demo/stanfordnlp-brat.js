@@ -500,7 +500,7 @@ function render(data, reverse) {
         var dependent = dep.dependent - 1;
         if (governor == -1) continue;
         addRelationType(dep.dep);
-        relations.push([name + '_' + sentI + '_' + i, dep.dep, [['governor', posID(governor)], ['dependent', posID(dependent)]]]);
+        relations.push([name + '_' + sentI + '_' + i, dep.dep, [['governor', uposID(governor)], ['dependent', uposID(dependent)]]]);
       }
       return relations;
     }
@@ -755,7 +755,7 @@ function render(data, reverse) {
     if (!useDagre) {
       embed('parse', cparseEntities, cparseRelations);
     }
-    embed('deps', posEntities, depsRelations);
+    embed('deps', uposEntities, depsRelations);
     embed('deps2', posEntities, deps2Relations);
     embed('coref', corefEntities, corefRelations);
     embed('openie', openieEntities, openieRelations);
