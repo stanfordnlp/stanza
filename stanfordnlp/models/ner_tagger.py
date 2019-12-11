@@ -64,6 +64,7 @@ def parse_args():
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
+    parser.add_argument('--min_lr', type=float, default=1e-4, help='Minimum learning rate to stop training.')
     parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD.')
     parser.add_argument('--lr_decay', type=float, default=0.9, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
@@ -165,7 +166,6 @@ def train(args):
             loss = trainer.update(batch, eval=False) # update step
             train_loss += loss
             if global_step % args['log_step'] == 0:
-                current_lr = trainer.optimizer.param_groups[0]['lr']
                 duration = time.time() - start_time
                 print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
                         max_steps, loss, duration, current_lr))
@@ -197,7 +197,8 @@ def train(args):
                     scheduler.step(dev_score)
             
             # check stopping
-            if global_step >= args['max_steps']:
+            current_lr = trainer.optimizer.param_groups[0]['lr']
+            if global_step >= args['max_steps'] or current_lr <= args['min_lr']:
                 should_stop = True
                 break
 
