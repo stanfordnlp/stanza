@@ -152,7 +152,7 @@ def train(args):
     # LR scheduling
     if args['lr_decay'] > 0:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'], \
-            patience=args['patience'], verbose=True, min_lr=1e-6)
+            patience=args['patience'], verbose=True, min_lr=args['min_lr'])
     else:
         scheduler = None
 
