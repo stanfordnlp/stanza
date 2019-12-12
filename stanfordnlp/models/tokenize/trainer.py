@@ -32,7 +32,7 @@ class Trainer(Trainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = optim.Adam(self.parameters, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
-        self.lang = self.args['lang'] # language determines how token normlization is done
+        self.lang = self.args['lang'] # language determines how token normalization is done
 
     def update(self, inputs):
         self.model.train()

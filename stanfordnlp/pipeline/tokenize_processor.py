@@ -53,6 +53,9 @@ class TokenizeProcessor(UDProcessor):
         return document
 
     def process(self, document):
+        assert isinstance(document, str) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
+            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string."
+
         if self.config.get('pretokenized'):
             raw_text = None
             document = self.process_pre_tokenized_text(document)
@@ -66,9 +69,12 @@ class TokenizeProcessor(UDProcessor):
                 data = paras_to_chunks(text, dummy_labels)
                 batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
             else:
+                if isinstance(document, list):
+                    document = '\n\n'.join(document)
                 batches = DataLoader(self.config, input_text=document, vocab=self.vocab, evaluation=True)
             # get dict data
             _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
-                                   orig_text = document)
+                                   orig_text = document,
+                                   no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
