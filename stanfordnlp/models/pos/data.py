@@ -16,7 +16,7 @@ class DataLoader:
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
-        self.sort_during_eval = sort_during_eval        
+        self.sort_during_eval = sort_during_eval
         self.doc = doc
 
         data = self.load_doc(self.doc)
@@ -26,7 +26,7 @@ class DataLoader:
             self.vocab = self.init_vocab(data)
         else:
             self.vocab = vocab
-        self.pretrain_vocab = pretrain.vocab
+        self.pretrain_vocab = pretrain.vocab if pretrain is not None else None
 
         # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -66,7 +66,10 @@ class DataLoader:
             processed_sent += [vocab['upos'].map([w[1] for w in sent])]
             processed_sent += [vocab['xpos'].map([w[2] for w in sent])]
             processed_sent += [vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [pretrain_vocab.map([w[0] for w in sent])]
+            if pretrain_vocab is not None:
+                processed_sent += [pretrain_vocab.map([w[0] for w in sent])]
+            else:
+                processed_sent += [[PAD_ID] * len(sent)]
             processed.append(processed_sent)
         return processed
 
@@ -117,7 +120,7 @@ class DataLoader:
         data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
         data = self.resolve_none(data)
         return data
-    
+
     def resolve_none(self, data):
         # replace None to '_'
         for sent_idx in range(len(data)):

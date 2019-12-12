@@ -38,7 +38,7 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb, share_hid=args['share_hid'])
+            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'])
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if self.use_cuda:
             self.model.cuda()
@@ -109,5 +109,5 @@ class Trainer(BaseTrainer):
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        self.model = Tagger(self.args, self.vocab, emb_matrix=pretrain.emb, share_hid=self.args['share_hid'])
+        self.model = Tagger(self.args, self.vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=self.args['share_hid'])
         self.model.load_state_dict(checkpoint['model'], strict=False)
