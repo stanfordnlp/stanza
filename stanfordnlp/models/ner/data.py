@@ -178,8 +178,8 @@ class DataLoader:
 
     def reshuffle(self):
         data = [y for x in self.data for y in x]
+        random.shuffle(data)
         self.data = self.chunk_batches(data)
-        random.shuffle(self.data)
 
     def chunk_batches(self, data):
         data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
