@@ -65,6 +65,7 @@ class CharacterLanguageModel(nn.Module):
         self.vocab = vocab
         self.is_forward_lm = is_forward_lm
         self.pad = pad
+        self.finetune = True # always finetune unless otherwise specified
 
         # char embeddings
         self.char_emb = nn.Embedding(len(self.vocab['char']), self.args['char_emb_dim'], padding_idx=None) # we use space as padding, so padding_idx is not necessary
@@ -102,6 +103,14 @@ class CharacterLanguageModel(nn.Module):
             if self.pad:
                 res = pad_packed_sequence(res, batch_first=True)[0]
         return res
+    
+    def train(self, mode=True):
+        """
+        Override the default train() function, so that when self.finetune == False, the training mode 
+        won't be impacted by the parent models' status change.
+        """
+        if self.finetune: # only set the mode in finetune status
+            super().train(mode)
 
     def save(self, filename):
         state = {
@@ -114,10 +123,11 @@ class CharacterLanguageModel(nn.Module):
         torch.save(state, filename)
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename, finetune=False):
         state = torch.load(filename, lambda storage, loc: storage)
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
         model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
+        model.finetune = finetune # set finetune status
         model.eval()
         return model
