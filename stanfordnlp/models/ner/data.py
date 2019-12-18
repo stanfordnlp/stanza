@@ -53,7 +53,7 @@ class DataLoader:
             assert 'vocab' in state_dict, "Cannot find vocab in charLM model file."
             return state_dict['vocab']
 
-        if not self.eval:
+        if self.eval:
             raise Exception("Vocab must exist for evaluation.")
         if self.args['charlm']:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
