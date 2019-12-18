@@ -155,7 +155,7 @@ class DataLoader:
 
     def load_doc(self, doc):
         data = doc.get([TEXT, NER], as_sentences=True)
-        if not self.preprocess_tags: # skip tag preprocessing
+        if self.preprocess_tags: # preprocess tags
             data = self.process_tags(data)
         return data
 
