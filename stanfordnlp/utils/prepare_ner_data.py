@@ -53,6 +53,8 @@ def load_conll03(filename, skip_doc_start=True):
                 example = process_cache(cached_lines)
                 examples.append(example)
                 cached_lines = []
+        if len(cached_lines) > 0:
+            examples.append(process_cache(cached_lines))
     return examples
 
 def process_cache(cached_lines):

@@ -7,17 +7,18 @@ from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
 from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
-from stanfordnlp.models.ner.utils import is_bio_scheme, convert_tags_to_bioes
+from stanfordnlp.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
 
 logger = logging.getLogger(__name__)
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
         self.doc = doc
+        self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
         self.tags = [[w[1] for w in sent] for sent in data]
@@ -52,7 +53,8 @@ class DataLoader:
             assert 'vocab' in state_dict, "Cannot find vocab in charLM model file."
             return state_dict['vocab']
 
-        assert self.eval == False # for eval vocab must exist
+        if not self.eval:
+            raise Exception("Vocab must exist for evaluation.")
         if self.args['charlm']:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
         else: 
@@ -153,7 +155,7 @@ class DataLoader:
 
     def load_doc(self, doc):
         data = doc.get([TEXT, NER], as_sentences=True)
-        if not self.eval:
+        if not self.preprocess_tags: # skip tag preprocessing
             data = self.process_tags(data)
         return data
 
@@ -169,10 +171,13 @@ class DataLoader:
         for sent in sentences:
             words, tags = zip(*sent)
             # NER field sanity checking
-            if not self.eval and any([x is None or x == '_' for x in tags]):
-                raise Exception("NER tag not found for some input data during training.")
+            if any([x is None or x == '_' for x in tags]):
+                raise Exception("NER tag not found for some input data.")
+            # first ensure BIO2 scheme
+            tags = to_bio2(tags)
+            # then convert to BIOES
             if convert_to_bioes:
-                tags = convert_tags_to_bioes(tags)
+                tags = bio2_to_bioes(tags)
             res.append([[w,t] for w,t in zip(words, tags)])
         return res
 
