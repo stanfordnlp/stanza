@@ -23,17 +23,19 @@ class WordDropout(nn.Module):
             res = res + dropmask.float() * replacement
 
         return res
+    
+    def extra_repr(self):
+        return 'p={}'.format(self.dropprob)
 
 class LockedDropout(nn.Module):
     """
     A variant of dropout layer that consistently drops out the same parameters over time. Also known as the variational dropout. 
     This implentation was modified from the LockedDropout implementation in the flair library (https://github.com/zalandoresearch/flair).
     """
-    def __init__(self, dropprob, batch_first=True, inplace=False):
+    def __init__(self, dropprob, batch_first=True):
         super().__init__()
         self.dropprob = dropprob
         self.batch_first = batch_first
-        self.inplace = inplace
 
     def forward(self, x):
         if not self.training or self.dropprob == 0:
@@ -46,6 +48,9 @@ class LockedDropout(nn.Module):
 
         mask = m.div(1 - self.dropprob).expand_as(x)
         return mask * x
+    
+    def extra_repr(self):
+        return 'p={}'.format(self.dropprob)
 
 class SequenceUnitDropout(nn.Module):
     """ A unit dropout layer that's designed for input of sequence units (e.g., word sequence, char sequence, etc.).
@@ -64,4 +69,7 @@ class SequenceUnitDropout(nn.Module):
         dropmask = torch.rand(*masksize, device=x.device) < self.dropprob
         res = x.masked_fill(dropmask, self.replacement_id)
         return res
+    
+    def extra_repr(self):
+        return 'p={}, replacement_id={}'.format(self.dropprob, self.replacement_id)
 
