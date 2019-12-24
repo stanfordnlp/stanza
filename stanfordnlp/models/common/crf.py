@@ -14,10 +14,10 @@ class CRFLoss(nn.Module):
     Calculate log-space crf loss, given unary potentials, a transition matrix
     and gold tag sequences.
     """
-    def __init__(self, num_tag, size_average=False):
+    def __init__(self, num_tag, batch_average=True):
         super().__init__()
         self._transitions = nn.Parameter(torch.zeros(num_tag, num_tag))
-        self._size_average = size_average
+        self._batch_average = batch_average # if not batch average, average on all tokens
 
     def forward(self, inputs, masks, tag_indices):
         """
@@ -36,7 +36,9 @@ class CRFLoss(nn.Module):
         log_norm = self.crf_log_norm(inputs, masks, tag_indices)
         log_likelihood = unary_scores + binary_scores - log_norm # batch_size
         loss = torch.sum(-log_likelihood)
-        if self._size_average:
+        if self._batch_average:
+            loss = loss / self.bs
+        else:
             total = masks.eq(0).sum()
             loss = loss / (total + 1e-8)
         return loss, self._transitions

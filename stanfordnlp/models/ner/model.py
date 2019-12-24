@@ -4,8 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from stanfordnlp.models.common.biaffine import BiaffineScorer
-from stanfordnlp.models.common.hlstm import HighwayLSTM
 from stanfordnlp.models.common.packed_lstm import PackedLSTM
 from stanfordnlp.models.common.dropout import WordDropout, LockedDropout
 from stanfordnlp.models.common.char_model import CharacterModel, CharacterLanguageModel
@@ -43,8 +41,8 @@ class NERTagger(nn.Module):
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
             input_size += self.args['char_hidden_dim'] * 2
         
-        # optionally add a input transformation layer for charlm
-        if self.args.get('input_transform', False) and self.args['charlm']:
+        # optionally add a input transformation layer
+        if self.args.get('input_transform', False):
             self.input_transform = nn.Linear(input_size, input_size)
         else:
             self.input_transform = None
@@ -52,9 +50,10 @@ class NERTagger(nn.Module):
         # recurrent layers
         self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, \
                 bidirectional=True, dropout=0 if self.args['num_layers'] == 1 else self.args['dropout'])
-        self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
-        self.taggerlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
-        self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
+        # self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
+        self.drop_replacement = None
+        self.taggerlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
+        self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
 
         # tag classifier
         num_tag = len(self.vocab['tag'])
@@ -62,7 +61,7 @@ class NERTagger(nn.Module):
         self.tag_clf.bias.data.zero_()
 
         # criterion
-        self.crit = CRFLoss(num_tag, size_average=True)
+        self.crit = CRFLoss(num_tag)
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
