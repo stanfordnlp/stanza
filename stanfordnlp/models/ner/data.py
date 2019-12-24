@@ -119,7 +119,7 @@ class DataLoader:
             chars_forward.append(chars_forward_tmp)
             chars_backward.append(chars_backward_tmp)
             charoffsets_forward.append(charoffsets_forward_tmp)
-            charoffsets_backward.append(charoffsets_backward_tmp)
+            charoffsets_backward.append(charoffsets_backward_tmp[::-1])
         charlens = [len(sent) for sent in chars_forward]
 
         chars_sorted, char_orig_idx = sort_all([chars_forward, chars_backward, charoffsets_forward, charoffsets_backward], charlens)
