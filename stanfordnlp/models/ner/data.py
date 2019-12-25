@@ -98,56 +98,35 @@ class DataLoader:
         assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[int]]
 
         # sort sentences by lens for easy RNN operations
-        lens = [len(x) for x in batch[0]]
-        batch, orig_idx = sort_all(batch, lens)
+        sentlens = [len(x) for x in batch[0]]
+        batch, orig_idx = sort_all(batch, sentlens)
+        sentlens = [len(x) for x in batch[0]]
 
-        # get char-LM representations
-        start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ')
-        start_offset, end_offset = 1, 1
-        chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = [], [], [], []
-        for sent in batch[1]:
-            chars_forward_tmp, chars_backward_tmp = [start_id], [start_id]
-            charoffsets_forward_tmp, charoffsets_backward_tmp = [], []
-            for word in sent:
-                chars_forward_tmp += word
-                charoffsets_forward_tmp += [len(chars_forward_tmp)]
-                chars_forward_tmp += [end_id]
-            for word in sent[::-1]:
-                chars_backward_tmp += word[::-1]
-                charoffsets_backward_tmp += [len(chars_backward_tmp)]
-                chars_backward_tmp += [end_id]
-            chars_forward.append(chars_forward_tmp)
-            chars_backward.append(chars_backward_tmp)
-            charoffsets_forward.append(charoffsets_forward_tmp)
-            charoffsets_backward.append(charoffsets_backward_tmp[::-1])
-        charlens = [len(sent) for sent in chars_forward]
-
+        # sort chars by lens for easy char-LM operations
+        chars_forward, chars_backward, charoffsets_forward, charoffsets_backward, charlens = self.process_chars(batch[1])
         chars_sorted, char_orig_idx = sort_all([chars_forward, chars_backward, charoffsets_forward, charoffsets_backward], charlens)
         chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = chars_sorted
-        charlens = [len(sent) for sent in chars_forward] # actual char length
-
-        chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=end_id)
-        chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=end_id)
-        chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)]) # padded forward and backward char idx
-        charoffsets = [charoffsets_forward, charoffsets_backward] # idx for forward and backward lm to get word representation
+        charlens = [len(sent) for sent in chars_forward]
 
         # sort words by lens for easy char-RNN operations
         batch_words = [w for sent in batch[1] for w in sent]
-        word_lens = [len(x) for x in batch_words]
-        batch_words, word_orig_idx = sort_all([batch_words], word_lens)
+        wordlens = [len(x) for x in batch_words]
+        batch_words, word_orig_idx = sort_all([batch_words], wordlens)
         batch_words = batch_words[0]
-        word_lens = [len(x) for x in batch_words]
+        wordlens = [len(x) for x in batch_words]
 
         # convert to tensors
-        words = batch[0]
-        words = get_long_tensor(words, batch_size)
+        words = get_long_tensor(batch[0], batch_size)
         words_mask = torch.eq(words, PAD_ID)
-        wordchars = get_long_tensor(batch_words, len(word_lens))
+        wordchars = get_long_tensor(batch_words, len(wordlens))
         wordchars_mask = torch.eq(wordchars, PAD_ID)
-
+        chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=self.vocab['char'].unit2id(' '))
+        chars_backward = get_long_tensor(chars_backward, batch_size, pad_id=self.vocab['char'].unit2id(' '))
+        chars = torch.cat([chars_forward.unsqueeze(0), chars_backward.unsqueeze(0)]) # padded forward and backward char idx
+        charoffsets = [charoffsets_forward, charoffsets_backward] # idx for forward and backward lm to get word representation
         tags = get_long_tensor(batch[2], batch_size)
-        sentlens = [len(x) for x in batch[0]]
-        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, word_lens, charlens, charoffsets
+
+        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -180,6 +159,31 @@ class DataLoader:
                 tags = bio2_to_bioes(tags)
             res.append([[w,t] for w,t in zip(words, tags)])
         return res
+
+    def process_chars(self, sents):
+        start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # special token
+        start_offset, end_offset = 1, 1
+        chars_forward, chars_backward, charoffsets_forward, charoffsets_backward = [], [], [], []
+        # get char representation for each sentence
+        for sent in sents:
+            chars_forward_sent, chars_backward_sent, charoffsets_forward_sent, charoffsets_backward_sent = [start_id], [start_id], [], []
+            # forward lm
+            for word in sent:
+                chars_forward_sent += word
+                charoffsets_forward_sent = charoffsets_forward_sent + [len(chars_forward_sent)] # add each token offset in the last for forward lm
+                chars_forward_sent += [end_id]
+            # backward lm
+            for word in sent[::-1]:
+                chars_backward_sent += word[::-1]
+                charoffsets_backward_sent = [len(chars_backward_sent)] + charoffsets_backward_sent # add each offset in the first for backward lm
+                chars_backward_sent += [end_id]
+            # store each sentence
+            chars_forward.append(chars_forward_sent)
+            chars_backward.append(chars_backward_sent)
+            charoffsets_forward.append(charoffsets_forward_sent)
+            charoffsets_backward.append(charoffsets_backward_sent)
+        charlens = [len(sent) for sent in chars_forward] # forward lm and backward lm should have the same lengths
+        return chars_forward, chars_backward, charoffsets_forward, charoffsets_backward, charlens
 
     def reshuffle(self):
         data = [y for x in self.data for y in x]
