@@ -167,7 +167,7 @@ class Trainer(object):
         return skip
 
     def ensemble(self, pairs, other_preds):
-        """ Ensemble the dict with statitical model predictions. """
+        """ Ensemble the dict with statistical model predictions. """
         lemmas = []
         assert len(pairs) == len(other_preds)
         for p, pred in zip(pairs, other_preds):
