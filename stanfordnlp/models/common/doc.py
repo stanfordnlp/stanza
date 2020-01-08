@@ -674,7 +674,7 @@ class Word:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}

@@ -11,6 +11,7 @@ import os
 import time
 from datetime import datetime
 import argparse
+import logging
 import numpy as np
 import random
 import json
@@ -26,6 +27,8 @@ from stanfordnlp.utils.conll import CoNLL
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models import _training_logging
 
+logger = logging.getLogger(__name__)
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
@@ -38,31 +41,40 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
-    parser.add_argument('--hidden_dim', type=int, default=100)
-    parser.add_argument('--char_hidden_dim', type=int, default=25)
+    parser.add_argument('--hidden_dim', type=int, default=256)
+    parser.add_argument('--char_hidden_dim', type=int, default=100)
     parser.add_argument('--word_emb_dim', type=int, default=100)
-    parser.add_argument('--char_emb_dim', type=int, default=25)
+    parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--pretrain_max_vocab', type=int, default=500000)
     parser.add_argument('--word_dropout', type=float, default=0)
+    parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")
+    parser.add_argument('--char_dropout', type=float, default=0, help="Character-level language model dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using character-level language model.")
+    parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in charater model.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
+    parser.add_argument('--no_emb_finetune', dest='emb_finetune', action='store_false', help="Turn off finetuning of the embedding matrix.")
+    parser.add_argument('--no_input_transform', dest='input_transform', action='store_false', help="Do not use input transformation layer before tagger lstm.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
-    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD.')
-    parser.add_argument('--lr_decay', type=float, default=0.9, help="LR decay rate.")
+    parser.add_argument('--min_lr', type=float, default=1e-4, help='Minimum learning rate to stop training.')
+    parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
+    parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
-    parser.add_argument('--max_steps', type=int, default=50000)
+    parser.add_argument('--max_steps', type=int, default=200000)
     parser.add_argument('--eval_interval', type=int, default=500)
-    parser.add_argument('--batch_size', type=int, default=20)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
@@ -86,7 +98,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running tagger in {} mode".format(args['mode']))
+    logger.info("Running tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -106,8 +118,16 @@ def train(args):
     # do not save pretrained embeddings individually
     pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
+    if args['charlm']:
+        if args['charlm_shorthand'] is None: 
+            logger.info("CharLM Shorthand is required for loading pretrained CharLM model...")
+            sys.exit(0)
+        logger.info('Use pretrained contextualized char embedding')
+        args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
@@ -117,11 +137,12 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
+        logger.info("Skip training because no data available...")
         sys.exit(0)
 
-    print("Training tagger...")
+    logger.info("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    logger.info(trainer.model)
 
     global_step = 0
     max_steps = args['max_steps']
@@ -134,7 +155,7 @@ def train(args):
     # LR scheduling
     if args['lr_decay'] > 0:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'], \
-            patience=args['patience'], verbose=True, min_lr=1e-6)
+            patience=args['patience'], verbose=True, min_lr=args['min_lr'])
     else:
         scheduler = None
 
@@ -148,39 +169,39 @@ def train(args):
             loss = trainer.update(batch, eval=False) # update step
             train_loss += loss
             if global_step % args['log_step'] == 0:
-                current_lr = trainer.optimizer.param_groups[0]['lr']
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
+                logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
                         max_steps, loss, duration, current_lr))
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
-                print("Evaluating on dev set...")
+                logger.info("Evaluating on dev set...")
                 dev_preds = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                _, _, dev_score = scorer.score_by_chunk(dev_gold_tags, dev_preds, scheme=args['scheme'].lower())
+                _, _, dev_score = scorer.score_by_chunk(dev_gold_tags, dev_preds, scheme=args['scheme'].lower(), logger=logger)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
                 train_loss = 0
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     trainer.save(model_file)
-                    print("new best model saved.")
+                    logger.info("New best model saved.")
                     best_dev_preds = dev_preds
 
                 dev_score_history += [dev_score]
-                print("")
+                logger.info("")
 
                 # lr schedule
                 if scheduler is not None:
                     scheduler.step(dev_score)
             
             # check stopping
-            if global_step >= args['max_steps']:
+            current_lr = trainer.optimizer.param_groups[0]['lr']
+            if global_step >= args['max_steps'] or current_lr <= args['min_lr']:
                 should_stop = True
                 break
 
@@ -189,10 +210,10 @@ def train(args):
 
         train_batch.reshuffle()
 
-    print("Training ended with {} steps.".format(global_step))
+    logger.info("Training ended with {} steps.".format(global_step))
 
     best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    logger.info("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
 
 def evaluate(args):
     # file paths
@@ -210,20 +231,20 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(json.load(open(args['eval_file'])))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
     
-    print("Start evaluation...")
+    logger.info("Start evaluation...")
     preds = []
     for i, b in enumerate(batch):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
-    _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower())
+    _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower(), logger=logger)
 
-    print("Tagger score:")
-    print("{} {:.2f}".format(args['shorthand'], score*100))
+    logger.info("Tagger score:")
+    logger.info("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

@@ -4,7 +4,6 @@ Processor for performing named entity tagging.
 import logging
 
 from stanfordnlp.models.common import doc
-from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.models.common.utils import unsort
 from stanfordnlp.models.ner.data import DataLoader
 from stanfordnlp.models.ner.trainer import Trainer
@@ -22,11 +21,13 @@ class NERProcessor(UDProcessor):
 
     def _set_up_model(self, config, use_gpu):
         # set up trainer
-        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        args = {'charlm_forward_file': config['charlm_forward_file'], 'charlm_backward_file': config['charlm_backward_file']}
+        self._trainer = Trainer(args=args, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
+        # set up a eval-only data loader and skip tag preprocessing
         batch = DataLoader(
-            document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+            document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True, preprocess_tags=False)
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)

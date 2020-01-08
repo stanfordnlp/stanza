@@ -66,7 +66,8 @@ class DataLoader:
             processed_sent += [vocab['upos'].map([w[1] for w in sent])]
             processed_sent += [vocab['xpos'].map([w[2] for w in sent])]
             processed_sent += [vocab['feats'].map([w[3] for w in sent])]
-            processed_sent += [pretrain_vocab.map([w[0] for w in sent])]
+            # always use lowercase lookup in pretrained vocab
+            processed_sent += [pretrain_vocab.map([w[0].lower() for w in sent])]
             processed.append(processed_sent)
         return processed
 

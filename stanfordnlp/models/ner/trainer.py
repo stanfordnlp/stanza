@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """
     if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:5]]
+        inputs = [b.cuda() if b is not None else None for b in batch[:6]]
     else:
-        inputs = batch[:5]
-    orig_idx = batch[5]
-    word_orig_idx = batch[6]
-    sentlens = batch[7]
-    wordlens = batch[8]
-    return inputs, orig_idx, word_orig_idx, sentlens, wordlens
+        inputs = batch[:6]
+    orig_idx = batch[6]
+    word_orig_idx = batch[7]
+    char_orig_idx = batch[8]
+    sentlens = batch[9]
+    wordlens = batch[10]
+    charlens = batch[11]
+    charoffsets = batch[12]
+    return inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -33,7 +36,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file)
+            self.load(model_file, args)
         else:
             assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
@@ -48,15 +51,15 @@ class Trainer(BaseTrainer):
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags = inputs
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
+        word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         if eval:
             self.model.eval()
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
+        loss, _, _ = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -67,12 +70,12 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, self.use_cuda)
-        word, word_mask, wordchars, wordchars_mask, tags = inputs
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
+        word, word_mask, wordchars, wordchars_mask, chars, tags = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens)
+        _, logits, trans = self.model(word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx)
 
         # decode
         trans = trans.data.cpu().numpy()
@@ -108,13 +111,14 @@ class Trainer(BaseTrainer):
         except:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename):
+    def load(self, filename, args=None):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
             sys.exit(1)
         self.args = checkpoint['config']
+        if args: self.args.update(args)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = NERTagger(self.args, self.vocab)
         self.model.load_state_dict(checkpoint['model'], strict=False)
