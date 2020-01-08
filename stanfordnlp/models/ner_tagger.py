@@ -41,13 +41,13 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
-    parser.add_argument('--hidden_dim', type=int, default=100)
-    parser.add_argument('--char_hidden_dim', type=int, default=25)
+    parser.add_argument('--hidden_dim', type=int, default=256)
+    parser.add_argument('--char_hidden_dim', type=int, default=100)
     parser.add_argument('--word_emb_dim', type=int, default=100)
-    parser.add_argument('--char_emb_dim', type=int, default=25)
+    parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--pretrain_max_vocab', type=int, default=500000)
     parser.add_argument('--word_dropout', type=float, default=0)
     parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
@@ -56,25 +56,25 @@ def parse_args():
     parser.add_argument('--char_dropout', type=float, default=0, help="Character-level language model dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
     parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using character-level language model.")
-    parser.add_argument('--input_transform', action='store_true', help="Add an input transformation layer before tagger lstm; only works when charlm is used")
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in charater model.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
     parser.add_argument('--no_emb_finetune', dest='emb_finetune', action='store_false', help="Turn off finetuning of the embedding matrix.")
+    parser.add_argument('--no_input_transform', dest='input_transform', action='store_false', help="Do not use input transformation layer before tagger lstm.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
     parser.add_argument('--min_lr', type=float, default=1e-4, help='Minimum learning rate to stop training.')
-    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SGD.')
-    parser.add_argument('--lr_decay', type=float, default=0.9, help="LR decay rate.")
+    parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
+    parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
-    parser.add_argument('--max_steps', type=int, default=50000)
+    parser.add_argument('--max_steps', type=int, default=200000)
     parser.add_argument('--eval_interval', type=int, default=500)
-    parser.add_argument('--batch_size', type=int, default=20)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
@@ -106,7 +106,6 @@ def main():
         evaluate(args)
 
 def train(args):
-
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
@@ -143,6 +142,7 @@ def train(args):
 
     logger.info("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    logger.info(trainer.model)
 
     global_step = 0
     max_steps = args['max_steps']
