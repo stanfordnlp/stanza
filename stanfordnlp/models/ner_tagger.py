@@ -11,6 +11,7 @@ import os
 import time
 from datetime import datetime
 import argparse
+import logging
 import numpy as np
 import random
 import json
@@ -25,6 +26,8 @@ from stanfordnlp.models.common.pretrain import Pretrain
 from stanfordnlp.utils.conll import CoNLL
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models import _training_logging
+
+logger = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -95,7 +98,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running tagger in {} mode".format(args['mode']))
+    logger.info("Running tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -118,14 +121,14 @@ def train(args):
 
     if args['charlm']:
         if args['charlm_shorthand'] is None: 
-            print("CharLM Shorthand is required for loading pretrained CharLM model...")
+            logger.info("CharLM Shorthand is required for loading pretrained CharLM model...")
             sys.exit(0)
-        print('Use pretrained contextualized char embedding')
+        logger.info('Use pretrained contextualized char embedding')
         args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
         args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
@@ -135,10 +138,10 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
+        logger.info("Skip training because no data available...")
         sys.exit(0)
 
-    print("Training tagger...")
+    logger.info("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
 
     global_step = 0
@@ -167,30 +170,30 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
+                logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
                         max_steps, loss, duration, current_lr))
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
-                print("Evaluating on dev set...")
+                logger.info("Evaluating on dev set...")
                 dev_preds = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                _, _, dev_score = scorer.score_by_chunk(dev_gold_tags, dev_preds, scheme=args['scheme'].lower())
+                _, _, dev_score = scorer.score_by_chunk(dev_gold_tags, dev_preds, scheme=args['scheme'].lower(), logger=logger)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
                 train_loss = 0
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     trainer.save(model_file)
-                    print("new best model saved.")
+                    logger.info("New best model saved.")
                     best_dev_preds = dev_preds
 
                 dev_score_history += [dev_score]
-                print("")
+                logger.info("")
 
                 # lr schedule
                 if scheduler is not None:
@@ -207,10 +210,10 @@ def train(args):
 
         train_batch.reshuffle()
 
-    print("Training ended with {} steps.".format(global_step))
+    logger.info("Training ended with {} steps.".format(global_step))
 
     best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    logger.info("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
 
 def evaluate(args):
     # file paths
@@ -228,20 +231,20 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(json.load(open(args['eval_file'])))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
     
-    print("Start evaluation...")
+    logger.info("Start evaluation...")
     preds = []
     for i, b in enumerate(batch):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
-    _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower())
+    _, _, score = scorer.score_by_chunk(gold_tags, preds, scheme=loaded_args['scheme'].lower(), logger=logger)
 
-    print("Tagger score:")
-    print("{} {:.2f}".format(args['shorthand'], score*100))
+    logger.info("Tagger score:")
+    logger.info("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

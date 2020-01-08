@@ -4,13 +4,16 @@ BIOES tagging scheme.
 """
 import sys
 import os
+import logging
 from collections import Counter
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_EMPTY_TAG = 'O'
 BIO = 'bio'
 BIOES = 'bioes'
 
-def score_by_token(gold_tags, predicted_tags, verbose=True, empty_tag=DEFAULT_EMPTY_TAG):
+def score_by_token(gold_tags, predicted_tags, verbose=True, empty_tag=DEFAULT_EMPTY_TAG, logger=logger):
     """ Score predicted sequences based on gold sequences at the token level.
     """
     correct_by_tag = Counter()
@@ -41,11 +44,11 @@ def score_by_token(gold_tags, predicted_tags, verbose=True, empty_tag=DEFAULT_EM
     if prec_micro + rec_micro > 0:
         f_micro = 2.0 * prec_micro * rec_micro / (prec_micro + rec_micro)
     if verbose:
-        print("P\tR\tF1")
-        print("{:.2f}\t{:.2f}\t{:.2f}".format(prec_micro*100, rec_micro*100, f_micro*100))
+        logger.info("P\tR\tF1")
+        logger.info("{:.2f}\t{:.2f}\t{:.2f}".format(prec_micro*100, rec_micro*100, f_micro*100))
     return prec_micro, rec_micro, f_micro
 
-def score_by_chunk(gold_tags, predicted_tags, scheme=BIO, verbose=True, empty_tag=DEFAULT_EMPTY_TAG):
+def score_by_chunk(gold_tags, predicted_tags, scheme=BIO, verbose=True, empty_tag=DEFAULT_EMPTY_TAG, logger=logger):
     """ Score predicted sequences based on gold sequences at the entity level.
     """
     assert(len(gold_tags) == len(predicted_tags))
@@ -78,8 +81,8 @@ def score_by_chunk(gold_tags, predicted_tags, scheme=BIO, verbose=True, empty_ta
     if prec_micro + rec_micro > 0:
         f_micro = 2.0 * prec_micro * rec_micro / (prec_micro + rec_micro)
     if verbose:
-        print("P\tR\tF1")
-        print("{:.2f}\t{:.2f}\t{:.2f}".format(prec_micro*100, rec_micro*100, f_micro*100))
+        logger.info("P\tR\tF1")
+        logger.info("{:.2f}\t{:.2f}\t{:.2f}".format(prec_micro*100, rec_micro*100, f_micro*100))
     return prec_micro, rec_micro, f_micro
 
 def get_chunks_from_bio(tag_sequences, empty_tag):
