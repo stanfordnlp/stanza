@@ -34,7 +34,6 @@ class Trainer(BaseTrainer):
             # load everything from file
             self.load(pretrain, model_file)
         else:
-            assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
             self.args = args
             self.vocab = vocab
