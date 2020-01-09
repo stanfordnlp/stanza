@@ -109,7 +109,7 @@ def train(args):
     # load pretrained vectors
     vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
     pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab']) if args['pretrain'] else None
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
@@ -212,7 +212,7 @@ def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_parser.pt'.format(args['save_dir'], args['shorthand'])
     pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    
+
     # load pretrain
     pretrain = Pretrain(pretrain_file)
 

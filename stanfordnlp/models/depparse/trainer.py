@@ -35,11 +35,10 @@ class Trainer(BaseTrainer):
             # load everything from file
             self.load(pretrain, model_file)
         else:
-            assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Parser(args, vocab, emb_matrix=pretrain.emb)
+            self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if self.use_cuda:
             self.model.cuda()
@@ -107,6 +106,6 @@ class Trainer(BaseTrainer):
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        self.model = Parser(self.args, self.vocab, emb_matrix=pretrain.emb)
+        self.model = Parser(self.args, self.vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
