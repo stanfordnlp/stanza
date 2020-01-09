@@ -153,7 +153,7 @@ class Parser(nn.Module):
             dist_kld = -torch.log((dist_target.float() - dist_pred)**2/2 + 1)
             unlabeled_scores += dist_kld.detach()
 
-        diag = torch.eye(head.size(-1)+1, dtype=torch.uint8, device=head.device).unsqueeze(0)
+        diag = torch.eye(head.size(-1)+1, dtype=torch.bool, device=head.device).unsqueeze(0)
         unlabeled_scores.masked_fill_(diag, -float('inf'))
 
         preds = []
