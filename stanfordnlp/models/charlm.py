@@ -48,7 +48,7 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def build_vocab(path): 
+def build_vocab(path, cutoff=0):
     # Requires a large amount of memeory, but only need to build once
     if os.path.isdir(path):
         # here we need some trick to deal with excessively large files
@@ -60,12 +60,17 @@ def build_vocab(path):
             lines = open(path + '/' + filename).readlines()
             for line in lines:
                 counter.update(list(line))
+        # remove infrequent characters from vocab
+        for k in list(counter.keys()):
+            if counter[k] < cutoff:
+                del counter[k]
         # a singleton list of all characters
         data = [sorted([x[0] for x in counter.most_common()])]
+        vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     else:
         lines = open(path).readlines() # reserve '\n'
         data = [list(line) for line in lines]
-    vocab = CharVocab(data)
+        vocab = CharVocab(data, cutoff=cutoff)
     return vocab
 
 def load_file(path, vocab, direction):
@@ -113,6 +118,7 @@ def parse_args():
     parser.add_argument('--patience', type=int, default=10, help="Patience for annealing the learning rate")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--momentum', type=float, default=0.0, help='Momentum for SGD.')
+    parser.add_argument('--cutoff', type=int, default=1000, help="Frequency cutoff for char vocab. By default we assume a very large corpus.")
     
     parser.add_argument('--report_steps', type=int, default=50, help="Update step interval to report loss")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
@@ -231,7 +237,7 @@ def train(args):
         vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
     else:
         logging.info('Building and saving vocab')
-        vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'])}
+        vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
 
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)

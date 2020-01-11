@@ -7,9 +7,12 @@ class CharVocab(BaseVocab):
     def build_vocab(self):
         if type(self.data[0][0]) is list: # general data from DataLoader
             counter = Counter([c for sent in self.data for w in sent for c in w[self.idx]])
-        else: # data from Char LM
+            for k in list(counter.keys()):
+                if counter[k] < self.cutoff:
+                    del counter[k]
+        else: # special data from Char LM
             counter = Counter([c for sent in self.data for c in sent])
-        self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
+        self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: (counter[k], k), reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
 class WordVocab(BaseVocab):
