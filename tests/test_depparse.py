@@ -67,7 +67,7 @@ def test_depparse():
 
 
 def test_depparse_with_pretagged_doc():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en',
+    nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'depparse_pretagged': True})
 
     doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PRETAGGED))
@@ -79,4 +79,4 @@ def test_depparse_with_pretagged_doc():
 
 def test_raises_requirements_exception_if_pretagged_not_passed():
     with pytest.raises(PipelineRequirementsException):
-        stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': '.', 'lang': 'en'})
+        stanfordnlp.Pipeline(**{'processors': 'depparse', 'models_dir': TEST_MODELS_DIR, 'lang': 'en'})

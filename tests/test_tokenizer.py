@@ -90,7 +90,7 @@ def test_tokenize():
 
 
 def test_pretokenized():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'models_dir': '.', 'lang': 'en',
+    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'models_dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'tokenize_pretokenized': True})
     doc = nlp(EN_DOC_PRETOKENIZED)
     assert EN_DOC_PRETOKENIZED_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
@@ -98,7 +98,7 @@ def test_pretokenized():
     assert EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 def test_no_ssplit():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'models_dir': '.', 'lang': 'en',
+    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'models_dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'tokenize_no_ssplit': True})
 
     doc = nlp(EN_DOC_NO_SSPLIT)
