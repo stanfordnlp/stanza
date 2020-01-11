@@ -64,7 +64,7 @@ def find_token(token, text):
     m = re.search('\s*'.join(['\s' if re.match('\s', x) else re.escape(x) for x in token]), text)
     return m.start(), m.group()
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -169,7 +169,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
                 current_tok = ''
-                if p == 2 or p == 4:
+                if (p == 2 or p == 4) and not no_ssplit:
                     doc.append(process_sentence(current_sent, mwt_dict))
                     current_sent = []
 

@@ -31,7 +31,7 @@ PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 
 # list of settings for each processor
 PROCESSOR_SETTINGS = {
-    TOKENIZE: ['batch_size', 'pretokenized'],
+    TOKENIZE: ['batch_size', 'pretokenized', 'no_ssplit'],
     MWT: ['batch_size', 'dict_only', 'ensemble_dict'],
     POS: ['batch_size'],
     LEMMA: ['batch_size', 'beam_size', 'dict_only', 'ensemble_dict', 'use_identity'],
@@ -43,7 +43,7 @@ PROCESSOR_SETTINGS_LIST = \
     ['_'.join(psp) for k, v in PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
 
 BOOLEAN_PROCESSOR_SETTINGS = {
-    TOKENIZE: ['pretokenized'],
+    TOKENIZE: ['pretokenized', 'no_ssplit'],
     MWT: ['dict_only', 'ensemble_dict'],
     LEMMA: ['dict_only', 'edit', 'ensemble_dict', 'use_identity'],
     DEPPARSE: ['pretagged']

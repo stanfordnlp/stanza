@@ -78,6 +78,10 @@ EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 <Token id=4;words=[<Word id=4;text=.>]>
 """.strip()
 
+EN_DOC_NO_SSPLIT = ["This is a sentence. This is another.", "This is a third."]
+
+EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is', 'another', '.'], ['This', 'is', 'a', 'third', '.']]
+
 
 def test_tokenize():
     nlp = stanfordnlp.Pipeline(processors='tokenize', models_dir=TEST_MODELS_DIR, lang='en')
@@ -93,3 +97,9 @@ def test_pretokenized():
     doc = nlp(EN_DOC_PRETOKENIZED_LIST)
     assert EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
+def test_no_ssplit():
+    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'models_dir': '.', 'lang': 'en',
+                                  'tokenize_no_ssplit': True})
+
+    doc = nlp(EN_DOC_NO_SSPLIT)
+    assert EN_DOC_NO_SSPLIT_SENTENCES == [[w.text for w in s.words] for s in doc.sentences]
