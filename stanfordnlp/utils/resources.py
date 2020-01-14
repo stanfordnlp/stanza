@@ -4,15 +4,15 @@ utilities for getting resources
 
 import os
 import requests
-import zipfile
-
 from tqdm import tqdm
 from pathlib import Path
+import json
 
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
-DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models'
+DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
+DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 
 # list of language shorthands
@@ -48,92 +48,43 @@ def build_default_config(treebank, models_path):
             default_config[f"{processor}_charlm_backward_file"] = os.path.join(treebank_dir, f"{treebank}_backward_charlm.pt")
     return default_config
 
+def ensure_path(path):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
 
-# load a config from file
-def load_config(config_file_path):
-    loaded_config = {}
-    with open(config_file_path) as config_file:
-        for config_line in config_file:
-            config_key, config_value = config_line.split(':')
-            loaded_config[config_key] = config_value.rstrip().lstrip()
-    return loaded_config
-
-
-# download a ud models zip file
-def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False, force=False,
-                      version=DEFAULT_DOWNLOAD_VERSION):
-    # ask if user wants to download
-    if resource_dir is not None and os.path.exists(os.path.join(resource_dir, f"{lang_name}_models")):
-        if confirm_if_exists:
-            print("")
-            print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download the models again? [y/N]")
-            should_download = 'y' if force else input()
-            should_download = should_download.strip().lower() in ['yes', 'y']
-        else:
-            should_download = False
-    else:
-        print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
-        should_download = 'y' if force else input()
-        should_download = should_download.strip().lower() in ['yes', 'y', '']
-    if should_download:
-        # set up data directory
-        if resource_dir is None:
-            print('')
-            print('Default download directory: ' + DEFAULT_MODEL_DIR)
-            print('Hit enter to continue or type an alternate directory.')
-            where_to_download = '' if force else input()
-            if where_to_download != '':
-                download_dir = where_to_download
-            else:
-                download_dir = DEFAULT_MODEL_DIR
-        else:
-            download_dir = resource_dir
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
-        print('')
-        print('Downloading models for: '+lang_name)
-        model_zip_file_name = f'{lang_name}_models.zip'
-        download_url = f'{DEFAULT_MODELS_URL}/{version}/{model_zip_file_name}'
-        download_file_path = os.path.join(download_dir, model_zip_file_name)
-        print('Download location: '+download_file_path)
-
-        # initiate download
-        r = requests.get(download_url, stream=True)
-        with open(download_file_path, 'wb') as f:
-            file_size = int(r.headers.get('content-length'))
-            default_chunk_size = 131072
-            with tqdm(total=file_size, unit='B', unit_scale=True) as pbar:
-                for chunk in r.iter_content(chunk_size=default_chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
-                        pbar.update(len(chunk))
-        # unzip models file
-        print('')
-        print('Download complete.  Models saved to: '+download_file_path)
-        if should_unzip:
-            unzip_ud_model(lang_name, download_file_path, download_dir)
-        # remove the zipe file
-        print("Cleaning up...", end="")
-        os.remove(download_file_path)
-        print('Done.')
-
-
-# unzip a ud models zip file
-def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
-    print('Extracting models file for: '+lang_name)
-    with zipfile.ZipFile(zip_file_src, "r") as zip_ref:
-        zip_ref.extractall(zip_file_target)
-
+def request_file(download_url, download_path, verbose=True):
+    ensure_path(download_path)
+    r = requests.get(download_url, stream=True)
+    with open(download_path, 'wb') as f:
+        file_size = int(r.headers.get('content-length'))
+        default_chunk_size = 131072
+        with tqdm(total=file_size, unit='B', unit_scale=True, disable=not verbose) as pbar:
+            for chunk in r.iter_content(chunk_size=default_chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+                    pbar.update(len(chunk))
 
 # main download function
-def download(download_label, resource_dir=None, confirm_if_exists=False, force=False, version=DEFAULT_DOWNLOAD_VERSION):
-    if download_label in conll_shorthands:
-        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force,
-                          version=version)
-    elif download_label in default_treebanks:
-        print(f'Using the default treebank "{default_treebanks[download_label]}" for language "{download_label}".')
-        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir,
-                          confirm_if_exists=confirm_if_exists, force=force, version=version)
+def download(lang, dir=None, default=True, tokenize=None, mwt=None, pos=None, tagger=None, lemmatizer=None, parser=None, ner=None, version=None):
+    if dir is None:
+        dir = DEFAULT_MODEL_DIR
+    if version is None:
+        version = DEFAULT_DOWNLOAD_VERSION
+    if default:
+        print('Downloading default packages...')
+        request_file(f'{DEFAULT_MODELS_URL}/{DEFAULT_DOWNLOAD_VERSION}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
+        resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+        if lang not in resources:
+            print(f'Unsupported language: {lang}')
+            return
+        default_pipelines = resources[lang]['default']
+        for key, values in default_pipelines.items():
+            if isinstance(values, str): values = [values]
+            for value in values:
+                print(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt')
+                request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt', os.path.join(dir, lang, key, f'{lang}_{value}_{key}.pt'))
     else:
-        raise ValueError(f'The language or treebank "{download_label}" is not currently supported by this function. Please try again with other languages or treebanks.')
+        pass
+        
+
+
