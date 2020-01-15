@@ -14,6 +14,7 @@ DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
+PIPELINE_NAME = ['tokenizer', 'mwt', 'lemmatizer', 'tagger', 'parser', 'nertagger', 'charlm']
 
 # list of language shorthands
 conll_shorthands = ['af_afribooms', 'ar_padt', 'bg_btb', 'bxr_bdt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'cu_proiel', 'da_ddt', 'de_gsd', 'el_gdt', 'en_ewt', 'en_gum', 'en_lines', 'es_ancora', 'et_edt', 'eu_bdt', 'fa_seraji', 'fi_ftb', 'fi_tdt', 'fr_gsd', 'fro_srcmf', 'fr_sequoia', 'fr_spoken', 'ga_idt', 'gl_ctg', 'gl_treegal', 'got_proiel', 'grc_perseus', 'grc_proiel', 'he_htb', 'hi_hdtb', 'hr_set', 'hsb_ufal', 'hu_szeged', 'hy_armtdp', 'id_gsd', 'it_isdt', 'it_postwita', 'ja_gsd', 'kk_ktb', 'kmr_mg', 'ko_gsd', 'ko_kaist', 'la_ittb', 'la_perseus', 'la_proiel', 'lv_lvtb', 'nl_alpino', 'nl_lassysmall', 'no_bokmaal', 'no_nynorsklia', 'no_nynorsk', 'pl_lfg', 'pl_sz', 'pt_bosque', 'ro_rrt', 'ru_syntagrus', 'ru_taiga', 'sk_snk', 'sl_ssj', 'sl_sst', 'sme_giella', 'sr_set', 'sv_lines', 'sv_talbanken', 'tr_imst', 'ug_udt', 'uk_iu', 'ur_udtb', 'vi_vtb', 'zh_gsd']
@@ -65,26 +66,40 @@ def request_file(download_url, download_path, verbose=True):
                     pbar.update(len(chunk))
 
 # main download function
-def download(lang, dir=None, default=True, tokenize=None, mwt=None, pos=None, tagger=None, lemmatizer=None, parser=None, ner=None, version=None):
+def download(lang, dir=None, default=True, custom={}, version=None, verbose=True):
+    # If dir and version is None, use default settings.
     if dir is None:
         dir = DEFAULT_MODEL_DIR
     if version is None:
         version = DEFAULT_DOWNLOAD_VERSION
+    
+    # Download resources.json to obtain latest packages.
+    request_file(f'{DEFAULT_MODELS_URL}/{DEFAULT_DOWNLOAD_VERSION}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE), verbose=verbose)
+    resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+    if lang not in resources:
+        print(f'Unsupported language: {lang}.')
+        return
+
+    # Default or Customize?
     if default:
-        print('Downloading default packages...')
-        request_file(f'{DEFAULT_MODELS_URL}/{DEFAULT_DOWNLOAD_VERSION}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
-        resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
-        if lang not in resources:
-            print(f'Unsupported language: {lang}')
+        if len(custom):
+            print('For customized download, please set "default=False".')
             return
-        default_pipelines = resources[lang]['default']
-        for key, values in default_pipelines.items():
-            if isinstance(values, str): values = [values]
-            for value in values:
-                print(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt')
-                request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt', os.path.join(dir, lang, key, f'{lang}_{value}_{key}.pt'))
+        # Download each default package
+        custom = resources[lang]['default']
+        if verbose: print('Downloading default packages...')
     else:
-        pass
-        
+        if verbose: print('Downloading customized packages...')
+    
+    # Download packages
+    for key, values in custom.items():
+        if isinstance(values, str): values = [values]
+        for value in values:
+            if key not in resources[lang] or value not in resources[lang][key]:
+                print(f'Unsupported package: {lang}_{value}_{key}.')
+                return
+            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt', os.path.join(dir, lang, key, f'{lang}_{value}_{key}.pt'), verbose=verbose)
+
+
 
 
