@@ -13,12 +13,12 @@ args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
-train_file=${CHARLM_DATA_DIR}/${short}.train.txt
-dev_file=${CHARLM_DATA_DIR}/${short}.dev.txt
-test_file=${CHARLM_DATA_DIR}/${short}.test.txt
+train_dir=${CHARLM_DATA_DIR}/${lang}/${short}/train
+dev_file=${CHARLM_DATA_DIR}/${lang}/${short}/dev.txt
+test_file=${CHARLM_DATA_DIR}/${lang}/${short}/test.txt
 
 echo "Running charlm with $args..."
-python -m stanfordnlp.models.charlm --train_file $train_file --eval_file $dev_file \
+python -m stanfordnlp.models.charlm --train_dir $train_dir --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode train $args
 python -m stanfordnlp.models.charlm --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode predict $args
