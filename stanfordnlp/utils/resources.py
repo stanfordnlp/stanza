@@ -7,6 +7,7 @@ import requests
 from tqdm import tqdm
 from pathlib import Path
 import json
+import hashlib
 
 # set home dir for default
 HOME_DIR = str(Path.home())
@@ -14,6 +15,9 @@ DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
+DEFAULT_PROCESSORS = "default_processors"
+DEFAULT_DEPENDENCIES = "default_dependencies"
+MD5 = 'md5'
 PIPELINE_NAME = ['tokenizer', 'mwt', 'lemmatizer', 'tagger', 'parser', 'nertagger', 'charlm']
 
 # list of language shorthands
@@ -52,8 +56,14 @@ def build_default_config(treebank, models_path):
 def ensure_path(path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
-def request_file(download_url, download_path, verbose=True):
-    ensure_path(download_path)
+def get_md5(path):
+    data = open(path, 'rb').read()
+    return hashlib.md5(data).hexdigest()
+
+def is_file_existed(path, md5):
+    return os.path.exists(path) and get_md5(path) == md5
+
+def download_file(download_url, download_path, verbose=True):
     r = requests.get(download_url, stream=True)
     with open(download_path, 'wb') as f:
         file_size = int(r.headers.get('content-length'))
@@ -65,8 +75,56 @@ def request_file(download_url, download_path, verbose=True):
                     f.flush()
                     pbar.update(len(chunk))
 
+def request_file(download_url, download_path, verbose=True, md5=None):
+    ensure_path(download_path)
+    if is_file_existed(download_path, md5): 
+        if verbose: print(f'File exists: {download_path}.')
+        return
+    download_file(download_url, download_path, verbose=verbose)
+    assert(not md5 or is_file_existed(download_path, md5))
+
+# TODO: change download_list to list 
+def maintain_download_list(resources, lang, package, processors, verbose):
+    download_list = {}
+    dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    if processors:
+        if verbose: print(f'Processing parameter "processors"...')
+        for key, value in processors.items():
+            assert(key in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']) # <TODO>: constant
+            assert(isinstance(key, str) and isinstance(value, str))
+            if key in resources[lang] and value in resources[lang][key]:
+                if verbose: print(f'Find {key}: {value}.')
+                download_list[key] = value
+
+    if package:
+        if package == 'default':
+            for key, value in resources[lang][DEFAULT_PROCESSORS].items():
+                if key not in download_list:
+                    if verbose: print(f'Find {key}: {value}.')
+                    download_list[key] = value
+        else:
+            for key in resources[lang]:
+                if key not in download_list and package in resources[lang][key]:
+                    if verbose: print(f'Find {key}: {package}.')
+                    download_list[key] = package
+    return download_list
+
+# TODO: change download_list to list
+def add_dependencies(resources, lang, download_list, verbose):
+    default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    for key, value in download_list.items():
+        dependencies = default_dependencies.get(key, None)
+        dependencies = resources[lang][key][value].get('dependencies', dependencies)
+        if dependencies:
+            for dependency in dependencies:
+                dependency_key, dependency_value = dependency['processor'], dependency['model']
+                if dependency_key not in download_list:
+                    if verbose: print(f'Find dependency {dependency_key}: {dependency_value}.')
+                    download_list[dependency_key] = dependency_value
+    return download_list
+
 # main download function
-def download(lang, dir=None, default=True, custom={}, version=None, verbose=True):
+def download(lang, dir=None, package='default', processors={}, version=None, verbose=True, force=False):
     # If dir and version is None, use default settings.
     if dir is None:
         dir = DEFAULT_MODEL_DIR
@@ -80,26 +138,22 @@ def download(lang, dir=None, default=True, custom={}, version=None, verbose=True
         print(f'Unsupported language: {lang}.')
         return
 
-    # Default or Customize?
-    if default:
-        if len(custom):
-            print('For customized download, please set "default=False".')
-            return
-        # Download each default package
-        custom = resources[lang]['default']
+    # Default: download zipfile and unzip
+    if package == 'default' and len(processors) == 0:
+        print(resources)
         if verbose: print('Downloading default packages...')
+        if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/{DEFAULT_PROCESSORS}.zip...')
+        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{DEFAULT_PROCESSORS}.zip', os.path.join(dir, lang, f'{DEFAULT_PROCESSORS}.zip'), verbose=verbose, md5=resources[lang]['default_md5'])
+        # <TODO>: unzip
+    # Customize: maintain download list
     else:
         if verbose: print('Downloading customized packages...')
-    
-    # Download packages
-    for key, values in custom.items():
-        if isinstance(values, str): values = [values]
-        for value in values:
-            if key not in resources[lang] or value not in resources[lang][key]:
-                print(f'Unsupported package: {lang}_{value}_{key}.')
-                return
-            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{lang}_{value}_{key}.pt', os.path.join(dir, lang, key, f'{lang}_{value}_{key}.pt'), verbose=verbose)
-
-
+        download_list = maintain_download_list(resources, lang, package, processors, verbose)
+        download_list = add_dependencies(resources, lang, download_list, verbose)
+        
+        # Download packages
+        for key, value in download_list.items():
+            if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt...')
+            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), verbose=verbose, md5=resources[lang][key][value][MD5])
 
 
