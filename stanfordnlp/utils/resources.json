@@ -1,0 +1,39 @@
+{
+    "en": {
+        "default_md5": "xxx",
+        "default_processors": {
+            "tokenize": "ewt",
+            "lemma": "ewt",
+            "pos": "ewt",
+            "depparse": "ewt",
+            "ner": "conll03"
+        },
+        "default_dependencies": {
+            "pos": [{"processor": "pretrain", "model": "ewt"}],
+            "depparse": [{"processor": "pretrain", "model": "ewt"}],
+            "ner": [{"processor": "charlm", "model": "flair_forward"}, {"processor": "charlm", "model": "flair_backward"}]
+        },
+        "tokenize": {
+            "ewt": {"md5": "c42688564ffedf7208c2985e59c9b7c1"}   
+        },
+        "lemma": {
+            "ewt": {"md5": "6e4ce2532066c4c041c4ac15a9f8808c"} 
+        },
+        "pos": {
+            "ewt": {"md5": "9ab69fd06efe860e6514bbcbf4f7dd49"} 
+        },
+        "depparse": {
+            "ewt": {"md5": "9553ec9e232e8673922256326a26bd24", "dependencies": [{"processor": "pretrain", "model": "haha"}]} 
+        },
+        "pretrain": {
+            "ewt": {"md5": "01036a4efaa4fba5e0fe1463b3b06352"} 
+        }, 
+        "ner": {
+            "conll03": {"md5": "fad0817d94c9b031cf7e05135e427833"}
+        },
+        "charlm": {
+            "flair_forward": {"md5": "75e1f1d4d104c8a231e420439d25847b"},
+            "flair_backward": {"md5": "c576001c525d8625198bdcfc4b02db62"} 
+        }
+    }
+}
