@@ -83,7 +83,6 @@ def request_file(download_url, download_path, verbose=True, md5=None):
     download_file(download_url, download_path, verbose=verbose)
     assert(not md5 or is_file_existed(download_path, md5))
 
-# TODO: change download_list to list 
 def maintain_download_list(resources, lang, package, processors, verbose):
     download_list = {}
     dependencies = resources[lang][DEFAULT_DEPENDENCIES]
@@ -95,6 +94,8 @@ def maintain_download_list(resources, lang, package, processors, verbose):
             if key in resources[lang] and value in resources[lang][key]:
                 if verbose: print(f'Find {key}: {value}.')
                 download_list[key] = value
+            else:
+                if verbose: print(f'Can not find {key}: {value}.')
 
     if package:
         if package == 'default':
@@ -103,24 +104,31 @@ def maintain_download_list(resources, lang, package, processors, verbose):
                     if verbose: print(f'Find {key}: {value}.')
                     download_list[key] = value
         else:
-            for key in resources[lang]:
-                if key not in download_list and package in resources[lang][key]:
-                    if verbose: print(f'Find {key}: {package}.')
-                    download_list[key] = package
+            flag = False
+            for key in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']: # <TODO>: constant
+                if package in resources[lang][key]:
+                    flag = True
+                    if key not in download_list:
+                        if verbose: print(f'Find {key}: {package}.')
+                        download_list[key] = package
+                    else:
+                        if verbose: print(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
+            if not flag and verbose: print((f'Can not find package {package}.'))
+    download_list = [(key, value) for key, value in download_list.items()] 
     return download_list
 
-# TODO: change download_list to list
-def add_dependencies(resources, lang, download_list, verbose):
+
+def add_dependencies(resources, lang, download_list, verbose):    
     default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
-    for key, value in download_list.items():
+    dependencies_list = []
+    for key, value in download_list:
         dependencies = default_dependencies.get(key, None)
         dependencies = resources[lang][key][value].get('dependencies', dependencies)
-        if dependencies:
-            for dependency in dependencies:
-                dependency_key, dependency_value = dependency['processor'], dependency['model']
-                if dependency_key not in download_list:
-                    if verbose: print(f'Find dependency {dependency_key}: {dependency_value}.')
-                    download_list[dependency_key] = dependency_value
+        if dependencies: dependencies_list += [tuple(dependency) for dependency in dependencies]
+    dependencies_list = list(set(dependencies_list))
+    for key, value in dependencies_list:
+        if verbose: print(f'Find dependency {key}: {value}.')
+    download_list += dependencies_list
     return download_list
 
 # main download function
@@ -150,9 +158,10 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
         if verbose: print('Downloading customized packages...')
         download_list = maintain_download_list(resources, lang, package, processors, verbose)
         download_list = add_dependencies(resources, lang, download_list, verbose)
+        if verbose: print(f'Download list: {download_list}')
         
         # Download packages
-        for key, value in download_list.items():
+        for key, value in download_list:
             if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt...')
             request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), verbose=verbose, md5=resources[lang][key][value][MD5])
 
