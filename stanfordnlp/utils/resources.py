@@ -11,9 +11,10 @@ import hashlib
 
 # set home dir for default
 HOME_DIR = str(Path.home())
+DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/download-refactor/stanfordnlp/utils'
+DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
-DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"
@@ -98,6 +99,7 @@ def maintain_download_list(resources, lang, package, processors, verbose):
                 if verbose: print(f'Can not find {key}: {value}.')
 
     if package:
+        if verbose: print(f'Processing parameter "package"...')
         if package == 'default':
             for key, value in resources[lang][DEFAULT_PROCESSORS].items():
                 if key not in download_list:
@@ -132,7 +134,7 @@ def add_dependencies(resources, lang, download_list, verbose):
     return download_list
 
 # main download function
-def download(lang, dir=None, package='default', processors={}, version=None, verbose=True, force=False):
+def download(lang, dir=None, package='default', processors={}, version=None, verbose=True):
     # If dir and version is None, use default settings.
     if dir is None:
         dir = DEFAULT_MODEL_DIR
@@ -140,7 +142,8 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
         version = DEFAULT_DOWNLOAD_VERSION
     
     # Download resources.json to obtain latest packages.
-    request_file(f'{DEFAULT_MODELS_URL}/{DEFAULT_DOWNLOAD_VERSION}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE), verbose=verbose)
+    if verbose: print('Downloading resource files...')
+    request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE), verbose=verbose)
     resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
     if lang not in resources:
         print(f'Unsupported language: {lang}.')
@@ -148,7 +151,6 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
 
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
-        print(resources)
         if verbose: print('Downloading default packages...')
         if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz...')
         request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), verbose=verbose, md5=resources[lang]['default_md5'])
