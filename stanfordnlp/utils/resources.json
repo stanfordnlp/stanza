@@ -1,6 +1,6 @@
 {
     "en": {
-        "default_md5": "xxx",
+        "default_md5": "48f641c53684cd1e911fd77a7c8dd553",
         "default_processors": {
             "tokenize": "ewt",
             "lemma": "ewt",
@@ -9,12 +9,15 @@
             "ner": "conll03"
         },
         "default_dependencies": {
-            "pos": [{"processor": "pretrain", "model": "ewt"}],
-            "depparse": [{"processor": "pretrain", "model": "ewt"}],
-            "ner": [{"processor": "charlm", "model": "flair_forward"}, {"processor": "charlm", "model": "flair_backward"}]
+            "pos": [["pretrain", "ewt"]],
+            "depparse": [["pretrain", "ewt"]],
+            "ner": [["charlm", "flair_forward"], ["charlm", "flair_backward"]]
         },
         "tokenize": {
             "ewt": {"md5": "c42688564ffedf7208c2985e59c9b7c1"}   
+        },
+        "mwt": {
+
         },
         "lemma": {
             "ewt": {"md5": "6e4ce2532066c4c041c4ac15a9f8808c"} 
@@ -23,7 +26,7 @@
             "ewt": {"md5": "9ab69fd06efe860e6514bbcbf4f7dd49"} 
         },
         "depparse": {
-            "ewt": {"md5": "9553ec9e232e8673922256326a26bd24", "dependencies": [{"processor": "pretrain", "model": "haha"}]} 
+            "ewt": {"md5": "9553ec9e232e8673922256326a26bd24", "dependencies": [["pretrain", "ewt"], ["pos", "ewt"]]}
         },
         "pretrain": {
             "ewt": {"md5": "01036a4efaa4fba5e0fe1463b3b06352"} 

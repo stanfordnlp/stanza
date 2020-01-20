@@ -150,8 +150,8 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
     if package == 'default' and len(processors) == 0:
         print(resources)
         if verbose: print('Downloading default packages...')
-        if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/{DEFAULT_PROCESSORS}.zip...')
-        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{DEFAULT_PROCESSORS}.zip', os.path.join(dir, lang, f'{DEFAULT_PROCESSORS}.zip'), verbose=verbose, md5=resources[lang]['default_md5'])
+        if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz...')
+        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), verbose=verbose, md5=resources[lang]['default_md5'])
         # <TODO>: unzip
     # Customize: maintain download list
     else:
