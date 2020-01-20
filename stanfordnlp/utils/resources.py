@@ -8,6 +8,8 @@ from tqdm import tqdm
 from pathlib import Path
 import json
 import hashlib
+import tarfile
+import shutil
 
 # set home dir for default
 HOME_DIR = str(Path.home())
@@ -75,6 +77,25 @@ def download_file(download_url, download_path, verbose=True):
                     f.write(chunk)
                     f.flush()
                     pbar.update(len(chunk))
+
+def unzip_and_move(path, filename, verbose=True):
+    os.chdir(path)
+    if verbose: print(f'Unzip: {path}/{filename}...')
+    tar = tarfile.open(os.path.join(path, filename), 'r:gz')
+    tar.extractall()
+    tar.close()
+
+    filenames = [name for name in os.listdir(os.path.join(path, 'default')) if name.endswith('.pt')]
+    for name in filenames:
+        splitname = name.replace('.pt', '').split('_')
+        model_name, processor_name = '_'.join(splitname[:-1]), splitname[-1]
+        if verbose: print(f'Move: default/{name} to {processor_name}/{model_name}.pt...')
+        ensure_path(os.path.join(path, processor_name, model_name + '.pt'))
+        shutil.move(os.path.join(path, 'default', name), os.path.join(path, processor_name, model_name + '.pt'))
+    
+    if verbose: print(f'Remove: {path}/default...')
+    os.rmdir(os.path.join(path, 'default'))
+
 
 def request_file(download_url, download_path, verbose=True, md5=None):
     ensure_path(download_path)
@@ -154,7 +175,7 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
         if verbose: print('Downloading default packages...')
         if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz...')
         request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), verbose=verbose, md5=resources[lang]['default_md5'])
-        # <TODO>: unzip
+        unzip_and_move(os.path.join(dir, lang), 'default.tar.gz', verbose=verbose)
     # Customize: maintain download list
     else:
         if verbose: print('Downloading customized packages...')
