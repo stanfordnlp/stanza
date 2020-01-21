@@ -154,6 +154,28 @@ def add_dependencies(resources, lang, download_list, verbose):
     download_list += dependencies_list
     return download_list
 
+def make_table(header, content, column_width=20):
+    ret = ''
+    len_column, len_row = len(header), len(content) + 1
+    
+    ret += '=' * (len_column * column_width + 1) + '\n'
+    
+    ret += '|'
+    for item in header: ret += item.ljust(column_width - 1) + '|'
+    ret += '\n'
+    
+    ret += '-' * (len_column * column_width + 1) + '\n'
+    
+    for line in content:
+        ret += '|'
+        for item in line: ret += item.ljust(column_width - 1) + '|'
+        ret += '\n'
+    
+    ret += '=' * (len_column * column_width + 1) + '\n'
+    
+    return ret
+
+
 # main download function
 def download(lang, dir=None, package='default', processors={}, version=None, verbose=True):
     # If dir and version is None, use default settings.
