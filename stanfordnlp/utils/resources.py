@@ -10,6 +10,9 @@ import json
 import hashlib
 import tarfile
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 # set home dir for default
 HOME_DIR = str(Path.home())
@@ -66,21 +69,23 @@ def get_md5(path):
 def is_file_existed(path, md5):
     return os.path.exists(path) and get_md5(path) == md5
 
-def download_file(download_url, download_path, verbose=True):
+def download_file(download_url, download_path):
+    verbose = logger.level in [0, 10, 20]
     r = requests.get(download_url, stream=True)
     with open(download_path, 'wb') as f:
         file_size = int(r.headers.get('content-length'))
         default_chunk_size = 131072
-        with tqdm(total=file_size, unit='B', unit_scale=True, disable=not verbose) as pbar:
+        desc = 'Downloading ' + download_url
+        with tqdm(total=file_size, unit='B', unit_scale=True, disable=not verbose, desc=desc) as pbar:
             for chunk in r.iter_content(chunk_size=default_chunk_size):
                 if chunk:
                     f.write(chunk)
                     f.flush()
                     pbar.update(len(chunk))
 
-def unzip_and_move(path, filename, verbose=True):
+def unzip_and_move(path, filename):
     os.chdir(path)
-    if verbose: print(f'Unzip: {path}/{filename}...')
+    logger.debug(f'Unzip: {path}/{filename}...')
     tar = tarfile.open(os.path.join(path, filename), 'r:gz')
     tar.extractall()
     tar.close()
@@ -89,42 +94,42 @@ def unzip_and_move(path, filename, verbose=True):
     for name in filenames:
         splitname = name.replace('.pt', '').split('_')
         model_name, processor_name = '_'.join(splitname[:-1]), splitname[-1]
-        if verbose: print(f'Move: default/{name} to {processor_name}/{model_name}.pt...')
+        logger.debug(f'Move: default/{name} to {processor_name}/{model_name}.pt...')
         ensure_path(os.path.join(path, processor_name, model_name + '.pt'))
         shutil.move(os.path.join(path, 'default', name), os.path.join(path, processor_name, model_name + '.pt'))
     
-    if verbose: print(f'Remove: {path}/default...')
+    logger.debug(f'Remove: {path}/default...')
     os.rmdir(os.path.join(path, 'default'))
 
 
-def request_file(download_url, download_path, verbose=True, md5=None):
+def request_file(download_url, download_path, md5=None):
     ensure_path(download_path)
     if is_file_existed(download_path, md5): 
-        if verbose: print(f'File exists: {download_path}.')
+        logger.info(f'File exists: {download_path}.')
         return
-    download_file(download_url, download_path, verbose=verbose)
+    download_file(download_url, download_path)
     assert(not md5 or is_file_existed(download_path, md5))
 
-def maintain_download_list(resources, lang, package, processors, verbose):
+def maintain_download_list(resources, lang, package, processors):
     download_list = {}
     dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     if processors:
-        if verbose: print(f'Processing parameter "processors"...')
+        logger.debug(f'Processing parameter "processors"...')
         for key, value in processors.items():
             assert(key in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']) # <TODO>: constant
             assert(isinstance(key, str) and isinstance(value, str))
             if key in resources[lang] and value in resources[lang][key]:
-                if verbose: print(f'Find {key}: {value}.')
+                logger.debug(f'Find {key}: {value}.')
                 download_list[key] = value
             else:
-                if verbose: print(f'Can not find {key}: {value}.')
+                logger.warning(f'Can not find {key}: {value}.')
 
     if package:
-        if verbose: print(f'Processing parameter "package"...')
+        logger.debug(f'Processing parameter "package"...')
         if package == 'default':
             for key, value in resources[lang][DEFAULT_PROCESSORS].items():
                 if key not in download_list:
-                    if verbose: print(f'Find {key}: {value}.')
+                    logger.debug(f'Find {key}: {value}.')
                     download_list[key] = value
         else:
             flag = False
@@ -132,16 +137,16 @@ def maintain_download_list(resources, lang, package, processors, verbose):
                 if package in resources[lang][key]:
                     flag = True
                     if key not in download_list:
-                        if verbose: print(f'Find {key}: {package}.')
+                        logger.debug(f'Find {key}: {package}.')
                         download_list[key] = package
                     else:
-                        if verbose: print(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
-            if not flag and verbose: print((f'Can not find package {package}.'))
+                        logger.debug(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
+            if not flag: logger.warning((f'Can not find package: {package}.'))
     download_list = [(key, value) for key, value in download_list.items()] 
     return download_list
 
 
-def add_dependencies(resources, lang, download_list, verbose):    
+def add_dependencies(resources, lang, download_list):    
     default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     dependencies_list = []
     for key, value in download_list:
@@ -150,34 +155,45 @@ def add_dependencies(resources, lang, download_list, verbose):
         if dependencies: dependencies_list += [tuple(dependency) for dependency in dependencies]
     dependencies_list = list(set(dependencies_list))
     for key, value in dependencies_list:
-        if verbose: print(f'Find dependency {key}: {value}.')
+        logger.debug(f'Find dependency {key}: {value}.')
     download_list += dependencies_list
     return download_list
 
 def make_table(header, content, column_width=20):
-    ret = ''
+    '''
+    Input:
+    header -> List[str]: table header
+    content -> List[List[str]]: table content
+    column_width -> int: table column width
+    
+    Output:
+    table_str -> str: well-formatted string for the table
+    '''
+    table_str = ''
     len_column, len_row = len(header), len(content) + 1
     
-    ret += '=' * (len_column * column_width + 1) + '\n'
+    table_str += '=' * (len_column * column_width + 1) + '\n'
     
-    ret += '|'
-    for item in header: ret += item.ljust(column_width - 1) + '|'
-    ret += '\n'
+    table_str += '|'
+    for item in header: table_str += item.ljust(column_width - 1) + '|'
+    table_str += '\n'
     
-    ret += '-' * (len_column * column_width + 1) + '\n'
+    table_str += '-' * (len_column * column_width + 1) + '\n'
     
     for line in content:
-        ret += '|'
-        for item in line: ret += item.ljust(column_width - 1) + '|'
-        ret += '\n'
+        table_str += '|'
+        for item in line: table_str += item.ljust(column_width - 1) + '|'
+        table_str += '\n'
     
-    ret += '=' * (len_column * column_width + 1) + '\n'
+    table_str += '=' * (len_column * column_width + 1) + '\n'
     
-    return ret
+    return table_str
 
 
 # main download function
-def download(lang, dir=None, package='default', processors={}, version=None, verbose=True):
+def download(lang, dir=None, package='default', processors={}, version=None, logging_level='INFO'):
+    assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    logger.setLevel(logging_level)
     # If dir and version is None, use default settings.
     if dir is None:
         dir = DEFAULT_MODEL_DIR
@@ -185,29 +201,28 @@ def download(lang, dir=None, package='default', processors={}, version=None, ver
         version = DEFAULT_DOWNLOAD_VERSION
     
     # Download resources.json to obtain latest packages.
-    if verbose: print('Downloading resource files...')
-    request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE), verbose=verbose)
+    logger.info('Downloading resource file...')
+    request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
     resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
     if lang not in resources:
-        print(f'Unsupported language: {lang}.')
+        logger.warning(f'Unsupported language: {lang}.')
         return
 
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
-        if verbose: print('Downloading default packages...')
-        if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz...')
-        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), verbose=verbose, md5=resources[lang]['default_md5'])
-        unzip_and_move(os.path.join(dir, lang), 'default.tar.gz', verbose=verbose)
+        logger.info('Downloading default packages...')
+        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), md5=resources[lang]['default_md5'])
+        unzip_and_move(os.path.join(dir, lang), 'default.tar.gz')
     # Customize: maintain download list
     else:
-        if verbose: print('Downloading customized packages...')
-        download_list = maintain_download_list(resources, lang, package, processors, verbose)
-        download_list = add_dependencies(resources, lang, download_list, verbose)
-        if verbose: print(f'Download list: {download_list}')
+        logger.info('Downloading customized packages...')
+        download_list = maintain_download_list(resources, lang, package, processors)
+        download_list = add_dependencies(resources, lang, download_list)
+        download_table = make_table(['Processor', 'Model'], download_list)
+        logger.info(f'Download list:\n{download_table}')
         
         # Download packages
         for key, value in download_list:
-            if verbose: print(f'Downloading {DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt...')
-            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), verbose=verbose, md5=resources[lang][key][value][MD5])
+            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value][MD5])
 
 
