@@ -8,7 +8,7 @@ from tqdm import tqdm
 from pathlib import Path
 import json
 import hashlib
-import tarfile
+import zipfile
 import shutil
 import logging
 
@@ -83,23 +83,10 @@ def download_file(download_url, download_path):
                     f.flush()
                     pbar.update(len(chunk))
 
-def unzip_and_move(path, filename):
-    os.chdir(path)
+def unzip(path, filename):
     logger.debug(f'Unzip: {path}/{filename}...')
-    tar = tarfile.open(os.path.join(path, filename), 'r:gz')
-    tar.extractall()
-    tar.close()
-
-    filenames = [name for name in os.listdir(os.path.join(path, 'default')) if name.endswith('.pt')]
-    for name in filenames:
-        splitname = name.replace('.pt', '').split('_')
-        model_name, processor_name = '_'.join(splitname[:-1]), splitname[-1]
-        logger.debug(f'Move: default/{name} to {processor_name}/{model_name}.pt...')
-        ensure_path(os.path.join(path, processor_name, model_name + '.pt'))
-        shutil.move(os.path.join(path, 'default', name), os.path.join(path, processor_name, model_name + '.pt'))
-    
-    logger.debug(f'Remove: {path}/default...')
-    os.rmdir(os.path.join(path, 'default'))
+    with zipfile.ZipFile(os.path.join(path, filename)) as f:
+        f.extractall(path)
 
 
 def request_file(download_url, download_path, md5=None):
@@ -211,8 +198,8 @@ def download(lang, dir=None, package='default', processors={}, version=None, log
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
         logger.info('Downloading default packages...')
-        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.tar.gz', os.path.join(dir, lang, f'default.tar.gz'), md5=resources[lang]['default_md5'])
-        unzip_and_move(os.path.join(dir, lang), 'default.tar.gz')
+        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
+        unzip(os.path.join(dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
         logger.info('Downloading customized packages...')
