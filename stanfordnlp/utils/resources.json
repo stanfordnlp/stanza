@@ -1,6 +1,6 @@
 {
     "en": {
-        "default_md5": "17352511580cb35bfd8abc056a01c906",
+        "default_md5": "b57a6272f4bc47edc2486471b7636918",
         "default_processors": {
             "tokenize": "ewt",
             "lemma": "ewt",
@@ -26,10 +26,10 @@
             "ewt": {"md5": "9ab69fd06efe860e6514bbcbf4f7dd49"} 
         },
         "depparse": {
-            "ewt": {"md5": "e873679ee9bbb393caba0933755b1e77 "}
+            "ewt": {"md5": "e873679ee9bbb393caba0933755b1e77"}
         },
         "pretrain": {
-            "ewt": {"md5": "01036a4efaa4fba5e0fe1463b3b06352"} 
+            "ewt": {"md5": "46013c90dfc089126d4532112ea33df8"} 
         }, 
         "ner": {
             "conll03": {"md5": "fad0817d94c9b031cf7e05135e427833"}
