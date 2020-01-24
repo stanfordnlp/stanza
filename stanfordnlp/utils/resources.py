@@ -48,15 +48,16 @@ def build_default_config(treebank, models_path):
     if treebank == 'vi_vtb':
         default_config['lemma_use_identity'] = True
         default_config['lemma_batch_size'] = 5000
-    treebank_dir = os.path.join(models_path, f"{treebank}_models")
+    lang, model = treebank.split('_')
+    print(f'lang: {lang}, model: {model}')
     for processor in default_config['processors'].split(','):
         model_file_ending = f"{processor_to_ending[processor]}.pt"
-        default_config[f"{processor}_model_path"] = os.path.join(treebank_dir, f"{treebank}_{model_file_ending}")
+        default_config[f"{processor}_model_path"] = os.path.join(models_path, lang, processor, model + '.pt')
         if processor in ['pos', 'depparse']:
-            default_config[f"{processor}_pretrain_path"] = os.path.join(treebank_dir, f"{treebank}.pretrain.pt")
+            default_config[f"{processor}_pretrain_path"] = os.path.join(models_path, lang, 'pretrain', model + '.pt')
         if processor in ['ner']:
-            default_config[f"{processor}_charlm_forward_file"] = os.path.join(treebank_dir, f"{treebank}_forward_charlm.pt")
-            default_config[f"{processor}_charlm_backward_file"] = os.path.join(treebank_dir, f"{treebank}_backward_charlm.pt")
+            default_config[f"{processor}_charlm_forward_file"] = os.path.join(models_path, lang, 'charlm', model + '_forward.pt')
+            default_config[f"{processor}_charlm_backward_file"] = os.path.join(models_path, lang, 'charlm', model + '_backward.pt')
     return default_config
 
 def ensure_path(path):
