@@ -1,23 +1,26 @@
 #!/bin/bash
 #
 # Train and evaluate character-level language model. Run as:
-#   ./run_charlm.sh TREEBANK DIRECTION OTHER_ARGS
-# where TREEBANK is the UD treebank name (e.g., UD_English-EWT), DIRECTION is either forward or backward, and OTHER_ARGS are additional training arguments (see charlm code) or empty.
+#   ./run_charlm.sh CORPUS DIRECTION OTHER_ARGS
+# where CORPUS is charlm corpus name (e.g., English-1Billion), DIRECTION is either forward or backward, and OTHER_ARGS are additional training arguments (see charlm code) or empty.
 # This script assumes UDBASE and CHARLM_DATA_DIR are correctly set in config.sh.
 
 source scripts/config.sh
 
-treebank=$1; shift
+corpus=$1; shift
 direction=$1; shift
 args=$@
-short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
-lang=`echo $short | sed -e 's#_.*##g'`
 
-train_dir=${CHARLM_DATA_DIR}/${lang}/${short}/train
-dev_file=${CHARLM_DATA_DIR}/${lang}/${short}/dev.txt
-test_file=${CHARLM_DATA_DIR}/${lang}/${short}/test.txt
+lang=`echo $corpus | sed -e 's#-.*$##g'`
+lcode=`python scripts/lang2code.py $lang`
+corpus_name=`echo $corpus | sed -e 's#^.*-##g' | tr '[:upper:]' '[:lower:]'`
+short=${lcode}_${corpus_name}
 
-echo "Running charlm with $args..."
+train_dir=${CHARLM_DATA_DIR}/${lang}/${corpus_name}/train
+dev_file=${CHARLM_DATA_DIR}/${lang}/${corpus_name}/dev.txt
+test_file=${CHARLM_DATA_DIR}/${lang}/${corpus_name}/test.txt
+
+echo "Running charlm for $lang:$corpus with $args..."
 python -m stanfordnlp.models.charlm --train_dir $train_dir --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode train $args
 python -m stanfordnlp.models.charlm --eval_file $dev_file \

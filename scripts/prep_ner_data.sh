@@ -1,19 +1,21 @@
 #!/bin/bash
 #
 # Prepare data for training and evaluating NER taggers. Run as:
-#   ./prep_ner_data.sh TREEBANK
-# where TREEBANK is the UD treebank name (e.g., UD_English-EWT).
+#   ./prep_ner_data.sh CORPUS
+# where CORPUS is the full corpus name, with language as prefix (e.g., English-CoNLL03).
 # This script assumes NER_DIR and NER_DATA_DIR are correctly set in config.sh.
 
 source scripts/config.sh
 
-treebank=$1; shift
-short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
-lang=`echo $short | sed -e 's#_.*##g'`
+corpus=$1; shift
+lang=`echo $corpus | sed -e 's#-.*$##g'`
+lcode=`python scripts/lang2code.py $lang`
+corpus_name=`echo $corpus | sed -e 's#^.*-##g' | tr '[:upper:]' '[:lower:]'`
+short=${lcode}_${corpus_name}
 
-train_file=$NER_DIR/${treebank}/${lang}.train
-dev_file=$NER_DIR/${treebank}/${lang}.testa
-test_file=$NER_DIR/${treebank}/${lang}.testb
+train_file=$NER_DIR/${corpus}/train.bio
+dev_file=$NER_DIR/${corpus}/dev.bio
+test_file=$NER_DIR/${corpus}/test.bio
 
 train_json_file=$NER_DATA_DIR/${short}.train.json
 dev_json_file=$NER_DATA_DIR/${short}.dev.json
