@@ -103,7 +103,7 @@ def parse_args():
     parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
 
     parser.add_argument('--char_emb_dim', type=int, default=100, help="Dimension of unit embeddings")
-    parser.add_argument('--char_hidden_dim', type=int, default=2048, help="Dimension of hidden units")
+    parser.add_argument('--char_hidden_dim', type=int, default=1024, help="Dimension of hidden units")
     parser.add_argument('--char_num_layers', type=int, default=1, help="Layers of RNN in the language model")
     parser.add_argument('--char_dropout', type=float, default=0.05, help="Dropout probability")
     parser.add_argument('--char_unit_dropout', type=float, default=1e-5, help="Randomly set an input char to UNK during training")
@@ -115,7 +115,7 @@ def parse_args():
     parser.add_argument('--max_grad_norm', type=float, default=0.25, help="Maximum gradient norm to clip to")
     parser.add_argument('--lr0', type=float, default=20, help="Initial learning rate")
     parser.add_argument('--anneal', type=float, default=0.25, help="Anneal the learning rate by this amount when dev performance deteriorate")
-    parser.add_argument('--patience', type=int, default=10, help="Patience for annealing the learning rate")
+    parser.add_argument('--patience', type=int, default=1, help="Patience for annealing the learning rate")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--momentum', type=float, default=0.0, help='Momentum for SGD.')
     parser.add_argument('--cutoff', type=int, default=1000, help="Frequency cutoff for char vocab. By default we assume a very large corpus.")
@@ -239,6 +239,7 @@ def train(args):
         logging.info('Building and saving vocab')
         vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
+    logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
 
     model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
     if args['cuda']: model = model.cuda()
