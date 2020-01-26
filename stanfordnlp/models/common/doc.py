@@ -478,11 +478,11 @@ class Token:
         return json.dumps(self.to_dict(), indent=2)
 
     def to_dict(self, fields=[ID, TEXT, MISC]):
-        """ Dumps the token into a list of dictionary for this token with its extended words 
+        """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
         ret = []
-        if len(self.words) != 1:
+        if multi_word_token_id.match(self.id):
             token_dict = {}
             for field in fields:
                 if getattr(self, field) is not None:
