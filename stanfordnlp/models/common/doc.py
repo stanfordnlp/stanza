@@ -95,7 +95,7 @@ class Document:
             self.sentences.append(Sentence(tokens))
             begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
-        
+
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False):
@@ -114,7 +114,7 @@ class Document:
                     cursent += [getattr(word, fields[0])]
                 else:
                     cursent += [[getattr(word, field) for field in fields]]
-            
+
             if as_sentences:
                 results.append(cursent)
             else:
@@ -122,14 +122,14 @@ class Document:
         return results
 
     def set(self, fields, contents):
-        """ Set fields based on contents. If only one field (singleton list) is provided, then a list 
+        """ Set fields based on contents. If only one field (singleton list) is provided, then a list
         of content will be expected; otherwise a list of list of contents will be expected.
         """
         assert isinstance(fields, list), "Must provide field names as a list."
         assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
         assert len(fields) >= 1, "Must have at least one field."
         assert self.num_words == len(contents), "Contents must have the same number as the original file."
-        
+
         cidx = 0
         for sentence in self.sentences:
             for word in sentence.words:
@@ -172,8 +172,8 @@ class Document:
         return
 
     def get_mwt_expansions(self, evaluation=False):
-        """ Get the multi-word tokens. For training, return a list of 
-        (multi-word token, extended multi-word token); otherwise, return a list of 
+        """ Get the multi-word tokens. For training, return a list of
+        (multi-word token, extended multi-word token); otherwise, return a list of
         multi-word token only.
         """
         expansions = []
@@ -193,7 +193,7 @@ class Document:
         self.ents = []
         ent_words = []
         cur_type = None
-        
+
         def flush():
             if len(ent_words) > 0:
                 self.ents.append(Span(words=ent_words, type=cur_type, doc=self))
@@ -242,10 +242,10 @@ class Document:
         """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
         """
         return [sentence.to_dict() for sentence in self.sentences]
-    
+
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
-                
+
 
 class Sentence:
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
@@ -281,7 +281,7 @@ class Sentence:
                 else:
                     self.tokens.append(Token(entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
-        
+
         # check if there is dependency info
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
         is_complete_words = len(self.words) == int(self.words[-1].id)
@@ -328,7 +328,7 @@ class Sentence:
         self._words = value
 
     def build_dependencies(self):
-        """ Build the dependency graph for this sentence. Each dependency graph entry is 
+        """ Build the dependency graph for this sentence. Each dependency graph entry is
         a list of (head, deprel, word).
         """
         self.dependencies = []
@@ -386,11 +386,11 @@ class Sentence:
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
-    
+
 
 class Token:
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
-    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French, 
+    text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French,
     a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
     """
 
@@ -412,8 +412,8 @@ class Token:
         """ Create attributes by parsing from the `misc` field.
         """
         for item in self._misc.split('|'):
-            key_value = item.split('=')
-            if len(key_value) == 1: continue # some key_value can not be splited                
+            key_value = item.split('=', 1)
+            if len(key_value) == 1: continue # some key_value can not be splited
             key, value = key_value
             if key in [START_CHAR, END_CHAR]:
                 value = int(value)
@@ -491,11 +491,11 @@ class Token:
         for word in self.words:
             ret.append(word.to_dict())
         return ret
-    
+
     def pretty_print(self):
         """ Print this token with its extended words in one line. """
         return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
-    
+
     def _is_null(self, value):
         return (value is None) or (value == '_')
 
@@ -509,7 +509,7 @@ class Word:
         assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
         self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, \
                 self._parent, self._ner = [None] * 12
-        
+
         self.id = word_entry.get(ID)
         self.text = word_entry.get(TEXT)
         self.lemma = word_entry.get(LEMMA, None)
@@ -524,13 +524,13 @@ class Word:
 
         if self.misc is not None:
             self.init_from_misc()
-    
+
     def init_from_misc(self):
         """ Create attributes by parsing from the `misc` field.
         """
         for item in self._misc.split('|'):
-            key_value = item.split('=')
-            if len(key_value) == 1: continue # some key_value can not be splited                
+            key_value = item.split('=', 1)
+            if len(key_value) == 1: continue # some key_value can not be splited
             key, value = key_value
             # set attribute
             attr = f'_{key}'
@@ -660,7 +660,7 @@ class Word:
     def pos(self, value):
         """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
-    
+
     @property
     def ner(self):
         """ Access the NER tag of this word. Example: 'B-ORG'"""
@@ -706,13 +706,13 @@ class Span:
         assert doc is not None, 'A parent doc must be provided to construct a span.'
         self._doc,  self._text, self._type, self._start_char, self._end_char = [None] * 5
         self._words = []
-        
+
         if span_entry is not None:
             self.init_from_entry(span_entry, doc)
 
         if words is not None:
             self.init_from_words(words, type, doc)
-        
+
     def init_from_entry(self, span_entry, doc):
         self.doc = doc
         self.text = span_entry.get(TEXT, None)
@@ -740,7 +740,7 @@ class Span:
     def doc(self, value):
         """ Set the parent doc of this span. """
         self._doc = value
-    
+
     @property
     def text(self):
         """ Access the text of this word. Example: 'The'"""
