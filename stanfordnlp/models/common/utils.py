@@ -16,11 +16,19 @@ import stanfordnlp.utils.conll18_ud_eval as ud_eval
 def get_wordvec_file(wordvec_dir, shorthand):
     """ Lookup the name of the word vectors file, given a directory and the language shorthand.
     """
-    lcode, tcode = shorthand.split('_')
+    lcode, tcode = shorthand.split('_', 1)
     lang = lcode2lang[lcode] if lcode != 'no' else lcode2lang[shorthand]
-    if lcode == 'zh':
-        lang = 'ChineseT'
-    filename = os.path.join(wordvec_dir, lang, '{}.vectors'.format(\
+    # locate language folder
+    word2vec_dir = os.path.join(wordvec_dir, 'word2vec', lang)
+    fasttext_dir = os.path.join(wordvec_dir, 'fasttext', lang)
+    if os.path.exists(word2vec_dir): # first try word2vec
+        lang_dir = word2vec_dir
+    elif os.path.exists(fasttext_dir): # otherwise try fasttext
+        lang_dir = fasttext_dir
+    else:
+        raise Exception("Cannot locate word vector directory for language: {}".format(lang))
+    # look for wordvec filename in {lang_dir}
+    filename = os.path.join(lang_dir, '{}.vectors'.format(\
             lcode if lcode != 'no' else (shorthand if shorthand != 'no_nynorsklia' else 'no_nynorsk')))
     if os.path.exists(filename + ".xz"):
         filename = filename + ".xz"
