@@ -139,7 +139,7 @@ class Pipeline:
     def process(self, doc):
         # run the pipeline
         for processor_name in PIPELINE_NAMES:
-            if self.processors.get(processor_name, None):
+            if self.processors.get(processor_name):
                 doc = self.processors[processor_name].process(doc)
         return doc
 

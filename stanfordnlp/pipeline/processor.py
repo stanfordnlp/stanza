@@ -85,7 +85,8 @@ class Processor(ABC):
         """ Given a list of fulfilled requirements, check if all of this processor's requirements are met or not. """
         provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors]+[set([])])
         if self.requires - provided_reqs:
-            raise ProcessorRequirementsException([item[0] for item in self.pipeline.load_list], self, provided_reqs) # TODO: better first item
+            load_names = [item[0] for item in self.pipeline.load_list]
+            raise ProcessorRequirementsException(load_names, self, provided_reqs)
 
 
 class UDProcessor(Processor):
