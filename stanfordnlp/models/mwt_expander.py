@@ -1,7 +1,7 @@
 """
 Entry point for training and evaluating a multi-word token (MWT) expander.
 
-This MWT expander combines a neural sequence-to-sequence architecture with a dictionary 
+This MWT expander combines a neural sequence-to-sequence architecture with a dictionary
 to decode the token into multiple words.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
@@ -100,7 +100,7 @@ def train(args):
     args['vocab_size'] = vocab.size
     dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
-    
+
     utils.ensure_dir(args['save_dir'])
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
@@ -206,7 +206,7 @@ def evaluate(args):
     gold_file = args['gold_file']
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
-    
+
     # load model
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
