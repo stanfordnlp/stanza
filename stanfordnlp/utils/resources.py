@@ -114,8 +114,8 @@ def request_file(url, path, md5=None):
     download_file(url, path)
     assert(not md5 or is_file_existed(path, md5))
 
-def maintain_download_list(resources, lang, package, processors):
-    download_list = {}
+def maintain_processor_list(resources, lang, package, processors):
+    processor_list = {}
     dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     if processors:
         logger.debug(f'Processing parameter "processors"...')
@@ -124,7 +124,7 @@ def maintain_download_list(resources, lang, package, processors):
             assert(isinstance(key, str) and isinstance(value, str))
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Find {key}: {value}.')
-                download_list[key] = value
+                processor_list[key] = value
             else:
                 logger.warning(f'Can not find {key}: {value}.')
 
@@ -132,38 +132,47 @@ def maintain_download_list(resources, lang, package, processors):
         logger.debug(f'Processing parameter "package"...')
         if package == 'default':
             for key, value in resources[lang][DEFAULT_PROCESSORS].items():
-                if key not in download_list:
+                if key not in processor_list:
                     logger.debug(f'Find {key}: {value}.')
-                    download_list[key] = value
+                    processor_list[key] = value
         else:
             flag = False
             for key in PIPELINE_NAMES:
                 if package in resources[lang][key]:
                     flag = True
-                    if key not in download_list:
+                    if key not in processor_list:
                         logger.debug(f'Find {key}: {package}.')
-                        download_list[key] = package
+                        processor_list[key] = package
                     else:
                         logger.debug(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
             if not flag: logger.warning((f'Can not find package: {package}.'))
-    download_list = [[key, value] for key, value in download_list.items()] 
-    return download_list
+    processor_list = [[key, value] for key, value in processor_list.items()] 
+    return processor_list
 
-def add_dependencies(resources, lang, download_list):    
+def add_dependencies(resources, lang, processor_list):    
     default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    for item in processor_list:
+        processor, model = item
+        dependencies = default_dependencies.get(processor, None)
+        dependencies = resources[lang][processor][model].get('dependencies', dependencies)
+        item.append(dependencies)
+    return processor_list
+
+def flatten_processor_list(processor_list):
+    flattened_processor_list = []
     dependencies_list = []
-    for key, value in download_list:
-        dependencies = default_dependencies.get(key, None)
-        dependencies = resources[lang][key][value].get('dependencies', dependencies)
+    for item in processor_list:
+        processor, model, dependencies = item
+        flattened_processor_list.append([processor, model])
         if dependencies: dependencies_list += [tuple(dependency) for dependency in dependencies]
-    dependencies_list = [list(i) for i in set(dependencies_list)]
-    for key, value in dependencies_list:
-        logger.debug(f'Find dependency {key}: {value}.')
-    download_list += dependencies_list
-    return download_list
+    dependencies_list = [list(item) for item in set(dependencies_list)]
+    for processor, model in dependencies_list:
+        logger.debug(f'Find dependency {processor}: {model}.')
+    flattened_processor_list += dependencies_list
+    return flattened_processor_list
 
 # main download function
-def download(lang, dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO'):
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO'):
     assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     logger.setLevel(logging_level)
     
@@ -183,8 +192,9 @@ def download(lang, dir=DEFAULT_MODEL_DIR, package='default', processors={}, vers
     # Customize: maintain download list
     else:
         logger.info('Downloading customized packages...')
-        download_list = maintain_download_list(resources, lang, package, processors)
+        download_list = maintain_processor_list(resources, lang, package, processors)
         download_list = add_dependencies(resources, lang, download_list)
+        download_list = flatten_processor_list(download_list)
         download_table = make_table(['Processor', 'Model'], download_list)
         logger.info(f'Download list:\n{download_table}')
         
