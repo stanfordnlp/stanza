@@ -2,24 +2,47 @@ from collections import defaultdict
 import os
 import sys
 from stanfordnlp.models.common.vocab import VOCAB_PREFIX
+from stanfordnlp.models.common.constant import lang2lcode
 from stanfordnlp.models.pos.vocab import XPOSVocab, WordVocab
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.utils.conll import CoNLL
 
 if len(sys.argv) != 3:
-    print('Usage: {} short_to_tb_file output_factory_file'.format(sys.argv[0]))
+    print('Usage: {} list_of_tb_file output_factory_file'.format(sys.argv[0]))
     sys.exit(0)
 
 # Read list of all treebanks of concern
-short_to_tb_file, output_file = sys.argv[1:]
+list_of_tb_file, output_file = sys.argv[1:]
+
+def treebank_to_short_name(treebank):
+    """ Convert treebank name to short code. """
+    if treebank.startswith('UD_'):
+        treebank = treebank[3:]
+    splits = treebank.split('-')
+    assert len(splits) == 2
+    lang, corpus = splits
+    lcode = lang2lcode[lang]
+    short = "{}_{}".format(lcode, corpus.lower())
+    return short
 
 shorthands = []
 fullnames = []
-with open(short_to_tb_file) as f:
+with open(list_of_tb_file) as f:
     for line in f:
-        line = line.strip().split()
-        shorthands.append(line[0])
-        fullnames.append(line[1])
+        treebank = line.strip()
+        fullnames.append(treebank)
+        shorthands.append(treebank_to_short_name(treebank))
+
+def filter_data(data, idx):
+    data_filtered = []
+    for sentence in data:
+        flag = True
+        for token in sentence:
+            if token[idx] is None:
+                flag = False
+        if flag: data_filtered.append(sentence)
+    return data_filtered
+
 
 # For each treebank, we would like to find the XPOS Vocab configuration that minimizes
 # the number of total classes needed to predict by all tagger classifiers. This is
@@ -40,6 +63,9 @@ for sh, fn in zip(shorthands, fullnames):
 
     doc = Document(CoNLL.conll2dict(input_file='data/pos/{}.train.in.conllu'.format(sh)))
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
+    print(f'Original length = {len(data)}')
+    data = filter_data(data, idx=2)
+    print(f'Filtered length = {len(data)}')
     vocab = WordVocab(data, sh, idx=2, ignore=["_"])
     key = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
     best_size = len(vocab) - len(VOCAB_PREFIX)
