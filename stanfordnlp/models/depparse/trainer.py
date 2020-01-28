@@ -33,7 +33,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(pretrain, model_file)
+            self.load(model_file, pretrain)
         else:
             # build model from scratch
             self.args = args
@@ -98,7 +98,11 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, pretrain, filename):
+    def load(self, filename, pretrain):
+        """
+        Load a model from file, with preloaded pretrain embeddings. Here we allow the pretrain to be None or a dummy input,
+        and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
+        """
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -106,6 +110,10 @@ class Trainer(BaseTrainer):
             sys.exit(1)
         self.args = checkpoint['config']
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        self.model = Parser(self.args, self.vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
+        # load model
+        emb_matrix = None
+        if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
+            emb_matrix = pretrain.emb
+        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
