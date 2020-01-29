@@ -284,7 +284,7 @@ class Sentence:
 
         # check if there is dependency info
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
-        is_complete_words = len(self.words) == int(self.words[-1].id)
+        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == int(self.words[-1].id))
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
 
     @property
