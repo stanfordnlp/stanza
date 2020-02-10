@@ -808,11 +808,25 @@
         "md5": "9c439178436e6072eab80a79da7f2bac"
       }
     },
+    "ner": {
+      "conll03": {
+        "md5": "fad0817d94c9b031cf7e05135e427833"
+      }
+    },
+    "charlm": {
+      "flair_forward": {
+        "md5": "75e1f1d4d104c8a231e420439d25847b"
+      },
+      "flair_backward": {
+        "md5": "c576001c525d8625198bdcfc4b02db62"
+      } 
+    },
     "default_processors": {
       "tokenize": "ewt",
       "lemma": "ewt",
       "pos": "ewt",
-      "depparse": "ewt"
+      "depparse": "ewt",
+      "ner": "conll03"
     },
     "default_dependencies": {
       "pos": [
@@ -826,9 +840,19 @@
           "pretrain",
           "ewt"
         ]
-      ]
+      ],
+      "ner": [
+          [
+            "charlm",
+            "flair_forward"
+          ],
+          [
+            "charlm",
+            "flair_backward"
+          ]
+        ]
     },
-    "default_md5": "94889cecf3791b25b7fa6f2fab0c8659"
+    "default_md5": "b57a6272f4bc47edc2486471b7636918"
   },
   "es": {
     "pretrain": {
