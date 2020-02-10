@@ -133,6 +133,9 @@ def maintain_processor_list(resources, lang, package, processors):
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Find {key}: {value}.')
                 processor_list[key] = value
+            elif key in resources[lang][DEFAULT_PROCESSORS] and value == 'default':
+                logger.debug(f'Find {key}: {resources[lang][DEFAULT_PROCESSORS][key]}.')
+                processor_list[key] = resources[lang][DEFAULT_PROCESSORS][key]
             else:
                 logger.warning(f'Can not find {key}: {value}.')
 
@@ -193,6 +196,11 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     if lang not in resources:
         logger.warning(f'Unsupported language: {lang}.')
         return
+    
+    # Special case: processors is str, compatible with older verson
+    if isinstance(processors, str):
+        processors = {processor.strip(): package for processor in processors.split(',')}
+        package = None
 
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
