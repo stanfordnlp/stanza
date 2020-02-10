@@ -73,6 +73,11 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
             return
 
+        # Special case: processors is str, compatible with older verson
+        if isinstance(processors, str):
+            processors = {processor.strip(): package for processor in processors.split(',')}
+            package = None
+
         # Maintain load list
         self.load_list = maintain_processor_list(resources, lang, package, processors)
         self.load_list = add_dependencies(resources, lang, self.load_list)
