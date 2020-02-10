@@ -138,6 +138,7 @@ def maintain_processor_list(resources, lang, package, processors):
         else:
             flag = False
             for key in PIPELINE_NAMES:
+                if key not in resources[lang]: continue 
                 if package in resources[lang][key]:
                     flag = True
                     if key not in processor_list:
