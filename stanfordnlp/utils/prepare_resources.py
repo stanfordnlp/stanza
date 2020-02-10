@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import hashlib
 import shutil
+import zipfile
 
 
 # list of language shorthands
@@ -47,8 +48,7 @@ def handle_pretrain(input_path, output_path):
     torch.save(model, output_path)
 
 
-def main():
-    args = parse_args()
+def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
     for dir in dirs:
@@ -66,7 +66,7 @@ def main():
             ensure_dir(Path(output_path).parent)
             if processor == 'pretrain':
                 handle_pretrain(input_path, output_path)
-            elif 
+            else:
                 shutil.copy(input_path, output_path)
             # maintain md5
             md5 = get_md5(output_path)
@@ -83,6 +83,42 @@ def main():
             else:
                 resources[lang][processor][treebank] = {'md5': md5}
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+
+def process_defaults(args):
+    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    for lang in resources:
+        if lang not in default_treebanks: 
+            print(lang + ' not in default treebanks!!!')
+            continue
+        print(lang)
+        shorthand = default_treebanks[lang]
+        mwt = False
+        if shorthand in mwt_languages: mwt = True
+        _, treebank = shorthand.split('_')
+        
+        os.chdir(os.path.join(args.output_dir, lang))
+        zipf = zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED)
+        default_processors = {}
+        for processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']:
+            if os.path.exists(os.path.join(args.output_dir, lang, processor, treebank + '.pt')):
+                if processor != 'pretrain': default_processors[processor] = treebank
+                zipf.write(processor)
+                zipf.write(os.path.join(processor, treebank + '.pt'))
+        zipf.close()
+        default_dependencies = {'pos': [['pretrain', treebank]], 'depparse': [['pretrain', treebank]]}        
+        default_md5 = get_md5(os.path.join(args.output_dir, lang, 'default.zip'))
+        resources[lang]['default_processors'] = default_processors
+        resources[lang]['default_dependencies'] = default_dependencies
+        resources[lang]['default_md5'] = default_md5
+
+    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+
+def main():
+    args = parse_args()
+    process_dirs(args)
+    process_defaults(args)
 
 
 if __name__ == '__main__':
