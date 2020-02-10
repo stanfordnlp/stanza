@@ -107,7 +107,8 @@
       "mwt": "padt",
       "lemma": "padt",
       "pos": "padt",
-      "depparse": "padt"
+      "depparse": "padt",
+      "ner": "ontonotes"
     },
     "default_dependencies": {
       "pos": [
@@ -121,9 +122,55 @@
           "pretrain",
           "padt"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "ccwiki_backward"
+        ],
+        [
+          "charlm",
+          "ccwiki_forward"
+        ]
       ]
     },
-    "default_md5": "14ed48753fb5a503019b7c2c5d47f8a5"
+    "default_md5": "e06ff9b8760dbbe7ced7bb5f91f2aedf",
+    "charlm": {
+      "ccwiki_backward": {
+        "md5": "a6bd5a290149d920e7fe8c1da4d7e25b"
+      },
+      "ccwiki_forward": {
+        "md5": "6bd7a209c2cd1e38c350277f0f95956d"
+      }
+    },
+    "ner": {
+      "aqmar": {
+        "md5": "cada2401d245b8444a0909c30e2f4b7e",
+        "dependencies": [
+          [
+            "charlm",
+            "ccwiki_backward"
+          ],
+          [
+            "charlm",
+            "ccwiki_forward"
+          ]
+        ]
+      },
+      "ontonotes": {
+        "md5": "5c79c60651cee46a288f6b02c7bf32fc",
+        "dependencies": [
+          [
+            "charlm",
+            "ccwiki_backward"
+          ],
+          [
+            "charlm",
+            "ccwiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "bg": {
     "pretrain": {
@@ -605,7 +652,8 @@
       "mwt": "gsd",
       "lemma": "gsd",
       "pos": "gsd",
-      "depparse": "gsd"
+      "depparse": "gsd",
+      "ner": "conll03"
     },
     "default_dependencies": {
       "pos": [
@@ -619,9 +667,55 @@
           "pretrain",
           "gsd"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "newswiki_backward"
+        ],
+        [
+          "charlm",
+          "newswiki_forward"
+        ]
       ]
     },
-    "default_md5": "be910273282640bb6eb03d16ac72c971"
+    "default_md5": "e7537a7c84bd4e02ac483f72e4eafb3b",
+    "charlm": {
+      "newswiki_backward": {
+        "md5": "82f0d9a6a12c736648edbe28d87e9016"
+      },
+      "newswiki_forward": {
+        "md5": "f2841fa3f1981a849d3ed08a723ccc22"
+      }
+    },
+    "ner": {
+      "conll03": {
+        "md5": "402d570ff170fb55917425f67b46a479",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      },
+      "germeval2014": {
+        "md5": "b5b8a8139fa0ebd63f45cbcf0e6a5f81",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "el": {
     "pretrain": {
@@ -810,7 +904,43 @@
     },
     "ner": {
       "conll03": {
-        "md5": "fad0817d94c9b031cf7e05135e427833"
+        "md5": "d2934251eca10634ddc062d132b09826",
+        "dependencies": [
+          [
+            "charlm",
+            "1billion_backward"
+          ],
+          [
+            "charlm",
+            "1billion_forward"
+          ]
+        ]
+      },
+      "ontonotes_ftcrawl": {
+        "md5": "538dca80b5dbf397e70ac60f990f1249",
+        "dependencies": [
+          [
+            "charlm",
+            "1billion_backward"
+          ],
+          [
+            "charlm",
+            "1billion_forward"
+          ]
+        ]
+      },
+      "ontonotes": {
+        "md5": "52858fc3aaa15a7a3e83564599c6d064",
+        "dependencies": [
+          [
+            "charlm",
+            "1billion_backward"
+          ],
+          [
+            "charlm",
+            "1billion_forward"
+          ]
+        ]
       }
     },
     "charlm": {
@@ -819,7 +949,13 @@
       },
       "flair_backward": {
         "md5": "c576001c525d8625198bdcfc4b02db62"
-      } 
+      },
+      "1billion_backward": {
+        "md5": "1405948b125b4264fd17509d1b6175ca"
+      },
+      "1billion_forward": {
+        "md5": "468b3377455fa0311565d46865f55afb"
+      }
     },
     "default_processors": {
       "tokenize": "ewt",
@@ -842,17 +978,17 @@
         ]
       ],
       "ner": [
-          [
-            "charlm",
-            "flair_forward"
-          ],
-          [
-            "charlm",
-            "flair_backward"
-          ]
+        [
+          "charlm",
+          "1billion_backward"
+        ],
+        [
+          "charlm",
+          "1billion_forward"
         ]
+      ]
     },
-    "default_md5": "b57a6272f4bc47edc2486471b7636918"
+    "default_md5": "b747d3068f5c58432d326bf4a280e228"
   },
   "es": {
     "pretrain": {
@@ -902,7 +1038,8 @@
       "mwt": "ancora",
       "lemma": "ancora",
       "pos": "ancora",
-      "depparse": "ancora"
+      "depparse": "ancora",
+      "ner": "conll02"
     },
     "default_dependencies": {
       "pos": [
@@ -916,9 +1053,55 @@
           "pretrain",
           "ancora"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "newswiki_backward"
+        ],
+        [
+          "charlm",
+          "newswiki_forward"
+        ]
       ]
     },
-    "default_md5": "cae8b71cfae8ba40e0a21491a6cba345"
+    "default_md5": "f4c3f8330a94f0c135650fc35de3399b",
+    "charlm": {
+      "newswiki_backward": {
+        "md5": "acd1d5f0acc5ef8ccbac8576f1676503"
+      },
+      "newswiki_forward": {
+        "md5": "b3cf35beef36d86db315915c67bd2fcd"
+      }
+    },
+    "ner": {
+      "ancora": {
+        "md5": "0950b7d53f7e3b4d803d5bfee076eb14",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      },
+      "conll02": {
+        "md5": "42481bf29279baff3d450bf115036da5",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "et": {
     "pretrain": {
@@ -1303,7 +1486,8 @@
       "mwt": "gsd",
       "lemma": "gsd",
       "pos": "gsd",
-      "depparse": "gsd"
+      "depparse": "gsd",
+      "ner": "wikiner"
     },
     "default_dependencies": {
       "pos": [
@@ -1317,9 +1501,42 @@
           "pretrain",
           "gsd"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "newswiki_backward"
+        ],
+        [
+          "charlm",
+          "newswiki_forward"
+        ]
       ]
     },
-    "default_md5": "b51953ea2a16f498088155dd9d5955fe"
+    "default_md5": "f83cd0973fb79d6c964222754d9e9655",
+    "charlm": {
+      "newswiki_backward": {
+        "md5": "42eba035046673e195274f45e713653c"
+      },
+      "newswiki_forward": {
+        "md5": "d98e6909619100c23b745cae4383eea2"
+      }
+    },
+    "ner": {
+      "wikiner": {
+        "md5": "f3a28e8bf64bddcfe7d0aa77d35a9b2a",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "fro": {
     "pretrain": {
@@ -2722,7 +2939,8 @@
       "tokenize": "alpino",
       "lemma": "alpino",
       "pos": "alpino",
-      "depparse": "alpino"
+      "depparse": "alpino",
+      "ner": "conll02"
     },
     "default_dependencies": {
       "pos": [
@@ -2736,9 +2954,55 @@
           "pretrain",
           "alpino"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "ccwiki_backward"
+        ],
+        [
+          "charlm",
+          "ccwiki_forward"
+        ]
       ]
     },
-    "default_md5": "e3a878b124077c0fe6ee38f3020d82eb"
+    "default_md5": "f6e3214cacce4cb26ced373973578a37",
+    "charlm": {
+      "ccwiki_backward": {
+        "md5": "217bcb073b6a5011e684ef8f1ddfb968"
+      },
+      "ccwiki_forward": {
+        "md5": "7eb93025ac87ea4bf7f42dc28fcb37cd"
+      }
+    },
+    "ner": {
+      "conll02": {
+        "md5": "90e3cb1b395f6ee7b5bd2870c4e3e4cf",
+        "dependencies": [
+          [
+            "charlm",
+            "ccwiki_backward"
+          ],
+          [
+            "charlm",
+            "ccwiki_forward"
+          ]
+        ]
+      },
+      "wikiner": {
+        "md5": "239ec3a17b9ac7df5ee14c0493213a2e",
+        "dependencies": [
+          [
+            "charlm",
+            "ccwiki_backward"
+          ],
+          [
+            "charlm",
+            "ccwiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "no": {
     "pretrain": {
@@ -3120,7 +3384,8 @@
       "tokenize": "syntagrus",
       "lemma": "syntagrus",
       "pos": "syntagrus",
-      "depparse": "syntagrus"
+      "depparse": "syntagrus",
+      "ner": "wikiner"
     },
     "default_dependencies": {
       "pos": [
@@ -3134,9 +3399,42 @@
           "pretrain",
           "syntagrus"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "newswiki_backward"
+        ],
+        [
+          "charlm",
+          "newswiki_forward"
+        ]
       ]
     },
-    "default_md5": "23655082de119266bdc9e5af67040040"
+    "default_md5": "09999e68ca7d650de5fddb18427feddb",
+    "charlm": {
+      "newswiki_backward": {
+        "md5": "47d7517555684206f327ba4e0527d034"
+      },
+      "newswiki_forward": {
+        "md5": "c04b0361a5556ac4c759932d688279d9"
+      }
+    },
+    "ner": {
+      "wikiner": {
+        "md5": "16737775e8e9fd034e591b4cc7581bae",
+        "dependencies": [
+          [
+            "charlm",
+            "newswiki_backward"
+          ],
+          [
+            "charlm",
+            "newswiki_forward"
+          ]
+        ]
+      }
+    }
   },
   "sk": {
     "pretrain": {
@@ -3834,7 +4132,8 @@
       "tokenize": "gsd",
       "lemma": "gsd",
       "pos": "gsd",
-      "depparse": "gsd"
+      "depparse": "gsd",
+      "ner": "ontonotes"
     },
     "default_dependencies": {
       "pos": [
@@ -3848,8 +4147,41 @@
           "pretrain",
           "gsd"
         ]
+      ],
+      "ner": [
+        [
+          "charlm",
+          "gigaword_backward"
+        ],
+        [
+          "charlm",
+          "gigaword_forward"
+        ]
       ]
     },
-    "default_md5": "c30e57cbd3d97e54cfb14856c3f629b2"
+    "default_md5": "3a4b6aabf2f8e89d02a7db641686a6a8",
+    "charlm": {
+      "gigaword_backward": {
+        "md5": "9efba48c365d8ad4dfd62587578fa132"
+      },
+      "gigaword_forward": {
+        "md5": "5e61ceea0d0672b02c3af723865d9d97"
+      }
+    },
+    "ner": {
+      "ontonotes": {
+        "md5": "702df19bf8c98c5831b4f67aed86e551",
+        "dependencies": [
+          [
+            "charlm",
+            "gigaword_backward"
+          ],
+          [
+            "charlm",
+            "gigaword_forward"
+          ]
+        ]
+      }
+    }
   }
 }
