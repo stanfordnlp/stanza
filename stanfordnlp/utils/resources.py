@@ -114,6 +114,14 @@ def request_file(url, path, md5=None):
     download_file(url, path)
     assert(not md5 or is_file_existed(path, md5))
 
+def sort_processors(processor_list):
+    sorted_list = []
+    for processor in PIPELINE_NAMES:
+        for item in processor_list:
+            if item[0] == processor:
+                sorted_list.append(item)
+    return sorted_list
+
 def maintain_processor_list(resources, lang, package, processors):
     processor_list = {}
     dependencies = resources[lang][DEFAULT_DEPENDENCIES]
@@ -147,7 +155,8 @@ def maintain_processor_list(resources, lang, package, processors):
                     else:
                         logger.debug(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
             if not flag: logger.warning((f'Can not find package: {package}.'))
-    processor_list = [[key, value] for key, value in processor_list.items()] 
+    processor_list = [[key, value] for key, value in processor_list.items()]
+    processor_list = sort_processors(processor_list)
     return processor_list
 
 def add_dependencies(resources, lang, processor_list):    
