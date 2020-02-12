@@ -9,8 +9,6 @@ import subprocess
 from datetime import datetime
 from tests import *
 
-pytestmark = pytest.mark.pipeline
-
 DOWNLOAD_TEST_DIR = f'{TEST_WORKING_DIR}/download'
 
 RUN_PIPELINE_TEST_LANGUAGES = [AR_SHORTHAND, DE_SHORTHAND, FR_SHORTHAND, KK_SHORTHAND, KO_SHORTHAND]
