@@ -121,8 +121,10 @@ class CoNLL:
         """
         token_conll = ['_' for i in range(FIELD_NUM)]
         for key in token_dict:
-            token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
-        if '-' not in token_dict[ID] and HEAD not in token_dict: # word (not mwt token) without head
+            if key in FIELD_TO_IDX:
+                token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+        # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
+        if '-' not in token_dict[ID] and HEAD not in token_dict:
             token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID]) - 1) # evaluation script requires head: int
         return token_conll
 
