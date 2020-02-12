@@ -28,7 +28,10 @@ batch_size=5000
 if [ $treebank == 'UD_Finnish-TDT' ] || [ $treebank == 'UD_Russian-Taiga' ] || [ $treebank == 'UD_Latvian-LVTB' ] \
     || [ $treebank == 'UD_Croatian-SET' ] || [ $treebank == 'UD_Galician-TreeGal' ]; then
     batch_size=3000
+elif [ $treebank == 'UD_German-HDT' ]; then
+    batch_size=1500
 fi
+
 echo "Using batch size $batch_size"
 
 echo "Running parser with $args..."

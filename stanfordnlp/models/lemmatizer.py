@@ -88,10 +88,6 @@ def main():
     args = vars(args)
     print("Running lemmatizer in {} mode".format(args['mode']))
 
-    # manually correct for training epochs
-    if args['lang'] in ['cs_pdt', 'ru_syntagrus']:
-        args['num_epoch'] = 30
-
     if args['mode'] == 'train':
         train(args)
     else:

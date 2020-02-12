@@ -21,13 +21,19 @@ if [ ! -e $train_file ]; then
     bash scripts/prep_lemma_data.sh $treebank
 fi
 
+# handle languages that need less epochs
+num_epoch=60
+if [ $treebank == 'UD_Czech-PDT' ] || [ $treebank == 'UD_Russian-SynTagRus' ] || [ $treebank == 'UD_German-HDT' ]; then
+    num_epoch=30
+fi
+
 echo "Running lemmatizer with $args..."
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
     python -m stanfordnlp.models.identity_lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short
 else
     python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
-        --output_file $output_file --gold_file $gold_file --lang $short --mode train $args
+        --output_file $output_file --gold_file $gold_file --lang $short --num_epoch $num_epoch --mode train $args
     python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short --mode predict $args
 fi

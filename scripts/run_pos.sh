@@ -26,6 +26,8 @@ batch_size=5000
 
 if [ $treebank == 'UD_Croatian-SET' ]; then
     batch_size=3000
+elif [ $treebank == 'UD_German-HDT' ]; then
+    batch_size=2000
 fi
 echo "Using batch size $batch_size"
 

@@ -143,5 +143,3 @@ gold_file=${ETE_DATA_DIR}/${short}-ud-${set}.conllu
 echo 'running official eval script'
 # print out results
 python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $ete_file
-# store results to file
-python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $ete_file > ${short}.ete.results
