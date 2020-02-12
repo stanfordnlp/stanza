@@ -2,11 +2,14 @@
 Tests for the run_pipeline.py script, also serves as integration test
 """
 
+import pytest
 import re
 import subprocess
 
 from datetime import datetime
 from tests import *
+
+pytestmark = pytest.mark.pipeline
 
 DOWNLOAD_TEST_DIR = f'{TEST_WORKING_DIR}/download'
 

@@ -9,6 +9,8 @@ import stanfordnlp.server as corenlp
 from stanfordnlp.protobuf import Document
 from tests import TEST_WORKING_DIR
 
+pytestmark = pytest.mark.client
+
 EN_DOC = "Joe Smith lives in California."
 
 # results with an example properties file

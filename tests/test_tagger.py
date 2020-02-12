@@ -2,12 +2,14 @@
 Basic testing of part of speech tagging
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
 
-EN_DOC = "Joe Smith was born in California."
+pytestmark = pytest.mark.pipeline
 
+EN_DOC = "Joe Smith was born in California."
 
 EN_DOC_GOLD = """
 <Token id=1;words=[<Word id=1;text=Joe;upos=PROPN;xpos=NNP;feats=Number=Sing>]>

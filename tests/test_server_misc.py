@@ -2,7 +2,10 @@
 Misc tests for the server
 """
 
+import pytest
 import stanfordnlp.server as corenlp
+
+pytestmark = pytest.mark.client
 
 EN_DOC = "Joe Smith lives in California."
 

@@ -2,10 +2,12 @@
 Basic testing of tokenization
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
 

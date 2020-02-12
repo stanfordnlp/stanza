@@ -8,6 +8,7 @@ from stanfordnlp.utils.conll import CoNLL
 
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 # data for testing
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."

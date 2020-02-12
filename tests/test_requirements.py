@@ -9,6 +9,7 @@ from stanfordnlp.pipeline.core import PipelineRequirementsException
 from stanfordnlp.pipeline.processor import ProcessorRequirementsException
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 def check_exception_vals(req_exception, req_exception_vals):
     """

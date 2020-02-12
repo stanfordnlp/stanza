@@ -10,7 +10,7 @@ import subprocess
 from tests import *
 
 # set the marker for this module
-pytestmark = pytest.mark.travis
+pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 

@@ -15,7 +15,7 @@ from stanfordnlp.protobuf import Document, Sentence, Token, DependencyGraph,\
 from stanfordnlp.protobuf import parseFromDelimitedString, writeToDelimitedString, to_text
 
 # set the marker for this module
-pytestmark = pytest.mark.travis
+pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 # Text that was annotated
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"

@@ -2,9 +2,12 @@
 Basic testing of lemmatization
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
+
+pytestmark = pytest.mark.pipeline
 
 EN_DOC = "Joe Smith was born in California."
 

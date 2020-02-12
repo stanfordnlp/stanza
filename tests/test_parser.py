@@ -2,10 +2,12 @@
 Basic testing of dependency parser
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 EN_DOC = "Joe Smith lives in California."
 

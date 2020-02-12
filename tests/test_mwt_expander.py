@@ -2,10 +2,12 @@
 Basic testing of multi-word-token expansion
 """
 
+import pytest
 import stanfordnlp
 
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 # mwt data for testing
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \
