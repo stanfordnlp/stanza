@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")

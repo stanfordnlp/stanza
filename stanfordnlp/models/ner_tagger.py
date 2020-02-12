@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=500000)
+    parser.add_argument('--pretrain_max_vocab', type=int, default=100000)
     parser.add_argument('--word_dropout', type=float, default=0)
     parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
