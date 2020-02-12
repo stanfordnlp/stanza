@@ -48,7 +48,7 @@ class Pretrain:
             except BaseException as e:
                 logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
                 return self.read_pretrain()
-            return data['vocab'], data['emb']
+            return PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
         else:
             return self.read_pretrain()
 
@@ -80,7 +80,7 @@ class Pretrain:
         if self._save_to_file:
             assert self.filename is not None, "Filename must be provided to save pretrained vector to file."
             # save to file
-            data = {'vocab': vocab, 'emb': emb}
+            data = {'vocab': vocab.state_dict(), 'emb': emb}
             try:
                 torch.save(data, self.filename)
                 logger.info("Saved pretrained vocab and vectors to {}".format(self.filename))
@@ -119,3 +119,17 @@ class Pretrain:
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
         return words, emb, failed
+
+
+if __name__ == '__main__':
+    with open('test.txt', 'w') as fout:
+        fout.write('3 2\na 1 1\nb -1 -1\nc 0 0\n')
+    # 1st load: save to pt file
+    pretrain = Pretrain('test.pt', 'test.txt')
+    print(pretrain.emb)
+    # verify pt file
+    x = torch.load('test.pt')
+    print(x)
+    # 2nd load: load saved pt file
+    pretrain = Pretrain('test.pt', 'test.txt')
+    print(pretrain.emb)

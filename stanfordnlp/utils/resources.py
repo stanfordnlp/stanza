@@ -4,136 +4,218 @@ utilities for getting resources
 
 import os
 import requests
-import zipfile
-
 from tqdm import tqdm
 from pathlib import Path
+import json
+import hashlib
+import zipfile
+import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 # set home dir for default
 HOME_DIR = str(Path.home())
+DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/download-refactor/stanfordnlp/utils'
+DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
-DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanfordnlp_models'
+DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
-
-# list of language shorthands
-conll_shorthands = ['af_afribooms', 'ar_padt', 'bg_btb', 'bxr_bdt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'cu_proiel', 'da_ddt', 'de_gsd', 'el_gdt', 'en_ewt', 'en_gum', 'en_lines', 'es_ancora', 'et_edt', 'eu_bdt', 'fa_seraji', 'fi_ftb', 'fi_tdt', 'fr_gsd', 'fro_srcmf', 'fr_sequoia', 'fr_spoken', 'ga_idt', 'gl_ctg', 'gl_treegal', 'got_proiel', 'grc_perseus', 'grc_proiel', 'he_htb', 'hi_hdtb', 'hr_set', 'hsb_ufal', 'hu_szeged', 'hy_armtdp', 'id_gsd', 'it_isdt', 'it_postwita', 'ja_gsd', 'kk_ktb', 'kmr_mg', 'ko_gsd', 'ko_kaist', 'la_ittb', 'la_perseus', 'la_proiel', 'lv_lvtb', 'nl_alpino', 'nl_lassysmall', 'no_bokmaal', 'no_nynorsklia', 'no_nynorsk', 'pl_lfg', 'pl_sz', 'pt_bosque', 'ro_rrt', 'ru_syntagrus', 'ru_taiga', 'sk_snk', 'sl_ssj', 'sl_sst', 'sme_giella', 'sr_set', 'sv_lines', 'sv_talbanken', 'tr_imst', 'ug_udt', 'uk_iu', 'ur_udtb', 'vi_vtb', 'zh_gsd']
-
-# all languages with mwt
-mwt_languages = ['ar_padt', 'ca_ancora', 'cs_cac', 'cs_fictree', 'cs_pdt', 'de_gsd', 'el_gdt', 'es_ancora', 'fa_seraji', 'fi_ftb', 'fr_gsd', 'fr_sequoia', 'gl_ctg', 'gl_treegal', 'he_htb', 'hy_armtdp', 'it_isdt', 'it_postwita', 'kk_ktb', 'pl_sz', 'pt_bosque', 'tr_imst']
-
-# default treebank for languages
-default_treebanks = {'af': 'af_afribooms', 'grc': 'grc_proiel', 'ar': 'ar_padt', 'hy': 'hy_armtdp', 'eu': 'eu_bdt', 'bg': 'bg_btb', 'bxr': 'bxr_bdt', 'ca': 'ca_ancora', 'zh': 'zh_gsd', 'hr': 'hr_set', 'cs': 'cs_pdt', 'da': 'da_ddt', 'nl': 'nl_alpino', 'en': 'en_ewt', 'et': 'et_edt', 'fi': 'fi_tdt', 'fr': 'fr_gsd', 'gl': 'gl_ctg', 'de': 'de_gsd', 'got': 'got_proiel', 'el': 'el_gdt', 'he': 'he_htb', 'hi': 'hi_hdtb', 'hu': 'hu_szeged', 'id': 'id_gsd', 'ga': 'ga_idt', 'it': 'it_isdt', 'ja': 'ja_gsd', 'kk': 'kk_ktb', 'ko': 'ko_kaist', 'kmr': 'kmr_mg', 'la': 'la_ittb', 'lv': 'lv_lvtb', 'sme': 'sme_giella', 'no_bokmaal': 'no_bokmaal', 'no_nynorsk': 'no_nynorsk', 'cu': 'cu_proiel', 'fro': 'fro_srcmf', 'fa': 'fa_seraji', 'pl': 'pl_lfg', 'pt': 'pt_bosque', 'ro': 'ro_rrt', 'ru': 'ru_syntagrus', 'sr': 'sr_set', 'sk': 'sk_snk', 'sl': 'sl_ssj', 'es': 'es_ancora', 'sv': 'sv_talbanken', 'tr': 'tr_imst', 'uk': 'uk_iu', 'hsb': 'hsb_ufal', 'ur': 'ur_udtb', 'ug': 'ug_udt', 'vi': 'vi_vtb'}
-
-# map processor name to file ending
-processor_to_ending = {'tokenize': 'tokenizer', 'mwt': 'mwt_expander', 'pos': 'tagger', 'lemma': 'lemmatizer', 'depparse': 'parser', 'ner': 'nertagger'}
+DEFAULT_PROCESSORS = "default_processors"
+DEFAULT_DEPENDENCIES = "default_dependencies"
+PIPELINE_NAMES = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']
 
 # given a language and models path, build a default configuration
-def build_default_config(treebank, models_path):
+def build_default_config(resources, lang, dir, load_list):
     default_config = {}
-    if treebank in mwt_languages:
-        default_config['processors'] = 'tokenize,mwt,pos,lemma,depparse,ner'
-    else:
-        default_config['processors'] = 'tokenize,pos,lemma,depparse,ner'
-    if treebank == 'vi_vtb':
+    if lang == 'vi': # <TODO> special handle for vi
         default_config['lemma_use_identity'] = True
         default_config['lemma_batch_size'] = 5000
-    treebank_dir = os.path.join(models_path, f"{treebank}_models")
-    for processor in default_config['processors'].split(','):
-        model_file_ending = f"{processor_to_ending[processor]}.pt"
-        default_config[f"{processor}_model_path"] = os.path.join(treebank_dir, f"{treebank}_{model_file_ending}")
-        if processor in ['pos', 'depparse']:
-            default_config[f"{processor}_pretrain_path"] = os.path.join(treebank_dir, f"{treebank}.pretrain.pt")
-        if processor in ['ner']:
-            default_config[f"{processor}_charlm_forward_file"] = os.path.join(treebank_dir, f"{treebank}_forward_charlm.pt")
-            default_config[f"{processor}_charlm_backward_file"] = os.path.join(treebank_dir, f"{treebank}_backward_charlm.pt")
+
+    for item in load_list:
+        processor, model, dependencies = item
+        default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, model + '.pt')
+        if not dependencies: continue
+        for dependency in dependencies:
+            dep_processor, dep_model = dependency
+            if dep_processor == 'charlm': # <TODO>: special handle for charlm
+                direction = dep_model.split('_')[1]
+                default_config[f"{processor}_{dep_processor}_{direction}_file"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
+            else:
+                default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
+
     return default_config
 
+def make_table(header, content, column_width=20):
+    '''
+    Input:
+    header -> List[str]: table header
+    content -> List[List[str]]: table content
+    column_width -> int: table column width
+    
+    Output:
+    table_str -> str: well-formatted string for the table
+    '''
+    table_str = ''
+    len_column, len_row = len(header), len(content) + 1
+    
+    table_str += '=' * (len_column * column_width + 1) + '\n'
+    
+    table_str += '|'
+    for item in header: table_str += str(item).ljust(column_width - 1) + '|'
+    table_str += '\n'
+    
+    table_str += '-' * (len_column * column_width + 1) + '\n'
+    
+    for line in content:
+        table_str += '|'
+        for item in line:
+            table_str += str(item).ljust(column_width - 1) + '|'
+        table_str += '\n'
+    
+    table_str += '=' * (len_column * column_width + 1) + '\n'
+    
+    return table_str
 
-# load a config from file
-def load_config(config_file_path):
-    loaded_config = {}
-    with open(config_file_path) as config_file:
-        for config_line in config_file:
-            config_key, config_value = config_line.split(':')
-            loaded_config[config_key] = config_value.rstrip().lstrip()
-    return loaded_config
+def ensure_dir(dir):
+    Path(dir).mkdir(parents=True, exist_ok=True)
 
+def get_md5(path):
+    data = open(path, 'rb').read()
+    return hashlib.md5(data).hexdigest()
 
-# download a ud models zip file
-def download_ud_model(lang_name, resource_dir=None, should_unzip=True, confirm_if_exists=False, force=False,
-                      version=DEFAULT_DOWNLOAD_VERSION):
-    # ask if user wants to download
-    if resource_dir is not None and os.path.exists(os.path.join(resource_dir, f"{lang_name}_models")):
-        if confirm_if_exists:
-            print("")
-            print(f"The model directory already exists at \"{resource_dir}/{lang_name}_models\". Do you want to download the models again? [y/N]")
-            should_download = 'y' if force else input()
-            should_download = should_download.strip().lower() in ['yes', 'y']
-        else:
-            should_download = False
-    else:
-        print('Would you like to download the models for: '+lang_name+' now? (Y/n)')
-        should_download = 'y' if force else input()
-        should_download = should_download.strip().lower() in ['yes', 'y', '']
-    if should_download:
-        # set up data directory
-        if resource_dir is None:
-            print('')
-            print('Default download directory: ' + DEFAULT_MODEL_DIR)
-            print('Hit enter to continue or type an alternate directory.')
-            where_to_download = '' if force else input()
-            if where_to_download != '':
-                download_dir = where_to_download
+def unzip(dir, filename):
+    logger.debug(f'Unzip: {dir}/{filename}...')
+    with zipfile.ZipFile(os.path.join(dir, filename)) as f:
+        f.extractall(dir)
+
+def is_file_existed(path, md5):
+    return os.path.exists(path) and get_md5(path) == md5
+
+def download_file(url, path):
+    verbose = logger.level in [0, 10, 20]
+    r = requests.get(url, stream=True)
+    with open(path, 'wb') as f:
+        file_size = int(r.headers.get('content-length'))
+        default_chunk_size = 131072
+        desc = 'Downloading ' + url
+        with tqdm(total=file_size, unit='B', unit_scale=True, disable=not verbose, desc=desc) as pbar:
+            for chunk in r.iter_content(chunk_size=default_chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+                    pbar.update(len(chunk))
+
+def request_file(url, path, md5=None):
+    ensure_dir(Path(path).parent)
+    if is_file_existed(path, md5): 
+        logger.info(f'File exists: {path}.')
+        return
+    download_file(url, path)
+    assert(not md5 or is_file_existed(path, md5))
+
+def sort_processors(processor_list):
+    sorted_list = []
+    for processor in PIPELINE_NAMES:
+        for item in processor_list:
+            if item[0] == processor:
+                sorted_list.append(item)
+    return sorted_list
+
+def maintain_processor_list(resources, lang, package, processors):
+    processor_list = {}
+    dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    if processors:
+        logger.debug(f'Processing parameter "processors"...')
+        for key, value in processors.items():
+            assert(key in PIPELINE_NAMES)
+            assert(isinstance(key, str) and isinstance(value, str))
+            if key in resources[lang] and value in resources[lang][key]:
+                logger.debug(f'Find {key}: {value}.')
+                processor_list[key] = value
+            elif key in resources[lang][DEFAULT_PROCESSORS] and value == 'default':
+                logger.debug(f'Find {key}: {resources[lang][DEFAULT_PROCESSORS][key]}.')
+                processor_list[key] = resources[lang][DEFAULT_PROCESSORS][key]
             else:
-                download_dir = DEFAULT_MODEL_DIR
+                logger.warning(f'Can not find {key}: {value}.')
+
+    if package:
+        logger.debug(f'Processing parameter "package"...')
+        if package == 'default':
+            for key, value in resources[lang][DEFAULT_PROCESSORS].items():
+                if key not in processor_list:
+                    logger.debug(f'Find {key}: {value}.')
+                    processor_list[key] = value
         else:
-            download_dir = resource_dir
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
-        print('')
-        print('Downloading models for: '+lang_name)
-        model_zip_file_name = f'{lang_name}_models.zip'
-        download_url = f'{DEFAULT_MODELS_URL}/{version}/{model_zip_file_name}'
-        download_file_path = os.path.join(download_dir, model_zip_file_name)
-        print('Download location: '+download_file_path)
+            flag = False
+            for key in PIPELINE_NAMES:
+                if key not in resources[lang]: continue 
+                if package in resources[lang][key]:
+                    flag = True
+                    if key not in processor_list:
+                        logger.debug(f'Find {key}: {package}.')
+                        processor_list[key] = package
+                    else:
+                        logger.debug(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
+            if not flag: logger.warning((f'Can not find package: {package}.'))
+    processor_list = [[key, value] for key, value in processor_list.items()]
+    processor_list = sort_processors(processor_list)
+    return processor_list
 
-        # initiate download
-        r = requests.get(download_url, stream=True)
-        with open(download_file_path, 'wb') as f:
-            file_size = int(r.headers.get('content-length'))
-            default_chunk_size = 131072
-            with tqdm(total=file_size, unit='B', unit_scale=True) as pbar:
-                for chunk in r.iter_content(chunk_size=default_chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
-                        pbar.update(len(chunk))
-        # unzip models file
-        print('')
-        print('Download complete.  Models saved to: '+download_file_path)
-        if should_unzip:
-            unzip_ud_model(lang_name, download_file_path, download_dir)
-        # remove the zipe file
-        print("Cleaning up...", end="")
-        os.remove(download_file_path)
-        print('Done.')
+def add_dependencies(resources, lang, processor_list):    
+    default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    for item in processor_list:
+        processor, model = item
+        dependencies = default_dependencies.get(processor, None)
+        dependencies = resources[lang][processor][model].get('dependencies', dependencies)
+        item.append(dependencies)
+    return processor_list
 
-
-# unzip a ud models zip file
-def unzip_ud_model(lang_name, zip_file_src, zip_file_target):
-    print('Extracting models file for: '+lang_name)
-    with zipfile.ZipFile(zip_file_src, "r") as zip_ref:
-        zip_ref.extractall(zip_file_target)
-
+def flatten_processor_list(processor_list):
+    flattened_processor_list = []
+    dependencies_list = []
+    for item in processor_list:
+        processor, model, dependencies = item
+        flattened_processor_list.append([processor, model])
+        if dependencies: dependencies_list += [tuple(dependency) for dependency in dependencies]
+    dependencies_list = [list(item) for item in set(dependencies_list)]
+    for processor, model in dependencies_list:
+        logger.debug(f'Find dependency {processor}: {model}.')
+    flattened_processor_list += dependencies_list
+    return flattened_processor_list
 
 # main download function
-def download(download_label, resource_dir=None, confirm_if_exists=False, force=False, version=DEFAULT_DOWNLOAD_VERSION):
-    if download_label in conll_shorthands:
-        download_ud_model(download_label, resource_dir=resource_dir, confirm_if_exists=confirm_if_exists, force=force,
-                          version=version)
-    elif download_label in default_treebanks:
-        print(f'Using the default treebank "{default_treebanks[download_label]}" for language "{download_label}".')
-        download_ud_model(default_treebanks[download_label], resource_dir=resource_dir,
-                          confirm_if_exists=confirm_if_exists, force=force, version=version)
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO'):
+    assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    logger.setLevel(logging_level)
+    
+    # Download resources.json to obtain latest packages.
+    logger.info('Downloading resource file...')
+    request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
+    resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+    if lang not in resources:
+        logger.warning(f'Unsupported language: {lang}.')
+        return
+    
+    # Special case: processors is str, compatible with older verson
+    if isinstance(processors, str):
+        processors = {processor.strip(): package for processor in processors.split(',')}
+        package = None
+
+    # Default: download zipfile and unzip
+    if package == 'default' and len(processors) == 0:
+        logger.info('Downloading default packages...')
+        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
+        unzip(os.path.join(dir, lang), 'default.zip')
+    # Customize: maintain download list
     else:
-        raise ValueError(f'The language or treebank "{download_label}" is not currently supported by this function. Please try again with other languages or treebanks.')
+        logger.info('Downloading customized packages...')
+        download_list = maintain_processor_list(resources, lang, package, processors)
+        download_list = add_dependencies(resources, lang, download_list)
+        download_list = flatten_processor_list(download_list)
+        download_table = make_table(['Processor', 'Model'], download_list)
+        logger.info(f'Download list:\n{download_table}')
+        
+        # Download packages
+        for key, value in download_list:
+            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])

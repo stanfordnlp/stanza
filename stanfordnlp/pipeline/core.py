@@ -7,6 +7,8 @@ import itertools
 import sys
 import torch
 import logging
+import json
+import os
 
 from distutils.util import strtobool
 from stanfordnlp.pipeline._constants import *
@@ -18,16 +20,12 @@ from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, default_treebanks, mwt_languages, build_default_config
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, make_table, build_default_config
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PROCESSORS_LIST = f'{TOKENIZE},{MWT},{POS},{LEMMA},{DEPPARSE}'
-
 NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
                            LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}
-
-PIPELINE_SETTINGS = ['lang', 'shorthand', 'mode']
 
 # list of settings for each processor
 PROCESSOR_SETTINGS = {
@@ -37,21 +35,7 @@ PROCESSOR_SETTINGS = {
     LEMMA: ['batch_size', 'beam_size', 'dict_only', 'ensemble_dict', 'use_identity'],
     DEPPARSE: ['batch_size', 'pretagged'],
     NER: ['batch_size']
-}
-
-PROCESSOR_SETTINGS_LIST = \
-    ['_'.join(psp) for k, v in PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
-
-BOOLEAN_PROCESSOR_SETTINGS = {
-    TOKENIZE: ['pretokenized', 'no_ssplit'],
-    MWT: ['dict_only', 'ensemble_dict'],
-    LEMMA: ['dict_only', 'edit', 'ensemble_dict', 'use_identity'],
-    DEPPARSE: ['pretagged']
-}
-
-BOOLEAN_PROCESSOR_SETTINGS_LIST = \
-    ['_'.join(psp) for k, v in BOOLEAN_PROCESSOR_SETTINGS.items() for psp in itertools.product([k], v)]
-
+} # TODO: ducumentation
 
 class PipelineRequirementsException(Exception):
     """
@@ -77,30 +61,46 @@ class PipelineRequirementsException(Exception):
 
 
 class Pipeline:
+    
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO', use_gpu=True, **kwargs):
+        assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        logger.setLevel(logging_level)
 
-    def __init__(self, processors=DEFAULT_PROCESSORS_LIST, lang='en', models_dir=DEFAULT_MODEL_DIR, treebank=None,
-                 use_gpu=True, **kwargs):
-        shorthand = default_treebanks[lang] if treebank is None else treebank
-        config = build_default_config(shorthand, models_dir)
-        config.update(kwargs)
-        self.config = config
-        self.config['processors'] = processors
-        self.config['lang'] = lang
-        self.config['shorthand'] = shorthand
-        self.config['models_dir'] = models_dir
-        self.processor_names = [n.strip() for n in self.config['processors'].split(',')]
-        self.processors = {TOKENIZE: None, MWT: None, LEMMA: None, POS: None, DEPPARSE: None}
-        # always use GPU if a GPU device can be found, unless use_gpu is explicitly set to be False
+        # Load resources.json to obtain latest packages.
+        logger.info('Loading resource file...')
+        resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+        if lang not in resources:
+            logger.warning(f'Unsupported language: {lang}.')
+            return
+
+        # Special case: processors is str, compatible with older verson
+        if isinstance(processors, str):
+            processors = {processor.strip(): package for processor in processors.split(',')}
+            package = None
+
+        # Maintain load list
+        self.load_list = maintain_processor_list(resources, lang, package, processors)
+        self.load_list = add_dependencies(resources, lang, self.load_list)
+        load_table = make_table(['Processor', 'Model', 'Dependencies'], self.load_list)
+        logger.info(f'Load list:\n{load_table}')
+        
+        # Load processors
         self.use_gpu = torch.cuda.is_available() and use_gpu
         logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
+
+        # shorthand = default_treebanks[lang] if treebank is None else treebank
+        self.config = build_default_config(resources, lang, dir, self.load_list)
+        self.config.update(kwargs)
+
+        self.processors = {}
+
         # configs that are the same for all processors
-        pipeline_level_configs = {'lang': self.config['lang'], 'shorthand': self.config['shorthand'], 'mode': 'predict'}
-        self.standardize_config_values()
+        pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
+        
         # set up processors
         pipeline_reqs_exceptions = []
-        for processor_name in self.processor_names:
-            if processor_name == MWT and self.config['shorthand'] not in mwt_languages:
-                continue
+        for item in self.load_list:
+            processor_name, model, _ = item
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
@@ -128,8 +128,9 @@ class Pipeline:
     def filter_config(self, prefix, config_dict):
         filtered_dict = {}
         for key in config_dict.keys():
-            if key.split('_')[0] == prefix:
-                filtered_dict['_'.join(key.split('_')[1:])] = config_dict[key]
+            k, v = key.split('_', 1) # split tokenize_pretokenize to tokenize+pretokenize
+            if k == prefix:
+                filtered_dict[v] = config_dict[key]
         return filtered_dict
 
     @property
@@ -138,24 +139,12 @@ class Pipeline:
         Return all currently loaded processors in execution order.
         :return: list of Processor instances
         """
-        return [self.processors[processor_name] for processor_name in self.processor_names
-                if self.processors.get(processor_name)]
-
-    def standardize_config_values(self):
-        """
-        Standardize config settings
-        1.) for boolean settings, convert string values to True or False using distutils.util.strtobool
-        """
-        standardized_entries = {}
-        for key, val in self.config.items():
-            if key in BOOLEAN_PROCESSOR_SETTINGS_LIST and isinstance(val, str):
-                standardized_entries[key] = bool(strtobool(val))
-        self.config.update(standardized_entries)
+        return [self.processors[processor_name] for processor_name in PIPELINE_NAMES if self.processors.get(processor_name)]
 
     def process(self, doc):
         # run the pipeline
-        for processor_name in self.processor_names:
-            if self.processors[processor_name] is not None:
+        for processor_name in PIPELINE_NAMES:
+            if self.processors.get(processor_name):
                 doc = self.processors[processor_name].process(doc)
         return doc
 
@@ -164,3 +153,4 @@ class Pipeline:
                     isinstance(doc, Document)]), 'input should be either str, list or Document'
         doc = self.process(doc)
         return doc
+
