@@ -185,8 +185,18 @@ def flatten_processor_list(processor_list):
     return flattened_processor_list
 
 # main download function
-def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO'):
-    assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
+        logging_level='INFO', verbose=None):
+    # Check verbose for easy logging control
+    if verbose == False:
+        logging_level = 'ERROR'
+    elif verbose == True:
+        logging_level = 'INFO'
+    
+    # Set logging level
+    logging_level = logging_level.upper()
+    if logging_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+        raise Exception(f"Unrecognized logging level for downloading: {logging_level}")
     logger.setLevel(logging_level)
     
     # Download resources.json to obtain latest packages.

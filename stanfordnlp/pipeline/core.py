@@ -62,8 +62,18 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
     
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, logging_level='INFO', use_gpu=True, **kwargs):
-        assert logging_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
+            logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
+        # Check verbose for easy logging control
+        if verbose == False:
+            logging_level = 'ERROR'
+        elif verbose == True:
+            logging_level = 'INFO'
+        
+        # Set logging level
+        logging_level = logging_level.upper()
+        if logging_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+            raise Exception(f"Unrecognized logging level for pipeline: {logging_level}")
         logger.setLevel(logging_level)
 
         # Load resources.json to obtain latest packages.
