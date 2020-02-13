@@ -205,8 +205,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
     resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
     if lang not in resources:
-        logger.warning(f'Unsupported language: {lang}.')
-        return
+            raise Exception(f'Unsupported language: {lang}.')
     
     # Special case: processors is str, compatible with older verson
     if isinstance(processors, str):
