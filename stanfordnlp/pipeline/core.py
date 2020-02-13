@@ -95,7 +95,7 @@ class Pipeline:
         # Maintain load list
         self.load_list = maintain_processor_list(resources, lang, package, processors)
         self.load_list = add_dependencies(resources, lang, self.load_list)
-        load_table = make_table(['Processor', 'Model', 'Dependencies'], self.load_list)
+        load_table = make_table(['Processor', 'Model'], [row[:2] for row in self.load_list])
         logger.info(f'Load list:\n{load_table}')
         
         # Load processors
