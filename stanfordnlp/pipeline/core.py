@@ -72,16 +72,20 @@ class Pipeline:
         
         # Set logging level
         logging_level = logging_level.upper()
-        if logging_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
-            raise Exception(f"Unrecognized logging level for pipeline: {logging_level}")
+        all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
+        if logging_level not in all_levels:
+            raise Exception(f"Unrecognized logging level for pipeline: {logging_level}. Must be one of {', '.join(all_levels)}.")
         logger.setLevel(logging_level)
 
         # Load resources.json to obtain latest packages.
         logger.info('Loading resource file...')
-        resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+        resources_filepath = os.path.join(dir, DEFAULT_RESOURCES_FILE)
+        if not os.path.exists(resources_filepath):
+            raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
+        with open(resources_filepath) as infile:
+            resources = json.load(infile)
         if lang not in resources:
-            logger.warning(f'Unsupported language: {lang}.')
-            return
+            raise Exception(f'Unsupported language: {lang}.')
 
         # Special case: processors is str, compatible with older verson
         if isinstance(processors, str):
