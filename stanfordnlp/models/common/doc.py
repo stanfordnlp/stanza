@@ -791,3 +791,15 @@ class Span:
         """ Set the end character offset of this span. """
         self._end_char = value
 
+    def to_dict(self):
+        attrs = ['text', 'type', 'start_char', 'end_char']
+        span_dict = dict([(attr_name, getattr(self, attr_name)) for attr_name in attrs])
+        return span_dict
+
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=2)
+
+    def pretty_print(self):
+        span_dict = self.to_dict()
+        feature_str = ";".join(["{}={}".format(k,v) for k,v in span_dict.items()])
+        return f"<{self.__class__.__name__} {feature_str}>"
