@@ -48,9 +48,7 @@ lcode2lang = {
     "pcm": "Naija",
     "sme": "North_Sami",
     "no": "Norwegian",
-    "no_bokmaal": "Norwegian-Bokmaal",
-    "no_nynorsk": "Norwegian-Nynorsk",
-    "no_nynorsklia": "Norwegian-NynorskLIA",
+    "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
     "orv": "Old_Russian",
@@ -81,3 +79,7 @@ lcode2lang = {
 
 lang2lcode = {lcode2lang[k]: k for k in lcode2lang}
 langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
+
+# additional useful code to language mapping
+# added after dict invert to avoid conflict
+lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
