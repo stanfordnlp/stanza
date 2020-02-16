@@ -26,7 +26,7 @@ fi
 batch_size=5000
 
 if [ $treebank == 'UD_Finnish-TDT' ] || [ $treebank == 'UD_Russian-Taiga' ] || [ $treebank == 'UD_Latvian-LVTB' ] \
-    || [ $treebank == 'UD_Croatian-SET' ] || [ $treebank == 'UD_Galician-TreeGal' ]; then
+    || [ $treebank == 'UD_Croatian-SET' ] || [ $treebank == 'UD_Galician-TreeGal' ] || [ $treebank == 'UD_Czech-CLTT' ]; then
     batch_size=3000
 elif [ $treebank == 'UD_German-HDT' ]; then
     batch_size=1500

@@ -32,6 +32,7 @@ if [ ! -e $labels ]; then
     bash scripts/prep_tokenize_data.sh $treebank train
     bash scripts/prep_tokenize_data.sh $treebank dev
 fi
+sleep 10 # leave time for file systems
 
 DEV_GOLD=${TOKENIZE_DATA_DIR}/${short}.dev.gold.conllu
 seqlen=$(python -c "from math import ceil; print(ceil($(python stanfordnlp/utils/avg_sent_len.py $labels) * 3 / 100) * 100)")
