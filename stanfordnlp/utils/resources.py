@@ -237,3 +237,4 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         # Download packages
         for key, value in download_list:
             request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+    logger.info(f'Finished downloading models and saved to {dir}.')
