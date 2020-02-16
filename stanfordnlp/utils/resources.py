@@ -207,18 +207,27 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     if logging_level not in all_levels:
         raise Exception(f"Unrecognized logging level for pipeline: {logging_level}. Must be one of {', '.join(all_levels)}.")
     logger.setLevel(logging_level)
-    
+
+    # Check parameter types and convert values to lower case
+    if isinstance(package, str):
+        package = package.strip().lower()
+    elif package is not None:
+        raise Exception(f"The parameter 'package' should be str, but got {type(package).__name__} instead.")
+    if isinstance(processors, str):
+        # Special case: processors is str, compatible with older verson
+        processors = {processor.strip().lower(): package for processor in processors.split(',')}
+        package = None
+    elif isinstance(processors, dict):
+        processors = {k.strip().lower(): v.strip().lower() for k, v in processors.items()}
+    elif processors is not None:
+        raise Exception(f"The parameter 'processors' should be dict or str, but got {type(processors).__name__} instead.")
+
     # Download resources.json to obtain latest packages.
     logger.info('Downloading resource file...')
     request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
     resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
-    
-    # Special case: processors is str, compatible with older verson
-    if isinstance(processors, str):
-        processors = {processor.strip(): package for processor in processors.split(',')}
-        package = None
 
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
