@@ -193,9 +193,7 @@ def flatten_processor_list(processor_list):
     flattened_processor_list += dependencies_list
     return flattened_processor_list
 
-# main download function
-def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
-        logging_level='INFO', verbose=None):
+def check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger):
     # Check verbose for easy logging control
     if verbose == False:
         logging_level = 'ERROR'
@@ -215,10 +213,17 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         if lang in langlower2lcode: lang = langlower2lcode[lang]
     elif lang is not None:
         raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
+    
+    if isinstance(dir, str):
+        dir = dir.strip()
+    elif dir is not None:
+        raise Exception(f"The parameter 'dir' should be str, but got {type(dir).__name__} instead.")
+    
     if isinstance(package, str):
         package = package.strip().lower()
     elif package is not None:
         raise Exception(f"The parameter 'package' should be str, but got {type(package).__name__} instead.")
+    
     if isinstance(processors, str):
         # Special case: processors is str, compatible with older verson
         processors = {processor.strip().lower(): package for processor in processors.split(',')}
@@ -227,6 +232,14 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         processors = {k.strip().lower(): v.strip().lower() for k, v in processors.items()}
     elif processors is not None:
         raise Exception(f"The parameter 'processors' should be dict or str, but got {type(processors).__name__} instead.")
+    
+    return lang, dir, package, processors, logging_level, verbose, logger
+
+# main download function
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
+        logging_level='INFO', verbose=None):
+    global logger
+    lang, dir, package, processors, logging_level, verbose, logger = check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger)
 
     # Download resources.json to obtain latest packages.
     logger.info('Downloading resource file...')

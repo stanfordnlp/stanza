@@ -20,7 +20,7 @@ from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, make_table, build_default_config
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, make_table, build_default_config, check_and_process_parameters
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 
 logger = logging.getLogger(__name__)
@@ -65,37 +65,8 @@ class Pipeline:
     
     def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
             logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
-        # Check verbose for easy logging control
-        if verbose == False:
-            logging_level = 'ERROR'
-        elif verbose == True:
-            logging_level = 'INFO'
-        
-        # Set logging level
-        logging_level = logging_level.upper()
-        all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
-        if logging_level not in all_levels:
-            raise Exception(f"Unrecognized logging level for pipeline: {logging_level}. Must be one of {', '.join(all_levels)}.")
-        logger.setLevel(logging_level)
-
-        # Check parameter types and convert values to lower case
-        if isinstance(lang, str):
-            lang = lang.strip().lower()
-            if lang in langlower2lcode: lang = langlower2lcode[lang]
-        elif lang is not None:
-            raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
-        if isinstance(package, str):
-            package = package.strip().lower()
-        elif package is not None:
-            raise Exception(f"The parameter 'package' should be str, but got {type(package).__name__} instead.")
-        if isinstance(processors, str):
-            # Special case: processors is str, compatible with older verson
-            processors = {processor.strip().lower(): package for processor in processors.split(',')}
-            package = None
-        elif isinstance(processors, dict):
-            processors = {k.strip().lower(): v.strip().lower() for k, v in processors.items()}
-        elif processors is not None:
-            raise Exception(f"The parameter 'processors' should be dict or str, but got {type(processors).__name__} instead.")
+        global logger
+        lang, dir, package, processors, logging_level, verbose, logger = check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger)
 
         # Load resources.json to obtain latest packages.
         logger.info('Loading resource file...')
