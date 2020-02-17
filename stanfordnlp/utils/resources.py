@@ -30,10 +30,6 @@ PIPELINE_NAMES = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):
     default_config = {}
-    if lang == 'vi': # <TODO> special handle for vi
-        default_config['lemma_use_identity'] = True
-        default_config['lemma_batch_size'] = 5000
-
     for item in load_list:
         processor, model, dependencies = item
         default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, model + '.pt')
@@ -45,7 +41,6 @@ def build_default_config(resources, lang, dir, load_list):
                 default_config[f"{processor}_{dep_processor}_{direction}_file"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
             else:
                 default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
-
     return default_config
 
 def ensure_dir(dir):
