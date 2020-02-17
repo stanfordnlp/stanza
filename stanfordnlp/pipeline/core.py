@@ -21,6 +21,7 @@ from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
 from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, make_table, build_default_config
+from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,11 @@ class Pipeline:
         logger.setLevel(logging_level)
 
         # Check parameter types and convert values to lower case
+        if isinstance(lang, str):
+            lang = lang.strip().lower()
+            if lang in langlower2lcode: lang = langlower2lcode[lang]
+        elif lang is not None:
+            raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
         if isinstance(package, str):
             package = package.strip().lower()
         elif package is not None:
@@ -100,6 +106,7 @@ class Pipeline:
             resources = json.load(infile)
         if lang not in resources:
             raise Exception(f'Unsupported language: {lang}.')
+        logger.info(f'Loading models for language: {lang} ({lcode2lang[lang]})')
 
         # Maintain load list
         self.load_list = maintain_processor_list(resources, lang, package, processors)

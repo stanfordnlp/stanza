@@ -80,3 +80,4 @@ lcode2lang = {
 }
 
 lang2lcode = {lcode2lang[k]: k for k in lcode2lang}
+langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}

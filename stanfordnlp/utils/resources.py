@@ -11,6 +11,7 @@ import hashlib
 import zipfile
 import shutil
 import logging
+from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +210,11 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     logger.setLevel(logging_level)
 
     # Check parameter types and convert values to lower case
+    if isinstance(lang, str):
+        lang = lang.strip().lower()
+        if lang in langlower2lcode: lang = langlower2lcode[lang]
+    elif lang is not None:
+        raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
     if isinstance(package, str):
         package = package.strip().lower()
     elif package is not None:
@@ -228,6 +234,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
+    logger.info(f'Downloading models for language: {lang} ({lcode2lang[lang]})')
 
     # Default: download zipfile and unzip
     if package == 'default' and len(processors) == 0:
