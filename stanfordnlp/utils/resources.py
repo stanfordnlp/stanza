@@ -12,6 +12,7 @@ import zipfile
 import shutil
 import logging
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
+from stanfordnlp.utils.helper_func import make_table
 
 logger = logging.getLogger(__name__)
 
@@ -46,45 +47,6 @@ def build_default_config(resources, lang, dir, load_list):
                 default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
 
     return default_config
-
-def make_table(header, content, column_width=None):
-    '''
-    Input:
-    header -> List[str]: table header
-    content -> List[List[str]]: table content
-    column_width -> int: table column width; set to None for dynamically calculated widths
-    
-    Output:
-    table_str -> str: well-formatted string for the table
-    '''
-    table_str = ''
-    len_column, len_row = len(header), len(content) + 1
-    if column_width is None:
-        # dynamically decide column widths
-        lens = [[len(str(h)) for h in header]]
-        lens += [[len(str(x)) for x in row] for row in content]
-        column_widths = [max(c)+3 for c in zip(*lens)]
-    else:
-        column_widths = [column_width] * len_column
-    
-    table_str += '=' * (sum(column_widths) + 1) + '\n'
-    
-    table_str += '|'
-    for i, item in enumerate(header):
-        table_str += ' ' + str(item).ljust(column_widths[i] - 2) + '|'
-    table_str += '\n'
-    
-    table_str += '-' * (sum(column_widths) + 1) + '\n'
-    
-    for line in content:
-        table_str += '|'
-        for i, item in enumerate(line):
-            table_str += ' ' + str(item).ljust(column_widths[i] - 2) + '|'
-        table_str += '\n'
-    
-    table_str += '=' * (sum(column_widths) + 1) + '\n'
-    
-    return table_str
 
 def ensure_dir(dir):
     Path(dir).mkdir(parents=True, exist_ok=True)

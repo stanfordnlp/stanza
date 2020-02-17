@@ -20,8 +20,9 @@ from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, make_table, build_default_config, check_and_process_parameters
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, DEFAULT_DEPENDENCIES, PIPELINE_NAMES, maintain_processor_list, add_dependencies, build_default_config, check_and_process_parameters
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
+from stanfordnlp.utils.helper_func import make_table
 
 logger = logging.getLogger(__name__)
 
