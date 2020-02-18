@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 # set home dir for default
 HOME_DIR = str(Path.home())
-DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/dev/stanfordnlp/utils'
+DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/download-refactor/stanfordnlp/utils'
 DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"
-PIPELINE_NAMES = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']
+PIPELINE_NAMES = ['tokenize', 'mwt', 'pos', 'lemma', 'depparse', 'ner']
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):
@@ -36,11 +36,7 @@ def build_default_config(resources, lang, dir, load_list):
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
-            if dep_processor == 'charlm': # <TODO>: special handle for charlm
-                direction = dep_model.split('_')[1]
-                default_config[f"{processor}_{dep_processor}_{direction}_file"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
-            else:
-                default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
+            default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
     return default_config
 
 def ensure_dir(dir):
@@ -90,7 +86,6 @@ def sort_processors(processor_list):
 
 def maintain_processor_list(resources, lang, package, processors):
     processor_list = {}
-    dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     if processors:
         logger.debug(f'Processing parameter "processors"...')
         for key, value in processors.items():
@@ -134,6 +129,7 @@ def add_dependencies(resources, lang, processor_list):
         processor, model = item
         dependencies = default_dependencies.get(processor, None)
         dependencies = resources[lang][processor][model].get('dependencies', dependencies)
+        if dependencies: dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
         item.append(dependencies)
     return processor_list
 

@@ -21,7 +21,7 @@ class NERProcessor(UDProcessor):
 
     def _set_up_model(self, config, use_gpu):
         # set up trainer
-        args = {'charlm_forward_file': config['charlm_forward_file'], 'charlm_backward_file': config['charlm_backward_file']}
+        args = {'charlm_forward_file': config['forward_charlm_path'], 'charlm_backward_file': config['backward_charlm_path']}
         self._trainer = Trainer(args=args, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
