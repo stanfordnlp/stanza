@@ -6,6 +6,8 @@ import io
 import re
 import json
 
+from stanfordnlp.models.ner.utils import decode_from_bioes
+
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")
 
@@ -92,7 +94,7 @@ class Document:
     def _process_sentences(self, sentences):
         self.sentences = []
         for tokens in sentences:
-            self.sentences.append(Sentence(tokens))
+            self.sentences.append(Sentence(tokens, doc=self))
             begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
 
@@ -189,44 +191,12 @@ class Document:
         return expansions
 
     def build_ents(self):
-        """ Build the list of entities by iterating over all words. Return total number of entities. """
+        """ Build the list of entities by iterating over all words. Return all entities as a list. """
         self.ents = []
-        ent_words = []
-        cur_type = None
-
-        def flush():
-            if len(ent_words) > 0:
-                self.ents.append(Span(words=ent_words, type=cur_type, doc=self))
-
         for s in self.sentences:
-            for w in s.words:
-                if w.ner is None:
-                    continue
-                elif w.ner == 'O':
-                    flush()
-                    ent_words = []
-                elif w.ner.startswith('B-'): # start of new ent
-                    flush()
-                    ent_words = [w]
-                    cur_type = w.ner[2:]
-                elif w.ner.startswith('I-'): # continue last ent
-                    ent_words.append(w)
-                    cur_type = w.ner[2:]
-                elif w.ner.startswith('E-'): # end last ent
-                    ent_words.append(w)
-                    cur_type = w.ner[2:]
-                    flush()
-                    ent_words = []
-                elif w.ner.startswith('S-'): # start single word ent
-                    flush()
-                    ent_words = [w]
-                    cur_type = w.ner[2:]
-                    flush()
-                    ent_words = []
-            # flush after sentence, since entity won't cross sentence boundary
-            flush()
-            ent_words = []
-        return len(self.ents)
+            s_ents = s.build_ents()
+            self.ents += s_ents
+        return self.ents
 
     def iter_words(self):
         """ An iterator that returns all of the words in this Document. """
@@ -251,13 +221,15 @@ class Sentence:
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
     """
 
-    def __init__(self, tokens):
+    def __init__(self, tokens, doc=None):
         """ Construct a setence given a list of tokens in the form of CoNLL-U dicts.
         """
         self._tokens = []
         self._words = []
         self._dependencies = []
         self._text = None
+        self._ents = []
+        self._doc = doc
 
         self._process_tokens(tokens)
 
@@ -286,6 +258,16 @@ class Sentence:
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
         is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == int(self.words[-1].id))
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
+    
+    @property
+    def doc(self):
+        """ Access the parent doc of this span. """
+        return self._doc
+
+    @doc.setter
+    def doc(self, value):
+        """ Set the parent doc of this span. """
+        self._doc = value
 
     @property
     def text(self):
@@ -326,6 +308,36 @@ class Sentence:
     def words(self, value):
         """ Set the list of words for this sentence. """
         self._words = value
+    
+    @property
+    def ents(self):
+        """ Access the list of entities in this sentence. """
+        return self._ents
+
+    @ents.setter
+    def ents(self, value):
+        """ Set the list of entities in this sentence. """
+        self._ents = value
+
+    @property
+    def entities(self):
+        """ Access the list of entities. This is just an alias of `ents`. """
+        return self._ents
+
+    @entities.setter
+    def entities(self, value):
+        """ Set the list of entities in this sentence. """
+        self._ents = value
+    
+    def build_ents(self):
+        """ Build the list of entities by iterating over all words. Return all entities as a list. """
+        self.ents = []
+        tags = [w.ner for w in self.words]
+        decoded = decode_from_bioes(tags)
+        for e in decoded:
+            ent_words = self.words[e['start']:e['end']+1]
+            self.ents.append(Span(words=ent_words, type=e['type'], doc=self.doc, sent=self))
+        return self.ents
 
     def build_dependencies(self):
         """ Build the dependency graph for this sentence. Each dependency graph entry is
@@ -398,7 +410,7 @@ class Token:
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
         assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._start_char, self._end_char = [None] * 6
+        self._id, self._text, self._misc, self._words, self._start_char, self._end_char, self._ner = [None] * 7
 
         self.id = token_entry.get(ID)
         self.text = token_entry.get(TEXT)
@@ -473,6 +485,16 @@ class Token:
     def end_char(self):
         """ Access the end character index for this token in the raw text. """
         return self._end_char
+    
+    @property
+    def ner(self):
+        """ Access the NER tag of this token. Example: 'B-ORG'"""
+        return self._ner
+
+    @ner.setter
+    def ner(self, value):
+        """ Set the token's NER tag. Example: 'B-ORG'"""
+        self._ner = value if self._is_null(value) == False else None
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -698,37 +720,39 @@ class Span:
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
 
-    def __init__(self, span_entry=None, words=None, type=None, doc=None):
-        """ Construct a span given a span entry or a list of words.
+    def __init__(self, span_entry=None, words=None, type=None, doc=None, sent=None):
+        """ Construct a span given a span entry or a list of words. A valid reference to a doc
+        must be provided to construct a span (otherwise the text of the span cannot be initialized).
         """
         assert span_entry is not None or (words is not None and type is not None), \
                 'Either a span_entry or a word list needs to be provided to construct a span.'
         assert doc is not None, 'A parent doc must be provided to construct a span.'
-        self._doc,  self._text, self._type, self._start_char, self._end_char = [None] * 5
+        self._text, self._type, self._start_char, self._end_char = [None] * 4
         self._words = []
+        self._doc = doc
+        self._sent = sent
 
         if span_entry is not None:
-            self.init_from_entry(span_entry, doc)
+            self.init_from_entry(span_entry)
 
         if words is not None:
-            self.init_from_words(words, type, doc)
+            self.init_from_words(words, type)
 
-    def init_from_entry(self, span_entry, doc):
-        self.doc = doc
+    def init_from_entry(self, span_entry):
         self.text = span_entry.get(TEXT, None)
         self.type = span_entry.get(TYPE, None)
         self.start_char = span_entry.get(START_CHAR, None)
         self.end_char = span_entry.get(END_CHAR, None)
 
-    def init_from_words(self, words, type, doc):
+    def init_from_words(self, words, type):
         assert isinstance(words, list), 'Words must be provided as a list to construct a span.'
         assert len(words) > 0, "Words of a span cannot be an empty list."
-        self.doc = doc
         self.words = words
         self.type = type
         # load start and end char offsets from words' parent tokens
         self.start_char = self.words[0].parent.start_char
         self.end_char = self.words[-1].parent.end_char
+        # assume doc is already provided and not None
         self.text = self.doc.text[self.start_char:self.end_char]
 
     @property
