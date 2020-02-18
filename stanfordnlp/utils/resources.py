@@ -86,7 +86,6 @@ def sort_processors(processor_list):
 
 def maintain_processor_list(resources, lang, package, processors):
     processor_list = {}
-    dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     if processors:
         logger.debug(f'Processing parameter "processors"...')
         for key, value in processors.items():
@@ -130,6 +129,7 @@ def add_dependencies(resources, lang, processor_list):
         processor, model = item
         dependencies = default_dependencies.get(processor, None)
         dependencies = resources[lang][processor][model].get('dependencies', dependencies)
+        if dependencies: dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
         item.append(dependencies)
     return processor_list
 
