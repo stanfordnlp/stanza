@@ -25,7 +25,7 @@ DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"
-PIPELINE_NAMES = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner']
+PIPELINE_NAMES = ['tokenize', 'mwt', 'pos', 'lemma', 'depparse', 'ner']
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):
@@ -36,11 +36,7 @@ def build_default_config(resources, lang, dir, load_list):
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
-            if dep_processor == 'charlm': # <TODO>: special handle for charlm
-                direction = dep_model.split('_')[1]
-                default_config[f"{processor}_{dep_processor}_{direction}_file"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
-            else:
-                default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
+            default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
     return default_config
 
 def ensure_dir(dir):
