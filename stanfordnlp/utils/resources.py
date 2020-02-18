@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # set home dir for default
 HOME_DIR = str(Path.home())
-DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/download-refactor/stanfordnlp/utils'
+DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/dev/stanfordnlp/utils'
 DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
