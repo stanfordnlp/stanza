@@ -14,10 +14,10 @@
       "padt": {
         "md5": "aa2cd64c6544511faa08cc846b9ea0f2",
         "dependencies": [
-          [
-            "pretrain",
-            "padt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "padt"
+          }
         ]
       }
     },
@@ -35,27 +35,27 @@
       "aqmar": {
         "md5": "cada2401d245b8444a0909c30e2f4b7e",
         "dependencies": [
-          [
-            "backward_charlm",
-            "ccwiki"
-          ],
-          [
-            "forward_charlm",
-            "ccwiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "ccwiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "ccwiki"
+          }
         ]
       },
       "ontonotes": {
         "md5": "5c79c60651cee46a288f6b02c7bf32fc",
         "dependencies": [
-          [
-            "backward_charlm",
-            "ccwiki"
-          ],
-          [
-            "forward_charlm",
-            "ccwiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "ccwiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "ccwiki"
+          }
         ]
       }
     },
@@ -63,10 +63,10 @@
       "padt": {
         "md5": "3ca179388647b1e287e09249698b52d4",
         "dependencies": [
-          [
-            "pretrain",
-            "padt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "padt"
+          }
         ]
       }
     },
@@ -90,26 +90,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "padt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "padt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "padt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "padt"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "ccwiki"
-        ],
-        [
-          "backward_charlm",
-          "ccwiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "ccwiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "ccwiki"
+        }
       ]
     },
     "default_md5": "be050f9e81b0e453afc8bd316c0d18ad"
@@ -129,19 +129,19 @@
       "gsd": {
         "md5": "db2ca0b9e1153bc479c164b2885ec665",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "hdt": {
         "md5": "d48fe48f08bc708f7ccef435d497e344",
         "dependencies": [
-          [
-            "pretrain",
-            "hdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hdt"
+          }
         ]
       }
     },
@@ -162,27 +162,27 @@
       "conll03": {
         "md5": "402d570ff170fb55917425f67b46a479",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       },
       "germeval2014": {
         "md5": "b5b8a8139fa0ebd63f45cbcf0e6a5f81",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       }
     },
@@ -190,19 +190,19 @@
       "gsd": {
         "md5": "f7779097a8ba327bf7c31a360b87391e",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "hdt": {
         "md5": "2e6f6dfcfdc03ed4e20f5d5373825c6c",
         "dependencies": [
-          [
-            "pretrain",
-            "hdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hdt"
+          }
         ]
       }
     },
@@ -232,26 +232,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "newswiki"
-        ],
-        [
-          "backward_charlm",
-          "newswiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "newswiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "newswiki"
+        }
       ]
     },
     "default_md5": "6d83a846cd1092ab84956b1fff9fad3a"
@@ -271,37 +271,37 @@
       "ewt": {
         "md5": "e11b39c8743b493e8d5d25b49b4bd46f",
         "dependencies": [
-          [
-            "pretrain",
-            "ewt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ewt"
+          }
         ]
       },
       "gum": {
         "md5": "73623aabebc55432e97362e22dc37752",
         "dependencies": [
-          [
-            "pretrain",
-            "gum"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gum"
+          }
         ]
       },
       "lines": {
         "md5": "13d66dfa29fceea34a9cd2816d9f0edc",
         "dependencies": [
-          [
-            "pretrain",
-            "lines"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lines"
+          }
         ]
       },
       "partut": {
         "md5": "403c165b6098bb9a24c253da64475ebb",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       }
     },
@@ -328,27 +328,27 @@
       "conll03": {
         "md5": "d2934251eca10634ddc062d132b09826",
         "dependencies": [
-          [
-            "backward_charlm",
-            "1billion"
-          ],
-          [
-            "forward_charlm",
-            "1billion"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "1billion"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "1billion"
+          }
         ]
       },
       "ontonotes": {
         "md5": "52858fc3aaa15a7a3e83564599c6d064",
         "dependencies": [
-          [
-            "backward_charlm",
-            "1billion"
-          ],
-          [
-            "forward_charlm",
-            "1billion"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "1billion"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "1billion"
+          }
         ]
       }
     },
@@ -356,37 +356,37 @@
       "ewt": {
         "md5": "8013cf077e912c389205f373ba8ad47c",
         "dependencies": [
-          [
-            "pretrain",
-            "ewt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ewt"
+          }
         ]
       },
       "gum": {
         "md5": "76f817066a386142e7fdb552be826497",
         "dependencies": [
-          [
-            "pretrain",
-            "gum"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gum"
+          }
         ]
       },
       "lines": {
         "md5": "d897b279e966db45e3b4f9711b5ca77f",
         "dependencies": [
-          [
-            "pretrain",
-            "lines"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lines"
+          }
         ]
       },
       "partut": {
         "md5": "ffd064355ee4d55687e55c0329e50632",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       }
     },
@@ -427,26 +427,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ewt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ewt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ewt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ewt"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "1billion"
-        ],
-        [
-          "backward_charlm",
-          "1billion"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "1billion"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "1billion"
+        }
       ]
     },
     "default_md5": "357ad5f0260cbeafe3c936a5a956e4c2"
@@ -466,19 +466,19 @@
       "ancora": {
         "md5": "04dce2565b175dd3e67c6d17eacdfd3f",
         "dependencies": [
-          [
-            "pretrain",
-            "ancora"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ancora"
+          }
         ]
       },
       "gsd": {
         "md5": "a5ac481b2e50bc03a5710d3a96e1d502",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -502,27 +502,27 @@
       "ancora": {
         "md5": "0950b7d53f7e3b4d803d5bfee076eb14",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       },
       "conll02": {
         "md5": "42481bf29279baff3d450bf115036da5",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       }
     },
@@ -530,19 +530,19 @@
       "ancora": {
         "md5": "dc58b64c6fd1f0656209b7f8ab34f33d",
         "dependencies": [
-          [
-            "pretrain",
-            "ancora"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ancora"
+          }
         ]
       },
       "gsd": {
         "md5": "cc8e92c199a1507a368a9b6ac1191ae4",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -572,26 +572,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ancora"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ancora"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ancora"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ancora"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "newswiki"
-        ],
-        [
-          "backward_charlm",
-          "newswiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "newswiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "newswiki"
+        }
       ]
     },
     "default_md5": "04fff68f0ecd876f09baa6997b18ac86"
@@ -611,37 +611,37 @@
       "gsd": {
         "md5": "ea00a2f77e35b414226cb74822a0d642",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "partut": {
         "md5": "e34cecf8b85b676f4ac24babc5140835",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       },
       "sequoia": {
         "md5": "6828a2179f1f33d5d9259f97a72617e5",
         "dependencies": [
-          [
-            "pretrain",
-            "sequoia"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sequoia"
+          }
         ]
       },
       "spoken": {
         "md5": "e3c11ab7ab8ecac4b68d9aea7db8c8c3",
         "dependencies": [
-          [
-            "pretrain",
-            "spoken"
-          ]
+          {
+            "model": "pretrain",
+            "package": "spoken"
+          }
         ]
       }
     },
@@ -677,14 +677,14 @@
       "wikiner": {
         "md5": "f3a28e8bf64bddcfe7d0aa77d35a9b2a",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       }
     },
@@ -692,37 +692,37 @@
       "gsd": {
         "md5": "de7d66c2c5e68dbe3c4c3ed108708e57",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "partut": {
         "md5": "057fd41b6b308d5d5b102250fd4a7202",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       },
       "sequoia": {
         "md5": "66a807f3c55c7ad6b92d67802a3e313e",
         "dependencies": [
-          [
-            "pretrain",
-            "sequoia"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sequoia"
+          }
         ]
       },
       "spoken": {
         "md5": "851f762f0eaf76d2f5f663d6760c30c2",
         "dependencies": [
-          [
-            "pretrain",
-            "spoken"
-          ]
+          {
+            "model": "pretrain",
+            "package": "spoken"
+          }
         ]
       }
     },
@@ -764,26 +764,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "newswiki"
-        ],
-        [
-          "backward_charlm",
-          "newswiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "newswiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "newswiki"
+        }
       ]
     },
     "default_md5": "2e4971e7944c7c4d4d121a191687be71"
@@ -803,19 +803,19 @@
       "alpino": {
         "md5": "b856e40af2ce160aaf3b787e2e2a6333",
         "dependencies": [
-          [
-            "pretrain",
-            "alpino"
-          ]
+          {
+            "model": "pretrain",
+            "package": "alpino"
+          }
         ]
       },
       "lassysmall": {
         "md5": "1352b438cfbd15743c410c949f853ae7",
         "dependencies": [
-          [
-            "pretrain",
-            "lassysmall"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lassysmall"
+          }
         ]
       }
     },
@@ -831,27 +831,27 @@
       "conll02": {
         "md5": "90e3cb1b395f6ee7b5bd2870c4e3e4cf",
         "dependencies": [
-          [
-            "backward_charlm",
-            "ccwiki"
-          ],
-          [
-            "forward_charlm",
-            "ccwiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "ccwiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "ccwiki"
+          }
         ]
       },
       "wikiner": {
         "md5": "239ec3a17b9ac7df5ee14c0493213a2e",
         "dependencies": [
-          [
-            "backward_charlm",
-            "ccwiki"
-          ],
-          [
-            "forward_charlm",
-            "ccwiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "ccwiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "ccwiki"
+          }
         ]
       }
     },
@@ -859,19 +859,19 @@
       "alpino": {
         "md5": "000587dfdbf5ec7800795f5121fe17a5",
         "dependencies": [
-          [
-            "pretrain",
-            "alpino"
-          ]
+          {
+            "model": "pretrain",
+            "package": "alpino"
+          }
         ]
       },
       "lassysmall": {
         "md5": "03efc35b967672d9a22c90c330e23a95",
         "dependencies": [
-          [
-            "pretrain",
-            "lassysmall"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lassysmall"
+          }
         ]
       }
     },
@@ -900,26 +900,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "alpino"
-        ]
+        {
+          "model": "pretrain",
+          "package": "alpino"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "alpino"
-        ]
+        {
+          "model": "pretrain",
+          "package": "alpino"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "ccwiki"
-        ],
-        [
-          "backward_charlm",
-          "ccwiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "ccwiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "ccwiki"
+        }
       ]
     },
     "default_md5": "4e1209d8ed6f067f6d10d68ae1f75c3a"
@@ -939,28 +939,28 @@
       "gsd": {
         "md5": "cb2545f93acbd637de59c23d08d58265",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "syntagrus": {
         "md5": "08c550c745c7a542cf1122a68fc54f29",
         "dependencies": [
-          [
-            "pretrain",
-            "syntagrus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "syntagrus"
+          }
         ]
       },
       "taiga": {
         "md5": "5d61b4b6bbf3ddcf7cc4ae23fb19b10c",
         "dependencies": [
-          [
-            "pretrain",
-            "taiga"
-          ]
+          {
+            "model": "pretrain",
+            "package": "taiga"
+          }
         ]
       }
     },
@@ -979,14 +979,14 @@
       "wikiner": {
         "md5": "16737775e8e9fd034e591b4cc7581bae",
         "dependencies": [
-          [
-            "backward_charlm",
-            "newswiki"
-          ],
-          [
-            "forward_charlm",
-            "newswiki"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "newswiki"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "newswiki"
+          }
         ]
       }
     },
@@ -994,28 +994,28 @@
       "gsd": {
         "md5": "c11fc386efeb4381d2e7a88935f8d46e",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "syntagrus": {
         "md5": "bb75c6da46c39babe1a9499d6671944d",
         "dependencies": [
-          [
-            "pretrain",
-            "syntagrus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "syntagrus"
+          }
         ]
       },
       "taiga": {
         "md5": "866251f85e0bcf3d1e503552c4b1d3ec",
         "dependencies": [
-          [
-            "pretrain",
-            "taiga"
-          ]
+          {
+            "model": "pretrain",
+            "package": "taiga"
+          }
         ]
       }
     },
@@ -1050,26 +1050,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "syntagrus"
-        ]
+        {
+          "model": "pretrain",
+          "package": "syntagrus"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "syntagrus"
-        ]
+        {
+          "model": "pretrain",
+          "package": "syntagrus"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "newswiki"
-        ],
-        [
-          "backward_charlm",
-          "newswiki"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "newswiki"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "newswiki"
+        }
       ]
     },
     "default_md5": "040cb4b3087d57e8b9cbdcc32f1e66b1"
@@ -1089,10 +1089,10 @@
       "gsd": {
         "md5": "e95e0bcb62a34561f13c50f14b148016",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -1105,14 +1105,14 @@
       "ontonotes": {
         "md5": "702df19bf8c98c5831b4f67aed86e551",
         "dependencies": [
-          [
-            "backward_charlm",
-            "gigaword"
-          ],
-          [
-            "forward_charlm",
-            "gigaword"
-          ]
+          {
+            "model": "backward_charlm",
+            "package": "gigaword"
+          },
+          {
+            "model": "forward_charlm",
+            "package": "gigaword"
+          }
         ]
       }
     },
@@ -1120,10 +1120,10 @@
       "gsd": {
         "md5": "851b1da0b7fe9b751d919cad36343e8a",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -1146,26 +1146,26 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "ner": [
-        [
-          "forward_charlm",
-          "gigaword"
-        ],
-        [
-          "backward_charlm",
-          "gigaword"
-        ]
+        {
+          "model": "forward_charlm",
+          "package": "gigaword"
+        },
+        {
+          "model": "backward_charlm",
+          "package": "gigaword"
+        }
       ]
     },
     "default_md5": "0ff72987f334b96b5a7d0a42f364b45c"
@@ -1175,10 +1175,10 @@
       "afribooms": {
         "md5": "c8d6410c6ec7437e07b70751156b9211",
         "dependencies": [
-          [
-            "pretrain",
-            "afribooms"
-          ]
+          {
+            "model": "pretrain",
+            "package": "afribooms"
+          }
         ]
       }
     },
@@ -1191,10 +1191,10 @@
       "afribooms": {
         "md5": "04ac6560b94fc47f550545f89323ba30",
         "dependencies": [
-          [
-            "pretrain",
-            "afribooms"
-          ]
+          {
+            "model": "pretrain",
+            "package": "afribooms"
+          }
         ]
       }
     },
@@ -1216,16 +1216,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "afribooms"
-        ]
+        {
+          "model": "pretrain",
+          "package": "afribooms"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "afribooms"
-        ]
+        {
+          "model": "pretrain",
+          "package": "afribooms"
+        }
       ]
     },
     "default_md5": "91445a7d1fad1bc9ea04a806d3c9626d"
@@ -1235,10 +1235,10 @@
       "hse": {
         "md5": "25dfb867053bf31600c9fb547cd9ee2a",
         "dependencies": [
-          [
-            "pretrain",
-            "hse"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hse"
+          }
         ]
       }
     },
@@ -1251,10 +1251,10 @@
       "hse": {
         "md5": "648917a77270e610d41b14d6ca2ff514",
         "dependencies": [
-          [
-            "pretrain",
-            "hse"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hse"
+          }
         ]
       }
     },
@@ -1276,16 +1276,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "hse"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hse"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "hse"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hse"
+        }
       ]
     },
     "default_md5": "76a36df58f438a1f93dece7b76f85486"
@@ -1295,10 +1295,10 @@
       "btb": {
         "md5": "ddf666ab61c253ff8b2a92945524cd2e",
         "dependencies": [
-          [
-            "pretrain",
-            "btb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "btb"
+          }
         ]
       }
     },
@@ -1311,10 +1311,10 @@
       "btb": {
         "md5": "e1629e9a81dcef625c9b99d81d9fae93",
         "dependencies": [
-          [
-            "pretrain",
-            "btb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "btb"
+          }
         ]
       }
     },
@@ -1336,16 +1336,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "btb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "btb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "btb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "btb"
+        }
       ]
     },
     "default_md5": "e7400f122cb4cca2442fbc5b911e9dca"
@@ -1355,10 +1355,10 @@
       "bdt": {
         "md5": "12301d68999309503f7e5fefd42f55b9",
         "dependencies": [
-          [
-            "pretrain",
-            "bdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bdt"
+          }
         ]
       }
     },
@@ -1371,10 +1371,10 @@
       "bdt": {
         "md5": "0725151725d23eef031bd8434b5576cb",
         "dependencies": [
-          [
-            "pretrain",
-            "bdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bdt"
+          }
         ]
       }
     },
@@ -1396,16 +1396,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "bdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "bdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bdt"
+        }
       ]
     },
     "default_md5": "13334780ea37d3801714161a77134429"
@@ -1415,10 +1415,10 @@
       "ancora": {
         "md5": "3cd02727968bf9fcc41f0ce71f763c56",
         "dependencies": [
-          [
-            "pretrain",
-            "ancora"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ancora"
+          }
         ]
       }
     },
@@ -1436,10 +1436,10 @@
       "ancora": {
         "md5": "e2de9e794c90883888b2276552c43234",
         "dependencies": [
-          [
-            "pretrain",
-            "ancora"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ancora"
+          }
         ]
       }
     },
@@ -1462,16 +1462,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ancora"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ancora"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ancora"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ancora"
+        }
       ]
     },
     "default_md5": "0b0e77631bb0627b4549dc4a40a94682"
@@ -1481,10 +1481,10 @@
       "scriptorium": {
         "md5": "220899cfe651d2a103e02c4516c65040",
         "dependencies": [
-          [
-            "pretrain",
-            "scriptorium"
-          ]
+          {
+            "model": "pretrain",
+            "package": "scriptorium"
+          }
         ]
       }
     },
@@ -1502,10 +1502,10 @@
       "scriptorium": {
         "md5": "a955103419450b88398c39bf8f095b1d",
         "dependencies": [
-          [
-            "pretrain",
-            "scriptorium"
-          ]
+          {
+            "model": "pretrain",
+            "package": "scriptorium"
+          }
         ]
       }
     },
@@ -1523,16 +1523,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "scriptorium"
-        ]
+        {
+          "model": "pretrain",
+          "package": "scriptorium"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "scriptorium"
-        ]
+        {
+          "model": "pretrain",
+          "package": "scriptorium"
+        }
       ]
     },
     "default_md5": "fccc4bc40aa67adb1633f768a1a7faa4"
@@ -1542,37 +1542,37 @@
       "cac": {
         "md5": "dcdd27e7680d3a2db2670e5e08b1b079",
         "dependencies": [
-          [
-            "pretrain",
-            "cac"
-          ]
+          {
+            "model": "pretrain",
+            "package": "cac"
+          }
         ]
       },
       "cltt": {
         "md5": "ee0ceea5af2b32b316413f2a82ee93ed",
         "dependencies": [
-          [
-            "pretrain",
-            "cltt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "cltt"
+          }
         ]
       },
       "fictree": {
         "md5": "245a043307f8c65065f8b132ffd783d9",
         "dependencies": [
-          [
-            "pretrain",
-            "fictree"
-          ]
+          {
+            "model": "pretrain",
+            "package": "fictree"
+          }
         ]
       },
       "pdt": {
         "md5": "74dd3d2b7dbf12490c6e7cfde4015778",
         "dependencies": [
-          [
-            "pretrain",
-            "pdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "pdt"
+          }
         ]
       }
     },
@@ -1608,37 +1608,37 @@
       "cac": {
         "md5": "d8e452e4f03c25921a720e81137dbd36",
         "dependencies": [
-          [
-            "pretrain",
-            "cac"
-          ]
+          {
+            "model": "pretrain",
+            "package": "cac"
+          }
         ]
       },
       "cltt": {
         "md5": "7c93feabf4e671e715548ef6477852a4",
         "dependencies": [
-          [
-            "pretrain",
-            "cltt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "cltt"
+          }
         ]
       },
       "fictree": {
         "md5": "2fdfe783e6bafec64d708bf7ef803d9f",
         "dependencies": [
-          [
-            "pretrain",
-            "fictree"
-          ]
+          {
+            "model": "pretrain",
+            "package": "fictree"
+          }
         ]
       },
       "pdt": {
         "md5": "8a6c55d0ea488155533f65946c9e204f",
         "dependencies": [
-          [
-            "pretrain",
-            "pdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "pdt"
+          }
         ]
       }
     },
@@ -1679,16 +1679,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "pdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "pdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "pdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "pdt"
+        }
       ]
     },
     "default_md5": "687b10e0ec30b09cd4a1d79d779df6e2"
@@ -1698,10 +1698,10 @@
       "proiel": {
         "md5": "a3000d33c8f15a1d1e43715003b96d81",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -1714,10 +1714,10 @@
       "proiel": {
         "md5": "2f468981e750f6c3743ff28c4b201216",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -1739,16 +1739,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ]
     },
     "default_md5": "75ab6777625d9a73b70a98fc8850a0a1"
@@ -1758,10 +1758,10 @@
       "ddt": {
         "md5": "fd3138358cc1855e054498cf11445616",
         "dependencies": [
-          [
-            "pretrain",
-            "ddt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ddt"
+          }
         ]
       }
     },
@@ -1774,10 +1774,10 @@
       "ddt": {
         "md5": "7ca328d11593d075559419c2ff3f0eca",
         "dependencies": [
-          [
-            "pretrain",
-            "ddt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ddt"
+          }
         ]
       }
     },
@@ -1799,16 +1799,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ddt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ddt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ddt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ddt"
+        }
       ]
     },
     "default_md5": "deb420962fcddda7968c103df64a7642"
@@ -1818,10 +1818,10 @@
       "gdt": {
         "md5": "5d8b2a51ed363c441fd9895ce0a54756",
         "dependencies": [
-          [
-            "pretrain",
-            "gdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gdt"
+          }
         ]
       }
     },
@@ -1839,10 +1839,10 @@
       "gdt": {
         "md5": "310471453a3ced3484e94000911943e5",
         "dependencies": [
-          [
-            "pretrain",
-            "gdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gdt"
+          }
         ]
       }
     },
@@ -1865,16 +1865,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gdt"
+        }
       ]
     },
     "default_md5": "5b72591a327becc69184d2cb8c6d9ef6"
@@ -1884,19 +1884,19 @@
       "edt": {
         "md5": "be9e8f12e52198211e6c4e6eb45c03ce",
         "dependencies": [
-          [
-            "pretrain",
-            "edt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "edt"
+          }
         ]
       },
       "ewt": {
         "md5": "7ceaa3c5816bb8f8ff615a48c742ea60",
         "dependencies": [
-          [
-            "pretrain",
-            "ewt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ewt"
+          }
         ]
       }
     },
@@ -1912,19 +1912,19 @@
       "edt": {
         "md5": "62bffecf897a505e1545292b5cdd50f4",
         "dependencies": [
-          [
-            "pretrain",
-            "edt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "edt"
+          }
         ]
       },
       "ewt": {
         "md5": "537a97a5c654f1cbea71406de23781cd",
         "dependencies": [
-          [
-            "pretrain",
-            "ewt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ewt"
+          }
         ]
       }
     },
@@ -1952,16 +1952,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "edt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "edt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "edt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "edt"
+        }
       ]
     },
     "default_md5": "b65962c9f8d17a91f5d63959c864bc80"
@@ -1971,10 +1971,10 @@
       "bdt": {
         "md5": "f69d4045653a7f76fa490a43b9035cf3",
         "dependencies": [
-          [
-            "pretrain",
-            "bdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bdt"
+          }
         ]
       }
     },
@@ -1987,10 +1987,10 @@
       "bdt": {
         "md5": "d9fbef8a4af026931302b66597ad8732",
         "dependencies": [
-          [
-            "pretrain",
-            "bdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bdt"
+          }
         ]
       }
     },
@@ -2012,16 +2012,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "bdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "bdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bdt"
+        }
       ]
     },
     "default_md5": "86e7eec34258c7655e138324e9b06447"
@@ -2031,10 +2031,10 @@
       "seraji": {
         "md5": "c3a03301089c740262eb0276ad4bfd2a",
         "dependencies": [
-          [
-            "pretrain",
-            "seraji"
-          ]
+          {
+            "model": "pretrain",
+            "package": "seraji"
+          }
         ]
       }
     },
@@ -2052,10 +2052,10 @@
       "seraji": {
         "md5": "e028d59950628d0b8fa4994cf1861a04",
         "dependencies": [
-          [
-            "pretrain",
-            "seraji"
-          ]
+          {
+            "model": "pretrain",
+            "package": "seraji"
+          }
         ]
       }
     },
@@ -2078,16 +2078,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "seraji"
-        ]
+        {
+          "model": "pretrain",
+          "package": "seraji"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "seraji"
-        ]
+        {
+          "model": "pretrain",
+          "package": "seraji"
+        }
       ]
     },
     "default_md5": "f8855d5a3546035bdf17a863819a2d11"
@@ -2097,19 +2097,19 @@
       "ftb": {
         "md5": "bb2dcd7d8be332ac38f9a2d842887813",
         "dependencies": [
-          [
-            "pretrain",
-            "ftb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ftb"
+          }
         ]
       },
       "tdt": {
         "md5": "50e8cb620c03b0192566bd53d95b83c9",
         "dependencies": [
-          [
-            "pretrain",
-            "tdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "tdt"
+          }
         ]
       }
     },
@@ -2133,19 +2133,19 @@
       "ftb": {
         "md5": "14c3d12780da7b2071c391f983271d2a",
         "dependencies": [
-          [
-            "pretrain",
-            "ftb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ftb"
+          }
         ]
       },
       "tdt": {
         "md5": "87382ab2dc800d62d9e57455bd9e393c",
         "dependencies": [
-          [
-            "pretrain",
-            "tdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "tdt"
+          }
         ]
       }
     },
@@ -2174,16 +2174,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "tdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "tdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "tdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "tdt"
+        }
       ]
     },
     "default_md5": "6feb6bb20aa18bc709c6d4a77954c8ba"
@@ -2193,10 +2193,10 @@
       "srcmf": {
         "md5": "5c33458d8bc40eba4985af3f7e2eac27",
         "dependencies": [
-          [
-            "pretrain",
-            "srcmf"
-          ]
+          {
+            "model": "pretrain",
+            "package": "srcmf"
+          }
         ]
       }
     },
@@ -2204,10 +2204,10 @@
       "srcmf": {
         "md5": "0033a7b5f9a149af66fd9b9a7336781c",
         "dependencies": [
-          [
-            "pretrain",
-            "srcmf"
-          ]
+          {
+            "model": "pretrain",
+            "package": "srcmf"
+          }
         ]
       }
     },
@@ -2228,16 +2228,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "srcmf"
-        ]
+        {
+          "model": "pretrain",
+          "package": "srcmf"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "srcmf"
-        ]
+        {
+          "model": "pretrain",
+          "package": "srcmf"
+        }
       ]
     },
     "default_md5": "a79be7f1a506d24374dc096272893578"
@@ -2247,10 +2247,10 @@
       "idt": {
         "md5": "756e74f349bf0176904d96fa65ae05c7",
         "dependencies": [
-          [
-            "pretrain",
-            "idt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "idt"
+          }
         ]
       }
     },
@@ -2263,10 +2263,10 @@
       "idt": {
         "md5": "4f4be3407ddf0977ea4852fb12f0dea4",
         "dependencies": [
-          [
-            "pretrain",
-            "idt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "idt"
+          }
         ]
       }
     },
@@ -2288,16 +2288,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "idt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "idt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "idt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "idt"
+        }
       ]
     },
     "default_md5": "652cb28360fab063474aba6d79f4f53c"
@@ -2307,10 +2307,10 @@
       "arcosg": {
         "md5": "0e9b859c8c867bd6f3d4c7986d230e10",
         "dependencies": [
-          [
-            "pretrain",
-            "arcosg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "arcosg"
+          }
         ]
       }
     },
@@ -2323,10 +2323,10 @@
       "arcosg": {
         "md5": "76896995e30ab94a9505a098dcb036f0",
         "dependencies": [
-          [
-            "pretrain",
-            "arcosg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "arcosg"
+          }
         ]
       }
     },
@@ -2348,16 +2348,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "arcosg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "arcosg"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "arcosg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "arcosg"
+        }
       ]
     },
     "default_md5": "a6cee66731e606ff98dbb47219ef59e1"
@@ -2367,19 +2367,19 @@
       "ctg": {
         "md5": "2784179b5ea224f451cde93d99babc73",
         "dependencies": [
-          [
-            "pretrain",
-            "ctg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ctg"
+          }
         ]
       },
       "treegal": {
         "md5": "d6e4ab1226d498c046f78a1192a77d1c",
         "dependencies": [
-          [
-            "pretrain",
-            "treegal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "treegal"
+          }
         ]
       }
     },
@@ -2403,19 +2403,19 @@
       "ctg": {
         "md5": "8aeabd24ce3669314230d62e0268e7ce",
         "dependencies": [
-          [
-            "pretrain",
-            "ctg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ctg"
+          }
         ]
       },
       "treegal": {
         "md5": "13f0d19626a82bd3fe23d649e7989647",
         "dependencies": [
-          [
-            "pretrain",
-            "treegal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "treegal"
+          }
         ]
       }
     },
@@ -2444,16 +2444,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ctg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ctg"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ctg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ctg"
+        }
       ]
     },
     "default_md5": "f086df5396f692b2faa6b1ff39791f09"
@@ -2463,10 +2463,10 @@
       "proiel": {
         "md5": "f9e5760ebe1a8ebe933fa7a2248e92d9",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -2479,10 +2479,10 @@
       "proiel": {
         "md5": "22c96e046086383f16739c39ebbf3343",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -2504,16 +2504,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ]
     },
     "default_md5": "336ff4205c0a9a6b4b467f1dde372694"
@@ -2523,19 +2523,19 @@
       "perseus": {
         "md5": "d8a055510bb8a0b847d50e348765118a",
         "dependencies": [
-          [
-            "pretrain",
-            "perseus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "perseus"
+          }
         ]
       },
       "proiel": {
         "md5": "ba7b1e5c4a16d19374b5e4f25666fdf6",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -2551,19 +2551,19 @@
       "perseus": {
         "md5": "e5036a8572e90b786024825f28d0169f",
         "dependencies": [
-          [
-            "pretrain",
-            "perseus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "perseus"
+          }
         ]
       },
       "proiel": {
         "md5": "813ae5f83d81709f5c8aa2ff27dddc7a",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -2591,16 +2591,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "proiel"
-        ]
+        {
+          "model": "pretrain",
+          "package": "proiel"
+        }
       ]
     },
     "default_md5": "0985f5f267ba150b8957d07b93966c6a"
@@ -2610,10 +2610,10 @@
       "htb": {
         "md5": "106ada8e20c8856d5e1e7693e99ead05",
         "dependencies": [
-          [
-            "pretrain",
-            "htb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "htb"
+          }
         ]
       }
     },
@@ -2631,10 +2631,10 @@
       "htb": {
         "md5": "2ed171f90f93faea2047b67420874e91",
         "dependencies": [
-          [
-            "pretrain",
-            "htb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "htb"
+          }
         ]
       }
     },
@@ -2657,16 +2657,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "htb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "htb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "htb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "htb"
+        }
       ]
     },
     "default_md5": "54720709c75386c7f93a04327ab4d70e"
@@ -2676,10 +2676,10 @@
       "hdtb": {
         "md5": "50d3dcaef001037ad6ef2dcdf86dfc97",
         "dependencies": [
-          [
-            "pretrain",
-            "hdtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hdtb"
+          }
         ]
       }
     },
@@ -2692,10 +2692,10 @@
       "hdtb": {
         "md5": "bea2e9006ecb2368ef3e4b6ee485569b",
         "dependencies": [
-          [
-            "pretrain",
-            "hdtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hdtb"
+          }
         ]
       }
     },
@@ -2717,16 +2717,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "hdtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hdtb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "hdtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hdtb"
+        }
       ]
     },
     "default_md5": "1682efc0a4aeaadc2bc8ecf187ab24f5"
@@ -2736,10 +2736,10 @@
       "set": {
         "md5": "e51b4f62d5256288265c7916815e4679",
         "dependencies": [
-          [
-            "pretrain",
-            "set"
-          ]
+          {
+            "model": "pretrain",
+            "package": "set"
+          }
         ]
       }
     },
@@ -2752,10 +2752,10 @@
       "set": {
         "md5": "8e84f5c8ebe38d3af95cb621e5452624",
         "dependencies": [
-          [
-            "pretrain",
-            "set"
-          ]
+          {
+            "model": "pretrain",
+            "package": "set"
+          }
         ]
       }
     },
@@ -2777,16 +2777,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "set"
-        ]
+        {
+          "model": "pretrain",
+          "package": "set"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "set"
-        ]
+        {
+          "model": "pretrain",
+          "package": "set"
+        }
       ]
     },
     "default_md5": "f335465dcea40fe7062eb1e505988ac3"
@@ -2796,10 +2796,10 @@
       "ufal": {
         "md5": "e66ab0c430b2f1ceaea0b1797c08ef21",
         "dependencies": [
-          [
-            "pretrain",
-            "ufal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ufal"
+          }
         ]
       }
     },
@@ -2812,10 +2812,10 @@
       "ufal": {
         "md5": "79190b59de372c54f644352b73ea1956",
         "dependencies": [
-          [
-            "pretrain",
-            "ufal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ufal"
+          }
         ]
       }
     },
@@ -2837,16 +2837,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ufal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ufal"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ufal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ufal"
+        }
       ]
     },
     "default_md5": "d6b918e102f66f374d6675a94dcbf193"
@@ -2856,10 +2856,10 @@
       "szeged": {
         "md5": "6789f06dbb6190224f051ceaece20400",
         "dependencies": [
-          [
-            "pretrain",
-            "szeged"
-          ]
+          {
+            "model": "pretrain",
+            "package": "szeged"
+          }
         ]
       }
     },
@@ -2872,10 +2872,10 @@
       "szeged": {
         "md5": "0d541241a392eda60a95eb9ee7812caa",
         "dependencies": [
-          [
-            "pretrain",
-            "szeged"
-          ]
+          {
+            "model": "pretrain",
+            "package": "szeged"
+          }
         ]
       }
     },
@@ -2897,16 +2897,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "szeged"
-        ]
+        {
+          "model": "pretrain",
+          "package": "szeged"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "szeged"
-        ]
+        {
+          "model": "pretrain",
+          "package": "szeged"
+        }
       ]
     },
     "default_md5": "bc28aba8e5767e55e11808e12d9e5af2"
@@ -2916,10 +2916,10 @@
       "armtdp": {
         "md5": "97480899830157d81cfde70077a53336",
         "dependencies": [
-          [
-            "pretrain",
-            "armtdp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "armtdp"
+          }
         ]
       }
     },
@@ -2937,10 +2937,10 @@
       "armtdp": {
         "md5": "2fb50510c1319adb3452fc30a06a8161",
         "dependencies": [
-          [
-            "pretrain",
-            "armtdp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "armtdp"
+          }
         ]
       }
     },
@@ -2963,16 +2963,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "armtdp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "armtdp"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "armtdp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "armtdp"
+        }
       ]
     },
     "default_md5": "1ad01f7261cac3c1cd239ec0b6e6df05"
@@ -2982,10 +2982,10 @@
       "gsd": {
         "md5": "5d62d3bdbec2df1c38d913eb57f38571",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -2998,10 +2998,10 @@
       "gsd": {
         "md5": "8125006a20edd21f7d125be0e9d114ef",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -3023,16 +3023,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ]
     },
     "default_md5": "ebf47fbb9022f35afa65f4305d8e5ba8"
@@ -3042,46 +3042,46 @@
       "isdt": {
         "md5": "d9299667bc1c3e665d31eb00435af189",
         "dependencies": [
-          [
-            "pretrain",
-            "isdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "isdt"
+          }
         ]
       },
       "partut": {
         "md5": "7c8aa80eca7b223305c6ab4da3dafe6e",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       },
       "postwita": {
         "md5": "e3b52365d84d0aa9ebbd0a8672ebdc02",
         "dependencies": [
-          [
-            "pretrain",
-            "postwita"
-          ]
+          {
+            "model": "pretrain",
+            "package": "postwita"
+          }
         ]
       },
       "twittiro": {
         "md5": "74012abf8fa2a16936cad84650800556",
         "dependencies": [
-          [
-            "pretrain",
-            "twittiro"
-          ]
+          {
+            "model": "pretrain",
+            "package": "twittiro"
+          }
         ]
       },
       "vit": {
         "md5": "364dfa620d78bd236e6577a6ac3ef544",
         "dependencies": [
-          [
-            "pretrain",
-            "vit"
-          ]
+          {
+            "model": "pretrain",
+            "package": "vit"
+          }
         ]
       }
     },
@@ -3123,46 +3123,46 @@
       "isdt": {
         "md5": "029467be15a4f780562cb8c0276e10e0",
         "dependencies": [
-          [
-            "pretrain",
-            "isdt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "isdt"
+          }
         ]
       },
       "partut": {
         "md5": "966797e5f43ab176fc3ba25a11b42ed0",
         "dependencies": [
-          [
-            "pretrain",
-            "partut"
-          ]
+          {
+            "model": "pretrain",
+            "package": "partut"
+          }
         ]
       },
       "postwita": {
         "md5": "317141e4ab023b5ca4ac039f92329f20",
         "dependencies": [
-          [
-            "pretrain",
-            "postwita"
-          ]
+          {
+            "model": "pretrain",
+            "package": "postwita"
+          }
         ]
       },
       "twittiro": {
         "md5": "36e5adb2047aa321f3180c7972b1e234",
         "dependencies": [
-          [
-            "pretrain",
-            "twittiro"
-          ]
+          {
+            "model": "pretrain",
+            "package": "twittiro"
+          }
         ]
       },
       "vit": {
         "md5": "23cf205924d98b4c93d50f1ba972d41e",
         "dependencies": [
-          [
-            "pretrain",
-            "vit"
-          ]
+          {
+            "model": "pretrain",
+            "package": "vit"
+          }
         ]
       }
     },
@@ -3209,16 +3209,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "isdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "isdt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "isdt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "isdt"
+        }
       ]
     },
     "default_md5": "7ca2c45c7162328f5e2a4f04956b50a6"
@@ -3228,10 +3228,10 @@
       "gsd": {
         "md5": "d62dd92d5861365aef229cbb827c2555",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -3244,10 +3244,10 @@
       "gsd": {
         "md5": "d32371b546223bcdeb2442f38e4a063b",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -3269,16 +3269,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsd"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsd"
+        }
       ]
     },
     "default_md5": "dfcf949f709b423d31c93a97b3a32b61"
@@ -3288,10 +3288,10 @@
       "ktb": {
         "md5": "3433c67ff4b209542429acc73eee101a",
         "dependencies": [
-          [
-            "pretrain",
-            "ktb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ktb"
+          }
         ]
       }
     },
@@ -3309,10 +3309,10 @@
       "ktb": {
         "md5": "6c4b3de170a2116cd723f9a99a4ac8e1",
         "dependencies": [
-          [
-            "pretrain",
-            "ktb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ktb"
+          }
         ]
       }
     },
@@ -3335,16 +3335,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ktb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ktb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ktb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ktb"
+        }
       ]
     },
     "default_md5": "410af1161d0fee815251c869b60ea304"
@@ -3354,10 +3354,10 @@
       "mg": {
         "md5": "8ebea8cf57387e78fe2bef7a028882f5",
         "dependencies": [
-          [
-            "pretrain",
-            "mg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mg"
+          }
         ]
       }
     },
@@ -3370,10 +3370,10 @@
       "mg": {
         "md5": "ac29352f94d97d26ad5058afaecab3a9",
         "dependencies": [
-          [
-            "pretrain",
-            "mg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mg"
+          }
         ]
       }
     },
@@ -3395,16 +3395,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "mg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mg"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "mg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mg"
+        }
       ]
     },
     "default_md5": "af4f2b8d53fdfcd9e10cf5cf88bef562"
@@ -3414,19 +3414,19 @@
       "gsd": {
         "md5": "26e37dfe8c35c9991d8cb5a3ef95c533",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "kaist": {
         "md5": "ce6f609536baa35928e6e6bff8e5f89e",
         "dependencies": [
-          [
-            "pretrain",
-            "kaist"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kaist"
+          }
         ]
       }
     },
@@ -3442,19 +3442,19 @@
       "gsd": {
         "md5": "407bcf2b961482843c2c9e5b8899ac95",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       },
       "kaist": {
         "md5": "8cc54d1cb85f79ff451d5905f3442c06",
         "dependencies": [
-          [
-            "pretrain",
-            "kaist"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kaist"
+          }
         ]
       }
     },
@@ -3482,16 +3482,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "kaist"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kaist"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "kaist"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kaist"
+        }
       ]
     },
     "default_md5": "f1d79e52b2ab8d491f124e1d21207870"
@@ -3501,28 +3501,28 @@
       "ittb": {
         "md5": "86709054294657828d8905a888b85933",
         "dependencies": [
-          [
-            "pretrain",
-            "ittb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ittb"
+          }
         ]
       },
       "perseus": {
         "md5": "cb21e59a53be61b2b305939411972389",
         "dependencies": [
-          [
-            "pretrain",
-            "perseus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "perseus"
+          }
         ]
       },
       "proiel": {
         "md5": "5bf61e6a188856b61cfaa7c16d981ff4",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -3541,28 +3541,28 @@
       "ittb": {
         "md5": "f178354a68dd36afb7679814aff1aded",
         "dependencies": [
-          [
-            "pretrain",
-            "ittb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ittb"
+          }
         ]
       },
       "perseus": {
         "md5": "b8754fa32514431ad35400c70e1cf231",
         "dependencies": [
-          [
-            "pretrain",
-            "perseus"
-          ]
+          {
+            "model": "pretrain",
+            "package": "perseus"
+          }
         ]
       },
       "proiel": {
         "md5": "13dc6102d93867dcfc49ef80a06d46dc",
         "dependencies": [
-          [
-            "pretrain",
-            "proiel"
-          ]
+          {
+            "model": "pretrain",
+            "package": "proiel"
+          }
         ]
       }
     },
@@ -3596,16 +3596,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ittb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ittb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ittb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ittb"
+        }
       ]
     },
     "default_md5": "ac0f069c64b7db8a84ccdc0a957adc73"
@@ -3615,19 +3615,19 @@
       "alksnis": {
         "md5": "c055cd6a85a7480f8bfe89197cc01d47",
         "dependencies": [
-          [
-            "pretrain",
-            "alksnis"
-          ]
+          {
+            "model": "pretrain",
+            "package": "alksnis"
+          }
         ]
       },
       "hse": {
         "md5": "f82b162db0b155b1972da01a5a3e0109",
         "dependencies": [
-          [
-            "pretrain",
-            "hse"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hse"
+          }
         ]
       }
     },
@@ -3643,19 +3643,19 @@
       "alksnis": {
         "md5": "7a979242e7870d528f04f4da00e393b1",
         "dependencies": [
-          [
-            "pretrain",
-            "alksnis"
-          ]
+          {
+            "model": "pretrain",
+            "package": "alksnis"
+          }
         ]
       },
       "hse": {
         "md5": "4bb61a33df68f648a9976138a96475ed",
         "dependencies": [
-          [
-            "pretrain",
-            "hse"
-          ]
+          {
+            "model": "pretrain",
+            "package": "hse"
+          }
         ]
       }
     },
@@ -3683,16 +3683,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "hse"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hse"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "hse"
-        ]
+        {
+          "model": "pretrain",
+          "package": "hse"
+        }
       ]
     },
     "default_md5": "45fffb0c9b21493f6a03d68de3cd9485"
@@ -3702,10 +3702,10 @@
       "lvtb": {
         "md5": "fb8fc55e60660415dcdd71efe3f23d8a",
         "dependencies": [
-          [
-            "pretrain",
-            "lvtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lvtb"
+          }
         ]
       }
     },
@@ -3718,10 +3718,10 @@
       "lvtb": {
         "md5": "0364106bf348ce3407d310aad296b8e4",
         "dependencies": [
-          [
-            "pretrain",
-            "lvtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lvtb"
+          }
         ]
       }
     },
@@ -3743,16 +3743,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "lvtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "lvtb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "lvtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "lvtb"
+        }
       ]
     },
     "default_md5": "0ab81c27f46e4bd46159db7246c38cdc"
@@ -3762,10 +3762,10 @@
       "kyoto": {
         "md5": "87d739419339e7f1cf99f108ba65270f",
         "dependencies": [
-          [
-            "pretrain",
-            "kyoto"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kyoto"
+          }
         ]
       }
     },
@@ -3778,10 +3778,10 @@
       "kyoto": {
         "md5": "8be10d266c0fce5bf48c9695267b1648",
         "dependencies": [
-          [
-            "pretrain",
-            "kyoto"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kyoto"
+          }
         ]
       }
     },
@@ -3803,16 +3803,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "kyoto"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kyoto"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "kyoto"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kyoto"
+        }
       ]
     },
     "default_md5": "5efbd94879d871dba3f71a1caf249b70"
@@ -3822,10 +3822,10 @@
       "ufal": {
         "md5": "734df4dda27136859cd11b61ece5044a",
         "dependencies": [
-          [
-            "pretrain",
-            "ufal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ufal"
+          }
         ]
       }
     },
@@ -3843,10 +3843,10 @@
       "ufal": {
         "md5": "1b0164ba319b4f28e1253529d671f0c8",
         "dependencies": [
-          [
-            "pretrain",
-            "ufal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ufal"
+          }
         ]
       }
     },
@@ -3869,16 +3869,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ufal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ufal"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ufal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ufal"
+        }
       ]
     },
     "default_md5": "b7f8df9fc82daf3fd4770a1a892f3c2c"
@@ -3888,10 +3888,10 @@
       "mudt": {
         "md5": "9408df2a1a5aab897508062fef20f39b",
         "dependencies": [
-          [
-            "pretrain",
-            "mudt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mudt"
+          }
         ]
       }
     },
@@ -3904,10 +3904,10 @@
       "mudt": {
         "md5": "bf9fd193db08647f69678e4a796e4387",
         "dependencies": [
-          [
-            "pretrain",
-            "mudt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mudt"
+          }
         ]
       }
     },
@@ -3929,16 +3929,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "mudt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mudt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "mudt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mudt"
+        }
       ]
     },
     "default_md5": "98067bd0f621502980c3b2fa36b2c500"
@@ -3948,19 +3948,19 @@
       "nynorsk": {
         "md5": "48559c93aa1976c0843a8bcf21d2c045",
         "dependencies": [
-          [
-            "pretrain",
-            "nynorsk"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nynorsk"
+          }
         ]
       },
       "nynorsklia": {
         "md5": "c0cf348c0efa3c0ae8f54d70fe3bb4f3",
         "dependencies": [
-          [
-            "pretrain",
-            "nynorsklia"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nynorsklia"
+          }
         ]
       }
     },
@@ -3976,19 +3976,19 @@
       "nynorsk": {
         "md5": "22e24810c46a13b8504b038063e16026",
         "dependencies": [
-          [
-            "pretrain",
-            "nynorsk"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nynorsk"
+          }
         ]
       },
       "nynorsklia": {
         "md5": "d7a1b06a5da5226b2245c4a69731c49b",
         "dependencies": [
-          [
-            "pretrain",
-            "nynorsklia"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nynorsklia"
+          }
         ]
       }
     },
@@ -4016,16 +4016,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "nynorsk"
-        ]
+        {
+          "model": "pretrain",
+          "package": "nynorsk"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "nynorsk"
-        ]
+        {
+          "model": "pretrain",
+          "package": "nynorsk"
+        }
       ]
     },
     "default_md5": "4a876d81310d122705a4520c9db9126f"
@@ -4035,10 +4035,10 @@
       "bokmaal": {
         "md5": "8cc47174844d85f27598ac908b5829bd",
         "dependencies": [
-          [
-            "pretrain",
-            "bokmaal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bokmaal"
+          }
         ]
       }
     },
@@ -4051,10 +4051,10 @@
       "bokmaal": {
         "md5": "5ffdb668949223c41c6019552aa50090",
         "dependencies": [
-          [
-            "pretrain",
-            "bokmaal"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bokmaal"
+          }
         ]
       }
     },
@@ -4076,16 +4076,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "bokmaal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bokmaal"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "bokmaal"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bokmaal"
+        }
       ]
     },
     "default_md5": "68af5ec1697cc1a68b229a9a1a682569"
@@ -4095,10 +4095,10 @@
       "kkpp": {
         "md5": "d70964ac7c6df6a53138ce44155bde0f",
         "dependencies": [
-          [
-            "pretrain",
-            "kkpp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kkpp"
+          }
         ]
       }
     },
@@ -4111,10 +4111,10 @@
       "kkpp": {
         "md5": "6660aee146ed1f9bcc74a6bc3a4df879",
         "dependencies": [
-          [
-            "pretrain",
-            "kkpp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "kkpp"
+          }
         ]
       }
     },
@@ -4136,16 +4136,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "kkpp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kkpp"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "kkpp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "kkpp"
+        }
       ]
     },
     "default_md5": "2c21f5387496dd31190f28e6dfaf7cab"
@@ -4155,10 +4155,10 @@
       "torot": {
         "md5": "add1c84eaa2f8e009e657de2b5a281a4",
         "dependencies": [
-          [
-            "pretrain",
-            "torot"
-          ]
+          {
+            "model": "pretrain",
+            "package": "torot"
+          }
         ]
       }
     },
@@ -4171,10 +4171,10 @@
       "torot": {
         "md5": "c23a763ed78a1c9ec3ff904cf32fd05e",
         "dependencies": [
-          [
-            "pretrain",
-            "torot"
-          ]
+          {
+            "model": "pretrain",
+            "package": "torot"
+          }
         ]
       }
     },
@@ -4191,16 +4191,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "torot"
-        ]
+        {
+          "model": "pretrain",
+          "package": "torot"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "torot"
-        ]
+        {
+          "model": "pretrain",
+          "package": "torot"
+        }
       ]
     },
     "default_md5": "026f769c1512c1ff7596c6627af420ad"
@@ -4210,19 +4210,19 @@
       "lfg": {
         "md5": "9bc6038a71540504d6c59711b7af93ea",
         "dependencies": [
-          [
-            "pretrain",
-            "lfg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lfg"
+          }
         ]
       },
       "pdb": {
         "md5": "80ae923646365ee4ddb087985f91642a",
         "dependencies": [
-          [
-            "pretrain",
-            "pdb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "pdb"
+          }
         ]
       }
     },
@@ -4243,19 +4243,19 @@
       "lfg": {
         "md5": "447e0737c60068feb7cf72d0eee33bbf",
         "dependencies": [
-          [
-            "pretrain",
-            "lfg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lfg"
+          }
         ]
       },
       "pdb": {
         "md5": "e7b7a9a02d66e3c5bc42a1da3a0118c8",
         "dependencies": [
-          [
-            "pretrain",
-            "pdb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "pdb"
+          }
         ]
       }
     },
@@ -4283,16 +4283,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "lfg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "lfg"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "lfg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "lfg"
+        }
       ]
     },
     "default_md5": "14229f471fd3a2ca7d1eb86b903ec04a"
@@ -4302,19 +4302,19 @@
       "bosque": {
         "md5": "314934b3fb237d450124c34378bb3841",
         "dependencies": [
-          [
-            "pretrain",
-            "bosque"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bosque"
+          }
         ]
       },
       "gsd": {
         "md5": "a2bed052afa2789f63ca959dd2e02af0",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -4338,19 +4338,19 @@
       "bosque": {
         "md5": "9f2d30498756312b6e279253e03e430e",
         "dependencies": [
-          [
-            "pretrain",
-            "bosque"
-          ]
+          {
+            "model": "pretrain",
+            "package": "bosque"
+          }
         ]
       },
       "gsd": {
         "md5": "8a7f8831c610118018635148198fb5af",
         "dependencies": [
-          [
-            "pretrain",
-            "gsd"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsd"
+          }
         ]
       }
     },
@@ -4379,16 +4379,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "bosque"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bosque"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "bosque"
-        ]
+        {
+          "model": "pretrain",
+          "package": "bosque"
+        }
       ]
     },
     "default_md5": "920de8806662a131add2f6a84c9f8814"
@@ -4398,19 +4398,19 @@
       "nonstandard": {
         "md5": "5d246f49ad580e1ebbc575a024af00ca",
         "dependencies": [
-          [
-            "pretrain",
-            "nonstandard"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nonstandard"
+          }
         ]
       },
       "rrt": {
         "md5": "6795e933220e285105b43b9c69164bd9",
         "dependencies": [
-          [
-            "pretrain",
-            "rrt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "rrt"
+          }
         ]
       }
     },
@@ -4426,19 +4426,19 @@
       "nonstandard": {
         "md5": "350caf4904e3250c1505cd8fdf5bca49",
         "dependencies": [
-          [
-            "pretrain",
-            "nonstandard"
-          ]
+          {
+            "model": "pretrain",
+            "package": "nonstandard"
+          }
         ]
       },
       "rrt": {
         "md5": "acf5a74de329f7151ed64b55bf38bcf3",
         "dependencies": [
-          [
-            "pretrain",
-            "rrt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "rrt"
+          }
         ]
       }
     },
@@ -4466,16 +4466,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "rrt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "rrt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "rrt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "rrt"
+        }
       ]
     },
     "default_md5": "0d9541599d9502ec98fc22f26c4f6af6"
@@ -4485,10 +4485,10 @@
       "snk": {
         "md5": "9833f9c25092b855485e96a6db163f07",
         "dependencies": [
-          [
-            "pretrain",
-            "snk"
-          ]
+          {
+            "model": "pretrain",
+            "package": "snk"
+          }
         ]
       }
     },
@@ -4501,10 +4501,10 @@
       "snk": {
         "md5": "0f450f5391d46ab84b78e35087a144f7",
         "dependencies": [
-          [
-            "pretrain",
-            "snk"
-          ]
+          {
+            "model": "pretrain",
+            "package": "snk"
+          }
         ]
       }
     },
@@ -4526,16 +4526,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "snk"
-        ]
+        {
+          "model": "pretrain",
+          "package": "snk"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "snk"
-        ]
+        {
+          "model": "pretrain",
+          "package": "snk"
+        }
       ]
     },
     "default_md5": "212ac7acefe1d5692cb16326e201a0e7"
@@ -4545,19 +4545,19 @@
       "ssj": {
         "md5": "eb10cbde390cf5f671119a06610effb5",
         "dependencies": [
-          [
-            "pretrain",
-            "ssj"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ssj"
+          }
         ]
       },
       "sst": {
         "md5": "097f3e8eeb4ee76c68c67bc099a62fd4",
         "dependencies": [
-          [
-            "pretrain",
-            "sst"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sst"
+          }
         ]
       }
     },
@@ -4573,19 +4573,19 @@
       "ssj": {
         "md5": "c620501d7985fe5ec0898c8180d4e53f",
         "dependencies": [
-          [
-            "pretrain",
-            "ssj"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ssj"
+          }
         ]
       },
       "sst": {
         "md5": "82643b09ff6753bc3e21644ddb0aed3c",
         "dependencies": [
-          [
-            "pretrain",
-            "sst"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sst"
+          }
         ]
       }
     },
@@ -4613,16 +4613,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ssj"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ssj"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ssj"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ssj"
+        }
       ]
     },
     "default_md5": "13b7c4891e98afae7c985df7b1cfa6cb"
@@ -4632,10 +4632,10 @@
       "giella": {
         "md5": "d719142327ad4e1e6b913acb430416b1",
         "dependencies": [
-          [
-            "pretrain",
-            "giella"
-          ]
+          {
+            "model": "pretrain",
+            "package": "giella"
+          }
         ]
       }
     },
@@ -4648,10 +4648,10 @@
       "giella": {
         "md5": "b80f63858b25236879443691ca61eb09",
         "dependencies": [
-          [
-            "pretrain",
-            "giella"
-          ]
+          {
+            "model": "pretrain",
+            "package": "giella"
+          }
         ]
       }
     },
@@ -4673,16 +4673,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "giella"
-        ]
+        {
+          "model": "pretrain",
+          "package": "giella"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "giella"
-        ]
+        {
+          "model": "pretrain",
+          "package": "giella"
+        }
       ]
     },
     "default_md5": "7aacbd6c8ebfa576fc12843c28a54a5e"
@@ -4692,10 +4692,10 @@
       "set": {
         "md5": "d33b7794836814ef5309671b73f89c6f",
         "dependencies": [
-          [
-            "pretrain",
-            "set"
-          ]
+          {
+            "model": "pretrain",
+            "package": "set"
+          }
         ]
       }
     },
@@ -4708,10 +4708,10 @@
       "set": {
         "md5": "03059e84420c7edfcc194ae7a2c808ca",
         "dependencies": [
-          [
-            "pretrain",
-            "set"
-          ]
+          {
+            "model": "pretrain",
+            "package": "set"
+          }
         ]
       }
     },
@@ -4733,16 +4733,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "set"
-        ]
+        {
+          "model": "pretrain",
+          "package": "set"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "set"
-        ]
+        {
+          "model": "pretrain",
+          "package": "set"
+        }
       ]
     },
     "default_md5": "c266989b2ef55966530299b291140f0c"
@@ -4752,19 +4752,19 @@
       "lines": {
         "md5": "084057aabc92d4fc32defa340e2a0c90",
         "dependencies": [
-          [
-            "pretrain",
-            "lines"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lines"
+          }
         ]
       },
       "talbanken": {
         "md5": "9defe233f3c07409a209d9e7f56b7e67",
         "dependencies": [
-          [
-            "pretrain",
-            "talbanken"
-          ]
+          {
+            "model": "pretrain",
+            "package": "talbanken"
+          }
         ]
       }
     },
@@ -4780,19 +4780,19 @@
       "lines": {
         "md5": "19587d9190e89f544c2652bf671b04b3",
         "dependencies": [
-          [
-            "pretrain",
-            "lines"
-          ]
+          {
+            "model": "pretrain",
+            "package": "lines"
+          }
         ]
       },
       "talbanken": {
         "md5": "1692eddfe76ce61017ec6a228a3bcfc9",
         "dependencies": [
-          [
-            "pretrain",
-            "talbanken"
-          ]
+          {
+            "model": "pretrain",
+            "package": "talbanken"
+          }
         ]
       }
     },
@@ -4820,16 +4820,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "talbanken"
-        ]
+        {
+          "model": "pretrain",
+          "package": "talbanken"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "talbanken"
-        ]
+        {
+          "model": "pretrain",
+          "package": "talbanken"
+        }
       ]
     },
     "default_md5": "4c76b4bf9a0f49f62b0e0c4174a09d7b"
@@ -4839,10 +4839,10 @@
       "sslc": {
         "md5": "a7314595a99437404d5ade0c6051755f",
         "dependencies": [
-          [
-            "pretrain",
-            "sslc"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sslc"
+          }
         ]
       }
     },
@@ -4855,10 +4855,10 @@
       "sslc": {
         "md5": "6a3133e4599bfd2e594dc6565bc8d3e6",
         "dependencies": [
-          [
-            "pretrain",
-            "sslc"
-          ]
+          {
+            "model": "pretrain",
+            "package": "sslc"
+          }
         ]
       }
     },
@@ -4875,16 +4875,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "sslc"
-        ]
+        {
+          "model": "pretrain",
+          "package": "sslc"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "sslc"
-        ]
+        {
+          "model": "pretrain",
+          "package": "sslc"
+        }
       ]
     },
     "default_md5": "704a0655d75af7e51f694171bbd0c6bb"
@@ -4894,10 +4894,10 @@
       "ttb": {
         "md5": "8a88aa26f30445fc2445b1b66ebcd89b",
         "dependencies": [
-          [
-            "pretrain",
-            "ttb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ttb"
+          }
         ]
       }
     },
@@ -4915,10 +4915,10 @@
       "ttb": {
         "md5": "a0834bcd28839a0aa5d68a4cf598353d",
         "dependencies": [
-          [
-            "pretrain",
-            "ttb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "ttb"
+          }
         ]
       }
     },
@@ -4941,16 +4941,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "ttb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ttb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "ttb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "ttb"
+        }
       ]
     },
     "default_md5": "842330efa81655768ccd69eed6227f02"
@@ -4960,10 +4960,10 @@
       "mtg": {
         "md5": "990ce6904d42d8913925e60417f5e93b",
         "dependencies": [
-          [
-            "pretrain",
-            "mtg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mtg"
+          }
         ]
       }
     },
@@ -4976,10 +4976,10 @@
       "mtg": {
         "md5": "4b3973287b576ece57620dd57f51bea9",
         "dependencies": [
-          [
-            "pretrain",
-            "mtg"
-          ]
+          {
+            "model": "pretrain",
+            "package": "mtg"
+          }
         ]
       }
     },
@@ -5001,16 +5001,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "mtg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mtg"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "mtg"
-        ]
+        {
+          "model": "pretrain",
+          "package": "mtg"
+        }
       ]
     },
     "default_md5": "394b5b1f59753401dfdb092bdaa41dff"
@@ -5020,10 +5020,10 @@
       "imst": {
         "md5": "485332e404224bf9b7c8d2ac98c7cdde",
         "dependencies": [
-          [
-            "pretrain",
-            "imst"
-          ]
+          {
+            "model": "pretrain",
+            "package": "imst"
+          }
         ]
       }
     },
@@ -5041,10 +5041,10 @@
       "imst": {
         "md5": "9411eea8e904cf0191e602a101542689",
         "dependencies": [
-          [
-            "pretrain",
-            "imst"
-          ]
+          {
+            "model": "pretrain",
+            "package": "imst"
+          }
         ]
       }
     },
@@ -5067,16 +5067,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "imst"
-        ]
+        {
+          "model": "pretrain",
+          "package": "imst"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "imst"
-        ]
+        {
+          "model": "pretrain",
+          "package": "imst"
+        }
       ]
     },
     "default_md5": "2ebae08c3e9c8d6e102daa4c3de876ae"
@@ -5086,10 +5086,10 @@
       "udt": {
         "md5": "ff5844fab5e5b8b71d846ac1c8d7ae18",
         "dependencies": [
-          [
-            "pretrain",
-            "udt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "udt"
+          }
         ]
       }
     },
@@ -5102,10 +5102,10 @@
       "udt": {
         "md5": "b233c30f78c3e6d8dcd1716134565b9e",
         "dependencies": [
-          [
-            "pretrain",
-            "udt"
-          ]
+          {
+            "model": "pretrain",
+            "package": "udt"
+          }
         ]
       }
     },
@@ -5127,16 +5127,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "udt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "udt"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "udt"
-        ]
+        {
+          "model": "pretrain",
+          "package": "udt"
+        }
       ]
     },
     "default_md5": "ef3989d8bc49968e3b1e6c695236f47b"
@@ -5146,10 +5146,10 @@
       "iu": {
         "md5": "67f896db83cbb199cd60f0ad7cc807b9",
         "dependencies": [
-          [
-            "pretrain",
-            "iu"
-          ]
+          {
+            "model": "pretrain",
+            "package": "iu"
+          }
         ]
       }
     },
@@ -5167,10 +5167,10 @@
       "iu": {
         "md5": "b2f1e1e4ddbf6064997e77061882fabb",
         "dependencies": [
-          [
-            "pretrain",
-            "iu"
-          ]
+          {
+            "model": "pretrain",
+            "package": "iu"
+          }
         ]
       }
     },
@@ -5193,16 +5193,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "iu"
-        ]
+        {
+          "model": "pretrain",
+          "package": "iu"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "iu"
-        ]
+        {
+          "model": "pretrain",
+          "package": "iu"
+        }
       ]
     },
     "default_md5": "86f1a0262eb295c31fd15b9096d1bcea"
@@ -5212,10 +5212,10 @@
       "udtb": {
         "md5": "493b99fbd5e5486f5b3f94ce7d70731d",
         "dependencies": [
-          [
-            "pretrain",
-            "udtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "udtb"
+          }
         ]
       }
     },
@@ -5228,10 +5228,10 @@
       "udtb": {
         "md5": "b6bbd80bd7654aed84669c8fc64ef681",
         "dependencies": [
-          [
-            "pretrain",
-            "udtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "udtb"
+          }
         ]
       }
     },
@@ -5253,16 +5253,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "udtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "udtb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "udtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "udtb"
+        }
       ]
     },
     "default_md5": "32a209c05add73f957173581ced5acab"
@@ -5272,10 +5272,10 @@
       "vtb": {
         "md5": "4520c6ceea564764dc4681a4dba96365",
         "dependencies": [
-          [
-            "pretrain",
-            "vtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "vtb"
+          }
         ]
       }
     },
@@ -5283,10 +5283,10 @@
       "vtb": {
         "md5": "37c3c4e5168390b3cf651949eaadbda7",
         "dependencies": [
-          [
-            "pretrain",
-            "vtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "vtb"
+          }
         ]
       }
     },
@@ -5307,16 +5307,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "vtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "vtb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "vtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "vtb"
+        }
       ]
     },
     "default_md5": "0ae93c3796cdff89902be26367c27c06"
@@ -5326,10 +5326,10 @@
       "wtb": {
         "md5": "9f1396d194956ecda60083ff7d48c971",
         "dependencies": [
-          [
-            "pretrain",
-            "wtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "wtb"
+          }
         ]
       }
     },
@@ -5347,10 +5347,10 @@
       "wtb": {
         "md5": "6383cb77071b26e933f9e4693c2af261",
         "dependencies": [
-          [
-            "pretrain",
-            "wtb"
-          ]
+          {
+            "model": "pretrain",
+            "package": "wtb"
+          }
         ]
       }
     },
@@ -5373,16 +5373,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "wtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "wtb"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "wtb"
-        ]
+        {
+          "model": "pretrain",
+          "package": "wtb"
+        }
       ]
     },
     "default_md5": "ffba057abfb121003e034892be0d9fbf"
@@ -5392,10 +5392,10 @@
       "gsdsimp": {
         "md5": "e4ad1365acaa803ba325eebe23ef9282",
         "dependencies": [
-          [
-            "pretrain",
-            "gsdsimp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsdsimp"
+          }
         ]
       }
     },
@@ -5408,10 +5408,10 @@
       "gsdsimp": {
         "md5": "b87b4a0de6350a1bf0e3674a548e9488",
         "dependencies": [
-          [
-            "pretrain",
-            "gsdsimp"
-          ]
+          {
+            "model": "pretrain",
+            "package": "gsdsimp"
+          }
         ]
       }
     },
@@ -5433,16 +5433,16 @@
     },
     "default_dependencies": {
       "pos": [
-        [
-          "pretrain",
-          "gsdsimp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsdsimp"
+        }
       ],
       "depparse": [
-        [
-          "pretrain",
-          "gsdsimp"
-        ]
+        {
+          "model": "pretrain",
+          "package": "gsdsimp"
+        }
       ]
     },
     "default_md5": "f82a5129dac495ac5a45ffaba443d75f"
