@@ -1,6 +1,5 @@
 import json
 import argparse
-import torch
 import os
 from pathlib import Path
 import hashlib
@@ -164,10 +163,10 @@ def process_dirs(args):
             md5 = get_md5(output_path)
             # maintain dependencies
             if processor == 'pos' or processor == 'depparse':
-                dependencies = [['pretrain', package]]
+                dependencies = [{'model': 'pretrain', 'package': package}]
             elif processor == 'ner':
                 charlm_package = default_charlms[lang]
-                dependencies = [['forward_charlm', charlm_package], ['backward_charlm', charlm_package]]
+                dependencies = [{'model': 'forward_charlm', 'package': charlm_package}, {'model': 'backward_charlm', 'package': charlm_package}]
             else:
                 dependencies = None
             # maintain resources
@@ -192,12 +191,12 @@ def process_defaults(args):
         os.chdir(os.path.join(args.output_dir, lang))
         zipf = zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED)
         default_processors = {}
-        default_dependencies = {'pos': [['pretrain', ud_package]], 'depparse': [['pretrain', ud_package]]}
+        default_dependencies = {'pos': [{'model': 'pretrain', 'package': ud_package}], 'depparse': [{'model': 'pretrain', 'package': ud_package}]}
 
         if lang in default_ners:
             ner_package = default_ners[lang]
             charlm_package = default_charlms[lang]
-            default_dependencies['ner'] = [['forward_charlm', charlm_package], ['backward_charlm', charlm_package]]
+            default_dependencies['ner'] = [{'model': 'forward_charlm', 'package': charlm_package}, {'model': 'backward_charlm', 'package': charlm_package}]
         
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'pretrain', 'forward_charlm', 'backward_charlm'] if lang in default_ners else ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         for processor in processors:
