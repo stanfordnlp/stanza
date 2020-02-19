@@ -83,7 +83,7 @@ class Pipeline:
         # Maintain load list
         self.load_list = maintain_processor_list(resources, lang, package, processors)
         self.load_list = add_dependencies(resources, lang, self.load_list)
-        load_table = make_table(['Processor', 'Model'], [row[:2] for row in self.load_list])
+        load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Load list:\n{load_table}')
         
         # Load processors
@@ -102,7 +102,7 @@ class Pipeline:
         # set up processors
         pipeline_reqs_exceptions = []
         for item in self.load_list:
-            processor_name, model, _ = item
+            processor_name, _, _ = item
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)

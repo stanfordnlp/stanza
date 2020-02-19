@@ -31,8 +31,8 @@ PIPELINE_NAMES = ['tokenize', 'mwt', 'pos', 'lemma', 'depparse', 'ner']
 def build_default_config(resources, lang, dir, load_list):
     default_config = {}
     for item in load_list:
-        processor, model, dependencies = item
-        default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, model + '.pt')
+        processor, package, dependencies = item
+        default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, package + '.pt')
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
@@ -126,9 +126,9 @@ def maintain_processor_list(resources, lang, package, processors):
 def add_dependencies(resources, lang, processor_list):    
     default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
     for item in processor_list:
-        processor, model = item
+        processor, package = item
         dependencies = default_dependencies.get(processor, None)
-        dependencies = resources[lang][processor][model].get('dependencies', dependencies)
+        dependencies = resources[lang][processor][package].get('dependencies', dependencies)
         if dependencies: dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
         item.append(dependencies)
     return processor_list
@@ -137,12 +137,12 @@ def flatten_processor_list(processor_list):
     flattened_processor_list = []
     dependencies_list = []
     for item in processor_list:
-        processor, model, dependencies = item
-        flattened_processor_list.append([processor, model])
+        processor, package, dependencies = item
+        flattened_processor_list.append([processor, package])
         if dependencies: dependencies_list += [tuple(dependency) for dependency in dependencies]
     dependencies_list = [list(item) for item in set(dependencies_list)]
-    for processor, model in dependencies_list:
-        logger.debug(f'Find dependency {processor}: {model}.')
+    for processor, package in dependencies_list:
+        logger.debug(f'Find dependency {processor}: {package}.')
     flattened_processor_list += dependencies_list
     return flattened_processor_list
 
@@ -213,7 +213,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         download_list = maintain_processor_list(resources, lang, package, processors)
         download_list = add_dependencies(resources, lang, download_list)
         download_list = flatten_processor_list(download_list)
-        download_table = make_table(['Processor', 'Model'], download_list)
+        download_table = make_table(['Processor', 'Package'], download_list)
         logger.info(f'Download list:\n{download_table}')
         
         # Download packages
