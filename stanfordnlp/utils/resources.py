@@ -34,11 +34,18 @@ def build_default_config(resources, lang, dir, load_list):
     default_config = {}
     for item in load_list:
         processor, package, dependencies = item
-        default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, package + '.pt')
+
+        # handle case when spacy is specified as tokenizer
+        if processor == TOKENIZE and package == 'spacy':
+            default_config[f"{TOKENIZE}_with_spacy"] = True
+        else:
+            default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, package + '.pt')
+        
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
             default_config[f"{processor}_{dep_processor}_path"] = os.path.join(dir, lang, dep_processor, dep_model + '.pt')
+
     return default_config
 
 def ensure_dir(dir):
@@ -88,20 +95,28 @@ def sort_processors(processor_list):
 
 def maintain_processor_list(resources, lang, package, processors):
     processor_list = {}
+    # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
         for key, value in processors.items():
             assert(key in PIPELINE_NAMES)
             assert(isinstance(key, str) and isinstance(value, str))
+            # check if keys and values can be found
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Find {key}: {value}.')
                 processor_list[key] = value
+            # allow values to be default in some cases
             elif key in resources[lang][DEFAULT_PROCESSORS] and value == 'default':
                 logger.debug(f'Find {key}: {resources[lang][DEFAULT_PROCESSORS][key]}.')
                 processor_list[key] = resources[lang][DEFAULT_PROCESSORS][key]
+            # allow tokenize to be set to "spacy"
+            elif key == TOKENIZE and value == 'spacy':
+                logger.debug(f'Find {key}: {value}. Using external spacy library as tokenizer.')
+                processor_list[key] = value
+            # cannot find and warn user
             else:
-                logger.warning(f'Can not find {key}: {value}.')
-
+                logger.warning(f'Can not find {key}: {value} from official model list. Ignoring it.')
+    # resolve package
     if package:
         logger.debug(f'Processing parameter "package"...')
         if package == 'default':
@@ -130,8 +145,11 @@ def add_dependencies(resources, lang, processor_list):
     for item in processor_list:
         processor, package = item
         dependencies = default_dependencies.get(processor, None)
-        dependencies = resources[lang][processor][package].get('dependencies', dependencies)
-        if dependencies: dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
+        # skip dependency checking for special spacy tokenizer
+        if not (processor == TOKENIZE and package == 'spacy'):
+            dependencies = resources[lang][processor][package].get('dependencies', dependencies)
+        if dependencies:
+            dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
         item.append(dependencies)
     return processor_list
 

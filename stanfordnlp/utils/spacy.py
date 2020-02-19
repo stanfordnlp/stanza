@@ -52,10 +52,8 @@ class SpacyTokenizer():
             for tok in sent:
                 token_entry = {
                     doc.TEXT: tok.text,
-                    doc.START_CHAR: tok.idx,
-                    doc.END_CHAR: tok.idx + len(tok.text)
+                    doc.MISC: f"{doc.START_CHAR}={tok.idx}|{doc.END_CHAR}={tok.idx+len(tok.text)}"
                 }
-                print(token_entry)
                 tokens.append(token_entry)
             sentences.append(tokens)
         return doc.Document(sentences, text)

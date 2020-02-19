@@ -3,6 +3,7 @@ Processor for performing tokenization
 """
 
 import io
+import logging
 
 from stanfordnlp.models.tokenize.data import DataLoader
 from stanfordnlp.models.tokenize.trainer import Trainer
@@ -11,7 +12,9 @@ from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanfordnlp.models.common import doc
+from stanfordnlp.utils.spacy import SpacyTokenizer
 
+logger = logging.getLogger(__name__)
 
 # class for running the tokenizer
 class TokenizeProcessor(UDProcessor):
@@ -27,6 +30,10 @@ class TokenizeProcessor(UDProcessor):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
+        elif config.get('with_spacy', False):
+            self._trainer = None
+            self._spacy_tokenizer = SpacyTokenizer(config.get('lang'))
+            logger.info("Using spaCy as tokenizer")
         else:
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
@@ -59,6 +66,8 @@ class TokenizeProcessor(UDProcessor):
         if self.config.get('pretokenized'):
             raw_text = None
             document = self.process_pre_tokenized_text(document)
+        elif self.config.get('with_spacy', False):
+            return self._spacy_tokenizer.tokenize(document)
         else:
             raw_text = document
             # set up batches
