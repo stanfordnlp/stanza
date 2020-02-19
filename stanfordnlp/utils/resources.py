@@ -11,8 +11,10 @@ import hashlib
 import zipfile
 import shutil
 import logging
+
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
+from stanfordnlp.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_DOWNLOAD_VERSION = 'latest'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"
-PIPELINE_NAMES = ['tokenize', 'mwt', 'pos', 'lemma', 'depparse', 'ner']
+PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER]
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):
