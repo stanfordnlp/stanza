@@ -32,6 +32,10 @@ class Document:
 
     def __init__(self, sentences, text=None):
         """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
+
+        Args:
+            sentences: a list of sentences, which being a list of token entry, in the form of a CoNLL-U dict.
+            text: the raw text of the document.
         """
         self._sentences = []
         self._text = None
