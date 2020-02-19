@@ -203,7 +203,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     logger.info(f'Downloading models for language: {lang} ({lcode2lang[lang]})')
 
     # Default: download zipfile and unzip
-    if package == 'default' and len(processors) == 0:
+    if package == 'default' and (processors is None or len(processors) == 0):
         logger.info('Downloading default packages...')
         request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
         unzip(os.path.join(dir, lang), 'default.zip')
