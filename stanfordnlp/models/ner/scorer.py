@@ -122,7 +122,7 @@ def test():
                     ['O', 'S-MISC', 'O', 'E-ORG', 'O', 'B-PER', 'I-PER', 'E-PER']]
     gold_sequences = [['O', 'B-LOC', 'E-LOC', 'O', 'B-PER', 'E-PER'],
                     ['O', 'S-MISC', 'B-ORG', 'E-ORG', 'O', 'B-PER', 'E-PER', 'S-LOC']]
-    #print score_by_token(pred_sequences, gold_sequences)
+    print(score_by_token(pred_sequences, gold_sequences))
     print(score_by_entity(pred_sequences, gold_sequences))
 
 if __name__ == '__main__':
