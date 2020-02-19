@@ -72,7 +72,7 @@ word: .        		token parent:26-.
 
 
 def test_mwt():
-    pipeline = stanfordnlp.Pipeline(processors='tokenize,mwt', models_dir=TEST_MODELS_DIR, lang='fr')
+    pipeline = stanfordnlp.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='fr')
     doc = pipeline(FR_MWT_SENTENCE)
     token_to_words = "\n".join(
         [f'token: {token.text.ljust(9)}\t\twords: [{", ".join([word.pretty_print() for word in token.words])}]' for sent in doc.sentences for token in sent.tokens]

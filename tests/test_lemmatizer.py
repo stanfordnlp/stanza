@@ -33,16 +33,14 @@ EN_DOC_LEMMATIZER_MODEL_GOLD = """
 
 
 def test_identity_lemmatizer():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize,lemma', 'models_dir': TEST_MODELS_DIR, 'lang': 'en',
+    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'lemma_use_identity': True})
     doc = nlp(EN_DOC)
     assert EN_DOC_IDENTITY_GOLD == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 
 def test_full_lemmatizer():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize,pos,lemma', 'models_dir': TEST_MODELS_DIR, 'lang': 'en'})
+    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'})
     doc = nlp(EN_DOC)
     assert EN_DOC_LEMMATIZER_MODEL_GOLD == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
-
-
 
