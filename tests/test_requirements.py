@@ -34,7 +34,7 @@ def test_missing_requirements():
         # missing tokenize
         (
             # input config
-            {'processors': 'pos,depparse', 'models_dir': TEST_MODELS_DIR, 'lang': 'en'},
+            {'processors': 'pos,depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en'},
             # 2 expected exceptions
             [
                 {'processor_type': 'POSProcessor', 'processors_list': ['pos', 'depparse'], 'provided_reqs': set([]),
@@ -46,7 +46,7 @@ def test_missing_requirements():
         # no pos when lemma_pos set to True; for english mwt should not be included in the loaded processor list
         (
             # input config
-            {'processors': 'tokenize,mwt,lemma', 'models_dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_pos': True},
+            {'processors': 'tokenize,mwt,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_pos': True},
             # 1 expected exception
             [
                 {'processor_type': 'LemmaProcessor', 'processors_list': ['tokenize', 'lemma'],
