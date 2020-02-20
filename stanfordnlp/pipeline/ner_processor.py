@@ -31,7 +31,7 @@ class NERProcessor(UDProcessor):
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
-        batch.doc.set([doc.NER], [y for x in preds for y in x])
+        batch.doc.set([doc.NER], [y for x in preds for y in x], to_token=True)
         # collect entities into document attribute
         total = len(batch.doc.build_ents())
         logger.debug(f'{total} entities found in document.')

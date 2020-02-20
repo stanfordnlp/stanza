@@ -372,13 +372,17 @@ class Sentence:
         self._ents = value
     
     def build_ents(self):
-        """ Build the list of entities by iterating over all words. Return all entities as a list. """
+        """ Build the list of entities by iterating over all tokens. Return all entities as a list. 
+        
+        Note that unlike other attributes, since NER requires raw text, the actual tagging are always
+        performed at and attached to the `Token`s, instead of `Word`s.
+        """
         self.ents = []
-        tags = [w.ner for w in self.words]
+        tags = [w.ner for w in self.tokens]
         decoded = decode_from_bioes(tags)
         for e in decoded:
-            ent_words = self.words[e['start']:e['end']+1]
-            self.ents.append(Span(words=ent_words, type=e['type'], doc=self.doc, sent=self))
+            ent_tokens = self.tokens[e['start']:e['end']+1]
+            self.ents.append(Span(tokens=ent_tokens, type=e['type'], doc=self.doc, sent=self))
         return self.ents
 
     def build_dependencies(self):
@@ -457,6 +461,7 @@ class Token:
         self.id = token_entry.get(ID)
         self.text = token_entry.get(TEXT)
         self.misc = token_entry.get(MISC, None)
+        self.ner = token_entry.get(NER, None)
         self.words = words if words is not None else []
 
         if self.misc is not None:
@@ -541,7 +546,7 @@ class Token:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-    def to_dict(self, fields=[ID, TEXT, MISC]):
+    def to_dict(self, fields=[ID, TEXT, NER, MISC]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -571,8 +576,8 @@ class Word:
         """ Construct a word given a dictionary format word entry.
         """
         assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, self._misc, \
-                self._parent, self._ner = [None] * 12
+        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, \
+            self._misc, self._parent = [None] * 11
 
         self.id = word_entry.get(ID)
         self.text = word_entry.get(TEXT)
@@ -584,7 +589,6 @@ class Word:
         self.deprel = word_entry.get(DEPREL, None)
         self.deps = word_entry.get(DEPS, None)
         self.misc = word_entry.get(MISC, None)
-        self.ner = word_entry.get(NER, None)
 
         if self.misc is not None:
             self.init_from_misc()
@@ -725,20 +729,10 @@ class Word:
         """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
 
-    @property
-    def ner(self):
-        """ Access the NER tag of this word. Example: 'B-ORG'"""
-        return self._ner
-
-    @ner.setter
-    def ner(self, value):
-        """ Set the word's NER tag. Example: 'B-ORG'"""
-        self._ner = value if self._is_null(value) == False else None
-
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
@@ -762,14 +756,15 @@ class Span:
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
 
-    def __init__(self, span_entry=None, words=None, type=None, doc=None, sent=None):
-        """ Construct a span given a span entry or a list of words. A valid reference to a doc
+    def __init__(self, span_entry=None, tokens=None, type=None, doc=None, sent=None):
+        """ Construct a span given a span entry or a list of tokens. A valid reference to a doc
         must be provided to construct a span (otherwise the text of the span cannot be initialized).
         """
-        assert span_entry is not None or (words is not None and type is not None), \
-                'Either a span_entry or a word list needs to be provided to construct a span.'
+        assert span_entry is not None or (tokens is not None and type is not None), \
+                'Either a span_entry or a token list needs to be provided to construct a span.'
         assert doc is not None, 'A parent doc must be provided to construct a span.'
         self._text, self._type, self._start_char, self._end_char = [None] * 4
+        self._tokens = []
         self._words = []
         self._doc = doc
         self._sent = sent
@@ -777,8 +772,8 @@ class Span:
         if span_entry is not None:
             self.init_from_entry(span_entry)
 
-        if words is not None:
-            self.init_from_words(words, type)
+        if tokens is not None:
+            self.init_from_tokens(tokens, type)
 
     def init_from_entry(self, span_entry):
         self.text = span_entry.get(TEXT, None)
@@ -786,16 +781,18 @@ class Span:
         self.start_char = span_entry.get(START_CHAR, None)
         self.end_char = span_entry.get(END_CHAR, None)
 
-    def init_from_words(self, words, type):
-        assert isinstance(words, list), 'Words must be provided as a list to construct a span.'
-        assert len(words) > 0, "Words of a span cannot be an empty list."
-        self.words = words
+    def init_from_tokens(self, tokens, type):
+        assert isinstance(tokens, list), 'Tokens must be provided as a list to construct a span.'
+        assert len(tokens) > 0, "Tokens of a span cannot be an empty list."
+        self.tokens = tokens
         self.type = type
-        # load start and end char offsets from words' parent tokens
-        self.start_char = self.words[0].parent.start_char
-        self.end_char = self.words[-1].parent.end_char
+        # load start and end char offsets from tokens
+        self.start_char = self.tokens[0].start_char
+        self.end_char = self.tokens[-1].end_char
         # assume doc is already provided and not None
         self.text = self.doc.text[self.start_char:self.end_char]
+        # collect the words of the span following tokens
+        self.words = [w for t in tokens for w in t.words]
 
     @property
     def doc(self):
@@ -817,6 +814,16 @@ class Span:
         """ Set the word's text value. Example: 'The'"""
         self._text = value
 
+    @property
+    def tokens(self):
+        """ Access reference to a list of tokens that correspond to this span. """
+        return self._tokens
+
+    @tokens.setter
+    def tokens(self, value):
+        """ Set the span's list of tokens. """
+        self._tokens = value
+    
     @property
     def words(self):
         """ Access reference to a list of words that correspond to this span. """

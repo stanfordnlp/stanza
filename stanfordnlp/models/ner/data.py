@@ -133,7 +133,7 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def load_doc(self, doc):
-        data = doc.get([TEXT, NER], as_sentences=True)
+        data = doc.get([TEXT, NER], as_sentences=True, from_token=True)
         if self.preprocess_tags: # preprocess tags
             data = self.process_tags(data)
         return data
