@@ -52,20 +52,23 @@ class TokenizeProcessor(UDProcessor):
             sentences = [sent.rstrip(' ').split() for sent in input_src.rstrip('\n').split('\n') if sent]
         elif isinstance(input_src, list):
             sentences = input_src
+        idx = 0
         for sentence in sentences:
             sent = []
             for token_id, token in enumerate(sentence):
-                sent.append({doc.ID: str(token_id + 1), doc.TEXT: token})
+                sent.append({doc.ID: str(token_id + 1), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
+                idx += len(token) + 1
             document.append(sent)
-        return document
+            idx += 1
+        raw_text = ' '.join([' '.join(sentence) for sentence in sentences])
+        return raw_text, document
 
     def process(self, document):
         assert isinstance(document, str) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
             "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string."
 
         if self.config.get('pretokenized'):
-            raw_text = None
-            document = self.process_pre_tokenized_text(document)
+            raw_text, document = self.process_pre_tokenized_text(document)
         elif self.config.get('with_spacy', False):
             return self._spacy_tokenizer.tokenize(document)
         else:
