@@ -39,6 +39,7 @@ class Document:
         """
         self._sentences = []
         self._text = None
+        self._num_tokens = 0
         self._num_words = 0
 
         self.text = text
@@ -64,6 +65,16 @@ class Document:
     def sentences(self, value):
         """ Set the list of tokens for this document. """
         self._sentences = value
+    
+    @property
+    def num_tokens(self):
+        """ Access the number of tokens for this document. """
+        return self._num_tokens
+
+    @num_tokens.setter
+    def num_tokens(self, value):
+        """ Set the number of tokens for this document. """
+        self._num_tokens = value
 
     @property
     def num_words(self):
@@ -102,12 +113,21 @@ class Document:
             begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
 
+        self.num_tokens = sum([len(sentence.tokens) for sentence in self.sentences])
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
-    def get(self, fields, as_sentences=False):
+    def get(self, fields, as_sentences=False, from_token=False):
         """ Get fields from a list of field names. If only one field name is provided, return a list
         of that field; if more than one, return a list of list. Note that all returned fields are after
         multi-word expansion.
+
+        Args:
+            fields: name of the fields as a list
+            as_sentences: if True, return the fields as a list of sentences; otherwise as a whole list
+            from_token: if True, get the fields from Token; otherwise from Word
+        
+        Returns:
+            All requested fields.
         """
         assert isinstance(fields, list), "Must provide field names as a list."
         assert len(fields) >= 1, "Must have at least one field."
@@ -115,35 +135,53 @@ class Document:
         results = []
         for sentence in self.sentences:
             cursent = []
-            for word in sentence.words:
+            # decide word or token
+            if from_token:
+                units = sentence.tokens
+            else:
+                units = sentence.words
+            for unit in units:
                 if len(fields) == 1:
-                    cursent += [getattr(word, fields[0])]
+                    cursent += [getattr(unit, fields[0])]
                 else:
-                    cursent += [[getattr(word, field) for field in fields]]
+                    cursent += [[getattr(unit, field) for field in fields]]
 
+            # decide whether append the results as a sentence or a whole list
             if as_sentences:
                 results.append(cursent)
             else:
                 results += cursent
         return results
 
-    def set(self, fields, contents):
+    def set(self, fields, contents, to_token=False):
         """ Set fields based on contents. If only one field (singleton list) is provided, then a list
         of content will be expected; otherwise a list of list of contents will be expected.
+
+        Args:
+            fields: name of the fields as a list
+            contents: field values to set; total length should be equal to number of words/tokens
+            to_token: if True, set field values to tokens; otherwise to words
         """
         assert isinstance(fields, list), "Must provide field names as a list."
         assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
         assert len(fields) >= 1, "Must have at least one field."
-        assert self.num_words == len(contents), "Contents must have the same number as the original file."
+
+        assert (to_token & self.num_tokens == len(contents)) or self.num_words == len(contents), \
+            "Contents must have the same number as the original file."
 
         cidx = 0
         for sentence in self.sentences:
-            for word in sentence.words:
+            # decide word or token
+            if to_token:
+                units = sentence.tokens
+            else:
+                units = sentence.words
+            for unit in units:
                 if len(fields) == 1:
-                    setattr(word, fields[0], contents[cidx])
+                    setattr(unit, fields[0], contents[cidx])
                 else:
                     for field, content in zip(fields, contents[cidx]):
-                        setattr(word, field, content)
+                        setattr(unit, field, content)
                 cidx += 1
         return
 
