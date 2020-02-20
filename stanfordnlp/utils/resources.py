@@ -15,16 +15,15 @@ import logging
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
 from stanfordnlp.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
+from stanfordnlp._version import __resources_version__
 
 logger = logging.getLogger('stanfordnlp')
 
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/dev/stanfordnlp/utils'
-DEFAULT_RESOURCES_FILE = 'resources.json'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
-DEFAULT_DOWNLOAD_VERSION = 'latest'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"
 PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER]
@@ -211,8 +210,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     return lang, dir, package, processors
 
 # main download function
-def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
-        logging_level='INFO', verbose=None):
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None):
     # set global logging level
     set_logging_level(logging_level, verbose)
     # process different pipeline parameters
@@ -220,8 +218,8 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
 
     # Download resources.json to obtain latest packages.
     logger.info('Downloading resource file...')
-    request_file(f'{DEFAULT_RESOURCES_URL}/{DEFAULT_RESOURCES_FILE}', os.path.join(dir, DEFAULT_RESOURCES_FILE))
-    resources = json.load(open(os.path.join(dir, DEFAULT_RESOURCES_FILE)))
+    request_file(f'{DEFAULT_RESOURCES_URL}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
+    resources = json.load(open(os.path.join(dir, 'resources.json')))
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
     logger.info(f'Downloading models for language: {lang} ({lcode2lang[lang]})')
@@ -229,7 +227,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
         logger.info('Downloading default packages...')
-        request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
+        request_file(f'{DEFAULT_MODELS_URL}/{__resources_version__}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
         unzip(os.path.join(dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
@@ -242,5 +240,5 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         
         # Download packages
         for key, value in download_list:
-            request_file(f'{DEFAULT_MODELS_URL}/{version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            request_file(f'{DEFAULT_MODELS_URL}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
     logger.info(f'Finished downloading models and saved to {dir}.')

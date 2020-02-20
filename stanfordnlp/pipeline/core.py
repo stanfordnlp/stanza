@@ -20,7 +20,7 @@ from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, PIPELINE_NAMES, \
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
@@ -65,8 +65,7 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
     
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
-            logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
         # set global logging level
         set_logging_level(logging_level, verbose)
         # process different pipeline parameters
@@ -74,7 +73,7 @@ class Pipeline:
 
         # Load resources.json to obtain latest packages.
         logger.info('Loading resource file...')
-        resources_filepath = os.path.join(dir, DEFAULT_RESOURCES_FILE)
+        resources_filepath = os.path.join(dir, 'resources.json')
         if not os.path.exists(resources_filepath):
             raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
         with open(resources_filepath) as infile:
