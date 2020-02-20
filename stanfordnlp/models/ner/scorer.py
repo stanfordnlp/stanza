@@ -8,16 +8,15 @@ from collections import Counter
 
 from stanfordnlp.models.ner.utils import decode_from_bioes
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
-def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True, logger=logger):
+def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
     """ Score predicted tags at the entity level.
 
     Args:
         pred_tags_sequences: a list of list of predicted tags for each word
         gold_tags_sequences: a list of list of gold tags for each word
         verbose: print log with results
-        logger: the logger to use
     
     Returns:
         Precision, recall and F1 scores.
@@ -66,14 +65,13 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True, logger
     return prec_micro, rec_micro, f_micro
 
 
-def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True, logger=logger):
+def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
     """ Score predicted tags at the token level.
 
     Args:
         pred_tags_sequences: a list of list of predicted tags for each word
         gold_tags_sequences: a list of list of gold tags for each word
         verbose: print log with results
-        logger: the logger to use
     
     Returns:
         Precision, recall and F1 scores.

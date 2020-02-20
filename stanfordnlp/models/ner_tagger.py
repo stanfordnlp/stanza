@@ -180,7 +180,7 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                _, _, dev_score = scorer.score_by_entity(dev_preds, dev_gold_tags, logger=logger)
+                _, _, dev_score = scorer.score_by_entity(dev_preds, dev_gold_tags)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -241,7 +241,7 @@ def evaluate(args):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
-    _, _, score = scorer.score_by_entity(preds, gold_tags, logger=logger)
+    _, _, score = scorer.score_by_entity(preds, gold_tags)
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
