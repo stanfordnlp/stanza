@@ -1,6 +1,7 @@
 <head>
   <!-- JQuery -->
   <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Lato&display=swap" rel="stylesheet">
   <!-- Bootstrap -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css"/>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css"/>
@@ -28,7 +29,7 @@
 <nav class="navbar navbar-default navbar-static-top">
   <div class="container">
     <div class="navbar-header">
-      <a class="navbar-brand" href="https://stanfordnlp.github.io/stanfordnlp/">StanfordNLP Python Toolkit 0.3.0 (updated 2019-??-??)</a>
+        <a class="navbar-brand" href="https://stanfordnlp.github.io/stanfordnlp/"><span class='logo'>Stanza</span> 1.0.0 (updated 2020, to be released)</a>
     </div>
   </div>
 </nav>
@@ -41,7 +42,7 @@
     <form id="form_annotate" accept-charset="UTF-8" onsubmit="return false;">
     <div class="col-sm-12" style="margin-bottom: 5px;">
       <label for="text" class="label">&mdash; Text to annotate &mdash;</label>
-      <textarea class="form-control" rows="2" id="text" placeholder="e.g., The quick brown fox jumped over the lazy dog." autofocus></textarea>
+      <textarea class="form-control" rows="2" id="text" placeholder="e.g., The quick brown fox jumped over the lazy dog." autofocus maxlength="10000"></textarea>
     </div>
 
     <!-- Annotators select -->
@@ -69,6 +70,7 @@
                     <option value="bg">Bulgarian</option>
                     <option value="bxr">Buryat</option>
                     <option value="ca">Catalan</option>
+                    <option value="zhs">Chinese (simplified)</option>
                     <option value="zh">Chinese (traditional)</option>
                     <option value="hr">Croatian</option>
                     <option value="cs">Czech</option>
@@ -95,8 +97,8 @@
                     <option value="la">Latin</option>
                     <option value="lv">Latvian</option>
                     <option value="sme">North Sami</option>
-                    <option value="no_bokmaal">Norwegian (Bokmaal)</option>
-                    <option value="no_nynorsk">Norwegian (Nynorsk)</option>
+                    <option value="no">Norwegian (Bokmaal)</option>
+                    <option value="nn">Norwegian (Nynorsk)</option>
                     <option value="cu">Old Church Slavonic</option>
                     <option value="fro">Old French</option>
                     <option value="fa">Persian</option>

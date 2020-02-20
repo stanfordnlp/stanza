@@ -69,7 +69,9 @@ var tokensMap = {
  * visualization color
  */
 function posColor(posTag) {
-  if (posTag.startsWith('N')) {
+  if (posTag === null) {
+    return '#E3E3E3';
+  } else if (posTag.startsWith('N')) {
     return '#A4BCED';
   } else if (posTag.startsWith('V') || posTag.startsWith('M')) {
     return '#ADF6A2';
@@ -97,11 +99,45 @@ function posColor(posTag) {
 }
 
 /**
+ * A mapping from part of speech tag to the associated
+ * visualization color
+ */
+function uposColor(posTag) {
+  if (posTag === null) {
+    return '#E3E3E3';
+  } else if (posTag === 'NOUN' || posTag === 'PROPN') {
+    return '#A4BCED';
+  } else if (posTag.startsWith('V') || posTag === 'AUX') {
+    return '#ADF6A2';
+  } else if (posTag === 'PART') {
+    return '#CCDAF6';
+  } else if (posTag === 'ADP') {
+    return '#FFE8BE';
+  } else if (posTag === 'ADV' || posTag.startsWith('PRON')) {
+    return '#FFFDA8';
+  } else if (posTag === 'NUM' || posTag === 'DET') {
+    return '#CCADF6';
+  } else if (posTag === 'ADJ') {
+    return '#FFFDA8';
+  } else if (posTag.startsWith('E') || posTag.startsWith('S')) {
+    return '#E4CBF6';
+  } else if (posTag.startsWith('CC')) {
+    return '#FFFFFF';
+  } else if (posTag === 'X' || posTag === 'FW') {
+    return '#FFFFFF';
+  } else {
+    return '#E3E3E3';
+  }
+}
+
+/**
  * A mapping from named entity tag to the associated
  * visualization color
  */
 function nerColor(nerTag) {
-  if (nerTag === 'PERSON' || nerTag === 'PER') {
+  if (nerTag === null) {
+    return '#E3E3E3';
+  } else if (nerTag === 'PERSON' || nerTag === 'PER') {
     return '#FFCCAA';
   } else if (nerTag === 'ORGANIZATION' || nerTag === 'ORG') {
     return '#8FB2FF';
@@ -302,6 +338,8 @@ function render(data, reverse) {
     color = '#ffccaa';
     if (name === 'POS') {
       color = posColor(type);
+    } else if (name === 'UPOS') {
+      color = uposColor(type);
     } else if (name === 'NER') {
       color = nerColor(coarseType);
     } else if (name === 'NNER') {
@@ -426,7 +464,9 @@ function render(data, reverse) {
     function posID(i) {
       return 'POS_' + sentI + '_' + i;
     }
-    if (tokens.length > 0 && typeof tokens[0].pos !== 'undefined') {
+    var noXPOS = true;
+    if (tokens.length > 0 && typeof tokens[0].pos !== 'undefined' && tokens[0].pos !== null) {
+      noXPOS = false;
       for (var i = 0; i < tokens.length; i++) {
         var token = tokens[i];
         var pos = token.pos;
@@ -450,7 +490,7 @@ function render(data, reverse) {
         var upos = token.upos;
         var begin = parseInt(token.characterOffsetBegin);
         var end = parseInt(token.characterOffsetEnd);
-        addEntityType('POS', upos);
+        addEntityType('UPOS', upos);
         uposEntities.push([uposID(i), upos, [[begin, end]]]);
       }
     }
@@ -464,7 +504,7 @@ function render(data, reverse) {
         tree.visitIndex = index;
         index++;
         if (tree.isTerminal) {
-          parseEntities[tree.visitIndex] = posEntities[tree.tokenIndex];
+          parseEntities[tree.visitIndex] = uposEntities[tree.tokenIndex];
           return index;
         } else if (tree.children) {
           addEntityType('PARSENODE', tree.label);
@@ -526,7 +566,9 @@ function render(data, reverse) {
 
     // NER tags
     // Assumption: contiguous occurrence of one non-O is a single entity
+    var noNER = true;
     if (tokens.some(function(token) { return token.ner; })) {
+      noNER = false;
       for (var i = 0; i < tokens.length; i++) {
         var ner = tokens[i].ner || 'O';
         var normalizedNER = tokens[i].normalizedNER;
@@ -745,12 +787,24 @@ function render(data, reverse) {
     }
   }
 
+  function reportna(container, text) {
+    $('#' + container).text(text);
+  }
+
   // Render each annotation
   head.ready(function() {
-    embed('pos', posEntities);
+    if (!noXPOS) {
+      embed('pos', posEntities);
+    } else {
+      reportna('pos', 'XPOS is not available for this language at this time.')
+    }
     embed('upos', uposEntities);
     embed('lemma', lemmaEntities);
-    embed('ner', nerEntities);
+    if (!noNER) {
+      embed('ner', nerEntities);
+    } else {
+      reportna('ner', 'NER is not available for this language at this time.')
+    }
     embed('entities', linkEntities);
     if (!useDagre) {
       embed('parse', cparseEntities, cparseRelations);
@@ -1052,12 +1106,12 @@ $(document).ready(function() {
           }
           // (create the divs)
           //                  div id      annotator     field_in_data                          label
-          createAnnotationDiv('pos',      'pos',        'pos',                                 'Part-of-Speech'          );
+          createAnnotationDiv('pos',      'pos',        'pos',                                 'Part-of-Speech (XPOS)'          );
           createAnnotationDiv('upos',     'upos',       'upos',                                'Universal Part-of-Speech');
           createAnnotationDiv('lemma',    'lemma',      'lemma',                               'Lemmas'                  );
           createAnnotationDiv('ner',      'ner',        'ner',                                 'Named Entity Recognition');
           //createAnnotationDiv('parse',    'parse',      'parseTree',                           'Constituency Parse'      );
-          createAnnotationDiv('deps',     'depparse',   'basicDependencies',                   'Basic Dependencies'      );
+          createAnnotationDiv('deps',     'depparse',   'basicDependencies',                   'Universal Dependencies'      );
           //createAnnotationDiv('deps2',    'depparse',   'enhancedPlusPlusDependencies',        'Enhanced++ Dependencies' );
           //createAnnotationDiv('openie',   'openie',     'openie',                              'Open IE'                 );
           //createAnnotationDiv('coref',    'coref',      'corefs',                              'Coreference'             );
