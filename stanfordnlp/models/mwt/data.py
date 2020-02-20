@@ -10,7 +10,7 @@ from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_floa
 from stanfordnlp.models.mwt.vocab import Vocab
 from stanfordnlp.models.common.doc import Document
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False):

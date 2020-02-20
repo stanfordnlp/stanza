@@ -11,7 +11,7 @@ from stanfordnlp.models.lemma.vocab import Vocab, MultiVocab
 from stanfordnlp.models.lemma import edit
 from stanfordnlp.models.common.doc import *
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):

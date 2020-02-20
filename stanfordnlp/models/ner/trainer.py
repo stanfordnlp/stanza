@@ -13,7 +13,7 @@ from stanfordnlp.models.ner.model import NERTagger
 from stanfordnlp.models.ner.vocab import MultiVocab
 from stanfordnlp.models.common.crf import viterbi_decode
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

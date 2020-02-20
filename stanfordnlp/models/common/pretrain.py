@@ -11,7 +11,7 @@ import torch
 
 from .vocab import BaseVocab, VOCAB_PREFIX
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class PretrainedWordVocab(BaseVocab):
     def build_vocab(self):

@@ -16,7 +16,7 @@ from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel
 from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.mwt.vocab import Vocab
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

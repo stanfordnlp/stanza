@@ -10,7 +10,7 @@ import numpy as np
 
 import stanfordnlp.models.common.seq2seq_constant as constant
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class BasicAttention(nn.Module):
     """

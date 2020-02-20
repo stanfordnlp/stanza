@@ -23,7 +23,7 @@ formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt="%Y-%m-%d %
 for h in logging.getLogger().handlers:
     h.setFormatter(formatter)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors,

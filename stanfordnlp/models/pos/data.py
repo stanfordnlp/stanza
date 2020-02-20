@@ -8,7 +8,7 @@ from stanfordnlp.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, Featur
 from stanfordnlp.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanfordnlp.models.common.doc import *
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):

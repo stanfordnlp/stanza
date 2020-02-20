@@ -16,7 +16,7 @@ from stanfordnlp.models.common import utils, loss
 from stanfordnlp.models.lemma import edit
 from stanfordnlp.models.lemma.vocab import MultiVocab
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

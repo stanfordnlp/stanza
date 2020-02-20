@@ -56,4 +56,5 @@ class SpacyTokenizer():
                 }
                 tokens.append(token_entry)
             sentences.append(tokens)
+
         return doc.Document(sentences, text)

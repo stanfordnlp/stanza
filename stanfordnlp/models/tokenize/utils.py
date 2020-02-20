@@ -9,7 +9,7 @@ from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
 from stanfordnlp.utils.conll import CoNLL
 from stanfordnlp.models.common.doc import *
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def load_mwt_dict(filename):
     if filename is not None:

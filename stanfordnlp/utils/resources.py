@@ -16,7 +16,7 @@ from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
 from stanfordnlp.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 # set home dir for default
 HOME_DIR = str(Path.home())

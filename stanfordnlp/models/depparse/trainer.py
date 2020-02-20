@@ -13,7 +13,7 @@ from stanfordnlp.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanfordnlp.models.depparse.model import Parser
 from stanfordnlp.models.pos.vocab import MultiVocab
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

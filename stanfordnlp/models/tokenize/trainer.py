@@ -9,7 +9,7 @@ from stanfordnlp.models.common.trainer import Trainer
 from .model import Tokenizer
 from .vocab import Vocab
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class Trainer(Trainer):
     def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):

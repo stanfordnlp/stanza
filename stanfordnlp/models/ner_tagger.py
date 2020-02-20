@@ -27,7 +27,7 @@ from stanfordnlp.utils.conll import CoNLL
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models import _training_logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 def parse_args():
     parser = argparse.ArgumentParser()

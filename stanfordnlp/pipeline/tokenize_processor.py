@@ -14,7 +14,7 @@ from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chu
 from stanfordnlp.models.common import doc
 from stanfordnlp.utils.spacy import SpacyTokenizer
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 # class for running the tokenizer
 class TokenizeProcessor(UDProcessor):

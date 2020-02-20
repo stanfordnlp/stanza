@@ -9,7 +9,7 @@ from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
 from stanfordnlp.models.common.doc import *
 from stanfordnlp.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):

@@ -19,7 +19,7 @@ from six.moves.urllib.parse import urlparse
 from stanfordnlp.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 # pattern tmp props file should follow
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')

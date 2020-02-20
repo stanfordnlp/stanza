@@ -13,7 +13,7 @@ from stanfordnlp.models.common import utils
 from stanfordnlp.models.common.seq2seq_modules import LSTMAttention
 from stanfordnlp.models.common.beam import Beam
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class Seq2SeqModel(nn.Module):
     """

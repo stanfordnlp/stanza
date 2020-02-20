@@ -10,7 +10,7 @@ from stanfordnlp.models.ner.trainer import Trainer
 from stanfordnlp.pipeline._constants import *
 from stanfordnlp.pipeline.processor import UDProcessor
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('stanfordnlp')
 
 class NERProcessor(UDProcessor):
 
