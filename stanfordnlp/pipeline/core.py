@@ -21,7 +21,7 @@ from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
 from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, PIPELINE_NAMES, \
-    maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters
+    maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
 
@@ -79,28 +79,28 @@ class Pipeline:
             raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
         with open(resources_filepath) as infile:
             resources = json.load(infile)
-        if lang not in resources:
-            raise Exception(f'Unsupported language: {lang}.')
-        logger.info(f'Loading models for language: {lang} ({lcode2lang[lang]})')
+        if lang in resources:
+            logger.info(f'Loading models for language: {lang} ({lcode2lang[lang]})')
+        else:
+            logger.warning('Unsupported language: {lang}.')
 
         # Maintain load list
-        self.load_list = maintain_processor_list(resources, lang, package, processors)
-        self.load_list = add_dependencies(resources, lang, self.load_list)
+        self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
+        self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
+        self.load_list = self.update_kwargs(kwargs, self.load_list)
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Load list:\n{load_table}')
-        
-        # Load processors
-        self.use_gpu = torch.cuda.is_available() and use_gpu
-        logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
 
-        # shorthand = default_treebanks[lang] if treebank is None else treebank
         self.config = build_default_config(resources, lang, dir, self.load_list)
         self.config.update(kwargs)
 
+        # Load processors
         self.processors = {}
 
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
+        self.use_gpu = torch.cuda.is_available() and use_gpu
+        logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
         
         # set up processors
         pipeline_reqs_exceptions = []
@@ -129,6 +129,18 @@ class Pipeline:
             raise PipelineRequirementsException(pipeline_reqs_exceptions)
 
         logger.info("Done loading processors!")
+
+    def update_kwargs(self, kwargs, processor_list):
+        processor_dict = {processor: {'package': package, 'dependencies': dependencies} for (processor, package, dependencies) in processor_list}
+        for key, value in kwargs.items():
+            k, v = key.split('_', 1)
+            if v == 'model_path':
+                package = value if len(value) < 25 else value[:10]+ '...' + value[-10:]
+                dependencies = processor_dict.get(k, {}).get('dependencies')
+                processor_dict[k] = {'package': package, 'dependencies': dependencies}
+        processor_list = [[processor, processor_dict[processor]['package'], processor_dict[processor]['dependencies']] for processor in processor_dict]
+        processor_list = sort_processors(processor_list)
+        return processor_list
 
     def filter_config(self, prefix, config_dict):
         filtered_dict = {}
