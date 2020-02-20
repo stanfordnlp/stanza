@@ -20,7 +20,8 @@ from stanfordnlp.pipeline.pos_processor import POSProcessor
 from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
 from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
 from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, PIPELINE_NAMES, maintain_processor_list, add_dependencies, build_default_config, check_and_process_parameters
+from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, DEFAULT_DOWNLOAD_VERSION, DEFAULT_RESOURCES_FILE, PIPELINE_NAMES, \
+    maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters
 from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
 from stanfordnlp.utils.helper_func import make_table
 
@@ -66,8 +67,10 @@ class Pipeline:
     
     def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
             logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
-        global logger
-        lang, dir, package, processors, logging_level, verbose, logger = check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger)
+        # set global logging level
+        set_logging_level(logging_level, verbose)
+        # process different pipeline parameters
+        lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
         # Load resources.json to obtain latest packages.
         logger.info('Loading resource file...')

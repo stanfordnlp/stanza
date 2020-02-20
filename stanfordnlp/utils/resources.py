@@ -166,7 +166,7 @@ def flatten_processor_list(processor_list):
     flattened_processor_list += dependencies_list
     return flattened_processor_list
 
-def check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger):
+def set_logging_level(logging_level, verbose):
     # Check verbose for easy logging control
     if verbose == False:
         logging_level = 'ERROR'
@@ -179,7 +179,9 @@ def check_and_process_parameters(lang, dir, package, processors, logging_level, 
     if logging_level not in all_levels:
         raise Exception(f"Unrecognized logging level for pipeline: {logging_level}. Must be one of {', '.join(all_levels)}.")
     logger.setLevel(logging_level)
+    return logging_level
 
+def process_pipeline_parameters(lang, dir, package, processors):
     # Check parameter types and convert values to lower case
     if isinstance(lang, str):
         lang = lang.strip().lower()
@@ -206,13 +208,15 @@ def check_and_process_parameters(lang, dir, package, processors, logging_level, 
     elif processors is not None:
         raise Exception(f"The parameter 'processors' should be dict or str, but got {type(processors).__name__} instead.")
     
-    return lang, dir, package, processors, logging_level, verbose, logger
+    return lang, dir, package, processors
 
 # main download function
 def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, version=DEFAULT_DOWNLOAD_VERSION, \
         logging_level='INFO', verbose=None):
-    global logger
-    lang, dir, package, processors, logging_level, verbose, logger = check_and_process_parameters(lang, dir, package, processors, logging_level, verbose, logger)
+    # set global logging level
+    set_logging_level(logging_level, verbose)
+    # process different pipeline parameters
+    lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
     # Download resources.json to obtain latest packages.
     logger.info('Downloading resource file...')
