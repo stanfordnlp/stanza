@@ -82,7 +82,7 @@ class Pipeline:
         if lang in resources:
             logger.info(f'Loading models for language: {lang} ({lcode2lang[lang]})')
         else:
-            logger.warning('Unsupported language: {lang}.')
+            logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
