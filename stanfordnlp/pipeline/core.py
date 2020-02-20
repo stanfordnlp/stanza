@@ -88,6 +88,7 @@ class Pipeline:
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
+        if len(self.load_list) == 0: raise Exception('No processor to load. Please check if your language or package is correctly set.')
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Load list:\n{load_table}')
 
