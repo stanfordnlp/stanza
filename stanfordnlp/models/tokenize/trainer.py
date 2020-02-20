@@ -4,14 +4,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from stanfordnlp.models.common.trainer import Trainer
+from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
 
 from .model import Tokenizer
 from .vocab import Vocab
 
 logger = logging.getLogger('stanfordnlp')
 
-class Trainer(Trainer):
+class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
