@@ -192,6 +192,7 @@ class CoreNLPClient(RobustService):
                  be_quiet=True,
                  max_char_length=DEFAULT_MAX_CHAR_LENGTH,
                  preload=True,
+                 classpath=None,
                  **kwargs):
 
         # properties cache maps keys to properties dictionaries for convenience
@@ -204,10 +205,13 @@ class CoreNLPClient(RobustService):
             # at this point self.server_start_info and self.server_props_file should be set
             host, port = urlparse(endpoint).netloc.split(":")
             assert host == "localhost", "If starting a server, endpoint must be localhost"
-            corenlp_home = os.getenv("CORENLP_HOME")
-            assert corenlp_home is not None, \
-                "Please define $CORENLP_HOME to be location of your CoreNLP Java checkout"
-            start_cmd = f"java -Xmx{memory} -cp '{corenlp_home}/*'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
+            if classpath == '$CLASSPATH':
+                classpath = os.getenv("CLASSPATH")
+            elif classpath is None:
+                classpath = os.getenv("CORENLP_HOME") + "/*"
+                assert classpath is not None, \
+                    "Please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter"
+            start_cmd = f"java -Xmx{memory} -cp '{classpath}'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
             if preload and self.server_start_info.get('preload_annotators'):
