@@ -153,6 +153,7 @@ During initialization, a `CoreNLPClient` object accepts the following options as
 | annotators | str | "tokenize,ssplit,lemma,pos,ner,depparse" | The default list of CoreNLP annotators the server will use |
 | properties | - | None | See "Customize Server Start" section below |
 | endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on. |
+| classpath | str | None | Classpath to use for CoreNLP.  None means $CORENLP_HOME, $CLASSPATH means to use the system $CLASSPATH, and otherwise, the given string is used |
 | timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
 | threads | int | 5 | The number of threads to hit the server with. If, for example, the server is running on an 8 core machine, you can specify this to be 8, and the client will allow you to make 8 simultaneous requests to the server. |
 | output_format | str | "serialized" | The default output format to use for the server response, unless otherwise specified. If set to be "serialized", the response will be converted to local Python objects (see usage examples above). For a list of all supported output format, see the [CoreNLP output options page](https://stanfordnlp.github.io/CoreNLP/cmdline.html). |
