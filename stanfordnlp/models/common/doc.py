@@ -166,7 +166,7 @@ class Document:
         assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
         assert len(fields) >= 1, "Must have at least one field."
 
-        assert (to_token & self.num_tokens == len(contents)) or self.num_words == len(contents), \
+        assert (to_token and self.num_tokens == len(contents)) or self.num_words == len(contents), \
             "Contents must have the same number as the original file."
 
         cidx = 0
