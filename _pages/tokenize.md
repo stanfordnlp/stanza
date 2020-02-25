@@ -26,11 +26,11 @@ The `tokenize` processor is usually the first processor used in the pipeline. It
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(processors='tokenize', lang='en')
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize')
 doc = nlp("This is a test sentence for stanfordnlp. This is another sentence.")
 for i, sentence in enumerate(doc.sentences):
     print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.index.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
 ```
 
 This code will generate the following output:
@@ -58,11 +58,11 @@ Alternatively, you can feed in pretokenized (and sentence split) text to the pip
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(processors='tokenize', lang='en', tokenize_pretokenized=True)
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp('This is token.ization done my way!\nSentence split, too!')
 for i, sentence in enumerate(doc.sentences):
     print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.index.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
 ```
 
 This code will generate the following output:
@@ -86,11 +86,11 @@ As can be seen from the output, tokenization and sentence split decisions are pr
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(processors='tokenize', lang='en', tokenize_pretokenized=True)
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp([['This', 'is', 'token.ization', 'done', 'my', 'way!'], ['Sentence', 'split,', 'too!']])
 for i, sentence in enumerate(doc.sentences):
     print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.index.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
 ```
 
 If `tokenize_pretokenized` were set to `False` and the input is a string, StanfordNLP would have generated the following output with its own tokenization and sentence split:
