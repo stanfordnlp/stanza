@@ -14,10 +14,13 @@ object or raw text, runs the processors in succession, and returns an annotated 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | lang | str | "en" | Use recommended models for this language. |
-| models_dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
-| processors | str | "tokenize,<wbr>mwt,<wbr>pos,<wbr>lemma,<wbr>depparse" | List of processors to use. For a list of all processors supported, see [Processors Summary](processors.md). |
-| treebank | str | None | Use models for this treebank. If not specified, `Pipeline` will look up the default treebank for the language requested. |
+| dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
+| package | str | "default" | Package to use. |
+| processors | dict or str | {} | Processors to use. Support comma-seperated string or dictionary. |
+| logging_level | str | None | Control infomation to print. |
+| verbose | str | True | Simplified for logging_level. |
 | use_gpu | bool | True | Attempt to use a GPU if possible. |
+| kwargs | - | - | Other arguments for processors. |
 
 Options for each of the individual processors can be specified when building the pipeline.  See the individual processor pages for descriptions.
 
@@ -28,11 +31,10 @@ Options for each of the individual processors can be specified when building the
 ```python
 import stanfordnlp
 
-MODELS_DIR = '.'
-stanfordnlp.download('en', MODELS_DIR) # Download the English models
-nlp = stanfordnlp.Pipeline(processors='tokenize,pos', models_dir=MODELS_DIR, treebank='en_ewt', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
+stanfordnlp.download("en") # Download the default English models
+nlp = stanfordnlp.Pipeline("en", processors='tokenize,pos', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
 doc = nlp("Barack Obama was born in Hawaii.") # Run the pipeline on input text
-doc.sentences[0].print_tokens() # Look at the result
+print(doc) # Look at the result
 ```
 
 ### Specifying A Full Config 
@@ -53,7 +55,7 @@ config = {
 }
 nlp = stanfordnlp.Pipeline(**config) # Initialize the pipeline using a configuration dict
 doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie.") # Run the pipeline on input text
-doc.sentences[0].print_tokens() # Look at the result
+print(doc) # Look at the result
 ```
 
 ### Accessing Word Information
@@ -71,7 +73,7 @@ about the word is printed out, specifically `word.text`, `word.lemma`, `word.upo
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline()
+nlp = stanfordnlp.Pipeline("en")
 doc = nlp("Barack Obama was born in Hawaii.")
 print(*[f'text: {word.text+" "}\tlemma: {word.lemma}\tupos: {word.upos}\txpos: {word.xpos}' for sent in doc.sentences for word in sent.words], sep='\n')
 
@@ -107,14 +109,14 @@ config = {
          }
 nlp = stanfordnlp.Pipeline(**config)
 doc = nlp('Joe Smith lives in California .\nHe loves pizza .')
-print(doc.conll_file.conll_as_string())
+print(doc)
 ```
 
 You can also provide a list of lists representing sentences and tokens.  Make sure to still set the `tokenize_pretokenized` option to `True`.
 Each list will represent the tokens of a sentence.
 
-```
+```python
 pretokenized_text = [['hello', 'world'], ['hello', 'world', 'again']]
 doc = nlp(pretokenized_text)
-print(doc.conll_file.conll_as_string())
+print(doc)
 ```
