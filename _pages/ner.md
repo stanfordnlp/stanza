@@ -33,7 +33,7 @@ import stanfordnlp
 nlp = stanfordnlp.Pipeline(lang="en", processors="tokenize,ner")
 doc = nlp("Barack Obama was born in Hawaii.")
 print(*[f'entity: {ent.text+" "}\ttype: {ent.type}' for ent in doc.ents], sep='\n')
-print()
+print('')
 print(*[f'token: {token.text+" "}\tner: {token.ner}' for sent in doc.sentences for token in sent.tokens], sep='\n')
 ```
 
@@ -42,7 +42,9 @@ This code will generate the following output:
 ```
 entity: Barack Obama 	type: PERSON
 entity: Hawaii 	type: GPE
+```
 
+```
 token: Barack 	ner: B-PERSON
 token: Obama 	ner: E-PERSON
 token: was 	ner: O
