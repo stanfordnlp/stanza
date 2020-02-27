@@ -48,7 +48,7 @@ Aside from the neural pipeline, StanfordNLP also provides the official Python wr
 
 After CoreNLP is set up, you can follow our [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) to test it out.
 
-**Note**: If you run into issues during installation or when you run the example scripts, please check out [this troubleshooting page](installation_usage.md#troubleshooting). If you cannot find your issue there, please report it to us on GitHub.
+**Note**: If you run into issues during installation or when you run the example scripts, please check out [this FAQ page](faq.md). If you cannot find your issue there, please report it to us on GitHub.
 
 
 ## License
