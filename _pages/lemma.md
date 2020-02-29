@@ -26,29 +26,35 @@ Generates the word lemmas for all tokens in the corpus.
 
 ## Example Usage
 
-If your main interest is lemmatizing, you can supply a smaller processors list with just the prerequisites for lemma.
+Running the lemmatizer requires tokenization, multi-word expansion and part-of-speech tagging.
 After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of words.
-The lemma information can be found in the `lemma` field.
+The lemma information can be found in the `lemma` field of each word.
+
+### Lemmatization
+
+The code below shows an example of accessing lemma for each word.
 
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(processors='tokenize,mwt,pos,lemma')
-doc = nlp("Barack Obama was born in Hawaii.")
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,mwt,pos,lemma')
+doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'word: {word.text+" "}\tlemma: {word.lemma}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
 
 This code will generate the following output:
 
 ```
-word: Barack 	lemma: Barack
-word: Obama 	lemma: Obama
-word: was 	lemma: be
-word: born 	lemma: bear
-word: in 	lemma: in
-word: Hawaii 	lemma: Hawaii
-word: . 	lemma: .
+word: Barack    lemma: Barack
+word: Obama     lemma: Obama
+word: was       lemma: be
+word: born      lemma: bear
+word: in        lemma: in
+word: Hawaii    lemma: Hawaii
+word: .         lemma: .
 ```
+
+The lemma of the word `was` is `be`.
 
 ## Training-Only Options
 

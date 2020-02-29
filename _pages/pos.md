@@ -20,7 +20,7 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 ## Example Usage
 
-Running the part of speech tagger requires tokenization and multi-word expansion. 
+Running the part-of-speech tagger requires tokenization and multi-word expansion. 
 After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of words. The part-of-speech tags can 
 be accessed via the `upos`(`pos`) and `xpos` fields of each `word`, while the universal morphological features can be accessed via the `feats` field.
 
@@ -47,6 +47,8 @@ word: in        upos: ADP       xpos: IN        feats: _
 word: Hawaii    upos: PROPN     xpos: NNP       feats: Number=Sing
 word: .         upos: PUNCT     xpos: .         feats: _
 ```
+
+The word `was` is an auxiliary verb in the past tense.
 
 ## Training-Only Options
 
