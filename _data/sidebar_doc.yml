@@ -22,8 +22,11 @@ entries:
 
       items:
 
-        - title: Installation & Basic Usage
+        - title: Installation & Getting started
           url: installation_usage.html
+
+        - title: Quick Example
+          url: quick_example.html
 
         - title: Models
           url: models.html
@@ -34,9 +37,6 @@ entries:
         - title: Model Training and Evaluation
           url: training.html
         
-        - title: Stanford CoreNLP Client
-          url: corenlp_client.html
-
     - title : Pipeline
 
       items:
@@ -66,6 +66,21 @@ entries:
 
         - title: NERProcessor
           url: ner.html
+
+    - title: Stanford CoreNLP Client
+        
+      items:
+        - title: Overview
+          url: corenlp_client.html
+
+        - title: Setup
+          url: corenlp_client.html#setup
+
+        - title: Usage
+          url: corenlp_client.html#usage
+
+        - title: Customization
+          url: corenlp_client.html#customizing-properties-for-server-start-and-requests
     
     - title: Resources
       
