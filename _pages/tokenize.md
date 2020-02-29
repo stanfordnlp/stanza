@@ -21,43 +21,47 @@ Tokenizes the text and performs sentence segmentation.
 
 ## Example Usage
 
+The `tokenize` processor is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of `Sentence`s. The list of tokens for sentence `sent` can then be accessed with `sent.tokens`. 
+
 ### Tokenization and Sentence Segmentation
 
-The `tokenize` processor is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of `Sentence`s. The list of tokens for sentence `sent` can then be accessed with `sent.tokens`. The code below shows an example of tokenization and sentence segmentation.
+The code below shows an example of tokenization and sentence segmentation.
 
 ```python
 import stanfordnlp
 
 nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize')
-doc = nlp("This is a test sentence for stanfordnlp. This is another sentence.")
+doc = nlp('This is a test sentence for stanfordnlp. This is another sentence.')
 for i, sentence in enumerate(doc.sentences):
-    print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(f'====== Sentence {i+1} tokens =======')
+    print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
 This code will generate the following output:
 
 ```
 ====== Sentence 1 tokens =======
-index:   1	token: This
-index:   2	token: is
-index:   3	token: a
-index:   4	token: test
-index:   5	token: sentence
-index:   6	token: for
-index:   7	token: stanfordnlp
-index:   8	token: .
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: test
+id: 5   text: sentence
+id: 6   text: for
+id: 7   text: stanfordnlp
+id: 8   text: .
 ====== Sentence 2 tokens =======
-index:   1	token: This
-index:   2	token: is
-index:   3	token: another
-index:   4	token: sentence
-index:   5	token: .
+id: 1   text: This
+id: 2   text: is
+id: 3   text: another
+id: 4   text: sentence
+id: 5   text: .
 ```
 
 ### Start with Pretokenized Text
 
-You can feed in pretokenized (and sentence split) text to the pipeline, as newline (`\n`) separated sentences, where each sentence is space separated tokens. Just set `tokenize_pretokenized` as `True` to bypass the neural tokenizer. The code below shows an example of bypassing the neural tokenizer.
+You can feed in pretokenized (and sentence split) text to the pipeline, as newline (`\n`) separated sentences, where each sentence is space separated tokens. Just set `tokenize_pretokenized` as `True` to bypass the neural tokenizer. 
+
+The code below shows an example of bypassing the neural tokenizer:
 
 ```python
 import stanfordnlp
@@ -65,11 +69,13 @@ import stanfordnlp
 nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp('This is token.ization done my way!\nSentence split, too!')
 for i, sentence in enumerate(doc.sentences):
-    print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(f'====== Sentence {i+1} tokens =======')
+    print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-Alternatively to passing in a string, you can also pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens. The equivalent of our example above would be:
+Alternatively to passing in a string, you can also pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens. 
+
+The equivalent of our example above would be:
 
 ```python
 import stanfordnlp
@@ -77,45 +83,45 @@ import stanfordnlp
 nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp([['This', 'is', 'token.ization', 'done', 'my', 'way!'], ['Sentence', 'split,', 'too!']])
 for i, sentence in enumerate(doc.sentences):
-    print(f"====== Sentence {i+1} tokens =======")
-    print(*[f"index: {token.id.rjust(3)}\ttoken: {token.text}" for token in sentence.tokens], sep='\n')
+    print(f'====== Sentence {i+1} tokens =======')
+    print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
 These codes will generate the following output:
 
 ```
 ====== Sentence 1 tokens =======
-index:   1	token: This
-index:   2	token: is
-index:   3	token: token.ization
-index:   4	token: done
-index:   5	token: my
-index:   6	token: way!
+id: 1   text: This
+id: 2   text: is
+id: 3   text: token.ization
+id: 4   text: done
+id: 5   text: my
+id: 6   text: way!
 ====== Sentence 2 tokens =======
-index:   1	token: Sentence
-index:   2	token: split,
-index:   3	token: too!
+id: 1   text: Sentence
+id: 2   text: split,
+id: 3   text: too!
 ```
 
 As can be seen from the output, tokenization and sentence split decisions are preserved. If `tokenize_pretokenized` were set to `False` and the input is a string, StanfordNLP would have generated the following output with its own tokenization and sentence split:
 
 ```
 ====== Sentence 1 tokens =======
-index:   1	token: This
-index:   2	token: is
-index:   3	token: token
-index:   4	token: .
-index:   5	token: ization
-index:   6	token: done
-index:   7	token: my
-index:   8	token: way
-index:   9	token: !
+id: 1   text: This
+id: 2   text: is
+id: 3   text: token
+id: 4   text: .
+id: 5   text: ization
+id: 6   text: done
+id: 7   text: my
+id: 8   text: way
+id: 9   text: !
 ====== Sentence 2 tokens =======
-index:   1	token: Sentence
-index:   2	token: split
-index:   3	token: ,
-index:   4	token: too
-index:   5	token: !
+id: 1   text: Sentence
+id: 2   text: split
+id: 3   text: ,
+id: 4   text: too
+id: 5   text: !
 ```
 
 ## Training-Only Options
