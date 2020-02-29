@@ -32,7 +32,7 @@ The lemma information can be found in the `lemma` field of each word.
 
 ### Lemmatization
 
-The code below shows an example of accessing lemma for each word.
+The code below shows an example of accessing lemma for each word:
 
 ```python
 import stanfordnlp

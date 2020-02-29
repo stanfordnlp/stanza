@@ -27,7 +27,7 @@ sentence `sent` can be accessed with `sent.tokens`.  The list of words for sente
 
 ### Access Syntactic Words for Multi-Word Token
 
-The code below shows an example of accessing syntactic words for each token in the first sentence.
+The code below shows an example of accessing syntactic words for each token in the first sentence:
 
 ```python
 import stanfordnlp
@@ -55,7 +55,7 @@ The multi-word token `du` is expanded to two syntactic words `de` and `le`.
 
 ### Access Parent Token for Word
 
-The code below shows an example of accessing parent token for each word in the first sentence.
+The code below shows an example of accessing parent token for each word in the first sentence:
 
 ```python
 import stanfordnlp

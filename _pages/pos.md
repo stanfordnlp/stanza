@@ -26,7 +26,7 @@ be accessed via the `upos`(`pos`) and `xpos` fields of each `word`, while the un
 
 ### POS and Morphological Feature Tagging
 
-The code below shows an example of accessing part-of-speech and morphological features for each word.
+The code below shows an example of accessing part-of-speech and morphological features for each word:
 
 ```python
 import stanfordnlp

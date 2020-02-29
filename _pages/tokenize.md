@@ -25,7 +25,7 @@ The `tokenize` processor is usually the first processor used in the pipeline. It
 
 ### Tokenization and Sentence Segmentation
 
-The code below shows an example of tokenization and sentence segmentation.
+The code below shows an example of tokenization and sentence segmentation:
 
 ```python
 import stanfordnlp
