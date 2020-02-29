@@ -21,38 +21,68 @@ Recognize named entities for all token spans in the corpus.
 
 ## Example Usage
 
-Running the named entity tagger simply requires tokenization.  So the pipeline
-can be run with `tokenize` as the list of processors.  After the pipeline is run, the document will 
-contain a list of sentences, and the sentences will contain lists of named entities. 
+Running the named entity tagger simply requires tokenization. After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of tokens. 
 Named entities can be accessed through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`.
-Token-level NER tags can be accessed via the `ner` fields of [`Token`](data_objects.md#token).
+Alternatively, token-level NER tags can be accessed via the `ner` fields of [`Token`](data_objects.md#token).
+
+### Named Entity Recognition
+
+The code below shows an example of accessing the named entities in the document:
 
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(lang="en", processors="tokenize,ner")
-doc = nlp("Barack Obama was born in Hawaii.")
-print(*[f'entity: {ent.text+" "}\ttype: {ent.type}' for ent in doc.ents], sep='\n')
-print('')
-print(*[f'token: {token.text+" "}\tner: {token.ner}' for sent in doc.sentences for token in sent.tokens], sep='\n')
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+doc = nlp('Barack Obama was born in Hawaii.')
+print(*[f'entity: {ent.text}\ttype: {ent.type}' for ent in doc.ents], sep='\n')
+```
+
+Alternatively, you can access the named entities in each sentence of the document. 
+
+The equivalent of our example above would be:
+
+```python
+import stanfordnlp
+
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+doc = nlp('Barack Obama was born in Hawaii.')
+print(*[f'entity: {ent.text}\ttype: {ent.type}' for sent in doc.sentences for ent in sent.ents], sep='\n')
+```
+
+These codes will generate the following output:
+
+```
+entity: Barack Obama    type: PERSON
+entity: Hawaii          type: GPE
+```
+
+The span `Barack Obama` is a person entity, while the span `Hawaii` is a geopolitical entity.
+
+### Access Token-level NER Tags
+
+The code below shows an example of accessing the ner tags for each token:
+
+```python
+import stanfordnlp
+
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+doc = nlp('Barack Obama was born in Hawaii.')
+print(*[f'token: {token.text}\tner: {token.ner}' for sent in doc.sentences for token in sent.tokens], sep='\n')
 ```
 
 This code will generate the following output:
 
 ```
-entity: Barack Obama 	type: PERSON
-entity: Hawaii 	type: GPE
+token: Barack   ner: B-PERSON
+token: Obama    ner: E-PERSON
+token: was      ner: O
+token: born     ner: O
+token: in       ner: O
+token: Hawaii   ner: S-GPE
+token: .        ner: O
 ```
 
-```
-token: Barack 	ner: B-PERSON
-token: Obama 	ner: E-PERSON
-token: was 	ner: O
-token: born 	ner: O
-token: in 	ner: O
-token: Hawaii 	ner: S-GPE
-token: . 	ner: O
-```
+The token `Barack` is the beginning of the person entity, while the token `Obama` is the end of the person entity.
 
 ## Training-Only Options
 
