@@ -10,7 +10,7 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 | Property name | Annotator class name | Generated Annotation |
 | --- | --- | --- |
-| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. |
+| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `upos`(`pos`), `xpos`, and `feats`. |
 
 ## Options
 
@@ -20,29 +20,32 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 ## Example Usage
 
-Running the part of speech tagger simply requires tokenization and multi-word expansion.  So the pipeline
-can be run with `tokenize,mwt,pos` as the list of processors.  After the pipeline is run, the document will 
-contain a list of sentences, and the sentences will contain lists of words. The part-of-speech tags can 
-be accessed via the `upos` and `xpos` fields.
+Running the part of speech tagger requires tokenization and multi-word expansion. 
+After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of words. The part-of-speech tags can 
+be accessed via the `upos`(`pos`) and `xpos` fields of each `word`, while the universal morphological features can be accessed via the `feats` field.
+
+### POS and Morphological Feature Tagging
+
+The code below shows an example of accessing part-of-speech and morphological features for each word.
 
 ```python
 import stanfordnlp
 
-nlp = stanfordnlp.Pipeline(processors='tokenize,mwt,pos')
-doc = nlp("Barack Obama was born in Hawaii.")
-print(*[f'word: {word.text+" "}\tupos: {word.upos}\txpos: {word.xpos}' for sent in doc.sentences for word in sent.words], sep='\n')
+nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,mwt,pos')
+doc = nlp('Barack Obama was born in Hawaii.')
+print(*[f'word: {word.text}\tupos: {word.upos}\txpos: {word.xpos}\tfeats: {word.feats if word.feats else "_"}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
 
 This code will generate the following output:
 
 ```
-word: Barack 	upos: PROPN	xpos: NNP
-word: Obama 	upos: PROPN	xpos: NNP
-word: was 	upos: AUX	xpos: VBD
-word: born 	upos: VERB	xpos: VBN
-word: in 	upos: ADP	xpos: IN
-word: Hawaii 	upos: PROPN	xpos: NNP
-word: . 	upos: PUNCT	xpos: .
+word: Barack    upos: PROPN     xpos: NNP       feats: Number=Sing
+word: Obama     upos: PROPN     xpos: NNP       feats: Number=Sing
+word: was       upos: AUX       xpos: VBD       feats: Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin
+word: born      upos: VERB      xpos: VBN       feats: Tense=Past|VerbForm=Part|Voice=Pass
+word: in        upos: ADP       xpos: IN        feats: _
+word: Hawaii    upos: PROPN     xpos: NNP       feats: Number=Sing
+word: .         upos: PUNCT     xpos: .         feats: _
 ```
 
 ## Training-Only Options
