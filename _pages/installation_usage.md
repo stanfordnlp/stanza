@@ -76,7 +76,7 @@ Load the default `tokenizer` for English:
 
 ## Document Processing
 
-Once the pipeline is loaded, you can simply pass text to the pipeline and get the annotated document. 
+Once the pipeline is loaded, you can simply pass the text to the pipeline and get the annotated document.
 
 ```python
 >>> doc = nlp('Barack Obama was born in Hawaii.')
@@ -84,7 +84,7 @@ Once the pipeline is loaded, you can simply pass text to the pipeline and get th
 
 ## Explore Annotations
 
-After all processors are run, a [Document](data_objects#document) instance will be returned, which stores all annotation results. Within a Document, annotations are further stored in [Sentence](data_objects#sentence)s, [Token](data_object#token)s and [Word](data_objects#word)s in a top-down fashion. 
+After all processors are run, a [Document](data_objects#document) instance will be returned, which stores all annotation results. Within a Document, annotations are further stored in [Sentence](data_objects#sentence)s, [Token](data_object#token)s, [Word](data_objects#word)s, [Span](data_objects#span)s in a top-down fashion.
 
 Print the text and POS tag of each word in the document:
 ```python
