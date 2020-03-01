@@ -22,6 +22,8 @@ Below is a comprehensive example of starting a server, making requests, and acce
 Note: It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
 the server is properly shut down when your Python application finishes.
 
+By default, CoreNLP Client uses `protobuf` for message passing. A full definition of our protocols (a.k.a., our supported annotations) can be found [here](https://github.com/stanfordnlp/CoreNLP/blob/master/src/edu/stanford/nlp/pipeline/CoreNLP.proto).
+
 ```python
 from stanfordnlp.server import CoreNLPClient
 
