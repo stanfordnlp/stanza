@@ -806,12 +806,12 @@ class Span:
 
     @property
     def text(self):
-        """ Access the text of this word. Example: 'The'"""
+        """ Access the text of this span. Example: 'Stanford University'"""
         return self._text
 
     @text.setter
     def text(self, value):
-        """ Set the word's text value. Example: 'The'"""
+        """ Set the span's text value. Example: 'Stanford University'"""
         self._text = value
 
     @property
@@ -865,6 +865,7 @@ class Span:
         self._end_char = value
 
     def to_dict(self):
+        """ Dumps the span into a dictionary. """
         attrs = ['text', 'type', 'start_char', 'end_char']
         span_dict = dict([(attr_name, getattr(self, attr_name)) for attr_name in attrs])
         return span_dict
@@ -873,6 +874,7 @@ class Span:
         return json.dumps(self.to_dict(), indent=2)
 
     def pretty_print(self):
+        """ Print the span in one line. """
         span_dict = self.to_dict()
         feature_str = ";".join(["{}={}".format(k,v) for k,v in span_dict.items()])
         return f"<{self.__class__.__name__} {feature_str}>"
