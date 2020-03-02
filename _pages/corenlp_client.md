@@ -10,9 +10,9 @@ StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a serve
 
 ## Setup
 
-* Download the latest version of Stanford CoreNLP and models jars from [here](https://stanfordnlp.github.io/CoreNLP/download.html)
-* Store the models jar in the distribution folder
-* Set the `CORENLP_HOME` environment variable to the location of the folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
+* Download the latest version of Stanford CoreNLP from [here](https://stanfordnlp.github.io/CoreNLP/download.html).
+* Download model files for the language you want to annotate from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and store them in the extracted CoreNLP folder.
+* Set the `CORENLP_HOME` environment variable to the location of the folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`.
  
 ## Usage
 
