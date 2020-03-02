@@ -4,6 +4,7 @@ keywords: installation-download
 permalink: '/installation_usage.html'
 ---
 
+To use StanfordNLP, you first need to install the package and download the model for the language you want to use. Then you can build the pipeline with downloaded models. Once the pipeline is built, you can process the document and get annotations.
 
 ## Installation
 
