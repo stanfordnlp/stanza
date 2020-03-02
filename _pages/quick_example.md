@@ -6,78 +6,33 @@ permalink: '/quick_example.html'
 
 ## Quick Example
 
-To try out StanfordNLP, you can simply follow these steps in the interactive Python interpreter:
+Here we provide many examples covering most use cases.
 
-```python
->>> import stanfordnlp
->>> stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
->>> nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
->>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
->>> doc.sentences[0].print_dependencies()
-```
+[Download Models](installation_usage.html#model-downloading)
 
-The last command here will print out the words in the first sentence in the input string (or `Document`, as it is represented in StanfordNLP), as well as the indices for the word that governs it in the Universal Dependencies parse of that sentence (its "head"), along with the dependency relation between the words. The output should look like:
+[Build Pipeline](pipeline.md#basic-example)
 
-```
-('Barack', '4', 'nsubj:pass')
-('Obama', '1', 'flat')
-('was', '4', 'aux:pass')
-('born', '0', 'root')
-('in', '6', 'case')
-('Hawaii', '4', 'obl')
-('.', '4', 'punct')
-```
+[Build Pipeline from Config](pipeline.md#build-pipeline-from-config)
 
-To build a pipeline for other languages, simply pass in the language code to the constructor like this `stanfordnlp.Pipeline(lang="fr")`. For a full list of languages (and their corresponnding language codes) supported by StanfordNLP, please see [this section](#human-languages-supported-by-stanfordnlp).
+[Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
-We also provide a [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/pipeline_demo.py) in our Github repostory that demonstrates how one uses StanfordNLP in other languages than English, for example Chinese (traditional)
+[Start with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
 
-```python
-python demo/pipeline_demo.py -l zh
-```
+[Access Syntactic Words for Multi-Word Token](mwt.md#access-syntactic-words-for-multi-word-token)
 
-And expect outputs like the following:
+[Access Parent Token for Word](mwt.md#access-parent-token-for-word)
 
-```
----
-tokens of first sentence:
-達沃斯	達沃斯	PROPN
-世界	世界	NOUN
-經濟	經濟	NOUN
-論壇	論壇	NOUN
-是	是	AUX
-每年	每年	DET
-全球	全球	NOUN
-政	政	PART
-商界	商界	NOUN
-領袖	領袖	NOUN
-聚	聚	VERB
-在	在	VERB
-一起	一起	NOUN
-的	的	PART
-年度	年度	NOUN
-盛事	盛事	NOUN
-。	。	PUNCT
+[POS and Morphological Feature Tagging](pos.md#pos-and-morphological-feature-tagging)
 
----
-dependency parse of first sentence:
-('達沃斯', '4', 'nmod')
-('世界', '4', 'nmod')
-('經濟', '4', 'nmod')
-('論壇', '16', 'nsubj')
-('是', '16', 'cop')
-('每年', '10', 'nmod')
-('全球', '10', 'nmod')
-('政', '9', 'case:pref')
-('商界', '10', 'nmod')
-('領袖', '11', 'nsubj')
-('聚', '16', 'acl:relcl')
-('在', '11', 'mark')
-('一起', '11', 'obj')
-('的', '11', 'mark:relcl')
-('年度', '16', 'nmod')
-('盛事', '0', 'root')
-('。', '16', 'punct')
-```
+[Lemmatization](lemma.md#lemmatization)
 
+[Dependency Parsing](depparse.md#dependency-parsing)
+
+[Named Entity Recognition](ner.md#named-entity-recognition)
+
+[Access Token-level NER Tags](ner.md#access-token-level-ner-tags)
+
+## IPython Notebook Tutorial
+
+[StanfordNLP Beginners Guide](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
 

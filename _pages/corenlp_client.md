@@ -17,7 +17,7 @@ StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a serve
 ## Usage
 
 After the above steps have been taken, you can start up the server and make requests in Python code.
-Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object.
+Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object. You can find the corresponding jupyter notebook tutorial [here](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/StanfordNLP_CoreNLP_Interface.ipynb).
 
 Note: It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
 the server is properly shut down when your Python application finishes.
