@@ -13,9 +13,9 @@ lcode=`python scripts/lang2code.py $lang`
 corpus_name=`echo $corpus | sed -e 's#^.*-##g' | tr '[:upper:]' '[:lower:]'`
 short=${lcode}_${corpus_name}
 
-train_file=$NER_DIR/${corpus}/train.bio
-dev_file=$NER_DIR/${corpus}/dev.bio
-test_file=$NER_DIR/${corpus}/test.bio
+train_file=$NERBASE/${corpus}/train.bio
+dev_file=$NERBASE/${corpus}/dev.bio
+test_file=$NERBASE/${corpus}/test.bio
 
 train_json_file=$NER_DATA_DIR/${short}.train.json
 dev_json_file=$NER_DATA_DIR/${short}.dev.json
