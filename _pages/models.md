@@ -8,19 +8,19 @@ permalink: '/models.html'
 
 ### Downloading and Using Models
 
-Downloading a language pack (a set of machine learning models for a human language that you wish to use in the StanfordNLP pipeline) is as simple as:
+StanfordNLP provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. You can customize downloading models by specifying the options in the table below:
 
-```python
->>> stanfordnlp.download('en') # replace the language code "en" here
-```
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| lang | str | "en" | Language code for the language to process with the Pipeline.  See table below for a complete list of available languages. |
+| dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
+| package | str | "default" | Package to use for processors. See table below for a complete list of available packages. |
+| processors | dict or str | {} | Processors to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
+| logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
+| verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 
-Or:
+We provide intutive examples about how to use these options [here](installation_usage.md#model-downloading).
 
-```python
->>> stanfordnlp.download('english') # replace the language "english" here
-```
-
-Support languages can be looked up in the next section. If only the language code is specified, we will download the default models for that language. If you are seeking the language pack built from a specific treebank, you can download the corresponding models with the appropriate treebank code. By default, language packs are stored in a `stanfordnlp_resources` folder inside your home directory.
 
 ### Human Languages Supported by StanfordNLP
 

@@ -27,7 +27,7 @@ pip install -e .
 
 ## Model Downloading
 
-StanfordNLP provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. A full list of available arguments can be found [here](pipeline.md#Options). Here we provide some intuitive examples covering most use cases:
+StanfordNLP provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. A full list of available options can be found [here](models#downloading-and-using-models). Here we provide some intuitive examples covering most use cases:
 
 Download the default pipeline for English:
 ```python

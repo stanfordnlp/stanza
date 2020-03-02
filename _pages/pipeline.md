@@ -36,6 +36,8 @@ doc = nlp("Barack Obama was born in Hawaii.") # Run the pipeline on the input te
 print(doc) # Look at the result
 ```
 
+You can find more intutive examples about how to use these options [here](installation_usage.md#model-downloading).
+
 ### Build Pipeline from Config 
 
 Alternatively, you can build the desired pipeline with a config, allowing maximum customization for the pipeline:
