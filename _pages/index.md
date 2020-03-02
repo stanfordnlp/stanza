@@ -8,45 +8,48 @@ homepage: true
 
 ## About
 
-StanfordNLP is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, to give a syntactic structure dependency parse, and to recognize named entities, which is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org). In addition, it is able to call the CoreNLP Java package and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
+StanfordNLP is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, to give a syntactic structure dependency parse, and to recognize named entities, which is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org). 
 
 This package is built with highly accurate neural network components that enable efficient training and evaluation with your own annotated data. The modules are built on top of [PyTorch](https://pytorch.org/). You will get much faster performance if you run this system on a GPU-enabled machine.
-This package is a combination of software based on the Stanford entry in the [CoNLL 2018 Shared Task on Universal Dependency Parsing](http://universaldependencies.org/conll18/), and the group's official Python interface to the Java [Stanford CoreNLP software](https://stanfordnlp.github.io/CoreNLP). The CoNLL UD system is partly a cleaned up version of code used in the shared task and partly an approximate rewrite in PyTorch of the [original Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
+
+![Stanza Pipeline](images/pipeline.png)
+
+In addition, it is able to call the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
 StanfordNLP features:
 
 * Native Python implementation requiring minimal efforts to set up;
 * Full neural network pipeline for robust text analytics, including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging, dependency parsing, and named entity recognition;
-* Pretrained neural models supporting [53 (human) languages featured in 73 treebanks](models.md#human-languages-supported-by-stanfordnlp);
+* Pretrained neural models supporting [66 (human) languages](models.md#human-languages-supported-by-stanfordnlp);
 * A stable, officially maintained Python interface to CoreNLP.
 
 ## Get Started
 
-We strongly recommend installing StanfordNLP with `pip`, which is as simple as
+We strongly recommend installing StanfordNLP with `pip`, which is as simple as:
 
 ```bash
 pip install stanfordnlp
 ```
 
-To see StanfordNLP's neural pipeline in action, you can launch the Python interactive interpreter, and try the following commands
+To see StanfordNLP's neural pipeline in action, you can launch the Python interactive interpreter, and try the following commands:
 
 ```python
 >>> import stanfordnlp
 >>> stanfordnlp.download('en') # download English model
->>> nlp = stanfordnlp.Pipeline('en', processors='tokenize,pos,ner') # initialize English neural pipeline
+>>> nlp = stanfordnlp.Pipeline('en') # initialize English neural pipeline
 >>> doc = nlp("Barack Obama was born in Hawaii.") # run annotation over a sentence
->>> print(doc)
 ```
 
-At the end, you should be able to see all the annotations in the example. For more details, please see our [getting started guide](installation_usage.md#getting-started).
+You should be able to see all the annotations in the example by running the following commands: 
 
-Aside from the neural pipeline, StanfordNLP also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. To use it, you first need to set up the CoreNLP package as follows
+```python
+>>> print(doc)
+>>> print(doc.entities)
+```
 
-* Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use.
-* Put the model jars in the distribution folder
-* Tell the python code where Stanford CoreNLP is located: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
+For more details, please see our [getting started guide](installation_usage.md#getting-started).
 
-After CoreNLP is set up, you can follow our [demo script](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/corenlp.py) to test it out.
+Aside from the neural pipeline, StanfordNLP also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. For more details, please see [Stanford CoreNLP Client](corenlp_client.md).
 
 **Note**: If you run into issues during installation or when you run the example scripts, please check out [this FAQ page](faq.md). If you cannot find your issue there, please report it to us on GitHub.
 
