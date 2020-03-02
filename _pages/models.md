@@ -8,31 +8,31 @@ permalink: '/models.html'
 
 ### Downloading and Using Models
 
-Downloading a language pack (a set of machine learning models for a human language that you wish to use in the StanfordNLP pipeline) is as simple as
+Downloading a language pack (a set of machine learning models for a human language that you wish to use in the StanfordNLP pipeline) is as simple as:
 
 ```python
->>> import stanfordnlp
->>> stanfordnlp.download('ar')    # replace "ar" with the language or treebank code you need, see below
+>>> stanfordnlp.download('en') # replace the language code "en" here
 ```
 
-The language code or treebank code can be looked up in the next section. If only the language code is specified, we will download the default models for that language. If you are seeking the language pack built from a specific treebank, you can download the corresponding models with the appropriate treebank code. By default, language packs are stored in a `stanfordnlp_resources` folder inside your home directory.
-
-To use the default language pack for any language, simply build the pipeline as follows:
+Or:
 
 ```python
->>> nlp = stanfordnlp.Pipeline(lang="es")    # replace "es" with the language of interest
+>>> stanfordnlp.download('english') # replace the language "english" here
 ```
 
-If you are using a non-default treebank for the langauge, make sure to also specify the treebank code, for example:
-
-```python
->>> nlp = stanford.Pipeline(lang="it", treebank="it_postwita")
-```
+Support languages can be looked up in the next section. If only the language code is specified, we will download the default models for that language. If you are seeking the language pack built from a specific treebank, you can download the corresponding models with the appropriate treebank code. By default, language packs are stored in a `stanfordnlp_resources` folder inside your home directory.
 
 ### Human Languages Supported by StanfordNLP
 
 Below is a list of all the (human) languages supported by StanfordNLP (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
 The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
+
+
+### Models History
+
+Models from earlier releases can be found and downloaded in the table below. We recommend you always use the lastest released models. However, you can still use these earlier models by downloading them and putting them in the correct directory.
+
+#### 0.2.0
 
 **Notes**
 
@@ -118,17 +118,8 @@ The performance of these systems on the [CoNLL 2018 Shared Task](https://univers
 | Uyghur | UDT | ug | ug_udt | [download](http://nlp.stanford.edu/software/stanfordnlp_models/0.2.0/ug_udt_models.zip) | 0.2.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/ug_udt/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 | Vietnamese | VTB | vi | vi_vtb | [download](http://nlp.stanford.edu/software/stanfordnlp_models/0.2.0/vi_vtb_models.zip) | 0.2.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/vi_vtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 
-### Models History
 
-Models from earlier releases can be downloaded using the version argument.  Note that not every release
-has a distinct model set.
-
-```python
->>> import stanfordnlp
->>> stanfordnlp.download('ar', version='0.1.0')  
-```
-
-Models from earlier releases can also be found in the table below.
+#### 0.1.0
 
 | Language | Treebank | Language code | Treebank code | Models |
 | :------- | :------- | :------------ | :------------ | :----- | 
