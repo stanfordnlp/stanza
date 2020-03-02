@@ -13,7 +13,7 @@ object or raw text, runs the processors in succession, and returns an annotated 
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| lang | str | "en" | Use recommended models for this language. |
+| lang | str | "en" | Language code for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages and models. |
 | dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
 | package | str | "default" | Package to use. |
 | processors | dict or str | {} | Processors to use. Support comma-seperated string or dictionary. |
