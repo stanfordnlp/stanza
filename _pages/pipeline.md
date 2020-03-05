@@ -16,7 +16,7 @@ object or raw text, runs the processors in succession, and returns an annotated 
 | lang | str | "en" | Language code for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
 | dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
 | package | str | "default" | Package to use for processors. See [here](models.md) for a complete list of available packages. |
-| processors | dict or str | {} | Processors to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
+| processors | dict or str | {} | [Processor](processors.md)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
 | logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
 | verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 | use_gpu | bool | True | Attempt to use a GPU if possible. |
