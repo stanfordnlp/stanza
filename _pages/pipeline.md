@@ -1,26 +1,39 @@
 ---
-title: Pipeline
+title: Pipeline and Processors
 keywords: pipeline
 permalink: '/pipeline.html'
 ---
 
 ## Pipeline
 
-Users of StanfordNLP can process documents by building a [`Pipeline`](pipeline.md) with the desired `Processor` units.  The pipeline takes in a [`Document`](data_objects.md#document)
+Users of StanfordNLP can process documents by building a [`Pipeline`](pipeline.md#pipeline) with the desired [`Processor`](pipeline.md#processors) units.  The pipeline takes in a [`Document`](data_objects.md#document)
 object or raw text, runs the processors in succession, and returns an annotated [`Document`](data_objects.md#document).
 
-## Options
+You can customize the pipeline by specifying the options in the table below:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | lang | str | "en" | Language code for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
 | dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
 | package | str | "default" | Package to use for processors. See [here](models.md) for a complete list of available packages. |
-| processors | dict or str | {} | [Processor](processors.md)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
+| processors | dict or str | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
 | logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
 | verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 | use_gpu | bool | True | Attempt to use a GPU if possible. |
 | kwargs | - | - | Options for each of the individual processors. See the individual processor pages for descriptions. |
+
+## Processors
+
+Processors are units of the neural pipeline that create different annotations for a [`Document`](data_objects.md#document). The neural pipeline now supports the following processors:
+
+| Name | Annotator class name | Generated Annotation | Description |
+| --- | --- | --- | --- | 
+| tokenize | TokenizeProcessor | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWT expander](mwt.md). | Tokenizes the text and performs sentence segmentation. |
+| mwt | MWTProcessor | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](tokenize.md). |
+| lemma | LemmaProcessor | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` value. The result can be accessed in `Word.lemma`. | Generates the word lemmas for all tokens in the corpus. |
+| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. | Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). |
+| depparse | DepparseProcessor | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parser. |
+| ner | NERProcessor | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
 ## Usage
 

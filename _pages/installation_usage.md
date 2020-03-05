@@ -29,9 +29,9 @@ pip install -e .
 
 ## Model Downloading
 
-StanfordNLP provides simple, flexible, unified interfaces for downloading various [Processor](processors.md)s and building the desired [Pipeline](pipeline.md). A full list of available options can be found [here](models#downloading-and-using-models). Here we provide some intuitive examples covering most use cases:
+StanfordNLP provides simple, flexible, unified interfaces for downloading various [Processor](pipeline.md#processors)s and building the desired [Pipeline](pipeline.md#pipeline). A full list of available options can be found [here](models#downloading-and-using-models). Here we provide some intuitive examples covering most use cases:
 
-Download the default [Processor](processors.md)s for English:
+Download the default [Processor](pipeline.md#processors)s for English:
 ```python
 >>> stanfordnlp.download('en')
 ```
@@ -63,14 +63,14 @@ Download the [TokenizeProcessor](tokenize.md) trained on `GSD` dataset, [POSProc
 
 Other options include specify model downloading directory and control which information to print.
 
-Download the `default` [Processor](processors.md)s for English to current working directory, and print all the information for debugging:
+Download the `default` [Processor](pipeline.md#processors)s for English to current working directory, and print all the information for debugging:
 ```python
 >>> stanfordnlp.download('en', dir='.', logging_level='DEBUG')
 ```
 
 ## Pipeline Loading
 
-The [Pipeline](pipeline.md) contains a list of [Processor](processors.md)s and is used to annotate documents. The [Pipeline](pipeline.md) has the same interface to that of the download module. Other options allow users to control devices (cpu or gpu), use pretokenized text, disable sentence split, specify model path, etc. A full list of available options be found [here](pipeline.md#options).
+The [Pipeline](pipeline.md#pipeline) contains a list of [Processor](pipeline.md#processors)s and is used to annotate documents. The [Pipeline](pipeline.md#pipeline) has the same interface to that of the download module. Other options allow users to control devices (cpu or gpu), use pretokenized text, disable sentence split, specify model path, etc. A full list of available options be found [here](pipeline.md#options).
 
 Load the [TokenizeProcessor](tokenize.md) trained on `EWT` dataset, [POSProcessor](pos.md) trained on `LinES` dataset, [NERProcessor](ner.md) trained on `CoNLL03` dataset:
 ```python
@@ -81,7 +81,7 @@ As the pipeline loading has the same interface to that of the download module, m
 
 ## Document Annotation
 
-Once the [Pipeline](pipeline.md) is loaded, you can simply pass the text to the [Pipeline](pipeline.md) and get the annotated [Document](data_objects#document) instance.
+Once the [Pipeline](pipeline.md#pipeline) is loaded, you can simply pass the text to the [Pipeline](pipeline.md#pipeline) and get the annotated [Document](data_objects#document) instance.
 
 ```python
 >>> doc = nlp('Barack Obama was born in Hawaii.')
