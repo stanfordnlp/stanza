@@ -24,7 +24,7 @@ We provide intutive examples about how to use these options [here](installation_
 ### Human Languages Supported by StanfordNLP
 
 Below is a list of all the (human) languages supported by StanfordNLP (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
-The performance of these systems on the [CoNLL 2018 Shared Task](https://universaldependencies.org/conll18/) official test set (in our unofficial evaluation) can be found [here](performance.md).
+The performance can be found [here](performance.md).
 
 
 ### Models Available
@@ -36,6 +36,8 @@ Below is a table for all models supported by StanfordNLP on the Universal Depend
 1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
 2. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language, which is the package trained on the largest treebank available for that language.
 3. The copyright and licensing status of machine learning models is not very clear (to us). We list in the table below the Treebank License of the underlying data from which each language pack (set of machine learning models for a treebank) was trained. To the extent that The Trustees of Leland Stanford Junior University have ownership and rights over these language packs, all these StanfordNLP language packs are made available under the [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
+
+#### UD Models
 
 | Language | Language code | Package | Version | Treebank License | Treebank Doc |  Notes |
 | :------- | :------------ | :------ | :------ | :--------------: | :-----------: | :---- |
@@ -140,5 +142,21 @@ Below is a table for all models supported by StanfordNLP on the Universal Depend
 | Vietnamese | vi | vtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/vi_vtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 | Wolof | wo | wtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/wo_wtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 
+#### NER Models
+
+| Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS LICENSE | CORPUS DOC | NOTES |
+| :------- | :----- | :-------- | :---- | :---- | :---- | :---- |
+| Arabic | ar | AQMAR | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Chinese | zh | OntoNotes | 18 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Dutch | nl | CoNLL02 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Dutch | nl | WikiNER | 4 | | | |
+| English | en | CoNLL03 | 4 | | | |
+| English | en | OntoNotes | 18 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| French | fr | WikiNER | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| German | de | CoNLL03 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| German | de | GermEval14 | 4 | | | |
+| Russian | ru | WikiNER | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Spanish | es | CoNLL02 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Spanish | es | AnCora | 4 | | | |
 
 We also provide links to download previous versions of models [here](model_history.md).
