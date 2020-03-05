@@ -70,12 +70,14 @@ Download the `default` [Processor](processors.md)s for English to current workin
 
 ## Pipeline Loading
 
-The [Pipeline](pipeline.md) contains a list of [Processor](processors.md)s and is used for annotating documents. The [Pipeline](pipeline.md) has the same interface to that of the download module. Other options allow users to control devices (cpu or gpu), use pretokenized text, disable sentence split, specify model path, etc. A full list of available options be found [here](pipeline.md#options).
+The [Pipeline](pipeline.md) contains a list of [Processor](processors.md)s and is used to annotate documents. The [Pipeline](pipeline.md) has the same interface to that of the download module. Other options allow users to control devices (cpu or gpu), use pretokenized text, disable sentence split, specify model path, etc. A full list of available options be found [here](pipeline.md#options).
 
 Load the [TokenizeProcessor](tokenize.md) trained on `EWT` dataset, [POSProcessor](pos.md) trained on `LinES` dataset, [NERProcessor](ner.md) trained on `CoNLL03` dataset:
 ```python
 >>> stanfordnlp.download('en', processors={'tokenize': 'ewt', 'pos': 'lines', 'ner': 'conll03'}, package=None)
 ```
+
+As the pipeline loading has the same interface to that of the download module, more examples can be found in [model downloading](installation_usage.md#model-downloading).
 
 ## Document Annotation
 
