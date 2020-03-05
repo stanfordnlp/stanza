@@ -47,7 +47,7 @@ You should be able to see all the annotations in the example by running the foll
 >>> print(doc.entities)
 ```
 
-For more details, please see our [getting started guide](installation_usage.md) and [quick example](quick_example.md).
+For more details, please see our [getting started guide](installation_usage.md) and [tutorial](tutorial.md).
 
 Aside from the neural pipeline, StanfordNLP also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. For more details, please see [Stanford CoreNLP Client](corenlp_client.md).
 

@@ -1,10 +1,10 @@
 ---
-title: Quick Example
-keywords: quick_example
-permalink: '/quick_example.html'
+title: Tutorial
+keywords: tutorial
+permalink: '/tutorial.html'
 ---
 
-## Quick Example
+## Tutorial
 
 Here we provide many examples covering most use cases.
 
