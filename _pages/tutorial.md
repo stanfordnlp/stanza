@@ -8,11 +8,15 @@ permalink: '/tutorial.html'
 
 Here we provide many examples covering most use cases.
 
+### Pipeline Building
+
 [Download Models](installation_usage.html#model-downloading)
 
-[Build Pipeline](pipeline.md#basic-example)
+[Build a Neural Pipeline](pipeline.md#basic-example)
 
-[Build Pipeline from Config](pipeline.md#build-pipeline-from-config)
+[Build a Neural Pipeline from Advanced Configurations](pipeline.md#build-pipeline-from-config)
+
+### Text Annotation
 
 [Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
@@ -22,17 +26,17 @@ Here we provide many examples covering most use cases.
 
 [Access Parent Token for Word](mwt.md#access-parent-token-for-word)
 
-[POS and Morphological Feature Tagging](pos.md#pos-and-morphological-feature-tagging)
+[Access POS and Morphological Feature for Word](pos.md#pos-and-morphological-feature-tagging)
 
-[Lemmatization](lemma.md#lemmatization)
+[Access Lemma for Word](lemma.md#lemmatization)
 
-[Dependency Parsing](depparse.md#dependency-parsing)
+[Access Head and Dependency Relation for Word](depparse.md#dependency-parsing)
 
-[Named Entity Recognition](ner.md#named-entity-recognition)
+[Access Named Entities for Sentence and Document](ner.md#named-entity-recognition)
 
-[Access Token-level NER Tags](ner.md#access-token-level-ner-tags)
+[Access Named Entity Recogition (NER) Tags for Token](ner.md#access-token-level-ner-tags)
 
-## IPython Notebook Tutorial
+### IPython Interactive Tutorial
 
 [StanfordNLP Beginners Guide](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
 
