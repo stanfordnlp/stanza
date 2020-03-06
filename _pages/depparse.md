@@ -17,6 +17,7 @@ Provides an accurate syntactic dependency parser.
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | depparse_batch_size | int | 5000 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). This parameter should be set larger than the number of words in the longest sentence in your input document, or you might run into unexpected behaviors. |
+| depparse_pretagged | bool | False | Assume the document is tokenized and pretagged. Only run dependency parsing on the document. |
 
 ## Example Usage
 
@@ -49,6 +50,21 @@ id: 9   word: .         head id: 3      head: atteint   deprel: punct
 ```
 
 The head of the word `Nous` is `atteint` with the dependency relation `nsubj`.
+
+### Start with Pretagged Document
+
+Normally, the `depparse` processor depends on `tokenize`, `mwt`, `pos`, and `lemma`. However, you can skip the restriction and pass the pretagged document (with upos, xpos, feats, lemma) by setting `depparse_pretagged=True`.
+
+The code below shows an example of dependency parsing with pretokenized and pretagged document:
+
+```python
+import stanfordnlp
+from stanfordnlp.models.common.doc import Document
+
+nlp = stanfordnlp.Pipeline(lang='en', processors='depparse', depparse_pretagged=True)
+pretagged_doc = Document([[{'id': '1', 'text': 'Test', 'lemma': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '2', 'text': 'sentence', 'lemma': 'sentence', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '3', 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'xpos': '.'}]])
+doc = nlp(pretagged_doc)
+```
 
 ## Training-Only Options
 
