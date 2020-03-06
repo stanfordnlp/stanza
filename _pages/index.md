@@ -12,7 +12,7 @@ Stanza is a Python natural language analysis package. It contains tools, which c
 
 This package is built with highly accurate neural network components that enable efficient training and evaluation with your own annotated data. The modules are built on top of [PyTorch](https://pytorch.org/). You will get much faster performance if you run this system on a GPU-enabled machine.
 
-![Stanza Pipeline](images/pipeline.png)
+<center><div style="width:60%;"><img src="images/pipeline.png"></div></center>
 
 In addition, it is able to call the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
