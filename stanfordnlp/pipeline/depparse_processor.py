@@ -16,7 +16,7 @@ class DepparseProcessor(UDProcessor):
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([DEPPARSE])
     # set of processor requirements for this processor
-    REQUIRES_DEFAULT = set([TOKENIZE, POS])
+    REQUIRES_DEFAULT = set([TOKENIZE, POS, LEMMA])
 
     def __init__(self, config, pipeline, use_gpu):
         self._pretagged = None
