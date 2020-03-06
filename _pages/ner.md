@@ -8,9 +8,9 @@ permalink: '/ner.html'
 
 Recognize named entities for all token spans in the corpus.
 
-| Property name | Annotator class name | Generated Annotation |
-| --- | --- | --- |
-| ner | NERProcessor | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. |
+| Name | Annotator class name | Requirement | Generated Annotation | Description |
+| --- | --- | --- | --- | --- | 
+| ner | NERProcessor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
 ## Options
 

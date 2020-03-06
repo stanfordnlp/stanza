@@ -8,9 +8,9 @@ permalink: '/depparse.html'
 
 Provides an accurate syntactic dependency parser.
 
-| Property name | Annotator class name | Generated Annotation |
-| --- | --- | --- |
-| depparse | DepparseProcessor | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. |
+| Name | Annotator class name | Requirement | Generated Annotation | Description |
+| --- | --- | --- | --- | --- | 
+| depparse | DepparseProcessor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parser. |
 
 ## Options
 

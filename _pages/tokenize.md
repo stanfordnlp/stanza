@@ -8,9 +8,9 @@ permalink: '/tokenize.html'
 
 Tokenizes the text and performs sentence segmentation.
 
-| Property name | Processor class name | Generated Annotation |
-| --- | --- | --- |
-| tokenize | TokenizeProcessor | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWT expander](mwt.md). |
+| Name | Annotator class name | Requirement | Generated Annotation | Description |
+| --- | --- | --- | --- | --- | 
+| tokenize | TokenizeProcessor | - | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWTProcessor](mwt.md). | Tokenizes the text and performs sentence segmentation. |
 
 ## Options
 

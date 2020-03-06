@@ -8,9 +8,9 @@ permalink: '/mwt.html'
 
 Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](tokenize.md). 
 
-| Property name | Processor class name | Generated Annotation |
-| --- | --- | --- |
-| mwt | MWTProcessor | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | 
+| Name | Annotator class name | Requirement | Generated Annotation | Description |
+| --- | --- | --- | --- | --- | 
+| mwt | MWTProcessor | tokenize | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md). |
 
 ## Options
 
