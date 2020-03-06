@@ -4,7 +4,7 @@ keywords: data objects
 permalink: '/data_objects.html'
 ---
 
-This page describes the data objects and annotations used in StanfordNLP, and how they interact with each other.
+This page describes the data objects and annotations used in Stanza, and how they interact with each other.
 
 ## Document
 

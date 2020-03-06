@@ -28,10 +28,10 @@ The `tokenize` processor is usually the first processor used in the pipeline. It
 The code below shows an example of tokenization and sentence segmentation:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize')
-doc = nlp('This is a test sentence for stanfordnlp. This is another sentence.')
+nlp = stanza.Pipeline(lang='en', processors='tokenize')
+doc = nlp('This is a test sentence for stanza. This is another sentence.')
 for i, sentence in enumerate(doc.sentences):
     print(f'====== Sentence {i+1} tokens =======')
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
@@ -47,7 +47,7 @@ id: 3   text: a
 id: 4   text: test
 id: 5   text: sentence
 id: 6   text: for
-id: 7   text: stanfordnlp
+id: 7   text: stanza
 id: 8   text: .
 ====== Sentence 2 tokens =======
 id: 1   text: This
@@ -64,9 +64,9 @@ You can feed in pretokenized (and sentence split) text to the pipeline, as newli
 The code below shows an example of bypassing the neural tokenizer:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
+nlp = stanza.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp('This is token.ization done my way!\nSentence split, too!')
 for i, sentence in enumerate(doc.sentences):
     print(f'====== Sentence {i+1} tokens =======')
@@ -78,9 +78,9 @@ Alternatively to passing in a string, you can also pass in a list of lists of st
 The equivalent of our example above would be:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
+nlp = stanza.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
 doc = nlp([['This', 'is', 'token.ization', 'done', 'my', 'way!'], ['Sentence', 'split,', 'too!']])
 for i, sentence in enumerate(doc.sentences):
     print(f'====== Sentence {i+1} tokens =======')
@@ -103,7 +103,7 @@ id: 2   text: split,
 id: 3   text: too!
 ```
 
-As can be seen from the output, tokenization and sentence split decisions are preserved. If `tokenize_pretokenized` were set to `False` and the input is a string, StanfordNLP would have generated the following output with its own tokenization and sentence split:
+As can be seen from the output, tokenization and sentence split decisions are preserved. If `tokenize_pretokenized` were set to `False` and the input is a string, Stanza would have generated the following output with its own tokenization and sentence split:
 
 ```
 ====== Sentence 1 tokens =======
@@ -131,10 +131,10 @@ While our neural pipeline can achieve significantly higher accuracy, rule-based 
 The code below shows an example of tokenization and sentence segmentation with [`spaCy`](https://spacy.io):
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors={'tokenize': 'spacy'}) # spaCy tokenizer is currently only allowed in English pipeline.
-doc = nlp('This is a test sentence for stanfordnlp. This is another sentence.')
+nlp = stanza.Pipeline(lang='en', processors={'tokenize': 'spacy'}) # spaCy tokenizer is currently only allowed in English pipeline.
+doc = nlp('This is a test sentence for stanza. This is another sentence.')
 for i, sentence in enumerate(doc.sentences):
     print(f'====== Sentence {i+1} tokens =======')
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
@@ -150,7 +150,7 @@ id: 3   text: a
 id: 4   text: test
 id: 5   text: sentence
 id: 6   text: for
-id: 7   text: stanfordnlp
+id: 7   text: stanza
 id: 8   text: .
 ====== Sentence 2 tokens =======
 id: 1   text: This
@@ -162,6 +162,6 @@ id: 5   text: .
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/tokenizer.py#L12) of the tokenizer.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/tokenizer.py#L12) of the tokenizer.
 
 Note that to train the tokenizer for Vietnamese, one would need to postprocess the character labels generated from the plain text file and the CoNLL-U file to form syllable-level labels, which is automatically handled if you are using the training scripts we provide.

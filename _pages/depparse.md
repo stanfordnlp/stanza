@@ -28,9 +28,9 @@ The `depparse` processor depends on `tokenize`, `mwt`, `pos`, and `lemma`. After
 The code below shows an example of accessing the head word and dependency relation for each word:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='fr', processors='tokenize,mwt,pos,lemma,depparse')
+nlp = stanza.Pipeline(lang='fr', processors='tokenize,mwt,pos,lemma,depparse')
 doc = nlp('Nous avons atteint la fin du sentier.')
 print(*[f'id: {word.id}\tword: {word.text}\thead id: {word.head}\thead: {sent.words[word.head-1].text if word.head > 0 else "root"}\tdeprel: {word.deprel}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
@@ -58,15 +58,15 @@ Normally, the `depparse` processor depends on `tokenize`, `mwt`, `pos`, and `lem
 The code below shows an example of dependency parsing with pretokenized and pretagged document:
 
 ```python
-import stanfordnlp
-from stanfordnlp.models.common.doc import Document
+import stanza
+from stanza.models.common.doc import Document
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='depparse', depparse_pretagged=True)
+nlp = stanza.Pipeline(lang='en', processors='depparse', depparse_pretagged=True)
 pretagged_doc = Document([[{'id': '1', 'text': 'Test', 'lemma': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '2', 'text': 'sentence', 'lemma': 'sentence', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '3', 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'xpos': '.'}]])
 doc = nlp(pretagged_doc)
 ```
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/parser.py#L21) of the dependency parser.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/parser.py#L21) of the dependency parser.
 

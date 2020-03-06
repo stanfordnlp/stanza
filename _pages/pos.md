@@ -29,9 +29,9 @@ be accessed via the `upos`(`pos`) and `xpos` fields of each `word`, while the un
 The code below shows an example of accessing part-of-speech and morphological features for each word:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,mwt,pos')
+nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
 doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'word: {word.text}\tupos: {word.upos}\txpos: {word.xpos}\tfeats: {word.feats if word.feats else "_"}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
@@ -52,4 +52,4 @@ The word `was` is an auxiliary verb in the past tense.
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/tagger.py#L21) of the POS/UFeats tagger.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/tagger.py#L21) of the POS/UFeats tagger.

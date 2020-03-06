@@ -1,12 +1,12 @@
 ---
 title: System Performance
-keywords: stanfordnlp, system performance
+keywords: stanza, system performance
 permalink: '/performance.html'
 ---
 
 ## System Performance on UD Treebanks
 
-In the table below you can find the performance of the version 1.0.0 models of StanfordNLP's neural pipeline, which is our best attempt at replicating our final system in the full PyTorch pipeline. The scores shown are from an end-to-end evaluation on the official test sets (from raw text to the full CoNLL-U file), and the scores are generated with the official evaluation script. For how we handled treebanks with no training data, please refer to the [system description paper]() for details.
+In the table below you can find the performance of the version 1.0.0 models of Stanza's neural pipeline, which is our best attempt at replicating our final system in the full PyTorch pipeline. The scores shown are from an end-to-end evaluation on the official test sets (from raw text to the full CoNLL-U file), and the scores are generated with the official evaluation script. For how we handled treebanks with no training data, please refer to the [system description paper]() for details.
 
 | Treebank | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :------- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
@@ -115,7 +115,7 @@ In the table below you can find the performance of the version 1.0.0 models of S
 
 ## System Performance on NER Corpora
 
-In the table below you can find the performance of the version 1.0.0 models of StanfordNLP's neural pipeline on various NER corpora.
+In the table below you can find the performance of the version 1.0.0 models of Stanza's neural pipeline on various NER corpora.
 
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |

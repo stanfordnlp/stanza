@@ -1,4 +1,4 @@
-# stanfordnlp
+# stanza
 The Stanford NLP Group's official Python library.  It contains packages for running our latest fully neural pipeline from the CoNLL 2018 Shared Task and for accessing the Java Stanford CoreNLP server.
 
 ### References
@@ -20,7 +20,7 @@ If you use the neural tokenizer, multi-word token expansion model, lemmatizer, P
 ```
 The PyTorch implementation of the neural pipeline in this repostory is due to [Peng Qi](https://qipeng.me) and [Yuhao Zhang](https://yuhao.im), with help from [Tim Dozat](https://web.stanford.edu/~tdozat/), who is the main contributor to the [Tensorflow version](https://github.com/tdozat/Parser-v3) of the tagger and parser.
 
-If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
+If you use the CoreNLP server, please cite the software package and the respective modules as described [here](https://stanza.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers").
 
 ## Setup
 
@@ -41,7 +41,7 @@ The code has currently been tested with Python 3.6.8.
 ### conda
 
 ```
-conda install stanfordnlp
+conda install stanza
 ```
 
 ### pip
@@ -49,14 +49,14 @@ conda install stanfordnlp
 #### from PyPI
 
 ```
-pip install stanfordnlp
+pip install stanza
 ```
 
 #### from source
 
 ```
-git clone git@github.com:stanfordnlp/stanfordnlp.git
-cd stanfordnlp
+git clone git@github.com:stanfordnlp/stanza.git
+cd stanza
 pip install -e .
 ```
 
@@ -156,7 +156,7 @@ Once you have trained models, you can run a full NLP pipeline natively in Python
 The following demo code demonstrates how to run a pipeline
 
 ```
-from stanfordnlp.pipeline import Document, Pipeline
+from stanza.pipeline import Document, Pipeline
 
 # example documents
 english_doc = Document('Barack Obama was born in Hawaii.  He was elected president in 2008.')
@@ -270,7 +270,7 @@ There are  a few initial setup steps.
 Here is some example Python code that will start a server, make an annotation request, and walk through the final annotation.
 
 ```
-from stanfordnlp.server import CoreNLPClient
+from stanza.server import CoreNLPClient
 
 # example text
 print('---')

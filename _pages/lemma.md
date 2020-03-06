@@ -35,9 +35,9 @@ The lemma information can be found in the `lemma` field of each word.
 The code below shows an example of accessing lemma for each word:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,mwt,pos,lemma')
+nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos,lemma')
 doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'word: {word.text+" "}\tlemma: {word.lemma}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
@@ -58,5 +58,5 @@ The lemma of the word `was` is `be`.
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/lemmatizer.py#L22) of the lemmatizer.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/lemmatizer.py#L22) of the lemmatizer.
 

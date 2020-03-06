@@ -1,12 +1,12 @@
 ---
 title: Stanford CoreNLP Client
-keywords: StanfordNLP, Stanford CoreNLP, Client, Server, Python
+keywords: Stanza, Stanford CoreNLP, Client, Server, Python
 permalink: '/corenlp_client.html'
 ---
 
 ## Overview
 
-StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a server interface.  Once the Java server is activated, requests can be made in Python, and a Document-like object will be returned.  You can find out more info about the full functionality of Stanford CoreNLP [here](https://stanfordnlp.github.io/CoreNLP/).
+Stanza allows users to access our Java toolkit Stanford CoreNLP via a server interface.  Once the Java server is activated, requests can be made in Python, and a Document-like object will be returned.  You can find out more info about the full functionality of Stanford CoreNLP [here](https://stanfordnlp.github.io/CoreNLP/).
 
 ## Setup
 
@@ -17,7 +17,7 @@ StanfordNLP allows users to access our Java toolkit Stanford CoreNLP via a serve
 ## Usage
 
 After the above steps have been taken, you can start up the server and make requests in Python code.
-Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object. You can find the corresponding jupyter notebook tutorial [here](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/StanfordNLP_CoreNLP_Interface.ipynb).
+Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object. You can find the corresponding jupyter notebook tutorial [here](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_CoreNLP_Interface.ipynb).
 
 Note: It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
 the server is properly shut down when your Python application finishes.
@@ -25,7 +25,7 @@ the server is properly shut down when your Python application finishes.
 By default, CoreNLP Client uses `protobuf` for message passing. A full definition of our protocols (a.k.a., our supported annotations) can be found [here](https://github.com/stanfordnlp/CoreNLP/blob/master/src/edu/stanford/nlp/pipeline/CoreNLP.proto).
 
 ```python
-from stanfordnlp.server import CoreNLPClient
+from stanza.server import CoreNLPClient
 
 # example text
 print('---')

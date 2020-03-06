@@ -30,9 +30,9 @@ sentence `sent` can be accessed with `sent.tokens`.  The list of words for sente
 The code below shows an example of accessing syntactic words for each token in the first sentence:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='fr', processors='tokenize,mwt')
+nlp = stanza.Pipeline(lang='fr', processors='tokenize,mwt')
 doc = nlp('Nous avons atteint la fin du sentier.')
 for token in doc.sentences[0].tokens:
     print(f'token: {token.text}\twords: {", ".join([word.text for word in token.words])}')
@@ -58,9 +58,9 @@ The multi-word token `du` is expanded to two syntactic words `de` and `le`.
 The code below shows an example of accessing parent token for each word in the first sentence:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='fr', processors='tokenize,mwt')
+nlp = stanza.Pipeline(lang='fr', processors='tokenize,mwt')
 doc = nlp('Nous avons atteint la fin du sentier.')
 for word in doc.sentences[0].words:
     print(f'word: {word.text}\tparent token: {word.parent.text}')
@@ -84,4 +84,4 @@ Words `de` and `le` have the same parent token `du`.
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/mwt_expander.py#L22) of the MWT expander.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/mwt_expander.py#L22) of the MWT expander.

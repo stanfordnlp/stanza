@@ -52,5 +52,5 @@ Here we provide many examples covering most use cases.
 
 ### IPython Interactive Tutorial
 
-[StanfordNLP Beginners Guide](https://github.com/stanfordnlp/stanfordnlp/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
+[Stanza Beginners Guide](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
 

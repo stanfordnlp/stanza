@@ -6,7 +6,7 @@ permalink: '/pipeline.html'
 
 ## Pipeline
 
-Users of StanfordNLP can process documents by building a [`Pipeline`](pipeline.md#pipeline) with the desired [`Processor`](pipeline.md#processors) units.  The pipeline takes in a [`Document`](data_objects.md#document)
+Users of Stanza can process documents by building a [`Pipeline`](pipeline.md#pipeline) with the desired [`Processor`](pipeline.md#processors) units.  The pipeline takes in a [`Document`](data_objects.md#document)
 object or raw text, runs the processors in succession, and returns an annotated [`Document`](data_objects.md#document).
 
 You can customize the pipeline by specifying the options in the table below:
@@ -14,7 +14,7 @@ You can customize the pipeline by specifying the options in the table below:
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | lang | str | "en" | Language code for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
-| dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
+| dir | str | ~/stanza_resources | Directory for storing the models. |
 | package | str | "default" | Package to use for processors. See [here](models.md) for a complete list of available packages. |
 | processors | dict or str | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
 | logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
@@ -42,9 +42,9 @@ Processors are units of the neural pipeline that create different annotations fo
 You can easily build the pipeline with options specified above:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline("en", processors='tokenize,pos', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
+nlp = stanza.Pipeline("en", processors='tokenize,pos', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
 doc = nlp("Barack Obama was born in Hawaii.") # Run the pipeline on the input text
 print(doc) # Look at the result
 ```
@@ -56,7 +56,7 @@ You can find more intutive examples about how to use these options [here](instal
 Alternatively, you can build the desired pipeline with a config, allowing maximum customization for the pipeline:
 
 ```python
-import stanfordnlp
+import stanza
 
 config = {
 	'processors': 'tokenize,mwt,pos', # Comma-separated list of processors to use
@@ -67,7 +67,7 @@ config = {
 	'pos_pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt',
 	'tokenize_pretokenized': True # Use pretokenized text as input and disable tokenization
 }
-nlp = stanfordnlp.Pipeline(**config) # Initialize the pipeline using a configuration dict
+nlp = stanza.Pipeline(**config) # Initialize the pipeline using a configuration dict
 doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie .") # Run the pipeline on the pretokenized input text
 print(doc) # Look at the result
 ```

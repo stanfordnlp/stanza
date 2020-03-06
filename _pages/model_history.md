@@ -4,7 +4,7 @@ keywords: models history
 permalink: '/model_history.html'
 ---
 
-This page contains links to previous models for StanfordNLP. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require teh Stanza package (`pip install stanza`).
+This page contains links to previous models for Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).
 
 ### 0.2.0
 

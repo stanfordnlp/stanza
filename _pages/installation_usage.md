@@ -4,68 +4,68 @@ keywords: installation-download
 permalink: '/installation_usage.html'
 ---
 
-To use StanfordNLP Neural Pipeline, you first need to install the package and download the model for the language you want to use. Then you can build the pipeline with downloaded models. Once the pipeline is built, you can process the document and get annotations.
+To use Stanza Neural Pipeline, you first need to install the package and download the model for the language you want to use. Then you can build the pipeline with downloaded models. Once the pipeline is built, you can process the document and get annotations.
 
 For the usage information of Stanford CoreNLP Client, you can check out [here](corenlp_client.md).
 
 ## Installation
 
-StanfordNLP supports Python 3.6 or later. We strongly recommend that you install StanfordNLP from PyPI. This should also help resolve all of the dependencies of StanfordNLP, for instance [PyTorch](https://pytorch.org/) 1.0.0 or above. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run:
+Stanza supports Python 3.6 or later. We strongly recommend that you install Stanza from PyPI. This should also help resolve all of the dependencies of Stanza, for instance [PyTorch](https://pytorch.org/) 1.0.0 or above. If you already have [pip installed](https://pip.pypa.io/en/stable/installing/), simply run:
 ```bash
-pip install stanfordnlp
+pip install stanza
 ```
 
-If you currently have a previous version of `stanfordnlp` installed, use:
+If you currently have a previous version of `stanza` installed, use:
 ```bash
-pip install stanfordnlp -U
+pip install stanza -U
 ```
 
-Alternatively, you can also install from source of this git repository, which will give you more flexibility in developing on top of StanfordNLP and training your own models. For this option, run:
+Alternatively, you can also install from source of this git repository, which will give you more flexibility in developing on top of Stanza and training your own models. For this option, run:
 ```bash
-git clone https://github.com/stanfordnlp/stanfordnlp.git
-cd stanfordnlp
+git clone https://github.com/stanfordnlp/stanza.git
+cd stanza
 pip install -e .
 ```
 
 ## Model Downloading
 
-StanfordNLP provides simple, flexible, unified interfaces for downloading various [Processor](pipeline.md#processors)s and building the desired [Pipeline](pipeline.md#pipeline). A full list of available options can be found [here](models#downloading-and-using-models). Here we provide some intuitive examples covering most use cases:
+Stanza provides simple, flexible, unified interfaces for downloading various [Processor](pipeline.md#processors)s and building the desired [Pipeline](pipeline.md#pipeline). A full list of available options can be found [here](models#downloading-and-using-models). Here we provide some intuitive examples covering most use cases:
 
 Download the default [Processor](pipeline.md#processors)s for English:
 ```python
->>> stanfordnlp.download('en')
+>>> stanza.download('en')
 ```
 
 Download the `default` [TokenizeProcessor](tokenize.md) and [POSProcessor](pos.md) for Chinese:
 ```python
->>> stanfordnlp.download('zh', processors='tokenize,pos')
+>>> stanza.download('zh', processors='tokenize,pos')
 ```
 
 Download the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md) trained on `GSD` dataset for German:
 ```python
->>> stanfordnlp.download('de', processors='tokenize,mwt', package='gsd')
+>>> stanza.download('de', processors='tokenize,mwt', package='gsd')
 ```
 
 Download the [NERProcessor](ner.md) trained on `CoNLL03` dataset and all other `default` processors for Dutch:
 ```python
->>> stanfordnlp.download('nl', processors={'ner': 'conll03'})
+>>> stanza.download('nl', processors={'ner': 'conll03'})
 ```
 
 Download the [NERProcessor](ner.md) trained on `WikiNER` dataset, and other processors trained on `PADT` dataset for Arabic:
 ```python
->>> stanfordnlp.download('ar', processors={'ner': 'wikiner'}, package='padt')
+>>> stanza.download('ar', processors={'ner': 'wikiner'}, package='padt')
 ```
 
 Download the [TokenizeProcessor](tokenize.md) trained on `GSD` dataset, [POSProcessor](pos.md) trained on `Spoken` dataset, [NERProcessor](ner.md) trained on `CoNLL03` dataset, and `default` [LemmaProcessor](lemma.md) for French:
 ```python
->>> stanfordnlp.download('fr', processors={'tokenize': 'gsd', 'pos': 'spoken', 'ner': 'conll03', 'lemma': 'default'}, package=None)
+>>> stanza.download('fr', processors={'tokenize': 'gsd', 'pos': 'spoken', 'ner': 'conll03', 'lemma': 'default'}, package=None)
 ```
 
 Other options include specify model downloading directory and control which information to print.
 
 Download the `default` [Processor](pipeline.md#processors)s for English to current working directory, and print all the information for debugging:
 ```python
->>> stanfordnlp.download('en', dir='.', logging_level='DEBUG')
+>>> stanza.download('en', dir='.', logging_level='DEBUG')
 ```
 
 ## Pipeline Loading
@@ -74,7 +74,7 @@ The [Pipeline](pipeline.md#pipeline) contains a list of [Processor](pipeline.md#
 
 Load the [TokenizeProcessor](tokenize.md) trained on `EWT` dataset, [POSProcessor](pos.md) trained on `LinES` dataset, [NERProcessor](ner.md) trained on `CoNLL03` dataset:
 ```python
->>> stanfordnlp.download('en', processors={'tokenize': 'ewt', 'pos': 'lines', 'ner': 'conll03'}, package=None)
+>>> stanza.download('en', processors={'tokenize': 'ewt', 'pos': 'lines', 'ner': 'conll03'}, package=None)
 ```
 
 As the pipeline loading has the same interface to that of the download module, more examples can be found in [model downloading](installation_usage.md#model-downloading).

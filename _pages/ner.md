@@ -30,9 +30,9 @@ Alternatively, token-level NER tags can be accessed via the `ner` fields of [`To
 The code below shows an example of accessing the named entities in the document:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
 doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'entity: {ent.text}\ttype: {ent.type}' for ent in doc.ents], sep='\n')
 ```
@@ -42,9 +42,9 @@ Alternatively, you can access the named entities in each sentence of the documen
 The equivalent of our example above would be:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
 doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'entity: {ent.text}\ttype: {ent.type}' for sent in doc.sentences for ent in sent.ents], sep='\n')
 ```
@@ -63,9 +63,9 @@ The span `Barack Obama` is a person entity, while the span `Hawaii` is a geopoli
 The code below shows an example of accessing the ner tags for each token:
 
 ```python
-import stanfordnlp
+import stanza
 
-nlp = stanfordnlp.Pipeline(lang='en', processors='tokenize,ner')
+nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
 doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'token: {token.text}\tner: {token.ner}' for sent in doc.sentences for token in sent.tokens], sep='\n')
 ```
@@ -86,4 +86,4 @@ The token `Barack` is the beginning of the person entity, while the token `Obama
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/ner_tagger.py#L32) of the NER tagger.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/ner_tagger.py#L32) of the NER tagger.

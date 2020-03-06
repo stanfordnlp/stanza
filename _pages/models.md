@@ -8,12 +8,12 @@ permalink: '/models.html'
 
 ### Downloading and Using Models
 
-StanfordNLP provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. You can customize downloading models by specifying the options in the table below:
+Stanza provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. You can customize downloading models by specifying the options in the table below:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
 | lang | str | "en" | Language code for the language to process with the Pipeline.  See table below for a complete list of available languages. |
-| dir | str | ~/stanfordnlp_resources | Directory for storing the models. |
+| dir | str | ~/stanza_resources | Directory for storing the models. |
 | package | str | "default" | Package to use for processors. See table below for a complete list of available packages. |
 | processors | dict or str | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
 | logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
@@ -21,21 +21,21 @@ StanfordNLP provides simple, flexible, unified interfaces for downloading variou
 
 We provide intutive examples about how to use these options [here](installation_usage.md#model-downloading). 
 
-### Human Languages Supported by StanfordNLP
+### Human Languages Supported by Stanza
 
-Below is a list of all the (human) languages supported by StanfordNLP (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
+Below is a list of all the (human) languages supported by Stanza (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
 The performance can be found [here](performance.md).
 
 
 ### Models Available
 
-Below is a table for all models supported by StanfordNLP on the Universal Dependencies 2.5 dataset. We recommend you always use the lastest released models. However, you can still use these earlier models by downloading them and putting them in the correct directory.
+Below is a table for all models supported by Stanza on the Universal Dependencies 2.5 dataset. We recommend you always use the lastest released models. However, you can still use these earlier models by downloading them and putting them in the correct directory.
 
 **Notes**
 
 1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
 2. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language, which is the package trained on the largest treebank available for that language.
-3. The copyright and licensing status of machine learning models is not very clear (to us). We list in the table below the Treebank License of the underlying data from which each language pack (set of machine learning models for a treebank) was trained. To the extent that The Trustees of Leland Stanford Junior University have ownership and rights over these language packs, all these StanfordNLP language packs are made available under the [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
+3. The copyright and licensing status of machine learning models is not very clear (to us). We list in the table below the Treebank License of the underlying data from which each language pack (set of machine learning models for a treebank) was trained. To the extent that The Trustees of Leland Stanford Junior University have ownership and rights over these language packs, all these Stanza language packs are made available under the [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
 
 #### UD Models
 
