@@ -6,34 +6,33 @@ permalink: '/pipeline.html'
 
 ## Pipeline
 
-Users of Stanza can process documents by building a [`Pipeline`](pipeline.md#pipeline) with the desired [`Processor`](pipeline.md#processors) units.  The pipeline takes in a [`Document`](data_objects.md#document)
-object or raw text, runs the processors in succession, and returns an annotated [`Document`](data_objects.md#document).
+Users of Stanza can process documents by building a [`Pipeline`](pipeline.md#pipeline) with the desired [`Processor`](pipeline.md#processors) units.  The pipeline takes in raw text or a [`Document`](data_objects.md#document) object, runs the processors in succession, and returns an annotated [`Document`](data_objects.md#document).
 
 You can customize the pipeline by specifying the options in the table below:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| lang | str | "en" | Language code for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
-| dir | str | ~/stanza_resources | Directory for storing the models. |
-| package | str | "default" | Package to use for processors. See [here](models.md) for a complete list of available packages. |
-| processors | dict or str | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
-| logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
-| verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
-| use_gpu | bool | True | Attempt to use a GPU if possible. |
+| lang | `str` | 'en' | Language code or language name for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
+| dir | `str` | ~/stanza_resources | Directory for storing the models. |
+| package | `str` | 'default' | Package to use for processors. See [here](models.md) for a complete list of available packages. |
+| processors | `dict` or `str` | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': 'ewt', 'pos': 'ewt'}).  |
+| logging_level | `str` | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
+| verbose | `str` | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
+| use_gpu | `bool` | True | Attempt to use a GPU if possible. |
 | kwargs | - | - | Options for each of the individual processors. See the individual processor pages for descriptions. |
 
 ## Processors
 
 Processors are units of the neural pipeline that create different annotations for a [`Document`](data_objects.md#document). The neural pipeline now supports the following processors:
 
-| Name | Annotator class name | Generated Annotation | Description |
-| --- | --- | --- | --- | 
-| tokenize | TokenizeProcessor | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWT expander](mwt.md). | Tokenizes the text and performs sentence segmentation. |
-| mwt | MWTProcessor | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](tokenize.md). |
-| lemma | LemmaProcessor | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` value. The result can be accessed in `Word.lemma`. | Generates the word lemmas for all tokens in the corpus. |
-| pos | POSProcessor | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. | Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). |
-| depparse | DepparseProcessor | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parser. |
-| ner | NERProcessor | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
+| Name | Annotator class name | Requirement | Generated Annotation | Description |
+| --- | --- | --- | --- | --- | 
+| tokenize | TokenizeProcessor | - | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWTProcessor](mwt.md). | Tokenizes the text and performs sentence segmentation. |
+| mwt | MWTProcessor | tokenize | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md). |
+| pos | POSProcessor | tokenize, mwt | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. | Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). |
+| lemma | LemmaProcessor | tokenize, mwt, pos | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` value. The result can be accessed in `Word.lemma`. | Generates the word lemmas for all tokens in the corpus. |
+| depparse | DepparseProcessor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parser. |
+| ner | NERProcessor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
 ## Usage
 
@@ -44,7 +43,7 @@ You can easily build the pipeline with options specified above:
 ```python
 import stanza
 
-nlp = stanza.Pipeline("en", processors='tokenize,pos', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
+nlp = stanza.Pipeline('en', processors='tokenize,pos', use_gpu=True, pos_batch_size=3000) # Build the pipeline, specify part-of-speech processor's batch size
 doc = nlp("Barack Obama was born in Hawaii.") # Run the pipeline on the input text
 print(doc) # Look at the result
 ```
