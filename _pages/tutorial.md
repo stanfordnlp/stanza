@@ -10,9 +10,7 @@ Here we provide many examples covering most use cases.
 
 ### Pipeline Building
 
-[Download Models](installation_usage.html#model-downloading)
-
-[Build a Neural Pipeline](pipeline.md#basic-example)
+[Download Models and Build a Neural Pipeline](installation_usage.html#pipeline-building)
 
 [Build a Neural Pipeline from Advanced Configurations](pipeline.md#build-pipeline-from-config)
 

@@ -19,7 +19,7 @@ Stanza provides simple, flexible, unified interfaces for downloading various mod
 | logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
 | verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 
-We provide intutive examples about how to use these options [here](installation_usage.md#model-downloading). 
+We provide examples about how to use these options [here](installation_usage.md#pipeline-building). 
 
 ### Human Languages Supported by Stanza
 
