@@ -74,7 +74,7 @@ The [Pipeline](pipeline.md#pipeline) contains a list of [Processor](pipeline.md#
 
 Load the [TokenizeProcessor](tokenize.md) trained on `EWT` dataset, [POSProcessor](pos.md) trained on `LinES` dataset, [NERProcessor](ner.md) trained on `CoNLL03` dataset:
 ```python
->>> stanza.download('en', processors={'tokenize': 'ewt', 'pos': 'lines', 'ner': 'conll03'}, package=None)
+>>> nlp = stanza.Pipeline('en', processors={'tokenize': 'ewt', 'pos': 'lines', 'ner': 'conll03'}, package=None)
 ```
 
 As the pipeline loading has the same interface to that of the download module, more examples can be found in [model downloading](installation_usage.md#model-downloading).
