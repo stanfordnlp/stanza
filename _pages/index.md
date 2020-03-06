@@ -49,7 +49,7 @@ You should be able to see all the annotations in the example by running the foll
 
 For more details, please see our [getting started guide](installation_usage.md) and [tutorial](tutorial.md).
 
-Aside from the neural pipeline, Stanza also provides the official Python wrapper for acessing the Java Stanford CoreNLP Server. For more details, please see [Stanford CoreNLP Client](corenlp_client.md).
+Aside from the neural pipeline, Stanza also provides the official Python wrapper for accessing the Java Stanford CoreNLP Server. For more details, please see [Stanford CoreNLP Client](corenlp_client.md).
 
 **Note**: If you run into issues during installation or when you run the example scripts, please check out [this FAQ page](faq.md). If you cannot find your issue there, please report it to us on GitHub.
 

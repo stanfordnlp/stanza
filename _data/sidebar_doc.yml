@@ -5,12 +5,11 @@ entries:
 - title: Sidebar
   subcategories:
 
-
     - title: Overview
 
       items:
         - title: About
-          url: index.html
+          url: index.html#about
 
         - title: Get Started
           url: index.html#get-started
@@ -22,7 +21,7 @@ entries:
 
       items:
 
-        - title: Installation & Getting started
+        - title: Installation & Getting Started
           url: installation_usage.html
 
         - title: Tutorial
@@ -70,7 +69,7 @@ entries:
     - title: Stanford CoreNLP Client
         
       items:
-        - title: Overview
+        - title: Overview#overview
           url: corenlp_client.html
 
         - title: Setup
