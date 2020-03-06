@@ -21,9 +21,9 @@ dev_file=${CHARLM_DATA_DIR}/${lang}/${corpus_name}/dev.txt
 test_file=${CHARLM_DATA_DIR}/${lang}/${corpus_name}/test.txt
 
 echo "Running charlm for $lang:$corpus with $args..."
-python -m stanfordnlp.models.charlm --train_dir $train_dir --eval_file $dev_file \
+python -m stanza.models.charlm --train_dir $train_dir --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode train $args
-python -m stanfordnlp.models.charlm --eval_file $dev_file \
+python -m stanza.models.charlm --eval_file $dev_file \
     --direction $direction --lang $lang --shorthand $short --mode predict $args
-python -m stanfordnlp.models.charlm --eval_file $test_file \
+python -m stanza.models.charlm --eval_file $test_file \
     --direction $direction --lang $lang --shorthand $short --mode predict $args

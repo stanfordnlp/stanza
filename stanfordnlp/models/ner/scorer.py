@@ -6,9 +6,9 @@ import os
 import logging
 from collections import Counter
 
-from stanfordnlp.models.ner.utils import decode_from_bioes
+from stanza.models.ner.utils import decode_from_bioes
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
     """ Score predicted tags at the entity level.

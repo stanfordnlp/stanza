@@ -11,21 +11,21 @@ import json
 import os
 
 from distutils.util import strtobool
-from stanfordnlp.pipeline._constants import *
-from stanfordnlp.models.common.doc import Document
-from stanfordnlp.pipeline.processor import Processor, ProcessorRequirementsException
-from stanfordnlp.pipeline.tokenize_processor import TokenizeProcessor
-from stanfordnlp.pipeline.mwt_processor import MWTProcessor
-from stanfordnlp.pipeline.pos_processor import POSProcessor
-from stanfordnlp.pipeline.lemma_processor import LemmaProcessor
-from stanfordnlp.pipeline.depparse_processor import DepparseProcessor
-from stanfordnlp.pipeline.ner_processor import NERProcessor
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
+from stanza.pipeline._constants import *
+from stanza.models.common.doc import Document
+from stanza.pipeline.processor import Processor, ProcessorRequirementsException
+from stanza.pipeline.tokenize_processor import TokenizeProcessor
+from stanza.pipeline.mwt_processor import MWTProcessor
+from stanza.pipeline.pos_processor import POSProcessor
+from stanza.pipeline.lemma_processor import LemmaProcessor
+from stanza.pipeline.depparse_processor import DepparseProcessor
+from stanza.pipeline.ner_processor import NERProcessor
+from stanza.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
-from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
-from stanfordnlp.utils.helper_func import make_table
+from stanza.models.common.constant import lcode2lang, langlower2lcode
+from stanza.utils.helper_func import make_table
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
                            LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}

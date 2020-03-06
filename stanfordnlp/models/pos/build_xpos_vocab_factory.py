@@ -1,11 +1,11 @@
 from collections import defaultdict
 import os
 import sys
-from stanfordnlp.models.common.vocab import VOCAB_PREFIX
-from stanfordnlp.models.common.constant import lang2lcode
-from stanfordnlp.models.pos.vocab import XPOSVocab, WordVocab
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.utils.conll import CoNLL
+from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.common.constant import lang2lcode
+from stanza.models.pos.vocab import XPOSVocab, WordVocab
+from stanza.models.common.doc import *
+from stanza.utils.conll import CoNLL
 
 if len(sys.argv) != 3:
     print('Usage: {} list_of_tb_file output_factory_file'.format(sys.argv[0]))

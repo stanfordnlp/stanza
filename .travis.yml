@@ -10,12 +10,12 @@ install:
   - wget $CORENLP_URL -O corenlp.zip
   - unzip corenlp.zip
   - mv $CORENLP_VERSION $CORENLP_HOME
-  - mkdir ~/stanfordnlp_test
-  - mkdir ~/stanfordnlp_test/in
-  - mkdir ~/stanfordnlp_test/out
-  - mkdir ~/stanfordnlp_test/scripts
-  - cp tests/data/external_server.properties ~/stanfordnlp_test/scripts
-  - cp tests/data/example_french.json ~/stanfordnlp_test/out
-  - export STANFORDNLP_TEST_HOME=~/stanfordnlp_test
+  - mkdir ~/stanza_test
+  - mkdir ~/stanza_test/in
+  - mkdir ~/stanza_test/out
+  - mkdir ~/stanza_test/scripts
+  - cp tests/data/external_server.properties ~/stanza_test/scripts
+  - cp tests/data/example_french.json ~/stanza_test/out
+  - export STANZA_TEST_HOME=~/stanza_test
 script:
   - python -m pytest -m travis tests/

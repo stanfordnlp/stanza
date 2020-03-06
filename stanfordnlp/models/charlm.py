@@ -13,17 +13,17 @@ import logging
 import time
 import os
 
-from stanfordnlp.models.common.char_model import CharacterLanguageModel
-from stanfordnlp.models.pos.vocab import CharVocab
-from stanfordnlp.models.common import utils
-from stanfordnlp.models import _training_logging
+from stanza.models.common.char_model import CharacterLanguageModel
+from stanza.models.pos.vocab import CharVocab
+from stanza.models.common import utils
+from stanza.models import _training_logging
 
 # modify logging format
 formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 for h in logging.getLogger().handlers:
     h.setFormatter(formatter)
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors,

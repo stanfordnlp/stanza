@@ -5,11 +5,11 @@ import numpy as np
 import re
 import logging
 
-from stanfordnlp.models.common.utils import ud_scores, harmonic_mean
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models.common.doc import *
+from stanza.models.common.utils import ud_scores, harmonic_mean
+from stanza.utils.conll import CoNLL
+from stanza.models.common.doc import *
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def load_mwt_dict(filename):
     if filename is not None:

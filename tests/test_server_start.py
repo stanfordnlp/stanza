@@ -3,8 +3,8 @@ Tests for starting a server in Python code
 """
 
 import pytest
-import stanfordnlp.server as corenlp
-from stanfordnlp.server.client import AnnotationException
+import stanza.server as corenlp
+from stanza.server.client import AnnotationException
 import time
 
 from tests import *

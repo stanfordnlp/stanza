@@ -3,9 +3,9 @@ Utils and wrappers for scoring parsers.
 """
 import logging
 
-from stanfordnlp.models.common.utils import ud_scores
+from stanza.models.common.utils import ud_scores
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def score(system_conllu_file, gold_conllu_file, verbose=True):
     """ Wrapper for UD parser scorer. """

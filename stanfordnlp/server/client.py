@@ -16,10 +16,10 @@ import uuid
 
 from six.moves.urllib.parse import urlparse
 
-from stanfordnlp.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
+from stanza.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 # pattern tmp props file should follow
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')

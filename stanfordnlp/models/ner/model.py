@@ -4,11 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from stanfordnlp.models.common.packed_lstm import PackedLSTM
-from stanfordnlp.models.common.dropout import WordDropout, LockedDropout
-from stanfordnlp.models.common.char_model import CharacterModel, CharacterLanguageModel
-from stanfordnlp.models.common.crf import CRFLoss
-from stanfordnlp.models.common.vocab import PAD_ID
+from stanza.models.common.packed_lstm import PackedLSTM
+from stanza.models.common.dropout import WordDropout, LockedDropout
+from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+from stanza.models.common.crf import CRFLoss
+from stanza.models.common.vocab import PAD_ID
 
 class NERTagger(nn.Module):
     def __init__(self, args, vocab, emb_matrix=None):

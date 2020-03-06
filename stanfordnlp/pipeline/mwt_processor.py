@@ -4,10 +4,10 @@ Processor for performing multi-word-token expansion
 
 import io
 
-from stanfordnlp.models.mwt.data import DataLoader
-from stanfordnlp.models.mwt.trainer import Trainer
-from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.processor import UDProcessor
+from stanza.models.mwt.data import DataLoader
+from stanza.models.mwt.trainer import Trainer
+from stanza.pipeline._constants import *
+from stanza.pipeline.processor import UDProcessor
 
 
 class MWTProcessor(UDProcessor):

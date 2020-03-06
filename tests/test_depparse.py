@@ -3,9 +3,9 @@ Basic tests of the depparse processor boolean flags
 """
 import pytest
 
-import stanfordnlp
-from stanfordnlp.pipeline.core import PipelineRequirementsException
-from stanfordnlp.utils.conll import CoNLL
+import stanza
+from stanza.pipeline.core import PipelineRequirementsException
+from stanza.utils.conll import CoNLL
 from tests import *
 
 pytestmark = pytest.mark.pipeline
@@ -63,16 +63,16 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 
 
 def test_depparse():
-    nlp = stanfordnlp.Pipeline(dir=TEST_MODELS_DIR, lang='en')
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en')
     doc = nlp(EN_DOC)
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join([sent.dependencies_string() for sent in doc.sentences])
 
 
 def test_depparse_with_pretagged_doc():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en',
+    nlp = stanza.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'depparse_pretagged': True})
 
-    doc = stanfordnlp.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PRETAGGED))
+    doc = stanza.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PRETAGGED))
     processed_doc = nlp(doc)
 
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join(
@@ -81,4 +81,4 @@ def test_depparse_with_pretagged_doc():
 
 def test_raises_requirements_exception_if_pretagged_not_passed():
     with pytest.raises(PipelineRequirementsException):
-        stanfordnlp.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en'})
+        stanza.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en'})

@@ -20,14 +20,14 @@ import random
 import torch
 from torch import nn, optim
 
-from stanfordnlp.models.depparse.data import DataLoader
-from stanfordnlp.models.depparse.trainer import Trainer
-from stanfordnlp.models.depparse import scorer
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models import _training_logging
+from stanza.models.depparse.data import DataLoader
+from stanza.models.depparse.trainer import Trainer
+from stanza.models.depparse import scorer
+from stanza.models.common import utils
+from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.doc import *
+from stanza.utils.conll import CoNLL
+from stanza.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

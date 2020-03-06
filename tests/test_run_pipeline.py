@@ -32,7 +32,7 @@ def run_pipeline_for_lang(lang_shorthand):
     safe_rm(models_download_dir)
     # run french pipeline command and check results
     pipeline_cmd = \
-        f"python -m stanfordnlp.run_pipeline -t {lang_shorthand} -d {DOWNLOAD_TEST_DIR} --force-download " \
+        f"python -m stanza.run_pipeline -t {lang_shorthand} -d {DOWNLOAD_TEST_DIR} --force-download " \
         f"-o {output_file} {input_file}"
     subprocess.call(pipeline_cmd, shell=True)
     # cleanup

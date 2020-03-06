@@ -3,14 +3,14 @@ Processor for performing named entity tagging.
 """
 import logging
 
-from stanfordnlp.models.common import doc
-from stanfordnlp.models.common.utils import unsort
-from stanfordnlp.models.ner.data import DataLoader
-from stanfordnlp.models.ner.trainer import Trainer
-from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.processor import UDProcessor
+from stanza.models.common import doc
+from stanza.models.common.utils import unsort
+from stanza.models.ner.data import DataLoader
+from stanza.models.ner.trainer import Trainer
+from stanza.pipeline._constants import *
+from stanza.pipeline.processor import UDProcessor
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class NERProcessor(UDProcessor):
 

@@ -6,12 +6,12 @@ import os
 import argparse
 import random
 
-from stanfordnlp.models.lemma.data import DataLoader
-from stanfordnlp.models.lemma import scorer
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models import _training_logging
+from stanza.models.lemma.data import DataLoader
+from stanza.models.lemma import scorer
+from stanza.models.common import utils
+from stanza.models.common.doc import *
+from stanza.utils.conll import CoNLL
+from stanza.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

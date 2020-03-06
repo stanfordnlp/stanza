@@ -2,13 +2,13 @@
 Processor for performing dependency parsing
 """
 
-from stanfordnlp.models.common import doc
-from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.utils import unsort
-from stanfordnlp.models.depparse.data import DataLoader
-from stanfordnlp.models.depparse.trainer import Trainer
-from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.processor import UDProcessor
+from stanza.models.common import doc
+from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.utils import unsort
+from stanza.models.depparse.data import DataLoader
+from stanza.models.depparse.trainer import Trainer
+from stanza.pipeline._constants import *
+from stanza.pipeline.processor import UDProcessor
 
 
 class DepparseProcessor(UDProcessor):

@@ -4,12 +4,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
+from stanza.models.common.trainer import Trainer as BaseTrainer
 
 from .model import Tokenizer
 from .vocab import Vocab
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):

@@ -8,12 +8,12 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.common.seq2seq_modules import LSTMAttention
-from stanfordnlp.models.common.beam import Beam
+import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common import utils
+from stanza.models.common.seq2seq_modules import LSTMAttention
+from stanza.models.common.beam import Beam
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class Seq2SeqModel(nn.Module):
     """

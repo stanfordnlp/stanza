@@ -29,11 +29,11 @@ fi
 
 echo "Running lemmatizer with $args..."
 if [[ "$lang" == "vi" || "$lang" == "fro" ]]; then
-    python -m stanfordnlp.models.identity_lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
+    python -m stanza.models.identity_lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short
 else
-    python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
+    python -m stanza.models.lemmatizer --data_dir $LEMMA_DATA_DIR --train_file $train_file --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short --num_epoch $num_epoch --mode train $args
-    python -m stanfordnlp.models.lemmatizer --data_dir $LEMMA_DATA_DIR --eval_file $eval_file \
+    python -m stanza.models.lemmatizer --data_dir $LEMMA_DATA_DIR --eval_file $eval_file \
         --output_file $output_file --gold_file $gold_file --lang $short --mode predict $args
 fi

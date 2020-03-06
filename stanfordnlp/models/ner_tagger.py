@@ -18,16 +18,16 @@ import json
 import torch
 from torch import nn, optim
 
-from stanfordnlp.models.ner.data import DataLoader
-from stanfordnlp.models.ner.trainer import Trainer
-from stanfordnlp.models.ner import scorer
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.models import _training_logging
+from stanza.models.ner.data import DataLoader
+from stanza.models.ner.trainer import Trainer
+from stanza.models.ner import scorer
+from stanza.models.common import utils
+from stanza.models.common.pretrain import Pretrain
+from stanza.utils.conll import CoNLL
+from stanza.models.common.doc import *
+from stanza.models import _training_logging
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def parse_args():
     parser = argparse.ArgumentParser()

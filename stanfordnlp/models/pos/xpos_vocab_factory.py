@@ -1,7 +1,7 @@
 # This is the XPOS factory method generated automatically from models.pos.build_xpos_factory.
 # Please don't edit it!
 
-from stanfordnlp.models.pos.vocab import WordVocab, XPOSVocab
+from stanza.models.pos.vocab import WordVocab, XPOSVocab
 
 def xpos_vocab_factory(data, shorthand):
     if shorthand in ["af_afribooms", "grc_perseus", "ar_padt", "bg_btb", "hr_set", "cs_cac", "cs_cltt", "cs_fictree", "cs_pdt", "en_partut", "fr_partut", "gl_ctg", "it_isdt", "it_partut", "it_postwita", "it_twittiro", "it_vit", "ja_gsd", "lv_lvtb", "lt_alksnis", "ro_nonstandard", "ro_rrt", "gd_arcosg", "sr_set", "sk_snk", "sl_ssj", "ta_ttb", "uk_iu", "gl_treegal", "la_perseus", "sl_sst"]:

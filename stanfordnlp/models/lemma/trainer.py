@@ -10,13 +10,13 @@ import torch
 from torch import nn
 import torch.nn.init as init
 
-import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common.seq2seq_model import Seq2SeqModel
-from stanfordnlp.models.common import utils, loss
-from stanfordnlp.models.lemma import edit
-from stanfordnlp.models.lemma.vocab import MultiVocab
+import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.seq2seq_model import Seq2SeqModel
+from stanza.models.common import utils, loss
+from stanza.models.lemma import edit
+from stanza.models.lemma.vocab import MultiVocab
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

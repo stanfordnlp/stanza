@@ -4,7 +4,7 @@ Utility functions for data transformations.
 
 import torch
 
-import stanfordnlp.models.common.seq2seq_constant as constant
+import stanza.models.common.seq2seq_constant as constant
 
 def map_to_ids(tokens, vocab):
     ids = [vocab[t] if t in vocab else constant.UNK_ID for t in tokens]

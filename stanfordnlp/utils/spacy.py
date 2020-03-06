@@ -2,7 +2,7 @@
 Utilities related to using spaCy in the pipeline.
 """
 
-from stanfordnlp.models.common import doc
+from stanza.models.common import doc
 
 def check_spacy():
     """

@@ -8,9 +8,9 @@ import torch.nn as nn
 import math
 import numpy as np
 
-import stanfordnlp.models.common.seq2seq_constant as constant
+import stanza.models.common.seq2seq_constant as constant
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class BasicAttention(nn.Module):
     """

@@ -5,16 +5,16 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanfordnlp.models.tokenize.data import DataLoader
-from stanfordnlp.models.tokenize.trainer import Trainer
-from stanfordnlp.models.tokenize.utils import output_predictions
-from stanfordnlp.pipeline._constants import *
-from stanfordnlp.pipeline.processor import UDProcessor
-from stanfordnlp.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
-from stanfordnlp.models.common import doc
-from stanfordnlp.utils.spacy import SpacyTokenizer
+from stanza.models.tokenize.data import DataLoader
+from stanza.models.tokenize.trainer import Trainer
+from stanza.models.tokenize.utils import output_predictions
+from stanza.pipeline._constants import *
+from stanza.pipeline.processor import UDProcessor
+from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
+from stanza.models.common import doc
+from stanza.utils.spacy import SpacyTokenizer
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 # class for running the tokenizer
 class TokenizeProcessor(UDProcessor):

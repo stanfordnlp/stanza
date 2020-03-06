@@ -7,13 +7,13 @@ import logging
 import torch
 from torch import nn
 
-from stanfordnlp.models.common.trainer import Trainer as BaseTrainer
-from stanfordnlp.models.common import utils, loss
-from stanfordnlp.models.ner.model import NERTagger
-from stanfordnlp.models.ner.vocab import MultiVocab
-from stanfordnlp.models.common.crf import viterbi_decode
+from stanza.models.common.trainer import Trainer as BaseTrainer
+from stanza.models.common import utils, loss
+from stanza.models.ner.model import NERTagger
+from stanza.models.ner.vocab import MultiVocab
+from stanza.models.common.crf import viterbi_decode
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 def unpack_batch(batch, use_cuda):
     """ Unpack a batch from the data loader. """

@@ -136,8 +136,8 @@ def get_md5(path):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, default='/u/scr/zyh/develop/stanfordnlp-train/saved_models', help='Input dir for various models.')
-    parser.add_argument('--output_dir', type=str, default='/u/apache/htdocs/static/software/stanza/output', help='Output dir for various models.')
+    parser.add_argument('--input_dir', type=str, help='Input dir for various models.')
+    parser.add_argument('--output_dir', type=str, help='Output dir for various models.')
     args = parser.parse_args()
     return args
 

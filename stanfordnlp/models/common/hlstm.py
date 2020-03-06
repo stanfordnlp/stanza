@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
 
-from stanfordnlp.models.common.packed_lstm import PackedLSTM
+from stanza.models.common.packed_lstm import PackedLSTM
 
 class HLSTMCell(nn.modules.rnn.RNNCellBase):
     """

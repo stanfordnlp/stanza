@@ -5,17 +5,17 @@ script for running full pipeline on command line
 import argparse
 import os
 
-from stanfordnlp import download, Pipeline
-from stanfordnlp.pipeline.core import BOOLEAN_PROCESSOR_SETTINGS_LIST, PROCESSOR_SETTINGS_LIST
-from stanfordnlp.utils.resources import default_treebanks, DEFAULT_MODEL_DIR
-from stanfordnlp.utils.conll import CoNLL
+from stanza import download, Pipeline
+from stanza.pipeline.core import BOOLEAN_PROCESSOR_SETTINGS_LIST, PROCESSOR_SETTINGS_LIST
+from stanza.utils.resources import default_treebanks, DEFAULT_MODEL_DIR
+from stanza.utils.conll import CoNLL
 
 
 if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser()
     # main arguments
-    parser.add_argument('-d', '--models-dir', help='location of models files | default: ~/stanfordnlp_resources',
+    parser.add_argument('-d', '--models-dir', help='location of models files | default: ~/stanza_resources',
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--language', help='language of text | default: en', default='en')
     parser.add_argument('-t', '--treebank', help='treebank to use | default: None', default=None)

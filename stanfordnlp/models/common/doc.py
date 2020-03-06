@@ -6,7 +6,7 @@ import io
 import re
 import json
 
-from stanfordnlp.models.ner.utils import decode_from_bioes
+from stanza.models.ner.utils import decode_from_bioes
 
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")

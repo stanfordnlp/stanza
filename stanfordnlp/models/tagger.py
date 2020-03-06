@@ -17,14 +17,14 @@ import random
 import torch
 from torch import nn, optim
 
-from stanfordnlp.models.pos.data import DataLoader
-from stanfordnlp.models.pos.trainer import Trainer
-from stanfordnlp.models.pos import scorer
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.common.pretrain import Pretrain
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models import _training_logging
+from stanza.models.pos.data import DataLoader
+from stanza.models.pos.trainer import Trainer
+from stanza.models.pos import scorer
+from stanza.models.common import utils
+from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.doc import *
+from stanza.utils.conll import CoNLL
+from stanza.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

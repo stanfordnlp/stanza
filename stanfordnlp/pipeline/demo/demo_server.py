@@ -1,6 +1,6 @@
 from flask import Flask, request, abort
 import json
-import stanfordnlp
+import stanza
 import os
 app = Flask(__name__, static_url_path='', static_folder=os.path.abspath(os.path.dirname(__file__)))
 
@@ -13,10 +13,10 @@ def get_file(path):
 
 @app.route('/<path:path>')
 def static_file(path):
-    if path in ['stanfordnlp-brat.css', 'stanfordnlp-brat.js', 'stanfordnlp-parseviewer.js', 'loading.gif']:
+    if path in ['stanza-brat.css', 'stanza-brat.js', 'stanza-parseviewer.js', 'loading.gif']:
         return app.send_static_file(path)
     elif path == 'index.html':
-        return app.send_static_file('stanfordnlp-brat.html')
+        return app.send_static_file('stanza-brat.html')
     else:
         abort(403)
 
@@ -33,7 +33,7 @@ def annotate():
     text = list(request.form.keys())[0]
 
     if lang not in pipelineCache:
-        pipelineCache[lang] = stanfordnlp.Pipeline(lang=lang, use_gpu=False)
+        pipelineCache[lang] = stanza.Pipeline(lang=lang, use_gpu=False)
 
     res = pipelineCache[lang](text)
 

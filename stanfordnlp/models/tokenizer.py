@@ -12,11 +12,11 @@ from copy import copy
 import numpy as np
 import torch
 
-from stanfordnlp.models.common import utils
-from stanfordnlp.models.tokenize.trainer import Trainer
-from stanfordnlp.models.tokenize.data import DataLoader
-from stanfordnlp.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
-from stanfordnlp.models import _training_logging
+from stanza.models.common import utils
+from stanza.models.tokenize.trainer import Trainer
+from stanza.models.tokenize.data import DataLoader
+from stanza.models.tokenize.utils import load_mwt_dict, eval_model, output_predictions
+from stanza.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

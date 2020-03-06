@@ -17,15 +17,15 @@ import random
 import torch
 from torch import nn, optim
 
-from stanfordnlp.models.lemma.data import DataLoader
-from stanfordnlp.models.lemma.vocab import Vocab
-from stanfordnlp.models.lemma.trainer import Trainer
-from stanfordnlp.models.lemma import scorer, edit
-from stanfordnlp.models.common import utils
-import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.utils.conll import CoNLL
-from stanfordnlp.models import _training_logging
+from stanza.models.lemma.data import DataLoader
+from stanza.models.lemma.vocab import Vocab
+from stanza.models.lemma.trainer import Trainer
+from stanza.models.lemma import scorer, edit
+from stanza.models.common import utils
+import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.doc import *
+from stanza.utils.conll import CoNLL
+from stanza.models import _training_logging
 
 def parse_args():
     parser = argparse.ArgumentParser()

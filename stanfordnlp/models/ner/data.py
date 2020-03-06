@@ -2,14 +2,14 @@ import random
 import logging
 import torch
 
-from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
-from stanfordnlp.models.ner.vocab import TagVocab, MultiVocab
-from stanfordnlp.models.common.doc import *
-from stanfordnlp.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
+from stanza.models.pos.vocab import CharVocab, WordVocab
+from stanza.models.ner.vocab import TagVocab, MultiVocab
+from stanza.models.common.doc import *
+from stanza.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):

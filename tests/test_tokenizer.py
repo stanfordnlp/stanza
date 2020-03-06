@@ -3,7 +3,7 @@ Basic testing of tokenization
 """
 
 import pytest
-import stanfordnlp
+import stanza
 
 from tests import *
 
@@ -86,13 +86,13 @@ EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is',
 
 
 def test_tokenize():
-    nlp = stanfordnlp.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
+    nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 
 def test_pretokenized():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
+    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'tokenize_pretokenized': True})
     doc = nlp(EN_DOC_PRETOKENIZED)
     assert EN_DOC_PRETOKENIZED_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
@@ -100,7 +100,7 @@ def test_pretokenized():
     assert EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 def test_no_ssplit():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
+    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'tokenize_no_ssplit': True})
 
     doc = nlp(EN_DOC_NO_SSPLIT)

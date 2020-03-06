@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Set environment variables for the training and testing of stanfordnlp modules.
+# Set environment variables for the training and testing of stanza modules.
 
 # Set UDBASE to the location of UD data folder
 # The data should be CoNLL-U format

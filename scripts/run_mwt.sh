@@ -21,13 +21,13 @@ if [ ! -e $train_file ]; then
     bash scripts/prep_mwt_data.sh $treebank
 fi
 
-dec_len=$(python -c "from math import ceil; print(ceil($(python stanfordnlp/utils/max_mwt_length.py ${TOKENIZE_DATA_DIR}/${short}-ud-train-mwt.json ${TOKENIZE_DATA_DIR}/${short}-ud-dev-mwt.json) * 1.1 + 1))")
+dec_len=$(python -c "from math import ceil; print(ceil($(python stanza/utils/max_mwt_length.py ${TOKENIZE_DATA_DIR}/${short}-ud-train-mwt.json ${TOKENIZE_DATA_DIR}/${short}-ud-dev-mwt.json) * 1.1 + 1))")
 
 echo "Running $args..."
-python -m stanfordnlp.models.mwt_expander --train_file $train_file --eval_file $eval_file \
+python -m stanza.models.mwt_expander --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode train --max_dec_len $dec_len $args
-python -m stanfordnlp.models.mwt_expander --eval_file $eval_file \
+python -m stanza.models.mwt_expander --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict $args
-results=`python stanfordnlp/utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
+results=`python stanza/utils/conll18_ud_eval.py -v $gold_file $output_file | head -5 | tail -n+5 | awk '{print $7}'`
 echo $results $args >> ${MWT_DATA_DIR}/${short}.results
 echo $short $results $args

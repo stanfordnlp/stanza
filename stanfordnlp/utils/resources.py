@@ -12,17 +12,17 @@ import zipfile
 import shutil
 import logging
 
-from stanfordnlp.models.common.constant import lcode2lang, langlower2lcode
-from stanfordnlp.utils.helper_func import make_table
-from stanfordnlp.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
-from stanfordnlp._version import __resources_version__
+from stanza.models.common.constant import lcode2lang, langlower2lcode
+from stanza.utils.helper_func import make_table
+from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
+from stanza._version import __resources_version__
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanfordnlp/dev/stanfordnlp/utils'
-DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanfordnlp_resources')
+DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanza_resources')
 DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
 DEFAULT_PROCESSORS = "default_processors"
 DEFAULT_DEPENDENCIES = "default_dependencies"

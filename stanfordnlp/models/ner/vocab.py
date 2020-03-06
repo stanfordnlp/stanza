@@ -1,9 +1,9 @@
 from collections import Counter, OrderedDict
 
-from stanfordnlp.models.common.vocab import BaseVocab, BaseMultiVocab
-from stanfordnlp.models.common.vocab import VOCAB_PREFIX
-from stanfordnlp.models.common.pretrain import PretrainedWordVocab
-from stanfordnlp.models.pos.vocab import CharVocab, WordVocab
+from stanza.models.common.vocab import BaseVocab, BaseMultiVocab
+from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.common.pretrain import PretrainedWordVocab
+from stanza.models.pos.vocab import CharVocab, WordVocab
 
 class TagVocab(BaseVocab):
     """ A vocab for the output tag sequence. """

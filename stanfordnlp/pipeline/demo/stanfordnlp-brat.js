@@ -22,7 +22,7 @@ head.js(
   bratLocation + '/client/src/visualizer.js',
 
   // parse viewer
-  './stanfordnlp-parseviewer.js'
+  './stanza-parseviewer.js'
 );
 
 // Uses Dagre (https://github.com/cpettitt/dagre) for constinuency parse

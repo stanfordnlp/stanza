@@ -7,7 +7,7 @@ import json
 import unicodedata
 import torch
 
-import stanfordnlp.models.common.seq2seq_constant as constant
+import stanza.models.common.seq2seq_constant as constant
 
 # torch utils
 def get_optimizer(name, parameters, lr):

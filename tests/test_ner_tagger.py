@@ -3,10 +3,10 @@ Basic testing of the NER tagger.
 """
 
 import pytest
-import stanfordnlp
+import stanza
 
 from tests import *
-from stanfordnlp.models.ner.scorer import score_by_token, score_by_entity
+from stanza.models.ner.scorer import score_by_token, score_by_entity
 
 pytestmark = pytest.mark.pipeline
 
@@ -19,7 +19,7 @@ EN_DOC_GOLD = """
 
 
 def test_ner():
-    nlp = stanfordnlp.Pipeline(**{'processors': 'tokenize,ner', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'logging_level': 'error'})
+    nlp = stanza.Pipeline(**{'processors': 'tokenize,ner', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'logging_level': 'error'})
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD == '\n'.join([ent.pretty_print() for ent in doc.ents])
 

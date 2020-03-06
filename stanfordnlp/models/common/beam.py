@@ -1,7 +1,7 @@
 from __future__ import division
 import torch
 
-import stanfordnlp.models.common.seq2seq_constant as constant
+import stanza.models.common.seq2seq_constant as constant
 
 """
  Adapted and modified from the OpenNMT project.

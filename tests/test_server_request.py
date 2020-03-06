@@ -4,9 +4,9 @@ Tests for setting request properties of servers
 
 import json
 import pytest
-import stanfordnlp.server as corenlp
+import stanza.server as corenlp
 
-from stanfordnlp.protobuf import Document
+from stanza.protobuf import Document
 from tests import TEST_WORKING_DIR
 
 pytestmark = pytest.mark.client
@@ -192,7 +192,7 @@ punct(es-5, .-10)
 @pytest.fixture(scope="module")
 def corenlp_client():
     """ Client to run tests on """
-    client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos', server_id='stanfordnlp_request_tests_server')
+    client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos', server_id='stanza_request_tests_server')
     client.register_properties_key('fr-custom', FRENCH_CUSTOM_PROPS)
     yield client
     client.stop()

@@ -1,7 +1,7 @@
-from stanfordnlp.pipeline.core import Pipeline
-from stanfordnlp.models.common.doc import Document
-from stanfordnlp.utils.resources import download
-from stanfordnlp._version import __version__, __resources_version__
+from stanza.pipeline.core import Pipeline
+from stanza.models.common.doc import Document
+from stanza.utils.resources import download
+from stanza._version import __version__, __resources_version__
 
 import logging.config
 logging.config.dictConfig(

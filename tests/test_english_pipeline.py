@@ -3,8 +3,8 @@ Basic testing of the English pipeline
 """
 
 import pytest
-import stanfordnlp
-from stanfordnlp.utils.conll import CoNLL
+import stanza
+from stanza.utils.conll import CoNLL
 
 from tests import *
 
@@ -110,7 +110,7 @@ EN_DOC_CONLLU_GOLD = """
 @pytest.fixture(scope="module")
 def processed_doc():
     """ Document created by running full English pipeline on a few sentences """
-    nlp = stanfordnlp.Pipeline(dir=TEST_MODELS_DIR)
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR)
     return nlp(EN_DOC)
 
 

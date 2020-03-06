@@ -37,7 +37,7 @@ fi
 
 if [ -e $dev_conllu ]; then
     echo "Preparing dev data..."
-    python stanfordnlp/utils/contract_mwt.py $dev_conllu $dev_in_file
+    python stanza/utils/contract_mwt.py $dev_conllu $dev_in_file
     bash scripts/prep_tokenize_data.sh $src_treebank dev
 else
     touch $dev_in_file

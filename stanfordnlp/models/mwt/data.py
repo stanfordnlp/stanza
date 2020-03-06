@@ -5,12 +5,12 @@ from collections import Counter
 import logging
 import torch
 
-import stanfordnlp.models.common.seq2seq_constant as constant
-from stanfordnlp.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanfordnlp.models.mwt.vocab import Vocab
-from stanfordnlp.models.common.doc import Document
+import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.mwt.vocab import Vocab
+from stanza.models.common.doc import Document
 
-logger = logging.getLogger('stanfordnlp')
+logger = logging.getLogger('stanza')
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False):

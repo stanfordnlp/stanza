@@ -1,7 +1,7 @@
 """
 Utils and wrappers for scoring lemmatizers.
 """
-from stanfordnlp.utils import conll18_ud_eval as ud_eval
+from stanza.utils import conll18_ud_eval as ud_eval
 
 def score(system_conllu_file, gold_conllu_file):
     """ Wrapper for lemma scorer. """

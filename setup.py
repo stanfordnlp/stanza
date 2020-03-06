@@ -8,8 +8,8 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-# read the version from stanfordnlp/_version.py
-version_file_contents = open(path.join(here, 'stanfordnlp/_version.py'), encoding='utf-8').read()
+# read the version from stanza/_version.py
+version_file_contents = open(path.join(here, 'stanza/_version.py'), encoding='utf-8').read()
 VERSION = re.compile('__version__ = \"(.*)\"').search(version_file_contents).group(1)
 
 # Get the long description from the README file
@@ -17,7 +17,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='stanfordnlp',
+    name='stanza',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -28,7 +28,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     # The project's main homepage.
-    url='https://github.com/stanfordnlp/stanfordnlp.git',
+    url='https://github.com/stanfordnlp/stanza.git',
 
     # Author details
     author='Stanford Natural Language Processing Group',

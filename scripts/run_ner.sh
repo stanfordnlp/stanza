@@ -24,10 +24,10 @@ if [ ! -e $train_file ]; then
 fi
 
 echo "Running ner with $args..."
-python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $dev_file \
+python -m stanza.models.ner_tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $dev_file \
     --lang $lang --shorthand $short --mode train $args
-python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $dev_file \
+python -m stanza.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $dev_file \
     --lang $lang --shorthand $short --mode predict $args
-python -m stanfordnlp.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $test_file \
+python -m stanza.models.ner_tagger --wordvec_dir $WORDVEC_DIR --eval_file $test_file \
     --lang $lang --shorthand $short --mode predict $args
 
