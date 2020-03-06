@@ -10,7 +10,7 @@ Users of Stanza can process documents by building a [`Pipeline`](pipeline.md#pip
 
 You can customize the pipeline by specifying the options in the table below:
 
-| Option name | Type | Default | Description |
+| Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | lang | `str` | 'en' | Language code or language name for the language to process with the Pipeline.  See [here](models.md) for a complete list of available languages. |
 | dir | `str` | ~/stanza_resources | Directory for storing the models. |
