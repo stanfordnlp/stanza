@@ -4,40 +4,31 @@ keywords: models
 permalink: '/models.html'
 ---
 
-## Models for Human Languages
+## Downloading Models
 
-### Downloading and Using Models
+Stanza provides simple and flexible interfaces for downloading models. You can customize downloading by specifying the options in the table below:
 
-Stanza provides simple, flexible, unified interfaces for downloading various models and building desired pipelines. You can customize downloading models by specifying the options in the table below:
-
-| Option name | Type | Default | Description |
+| Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| lang | str | "en" | Language code for the language to process with the Pipeline.  See table below for a complete list of available languages. |
-| dir | str | ~/stanza_resources | Directory for storing the models. |
-| package | str | "default" | Package to use for processors. See table below for a complete list of available packages. |
-| processors | dict or str | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': package, 'pos': package}).  |
-| logging_level | str | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
-| verbose | str | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
+| lang | `str` | 'en' | Language code or language name. See table below for a complete list of available languages. |
+| dir | `str` | ~/stanza_resources | Directory for storing the models. |
+| package | `str` | 'default' | Package to use for processors. See table below for a complete list of available packages. |
+| processors | `dict` or `str` | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': 'ewt', 'pos': 'ewt'}).  |
+| logging_level | `str` | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
+| verbose | `str` | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 
 We provide examples about how to use these options [here](installation_usage.md#pipeline-building). 
 
-### Human Languages Supported by Stanza
 
-Below is a list of all the (human) languages supported by Stanza (through this Python neural pipeline). All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/).
-The performance can be found [here](performance.md).
+## Available UD Models
 
-
-### Models Available
-
-Below is a table for all models supported by Stanza on the Universal Dependencies 2.5 dataset. We recommend you always use the lastest released models. However, you can still use these earlier models by downloading them and putting them in the correct directory.
+Below is a table for all UD models supported by Stanza on the Universal Dependencies 2.5 dataset. All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/). We recommend you always use the lastest released models. However, you can still use these [earlier models](model_history.md) by downloading them and putting them in the correct directory. The performance can be found [here](performance.md).
 
 **Notes**
 
-1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the CoNLL 2018 Shared Task test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
+1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the Universal Dependencies 2.5 test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
 2. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language, which is the package trained on the largest treebank available for that language.
 3. The copyright and licensing status of machine learning models is not very clear (to us). We list in the table below the Treebank License of the underlying data from which each language pack (set of machine learning models for a treebank) was trained. To the extent that The Trustees of Leland Stanford Junior University have ownership and rights over these language packs, all these Stanza language packs are made available under the [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
-
-#### UD Models
 
 | Language | Language code | Package | Version | Treebank License | Treebank Doc |  Notes |
 | :------- | :------------ | :------ | :------ | :--------------: | :-----------: | :---- |
@@ -142,21 +133,27 @@ Below is a table for all models supported by Stanza on the Universal Dependencie
 | Vietnamese | vi | vtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/vi_vtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 | Wolof | wo | wtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/wo_wtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 
-#### NER Models
+## Available NER Models
 
-| Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS LICENSE | CORPUS DOC | NOTES |
-| :------- | :----- | :-------- | :---- | :---- | :---- | :---- |
-| Arabic | ar | AQMAR | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Chinese | zh | OntoNotes | 18 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch | nl | CoNLL02 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch | nl | WikiNER | 4 | | | |
-| English | en | CoNLL03 | 4 | | | |
-| English | en | OntoNotes | 18 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| French | fr | WikiNER | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German | de | CoNLL03 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German | de | GermEval14 | 4 | | | |
-| Russian | ru | WikiNER | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish | es | CoNLL02 | 4 | | | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish | es | AnCora | 4 | | | |
+Below is a table for all NER models supported by Stanza on various NER datasets. We recommend you always use the lastest released models. However, you can still use these [earlier models](model_history.md) by downloading them and putting them in the correct directory. The performance can be found [here](performance.md).
 
-We also provide links to download previous versions of models [here](model_history.md).
+**Notes**
+
+1. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language.
+2. For package with 4 NER types, 4 types of entities can be recognized including `PER (Person)`, `LOC (Location)`, `ORG (Organization)`, `MISC (Miscellaneous)`; For package with 18 NER types, 18 types of entities can be recognized including `PERSON`, `NORP`, `FACILITY`, `ORGANIZATION`, `GPE`, `LOCATION`, `PRODUCT`,`EVENT`, `WORK OF ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL`, `CARDINAL` (details can be found [here](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf) in the page 21).
+ 
+| Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS DOC | NOTES |
+| :------- | :----- | :-------- | :---- | :---- | :---- |
+| Arabic | ar | AQMAR | 4 | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Chinese | zh | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Dutch | nl | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Dutch | nl | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | |
+| English | en | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | |
+| English | en | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| French | fr | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| German | de | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| German | de | GermEval14 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
+| Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
+
