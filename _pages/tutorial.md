@@ -22,6 +22,8 @@ Here we provide many examples covering most use cases.
 
 [Start with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
 
+[Use spaCy for Fast Tokenization and Sentence Segmentation](tokenize.md#use-spacy-for-fast-tokenization-and-sentence-segmentation)
+
 [Access Syntactic Words for Multi-Word Token](mwt.md#access-syntactic-words-for-multi-word-token)
 
 [Access Parent Token for Word](mwt.md#access-parent-token-for-word)

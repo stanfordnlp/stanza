@@ -124,6 +124,42 @@ id: 4   text: too
 id: 5   text: !
 ```
 
+### Use spaCy for Fast Tokenization and Sentence Segmentation
+
+While our neural pipeline can achieve significantly higher accuracy, rule-based tokenizer such as [`spaCy`](https://spacy.io) runs much faster when processing large-scale text. We provide an interface to use [`spaCy`](https://spacy.io) as the tokenizer for English by simply specifying in the `processors` option. Please make sure you have successfully downloaded and installed [`spaCy`](https://spacy.io) and English models following the [guide](https://spacy.io/usage).
+
+The code below shows an example of tokenization and sentence segmentation with [`spaCy`](https://spacy.io):
+
+```python
+import stanfordnlp
+
+nlp = stanfordnlp.Pipeline(lang='en', processors={'tokenize': 'spacy'}) # spaCy tokenizer is currently only allowed in English pipeline.
+doc = nlp('This is a test sentence for stanfordnlp. This is another sentence.')
+for i, sentence in enumerate(doc.sentences):
+    print(f'====== Sentence {i+1} tokens =======')
+    print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
+```
+
+This code will generate the following output:
+
+```
+====== Sentence 1 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: test
+id: 5   text: sentence
+id: 6   text: for
+id: 7   text: stanfordnlp
+id: 8   text: .
+====== Sentence 2 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: another
+id: 4   text: sentence
+id: 5   text: .
+```
+
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanfordnlp/blob/master/stanfordnlp/models/tokenizer.py#L12) of the tokenizer.
