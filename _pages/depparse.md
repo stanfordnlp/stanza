@@ -24,7 +24,7 @@ Provides an accurate syntactic dependency parser.
 Running the [DepparseProcessor](depparse.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), [POSProcessor](pos.md), and [LemmaProcessor](lemma.md). 
 After all these processors have been run, each [`Sentence`](data_objects.md#sentence) in the output would have been parsed into Universal Dependencies (version 2) structure, where the head index of each [`Word`](data_objects.md#word) can be accessed by the property `head`, and the dependency relation between the words `deprel`. Note that the head index starts at 1 for actual words, and is 0 only when the word itself is the root of the tree. This index should be offset by 1 when looking for the govenor word in the sentence. 
 
-### Dependency Parsing
+### Access Head and Dependency Relation for Word
 
 The code below shows an example of accessing the head word and dependency relation for each word:
 

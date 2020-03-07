@@ -23,7 +23,7 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 Running the [POSProcessor](pos.md) requires the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md). 
 After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Word`](data_objects.md#word)s. The part-of-speech tags can be accessed via the `upos`(`pos`) and `xpos` fields of each [`Word`](data_objects.md#word), while the universal morphological features can be accessed via the `feats` field.
 
-### POS and Morphological Feature Tagging
+### Access POS and Morphological Feature for Word
 
 The code below shows an example of accessing part-of-speech and morphological features for each word:
 

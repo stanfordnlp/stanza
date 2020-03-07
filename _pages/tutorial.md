@@ -26,17 +26,17 @@ Here we provide many examples covering most use cases.
 
 [Access Parent Token for Word](mwt.md#access-parent-token-for-word)
 
-[Access POS and Morphological Feature for Word](pos.md#pos-and-morphological-feature-tagging)
+[Access POS and Morphological Feature for Word](pos.md#access-pos-and-morphological-feature-for-word)
 
-[Access Lemma for Word](lemma.md#lemmatization)
+[Access Lemma for Word](lemma.md#access-lemma-for-word)
 
-[Access Head and Dependency Relation for Word](depparse.md#dependency-parsing)
+[Access Head and Dependency Relation for Word](depparse.md#access-head-and-dependency-relation-for-word)
 
 [Start with Pretagged Document](depparse.md#start-with-pretagged-document)
 
-[Access Named Entities for Sentence and Document](ner.md#named-entity-recognition)
+[Access Named Entities for Sentence and Document](ner.md#access-named-entities-for-sentence-and-document)
 
-[Access Named Entity Recogition (NER) Tags for Token](ner.md#access-token-level-ner-tags)
+[Access Named Entity Recogition (NER) Tags for Token](ner.md#access-named-entity-recogition-ner-tags-for-token)
 
 ### Data Conversion
 

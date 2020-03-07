@@ -1,6 +1,6 @@
 ---
-title: Models
-keywords: models
+title: Available Models
+keywords: available models
 permalink: '/models.html'
 ---
 

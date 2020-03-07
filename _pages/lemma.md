@@ -30,7 +30,7 @@ Running the [LemmaProcessor](lemma.md) requires the [TokenizeProcessor](tokenize
 After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Word`](data_objects.md#word)s.
 The lemma information can be found in the `lemma` field of each [`Word`](data_objects.md#word).
 
-### Lemmatization
+### Access Lemma for Word
 
 The code below shows an example of accessing lemma for each word:
 

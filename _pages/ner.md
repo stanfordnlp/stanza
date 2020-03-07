@@ -25,7 +25,7 @@ Running the [NERProcessor](ner.md) simply requires [TokenizeProcessor](tokenize.
 Named entities can be accessed through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`.
 Alternatively, token-level NER tags can be accessed via the `ner` fields of [`Token`](data_objects.md#token).
 
-### Named Entity Recognition
+### Access Named Entities for Sentence and Document
 
 The code below shows an example of accessing the named entities in the document:
 
@@ -58,7 +58,7 @@ entity: Hawaii          type: GPE
 
 The span `Barack Obama` is a person entity, while the span `Hawaii` is a geopolitical entity.
 
-### Access Token-level NER Tags
+### Access Named Entity Recogition (NER) Tags for Token
 
 The code below shows an example of accessing the ner tags for each token:
 
