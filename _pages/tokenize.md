@@ -126,6 +126,10 @@ id: 5   text: !
 
 ### Use spaCy for Fast Tokenization and Sentence Segmentation
 
+<div class="alert alert-warning" role="alert">
+Note: We only support English for spaCy tokenizer.
+</div>
+
 While our neural pipeline can achieve significantly higher accuracy, rule-based tokenizer such as [`spaCy`](https://spacy.io) runs much faster when processing large-scale text. We provide an interface to use [`spaCy`](https://spacy.io) as the tokenizer for English by simply specifying in the `processors` option. Please make sure you have successfully downloaded and installed [`spaCy`](https://spacy.io) and English models following the [guide](https://spacy.io/usage).
 
 The code below shows an example of tokenization and sentence segmentation with [`spaCy`](https://spacy.io):

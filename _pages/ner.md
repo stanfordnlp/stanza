@@ -8,6 +8,10 @@ permalink: '/ner.html'
 
 Recognize named entities for all token spans in the corpus.
 
+<div class="alert alert-warning" role="alert">
+Note: Currently we only support 8 languages. Supported languages can be found <a href="models.html#available-ner-models">here</a>.
+</div>
+
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- | 
 | ner | NERProcessor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
