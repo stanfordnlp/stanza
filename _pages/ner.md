@@ -21,7 +21,7 @@ Recognize named entities for all token spans in the corpus.
 
 ## Example Usage
 
-Running the named entity tagger simply requires tokenization. After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of tokens. 
+Running the [NERProcessor](ner.md) simply requires [TokenizeProcessor](tokenize.md). After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Token`](data_objects.md#token)s. 
 Named entities can be accessed through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`.
 Alternatively, token-level NER tags can be accessed via the `ner` fields of [`Token`](data_objects.md#token).
 

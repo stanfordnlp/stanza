@@ -21,7 +21,7 @@ Tokenizes the text and performs sentence segmentation.
 
 ## Example Usage
 
-The `tokenize` processor is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of `Sentence`s. The list of tokens for sentence `sent` can then be accessed with `sent.tokens`. 
+The `TokenizeProcessor` is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of [`Sentence`](data_objects.md#sentence)s. The list of [`Token`](data_objects.md#token)s for [`Sentence`](data_objects.md#sentence) can then be accessed with the property `tokens`. 
 
 ### Tokenization and Sentence Segmentation
 

@@ -6,7 +6,11 @@ permalink: '/mwt.html'
 
 ## Description
 
-Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [tokenizer](tokenize.md). 
+Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md).
+
+<div class="alert alert-warning" role="alert">
+Note: Only languages with <a href="https://universaldependencies.org/u/overview/tokenization.html">multi-word tokens (MWT)</a> require MWTProcessor.
+</div>
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- | 
@@ -20,10 +24,7 @@ Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/t
 
 ## Example Usage
 
-The `mwt` processor only requires `tokenize`.  After these two processors have run, the `Sentence`s will have 
-lists of tokens and corresponding words based on the multi-word-token expander model.  The list of tokens for
-sentence `sent` can be accessed with `sent.tokens`.  The list of words for sentence `sent` can be accessed with
-`sent.words`.  The list of words for a token `token` can be accessed with `token.words`.  
+The [MWTProcessor](mwt.md) processor only requires [TokenizeProcessor](tokenize.md). After these two processors have run, the [`Sentence`](data_objects.md#sentence)s will have lists of [`Token`](data_objects.md#token)s and corresponding [`Word`](data_objects.md#word)s based on the multi-word-token expander model.  The list of tokens for sentence `sent` can be accessed with `sent.tokens`.  The list of words for sentence `sent` can be accessed with `sent.words`.  The list of words for a token `token` can be accessed with `token.words`.  
 
 ### Access Syntactic Words for Multi-Word Token
 

@@ -26,9 +26,9 @@ Generates the word lemmas for all tokens in the corpus.
 
 ## Example Usage
 
-Running the lemmatizer requires tokenization, multi-word expansion and part-of-speech tagging.
-After the pipeline is run, the document will contain a list of sentences, and the sentences will contain lists of words.
-The lemma information can be found in the `lemma` field of each word.
+Running the [LemmaProcessor](lemma.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), and [POSProcessor](pos.md). 
+After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Word`](data_objects.md#word)s.
+The lemma information can be found in the `lemma` field of each [`Word`](data_objects.md#word).
 
 ### Lemmatization
 
