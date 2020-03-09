@@ -1,10 +1,10 @@
 ---
-title: Tutorial
-keywords: tutorial
-permalink: '/tutorial.html'
+title: Tutorials
+keywords: tutorials
+permalink: '/tutorials.html'
 ---
 
-## Tutorial
+## Tutorials
 
 Here we provide many examples covering most use cases.
 
