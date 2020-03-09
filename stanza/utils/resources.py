@@ -12,7 +12,6 @@ import zipfile
 import shutil
 import logging
 
-from stanza.models.common.constant import lcode2lang, langlower2lcode
 from stanza.utils.helper_func import make_table
 from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
 from stanza._version import __resources_version__
@@ -184,7 +183,6 @@ def process_pipeline_parameters(lang, dir, package, processors):
     # Check parameter types and convert values to lower case
     if isinstance(lang, str):
         lang = lang.strip().lower()
-        if lang in langlower2lcode: lang = langlower2lcode[lang]
     elif lang is not None:
         raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
     
@@ -222,7 +220,11 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     resources = json.load(open(os.path.join(dir, 'resources.json')))
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
-    logger.info(f'Downloading models for language: {lang} ({lcode2lang[lang]})')
+    if 'alias' in resources[lang]:
+        logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
+        lang = resources[lang]['alias']
+    lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
+    logger.info(f'Downloading models for language: {lang} ({lang_name})')
 
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):

@@ -22,7 +22,6 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
-from stanza.models.common.constant import lcode2lang, langlower2lcode
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -79,7 +78,11 @@ class Pipeline:
         with open(resources_filepath) as infile:
             resources = json.load(infile)
         if lang in resources:
-            logger.info(f'Loading models for language: {lang} ({lcode2lang[lang]})')
+            if 'alias' in resources[lang]:
+                logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
+                lang = resources[lang]['alias']
+            lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
+            logger.info(f'Loading models for language: {lang} ({lang_name})')
         else:
             logger.warning(f'Unsupported language: {lang}.')
 
