@@ -119,6 +119,82 @@ processor_to_ending = {
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
 
+# add full language name to language code and add alias in resources
+lcode2lang = {
+    "af": "Afrikaans",
+    "grc": "Ancient_Greek",
+    "ar": "Arabic",
+    "hy": "Armenian",
+    "eu": "Basque",
+    "be": "Belarusian",
+    "br": "Breton",
+    "bg": "Bulgarian",
+    "bxr": "Buryat",
+    "ca": "Catalan",
+    "zh": "Chinese",
+    "lzh": "Classical_Chinese",
+    "cop": "Coptic",
+    "hr": "Croatian",
+    "cs": "Czech",
+    "da": "Danish",
+    "nl": "Dutch",
+    "en": "English",
+    "et": "Estonian",
+    "fo": "Faroese",
+    "fi": "Finnish",
+    "fr": "French",
+    "gl": "Galician",
+    "de": "German",
+    "got": "Gothic",
+    "el": "Greek",
+    "he": "Hebrew",
+    "hi": "Hindi",
+    "hu": "Hungarian",
+    "id": "Indonesian",
+    "ga": "Irish",
+    "it": "Italian",
+    "ja": "Japanese",
+    "kk": "Kazakh",
+    "ko": "Korean",
+    "kmr": "Kurmanji",
+    "lt": "Lithuanian",
+    "olo": "Livvi",
+    "la": "Latin",
+    "lv": "Latvian",
+    "mt": "Maltese",
+    "mr": "Marathi",
+    "pcm": "Naija",
+    "sme": "North_Sami",
+    "no": "Norwegian",
+    "nn": "Norwegian_Nynorsk",
+    "cu": "Old_Church_Slavonic",
+    "fro": "Old_French",
+    "orv": "Old_Russian",
+    "fa": "Persian",
+    "pl": "Polish",
+    "pt": "Portuguese",
+    "ro": "Romanian",
+    "ru": "Russian",
+    "gd": "Scottish_Gaelic",
+    "sr": "Serbian",
+    "zhs": "Simplified_Chinese",
+    "sk": "Slovak",
+    "sl": "Slovenian",
+    "es": "Spanish",
+    "sv": "Swedish",
+    "swl": "Swedish_Sign_Language",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "th": "Thai",
+    "tr": "Turkish",
+    "uk": "Ukrainian",
+    "hsb": "Upper_Sorbian",
+    "ur": "Urdu",
+    "ug": "Uyghur",
+    "vi": "Vietnamese",
+    "wo": "Wolof"
+}
+
 
 def ensure_dir(dir):
     Path(dir).mkdir(parents=True, exist_ok=True)
@@ -218,10 +294,25 @@ def process_defaults(args):
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
+def process_lcode(args):
+    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    resources_new = {}
+    for lang in resources:
+        if lang not in lcode2lang:
+            print(lang + ' not found in lcode2lang!')
+            continue
+        lang_name = lcode2lang[lang]
+        resources[lang]['lang_name'] = lang_name
+        resources_new[lang] = resources[lang]
+        resources_new[lang_name] = {'alias': lang}
+    json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+
 def main():
     args = parse_args()
     process_dirs(args)
     process_defaults(args)
+    process_lcode(args)
 
 
 if __name__ == '__main__':
