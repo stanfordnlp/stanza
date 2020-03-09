@@ -29,7 +29,7 @@ Below is an overview of Stanza's neural network NLP pipeline:
    <img src="images/pipeline.png" style="width:60%">
 </p>
 
-## Get Started
+## Getting Started
 
 We strongly recommend installing Stanza with `pip`, which is as simple as:
 
