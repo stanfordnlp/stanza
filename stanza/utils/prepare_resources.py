@@ -303,8 +303,8 @@ def process_lcode(args):
             continue
         lang_name = lcode2lang[lang]
         resources[lang]['lang_name'] = lang_name
-        resources_new[lang] = resources[lang]
-        resources_new[lang_name] = {'alias': lang}
+        resources_new[lang.lower()] = resources[lang.lower()]
+        resources_new[lang_name.lower()] = {'alias': lang.lower()}
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
