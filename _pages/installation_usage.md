@@ -6,7 +6,7 @@ permalink: '/installation_usage.html'
 
 To use Stanza for text analysis, a first step is to install the package and download the models for the languages you want to analyze. After the download is done, an NLP pipeline can be constructed, which can process input documents and get annotations.
 
-On this page, we mainly introduce the installation of Stanza and the usage of its neural pipeline. For usage information of the Stanford CoreNLP Python interface, you can check out [the CoreNLP Client page](corenlp_client.md).
+On this page, we mainly introduce the installation of Stanza and simple examples for using its neural pipeline. For more examples of the neural pipeline, please check out our [Tutorials](tutorials). For usage information of the Stanford CoreNLP Python interface, please refer to the [CoreNLP Client](corenlp_client) page.
 
 ## Installation
 
