@@ -24,7 +24,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=VERSION,
 
-    description='Official Stanford NLP Python Library',
+    description='A Python NLP Library for Many Human Languages, by the Stanford NLP Group',
     long_description=long_description,
     long_description_content_type="text/markdown",
     # The project's main homepage.
@@ -48,15 +48,18 @@ setup(
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Text Processing :: Linguistic',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 
     # What does your project relate to?
-    keywords='natural-language-processing nlp natural-language-understanding stanford-nlp',
+    keywords='natural-language-processing nlp natural-language-understanding stanford-nlp deep-learning',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
