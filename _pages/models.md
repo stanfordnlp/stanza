@@ -7,7 +7,7 @@ permalink: '/models.html'
 Stanza provides pretrained NLP models for a total 66 human languages. On this page we provide detailed information on these models. 
 
 Pretrained models in Stanza can be divided into two categories, based on the datasets they were trained on:
-1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
+1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
 2. NER models, which support named entity tagging for 8 languages, and are trained on various NER datasets.
 
 ## Downloading Models
