@@ -14,6 +14,8 @@ While our [Installation & Getting Started](installation_usage) page covers basic
 
 [Running Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
+[Only Running Tokenization without Sentence Segmentation](tokenize.md#only-tokenization-without-sentence-segmentation)
+
 [Running Stanza with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
 
 [Using spaCy for Fast Tokenization and Sentence Segmentation](tokenize.md#use-spacy-for-fast-tokenization-and-sentence-segmentation)

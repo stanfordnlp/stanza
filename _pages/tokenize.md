@@ -18,6 +18,7 @@ Tokenizes the text and performs sentence segmentation.
 | --- | --- | --- | --- |
 | tokenize_batch_size | int | 32 | When annotating, this argument specifies the maximum number of paragraphs to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). |
 | tokenize_pretokenized | bool | False | Assume the text is tokenized by white space and sentence split by newline.  Do not run a model. |
+| tokenize_no_ssplit | bool | False | Assume the sentences are split by two continuous newlines (`\n\n`). Only run tokenization and disable sentence segmentation. |
 
 ## Example Usage
 
@@ -54,6 +55,65 @@ id: 1   text: This
 id: 2   text: is
 id: 3   text: another
 id: 4   text: sentence
+id: 5   text: .
+```
+
+### Only Tokenization without Sentence Segmentation
+
+You can only perform tokenization without sentence segmentation, as the sentences are split by two continuous newlines (`\n\n`). Just set `tokenize_no_ssplit` as `True` to disable sentence segmentation. 
+
+```python
+import stanza
+
+nlp = stanza.Pipeline(lang='en', processors='tokenize', tokenize_no_ssplit=True)
+doc = nlp('This is a sentence.\n\nThis is a second. This is a third.')
+for i, sentence in enumerate(doc.sentences):
+    print(f'====== Sentence {i+1} tokens =======')
+    print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
+```
+
+The code will generate the following output:
+
+```
+====== Sentence 1 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: sentence
+id: 5   text: .
+====== Sentence 2 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: second
+id: 5   text: .
+id: 6   text: This
+id: 7   text: is
+id: 8   text: a
+id: 9   text: third
+id: 10  text: .
+```
+
+As can be seen from the output, sentence split decisions are preserved. If `tokenize_no_ssplit` were set to `False`, Stanza would have generated the following output with its own sentence split (and tokenization):
+
+```
+====== Sentence 1 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: sentence
+id: 5   text: .
+====== Sentence 2 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: second
+id: 5   text: .
+====== Sentence 3 tokens =======
+id: 1   text: This
+id: 2   text: is
+id: 3   text: a
+id: 4   text: third
 id: 5   text: .
 ```
 
