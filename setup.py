@@ -47,9 +47,16 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Information Technology',
+        'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Text Processing',
         'Topic :: Text Processing :: Linguistic',
+        'Topic :: Software Development',
+        'Topic :: Software Development :: Libraries',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
