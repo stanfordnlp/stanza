@@ -22,7 +22,7 @@ Downloading models is as simple as calling the `stanza.download()` method. We pr
 | processors | `dict` or `str` | `dict()` | [Processor](pipeline.md#processors)s to download models for. This can either be specified as a comma-seperated list of processor names to use (e.g., `'tokenize,pos'`), or a Python dictionary with processor names as keys and package names as corresponding values (e.g., `{'tokenize': 'ewt', 'pos': 'ewt'}`). All unspecified processors will fall back to using the package specified by the `package` argument. A list of all Processors supported can be found [here](pipeline.md#processors).   |
 | logging_level | `str` | `'INFO'` | Controls the level of logging information to display during download. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less information will be displayed going from `'DEBUG'` to `'FATAL'`. |
 | verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'` (i.e., only show errors).  |
-{: #options }
+
 
 
 ## Available UD Models
