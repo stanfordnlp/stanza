@@ -6,23 +6,25 @@ permalink: '/corenlp_client.html'
 
 ## Overview
 
-Stanza allows users to access our Java toolkit Stanford CoreNLP via a server interface.  Once the Java server is activated, requests can be made in Python, and a Document-like object will be returned.  You can find out more info about the full functionality of Stanford CoreNLP [here](https://stanfordnlp.github.io/CoreNLP/).
+Stanza allows users to access our Java toolkit, Stanford CoreNLP, via its server interface.  Once the Java server is launched, Stanza can form requests for annotation in Python, and a [`Document`](data_objects.md#document)-like object will be returned.  You can find out more info about the full functionality of Stanford CoreNLP [here](https://stanfordnlp.github.io/CoreNLP/).
 
 ## Setup
 
 * Download the latest version of Stanford CoreNLP from [here](https://stanfordnlp.github.io/CoreNLP/download.html).
 * Download model files for the language you want to annotate from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and store them in the extracted CoreNLP folder.
 * Set the `CORENLP_HOME` environment variable to the location of the folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`.
- 
+
 ## Usage
 
-After the above steps have been taken, you can start up the server and make requests in Python code.
-Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object. You can find the corresponding jupyter notebook tutorial [here](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_CoreNLP_Interface.ipynb).
-
-Note: It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
-the server is properly shut down when your Python application finishes.
-
+After CoreNLP has been properly set up, you can start up the server and make requests in Python code with Stanza's help.
+Below is a comprehensive example of starting a server, making requests, and accessing data from the returned Document object. We have also prepared a [comprehensive Jupyter notebook tutorial](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_CoreNLP_Interface.ipynb), which you can experiment with interactively.
 By default, CoreNLP Client uses `protobuf` for message passing. A full definition of our protocols (a.k.a., our supported annotations) can be found [here](https://github.com/stanfordnlp/CoreNLP/blob/master/src/edu/stanford/nlp/pipeline/CoreNLP.proto).
+
+{% include alerts.html %}
+{{note}}
+It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
+the server is properly shut down when your Python application finishes.
+{{end}}
 
 ```python
 from stanza.server import CoreNLPClient
@@ -47,7 +49,7 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner', 'parse',
 
     # get the first sentence
     sentence = ann.sentence[0]
-    
+
     # get the constituency parse of the first sentence
     print('---')
     print('constituency parse of first sentence')
@@ -131,7 +133,7 @@ back and forth depending on the input text language.  You could also imagine hav
 For context, the Java server takes in requests, runs a StanfordCoreNLP pipeline, and sends a response.
 Annotators within a pipeline often use models to perform their work (e.g. a part-of-speech tagging model or
 a dependency parsing model).  For efficiency, the server maintains two caches.  One for the models (so they only
-have to be loaded once) and one for already built StanfordCoreNLP pipelines.  
+have to be loaded once) and one for already built StanfordCoreNLP pipelines.
 
 The server actually maintains two caches, one for the models, and one for pre-built Stanford CoreNLP pipelines.
 Loading models takes a significant amount of time (potentially on the order of a minute in some cases).  But
@@ -167,12 +169,18 @@ During initialization, a `CoreNLPClient` object accepts the following options as
 | max_char_length | int | 100000 | The max number of characters that will be accepted and processed by the CoreNLP server in a single request. |
 | preload | bool | True | Load the annotators immediately upon server start |
 
-### Customize Server Start
+Here is a quick example to specify which annotators to load and what output format to use
 
-When a StanfordCoreNLP Server is started it contains a set of default properties that define it's default pipeline.
-This is the pipeline that will run if no request properties are specified.
+```python
+with CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner', output_format='text') as client:
+```
 
-The following values can be supplied to the `properties` argument for `CoreNLPClient`'s `init` method:
+### Customizing Server Start
+
+When a CoreNLP Server is started it contains a set of default properties that define its default pipeline.
+This is the pipeline that will run unless the requests specify otherwise through request properties.
+
+The following values can be supplied to the `properties` argument for `CoreNLPClient`'s `init` method to build a default pipeline:
 
 | Option | Example | Description |
 | --- | --- | --- |
@@ -183,26 +191,21 @@ The following values can be supplied to the `properties` argument for `CoreNLPCl
 If not using the file path or language name option, one can also specify which `annotators` to use and the desired `outputFormat` with the
 `annotators` and `output_format` args to `CoreNLPClient`'s `init` method.
 
-Below are code examples to illustrate all of this:
+Below are code examples to illustrate these different options:
 
-#### Specify a properties file
+You can start the server by specifying a properties file
 ```python
 with CoreNLPClient(properties='/path/to/server.props') as client:
 ```
 
-#### Specify a Stanford CoreNLP supported language
+Or, specifying a Stanford CoreNLP supported language
 ```python
 with CoreNLPClient(properties='french') as client:
 ```
 
-#### Specify a Python dictionary
+Or, last but not least, specifying properties from a Python dictionary
 ```python
 with CoreNLPClient(properties={'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'}) as client:
-```
-
-#### Specify annotators and output_format
-```python
-with CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner', output_format='text') as client:
 ```
 
 ### Stanford CoreNLP Server Settings
@@ -226,9 +229,15 @@ All of these options can be set with `CoreNLPClient`'s `init` method.
 
 There is more documention [here](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html) for the server's start up options.
 
-#### Specify username and password for your server
+Here is a quick example of specifying username and password for your server at launch
 ```python
 with CoreNLPClient(username='myusername', password='1234') as client:
+```
+
+If your CoreNLP server is password protected, here's how you can supply that information to make sure
+annotation goes smoothly
+```python
+ann = client.annotate(text, username='myusername', password='1234')
 ```
 
 ### Request Properties
@@ -236,13 +245,15 @@ with CoreNLPClient(username='myusername', password='1234') as client:
 Properties for the StanfordCoreNLP pipeline run on text can be set for each request.
 If the request has properties, these will override the server's defaults.
 
+Request properties can be registered with Stanza's `CoreNLPClient` to maximize efficiency.
 The client maintains a `properties_cache` to map keys to particular property settings.
-Or a Stanford CoreNLP support language can be specified to use the language defaults, or
-a full Python dictionary.
+Alternatively, request properties can be specified as a Stanford CoreNLP support language
+to use the language defaults, or a full Python dictionary for maximal flexibility.
 
 The following code examples below show examples of specifying request properties.
 
-#### Register a set of properties with the client's properties_cache, use key
+Here is an example of how to register a set of properties with the client's `properties_cache`,
+and how to use those properties via the key for annotation
 ```python
 FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
                        'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french.tagger',
@@ -254,23 +265,19 @@ with CoreNLPClient(annotators='tokenize,ssplit,pos') as client:
     ann = client.annotate(text, properties_key='fr-custom')
 ```
 
-#### Set request properties as a Python dictionary
-```python
-ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
-```
-
-#### Specify a StanfordCoreNLP supported language
+Alternatively, request properties can simply be a language that you want to run the default CoreNLP
+pipeline for
 ```python
 ann = client.annotate(text, properties='german')
 ```
 
-#### Specify annotators and output_format
+Or, a dictionary that specifies all properties you want to set/override
 ```python
-ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json')
+ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
 ```
 
-#### Submit a username and password
-
+Similarly to `CoreNLPClient` initialization, you can also specify the annotators and output format
+for CoreNLP for individual annotation requests
 ```python
-ann = client.annotate(text, username='myusername', password='1234')
+ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json')
 ```
