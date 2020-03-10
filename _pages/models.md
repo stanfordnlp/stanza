@@ -4,20 +4,25 @@ keywords: available models
 permalink: '/models.html'
 ---
 
+Stanza provides pretrained NLP models for a total 66 human languages. On this page we provide detailed information on these models. 
+
+Pretrained models in Stanza can be divided into two categories, based on the datasets they were trained on:
+1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
+2. NER models, which support named entity tagging for 8 languages, and are trained on various NER datasets.
+
 ## Downloading Models
 
-Stanza provides simple and flexible interfaces for downloading models. You can customize downloading by specifying the options in the table below:
+Downloading models is as simple as calling the `stanza.download()` method. We provide detailed examples on how to use the `download` interface on the [Getting Started](installation_usage.md#building-a-pipeline) page. Detailed descriptions of all available options (i.e., arguments) of the `download` method are listed below:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| lang | `str` | `'en'` | Language code (e.g., `"en"`) or language name (e.g., `"English"`) for the language to process with the Pipeline. See table below for a complete list of available languages. |
+| lang | `str` | `'en'` | Language code (e.g., `"en"`) or language name (e.g., `"English"`) for the language to process with the Pipeline. See the tables of available models below for a complete list of supported languages. |
 | dir | `str` | `'~/stanza_resources'` | Directory for storing the models downloaded for Stanza. By default, Stanza stores its models in a folder in your home directory.  |
-| package | `str` | `'default'` | Package to download for processors, where each package typically specifies what data the models are trained on. We provide a "default" package for all languages that contains NLP models most users will find useful. See table below for a complete list of available packages. |
-| processors | `dict` or `str` | `dict()` | [Processor](pipeline.md#processors)s to download for the Pipeline. This can either be specified as a comma-seperated list of processor names to use (e.g., `'tokenize,pos'`), or a Python dictionary with Processor names as keys and packages as corresponding values (e.g., `{'tokenize': 'ewt', 'pos': 'ewt'}`). All unspecified Processors will fall back to using the package specified by the `package` argument. A list of all Processors supported can be found [here](pipeline.md#processors).   |
-| logging_level | `str` | `'INFO'` | Controls the level of logging information to display when the Pipeline is instantiated and run. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less and less information will be displayed from `'DEBUG'` to `'FATAL'`. |
-| verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'`.  |
+| package | `str` | `'default'` | Package to download for processors, where each package typically specifies what data the models are trained on. We provide a "default" package for all languages that contains NLP models most users will find useful, which will be used when the `package` argument isn't specified. See table below for a complete list of available packages. |
+| processors | `dict` or `str` | `dict()` | [Processor](pipeline.md#processors)s to download models for. This can either be specified as a comma-seperated list of processor names to use (e.g., `'tokenize,pos'`), or a Python dictionary with processor names as keys and package names as corresponding values (e.g., `{'tokenize': 'ewt', 'pos': 'ewt'}`). All unspecified processors will fall back to using the package specified by the `package` argument. A list of all Processors supported can be found [here](pipeline.md#processors).   |
+| logging_level | `str` | `'INFO'` | Controls the level of logging information to display during download. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less information will be displayed going from `'DEBUG'` to `'FATAL'`. |
+| verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'` (i.e., only show errors).  |
 
-We provide examples about how to use these options [here](installation_usage.md#building-a-pipeline). 
 
 
 ## Available UD Models
