@@ -6,13 +6,15 @@ permalink: '/tokenize.html'
 
 ## Description
 
-Tokenizes the text and performs sentence segmentation.
+The `TokenizeProcessor` tokenizes the text and performs sentence segmentation, so that downstream annotation can happen at the sentence level.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
+| --- | --- | --- | --- | --- |
 | tokenize | TokenizeProcessor | - | Segments a [`Document`](data_objects.md#document) into [`Sentence`](data_objects.md#sentence)s, each containing a list of [`Token`](data_objects.md#token)s. This processor also predicts which tokens are multi-word tokens, but leaves expanding them to the [MWTProcessor](mwt.md). | Tokenizes the text and performs sentence segmentation. |
 
 ## Options
+
+The following options are available to configure the `TokenizeProcessor` when instantiating the [`Pipeline`](pipeline.md#pipeline):
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -21,11 +23,11 @@ Tokenizes the text and performs sentence segmentation.
 
 ## Example Usage
 
-The `TokenizeProcessor` is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of [`Sentence`](data_objects.md#sentence)s. The list of [`Token`](data_objects.md#token)s for [`Sentence`](data_objects.md#sentence) can then be accessed with the property `tokens`. 
+The `TokenizeProcessor` is usually the first processor used in the pipeline. It performs tokenization and sentence segmentation at the same time. After this processor is run, the input document will become a list of [`Sentence`](data_objects.md#sentence)s. Each [`Sentence`](data_objects.md#sentence) contains a list of [`Token`](data_objects.md#token)s, which can be accessed with the property `tokens`.
 
 ### Tokenization and Sentence Segmentation
 
-The code below shows an example of tokenization and sentence segmentation:
+Here is a simple example of performing tokenization and sentence segmentation on a piece of plaintext:
 
 ```python
 import stanza
@@ -37,7 +39,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-This code will generate the following output:
+This code will generate the following output, which shows that the text is segmented into two sentences, each containing a few tokens:
 
 ```
 ====== Sentence 1 tokens =======
@@ -59,7 +61,8 @@ id: 5   text: .
 
 ### Start with Pretokenized Text
 
-You can feed in pretokenized (and sentence split) text to the pipeline, as newline (`\n`) separated sentences, where each sentence is space separated tokens. Just set `tokenize_pretokenized` as `True` to bypass the neural tokenizer. 
+In some cases, you might have already tokenized your text, and just want to use Stanza for downstream processing.
+In these cases, you can feed in pretokenized (and sentence split) text to the pipeline, as newline (`\n`) separated sentences, where each sentence is space separated tokens. Just set `tokenize_pretokenized` as `True` to bypass the neural tokenizer.
 
 The code below shows an example of bypassing the neural tokenizer:
 
@@ -73,7 +76,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-Alternatively to passing in a string, you can also pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens. 
+Alternatively to passing in a string, you can also pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens.
 
 The equivalent of our example above would be:
 
