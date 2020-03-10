@@ -8,9 +8,10 @@ permalink: '/ner.html'
 
 Recognize named entities for all token spans in the corpus.
 
-<div class="alert alert-warning" role="alert">
-Note: Currently we only support 8 languages. Supported languages can be found <a href="models.html#available-ner-models">here</a>.
-</div>
+{% include alerts.html %}
+{{ note }}
+{{ "The NERProcessor currently only supports 8 languages. All supported languages along with their training datasets can be found [here](models#available-ner-models)." | markdownify }}
+{{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- | 

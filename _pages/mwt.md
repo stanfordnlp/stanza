@@ -8,9 +8,10 @@ permalink: '/mwt.html'
 
 Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md).
 
-<div class="alert alert-warning" role="alert">
-Note: Only languages with <a href="https://universaldependencies.org/u/overview/tokenization.html">multi-word tokens (MWT)</a> require MWTProcessor.
-</div>
+{% include alerts.html %}
+{{ note }}
+Only languages with <a href='https://universaldependencies.org/u/overview/tokenization.html'>multi-word tokens (MWT)</a> require MWTProcessor.
+{{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- | 
