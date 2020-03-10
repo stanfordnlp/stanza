@@ -4,41 +4,36 @@ keywords: tutorials
 permalink: '/tutorials.html'
 ---
 
-## Tutorials
+While our [Installation & Getting Started](installation_usage) page covers basic installation and simple examples of using the neural NLP pipeline, on this page we provide links to advanced examples on building the pipeline, running text annotation and converting the annotations into different formats. At the end we also link to toturials with online notebooks for interactive learning of the library.
 
-Here we provide many examples covering most use cases.
+## Pipeline Building
 
-### Pipeline Building
+[Building a Neural Pipeline with Customized Model Paths](pipeline.md#build-pipeline-from-config)
 
-[Download Models and Build a Neural Pipeline](installation_usage.html#pipeline-building)
+## Text Annotation
 
-[Build a Neural Pipeline from Advanced Configurations](pipeline.md#build-pipeline-from-config)
+[Running Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
-### Text Annotation
+[Running Stanza with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
 
-[Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
+[Using spaCy for Fast Tokenization and Sentence Segmentation](tokenize.md#use-spacy-for-fast-tokenization-and-sentence-segmentation)
 
-[Start with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
+[Accessing Syntactic Words of Multi-Word Tokens](mwt.md#access-syntactic-words-for-multi-word-token)
 
-[Use spaCy for Fast Tokenization and Sentence Segmentation](tokenize.md#use-spacy-for-fast-tokenization-and-sentence-segmentation)
+[Accessing Parent Token of a Word](mwt.md#access-parent-token-for-word)
 
-[Access Syntactic Words for Multi-Word Token](mwt.md#access-syntactic-words-for-multi-word-token)
+[Accessing POS and Morphological Features of a Word](pos.md#access-pos-and-morphological-feature-for-word)
 
-[Access Parent Token for Word](mwt.md#access-parent-token-for-word)
+[Accessing Lemma of a Word](lemma.md#access-lemma-for-word)
 
-[Access POS and Morphological Feature for Word](pos.md#access-pos-and-morphological-feature-for-word)
+[Accessing Head and Dependency Relation of a Word](depparse.md#access-head-and-dependency-relation-for-word)
 
-[Access Lemma for Word](lemma.md#access-lemma-for-word)
+[Running Dependency Parsing with Pre-annotated Document](depparse.md#start-with-pretagged-document)
 
-[Access Head and Dependency Relation for Word](depparse.md#access-head-and-dependency-relation-for-word)
+[Accessing Named Entities in a Sentence or a Document](ner.md#access-named-entities-for-sentence-and-document)
 
-[Start with Pretagged Document](depparse.md#start-with-pretagged-document)
 
-[Access Named Entities for Sentence and Document](ner.md#access-named-entities-for-sentence-and-document)
-
-[Access Named Entity Recogition (NER) Tags for Token](ner.md#access-named-entity-recogition-ner-tags-for-token)
-
-### Data Conversion
+## Data Conversion
 
 [Document to Python Object](data_conversion.md#document-to-python-object)
 
@@ -48,7 +43,7 @@ Here we provide many examples covering most use cases.
 
 [Python Object to CoNLL](data_conversion.md#python-object-to-conll)
 
-### IPython Interactive Tutorial
+## Interactive Tutorials
 
-[Stanza Beginners Guide](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
+[A Beginner's Guide to Stanza](https://github.com/stanfordnlp/stanza/blob/master/demo/StanfordNLP_Beginners_Guide.ipynb)
 
