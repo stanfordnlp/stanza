@@ -40,7 +40,7 @@ def test_missing_requirements():
                 {'processor_type': 'POSProcessor', 'processors_list': ['pos', 'depparse'], 'provided_reqs': set([]),
                  'requires': set(['tokenize'])},
                 {'processor_type': 'DepparseProcessor', 'processors_list': ['pos', 'depparse'],
-                 'provided_reqs': set([]), 'requires': set(['tokenize','pos'])}
+                 'provided_reqs': set([]), 'requires': set(['tokenize','pos', 'lemma'])}
             ]
         ),
         # no pos when lemma_pos set to True; for english mwt should not be included in the loaded processor list
