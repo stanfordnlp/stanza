@@ -4,13 +4,13 @@ keywords: data conversion
 permalink: '/data_conversion.html'
 ---
 
-This page describes the data conversion for Stanza, and how can we seamlessly convert between [`Document`](data_objects.md#document) and [`CoNLL`](https://universaldependencies.org/format.html) through internal python object. We show four examples that represent exactly the same document.
+This page describes how to seamlessly convert between Stanza's [`Document`](data_objects.md#document), the [CoNLL-U format](https://universaldependencies.org/format.html), and native Python objects. We show four examples that represent exactly the same document.
 
 ## Document to Python Object
 
-A [`Document`](data_objects.md#document) instance will be returned after annotated by the [`Pipeline`](data_objects.md#pipeline). 
+A [`Document`](data_objects.md#document) instance will be returned after text is annotated by the [`Pipeline`](data_objects.md#pipeline).
 
-The code below shows an example of converting [`Document`](data_objects.md#document) to python native object:
+Here's how we can convert this [`Document`](data_objects.md#document) object to a native Python object:
 
 ```python
 import stanza
@@ -22,7 +22,7 @@ dicts = doc.to_dict() # dicts is List[List[Dict]], representing each token / wor
 
 ## Python Object to Document
 
-A [`Document`](data_objects.md#document) can be instanciated with python native object. And it can be passed to the [`Pipeline`](data_objects.md#pipeline) for further annotations.
+A [`Document`](data_objects.md#document) can also be instanciated with a native Python object, and then passed to the [`Pipeline`](data_objects.md#pipeline) for further annotations.
 
 The code below shows an example of converting python native object to [`Document`]:
 
@@ -35,9 +35,8 @@ doc = Document(dicts) # doc is class Document
 
 ## CoNLL to Python Object
 
-[`CoNLL`](https://universaldependencies.org/format.html) is a widely-used format for universal dependencies. 
-
-The code below shows an example of converting [`CoNLL`](https://universaldependencies.org/format.html) to python native object.
+[CoNLL-U](https://universaldependencies.org/format.html) is a widely-used format for universal dependencies.
+Here is an example of converting from a CoNLL-U format to a native Python object with the help of Stanza:
 
 ```python
 from stanza.utils.conll import CoNLL
@@ -48,9 +47,7 @@ dicts = CoNLL.convert_conll(conll) # dicts is List[List[Dict]], representing eac
 
 ## Python Object to CoNLL
 
-[`CoNLL`](https://universaldependencies.org/format.html) is a widely-used format for universal dependencies. 
-
-The code below shows an example of converting python native object to [`CoNLL`](https://universaldependencies.org/format.html).
+It might sometimes be desirable to output or process data in the [CoNLL-U format](https://universaldependencies.org/format.html) after text has been annotated by Stanza. Here is an example of converting a native Python object to the CoNLL-U format:
 
 ```python
 from stanza.utils.conll import CoNLL

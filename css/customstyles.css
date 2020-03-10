@@ -774,6 +774,10 @@ table p {
     margin-bottom: 12px;
 }
 
+td img {
+    margin: 0px;
+}
+
 pre, table code {
     white-space: pre-wrap;       /* css-3 */
     white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
