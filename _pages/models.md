@@ -7,7 +7,7 @@ permalink: '/models.html'
 Stanza provides pretrained NLP models for a total 66 human languages. On this page we provide detailed information on these models. 
 
 Pretrained models in Stanza can be divided into two categories, based on the datasets they were trained on:
-1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
+1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
 2. NER models, which support named entity tagging for 8 languages, and are trained on various NER datasets.
 
 ## Downloading Models
@@ -22,14 +22,14 @@ Downloading models is as simple as calling the `stanza.download()` method. We pr
 | processors | `dict` or `str` | `dict()` | [Processor](pipeline.md#processors)s to download models for. This can either be specified as a comma-seperated list of processor names to use (e.g., `'tokenize,pos'`), or a Python dictionary with processor names as keys and package names as corresponding values (e.g., `{'tokenize': 'ewt', 'pos': 'ewt'}`). All unspecified processors will fall back to using the package specified by the `package` argument. A list of all Processors supported can be found [here](pipeline.md#processors).   |
 | logging_level | `str` | `'INFO'` | Controls the level of logging information to display during download. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less information will be displayed going from `'DEBUG'` to `'FATAL'`. |
 | verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'` (i.e., only show errors).  |
-{: #options }
+
 
 
 ## Available UD Models
 
-Below is a table for all UD models supported by Stanza on the Universal Dependencies 2.5 dataset. All languages are built using data from and are annotated according to Universal Dependencies v2. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/). We recommend you always use the lastest released models. However, you can still use these [earlier models](model_history.md) by downloading them and putting them in the correct directory. The performance can be found [here](performance.md).
+The following table lists all UD models supported by Stanza and pretrained on the Universal Dependencies v2.5 datasets. You can find more information about the [POS tags](https://universaldependencies.org/u/pos/all.html), [morphological features](https://universaldependencies.org/u/feat/all.html), and [syntactic relations](https://universaldependencies.org/u/dep/all.html) used on the [Universal Dependencies website](https://universaldependencies.org/). We recommend you always use the lastest released models. However, you can still use these [earlier models](model_history.md) by downloading them and putting them in the correct directory. You can find performance of all available models on the [System Performance](performance.md) page.
 
-**Notes**
+**Table Notes**
 
 1. <i class="fas fa-exclamation-triangle" style="color:#e31a1c"></i> marks models which have very low unlabeled attachment score (UAS) when evaluated end-to-end (from tokenization all the way to dependency parsing). Specifically, their UAS is lower than 50% on the Universal Dependencies 2.5 test set. Users should be very cautious in using the output of these models for serious syntactic analysis.
 2. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language, which is the package trained on the largest treebank available for that language.
@@ -140,12 +140,12 @@ Below is a table for all UD models supported by Stanza on the Universal Dependen
 
 ## Available NER Models
 
-Below is a table for all NER models supported by Stanza on various NER datasets. We recommend you always use the lastest released models. However, you can still use these [earlier models](model_history.md) by downloading them and putting them in the correct directory. The performance can be found [here](performance.md).
+The following table lists all NER models supported by Stanza, pretrained on various NER datasets. Again, you can find performance of all available models on the [System Performance](performance.md) page.
 
-**Notes**
+**Table Notes**
 
 1. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language.
-2. For package with 4 NER types, 4 types of entities can be recognized including `PER (Person)`, `LOC (Location)`, `ORG (Organization)`, `MISC (Miscellaneous)`; For package with 18 NER types, 18 types of entities can be recognized including `PERSON`, `NORP`, `FACILITY`, `ORGANIZATION`, `GPE`, `LOCATION`, `PRODUCT`,`EVENT`, `WORK OF ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL`, `CARDINAL` (details can be found [here](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf) in the page 21).
+2. For packages with 4 named entity types, supported types include `PER (Person)`, `LOC (Location)`, `ORG (Organization)` and `MISC (Miscellaneous)`; for package with 18 named entity types, supported types include `PERSON`, `NORP`, `FACILITY`, `ORGANIZATION`, `GPE`, `LOCATION`, `PRODUCT`,`EVENT`, `WORK OF ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
  
 | Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS DOC | NOTES |
 | :------- | :----- | :-------- | :---- | :---- | :---- |

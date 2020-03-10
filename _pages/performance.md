@@ -4,9 +4,12 @@ keywords: stanza, system performance
 permalink: '/performance.html'
 ---
 
+Here we report the performance of Stanza's pretrained models on all supported languages. Again, performances of models for tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing are reported on the Universal Dependencies (UD) treebanks, while performances of the NER models are reported separately.
+
 ## System Performance on UD Treebanks
 
-In the table below you can find the performance of the version 1.0.0 models of Stanza's neural pipeline. The scores shown are from an end-to-end evaluation on the official test sets (from raw text to the full CoNLL-U file), and the scores are generated with the official evaluation script. For how we handled treebanks with no training data, please refer to the [system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf) for details.
+In the table below you can find the performance of Stanza's pretrained UD models. All models are trained and tested with the Universal Dependencies v2.5 treebanks. 
+Note that all scores reported are from an end-to-end evaluation on the official test sets (from raw text to the full CoNLL-U file), and are generated with the CoNLL 2018 UD shared task official evaluation script. For detailed interpretation of these scores and the evaluation scripts we used, please refer to the [CoNLL 2018 UD Shared Task Evaluation](https://universaldependencies.org/conll18/evaluation.html) page. For details on how we handled treebanks with no training data, please refer to [our CoNLL 2018 system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf).
 
 | Treebank | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :------- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
@@ -115,7 +118,7 @@ In the table below you can find the performance of the version 1.0.0 models of S
 
 ## System Performance on NER Corpora
 
-In the table below you can find the performance of the version 1.0.0 models of Stanza's neural pipeline on various NER corpora.
+In the table below you can find the performance of Stanza's pretrained NER models. All numbers reported are micro-averaged F1 scores. We used canonical train/dev/test splits for all datasets except for the WikiNER datasets, for which we used random splits.
 
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |
