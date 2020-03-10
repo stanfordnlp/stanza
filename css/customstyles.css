@@ -198,6 +198,10 @@ table#conll18-results tbody tr:first-child {
     background: #ffdddd;
 }
 
+table#options tbody td:first-child {
+  width: 10%;
+}
+
 p.external a {
   text-align:right;
   font-size:12px;
