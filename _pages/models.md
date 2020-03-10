@@ -10,12 +10,12 @@ Stanza provides simple and flexible interfaces for downloading models. You can c
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| lang | `str` | 'en' | Language code or language name. See table below for a complete list of available languages. |
-| dir | `str` | ~/stanza_resources | Directory for storing the models. |
-| package | `str` | 'default' | Package to use for processors. See table below for a complete list of available packages. |
-| processors | `dict` or `str` | {} | [Processor](pipeline.md#processors)s to use in the Pipeline. If str, should be comma-seperated processor names to use (e.g., 'tokenize,pos'). If dict, should specify the processor name with its package (e.g., {'tokenize': 'ewt', 'pos': 'ewt'}).  |
-| logging_level | `str` | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
-| verbose | `str` | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
+| lang | `str` | `'en'` | Language code (e.g., `"en"`) or language name (e.g., `"English"`) for the language to process with the Pipeline. See table below for a complete list of available languages. |
+| dir | `str` | `'~/stanza_resources'` | Directory for storing the models downloaded for Stanza. By default, Stanza stores its models in a folder in your home directory.  |
+| package | `str` | `'default'` | Package to download for processors, where each package typically specifies what data the models are trained on. We provide a "default" package for all languages that contains NLP models most users will find useful. See table below for a complete list of available packages. |
+| processors | `dict` or `str` | `dict()` | [Processor](pipeline.md#processors)s to download for the Pipeline. This can either be specified as a comma-seperated list of processor names to use (e.g., `'tokenize,pos'`), or a Python dictionary with Processor names as keys and packages as corresponding values (e.g., `{'tokenize': 'ewt', 'pos': 'ewt'}`). All unspecified Processors will fall back to using the package specified by the `package` argument. A list of all Processors supported can be found [here](pipeline.md#processors).   |
+| logging_level | `str` | `'INFO'` | Controls the level of logging information to display when the Pipeline is instantiated and run. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less and less information will be displayed from `'DEBUG'` to `'FATAL'`. |
+| verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'`.  |
 
 We provide examples about how to use these options [here](installation_usage.md#building-a-pipeline). 
 
