@@ -1,5 +1,5 @@
 ---
-title: NERProcessor 
+title: NERProcessor
 keywords: ner
 permalink: '/ner.html'
 ---
@@ -14,7 +14,7 @@ Recognize named entities for all token spans in the corpus.
 {{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
+| --- | --- | --- | --- | --- |
 | ner | NERProcessor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
 ## Options
@@ -26,68 +26,71 @@ Recognize named entities for all token spans in the corpus.
 
 ## Example Usage
 
-Running the [NERProcessor](ner.md) simply requires [TokenizeProcessor](tokenize.md). After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Token`](data_objects.md#token)s. 
+Running the [NERProcessor](ner.md) simply requires the [TokenizeProcessor](tokenize.md). After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Token`](data_objects.md#token)s.
 Named entities can be accessed through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`.
 Alternatively, token-level NER tags can be accessed via the `ner` fields of [`Token`](data_objects.md#token).
 
-### Access Named Entities for Sentence and Document
+### Accessing Named Entities for Sentence and Document
 
-The code below shows an example of accessing the named entities in the document:
+Here is an example of performing named entity recognition for a piece of text and accessing the named entities in the entire document:
 
 ```python
 import stanza
 
 nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
-doc = nlp('Barack Obama was born in Hawaii.')
+doc = nlp("Chris Manning teaches at Stanford University. He lives in the Bay Area.")
 print(*[f'entity: {ent.text}\ttype: {ent.type}' for ent in doc.ents], sep='\n')
 ```
 
-Alternatively, you can access the named entities in each sentence of the document. 
-
-The equivalent of our example above would be:
+Instead of accessing entities in the entire document, you can also access the named entities in each sentence of the document. The following example provides an identical result from the one above, by accessing entities from sentences instead of the entire document:
 
 ```python
 import stanza
 
 nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
-doc = nlp('Barack Obama was born in Hawaii.')
+doc = nlp("Chris Manning teaches at Stanford University. He lives in the Bay Area.")
 print(*[f'entity: {ent.text}\ttype: {ent.type}' for sent in doc.sentences for ent in sent.ents], sep='\n')
 ```
 
-These codes will generate the following output:
+As can be seen in the output, Stanza correctly identifies that _Chris Manning_ is a person, _Stanford University_ an organization, and _the Bay Area_ is a location.
 
 ```
-entity: Barack Obama    type: PERSON
-entity: Hawaii          type: GPE
+entity: Chris Manning	type: PERSON
+entity: Stanford University	type: ORG
+entity: the Bay Area	type: LOC
 ```
 
-The span `Barack Obama` is a person entity, while the span `Hawaii` is a geopolitical entity.
 
-### Access Named Entity Recogition (NER) Tags for Token
+### Accessing Named Entity Recogition (NER) Tags for Token
 
-The code below shows an example of accessing the ner tags for each token:
+It might sometimes be useful to access the BIOES NER tags for each token, and here is an example how:
 
 ```python
 import stanza
 
 nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
-doc = nlp('Barack Obama was born in Hawaii.')
+doc = nlp("Chris Manning teaches at Stanford University. He lives in the Bay Area.")
 print(*[f'token: {token.text}\tner: {token.ner}' for sent in doc.sentences for token in sent.tokens], sep='\n')
 ```
 
-This code will generate the following output:
+The result is the BIOES representation of the entities we saw above
 
 ```
-token: Barack   ner: B-PERSON
-token: Obama    ner: E-PERSON
-token: was      ner: O
-token: born     ner: O
-token: in       ner: O
-token: Hawaii   ner: S-GPE
-token: .        ner: O
+token: Chris	ner: B-PERSON
+token: Manning	ner: E-PERSON
+token: teaches	ner: O
+token: at	ner: O
+token: Stanford	ner: B-ORG
+token: University	ner: E-ORG
+token: .	ner: O
+token: He	ner: O
+token: lives	ner: O
+token: in	ner: O
+token: the	ner: B-LOC
+token: Bay	ner: I-LOC
+token: Area	ner: E-LOC
+token: .	ner: O
 ```
-
-The token `Barack` is the beginning of the person entity, while the token `Obama` is the end of the person entity.
 
 ## Training-Only Options
 

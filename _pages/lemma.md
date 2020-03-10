@@ -9,8 +9,8 @@ permalink: '/lemma.html'
 Generates the word lemmas for all tokens in the corpus.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
-| lemma | LemmaProcessor | tokenize, mwt, pos | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` value. The result can be accessed in `Word.lemma`. | Generates the word lemmas for all tokens in the corpus. |
+| --- | --- | --- | --- | --- |
+| lemma | LemmaProcessor | tokenize, mwt, pos | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` values. The result can be accessed as `Word.lemma`. | Generates the word lemmas for all words in the Document. |
 
 ## Options
 
@@ -26,13 +26,13 @@ Generates the word lemmas for all tokens in the corpus.
 
 ## Example Usage
 
-Running the [LemmaProcessor](lemma.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), and [POSProcessor](pos.md). 
+Running the [LemmaProcessor](lemma.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), and [POSProcessor](pos.md).
 After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Word`](data_objects.md#word)s.
 The lemma information can be found in the `lemma` field of each [`Word`](data_objects.md#word).
 
-### Access Lemma for Word
+### Accessing Lemma for Word
 
-The code below shows an example of accessing lemma for each word:
+Here is an example of lemmatizing words in a sentence and accessing their lemmas afterwards:
 
 ```python
 import stanza
@@ -42,7 +42,7 @@ doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'word: {word.text+" "}\tlemma: {word.lemma}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
 
-This code will generate the following output:
+As can be seen in the result, Stanza lemmatizes the word _was_ as _be_.
 
 ```
 word: Barack    lemma: Barack
@@ -53,8 +53,6 @@ word: in        lemma: in
 word: Hawaii    lemma: Hawaii
 word: .         lemma: .
 ```
-
-The lemma of the word `was` is `be`.
 
 ## Training-Only Options
 

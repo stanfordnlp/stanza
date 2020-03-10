@@ -60,9 +60,9 @@ id: 4   text: sentence
 id: 5   text: .
 ```
 
-### Only Tokenization without Sentence Segmentation
+### Tokenization without Sentence Segmentation
 
-You can only perform tokenization without sentence segmentation, as the sentences are split by two continuous newlines (`\n\n`). Just set `tokenize_no_ssplit` as `True` to disable sentence segmentation. 
+Sometimes you might want to tokenize your text given existing sentences (e.g., in machine translation). You can perform tokenization without sentence segmentation, as long as the sentences are split by two continuous newlines (`\n\n`) in the raw text. Just set `tokenize_no_ssplit` as `True` to disable sentence segmentation. Here is an example:
 
 ```python
 import stanza
@@ -74,7 +74,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-The code will generate the following output:
+As you can see in the output below, only two [`Sentence`](data_object.md#sentence)s resulted from this processing, where the second contains all the tokens in the second and third sentences if we were to perform sentence segmentation.
 
 ```
 ====== Sentence 1 tokens =======
@@ -96,7 +96,7 @@ id: 9   text: third
 id: 10  text: .
 ```
 
-As can be seen from the output, sentence split decisions are preserved. If `tokenize_no_ssplit` were set to `False`, Stanza would have generated the following output with its own sentence split (and tokenization):
+Contrast this to Stanza's output when `tokenize_no_ssplit` is set to `False` (its default value):
 
 ```
 ====== Sentence 1 tokens =======
@@ -119,6 +119,8 @@ id: 4   text: third
 id: 5   text: .
 ```
 
+Note that sentence segmentation is performed here as is normally the case.
+
 ### Start with Pretokenized Text
 
 In some cases, you might have already tokenized your text, and just want to use Stanza for downstream processing.
@@ -136,7 +138,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-Alternatively to passing in a string, you can also pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens.
+An alternative to passing in a string is to pass in a list of lists of strings, representing a document with sentences, each sentence a list of tokens.
 
 The equivalent of our example above would be:
 
@@ -150,7 +152,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-These codes will generate the following output:
+As you can see in the output below, no further tokenization or sentence segmentation is performed (note how punctuation are attached to the end of tokens as well as inside of tokens.
 
 ```
 ====== Sentence 1 tokens =======
@@ -166,7 +168,7 @@ id: 2   text: split,
 id: 3   text: too!
 ```
 
-As can be seen from the output, tokenization and sentence split decisions are preserved. If `tokenize_pretokenized` were set to `False` and the input is a string, Stanza would have generated the following output with its own tokenization and sentence split:
+Contrast this with Stanza's output when `tokenize_pretokenized` is set to `False`, Stanza would perform tokenization and sentence segmentation as it sees fits.
 
 ```
 ====== Sentence 1 tokens =======
@@ -194,9 +196,9 @@ id: 5   text: !
 {{ "You can only use spaCy to tokenize English text for now, since spaCy tokenizer does not handle multi-word token expansion for other languages." | markdownify }}
 {{ end }}
 
-While our neural pipeline can achieve significantly higher accuracy, rule-based tokenizer such as [`spaCy`](https://spacy.io) runs much faster when processing large-scale text. We provide an interface to use [`spaCy`](https://spacy.io) as the tokenizer for English by simply specifying in the `processors` option. Please make sure you have successfully downloaded and installed [`spaCy`](https://spacy.io) and English models following the [guide](https://spacy.io/usage).
+While our neural pipeline can achieve significantly higher accuracy, rule-based tokenizer such as [`spaCy`](https://spacy.io) runs much faster when processing large-scale text. We provide an interface to use [`spaCy`](https://spacy.io) as the tokenizer for English by simply specifying in the `processors` option. Please make sure you have successfully downloaded and installed [`spaCy`](https://spacy.io) and English models following their [usage guide](https://spacy.io/usage).
 
-The code below shows an example of tokenization and sentence segmentation with [`spaCy`](https://spacy.io):
+To perform tokenization and sentence segmentation with [`spaCy`](https://spacy.io), simply set the package for the `TokenizeProcessor` to `spacy`, as in the following example:
 
 ```python
 import stanza
@@ -208,7 +210,7 @@ for i, sentence in enumerate(doc.sentences):
     print(*[f'id: {token.id}\ttext: {token.text}' for token in sentence.tokens], sep='\n')
 ```
 
-This code will generate the following output:
+This will allow us to tokenize the text with Spacy and use it in downstream annotations in Stanza. The output is:
 
 ```
 ====== Sentence 1 tokens =======

@@ -1,5 +1,5 @@
 ---
-title: POSProcessor 
+title: POSProcessor
 keywords: pos
 permalink: '/pos.html'
 ---
@@ -9,8 +9,8 @@ permalink: '/pos.html'
 Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html).
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
-| pos | POSProcessor | tokenize, mwt | UPOS, XPOS, and UFeats annotations accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. | Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). |
+| --- | --- | --- | --- | --- |
+| pos | POSProcessor | tokenize, mwt | UPOS, XPOS, and UFeats annotations are accessible through [`Word`](data_objects.md#word)'s properties `pos`, `xpos`, and `ufeats`. | Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). |
 
 ## Options
 
@@ -20,12 +20,12 @@ Labels tokens with their [universal POS (UPOS) tags](https://universaldependenci
 
 ## Example Usage
 
-Running the [POSProcessor](pos.md) requires the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md). 
+Running the [POSProcessor](pos.md) requires the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md).
 After the pipeline is run, the [`Document`](data_objects.md#document) will contain a list of [`Sentence`](data_objects.md#sentence)s, and the [`Sentence`](data_objects.md#sentence)s will contain lists of [`Word`](data_objects.md#word)s. The part-of-speech tags can be accessed via the `upos`(`pos`) and `xpos` fields of each [`Word`](data_objects.md#word), while the universal morphological features can be accessed via the `feats` field.
 
-### Access POS and Morphological Feature for Word
+### Accessing POS and Morphological Feature for Word
 
-The code below shows an example of accessing part-of-speech and morphological features for each word:
+Here is an example of tagging a piece of text and accessing part-of-speech and morphological features for each word:
 
 ```python
 import stanza
@@ -35,7 +35,7 @@ doc = nlp('Barack Obama was born in Hawaii.')
 print(*[f'word: {word.text}\tupos: {word.upos}\txpos: {word.xpos}\tfeats: {word.feats if word.feats else "_"}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
 
-This code will generate the following output:
+As can be seen in the result, we can tell that the word `was` is a third-person auxiliary verb in the past tense from Stanza's analysis.
 
 ```
 word: Barack    upos: PROPN     xpos: NNP       feats: Number=Sing
@@ -47,7 +47,6 @@ word: Hawaii    upos: PROPN     xpos: NNP       feats: Number=Sing
 word: .         upos: PUNCT     xpos: .         feats: _
 ```
 
-The word `was` is an auxiliary verb in the past tense.
 
 ## Training-Only Options
 

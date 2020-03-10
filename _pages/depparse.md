@@ -9,8 +9,8 @@ permalink: '/depparse.html'
 Provides an accurate syntactic dependency parser.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
-| depparse | DepparseProcessor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parser. |
+| --- | --- | --- | --- | --- |
+| depparse | DepparseProcessor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parsing analysis. |
 
 ## Options
 
@@ -21,12 +21,12 @@ Provides an accurate syntactic dependency parser.
 
 ## Example Usage
 
-Running the [DepparseProcessor](depparse.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), [POSProcessor](pos.md), and [LemmaProcessor](lemma.md). 
-After all these processors have been run, each [`Sentence`](data_objects.md#sentence) in the output would have been parsed into Universal Dependencies (version 2) structure, where the head index of each [`Word`](data_objects.md#word) can be accessed by the property `head`, and the dependency relation between the words `deprel`. Note that the head index starts at 1 for actual words, and is 0 only when the word itself is the root of the tree. This index should be offset by 1 when looking for the govenor word in the sentence. 
+Running the [DepparseProcessor](depparse.md) requires the [TokenizeProcessor](tokenize.md), [MWTProcessor](mwt.md), [POSProcessor](pos.md), and [LemmaProcessor](lemma.md).
+After all these processors have been run, each [`Sentence`](data_objects.md#sentence) in the output would have been parsed into Universal Dependencies (version 2) structure, where the head index of each [`Word`](data_objects.md#word) can be accessed by the property `head`, and the dependency relation between the words `deprel`. Note that the head index starts at 1 for actual words, and is 0 only when the word itself is the root of the tree. This index should be offset by 1 when looking for the govenor word in the sentence.
 
-### Access Head and Dependency Relation for Word
+### Accessing Syntactic Dependency Information
 
-The code below shows an example of accessing the head word and dependency relation for each word:
+Here is an example of parsing a sentence and accessing syntactic parse information from each word:
 
 ```python
 import stanza
@@ -36,7 +36,7 @@ doc = nlp('Nous avons atteint la fin du sentier.')
 print(*[f'id: {word.id}\tword: {word.text}\thead id: {word.head}\thead: {sent.words[word.head-1].text if word.head > 0 else "root"}\tdeprel: {word.deprel}' for sent in doc.sentences for word in sent.words], sep='\n')
 ```
 
-This will generate the following output:
+As can be seen in the output, the syntactic head of the word _Nous_ is _atteint_, and the dependency relation between the two words is  `nsubj` (_Nous_ is a nominal subject for _atteint_).
 
 ```
 id: 1   word: Nous      head id: 3      head: atteint   deprel: nsubj
@@ -50,13 +50,12 @@ id: 8   word: sentier   head id: 5      head: fin       deprel: nmod
 id: 9   word: .         head id: 3      head: atteint   deprel: punct
 ```
 
-The head of the word `Nous` is `atteint` with the dependency relation `nsubj`.
 
 ### Start with Pretagged Document
 
-Normally, the `depparse` processor depends on `tokenize`, `mwt`, `pos`, and `lemma`. However, you can skip the restriction and pass the pretagged document (with upos, xpos, feats, lemma) by setting `depparse_pretagged=True`.
+Normally, the `depparse` processor depends on `tokenize`, `mwt`, `pos`, and `lemma` processors. However, in cases you wish to use your own tokenization, multi-word token expansion, POS tagging and lemmatization, you can skip the restriction and pass the pretagged document (with upos, xpos, feats, lemma) by setting `depparse_pretagged` to `True`.
 
-The code below shows an example of dependency parsing with pretokenized and pretagged document:
+Here is an example of dependency parsing with pretokenized and pretagged document:
 
 ```python
 import stanza

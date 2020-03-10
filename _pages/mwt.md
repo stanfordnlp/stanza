@@ -14,8 +14,8 @@ Only languages with <a href='https://universaldependencies.org/u/overview/tokeni
 {{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
-| --- | --- | --- | --- | --- | 
-| mwt | MWTProcessor | tokenize | Expands multi-word tokens into multiple words when they are predicted by the tokenizer. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md). |
+| --- | --- | --- | --- | --- |
+| mwt | MWTProcessor | tokenize | Expands multi-word tokens (MWTs) into multiple words when they are predicted by the tokenizer. Each [`Token`](data_objects.md#token) will correspond to one or more [`Word`](data_objects.md#word)s after tokenization and MWT expansion. | Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md). This is only applicable to some languages. |
 
 ## Options
 
@@ -25,11 +25,11 @@ Only languages with <a href='https://universaldependencies.org/u/overview/tokeni
 
 ## Example Usage
 
-The [MWTProcessor](mwt.md) processor only requires [TokenizeProcessor](tokenize.md). After these two processors have run, the [`Sentence`](data_objects.md#sentence)s will have lists of [`Token`](data_objects.md#token)s and corresponding [`Word`](data_objects.md#word)s based on the multi-word-token expander model.  The list of tokens for sentence `sent` can be accessed with `sent.tokens`.  The list of words for sentence `sent` can be accessed with `sent.words`.  The list of words for a token `token` can be accessed with `token.words`.  
+The [MWTProcessor](mwt.md) processor only requires [TokenizeProcessor](tokenize.md) to be run before it. After these two processors have processed the text, the [`Sentence`](data_objects.md#sentence)s will have lists of [`Token`](data_objects.md#token)s and corresponding syntactic [`Word`](data_objects.md#word)s based on the multi-word-token expander model.  The list of tokens for a sentence `sent` can be accessed with `sent.tokens`, and its list of words with `sent.words`. Similarly, the list of words for a token `token` can be accessed with `token.words`.
 
-### Access Syntactic Words for Multi-Word Token
+### Accessing Syntactic Words for Multi-Word Token
 
-The code below shows an example of accessing syntactic words for each token in the first sentence:
+Here is an example of a piece of text in French that requires multi-word token expansion, and how to access the underlying words of these multi-word tokens:
 
 ```python
 import stanza
@@ -40,7 +40,7 @@ for token in doc.sentences[0].tokens:
     print(f'token: {token.text}\twords: {", ".join([word.text for word in token.words])}')
 ```
 
-This code will generate the following output:
+As a result of running this code, we see that the word _du_ is expanded into its underlying syntactic words, _de_ and _le_.
 
 ```
 token: Nous     words: Nous
@@ -53,11 +53,9 @@ token: sentier  words: sentier
 token: .        words: .
 ```
 
-The multi-word token `du` is expanded to two syntactic words `de` and `le`.
+### Accessing Parent Token for Word
 
-### Access Parent Token for Word
-
-The code below shows an example of accessing parent token for each word in the first sentence:
+When performing word-level annotations and processing, it might sometimes be useful to access the token a given word is derived from, so that we can access its character offsets, among other things, that are associated with the token. Here is an example of how to do that with [`Word`](data_object.md#word)'s `parent` property with the same sentence we just saw:
 
 ```python
 import stanza
@@ -68,7 +66,7 @@ for word in doc.sentences[0].words:
     print(f'word: {word.text}\tparent token: {word.parent.text}')
 ```
 
-This code will generate the following output:
+As one can see in the result below, Words `de` and `le` have the same parent token `du`.
 
 ```
 word: Nous      parent token: Nous
@@ -81,8 +79,6 @@ word: le        parent token: du
 word: sentier   parent token: sentier
 word: .         parent token: .
 ```
-
-Words `de` and `le` have the same parent token `du`.
 
 ## Training-Only Options
 
