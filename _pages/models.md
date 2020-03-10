@@ -17,7 +17,7 @@ Stanza provides simple and flexible interfaces for downloading models. You can c
 | logging_level | `str` | 'INFO' | Control the details of information to display. Can be one of 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CIRTICAL', 'FATAL'. Less information will be displayed from 'DEBUG' to 'FATAL'. |
 | verbose | `str` | None | Simplified option for logging level. If True, set logging level to 'INFO'. If False, set logging level to 'ERROR'.  |
 
-We provide examples about how to use these options [here](installation_usage.md#pipeline-building). 
+We provide examples about how to use these options [here](installation_usage.md#building-a-pipeline). 
 
 
 ## Available UD Models

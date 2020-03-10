@@ -8,7 +8,7 @@ While our [Installation & Getting Started](installation_usage) page covers basic
 
 ## Pipeline Building
 
-[Building a Neural Pipeline with Customized Model Paths](pipeline.md#build-pipeline-from-config)
+[Building a Neural Pipeline with Customized Model Paths](pipeline.md#build-pipeline-from-a-config-dictionary)
 
 ## Text Annotation
 

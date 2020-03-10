@@ -52,7 +52,7 @@ print(doc) # Look at the result
 
 Here, we are building a Pipeline for English that performs tokenization, sentence segmentation, and POS tagging that runs on the GPU, and POS tagging is limited to processing 3000 words at one time to avoid excessive GPU memory consumption.
 
-You can find more examples about how to use these options [here](installation_usage.md#pipeline-building).
+You can find more examples about how to use these options [here](installation_usage.md#building-a-pipeline).
 
 ### Build Pipeline from a Config Dictionary
 
