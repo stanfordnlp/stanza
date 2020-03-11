@@ -1,4 +1,4 @@
-<center><img src="images/stanza-logo.png" height="120px"/></center>
+<p align="center"><img src="images/stanza-logo.png" height="100px"/></p>
 
 ## Stanza: A Python NLP Library for Many Human Languages
 
