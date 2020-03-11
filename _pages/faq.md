@@ -4,15 +4,47 @@ keywords: stanza, frequently asked questions, faq
 permalink: '/faq.html'
 ---
 
-## Troubleshooting
+## Model Output
+
+### Model predictions are wrong on some of my examples, is this normal?
+
+This is absolutely normal, as all models in Stanza (yes, even tokenization!) are statistical. Although they are quite accurate, it does not mean these models are perfect. Therefore, it's quite likely that you'll find cases where the model prediction clearly doesn't make sense, but statistically speaking, it shouldn't be too far off on a large collection of text from the [performance we report](performance.md) as long as the genre of your text is similar to what the models are trained on.
+
+### The model prediction is inconsistent between Stanza and CoreNLP, or their online demos
+
+Stanza's neural pipeline use fundamentally different models from CoreNLP for all tasks, and are usually trained on different data, so it is not unexpected that their behaviors will differ.
+
+As for online demos, it is possible that some demos are using models that are different from the latest models available for download, so it is not impossible that there are slight differences there as well.
+
+### Can I use Stanza models in CoreNLP, or the other way around?
+
+Since Stanza's neural pipeline use fundamentally different models from CoreNLP for all tasks, it will not be possible to use Stanza's model in CoreNLP or the other way around.
+
+However, you could use CoreNLP for part of the annotation (e.g., tokenization) through the [`CoreNLPClient`](corenlp_client.md), and use the resulting annotations as input to Stanza's neural pipeline.
+
+## Troubleshooting Download & Installation
+
+### Getting `ERROR: Could not find a version` `that satisfies the requirement torch` when installing Stanza
+
+This is usually because PyTorch doesn't have a version that Stanza requires for install through `pip`. You can usually work around this issue by installing PyTorch from your package manager (e.g., Anaconda) first, before trying to install Stanza.
+
+### Model download is very slow or I cannot connect to the server
+
+Although we try our best to keep our model server available, it does become unavailable from time to time due to various reasons, e.g., hardware updates, power outages, etc. These will usually be resolved within a few hours. Please be patient while we fix issues on our side!
+
+## Troubleshooting Running Stanza
+
+### Why do I keep getting a `SyntaxError: invalid syntax` error message while trying to `import stanza`?
+
+Stanza will not work with Python 3.5 or below. If you have trouble importing the package, please try to upgrade your Python.
+
+### Getting `Segmentation fault` or other uninterpretable non-Python errors when trying to run the neural pipeline
+
+This is ususally caused by a corrupted installation of PyTorch in your environment. Try reinstalling PyTorch and Stanza.
 
 ### Why am I getting an `OSError: [Errno 22] Invalid argument` error and therefore a `Vector file is not provided` exception while the model is being loaded?
 
 If you are getting this error, it is very likely that you are running macOS and using Python with version <= 3.6.7 or <= 3.7.1. If this is the case, then you are affected by a [known Python bug](https://bugs.python.org/issue24658) on macOS, and upgrading your Python to >= 3.6.8 or >= 3.7.2 should solve this issue.
 
 If you are not running macOS or already have the specified Python version and still seeing this issue, please report this to us via the [GitHub issue tracker](https://github.com/stanfordnlp/stanza/issues).
-
-### Why do I keep getting a `SyntaxError: invalid syntax` error message while trying to import stanza?
-
-Stanza will not work with Python 3.5 or below. If you have trouble importing the package, please try to upgrade your Python.
 
