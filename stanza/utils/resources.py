@@ -22,9 +22,6 @@ logger = logging.getLogger('stanza')
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
 DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanza_resources')
-DEFAULT_MODELS_URL = 'http://nlp.stanford.edu/software/stanza'
-DEFAULT_PROCESSORS = "default_processors"
-DEFAULT_DEPENDENCIES = "default_dependencies"
 PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER]
 
 # given a language and models path, build a default configuration
@@ -104,9 +101,9 @@ def maintain_processor_list(resources, lang, package, processors):
                 logger.debug(f'Find {key}: {value}.')
                 processor_list[key] = value
             # allow values to be default in some cases
-            elif key in resources[lang][DEFAULT_PROCESSORS] and value == 'default':
-                logger.debug(f'Find {key}: {resources[lang][DEFAULT_PROCESSORS][key]}.')
-                processor_list[key] = resources[lang][DEFAULT_PROCESSORS][key]
+            elif key in resources[lang]['default_processors'] and value == 'default':
+                logger.debug(f'Find {key}: {resources[lang]["default_processors"][key]}.')
+                processor_list[key] = resources[lang]['default_processors'][key]
             # allow tokenize to be set to "spacy"
             elif key == TOKENIZE and value == 'spacy':
                 logger.debug(f'Find {key}: {value}. Using external spacy library as tokenizer.')
@@ -118,7 +115,7 @@ def maintain_processor_list(resources, lang, package, processors):
     if package:
         logger.debug(f'Processing parameter "package"...')
         if package == 'default':
-            for key, value in resources[lang][DEFAULT_PROCESSORS].items():
+            for key, value in resources[lang]['default_processors'].items():
                 if key not in processor_list:
                     logger.debug(f'Find {key}: {value}.')
                     processor_list[key] = value
@@ -139,7 +136,7 @@ def maintain_processor_list(resources, lang, package, processors):
     return processor_list
 
 def add_dependencies(resources, lang, processor_list):    
-    default_dependencies = resources[lang][DEFAULT_DEPENDENCIES]
+    default_dependencies = resources[lang]['default_dependencies']
     for item in processor_list:
         processor, package = item
         dependencies = default_dependencies.get(processor, None)
@@ -224,12 +221,13 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
     lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
+    url = resources['url']
     logger.info(f'Downloading models for language: {lang} ({lang_name})')
 
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
         logger.info('Downloading default packages...')
-        request_file(f'{DEFAULT_MODELS_URL}/{__resources_version__}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
+        request_file(f'{url}/{__resources_version__}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
         unzip(os.path.join(dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
@@ -242,5 +240,5 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         
         # Download packages
         for key, value in download_list:
-            request_file(f'{DEFAULT_MODELS_URL}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
     logger.info(f'Finished downloading models and saved to {dir}.')
