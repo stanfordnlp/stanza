@@ -28,7 +28,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     # The project's main homepage.
-    url='https://github.com/stanfordnlp/stanza.git',
+    url='https://github.com/stanfordnlp/stanza',
 
     # Author details
     author='Stanford Natural Language Processing Group',
