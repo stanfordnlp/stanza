@@ -14,25 +14,25 @@ While our [Installation & Getting Started](installation_usage) page covers basic
 
 [Running Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
-[Only Running Tokenization without Sentence Segmentation](tokenize.md#only-tokenization-without-sentence-segmentation)
+[Running Tokenization without Sentence Segmentation](tokenize.md#tokenization-without-sentence-segmentation)
 
 [Running Stanza with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
 
 [Using spaCy for Fast Tokenization and Sentence Segmentation](tokenize.md#use-spacy-for-fast-tokenization-and-sentence-segmentation)
 
-[Accessing Syntactic Words of Multi-Word Tokens](mwt.md#access-syntactic-words-for-multi-word-token)
+[Accessing Syntactic Words of Multi-Word Tokens](mwt.md#accessing-syntactic-words-for-multi-word-token)
 
-[Accessing Parent Token of a Word](mwt.md#access-parent-token-for-word)
+[Accessing Parent Token of a Word](mwt.md#accessing-parent-token-for-word)
 
-[Accessing POS and Morphological Features of a Word](pos.md#access-pos-and-morphological-feature-for-word)
+[Accessing POS and Morphological Features of a Word](pos.md#accessing-pos-and-morphological-feature-for-word)
 
-[Accessing Lemma of a Word](lemma.md#access-lemma-for-word)
+[Accessing Lemma of a Word](lemma.md#accessing-lemma-for-word)
 
-[Accessing Head and Dependency Relation of a Word](depparse.md#access-head-and-dependency-relation-for-word)
+[Accessing Head and Dependency Relation of a Word](depparse.md#accessing-syntactic-dependency-information)
 
 [Running Dependency Parsing with Pre-annotated Document](depparse.md#start-with-pretagged-document)
 
-[Accessing Named Entities in a Sentence or a Document](ner.md#access-named-entities-for-sentence-and-document)
+[Accessing Named Entities in a Sentence or a Document](ner.md#accessing-named-entities-for-sentence-and-document)
 
 
 ## Data Conversion
