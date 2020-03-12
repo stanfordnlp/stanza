@@ -16,7 +16,7 @@ default_treebanks = {
   "bg": "btb",
   "bxr": "bdt",
   "ca": "ancora",
-  "zh": "gsd",
+  "zh-hant": "gsd",
   "hr": "set",
   "cs": "pdt",
   "da": "ddt",
@@ -67,7 +67,7 @@ default_treebanks = {
   "swl": "sslc",
   "cop": "scriptorium",
   "be": "hse",
-  "zhs": "gsdsimp",
+  "zh-hans": "gsdsimp",
   "lzh": "kyoto",
   "gd": "arcosg",
   "olo": "kkpp",
@@ -81,14 +81,14 @@ default_treebanks = {
 
 # default ner for languages
 default_ners = {
-  "ar": "ontonotes",
+  "ar": "aqmar",
   "de": "conll03",
   "en": "ontonotes",
   "es": "conll02",
   "fr": "wikiner",
   "nl": "conll02",
   "ru": "wikiner",
-  "zh": "ontonotes"
+  "zh-hans": "ontonotes"
 }
 
 
@@ -101,7 +101,7 @@ default_charlms = {
   "fr": "newswiki",
   "nl": "ccwiki",
   "ru": "newswiki",
-  "zh": "gigaword"
+  "zh-hans": "gigaword"
 }
 
 
@@ -131,7 +131,7 @@ lcode2lang = {
     "bg": "Bulgarian",
     "bxr": "Buryat",
     "ca": "Catalan",
-    "zh": "Chinese",
+    "zh-hant": "Traditional_Chinese",
     "lzh": "Classical_Chinese",
     "cop": "Coptic",
     "hr": "Croatian",
@@ -177,7 +177,7 @@ lcode2lang = {
     "ru": "Russian",
     "gd": "Scottish_Gaelic",
     "sr": "Serbian",
-    "zhs": "Simplified_Chinese",
+    "zh-hans": "Simplified_Chinese",
     "sk": "Slovak",
     "sl": "Slovenian",
     "es": "Spanish",
@@ -308,11 +308,18 @@ def process_lcode(args):
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
+def process_misc(args):
+    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    resources['url'] = 'http://nlp.stanford.edu/software/stanza'
+    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+
 def main():
     args = parse_args()
     process_dirs(args)
     process_defaults(args)
     process_lcode(args)
+    process_misc(args)
 
 
 if __name__ == '__main__':
