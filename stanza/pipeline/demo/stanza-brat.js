@@ -997,6 +997,8 @@ $(document).ready(function() {
     } else if ($('#language').val() === 'en') {
       $('#text').attr('placeholder', 'e.g., The quick brown fox jumped over the lazy dog.');
     } else if ($('#language').val() === 'zh') {
+      $('#text').attr('placeholder', '例如，快速的棕色狐狸跳过了懒惰的狗。');
+    } else if ($('#language').val() === 'zh-Hant') {
       $('#text').attr('placeholder', '例如，快速的棕色狐狸跳過了懶惰的狗。');
     } else if ($('#language').val() === 'fr') {
       $('#text').attr('placeholder', 'Par exemple, le renard brun rapide a sauté sur le chien paresseux.');
@@ -1039,7 +1041,9 @@ $(document).ready(function() {
       } else if ($('#language').val() === 'en') {
         currentQuery = 'The quick brown fox jumped over the lazy dog.';
       } else if ($('#language').val() === 'zh') {
-        currentQuery = '快速的棕色狐狸跳过了懒惰的狗';
+        currentQuery = '快速的棕色狐狸跳过了懒惰的狗。';
+      } else if ($('#language').val() === 'zh-Hant') {
+        currentQuery = '快速的棕色狐狸跳過了懶惰的狗。';
       } else if ($('#language').val() === 'fr') {
         currentQuery = 'Le renard brun rapide a sauté sur le chien paresseux.';
       } else if ($('#language').val() === 'de') {

@@ -13,9 +13,10 @@ def get_file(path):
 
 @app.route('/<path:path>')
 def static_file(path):
-    if path in ['stanza-brat.css', 'stanza-brat.js', 'stanza-parseviewer.js', 'loading.gif']:
+    if path in ['stanza-brat.css', 'stanza-brat.js', 'stanza-parseviewer.js', 'loading.gif',
+            'favicon.png', 'stanza-logo.png']:
         return app.send_static_file(path)
-    elif path == 'index.html':
+    elif path in 'index.html':
         return app.send_static_file('stanza-brat.html')
     else:
         abort(403)
@@ -42,7 +43,7 @@ def annotate():
         tokens = []
         deps = []
         for word in sentence.words:
-            tokens.append({'index': word.id, 'word': word.text, 'lemma': word.lemma, 'pos': word.xpos, 'upos': word.upos, 'feats': word.feats, 'ner': word.ner if word.ner is None or word.ner == 'O' else word.ner[2:]})
+            tokens.append({'index': word.id, 'word': word.text, 'lemma': word.lemma, 'pos': word.xpos, 'upos': word.upos, 'feats': word.feats, 'ner': word.parent.ner if word.parent.ner is None or word.parent.ner == 'O' else word.parent.ner[2:]})
             deps.append({'dep': word.deprel, 'governor': word.head, 'governorGloss': sentence.words[word.head-1].text,
                 'dependent': word.id, 'dependentGloss': word.text})
         annotated_sentences.append({'basicDependencies': deps, 'tokens': tokens})
