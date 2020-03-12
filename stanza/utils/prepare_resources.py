@@ -62,7 +62,7 @@ default_treebanks = {
   "vi": "vtb",
   "lt": "hse",
   "wo": "wtb",
-  "no": "bokmaal",
+  "nb": "bokmaal",
   "mt": "mudt",
   "swl": "sslc",
   "cop": "scriptorium",
@@ -165,7 +165,7 @@ lcode2lang = {
     "mr": "Marathi",
     "pcm": "Naija",
     "sme": "North_Sami",
-    "no": "Norwegian",
+    "nb": "Norwegian_Bokmaal",
     "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
@@ -310,6 +310,8 @@ def process_lcode(args):
 
 def process_misc(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    resources['no'] = {'alias': 'nb'}
+    resources['zh'] = {'alias': 'zh-hans'}
     resources['url'] = 'http://nlp.stanford.edu/software/stanza'
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 

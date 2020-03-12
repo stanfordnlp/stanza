@@ -47,7 +47,7 @@ lcode2lang = {
     "mr": "Marathi",
     "pcm": "Naija",
     "sme": "North_Sami",
-    "no": "Norwegian",
+    "nb": "Norwegian_Bokmaal",
     "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
