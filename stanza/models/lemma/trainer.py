@@ -180,6 +180,7 @@ class Trainer(object):
                 lemma = pred
             if lemma is None:
                 lemma = w
+            lemmas.append(lemma)
         return lemmas
 
     def save(self, filename):
