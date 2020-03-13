@@ -173,11 +173,13 @@ class Trainer(object):
         for p, pred in zip(pairs, other_preds):
             w, pos = p
             if (w,pos) in self.composite_dict:
-                lemmas += [self.composite_dict[(w,pos)]]
+                lemma = self.composite_dict[(w,pos)]
             elif w in self.word_dict:
-                lemmas += [self.word_dict[w]]
+                lemma = self.word_dict[w]
             else:
-                lemmas += [pred]
+                lemma = pred
+            if lemma is None:
+                lemma = w
         return lemmas
 
     def save(self, filename):
