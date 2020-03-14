@@ -256,7 +256,7 @@ class Document:
         return [sentence.to_dict() for sentence in self.sentences]
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
 
 class Sentence:
@@ -443,7 +443,7 @@ class Sentence:
         return ret
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
 
 class Token:
@@ -544,7 +544,7 @@ class Token:
         self._ner = value if self._is_null(value) == False else None
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     def to_dict(self, fields=[ID, TEXT, NER, MISC]):
         """ Dumps the token into a list of dictionary for this token with its extended words
@@ -730,7 +730,7 @@ class Word:
         self._upos = value if self._is_null(value) == False else None
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
         """ Dumps the word into a dictionary.
@@ -871,7 +871,7 @@ class Span:
         return span_dict
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     def pretty_print(self):
         """ Print the span in one line. """
