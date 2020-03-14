@@ -1,10 +1,8 @@
-<p align="center"><img src="https://github.com/stanfordnlp/stanfordnlp/raw/dev/images/stanza-logo.png" height="100px"/></p>
+<div align="center"><img src="https://github.com/stanfordnlp/stanfordnlp/raw/dev/images/stanza-logo.png" height="100px"/></div>
 
-<h2 align="center">
-    <p>Stanza: A Python NLP Library for Many Human Languages</p>
-</h2>
+<h2 align="center">Stanza: A Python NLP Library for Many Human Languages</h2>
 
-<p align="center">
+<div align="center">
     <a href="https://travis-ci.com/stanfordnlp/stanfordnlp">
         <img alt="Travis Status" src="https://travis-ci.com/stanfordnlp/stanza.svg?token=RPNzRzNDQRoq2x3J2juj&branch=master">
     </a>
@@ -13,7 +11,7 @@
     </a>
     <img alt="Conda Versions" src="https://img.shields.io/conda/vn/yuhaozhang/stanza?color=blue&label=conda">
     <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=blue">
-</p>
+</div>
 
 The Stanford NLP Group's official Python NLP library. It contains support for running various accurate natural language processing tools on 60+ languages and for accessing the Java Stanford CoreNLP software from Python. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanza/).
 
