@@ -44,7 +44,7 @@ To ask questions, report issues or request features, please use the [GitHub Issu
 
 ### pip
 
-Stanza supports Python 3.6 or later. We strongly recommend that you install Stanza from PyPI. If you already have [pip](https://pip.pypa.io/en/stable/installing/), the Python package manager, installed on your system, simply run:
+Stanza supports Python 3.6 or later. We recommend that you install Stanza via [pip](https://pip.pypa.io/en/stable/installing/), the Python package manager. To install, simply run:
 ```bash
 pip install stanza
 ```
@@ -62,6 +62,8 @@ To install Stanza via Anaconda, use the following conda command:
 ```bash
 conda install -c stanfordnlp stanza
 ```
+
+Note that for now installing Stanza via Anaconda does not work for Python 3.8. For Python 3.8 please use pip installation.
 
 ### From Source
 
