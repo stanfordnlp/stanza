@@ -10,7 +10,7 @@ homepage: true
 
 Stanza is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, to give a syntactic structure dependency parse, and to recognize named entities. The toolkit is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org). 
 
-Stanza is built with highly accurate neural network components that enable efficient training and evaluation with your own annotated data. The modules are built on top of the [PyTorch](https://pytorch.org/) library. You will get much faster performance if you run this system on a GPU-enabled machine.
+Stanza is built with highly accurate neural network components that also enable efficient training and evaluation with your own annotated data. The modules are built on top of the [PyTorch](https://pytorch.org/) library. You will get much faster performance if you run this system on a GPU-enabled machine.
 
 In addition, Stanza includes a Python interface to the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
@@ -78,7 +78,7 @@ limitations under the License.
 
 ## Citing Stanza in papers
 
-If you use the Stanza in your work, please cite this paper:
+If you use Stanza in your work, please cite this paper:
 
 > Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch](https://nlp.stanford.edu/pubs/qi2018universal.pdf) In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]
 

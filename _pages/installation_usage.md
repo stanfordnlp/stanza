@@ -91,7 +91,7 @@ Similarly, the following example shows how to use the [NERProcessor](ner.md) tra
 >>> nlp = stanza.Pipeline('nl', processors={'ner': 'wikiner'}, package='lassysmall')
 ```
 
-In some extreme cases, you may want to have full control over package names for all processors, instead of relying on the `default` package at all. This can be enabled by setting `package=None`. The following example shows how to use a `GSD` [TokenizeProcessor](tokenize.md), a `HDT` [POSProcessor](pos.md), and a `CoNLL03` [NERProcessor](ner.md), and a `default` [LemmaProcessor](lemma.md) for German:
+Rarely, you may want to have full control over package names for all processors, instead of relying on the `default` package at all. This can be enabled by setting `package=None`. The following example shows how to use a `GSD` [TokenizeProcessor](tokenize.md), a `HDT` [POSProcessor](pos.md), and a `CoNLL03` [NERProcessor](ner.md), and a `default` [LemmaProcessor](lemma.md) for German:
 ```python
 >>> stanza.download('de', processors={'tokenize': 'gsd', 'pos': 'hdt', 'ner': 'conll03', 'lemma': 'default'}, package=None)
 >>> nlp = stanza.Pipeline('de', processors={'tokenize': 'gsd', 'pos': 'hdt', 'ner': 'conll03', 'lemma': 'default'}, package=None)
@@ -117,7 +117,7 @@ nlp = stanza.Pipeline('en', verbose=False)
 
 ### Controlling Devices
 
-Stanza is implemented to be "CUDA-aware", meaning that it will run its processors on a CUDA-enabled GPU device whenever such a device is available, or otherwise CPU will be used. We suggest that you run the pipeline on GPU devices for maximum speed; however, you can force the pipeline to always run on CPU by setting `use_gpu=False` when initializing the pipeline:
+Stanza is implemented to be "CUDA-aware", meaning that it will run its processors on a CUDA-enabled GPU device whenever such a device is available, or otherwise CPU will be used. If processing a lot of text, we suggest that you run the pipeline on GPU devices for maximum speed, but Stanza also runs fine on CPU. You can force the pipeline to always run on CPU by setting `use_gpu=False` when initializing the pipeline:
 ```python
 nlp = stanza.Pipeline('en', use_gpu=False)
 ```
@@ -130,7 +130,7 @@ Annotating text is simple after a [Pipeline](pipeline.md#pipeline) is built and 
 >>> doc = nlp('Barack Obama was born in Hawaii.')
 ```
 
-Within a [Document](data_objects#document), annotations are further stored in [Sentence](data_objects#sentence)s, [Token](data_objects#token)s, [Word](data_objects#word)s in a top-down fashion. An additional [Span](data_objects#span) object may be used to store annotations such as named entity mentions. Here we provide some simple examples to manipulate with the returned annotations.
+Within a [Document](data_objects#document), annotations are further stored in [Sentence](data_objects#sentence)s, [Token](data_objects#token)s, [Word](data_objects#word)s in a top-down fashion. An additional [Span](data_objects#span) object may be used to store annotations such as named entity mentions. Here we provide some simple examples to manipulate the returned annotations.
 
 The following example shows how to print the text, lemma and POS tag of each word in each sentence of an annotated document:
 ```python

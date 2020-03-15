@@ -22,8 +22,8 @@ By default, CoreNLP Client uses `protobuf` for message passing. A full definitio
 
 {% include alerts.html %}
 {{note}}
-It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
-the server is properly shut down when your Python application finishes.
+{{"It is highly advised to start the server in a context manager (e.g. `with CoreNLPClient(...) as client:`) to ensure
+the server is properly shut down when your Python application finishes." | markdownify}}
 {{end}}
 
 ```python
