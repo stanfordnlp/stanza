@@ -212,7 +212,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
     # Download resources.json to obtain latest packages.
-    logger.info('Downloading resource file...')
+    logger.debug('Downloading resource file...')
     request_file(f'{DEFAULT_RESOURCES_URL}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
     resources = json.load(open(os.path.join(dir, 'resources.json')))
     if lang not in resources:
@@ -222,21 +222,19 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         lang = resources[lang]['alias']
     lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
     url = resources['url']
-    logger.info(f'Downloading models for language: {lang} ({lang_name})')
 
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
-        logger.info('Downloading default packages...')
+        logger.info(f'Downloading default packages for language: {lang} ({lang_name})...')
         request_file(f'{url}/{__resources_version__}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
         unzip(os.path.join(dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
-        logger.info('Downloading customized packages...')
         download_list = maintain_processor_list(resources, lang, package, processors)
         download_list = add_dependencies(resources, lang, download_list)
         download_list = flatten_processor_list(download_list)
         download_table = make_table(['Processor', 'Package'], download_list)
-        logger.info(f'Download list:\n{download_table}')
+        logger.info(f'Downloading these customized packages for language: {lang} ({lang_name})...\n{download_table}')
         
         # Download packages
         for key, value in download_list:

@@ -71,7 +71,7 @@ class Pipeline:
         lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
         # Load resources.json to obtain latest packages.
-        logger.info('Loading resource file...')
+        logger.debug('Loading resource file...')
         resources_filepath = os.path.join(dir, 'resources.json')
         if not os.path.exists(resources_filepath):
             raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
@@ -82,7 +82,6 @@ class Pipeline:
                 logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
                 lang = resources[lang]['alias']
             lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
-            logger.info(f'Loading models for language: {lang} ({lang_name})')
         else:
             logger.warning(f'Unsupported language: {lang}.')
 
@@ -92,7 +91,7 @@ class Pipeline:
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0: raise Exception('No processor to load. Please check if your language or package is correctly set.')
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
-        logger.info(f'Load list:\n{load_table}')
+        logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
         self.config = build_default_config(resources, lang, dir, self.load_list)
         self.config.update(kwargs)
