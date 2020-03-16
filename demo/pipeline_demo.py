@@ -6,14 +6,14 @@ import sys
 import argparse
 import os
 
-import stanfordnlp
-from stanfordnlp.utils.resources import DEFAULT_MODEL_DIR
+import stanza
+from stanza.utils.resources import DEFAULT_MODEL_DIR
 
 
 if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanfordnlp_resources',
+    parser.add_argument('-d', '--models_dir', help='location of models files | default: ~/stanza_resources',
                         default=DEFAULT_MODEL_DIR)
     parser.add_argument('-l', '--lang', help='Demo language',
                         default="en")
@@ -30,11 +30,11 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # download the models
-    stanfordnlp.download(args.lang, args.models_dir, confirm_if_exists=True)
+    stanza.download(args.lang, args.models_dir, confirm_if_exists=True)
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanfordnlp.Pipeline(models_dir=args.models_dir, lang=args.lang, use_gpu=(not args.cpu))
+    pipeline = stanza.Pipeline(models_dir=args.models_dir, lang=args.lang, use_gpu=(not args.cpu))
     # process the document
     doc = pipeline(example_sentences[args.lang])
     # access nlp annotations

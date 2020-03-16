@@ -6,11 +6,11 @@ import os
 
 # Environment Variables
 # set this to specify working directory of tests
-TEST_HOME_VAR = 'STANFORDNLP_TEST_HOME'
+TEST_HOME_VAR = 'STANZA_TEST_HOME'
 
 # Global Variables
-# test working directory base name must be stanfordnlp_test
-TEST_DIR_BASE_NAME = 'stanfordnlp_test'
+# test working directory base name must be stanza_test
+TEST_DIR_BASE_NAME = 'stanza_test'
 
 # check the working dir is set and compliant
 assert os.getenv(TEST_HOME_VAR) is not None, \

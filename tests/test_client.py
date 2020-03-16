@@ -3,14 +3,14 @@ Tests that call a running CoreNLPClient.
 """
 
 import pytest
-import stanfordnlp.server as corenlp
+import stanza.server as corenlp
 import shlex
 import subprocess
 
 from tests import *
 
 # set the marker for this module
-pytestmark = pytest.mark.travis
+pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 
@@ -40,7 +40,7 @@ Tokens:
 def corenlp_client():
     """ Client to run tests on """
     client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos,lemma,ner,depparse',
-                                   server_id='stanfordnlp_main_test_server')
+                                   server_id='stanza_main_test_server')
     yield client
     client.stop()
 
@@ -113,7 +113,7 @@ def test_external_server():
     """ Test starting up an external server and accessing with a client with start_server=False """
     corenlp_home = os.getenv('CORENLP_HOME')
     start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
-                f'-timeout 60000 -server_id stanfordnlp_external_server -serverProperties {SERVER_TEST_PROPS}'
+                f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
     start_cmd = start_cmd and shlex.split(start_cmd)
     external_server_process = subprocess.Popen(start_cmd)
     with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:

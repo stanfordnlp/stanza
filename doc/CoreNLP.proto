@@ -10,6 +10,12 @@ option java_outer_classname = "CoreNLPProtos";
 //
 
 //
+// To do the python version:
+//
+//  protoc -I=./doc --python_out=./stanza/protobuf ./doc/CoreNLP.proto
+//
+
+//
 // An enumeration for the valid languages allowed in CoreNLP
 //
 enum Language {
@@ -143,6 +149,7 @@ message Token {
   optional string ner               = 8;    // The word's NER tag
   optional string coarseNER         = 62;   // The word's coarse NER tag
   optional string fineGrainedNER    = 63;   // The word's fine-grained NER tag
+  repeated string nerLabelProbs     = 66;   // listing of probs
   optional string normalizedNER     = 9;    // The word's normalized NER tag
   optional string lemma             = 10;   // The word's lemma
   optional uint32 beginChar         = 11;   // The character offset begin, in the document
@@ -197,6 +204,20 @@ message Token {
   // mention index info
   repeated uint32 corefMentionIndex = 64;
   optional uint32 entityMentionIndex = 65;
+
+  // mwt stuff
+  optional bool isMWT = 67;
+  optional bool isFirstMWT = 68;
+  optional string mwtText = 69;
+
+  // number info
+  optional uint64 numericValue = 70;
+  optional string numericType = 71;
+  optional uint64 numericCompositeValue = 72;
+  optional string numericCompositeType = 73;
+
+  optional uint32 codepointOffsetBegin   = 74;
+  optional uint32 codepointOffsetEnd     = 75;
 
   // Fields in the CoreLabel java class that are moved elsewhere
   //       string text           @see Document#text + character offsets

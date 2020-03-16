@@ -2,10 +2,12 @@
 Basic testing of multi-word-token expansion
 """
 
-import stanfordnlp
+import pytest
+import stanza
 
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 # mwt data for testing
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \
@@ -13,30 +15,30 @@ FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient
 
 
 FR_MWT_TOKEN_TO_WORDS_GOLD = """
-token: Alors    		words: [<Word index=1;text=Alors>]
-token: encore   		words: [<Word index=2;text=encore>]
-token: inconnu  		words: [<Word index=3;text=inconnu>]
-token: du       		words: [<Word index=4;text=de>, <Word index=5;text=le>]
-token: grand    		words: [<Word index=6;text=grand>]
-token: public   		words: [<Word index=7;text=public>]
-token: ,        		words: [<Word index=8;text=,>]
-token: Emmanuel 		words: [<Word index=9;text=Emmanuel>]
-token: Macron   		words: [<Word index=10;text=Macron>]
-token: devient  		words: [<Word index=11;text=devient>]
-token: en       		words: [<Word index=12;text=en>]
-token: 2014     		words: [<Word index=13;text=2014>]
-token: ministre 		words: [<Word index=14;text=ministre>]
-token: de       		words: [<Word index=15;text=de>]
-token: l'       		words: [<Word index=16;text=l'>]
-token: Économie 		words: [<Word index=17;text=Économie>]
-token: ,        		words: [<Word index=18;text=,>]
-token: de       		words: [<Word index=19;text=de>]
-token: l'       		words: [<Word index=20;text=l'>]
-token: Industrie		words: [<Word index=21;text=Industrie>]
-token: et       		words: [<Word index=22;text=et>]
-token: du       		words: [<Word index=23;text=de>, <Word index=24;text=le>]
-token: Numérique		words: [<Word index=25;text=Numérique>]
-token: .        		words: [<Word index=26;text=.>]
+token: Alors    		words: [<Word id=1;text=Alors>]
+token: encore   		words: [<Word id=2;text=encore>]
+token: inconnu  		words: [<Word id=3;text=inconnu>]
+token: du       		words: [<Word id=4;text=de>, <Word id=5;text=le>]
+token: grand    		words: [<Word id=6;text=grand>]
+token: public   		words: [<Word id=7;text=public>]
+token: ,        		words: [<Word id=8;text=,>]
+token: Emmanuel 		words: [<Word id=9;text=Emmanuel>]
+token: Macron   		words: [<Word id=10;text=Macron>]
+token: devient  		words: [<Word id=11;text=devient>]
+token: en       		words: [<Word id=12;text=en>]
+token: 2014     		words: [<Word id=13;text=2014>]
+token: ministre 		words: [<Word id=14;text=ministre>]
+token: de       		words: [<Word id=15;text=de>]
+token: l'       		words: [<Word id=16;text=l'>]
+token: Économie 		words: [<Word id=17;text=Économie>]
+token: ,        		words: [<Word id=18;text=,>]
+token: de       		words: [<Word id=19;text=de>]
+token: l'       		words: [<Word id=20;text=l'>]
+token: Industrie		words: [<Word id=21;text=Industrie>]
+token: et       		words: [<Word id=22;text=et>]
+token: du       		words: [<Word id=23;text=de>, <Word id=24;text=le>]
+token: Numérique		words: [<Word id=25;text=Numérique>]
+token: .        		words: [<Word id=26;text=.>]
 """.strip()
 
 FR_MWT_WORD_TO_TOKEN_GOLD = """
@@ -70,13 +72,13 @@ word: .        		token parent:26-.
 
 
 def test_mwt():
-    pipeline = stanfordnlp.Pipeline(processors='tokenize,mwt', models_dir=TEST_MODELS_DIR, lang='fr')
+    pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='fr')
     doc = pipeline(FR_MWT_SENTENCE)
     token_to_words = "\n".join(
-        [f'token: {token.text.ljust(9)}\t\twords: {token.words}' for sent in doc.sentences for token in sent.tokens]
+        [f'token: {token.text.ljust(9)}\t\twords: [{", ".join([word.pretty_print() for word in token.words])}]' for sent in doc.sentences for token in sent.tokens]
     ).strip()
     word_to_token = "\n".join(
-        [f'word: {word.text.ljust(9)}\t\ttoken parent:{word.parent_token.index+"-"+word.parent_token.text}'
+        [f'word: {word.text.ljust(9)}\t\ttoken parent:{word.parent.id+"-"+word.parent.text}'
          for sent in doc.sentences for word in sent.words]).strip()
     assert token_to_words == FR_MWT_TOKEN_TO_WORDS_GOLD
     assert word_to_token == FR_MWT_WORD_TO_TOKEN_GOLD

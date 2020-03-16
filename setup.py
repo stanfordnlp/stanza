@@ -8,8 +8,8 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-# read the version from stanfordnlp/_version.py
-version_file_contents = open(path.join(here, 'stanfordnlp/_version.py'), encoding='utf-8').read()
+# read the version from stanza/_version.py
+version_file_contents = open(path.join(here, 'stanza/_version.py'), encoding='utf-8').read()
 VERSION = re.compile('__version__ = \"(.*)\"').search(version_file_contents).group(1)
 
 # Get the long description from the README file
@@ -17,18 +17,18 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='stanfordnlp',
+    name='stanza',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version=VERSION,
 
-    description='Official Stanford NLP Python Library',
+    description='A Python NLP Library for Many Human Languages, by the Stanford NLP Group',
     long_description=long_description,
     long_description_content_type="text/markdown",
     # The project's main homepage.
-    url='https://github.com/stanfordnlp/stanfordnlp.git',
+    url='https://github.com/stanfordnlp/stanza',
 
     # Author details
     author='Stanford Natural Language Processing Group',
@@ -47,16 +47,26 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Information Technology',
+        'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Text Processing',
+        'Topic :: Text Processing :: Linguistic',
+        'Topic :: Software Development',
+        'Topic :: Software Development :: Libraries',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 
     # What does your project relate to?
-    keywords='natural-language-processing nlp natural-language-understanding stanford-nlp',
+    keywords='natural-language-processing nlp natural-language-understanding stanford-nlp deep-learning',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -66,7 +76,10 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'protobuf', 'requests', 'torch>=1.0.0', 'tqdm'],
+    install_requires=['numpy', 'protobuf', 'requests', 'torch>=1.2.0', 'tqdm'],
+
+    # List required Python versions
+    python_requires='>=3.6',
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

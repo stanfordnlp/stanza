@@ -3,12 +3,13 @@ Test the requirements functionality for processors
 """
 
 import pytest
-import stanfordnlp
+import stanza
 
-from stanfordnlp.pipeline.core import PipelineRequirementsException
-from stanfordnlp.pipeline.processor import ProcessorRequirementsException
+from stanza.pipeline.core import PipelineRequirementsException
+from stanza.pipeline.processor import ProcessorRequirementsException
 from tests import *
 
+pytestmark = pytest.mark.pipeline
 
 def check_exception_vals(req_exception, req_exception_vals):
     """
@@ -33,22 +34,22 @@ def test_missing_requirements():
         # missing tokenize
         (
             # input config
-            {'processors': 'pos,depparse', 'models_dir': TEST_MODELS_DIR, 'lang': 'en'},
+            {'processors': 'pos,depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en'},
             # 2 expected exceptions
             [
                 {'processor_type': 'POSProcessor', 'processors_list': ['pos', 'depparse'], 'provided_reqs': set([]),
                  'requires': set(['tokenize'])},
                 {'processor_type': 'DepparseProcessor', 'processors_list': ['pos', 'depparse'],
-                 'provided_reqs': set([]), 'requires': set(['tokenize','pos'])}
+                 'provided_reqs': set([]), 'requires': set(['tokenize','pos', 'lemma'])}
             ]
         ),
-        # no pos when lemma_pos set to True
+        # no pos when lemma_pos set to True; for english mwt should not be included in the loaded processor list
         (
             # input config
-            {'processors': 'tokenize,mwt,lemma', 'models_dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_pos': True},
+            {'processors': 'tokenize,mwt,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_pos': True},
             # 1 expected exception
             [
-                {'processor_type': 'LemmaProcessor', 'processors_list': ['tokenize', 'mwt', 'lemma'],
+                {'processor_type': 'LemmaProcessor', 'processors_list': ['tokenize', 'lemma'],
                  'provided_reqs': set(['tokenize', 'mwt']), 'requires': set(['tokenize', 'pos'])}
             ]
         )
@@ -57,7 +58,7 @@ def test_missing_requirements():
     pipeline_fails = 0
     for bad_config, gold_exceptions in bad_config_lists:
         try:
-            stanfordnlp.Pipeline(**bad_config)
+            stanza.Pipeline(**bad_config)
         except PipelineRequirementsException as e:
             pipeline_fails += 1
             assert isinstance(e, PipelineRequirementsException)

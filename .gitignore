@@ -10,10 +10,15 @@ __pycache__/
 *.lem
 *.toklabels
 
+.pytest_cache/
+
 data/
 saved_models/
 logs/
+log/
 *_test_treebanks
 
 params/*/*.json
 !params/*/default.json
+
+*~
