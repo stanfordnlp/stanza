@@ -87,9 +87,6 @@ We are also grateful to community contributors for their help in improving Stanz
 
 If you use Stanza in your work, please cite this paper:
 
-Zhang, Yuhao, et al. "Optimizing the Factual Correctness of a Summary: A Study of Summarizing Radiology Reports." arXiv preprint arXiv:1911.02541 (2019).
-
-
 > Peng Qi, Yuhao Zhang, Yuhui Zhang, Jason Bolton and Christopher D. Manning. 2020. [Stanza: A Python Natural Language Processing Toolkit for Many Human Languages](https://arxiv.org/abs/2003.07082) arXiv preprint arXiv:2003.07082. \[[pdf](https://arxiv.org/pdf/2003.07082.pdf)\]
 
 If you use Stanford CoreNLP through the Stanza python client, please also follow the instructions [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) to cite the proper publications.
