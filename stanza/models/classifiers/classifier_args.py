@@ -10,6 +10,12 @@ class WVType(Enum):
     GOOGLE = 2
     FASTTEXT = 3
 
+# NLP machines:
+# word2vec are in
+# /u/nlp/data/stanfordnlp/model_production/stanfordnlp/extern_data/word2vec
+# google vectors are in
+# /scr/nlp/data/wordvectors/en/google/GoogleNews-vectors-negative300.txt
+
 def add_pretrain_args(parser):
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
     parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
