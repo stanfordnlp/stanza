@@ -87,7 +87,10 @@ We are also grateful to community contributors for their help in improving Stanz
 
 If you use Stanza in your work, please cite this paper:
 
-> Peng Qi, Timothy Dozat, Yuhao Zhang and Christopher D. Manning. 2018. [Universal Dependency Parsing from Scratch](https://nlp.stanford.edu/pubs/qi2018universal.pdf) In *Proceedings of the CoNLL 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies*, pp. 160-170. \[[pdf](https://nlp.stanford.edu/pubs/qi2018universal.pdf)\] \[[bib](https://nlp.stanford.edu/pubs/qi2018universal.bib)\]
+Zhang, Yuhao, et al. "Optimizing the Factual Correctness of a Summary: A Study of Summarizing Radiology Reports." arXiv preprint arXiv:1911.02541 (2019).
+
+
+> Peng Qi, Yuhao Zhang, Yuhui Zhang, Jason Bolton and Christopher D. Manning. 2020. [Stanza: A Python Natural Language Processing Toolkit for Many Human Languages](https://arxiv.org/abs/2003.07082  arXiv preprint arXiv:2003.07082. \[[pdf](https://arxiv.org/pdf/2003.07082.pdf)\]]
 
 If you use Stanford CoreNLP through the Stanza python client, please also follow the instructions [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) to cite the proper publications.
 
