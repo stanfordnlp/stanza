@@ -33,6 +33,9 @@ def build_default_config(resources, lang, dir, load_list):
         # handle case when spacy is specified as tokenizer
         if processor == TOKENIZE and package == 'spacy':
             default_config[f"{TOKENIZE}_with_spacy"] = True
+        # handle case when identity is specified as lemmatizer
+        elif processor == LEMMA and package == 'identity':
+            default_config[f"{LEMMA}_use_identity"] = True
         else:
             default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, package + '.pt')
         
@@ -108,6 +111,10 @@ def maintain_processor_list(resources, lang, package, processors):
             elif key == TOKENIZE and value == 'spacy':
                 logger.debug(f'Find {key}: {value}. Using external spacy library as tokenizer.')
                 processor_list[key] = value
+            # allow lemma to be set to "identity"
+            elif key == LEMMA and value == 'identity':
+                logger.debug(f'Find {key}: {value}. Using identical lemmatizer.')
+                processor_list[key] = value
             # cannot find and warn user
             else:
                 logger.warning(f'Can not find {key}: {value} from official model list. Ignoring it.')
@@ -140,8 +147,8 @@ def add_dependencies(resources, lang, processor_list):
     for item in processor_list:
         processor, package = item
         dependencies = default_dependencies.get(processor, None)
-        # skip dependency checking for special spacy tokenizer
-        if not (processor == TOKENIZE and package == 'spacy'):
+        # skip dependency checking for special spacy tokenizer and identity lemmatizer
+        if not any([processor == TOKENIZE and package == 'spacy', processor == LEMMA and package == 'identity']):
             dependencies = resources[lang][processor][package].get('dependencies', dependencies)
         if dependencies:
             dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
@@ -238,5 +245,8 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         
         # Download packages
         for key, value in download_list:
-            request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            try:
+                request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            except KeyError as e:
+                raise Exception(f"Cannot find the following processor and model name combination: {key}, {value}. Please check if you have provided the correct model name.") from e
     logger.info(f'Finished downloading models and saved to {dir}.')
