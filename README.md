@@ -17,19 +17,16 @@ The Stanford NLP Group's official Python NLP library. It contains support for ru
 
 ### References
 
-If you use our neural pipeline including the tokenizer, the multi-word token expansion model, the lemmatizer, the POS/morphological features tagger, the dependency parser, or the named entity recognition tool in your research, please kindly cite our CoNLL 2018 Shared Task [system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf):
+If you use this library in your research, please kindly cite our [Stanza system description paper](https://arxiv.org/abs/2003.07082):
 
 ```bibtex
-@inproceedings{qi2018universal,
- address = {Brussels, Belgium},
- author = {Qi, Peng  and  Dozat, Timothy  and  Zhang, Yuhao  and  Manning, Christopher D.},
- booktitle = {Proceedings of the {CoNLL} 2018 Shared Task: Multilingual Parsing from Raw Text to Universal Dependencies},
- month = {October},
- pages = {160--170},
- publisher = {Association for Computational Linguistics},
- title = {Universal Dependency Parsing from Scratch},
- url = {https://nlp.stanford.edu/pubs/qi2018universal.pdf},
- year = {2018}
+@misc{qi2020stanza,
+    title={Stanza: A {Python} Natural Language Processing Toolkit for Many Human Languages},
+    author={Qi, Peng and Zhang, Yuhao and Zhang, Yuhui and Bolton, Jason and Manning, Christopher D.},
+    year={2020},
+    eprint={2003.07082},
+    archivePrefix={arXiv},
+    primaryClass={cs.CL}
 }
 ```
 The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](http://qipeng.me), [Yuhao Zhang](http://yuhao.im), and [Yuhui Zhang](https://cs.stanford.edu/~yuhuiz/), with help from [Jason Bolton](mailto:jebolton@stanford.edu) and [Tim Dozat](https://web.stanford.edu/~tdozat/).
