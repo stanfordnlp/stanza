@@ -145,7 +145,7 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 **Table Notes**
 
 1. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language.
-2. For packages with 4 named entity types, supported types include `PER (Person)`, `LOC (Location)`, `ORG (Organization)` and `MISC (Miscellaneous)`; for package with 18 named entity types, supported types include `PERSON`, `NORP`, `FACILITY`, `ORGANIZATION`, `GPE`, `LOCATION`, `PRODUCT`,`EVENT`, `WORK OF ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
+2. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous); for package with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
  
 | Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS DOC | NOTES |
 | :------- | :----- | :-------- | :---- | :---- | :---- |
