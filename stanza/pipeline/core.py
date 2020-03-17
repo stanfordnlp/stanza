@@ -19,6 +19,7 @@ from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
 from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
+from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
@@ -27,7 +28,8 @@ from stanza.utils.helper_func import make_table
 logger = logging.getLogger('stanza')
 
 NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
-                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor}
+                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor,
+                           SENTIMENT: SentimentProcessor}
 
 # list of settings for each processor
 PROCESSOR_SETTINGS = {

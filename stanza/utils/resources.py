@@ -13,7 +13,7 @@ import shutil
 import logging
 
 from stanza.utils.helper_func import make_table
-from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SUPPORTED_TOKENIZERS
+from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SENTIMENT, SUPPORTED_TOKENIZERS
 from stanza._version import __resources_version__
 
 logger = logging.getLogger('stanza')
@@ -22,7 +22,7 @@ logger = logging.getLogger('stanza')
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
 DEFAULT_MODEL_DIR = os.getenv('STANZA_RESOURCES_DIR', os.path.join(HOME_DIR, 'stanza_resources'))
-PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER]
+PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SENTIMENT]
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):

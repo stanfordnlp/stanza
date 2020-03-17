@@ -90,7 +90,7 @@ class Processor(ABC):
 
 
 class UDProcessor(Processor):
-    """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse) """
+    """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """
     def __init__(self, config, pipeline, use_gpu):
         # overall config for the processor
         self._config = None
