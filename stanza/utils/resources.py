@@ -245,5 +245,8 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         
         # Download packages
         for key, value in download_list:
-            request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            try:
+                request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+            except KeyError as e:
+                raise Exception(f"Cannot find the following processor and model name combination: {key}, {value}. Please check if you have provided the correct model name.") from e
     logger.info(f'Finished downloading models and saved to {dir}.')
