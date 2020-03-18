@@ -140,6 +140,10 @@ All neural modules in this library can be trained with your own data. The tokeni
 
 For detailed step-by-step guidance on how to train and evaluate your own models, please visit our [training documentation](https://stanfordnlp.github.io/stanza/training.html).
 
+## Contributing to Stanza
+
+We welcome community contributions to Stanza in the form of bugfixes 🛠️ and enhancements 💡! If you want to contribute, please first read [our contibution guideline](CONTRIBUTING.md).
+
 ## LICENSE
 
 Stanza is released under the Apache License, Version 2.0. See the [LICENSE](https://github.com/stanfordnlp/stanza/blob/master/LICENSE) file for more details.
