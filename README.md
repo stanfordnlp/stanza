@@ -43,7 +43,7 @@ To ask questions, report issues or request features, please use the [GitHub Issu
 
 ## Contributing to Stanza
 
-We welcome community contributions to Stanza in the form of bugfixes 🛠️ and enhancements 💡! If you want to contribute, please first read [our contibution guideline](CONTRIBUTING.md).
+We welcome community contributions to Stanza in the form of bugfixes 🛠️ and enhancements 💡! If you want to contribute, please first read [our contribution guideline](CONTRIBUTING.md).
 
 ## Installation
 
