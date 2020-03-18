@@ -174,7 +174,8 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_sent = []
 
         assert(len(current_tok) == 0)
-        assert(len(current_sent) == 0)
+        if len(current_sent):
+            doc.append(process_sentence(current_sent, mwt_dict))
 
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
