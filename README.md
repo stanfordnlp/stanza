@@ -41,6 +41,10 @@ If you use the CoreNLP software through Stanza, please cite the CoreNLP software
 
 To ask questions, report issues or request features, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues).
 
+## Contributing to Stanza
+
+We welcome community contributions to Stanza in the form of bugfixes 🛠️ and enhancements 💡! If you want to contribute, please first read [our contibution guideline](CONTRIBUTING.md).
+
 ## Installation
 
 ### pip
@@ -139,10 +143,6 @@ To maximize speed performance, it is essential to run the pipeline on batches of
 All neural modules in this library can be trained with your own data. The tokenizer, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer and the dependency parser require [CoNLL-U](https://universaldependencies.org/format.html) formatted data, while the NER model requires the BIOES format. Currently, we do not support model training via the `Pipeline` interface. Therefore, to train your own models, you need to clone this git repository and run training from the source.
 
 For detailed step-by-step guidance on how to train and evaluate your own models, please visit our [training documentation](https://stanfordnlp.github.io/stanza/training.html).
-
-## Contributing to Stanza
-
-We welcome community contributions to Stanza in the form of bugfixes 🛠️ and enhancements 💡! If you want to contribute, please first read [our contibution guideline](CONTRIBUTING.md).
 
 ## LICENSE
 
