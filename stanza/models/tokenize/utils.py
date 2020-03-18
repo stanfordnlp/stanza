@@ -173,22 +173,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     doc.append(process_sentence(current_sent, mwt_dict))
                     current_sent = []
 
-        if len(current_tok):
-            tok = vocab.normalize_token(current_tok)
-            assert '\t' not in tok, tok
-            if len(tok) > 0:
-                if orig_text is not None:
-                    st0, tok0 = find_token(tok, text)
-                    st = char_offset + st0
-                    text = text[st0 + len(tok0):]
-                    char_offset += st0 + len(tok0)
-                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok0)}
-                else:
-                    additional_info = dict()
-                current_sent += [(tok, 2, additional_info)]
+        assert(len(current_tok) == 0)
+        assert(len(current_sent) == 0)
 
-        if len(current_sent):
-            doc.append(process_sentence(current_sent, mwt_dict))
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
 
