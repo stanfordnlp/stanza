@@ -182,7 +182,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     st = char_offset + st0
                     text = text[st0 + len(tok0):]
                     char_offset += st0 + len(tok0)
-                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok0)}
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok0)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, 2, additional_info)]
