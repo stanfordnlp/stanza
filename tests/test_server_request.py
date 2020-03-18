@@ -150,8 +150,8 @@ advmod(tôt-15, plus-14)
 advmod(jours-13, tôt-15)
 punct(fait-4, .-16)
 """
-
-FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json').read())
+with open(f'{TEST_WORKING_DIR}/out/example_french.json', encoding='utf-8') as fh:
+    FRENCH_JSON_GOLD = json.load(fh)
 
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 

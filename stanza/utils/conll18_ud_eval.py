@@ -278,6 +278,8 @@ def load_conllu(file):
     if sentence_start is not None:
         raise UDError("The CoNLL-U file does not end with empty line")
 
+    file.close()
+
     return ud
 
 # Evaluate the gold and system treebanks (loaded using load_conllu).

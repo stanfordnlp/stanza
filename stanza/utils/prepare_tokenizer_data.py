@@ -13,7 +13,7 @@ parser.add_argument('-m', '--mwt_output', default=None, type=str, help="Output f
 
 args = parser.parse_args()
 
-with open(args.plaintext_file, 'r') as f:
+with open(args.plaintext_file) as f:
     text = ''.join(f.readlines())
 textlen = len(text)
 

@@ -206,7 +206,8 @@ def copy_file(src, dst):
 
 
 def get_md5(path):
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as fh:
+        data = fh.read()
     return hashlib.md5(data).hexdigest()
 
 
@@ -252,11 +253,14 @@ def process_dirs(args):
                 resources[lang][processor][package] = {'md5': md5, 'dependencies': dependencies}
             else:
                 resources[lang][processor][package] = {'md5': md5}
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+    with open(os.path.join(args.output_dir, 'resources.json'), 'w', encoding='utf-8') as fh:
+        json.dump(resources, fh, indent=2)
 
 
 def process_defaults(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    with open(os.path.join(args.output_dir, 'resources.json'), encoding='utf-8') as fh:
+        resources = json.load(fh)
     for lang in resources:
         if lang not in default_treebanks: 
             print(lang + ' not in default treebanks!!!')
@@ -291,11 +295,13 @@ def process_defaults(args):
         resources[lang]['default_dependencies'] = default_dependencies
         resources[lang]['default_md5'] = default_md5
 
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+    with open(os.path.join(args.output_dir, 'resources.json'), 'w', encoding='utf-8') as fh:
+        json.dump(resources, fh, indent=2)
 
 
 def process_lcode(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    with open(os.path.join(args.output_dir, 'resources.json'), encoding='utf-8') as fh:
+        resources = json.load(fh)
     resources_new = {}
     for lang in resources:
         if lang not in lcode2lang:
@@ -305,15 +311,19 @@ def process_lcode(args):
         resources[lang]['lang_name'] = lang_name
         resources_new[lang.lower()] = resources[lang.lower()]
         resources_new[lang_name.lower()] = {'alias': lang.lower()}
-    json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
+    with open(os.path.join(args.output_dir, 'resources.json'), 'w', encoding='utf-8') as fh:
+        json.dump(resources, fh, indent=2)
 
 def process_misc(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    with open(os.path.join(args.output_dir, 'resources.json'), encoding='utf-8') as fh:
+        resources = json.load(fh)
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
     resources['url'] = 'http://nlp.stanford.edu/software/stanza'
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+    with open(os.path.join(args.output_dir, 'resources.json'), 'w', encoding='utf-8') as fh:
+        json.dump(resources, fh, indent=2)
 
 
 def main():

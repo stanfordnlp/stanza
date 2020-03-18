@@ -57,9 +57,9 @@ def build_vocab(path, cutoff=0):
         counter = Counter()
         filenames = sorted(os.listdir(path))
         for filename in filenames:
-            lines = open(path + '/' + filename).readlines()
-            for line in lines:
-                counter.update(list(line))
+            with open(path + '/' + filename, encoding='utf-8') as fh:
+                for line in fh:
+                    counter.update(list(line))
         # remove infrequent characters from vocab
         for k in list(counter.keys()):
             if counter[k] < cutoff:
@@ -68,13 +68,15 @@ def build_vocab(path, cutoff=0):
         data = [sorted([x[0] for x in counter.most_common()])]
         vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     else:
-        lines = open(path).readlines() # reserve '\n'
+        with open(path, encoding='utf-8') as fh:
+            lines = fh.readlines() # reserve '\n'
         data = [list(line) for line in lines]
         vocab = CharVocab(data, cutoff=cutoff)
     return vocab
 
 def load_file(path, vocab, direction):
-    lines = open(path).readlines() # reserve '\n'
+    with open(path, encoding='utf-8') as fh:
+        lines = fh.readlines()  # reserve '\n'
     data = list(''.join(lines))
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]

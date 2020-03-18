@@ -50,7 +50,8 @@ def ensure_dir(dir):
     Path(dir).mkdir(parents=True, exist_ok=True)
 
 def get_md5(path):
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as fh:
+        data = fh.read()
     return hashlib.md5(data).hexdigest()
 
 def unzip(dir, filename):
@@ -221,7 +222,8 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     # Download resources.json to obtain latest packages.
     logger.debug('Downloading resource file...')
     request_file(f'{DEFAULT_RESOURCES_URL}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
-    resources = json.load(open(os.path.join(dir, 'resources.json')))
+    with open(os.path.join(dir, 'resources.json'), encoding='utf-8') as fh:
+        resources = json.load(fh)
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:
