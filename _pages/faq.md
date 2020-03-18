@@ -10,7 +10,7 @@ permalink: '/faq.html'
 
 This is absolutely normal, as all models in Stanza (yes, even tokenization!) are statistical. Although they are quite accurate, it does not mean these models are perfect. Therefore, it's quite likely that you'll find cases where the model prediction clearly doesn't make sense, but statistically speaking, it shouldn't be too far off on a large collection of text from the [performance we report](performance.md) as long as the genre of your text is similar to what the models are trained on.
 
-### The model prediction is inconsistent between Stanza and CoreNLP, or their online demos
+### The model prediction is inconsistent between Stanza and CoreNLP, different versions of Stanza, or their online demos
 
 Stanza's neural pipeline use fundamentally different models from CoreNLP for all tasks, and are usually trained on different data, so it is not unexpected that their behaviors will differ.
 
@@ -27,6 +27,10 @@ However, you could use CoreNLP for part of the annotation (e.g., tokenization) t
 ### Getting `ERROR: Could not find a version` `that satisfies the requirement torch` when installing Stanza
 
 This is usually because PyTorch doesn't have a version that Stanza requires for install through `pip`. You can usually work around this issue by installing PyTorch from your package manager (e.g., Anaconda) first, before trying to install Stanza.
+
+### Getting `module 'stanza' has no attribute 'download'` when downloading models with Stanza
+
+This is likely because you're using Python 2. Note that Stanza only supports Python 3.6 or later.
 
 ### Model download is very slow or I cannot connect to the server
 

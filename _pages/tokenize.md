@@ -60,6 +60,12 @@ id: 4   text: sentence
 id: 5   text: .
 ```
 
+You can also use the tokenizer just for sentence segmentation. To access segmented sentences, simply use
+
+```python
+print([sentence.text for sentence in doc.sentences])
+```
+
 ### Tokenization without Sentence Segmentation
 
 Sometimes you might want to tokenize your text given existing sentences (e.g., in machine translation). You can perform tokenization without sentence segmentation, as long as the sentences are split by two continuous newlines (`\n\n`) in the raw text. Just set `tokenize_no_ssplit` as `True` to disable sentence segmentation. Here is an example:
