@@ -22,6 +22,10 @@ Since Stanza's neural pipeline use fundamentally different models from CoreNLP f
 
 However, you could use CoreNLP for part of the annotation (e.g., tokenization) through the [`CoreNLPClient`](corenlp_client.md), and use the resulting annotations as input to Stanza's neural pipeline.
 
+### Can I run POS tagging/morphological feature tagging/lemmatization/dependency parsing without expanding multi-word tokens (MWTs)?
+
+For syntactic tasks such as POS/morphological feature tagging, lemmatization, and dependency parsing, Stanza uses data made available through the [Universal Dependencies](https://universaldependencies.org/) project which makes the distinction between tokens (substrings of the input text) and syntactic words (see the [UD documentation on this](https://universaldependencies.org/u/overview/tokenization.html) for more information). This means if the language/dataset you want to use was deemed to contain multi-word tokens (MWTs), unfortunately nothing beyond tokenization and sentence segmentation can happen unless MWTs are expanded with the [MWT expansion model](mwt.md) in the pipeline (with the exception of [named entity recognition](ner.md), which are based on tokens!).
+
 ## Troubleshooting Download & Installation
 
 ### Getting `ERROR: Could not find a version` `that satisfies the requirement torch` when installing Stanza
