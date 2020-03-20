@@ -4,7 +4,11 @@ keywords: models history
 permalink: '/model_history.html'
 ---
 
-This page contains links to previous models for Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).
+This page contains links to downloadable models for all historical versions of Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).
+
+### 1.0.0
+
+For models used by Stanza v1.0.0 (latest version), you can find all related information on the [Usage: Available Models](models) page.
 
 ### 0.2.0
 
