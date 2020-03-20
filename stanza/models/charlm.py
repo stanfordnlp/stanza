@@ -124,6 +124,7 @@ def parse_args():
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--vocab_save_name', type=str, default=None, help="File name to save the vocab")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
+    parser.add_argument('--summary', action='store_true', help='Use summary writer to record progress.')
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
@@ -248,6 +249,13 @@ def train(args):
     criterion = torch.nn.CrossEntropyLoss()
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
 
+    writer = None
+    if args['summary']:
+        from torch.utils.tensorboard import SummaryWriter
+        summary_dir = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
+            else '{}/{}_{}_charlm_summary'.format(args['save_dir'], args['shorthand'], args['direction'])
+        writer = SummaryWriter(log_dir=summary_dir)
+
     best_loss = None
     for epoch in range(args['epochs']):
         # load train data from train_dir if not empty, otherwise load from file
@@ -261,6 +269,7 @@ def train(args):
 
         start_time = time.time()
         loss = evaluate_epoch(args, vocab, dev_data, model, criterion)
+        ppl = math.exp(loss)
         elapsed = int(time.time() - start_time)
         scheduler.step(loss)
         logger.info(
@@ -269,13 +278,18 @@ def train(args):
                 args['epochs'],
                 elapsed,
                 loss,
-                math.exp(loss),
+                ppl,
             )
         )
         if best_loss is None or loss < best_loss:
             best_loss = loss
             model.save(model_file)
             logger.info('new best model saved.')
+        if writer:
+            writer.add_scalar('dev_loss', loss, global_step=epoch+1)
+            writer.add_scalar('dev_ppl', ppl, global_step=epoch+1)
+    if writer:
+        writer.close()
     return
 
 def evaluate(args):
