@@ -252,7 +252,7 @@ def train(args):
     writer = None
     if args['summary']:
         from torch.utils.tensorboard import SummaryWriter
-        summary_dir = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
+        summary_dir = '{}/{}_summary'.format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
             else '{}/{}_{}_charlm_summary'.format(args['save_dir'], args['shorthand'], args['direction'])
         writer = SummaryWriter(log_dir=summary_dir)
 
