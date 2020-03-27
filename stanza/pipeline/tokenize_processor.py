@@ -71,21 +71,19 @@ class TokenizeProcessor(UDProcessor):
         elif self.config.get('with_spacy', False):
             return self._spacy_tokenizer.tokenize(document)
         else:
-            raw_text = document
+            raw_text = '\n\n'.join(document) if isinstance(document, list) else document
             # set up batches
             if self.config.get('lang') == 'vi':
                 # special processing is due for Vietnamese
-                text = '\n\n'.join([x for x in document.split('\n\n')]).rstrip()
+                text = '\n\n'.join([x for x in raw_text.split('\n\n')]).rstrip()
                 dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
                 data = paras_to_chunks(text, dummy_labels)
                 batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
             else:
-                if isinstance(document, list):
-                    document = '\n\n'.join(document)
-                batches = DataLoader(self.config, input_text=document, vocab=self.vocab, evaluation=True)
+                batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
             # get dict data
             _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
-                                   orig_text = document,
+                                   orig_text=raw_text,
                                    no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
