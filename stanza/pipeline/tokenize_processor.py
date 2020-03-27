@@ -49,7 +49,7 @@ class TokenizeProcessor(UDProcessor):
 
         document = []
         if isinstance(input_src, str):
-            sentences = [sent.rstrip(' ').split() for sent in input_src.rstrip('\n').split('\n') if sent]
+            sentences = [sent.strip().split() for sent in input_src.strip().split('\n') if len(sent.strip()) > 0]
         elif isinstance(input_src, list):
             sentences = input_src
         idx = 0
@@ -59,7 +59,6 @@ class TokenizeProcessor(UDProcessor):
                 sent.append({doc.ID: str(token_id + 1), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
                 idx += len(token) + 1
             document.append(sent)
-            idx += 1
         raw_text = ' '.join([' '.join(sentence) for sentence in sentences])
         return raw_text, document
 
