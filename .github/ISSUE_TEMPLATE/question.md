@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-Before you start, make sure to checkout:
+Before you start, make sure to check out:
 * Our documentation: https://stanfordnlp.github.io/stanza/
 * Our FAQ: https://stanfordnlp.github.io/stanza/faq.html
 * Github issues (especially closed ones)
