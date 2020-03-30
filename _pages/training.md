@@ -41,7 +41,7 @@ We provide various bash scripts to ease the training process in the `scripts` di
 ```bash
 bash scripts/run_${module}.sh ${corpus} ${other_args}
 ```
-where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma` or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
+where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, `depparse` or `ner`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
 
 For example, you can use the following command to train a tokenizer with batch size 32 and a dropout rate of 0.33 on the `UD_English-EWT` corpus:
 
@@ -61,7 +61,7 @@ For a full list of available training arguments, please refer to the specific en
 
 ## Evaluation
 
-Model evaluation will be run automatically after each training run. Additionally, after you finish training all modules, you can evaluate the full end-to-end system with this command:
+Model evaluation will be run automatically after each training run. Additionally, after you finish training all modules, you can evaluate the full universal dependency parsing pipeline with this command:
 ```bash
 bash scripts/run_ete.sh ${corpus} ${split}
 ```
