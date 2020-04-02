@@ -53,7 +53,7 @@ Stanza supports Python 3.6 or later. We recommend that you install Stanza via [p
 ```bash
 pip install stanza
 ```
-This should also help resolve all of the dependencies of Stanza, for instance [PyTorch](https://pytorch.org/) 1.2.0 or above.
+This should also help resolve all of the dependencies of Stanza, for instance [PyTorch](https://pytorch.org/) 1.3.0 or above.
 
 If you currently have a previous version of `stanza` installed, use:
 ```bash
