@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup basic prerequisites for running the tests.
-# This script needs to be sourced from the root directory, i.e., `source tests/setup_test.sh`.
+# This script sets environment variables, so it needs to be sourced from the root directory, i.e., `source tests/setup_test.sh`.
 
 test_dir=./stanza_test
 
