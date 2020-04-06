@@ -472,7 +472,7 @@ class CoreNLPClient(RobustService):
             matches = regex_matches_to_indexed_words(matches)
         return matches
 
-    def tregrex(self, text, pattern, filter=False, annotators=None, properties=None):
+    def tregex(self, text, pattern, filter=False, annotators=None, properties=None):
         return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
