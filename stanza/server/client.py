@@ -208,9 +208,10 @@ class CoreNLPClient(RobustService):
             if classpath == '$CLASSPATH':
                 classpath = os.getenv("CLASSPATH")
             elif classpath is None:
-                classpath = os.getenv("CORENLP_HOME") + "/*"
+                classpath = os.getenv("CORENLP_HOME")
                 assert classpath is not None, \
                     "Please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter"
+                classpath = classpath + "/*"
             start_cmd = f"java -Xmx{memory} -cp '{classpath}'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
