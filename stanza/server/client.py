@@ -2,6 +2,7 @@
 Client for accessing Stanford CoreNLP in Python
 """
 
+import contextlib
 import io
 import os
 import re
@@ -9,6 +10,7 @@ import requests
 import logging
 import json
 import shlex
+import socket
 import subprocess
 import time
 import sys
@@ -91,7 +93,7 @@ class RobustService(object):
     CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr, be_quiet=False):
+                 stderr=sys.stderr, be_quiet=False, host=None, port=None):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -101,15 +103,25 @@ class RobustService(object):
         self.server = None
         self.is_active = False
         self.be_quiet = be_quiet
+        self.host = host
+        self.port = port
 
     def is_alive(self):
         try:
+            if self.server is not None and self.server.poll() is not None:
+                return False
             return requests.get(self.endpoint + "/ping").ok
         except requests.exceptions.ConnectionError as e:
             raise ShouldRetryException(e)
 
     def start(self):
         if self.start_cmd:
+            if self.host and self.port:
+                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                    try:
+                        sock.bind((self.host, self.port))
+                    except socket.error:
+                        raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d (possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
                 stderr = open(os.devnull, 'w')
@@ -123,6 +135,7 @@ class RobustService(object):
     def stop(self):
         if self.server:
             self.server.kill()
+            self.server = None
         if self.stop_cmd:
             subprocess.run(self.stop_cmd, check=True)
         self.is_active = False
@@ -138,7 +151,10 @@ class RobustService(object):
         # Check if the service is active and alive
         if self.is_active:
             try:
-                return self.is_alive()
+                if self.is_alive():
+                    return
+                else:
+                    self.stop()
             except ShouldRetryException:
                 pass
 
@@ -204,6 +220,7 @@ class CoreNLPClient(RobustService):
             self._setup_default_server_props(properties, annotators, output_format)
             # at this point self.server_start_info and self.server_props_file should be set
             host, port = urlparse(endpoint).netloc.split(":")
+            port = int(port)
             assert host == "localhost", "If starting a server, endpoint must be localhost"
             if classpath == '$CLASSPATH':
                 classpath = os.getenv("CLASSPATH")
@@ -236,10 +253,11 @@ class CoreNLPClient(RobustService):
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
+            host = port = None
             self.server_start_info = {}
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet)
+                                            stdout, stderr, be_quiet, host=host, port=port)
 
         self.timeout = timeout
 
@@ -323,14 +341,14 @@ class CoreNLPClient(RobustService):
             self.server_start_info['props_file'] = self.server_props_file['path']
             self.server_start_info['preload_annotators'] = client_side_properties['annotators']
 
-    def stop(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         # check if there is a temp server props file to remove and remove it
         if self.server_props_file['is_temp']:
             if os.path.isfile(self.server_props_file['path']) and \
                     SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['path'])):
                 os.remove(self.server_props_file['path'])
-        # run base class stop
-        super(CoreNLPClient, self).stop()
+        # run base class __exit__
+        super(CoreNLPClient, self).__exit__(exc_type, exc_value, traceback)
 
     def _request(self, buf, properties, **kwargs):
         """
