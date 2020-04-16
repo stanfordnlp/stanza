@@ -84,7 +84,7 @@ class ShouldRetryException(Exception):
 
 
 class PermanentlyFailedException(Exception):
-    """ Exception raised if the service should retry the request. """
+    """ Exception raised if the service should NOT retry the request. """
     pass
 
 
