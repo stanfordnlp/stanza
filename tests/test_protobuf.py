@@ -33,7 +33,7 @@ def doc_pb():
 
 
 def test_parse_protobuf(doc_pb):
-    assert doc_pb.ByteSize() == 4239
+    assert doc_pb.ByteSize() == 4709
 
 
 def test_write_protobuf(doc_pb):
