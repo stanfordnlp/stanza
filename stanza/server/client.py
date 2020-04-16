@@ -2,6 +2,7 @@
 Client for accessing Stanford CoreNLP in Python
 """
 
+import atexit
 import contextlib
 import io
 import os
@@ -87,6 +88,13 @@ class PermanentlyFailedException(Exception):
     """ Exception raised if the service should NOT retry the request. """
     pass
 
+
+def clean_props_file(props_file):
+    # check if there is a temp server props file to remove and remove it
+    if props_file:
+        if (os.path.isfile(props_file) and
+            SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(props_file))):
+            os.remove(props_file)
 
 class RobustService(object):
     """ Service that resuscitates itself if it is not available. """
@@ -334,21 +342,13 @@ class CoreNLPClient(RobustService):
                 client_side_properties['outputFormat'] = output_format
             # write client side props to a tmp file which will be erased at end
             self.server_props_file['path'] = write_corenlp_props(client_side_properties)
+            atexit.register(clean_props_file, self.server_props_file['path'])
             self.server_props_file['is_temp'] = True
             # record server start up info
             self.server_start_info['client_side'] = True
             self.server_start_info['props'] = client_side_properties
             self.server_start_info['props_file'] = self.server_props_file['path']
             self.server_start_info['preload_annotators'] = client_side_properties['annotators']
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        # check if there is a temp server props file to remove and remove it
-        if self.server_props_file['is_temp']:
-            if os.path.isfile(self.server_props_file['path']) and \
-                    SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['path'])):
-                os.remove(self.server_props_file['path'])
-        # run base class __exit__
-        super(CoreNLPClient, self).__exit__(exc_type, exc_value, traceback)
 
     def _request(self, buf, properties, **kwargs):
         """
