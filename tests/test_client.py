@@ -52,10 +52,16 @@ def test_connect(corenlp_client):
 
 
 def test_context_manager():
-    with corenlp.CoreNLPClient(annotators="tokenize,ssplit") as context_client:
+    with corenlp.CoreNLPClient(annotators="tokenize,ssplit",
+                               endpoint="http://localhost:9001") as context_client:
         ann = context_client.annotate(TEXT)
         assert corenlp.to_text(ann.sentence[0]) == TEXT[:-1]
 
+def test_no_duplicate_servers():
+    """We expect a second server on the same port to fail"""
+    with pytest.raises(corenlp.PermanentlyFailedException):
+        with corenlp.CoreNLPClient(annotators="tokenize,ssplit") as duplicate_server:
+            raise RuntimeError("This should have failed")
 
 def test_annotate(corenlp_client):
     ann = corenlp_client.annotate(TEXT)
