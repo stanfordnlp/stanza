@@ -134,7 +134,17 @@ class RobustService(object):
 
     def stop(self):
         if self.server:
-            self.server.kill()
+            self.server.terminate()
+            try:
+                self.server.wait(5)
+            except subprocess.TimeoutExpired:
+                # Resorting to more aggressive measures...
+                self.server.kill()
+                try:
+                    self.server.wait(5)
+                except subprocess.TimeoutExpired:
+                    # oh well
+                    pass
             self.server = None
         if self.stop_cmd:
             subprocess.run(self.stop_cmd, check=True)
