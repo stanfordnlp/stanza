@@ -275,6 +275,7 @@ class Seq2SeqModel(nn.Module):
             k = ks[0]
             hyp = beam[b].get_hyp(k)
             hyp = utils.prune_hyp(hyp)
+            hyp = [i.item() for i in hyp]
             all_hyp += [hyp]
 
         return all_hyp, edit_logits
