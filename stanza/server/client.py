@@ -113,6 +113,7 @@ class RobustService(object):
         self.be_quiet = be_quiet
         self.host = host
         self.port = port
+        atexit.register(self.atexit_kill)
 
     def is_alive(self):
         try:
@@ -139,6 +140,11 @@ class RobustService(object):
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
                                            stdout=stderr)
+
+    def atexit_kill(self):
+        # make some kind of effort to stop the service at the end of the program
+        if self.server and self.server.poll() is None:
+            self.server.terminate()
 
     def stop(self):
         if self.server:
