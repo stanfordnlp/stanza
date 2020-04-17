@@ -163,7 +163,7 @@ class Seq2SeqModel(nn.Module):
             return log_probs
         return log_probs.view(logits.size(0), logits.size(1), logits.size(2))
 
-    def predict_greedy(self, src, src_mask, pos=None, beam_size=1):
+    def predict_greedy(self, src, src_mask, pos=None):
         """ Predict with greedy decoding. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
@@ -177,11 +177,6 @@ class Seq2SeqModel(nn.Module):
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
-        ## add pos-aware transformation to hn
-        #if self.use_pos:
-        #    assert pos is not None
-        #    pos_inputs = self.pos_embedding(pos)
-        #    hn = self.enc2dec(torch.cat([hn, pos_inputs], dim=1))
 
         if self.edit:
             edit_logits = self.edit_clf(hn)
@@ -205,9 +200,9 @@ class Seq2SeqModel(nn.Module):
             max_len += 1
             for i in range(batch_size):
                 if not done[i]:
-                    token = preds.data[i][0]
+                    token = preds.data[i][0].item()
                     if token == constant.EOS_ID:
-                        done[i] == True
+                        done[i] = True
                         total_done += 1
                     else:
                         output_seqs[i].append(token)
@@ -226,7 +221,7 @@ class Seq2SeqModel(nn.Module):
             enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
             pos_src_mask = src_mask.new_zeros([batch_size, 1])
             src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
-        src_lens = list(src_mask.data.eq(0).long().sum(1))
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -280,6 +275,7 @@ class Seq2SeqModel(nn.Module):
             k = ks[0]
             hyp = beam[b].get_hyp(k)
             hyp = utils.prune_hyp(hyp)
+            hyp = [i.item() for i in hyp]
             all_hyp += [hyp]
 
         return all_hyp, edit_logits
