@@ -159,7 +159,7 @@ def test_preload():
         time.sleep(140)
         results = annotate_and_time(client, EN_DOC)
         assert results['annotation'].strip() == EN_PRELOAD_GOLD.strip()
-        assert results['end_time'] - results['start_time'] < 1.5
+        assert results['end_time'] - results['start_time'] < 3
 
 
 def test_props_file():
