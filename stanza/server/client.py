@@ -527,6 +527,9 @@ class CoreNLPClient(RobustService):
         # force output for regex requests to be json
         properties['outputFormat'] = 'json'
 
+        # TODO: get rid of this once corenlp 4.0.0 is released?
+        # the "stupid reason" has hopefully been fixed on the corenlp side
+        # but maybe people are married to corenlp 3.9.2 for some reason
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
         # this to ensure that the _regex call doesn't timeout.
