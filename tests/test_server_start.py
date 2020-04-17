@@ -3,6 +3,7 @@ Tests for starting a server in Python code
 """
 
 import pytest
+import re
 import stanza.server as corenlp
 from stanza.server.client import AnnotationException
 import time
@@ -31,12 +32,12 @@ root(ROOT-0, lives-3)
 compound(Smith-2, Joe-1)
 nsubj(lives-3, Smith-2)
 case(California-5, in-4)
-nmod:in(lives-3, California-5)
+obl:in(lives-3, California-5)
 punct(lives-3, .-6)
 
 Extracted the following NER entity mentions:
-Joe Smith	PERSON
-California	STATE_OR_PROVINCE
+Joe Smith	PERSON  PERSON:0.9972202689478088
+California	STATE_OR_PROVINCE       LOCATION:0.9990868267002156
 """
 
 # results with an example properties file
@@ -97,16 +98,16 @@ Sentence #1 (10 tokens):
 Angela Merkel ist seit 2005 Bundeskanzlerin der Bundesrepublik Deutschland.
 
 Tokens:
-[Text=Angela CharacterOffsetBegin=0 CharacterOffsetEnd=6 PartOfSpeech=NE]
-[Text=Merkel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=NE]
-[Text=ist CharacterOffsetBegin=14 CharacterOffsetEnd=17 PartOfSpeech=VAFIN]
-[Text=seit CharacterOffsetBegin=18 CharacterOffsetEnd=22 PartOfSpeech=APPR]
-[Text=2005 CharacterOffsetBegin=23 CharacterOffsetEnd=27 PartOfSpeech=CARD]
-[Text=Bundeskanzlerin CharacterOffsetBegin=28 CharacterOffsetEnd=43 PartOfSpeech=NN]
-[Text=der CharacterOffsetBegin=44 CharacterOffsetEnd=47 PartOfSpeech=ART]
-[Text=Bundesrepublik CharacterOffsetBegin=48 CharacterOffsetEnd=62 PartOfSpeech=NN]
-[Text=Deutschland CharacterOffsetBegin=63 CharacterOffsetEnd=74 PartOfSpeech=NE]
-[Text=. CharacterOffsetBegin=74 CharacterOffsetEnd=75 PartOfSpeech=$.]
+[Text=Angela CharacterOffsetBegin=0 CharacterOffsetEnd=6 PartOfSpeech=PROPN]
+[Text=Merkel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=PROPN]
+[Text=ist CharacterOffsetBegin=14 CharacterOffsetEnd=17 PartOfSpeech=AUX]
+[Text=seit CharacterOffsetBegin=18 CharacterOffsetEnd=22 PartOfSpeech=ADP]
+[Text=2005 CharacterOffsetBegin=23 CharacterOffsetEnd=27 PartOfSpeech=NUM]
+[Text=Bundeskanzlerin CharacterOffsetBegin=28 CharacterOffsetEnd=43 PartOfSpeech=NOUN]
+[Text=der CharacterOffsetBegin=44 CharacterOffsetEnd=47 PartOfSpeech=DET]
+[Text=Bundesrepublik CharacterOffsetBegin=48 CharacterOffsetEnd=62 PartOfSpeech=PROPN]
+[Text=Deutschland CharacterOffsetBegin=63 CharacterOffsetEnd=74 PartOfSpeech=PROPN]
+[Text=. CharacterOffsetBegin=74 CharacterOffsetEnd=75 PartOfSpeech=PUNCT]
 """
 
 # results with custom Python dictionary set properties and annotators=tokenize,ssplit
@@ -158,7 +159,7 @@ def test_preload():
         # wait for annotators to load
         time.sleep(140)
         results = annotate_and_time(client, EN_DOC)
-        assert results['annotation'].strip() == EN_PRELOAD_GOLD.strip()
+        assert re.sub('[ \t]+', ' ', results['annotation'].strip()) == re.sub('[ \t]+', ' ', EN_PRELOAD_GOLD.strip())
         assert results['end_time'] - results['start_time'] < 3
 
 

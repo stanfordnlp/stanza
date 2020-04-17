@@ -179,7 +179,7 @@ Tokens:
 [Text=Manuel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=PROPN]
 [Text=López CharacterOffsetBegin=14 CharacterOffsetEnd=19 PartOfSpeech=PROPN]
 [Text=Obrador CharacterOffsetBegin=20 CharacterOffsetEnd=27 PartOfSpeech=PROPN]
-[Text=es CharacterOffsetBegin=28 CharacterOffsetEnd=30 PartOfSpeech=VERB]
+[Text=es CharacterOffsetBegin=28 CharacterOffsetEnd=30 PartOfSpeech=AUX]
 [Text=el CharacterOffsetBegin=31 CharacterOffsetEnd=33 PartOfSpeech=DET]
 [Text=presidente CharacterOffsetBegin=34 CharacterOffsetEnd=44 PartOfSpeech=NOUN]
 [Text=de CharacterOffsetBegin=45 CharacterOffsetEnd=47 PartOfSpeech=ADP]
@@ -187,16 +187,16 @@ Tokens:
 [Text=. CharacterOffsetBegin=54 CharacterOffsetEnd=55 PartOfSpeech=PUNCT]
 
 Dependency Parse (enhanced plus plus dependencies):
-root(ROOT-0, es-5)
-nsubj(es-5, Andrés-1)
-name(Andrés-1, Manuel-2)
-name(Andrés-1, López-3)
-name(Andrés-1, Obrador-4)
+root(ROOT-0, presidente-7)
+nsubj(presidente-7, Andrés-1)
+flat(Andrés-1, Manuel-2)
+flat(Andrés-1, López-3)
+flat(Andrés-1, Obrador-4)
+cop(presidente-7, es-5)
 det(presidente-7, el-6)
-nsubj(es-5, presidente-7)
 case(México-9, de-8)
 nmod:de(presidente-7, México-9)
-punct(es-5, .-10)
+punct(presidente-7, .-10)
 """
 
 
