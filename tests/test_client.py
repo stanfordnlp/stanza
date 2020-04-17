@@ -124,6 +124,7 @@ def test_external_server():
     external_server_process = subprocess.Popen(start_cmd)
     with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
-        assert ann.strip() == EN_GOLD
     assert external_server_process
-    external_server_process.kill()
+    external_server_process.terminate()
+    external_server_process.wait(5)
+    assert ann.strip() == EN_GOLD
