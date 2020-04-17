@@ -89,7 +89,7 @@ Bundesrepublik Deutschland	LOCATION
 
 
 GERMAN_SMALL_PROPS = {'annotators': 'tokenize,ssplit,pos', 'tokenize.language': 'de',
-                      'pos.model': 'edu/stanford/nlp/models/pos-tagger/german/german-hgc.tagger'}
+                      'pos.model': 'edu/stanford/nlp/models/pos-tagger/german-ud.tagger'}
 
 # results with custom Python dictionary set properties
 GERMAN_SMALL_PROPS_GOLD = """

@@ -49,7 +49,7 @@ LANGUAGE_DEFAULT_ANNOTATORS = {
 ENGLISH_DEFAULT_REQUEST_PROPERTIES = {
     "annotators": "tokenize,ssplit,pos,lemma,ner,depparse",
     "tokenize.language": "en",
-    "pos.model": "edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger",
+    "pos.model": "edu/stanford/nlp/models/pos-tagger/english-left3words-distsim.tagger",
     "ner.model": "edu/stanford/nlp/models/ner/english.all.3class.distsim.crf.ser.gz,"
                  "edu/stanford/nlp/models/ner/english.muc.7class.distsim.crf.ser.gz,"
                  "edu/stanford/nlp/models/ner/english.conll.4class.distsim.crf.ser.gz",

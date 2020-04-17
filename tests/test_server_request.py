@@ -61,12 +61,12 @@ Bundesrepublik Deutschland	LOCATION
 """
 
 FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
-                       'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french.tagger',
-                       'parse.model': 'edu/stanford/nlp/models/lexparser/frenchFactored.ser.gz',
+                       'pos.model': 'edu/stanford/nlp/models/pos-tagger/french-ud.tagger',
+                       'parse.model': 'edu/stanford/nlp/models/srparser/frenchSR.ser.gz',
                        'outputFormat': 'text'}
 
 FRENCH_EXTRA_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse',
-                      'pos.model': 'edu/stanford/nlp/models/pos-tagger/french/french-ud.tagger',
+                      'pos.model': 'edu/stanford/nlp/models/pos-tagger/french-ud.tagger',
                       'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_French.gz'}
 
 FRENCH_DOC = "Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt."
@@ -156,7 +156,7 @@ FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json'
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 
 ES_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse', 'tokenize.language': 'es',
-            'pos.model': 'edu/stanford/nlp/models/pos-tagger/spanish/spanish-ud.tagger',
+            'pos.model': 'edu/stanford/nlp/models/pos-tagger/spanish-ud.tagger',
             'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_Spanish.gz'}
 
 ES_PROPS_GOLD = """
