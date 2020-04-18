@@ -60,13 +60,23 @@ Angela Merkel	PERSON
 Bundesrepublik Deutschland	LOCATION
 """
 
-FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
+FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,mwt,pos,parse',
+                       'tokenize.language': 'fr',
                        'pos.model': 'edu/stanford/nlp/models/pos-tagger/french-ud.tagger',
                        'parse.model': 'edu/stanford/nlp/models/srparser/frenchSR.ser.gz',
+                       'mwt.mappingFile': 'edu/stanford/nlp/models/mwt/french/french-mwt.tsv',
+                       'mwt.pos.model': 'edu/stanford/nlp/models/mwt/french/french-mwt.tagger',
+                       'mwt.statisticalMappingFile': 'edu/stanford/nlp/models/mwt/french/french-mwt-statistical.tsv',
+                       'mwt.preserveCasing': 'false',
                        'outputFormat': 'text'}
 
-FRENCH_EXTRA_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse',
+FRENCH_EXTRA_PROPS = {'annotators': 'tokenize,ssplit,mwt,pos,depparse',
+                      'tokenize.language': 'fr',
                       'pos.model': 'edu/stanford/nlp/models/pos-tagger/french-ud.tagger',
+                      'mwt.mappingFile': 'edu/stanford/nlp/models/mwt/french/french-mwt.tsv',
+                      'mwt.pos.model': 'edu/stanford/nlp/models/mwt/french/french-mwt.tagger',
+                      'mwt.statisticalMappingFile': 'edu/stanford/nlp/models/mwt/french/french-mwt-statistical.tsv',
+                      'mwt.preserveCasing': 'false',
                       'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_French.gz'}
 
 FRENCH_DOC = "Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire quelques jours plus tôt."
@@ -120,12 +130,12 @@ Tokens:
 [Text=préliminaire CharacterOffsetBegin=14 CharacterOffsetEnd=26 PartOfSpeech=ADJ]
 [Text=fait CharacterOffsetBegin=27 CharacterOffsetEnd=31 PartOfSpeech=VERB]
 [Text=suite CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=NOUN]
-[Text=à CharacterOffsetBegin=38 CharacterOffsetEnd=39 PartOfSpeech=ADP]
-[Text=les CharacterOffsetBegin=39 CharacterOffsetEnd=41 PartOfSpeech=DET]
+[Text=à CharacterOffsetBegin=38 CharacterOffsetEnd=41 PartOfSpeech=ADP]
+[Text=les CharacterOffsetBegin=38 CharacterOffsetEnd=41 PartOfSpeech=DET]
 [Text=révélations CharacterOffsetBegin=42 CharacterOffsetEnd=53 PartOfSpeech=NOUN]
 [Text=de CharacterOffsetBegin=54 CharacterOffsetEnd=56 PartOfSpeech=ADP]
-[Text=l' CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=DET]
-[Text=hebdomadaire CharacterOffsetBegin=59 CharacterOffsetEnd=71 PartOfSpeech=NOUN]
+[Text=l’ CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=NOUN]
+[Text=hebdomadaire CharacterOffsetBegin=59 CharacterOffsetEnd=71 PartOfSpeech=ADJ]
 [Text=quelques CharacterOffsetBegin=72 CharacterOffsetEnd=80 PartOfSpeech=DET]
 [Text=jours CharacterOffsetBegin=81 CharacterOffsetEnd=86 PartOfSpeech=NOUN]
 [Text=plus CharacterOffsetBegin=87 CharacterOffsetEnd=91 PartOfSpeech=ADV]
@@ -137,15 +147,15 @@ root(ROOT-0, fait-4)
 det(enquête-2, Cette-1)
 nsubj(fait-4, enquête-2)
 amod(enquête-2, préliminaire-3)
-dobj(fait-4, suite-5)
+obj(fait-4, suite-5)
 case(révélations-8, à-6)
 det(révélations-8, les-7)
-nmod:à(suite-5, révélations-8)
-case(hebdomadaire-11, de-9)
-det(hebdomadaire-11, l'-10)
-nmod:de(révélations-8, hebdomadaire-11)
+obl:à(fait-4, révélations-8)
+case(l’-10, de-9)
+nmod:de(révélations-8, l’-10)
+amod(révélations-8, hebdomadaire-11)
 det(jours-13, quelques-12)
-nmod(fait-4, jours-13)
+obl(fait-4, jours-13)
 advmod(tôt-15, plus-14)
 advmod(jours-13, tôt-15)
 punct(fait-4, .-16)
@@ -155,8 +165,9 @@ FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json'
 
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 
-ES_PROPS = {'annotators': 'tokenize,ssplit,pos,depparse', 'tokenize.language': 'es',
+ES_PROPS = {'annotators': 'tokenize,ssplit,mwt,pos,depparse', 'tokenize.language': 'es',
             'pos.model': 'edu/stanford/nlp/models/pos-tagger/spanish-ud.tagger',
+            'mwt.mappingFile': 'edu/stanford/nlp/models/mwt/spanish/spanish-mwt.tsv',
             'depparse.model': 'edu/stanford/nlp/models/parser/nndep/UD_Spanish.gz'}
 
 ES_PROPS_GOLD = """
@@ -243,8 +254,5 @@ def test_lang_setting(corenlp_client):
 def test_annotators_and_output_format(corenlp_client):
     """ Test setting the annotators and output_format """
     ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_EXTRA_PROPS,
-                                  annotators="tokenize,ssplit,pos", output_format="json")
+                                  annotators="tokenize,ssplit,mwt,pos", output_format="json")
     assert FRENCH_JSON_GOLD == ann
-
-
-
