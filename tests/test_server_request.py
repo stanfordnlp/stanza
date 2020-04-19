@@ -89,37 +89,59 @@ Cette enquête préliminaire fait suite aux révélations de l’hebdomadaire qu
 
 Tokens:
 [Text=Cette CharacterOffsetBegin=0 CharacterOffsetEnd=5 PartOfSpeech=DET]
-[Text=enquête CharacterOffsetBegin=6 CharacterOffsetEnd=13 PartOfSpeech=NC]
+[Text=enquête CharacterOffsetBegin=6 CharacterOffsetEnd=13 PartOfSpeech=NOUN]
 [Text=préliminaire CharacterOffsetBegin=14 CharacterOffsetEnd=26 PartOfSpeech=ADJ]
-[Text=fait CharacterOffsetBegin=27 CharacterOffsetEnd=31 PartOfSpeech=V]
-[Text=suite CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=N]
-[Text=à CharacterOffsetBegin=38 CharacterOffsetEnd=39 PartOfSpeech=P]
-[Text=les CharacterOffsetBegin=39 CharacterOffsetEnd=41 PartOfSpeech=DET]
-[Text=révélations CharacterOffsetBegin=42 CharacterOffsetEnd=53 PartOfSpeech=NC]
-[Text=de CharacterOffsetBegin=54 CharacterOffsetEnd=56 PartOfSpeech=P]
-[Text=l' CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=DET]
-[Text=hebdomadaire CharacterOffsetBegin=59 CharacterOffsetEnd=71 PartOfSpeech=NC]
+[Text=fait CharacterOffsetBegin=27 CharacterOffsetEnd=31 PartOfSpeech=VERB]
+[Text=suite CharacterOffsetBegin=32 CharacterOffsetEnd=37 PartOfSpeech=NOUN]
+[Text=à CharacterOffsetBegin=38 CharacterOffsetEnd=41 PartOfSpeech=ADP]
+[Text=les CharacterOffsetBegin=38 CharacterOffsetEnd=41 PartOfSpeech=DET]
+[Text=révélations CharacterOffsetBegin=42 CharacterOffsetEnd=53 PartOfSpeech=NOUN]
+[Text=de CharacterOffsetBegin=54 CharacterOffsetEnd=56 PartOfSpeech=ADP]
+[Text=l’ CharacterOffsetBegin=57 CharacterOffsetEnd=59 PartOfSpeech=NOUN]
+[Text=hebdomadaire CharacterOffsetBegin=59 CharacterOffsetEnd=71 PartOfSpeech=ADJ]
 [Text=quelques CharacterOffsetBegin=72 CharacterOffsetEnd=80 PartOfSpeech=DET]
-[Text=jours CharacterOffsetBegin=81 CharacterOffsetEnd=86 PartOfSpeech=NC]
+[Text=jours CharacterOffsetBegin=81 CharacterOffsetEnd=86 PartOfSpeech=NOUN]
 [Text=plus CharacterOffsetBegin=87 CharacterOffsetEnd=91 PartOfSpeech=ADV]
 [Text=tôt CharacterOffsetBegin=92 CharacterOffsetEnd=95 PartOfSpeech=ADV]
-[Text=. CharacterOffsetBegin=95 CharacterOffsetEnd=96 PartOfSpeech=PUNC]
+[Text=. CharacterOffsetBegin=95 CharacterOffsetEnd=96 PartOfSpeech=PUNCT]
 
 Constituency parse: 
 (ROOT
   (SENT
-    (NP (DET Cette) (NC enquête)
-      (AP (ADJ préliminaire)))
+    (NP (DET Cette)
+      (MWN (NOUN enquête) (ADJ préliminaire)))
     (VN
-      (MWV (V fait) (N suite)))
-    (PP (P à)
-      (NP (DET les) (NC révélations)
-        (PP (P de)
-          (NP (DET l') (NC hebdomadaire)
-            (AdP
-              (NP (DET quelques) (NC jours))
-              (ADV plus) (ADV tôt))))))
-    (PUNC .)))
+      (MWV (VERB fait) (NOUN suite)))
+    (PP (ADP à)
+      (NP (DET les) (NOUN révélations)
+        (PP (ADP de)
+          (NP (NOUN l’)
+            (AP (ADJ hebdomadaire))))))
+    (NP (DET quelques) (NOUN jours))
+    (AdP (ADV plus) (ADV tôt))
+    (PUNCT .)))
+
+
+Binary Constituency parse: 
+(ROOT
+  (SENT
+    (NP (DET Cette)
+      (MWN (NOUN enquête) (ADJ préliminaire)))
+    (@SENT
+      (@SENT
+        (@SENT
+          (@SENT
+            (VN
+              (MWV (VERB fait) (NOUN suite)))
+            (PP (ADP à)
+              (NP
+                (@NP (DET les) (NOUN révélations))
+                (PP (ADP de)
+                  (NP (NOUN l’)
+                    (AP (ADJ hebdomadaire)))))))
+          (NP (DET quelques) (NOUN jours)))
+        (AdP (ADV plus) (ADV tôt)))
+      (PUNCT .))))
 """
 
 FRENCH_EXTRA_GOLD = """
