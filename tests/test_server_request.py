@@ -7,7 +7,7 @@ import pytest
 import stanza.server as corenlp
 
 from stanza.protobuf import Document
-from tests import TEST_WORKING_DIR
+from tests import TEST_WORKING_DIR, compare_ignoring_whitespace
 
 pytestmark = pytest.mark.client
 
@@ -34,30 +34,32 @@ Sentence #1 (10 tokens):
 Angela Merkel ist seit 2005 Bundeskanzlerin der Bundesrepublik Deutschland.
 
 Tokens:
-[Text=Angela CharacterOffsetBegin=0 CharacterOffsetEnd=6 PartOfSpeech=NE Lemma=angela NamedEntityTag=PERSON]
-[Text=Merkel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=NE Lemma=merkel NamedEntityTag=PERSON]
-[Text=ist CharacterOffsetBegin=14 CharacterOffsetEnd=17 PartOfSpeech=VAFIN Lemma=ist NamedEntityTag=O]
-[Text=seit CharacterOffsetBegin=18 CharacterOffsetEnd=22 PartOfSpeech=APPR Lemma=seit NamedEntityTag=O]
-[Text=2005 CharacterOffsetBegin=23 CharacterOffsetEnd=27 PartOfSpeech=CARD Lemma=2005 NamedEntityTag=O]
-[Text=Bundeskanzlerin CharacterOffsetBegin=28 CharacterOffsetEnd=43 PartOfSpeech=NN Lemma=bundeskanzlerin NamedEntityTag=O]
-[Text=der CharacterOffsetBegin=44 CharacterOffsetEnd=47 PartOfSpeech=ART Lemma=der NamedEntityTag=O]
-[Text=Bundesrepublik CharacterOffsetBegin=48 CharacterOffsetEnd=62 PartOfSpeech=NN Lemma=bundesrepublik NamedEntityTag=LOCATION]
-[Text=Deutschland CharacterOffsetBegin=63 CharacterOffsetEnd=74 PartOfSpeech=NE Lemma=deutschland NamedEntityTag=LOCATION]
-[Text=. CharacterOffsetBegin=74 CharacterOffsetEnd=75 PartOfSpeech=$. Lemma=. NamedEntityTag=O]
+[Text=Angela CharacterOffsetBegin=0 CharacterOffsetEnd=6 PartOfSpeech=PROPN Lemma=angela NamedEntityTag=PERSON]
+[Text=Merkel CharacterOffsetBegin=7 CharacterOffsetEnd=13 PartOfSpeech=PROPN Lemma=merkel NamedEntityTag=PERSON]
+[Text=ist CharacterOffsetBegin=14 CharacterOffsetEnd=17 PartOfSpeech=AUX Lemma=ist NamedEntityTag=O]
+[Text=seit CharacterOffsetBegin=18 CharacterOffsetEnd=22 PartOfSpeech=ADP Lemma=seit NamedEntityTag=O]
+[Text=2005 CharacterOffsetBegin=23 CharacterOffsetEnd=27 PartOfSpeech=NUM Lemma=2005 NamedEntityTag=O]
+[Text=Bundeskanzlerin CharacterOffsetBegin=28 CharacterOffsetEnd=43 PartOfSpeech=NOUN Lemma=bundeskanzlerin NamedEntityTag=O]
+[Text=der CharacterOffsetBegin=44 CharacterOffsetEnd=47 PartOfSpeech=DET Lemma=der NamedEntityTag=O]
+[Text=Bundesrepublik CharacterOffsetBegin=48 CharacterOffsetEnd=62 PartOfSpeech=PROPN Lemma=bundesrepublik NamedEntityTag=LOCATION]
+[Text=Deutschland CharacterOffsetBegin=63 CharacterOffsetEnd=74 PartOfSpeech=PROPN Lemma=deutschland NamedEntityTag=LOCATION]
+[Text=. CharacterOffsetBegin=74 CharacterOffsetEnd=75 PartOfSpeech=PUNCT Lemma=. NamedEntityTag=O]
 
-Constituency parse: 
-(ROOT
-  (S
-    (MPN (NE Angela) (NE Merkel))
-    (VAFIN ist)
-    (PP (APPR seit) (CARD 2005) (NN Bundeskanzlerin)
-      (NP (ART der) (NN Bundesrepublik) (NE Deutschland)))
-    ($. .)))
-
+Dependency Parse (enhanced plus plus dependencies):
+root(ROOT-0, Bundeskanzlerin-6)
+nsubj(Bundeskanzlerin-6, Angela-1)
+flat(Angela-1, Merkel-2)
+cop(Bundeskanzlerin-6, ist-3)
+case(2005-5, seit-4)
+nmod:seit(Bundeskanzlerin-6, 2005-5)
+det(Bundesrepublik-8, der-7)
+nmod(Bundeskanzlerin-6, Bundesrepublik-8)
+appos(Bundesrepublik-8, Deutschland-9)
+punct(Bundeskanzlerin-6, .-10)
 
 Extracted the following NER entity mentions:
-Angela Merkel	PERSON
-Bundesrepublik Deutschland	LOCATION
+Angela Merkel   PERSON  PERSON:0.9999981583355767
+Bundesrepublik Deutschland      LOCATION        LOCATION:0.968290232887181
 """
 
 FRENCH_CUSTOM_PROPS = {'annotators': 'tokenize,ssplit,mwt,pos,parse',
@@ -248,7 +250,7 @@ def test_switching_back_and_forth(corenlp_client):
 def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
     ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
-    assert ann.strip() == GERMAN_DOC_GOLD.strip()
+    compare_ignoring_whitespace(ann, GERMAN_DOC_GOLD)
 
 
 def test_annotators_and_output_format(corenlp_client):
