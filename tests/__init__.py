@@ -3,6 +3,7 @@ Utilities for testing
 """
 
 import os
+import re
 
 # Environment Variables
 # set this to specify working directory of tests
@@ -103,3 +104,9 @@ def safe_rm(path_to_rm):
     if dir_to_rm is not None and os.path.isdir(dir_to_rm):
         os.rmdir(dir_to_rm)
         assert not os.path.exists(dir_to_rm), f'Error removing: {dir_to_rm}'
+
+def compare_ignoring_whitespace(predicted, expected):
+    predicted = re.sub('[ \t]+', ' ', predicted.strip())
+    expected = re.sub('[ \t]+', ' ', expected.strip())
+    assert predicted == expected
+
