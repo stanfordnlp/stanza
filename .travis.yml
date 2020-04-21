@@ -5,10 +5,10 @@ notifications:
   email: false
 install:
   - pip install --quiet -e .
-  - export CORENLP_HOME=~/corenlp CORENLP_VERSION=stanford-corenlp-full-2018-10-05
+  - export CORENLP_HOME=~/corenlp400 CORENLP_VERSION=stanford-corenlp-full-2020-04-20
   - export CORENLP_URL="http://nlp.stanford.edu/software/${CORENLP_VERSION}.zip"
-  - wget $CORENLP_URL -O corenlp.zip
-  - unzip corenlp.zip
+  - wget $CORENLP_URL -O corenlp400.zip
+  - unzip corenlp400.zip
   - mv $CORENLP_VERSION $CORENLP_HOME
   - mkdir ~/stanza_test
   - mkdir ~/stanza_test/in

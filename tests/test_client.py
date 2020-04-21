@@ -26,7 +26,7 @@ Tokens:
 [Text=a CharacterOffsetBegin=12 CharacterOffsetEnd=13 PartOfSpeech=DT]
 [Text=simple CharacterOffsetBegin=14 CharacterOffsetEnd=20 PartOfSpeech=JJ]
 [Text=sentence CharacterOffsetBegin=21 CharacterOffsetEnd=29 PartOfSpeech=NN]
-[Text=that CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=IN]
+[Text=that CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=WDT]
 [Text=he CharacterOffsetBegin=35 CharacterOffsetEnd=37 PartOfSpeech=PRP]
 [Text=parsed CharacterOffsetBegin=38 CharacterOffsetEnd=44 PartOfSpeech=VBD]
 [Text=with CharacterOffsetBegin=45 CharacterOffsetEnd=49 PartOfSpeech=IN]
@@ -95,7 +95,7 @@ def test_tokensregex(corenlp_client):
 
 
 def test_semgrex(corenlp_client):
-    pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+    pattern = '{word:wrote} >nsubj {}=subject >obj {}=object'
     matches = corenlp_client.semgrex(TEXT, pattern, to_words=True)
     assert matches == [
         {
