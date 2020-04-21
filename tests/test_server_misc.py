@@ -5,6 +5,7 @@ Misc tests for the server
 import pytest
 import re
 import stanza.server as corenlp
+from tests import compare_ignoring_whitespace
 
 pytestmark = pytest.mark.client
 
@@ -40,7 +41,7 @@ def test_english_request():
     """ Test case of starting server with Spanish defaults, and then requesting default English properties """
     with corenlp.CoreNLPClient(properties='spanish', server_id='test_english_request') as client:
         ann = client.annotate(EN_DOC, properties_key='english', output_format='text')
-        assert re.sub('[ \t]+', ' ', ann.strip()) == re.sub('[ \t]+', ' ', EN_DOC_GOLD.strip())
+        compare_ignoring_whitespace(ann, EN_DOC_GOLD)
 
 
 
