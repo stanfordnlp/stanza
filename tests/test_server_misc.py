@@ -50,3 +50,19 @@ def test_unknown_request():
     with corenlp.CoreNLPClient(properties='spanish', server_id='test_english_request') as client:
         with pytest.raises(ValueError):
             ann = client.annotate(EN_DOC, properties_key='UNBAN_MOX_OPAL', output_format='text')
+
+expected_codepoints = ((0, 1), (2, 4), (5, 8), (9, 15), (16, 20))
+expected_characters = ((0, 1), (2, 4), (5, 10), (11, 17), (18, 22))
+codepoint_doc = "I am 𝒚̂𝒊 random text"
+
+def test_codepoints():
+    """ Test case of asking for codepoints from the English tokenizer """
+    with corenlp.CoreNLPClient(annotators=['tokenize','ssplit'], # 'depparse','coref'],
+                               properties={'tokenize.codepoint': 'true'}) as client:
+        ann = client.annotate(codepoint_doc)
+        for i, (codepoints, characters) in enumerate(zip(expected_codepoints, expected_characters)):
+            token = ann.sentence[0].token[i]
+            assert token.codepointOffsetBegin == codepoints[0]
+            assert token.codepointOffsetEnd == codepoints[1]
+            assert token.beginChar == characters[0]
+            assert token.endChar == characters[1]
