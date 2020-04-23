@@ -12,6 +12,7 @@ from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor
 from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
+from stanza.utils.jieba import JiebaTokenizer
 from stanza.utils.spacy import SpacyTokenizer
 
 logger = logging.getLogger('stanza')
@@ -30,6 +31,10 @@ class TokenizeProcessor(UDProcessor):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
+        elif config.get('with_jieba', False):
+            self._trainer = None
+            self._jieba_tokenizer = JiebaTokenizer(config.get('lang'))
+            logger.info("Using spaCy as tokenizer")
         elif config.get('with_spacy', False):
             self._trainer = None
             self._spacy_tokenizer = SpacyTokenizer(config.get('lang'))
@@ -68,6 +73,8 @@ class TokenizeProcessor(UDProcessor):
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)
+        elif self.config.get('with_jieba', False):
+            return self._jieba_tokenizer.tokenize(document)
         elif self.config.get('with_spacy', False):
             return self._spacy_tokenizer.tokenize(document)
         else:
