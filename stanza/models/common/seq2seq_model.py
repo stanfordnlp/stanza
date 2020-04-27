@@ -163,8 +163,8 @@ class Seq2SeqModel(nn.Module):
             return log_probs
         return log_probs.view(logits.size(0), logits.size(1), logits.size(2))
 
-    def predict(self, src, src_mask, pos=None, beam_size=5):
-        """ Predict with beam search. """
+    def predict_greedy(self, src, src_mask, pos=None):
+        """ Predict with greedy decoding. """
         enc_inputs = self.embedding(src)
         batch_size = enc_inputs.size(0)
         if self.use_pos:
@@ -173,7 +173,55 @@ class Seq2SeqModel(nn.Module):
             enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
             pos_src_mask = src_mask.new_zeros([batch_size, 1])
             src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
-        src_lens = list(src_mask.data.eq(0).long().sum(1))
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
+
+        # encode source
+        h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
+
+        if self.edit:
+            edit_logits = self.edit_clf(hn)
+        else:
+            edit_logits = None
+
+        # greedy decode by step
+        dec_inputs = self.embedding(self.SOS_tensor)
+        dec_inputs = dec_inputs.expand(batch_size, dec_inputs.size(0), dec_inputs.size(1))
+
+        done = [False for _ in range(batch_size)]
+        total_done = 0
+        max_len = 0
+        output_seqs = [[] for _ in range(batch_size)]
+
+        while total_done < batch_size and max_len < self.max_dec_len:
+            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask)
+            assert log_probs.size(1) == 1, "Output must have 1-step of output."
+            _, preds = log_probs.squeeze(1).max(1, keepdim=True)
+            dec_inputs = self.embedding(preds) # update decoder inputs
+            max_len += 1
+            for i in range(batch_size):
+                if not done[i]:
+                    token = preds.data[i][0].item()
+                    if token == constant.EOS_ID:
+                        done[i] = True
+                        total_done += 1
+                    else:
+                        output_seqs[i].append(token)
+        return output_seqs, edit_logits
+
+    def predict(self, src, src_mask, pos=None, beam_size=5):
+        """ Predict with beam search. """
+        if beam_size == 1:
+            return self.predict_greedy(src, src_mask, pos=pos)
+
+        enc_inputs = self.embedding(src)
+        batch_size = enc_inputs.size(0)
+        if self.use_pos:
+            assert pos is not None, "Missing POS input for seq2seq lemmatizer."
+            pos_inputs = self.pos_drop(self.pos_embedding(pos))
+            enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
+            pos_src_mask = src_mask.new_zeros([batch_size, 1])
+            src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -227,6 +275,7 @@ class Seq2SeqModel(nn.Module):
             k = ks[0]
             hyp = beam[b].get_hyp(k)
             hyp = utils.prune_hyp(hyp)
+            hyp = [i.item() for i in hyp]
             all_hyp += [hyp]
 
         return all_hyp, edit_logits

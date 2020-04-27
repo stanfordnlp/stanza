@@ -61,7 +61,7 @@ def find_token(token, text):
     Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
     Ignores whitespace mismatches between the text and the token.
     """
-    m = re.search('\s*'.join(['\s' if re.match('\s', x) else re.escape(x) for x in token]), text)
+    m = re.search(r'\s*'.join([r'\s' if re.match(r'\s', x) else re.escape(x) for x in token]), text)
     return m.start(), m.group()
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
@@ -173,22 +173,10 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     doc.append(process_sentence(current_sent, mwt_dict))
                     current_sent = []
 
-        if len(current_tok):
-            tok = vocab.normalize_token(current_tok)
-            assert '\t' not in tok, tok
-            if len(tok) > 0:
-                if orig_text is not None:
-                    st0, tok0 = find_token(tok, text)
-                    st = char_offset + st0
-                    text = text[st0 + len(tok0):]
-                    char_offset += st0 + len(tok0)
-                    additional_info = {END_CHAR: st, END_CHAR: st + len(tok0)}
-                else:
-                    additional_info = dict()
-                current_sent += [(tok, 2, additional_info)]
-
+        assert(len(current_tok) == 0)
         if len(current_sent):
             doc.append(process_sentence(current_sent, mwt_dict))
+
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
 

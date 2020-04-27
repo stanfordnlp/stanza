@@ -1,6 +1,12 @@
 #!/bin/bash
 # Setup basic prerequisites for running the tests.
-# This script needs to be sourced from the root directory, i.e., `source tests/setup_test.sh`.
+# This script sets environment variables, so it needs to be sourced from the root directory, i.e., `source tests/setup_test.sh`.
+
+if hash python3 2>/dev/null; then
+    PYTHON=python3
+else
+    PYTHON=python
+fi
 
 test_dir=./stanza_test
 
@@ -13,8 +19,8 @@ cp tests/data/example_french.json $test_dir/out
 
 models_dir=$test_dir/models
 mkdir -p $models_dir
-python -c "import stanza; stanza.download(lang='en', dir='${models_dir}', logging_level='info')"
-python -c "import stanza; stanza.download(lang='fr', dir='${models_dir}', logging_level='info')"
+$PYTHON -c "import stanza; stanza.download(lang='en', dir='${models_dir}', logging_level='info')" || echo "failed to download english model"
+$PYTHON -c "import stanza; stanza.download(lang='fr', dir='${models_dir}', logging_level='info')" || echo "failed to download french model"
 echo "Models downloaded to ${models_dir}."
 
 export STANZA_TEST_HOME=$test_dir

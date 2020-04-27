@@ -2,6 +2,8 @@
 Client for accessing Stanford CoreNLP in Python
 """
 
+import atexit
+import contextlib
 import io
 import os
 import re
@@ -9,6 +11,7 @@ import requests
 import logging
 import json
 import shlex
+import socket
 import subprocess
 import time
 import sys
@@ -46,7 +49,7 @@ LANGUAGE_DEFAULT_ANNOTATORS = {
 ENGLISH_DEFAULT_REQUEST_PROPERTIES = {
     "annotators": "tokenize,ssplit,pos,lemma,ner,depparse",
     "tokenize.language": "en",
-    "pos.model": "edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger",
+    "pos.model": "edu/stanford/nlp/models/pos-tagger/english-left3words-distsim.tagger",
     "ner.model": "edu/stanford/nlp/models/ner/english.all.3class.distsim.crf.ser.gz,"
                  "edu/stanford/nlp/models/ner/english.muc.7class.distsim.crf.ser.gz,"
                  "edu/stanford/nlp/models/ner/english.conll.4class.distsim.crf.ser.gz",
@@ -82,16 +85,23 @@ class ShouldRetryException(Exception):
 
 
 class PermanentlyFailedException(Exception):
-    """ Exception raised if the service should retry the request. """
+    """ Exception raised if the service should NOT retry the request. """
     pass
 
+
+def clean_props_file(props_file):
+    # check if there is a temp server props file to remove and remove it
+    if props_file:
+        if (os.path.isfile(props_file) and
+            SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(props_file))):
+            os.remove(props_file)
 
 class RobustService(object):
     """ Service that resuscitates itself if it is not available. """
     CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr, be_quiet=False):
+                 stderr=sys.stderr, be_quiet=False, host=None, port=None):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -101,15 +111,26 @@ class RobustService(object):
         self.server = None
         self.is_active = False
         self.be_quiet = be_quiet
+        self.host = host
+        self.port = port
+        atexit.register(self.atexit_kill)
 
     def is_alive(self):
         try:
+            if self.server is not None and self.server.poll() is not None:
+                return False
             return requests.get(self.endpoint + "/ping").ok
         except requests.exceptions.ConnectionError as e:
             raise ShouldRetryException(e)
 
     def start(self):
         if self.start_cmd:
+            if self.host and self.port:
+                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                    try:
+                        sock.bind((self.host, self.port))
+                    except socket.error:
+                        raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d (possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
                 stderr = open(os.devnull, 'w')
@@ -120,9 +141,27 @@ class RobustService(object):
                                            stderr=stderr,
                                            stdout=stderr)
 
+    def atexit_kill(self):
+        # make some kind of effort to stop the service (such as a
+        # CoreNLP server) at the end of the program.  not waiting so
+        # that the python script exiting isn't delayed
+        if self.server and self.server.poll() is None:
+            self.server.terminate()
+
     def stop(self):
         if self.server:
-            self.server.kill()
+            self.server.terminate()
+            try:
+                self.server.wait(5)
+            except subprocess.TimeoutExpired:
+                # Resorting to more aggressive measures...
+                self.server.kill()
+                try:
+                    self.server.wait(5)
+                except subprocess.TimeoutExpired:
+                    # oh well
+                    pass
+            self.server = None
         if self.stop_cmd:
             subprocess.run(self.stop_cmd, check=True)
         self.is_active = False
@@ -138,7 +177,10 @@ class RobustService(object):
         # Check if the service is active and alive
         if self.is_active:
             try:
-                return self.is_alive()
+                if self.is_alive():
+                    return
+                else:
+                    self.stop()
             except ShouldRetryException:
                 pass
 
@@ -204,13 +246,15 @@ class CoreNLPClient(RobustService):
             self._setup_default_server_props(properties, annotators, output_format)
             # at this point self.server_start_info and self.server_props_file should be set
             host, port = urlparse(endpoint).netloc.split(":")
+            port = int(port)
             assert host == "localhost", "If starting a server, endpoint must be localhost"
             if classpath == '$CLASSPATH':
                 classpath = os.getenv("CLASSPATH")
             elif classpath is None:
-                classpath = os.getenv("CORENLP_HOME") + "/*"
+                classpath = os.getenv("CORENLP_HOME")
                 assert classpath is not None, \
                     "Please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter"
+                classpath = classpath + "/*"
             start_cmd = f"java -Xmx{memory} -cp '{classpath}'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
@@ -235,10 +279,11 @@ class CoreNLPClient(RobustService):
             stop_cmd = None
         else:
             start_cmd = stop_cmd = None
+            host = port = None
             self.server_start_info = {}
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet)
+                                            stdout, stderr, be_quiet, host=host, port=port)
 
         self.timeout = timeout
 
@@ -315,21 +360,13 @@ class CoreNLPClient(RobustService):
                 client_side_properties['outputFormat'] = output_format
             # write client side props to a tmp file which will be erased at end
             self.server_props_file['path'] = write_corenlp_props(client_side_properties)
+            atexit.register(clean_props_file, self.server_props_file['path'])
             self.server_props_file['is_temp'] = True
             # record server start up info
             self.server_start_info['client_side'] = True
             self.server_start_info['props'] = client_side_properties
             self.server_start_info['props_file'] = self.server_props_file['path']
             self.server_start_info['preload_annotators'] = client_side_properties['annotators']
-
-    def stop(self):
-        # check if there is a temp server props file to remove and remove it
-        if self.server_props_file['is_temp']:
-            if os.path.isfile(self.server_props_file['path']) and \
-                    SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(self.server_props_file['path'])):
-                os.remove(self.server_props_file['path'])
-        # run base class stop
-        super(CoreNLPClient, self).stop()
 
     def _request(self, buf, properties, **kwargs):
         """
@@ -407,8 +444,10 @@ class CoreNLPClient(RobustService):
                 request_properties = dict(ENGLISH_DEFAULT_REQUEST_PROPERTIES)
             elif properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
                 request_properties = {'pipelineLanguage': properties_key.lower()}
+            elif properties_key not in self.properties_cache:
+                raise ValueError("Properties cache does not have '%s'" % properties_key)
             else:
-                request_properties = dict(self.properties_cache.get(properties_key, {}))
+                request_properties = dict(self.properties_cache[properties_key])
         else:
             request_properties = {}
         # add on custom properties for this request
@@ -472,7 +511,7 @@ class CoreNLPClient(RobustService):
             matches = regex_matches_to_indexed_words(matches)
         return matches
 
-    def tregrex(self, text, pattern, filter=False, annotators=None, properties=None):
+    def tregex(self, text, pattern, filter=False, annotators=None, properties=None):
         return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
@@ -498,6 +537,9 @@ class CoreNLPClient(RobustService):
         # force output for regex requests to be json
         properties['outputFormat'] = 'json'
 
+        # TODO: get rid of this once corenlp 4.0.0 is released?
+        # the "stupid reason" has hopefully been fixed on the corenlp side
+        # but maybe people are married to corenlp 3.9.2 for some reason
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
         # this to ensure that the _regex call doesn't timeout.

@@ -13,7 +13,7 @@ import shutil
 import logging
 
 from stanza.utils.helper_func import make_table
-from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER
+from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SUPPORTED_TOKENIZERS
 from stanza._version import __resources_version__
 
 logger = logging.getLogger('stanza')
@@ -21,7 +21,7 @@ logger = logging.getLogger('stanza')
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
-DEFAULT_MODEL_DIR = os.path.join(HOME_DIR, 'stanza_resources')
+DEFAULT_MODEL_DIR = os.getenv('STANZA_RESOURCES_DIR', os.path.join(HOME_DIR, 'stanza_resources'))
 PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER]
 
 # given a language and models path, build a default configuration
@@ -30,15 +30,15 @@ def build_default_config(resources, lang, dir, load_list):
     for item in load_list:
         processor, package, dependencies = item
 
-        # handle case when spacy is specified as tokenizer
-        if processor == TOKENIZE and package == 'spacy':
-            default_config[f"{TOKENIZE}_with_spacy"] = True
+        # handle case when spacy or jieba is specified as tokenizer
+        if processor == TOKENIZE and package in SUPPORTED_TOKENIZERS:
+            default_config[f"{TOKENIZE}_with_{package}"] = True
         # handle case when identity is specified as lemmatizer
         elif processor == LEMMA and package == 'identity':
             default_config[f"{LEMMA}_use_identity"] = True
         else:
             default_config[f"{processor}_model_path"] = os.path.join(dir, lang, processor, package + '.pt')
-        
+
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
@@ -77,7 +77,7 @@ def download_file(url, path):
 
 def request_file(url, path, md5=None):
     ensure_dir(Path(path).parent)
-    if is_file_existed(path, md5): 
+    if is_file_existed(path, md5):
         logger.info(f'File exists: {path}.')
         return
     download_file(url, path)
@@ -107,9 +107,9 @@ def maintain_processor_list(resources, lang, package, processors):
             elif key in resources[lang]['default_processors'] and value == 'default':
                 logger.debug(f'Find {key}: {resources[lang]["default_processors"][key]}.')
                 processor_list[key] = resources[lang]['default_processors'][key]
-            # allow tokenize to be set to "spacy"
-            elif key == TOKENIZE and value == 'spacy':
-                logger.debug(f'Find {key}: {value}. Using external spacy library as tokenizer.')
+            # allow tokenize to be set to "spacy" or "jieba"
+            elif key == TOKENIZE and value in SUPPORTED_TOKENIZERS:
+                logger.debug(f'Find {key}: {value}. Using external {value} library as tokenizer.')
                 processor_list[key] = value
             # allow lemma to be set to "identity"
             elif key == LEMMA and value == 'identity':
@@ -129,7 +129,7 @@ def maintain_processor_list(resources, lang, package, processors):
         else:
             flag = False
             for key in PIPELINE_NAMES:
-                if key not in resources[lang]: continue 
+                if key not in resources[lang]: continue
                 if package in resources[lang][key]:
                     flag = True
                     if key not in processor_list:
@@ -142,13 +142,13 @@ def maintain_processor_list(resources, lang, package, processors):
     processor_list = sort_processors(processor_list)
     return processor_list
 
-def add_dependencies(resources, lang, processor_list):    
+def add_dependencies(resources, lang, processor_list):
     default_dependencies = resources[lang]['default_dependencies']
     for item in processor_list:
         processor, package = item
         dependencies = default_dependencies.get(processor, None)
-        # skip dependency checking for special spacy tokenizer and identity lemmatizer
-        if not any([processor == TOKENIZE and package == 'spacy', processor == LEMMA and package == 'identity']):
+        # skip dependency checking for special spacy/jieba tokenizer and identity lemmatizer
+        if not any([processor == TOKENIZE and package in SUPPORTED_TOKENIZERS, processor == LEMMA and package == 'identity']):
             dependencies = resources[lang][processor][package].get('dependencies', dependencies)
         if dependencies:
             dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
@@ -174,7 +174,7 @@ def set_logging_level(logging_level, verbose):
         logging_level = 'ERROR'
     elif verbose == True:
         logging_level = 'INFO'
-    
+
     # Set logging level
     logging_level = logging_level.upper()
     all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
@@ -189,17 +189,17 @@ def process_pipeline_parameters(lang, dir, package, processors):
         lang = lang.strip().lower()
     elif lang is not None:
         raise Exception(f"The parameter 'lang' should be str, but got {type(lang).__name__} instead.")
-    
+
     if isinstance(dir, str):
         dir = dir.strip()
     elif dir is not None:
         raise Exception(f"The parameter 'dir' should be str, but got {type(dir).__name__} instead.")
-    
+
     if isinstance(package, str):
         package = package.strip().lower()
     elif package is not None:
         raise Exception(f"The parameter 'package' should be str, but got {type(package).__name__} instead.")
-    
+
     if isinstance(processors, str):
         # Special case: processors is str, compatible with older verson
         processors = {processor.strip().lower(): package for processor in processors.split(',')}
@@ -208,7 +208,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
         processors = {k.strip().lower(): v.strip().lower() for k, v in processors.items()}
     elif processors is not None:
         raise Exception(f"The parameter 'processors' should be dict or str, but got {type(processors).__name__} instead.")
-    
+
     return lang, dir, package, processors
 
 # main download function
@@ -242,7 +242,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         download_list = flatten_processor_list(download_list)
         download_table = make_table(['Processor', 'Package'], download_list)
         logger.info(f'Downloading these customized packages for language: {lang} ({lang_name})...\n{download_table}')
-        
+
         # Download packages
         for key, value in download_list:
             try:

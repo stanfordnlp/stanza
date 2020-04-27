@@ -21,7 +21,6 @@ def para_to_chunks(text, char_level_pred):
             if not re.match('^\s$', text[idx], flags=re.UNICODE):
                 # punctuation
                 chunks += [text[idx]]
-                assert len(lastpred) > 0
                 preds += [int(char_level_pred[idx])]
             else:
                 # prepend leading white spaces to chunks so we can tell the difference between "2 , 2" and "2,2"

@@ -26,7 +26,7 @@ Tokens:
 [Text=a CharacterOffsetBegin=12 CharacterOffsetEnd=13 PartOfSpeech=DT]
 [Text=simple CharacterOffsetBegin=14 CharacterOffsetEnd=20 PartOfSpeech=JJ]
 [Text=sentence CharacterOffsetBegin=21 CharacterOffsetEnd=29 PartOfSpeech=NN]
-[Text=that CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=IN]
+[Text=that CharacterOffsetBegin=30 CharacterOffsetEnd=34 PartOfSpeech=WDT]
 [Text=he CharacterOffsetBegin=35 CharacterOffsetEnd=37 PartOfSpeech=PRP]
 [Text=parsed CharacterOffsetBegin=38 CharacterOffsetEnd=44 PartOfSpeech=VBD]
 [Text=with CharacterOffsetBegin=45 CharacterOffsetEnd=49 PartOfSpeech=IN]
@@ -52,10 +52,16 @@ def test_connect(corenlp_client):
 
 
 def test_context_manager():
-    with corenlp.CoreNLPClient(annotators="tokenize,ssplit") as context_client:
+    with corenlp.CoreNLPClient(annotators="tokenize,ssplit",
+                               endpoint="http://localhost:9001") as context_client:
         ann = context_client.annotate(TEXT)
         assert corenlp.to_text(ann.sentence[0]) == TEXT[:-1]
 
+def test_no_duplicate_servers():
+    """We expect a second server on the same port to fail"""
+    with pytest.raises(corenlp.PermanentlyFailedException):
+        with corenlp.CoreNLPClient(annotators="tokenize,ssplit") as duplicate_server:
+            raise RuntimeError("This should have failed")
 
 def test_annotate(corenlp_client):
     ann = corenlp_client.annotate(TEXT)
@@ -89,7 +95,7 @@ def test_tokensregex(corenlp_client):
 
 
 def test_semgrex(corenlp_client):
-    pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+    pattern = '{word:wrote} >nsubj {}=subject >obj {}=object'
     matches = corenlp_client.semgrex(TEXT, pattern, to_words=True)
     assert matches == [
         {
@@ -118,6 +124,7 @@ def test_external_server():
     external_server_process = subprocess.Popen(start_cmd)
     with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
-        assert ann.strip() == EN_GOLD
     assert external_server_process
-    external_server_process.kill()
+    external_server_process.terminate()
+    external_server_process.wait(5)
+    assert ann.strip() == EN_GOLD
