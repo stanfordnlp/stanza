@@ -24,13 +24,11 @@ The Stanford NLP Group's official Python NLP library. It contains support for ru
 If you use this library in your research, please kindly cite our [Stanza system description paper](https://arxiv.org/abs/2003.07082):
 
 ```bibtex
-@misc{qi2020stanza,
+@inproceedings{qi2020stanza,
     title={Stanza: A {Python} Natural Language Processing Toolkit for Many Human Languages},
     author={Qi, Peng and Zhang, Yuhao and Zhang, Yuhui and Bolton, Jason and Manning, Christopher D.},
-    year={2020},
-    eprint={2003.07082},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
+    booktitle = "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics: System Demonstrations",
+    year={2020}
 }
 ```
 The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](http://qipeng.me), [Yuhao Zhang](http://yuhao.im), and [Yuhui Zhang](https://cs.stanford.edu/~yuhuiz/), with help from [Jason Bolton](mailto:jebolton@stanford.edu) and [Tim Dozat](https://web.stanford.edu/~tdozat/).
