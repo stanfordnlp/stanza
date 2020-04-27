@@ -34,7 +34,7 @@ class TokenizeProcessor(UDProcessor):
         elif config.get('with_jieba', False):
             self._trainer = None
             self._jieba_tokenizer = JiebaTokenizer(config.get('lang'))
-            logger.info("Using spaCy as tokenizer")
+            logger.info("Using jieba as tokenizer")
         elif config.get('with_spacy', False):
             self._trainer = None
             self._spacy_tokenizer = SpacyTokenizer(config.get('lang'))
