@@ -201,7 +201,7 @@ class Trainer(object):
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
-            sys.exit(1)
+            raise
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
