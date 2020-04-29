@@ -115,7 +115,7 @@ class Trainer(BaseTrainer):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            logger.exception("Cannot load model from {}".format(filename))
+            logger.error("Cannot load model from {}".format(filename))
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
