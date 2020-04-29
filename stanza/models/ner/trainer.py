@@ -116,7 +116,7 @@ class Trainer(BaseTrainer):
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
-            sys.exit(1)
+            raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
