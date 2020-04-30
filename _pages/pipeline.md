@@ -54,6 +54,8 @@ Here, we are building a Pipeline for English that performs tokenization, sentenc
 
 You can find more examples about how to use these options [here](installation_usage.md#building-a-pipeline).
 
+{% include alerts.html %} {{ note }} Batching To Maximize Pipeline Speed: To maximize speed performance, it is essential to run the pipeline on batches of documents. Running a for loop on one sentence at a time will be very slow. The best approach at this time is to concatenate documents together, with each document separated by a blank line (i.e., two line breaks \n\n). The tokenizer will recognize blank lines as sentence breaks. We are actively working on improving multi-document processing. {{ end }}
+
 ### Build Pipeline from a Config Dictionary
 
 When there are many options you want to configure, or even set programmatically, it might not be convenient to set them one by one using keyword arguments to instantiate the Pipeline. In these cases, alternatively, you can build the desired pipeline with a config dictionary, allowing maximum customization for the pipeline:
