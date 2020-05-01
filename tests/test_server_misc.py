@@ -57,9 +57,9 @@ def test_english_request():
 
 
 
-def test_unknown_request():
+def test_unknown_properties():
     """ Test case of starting server with Spanish defaults, and then requesting UNBAN_MOX_OPAL properties """
-    with corenlp.CoreNLPClient(properties='spanish', server_id='test_english_request') as client:
+    with corenlp.CoreNLPClient(properties='spanish', server_id='test_unknown_properties') as client:
         with pytest.raises(ValueError):
             ann = client.annotate(EN_DOC, properties_key='UNBAN_MOX_OPAL', output_format='text')
 
