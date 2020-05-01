@@ -281,6 +281,16 @@ class CoreNLPClient(RobustService):
             start_cmd = stop_cmd = None
             host = port = None
             self.server_start_info = {}
+            # save the annotators & output_format the user requested
+            # so that they get used when default queries are made
+            # the order we consider which annotators to use will be:
+            # annotators in the annotate() call
+            # annotators in the properties dict
+            # annotators in the properties_key UNLESS that was the built in English dict
+            # annotators created here
+            # default annotators (English dict or server side annotators)
+            self.annotators = annotators
+            self.output_format = output_format
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
                                             stdout, stderr, be_quiet, host=host, port=port)
@@ -336,8 +346,10 @@ class CoreNLPClient(RobustService):
             print(f"Setting server defaults from: {self.server_props_file['path']}")
             self.server_start_info['props_file'] = self.server_props_file['path']
             self.server_start_info['server_side'] = True
+            self.annotators = None
             if annotators is not None:
                 print(f"Warning: Server defaults being set server side, ignoring annotators={annotators}")
+            self.output_format = None
             if output_format is not None:
                 print(f"Warning: Server defaults being set server side, ignoring output_format={output_format}")
         # check if client side should set default properties
@@ -352,10 +364,12 @@ class CoreNLPClient(RobustService):
             }
             client_side_properties.update(properties)
             # override if a specific annotators list was specified
+            self.annotators = annotators
             if annotators:
                 client_side_properties['annotators'] = \
                     ",".join(annotators) if isinstance(annotators, list) else annotators
             # override if a specific output format was specified
+            self.output_format = output_format
             if output_format is not None and isinstance(output_format, str):
                 client_side_properties['outputFormat'] = output_format
             # write client side props to a tmp file which will be erased at end
@@ -436,6 +450,8 @@ class CoreNLPClient(RobustService):
 
         :return: request result
         """
+        if properties is None:
+            properties = {}
         # set properties for server call
         # first look for a cached default properties set
         # if a Stanford CoreNLP supported language is specified, just pass {pipelineLanguage="french"}
@@ -448,17 +464,33 @@ class CoreNLPClient(RobustService):
                 raise ValueError("Properties cache does not have '%s'" % properties_key)
             else:
                 request_properties = dict(self.properties_cache[properties_key])
+                # annotators and outputFormat in the properties_cache
+                # will override the values used when creating the
+                # CoreNLPClient, but will not override those passed in
+                # via the properties dict
+                # however, we put this here instead of above because
+                # we want any annotators used when creating the object
+                # to override the English defaults, which are a
+                # dictionary created here instead of on the server
+                # side as the other languages are
+                if annotators is None and 'annotators' not in properties and 'annotators' in request_properties:
+                    annotators = request_properties['annotators']
+                if output_format is None and 'outputFormat' not in properties and 'outputFormat' in request_properties:
+                    output_format = request_properties['outputFormat']
         else:
             request_properties = {}
         # add on custom properties for this request
-        if properties is None:
-            properties = {}
         request_properties.update(properties)
         # if annotators list is specified, override with that
+        # also can use the annotators field the object was created with
+        if annotators is None and 'annotators' not in properties:
+            annotators = self.annotators
         if annotators is not None:
             request_properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
         # always send an output format with request
         # in some scenario's the server's default output format is unknown, so default to serialized
+        if output_format is None and 'outputFormat' not in properties:
+            output_format = self.output_format
         if output_format is not None:
             request_properties['outputFormat'] = output_format
         if request_properties.get('outputFormat') is None:

@@ -36,6 +36,18 @@ Joe Smith       PERSON  PERSON:0.9972202689478088
 California      STATE_OR_PROVINCE       LOCATION:0.9990868267002156
 """
 
+EN_DOC_POS_ONLY_GOLD = """
+Sentence #1 (6 tokens):
+Joe Smith lives in California.
+
+Tokens:
+[Text=Joe CharacterOffsetBegin=0 CharacterOffsetEnd=3 PartOfSpeech=NNP]
+[Text=Smith CharacterOffsetBegin=4 CharacterOffsetEnd=9 PartOfSpeech=NNP]
+[Text=lives CharacterOffsetBegin=10 CharacterOffsetEnd=15 PartOfSpeech=VBZ]
+[Text=in CharacterOffsetBegin=16 CharacterOffsetEnd=18 PartOfSpeech=IN]
+[Text=California CharacterOffsetBegin=19 CharacterOffsetEnd=29 PartOfSpeech=NNP]
+[Text=. CharacterOffsetBegin=29 CharacterOffsetEnd=30 PartOfSpeech=.]
+"""
 
 def test_english_request():
     """ Test case of starting server with Spanish defaults, and then requesting default English properties """
@@ -45,11 +57,25 @@ def test_english_request():
 
 
 
-def test_unknown_request():
+def test_unknown_properties():
     """ Test case of starting server with Spanish defaults, and then requesting UNBAN_MOX_OPAL properties """
-    with corenlp.CoreNLPClient(properties='spanish', server_id='test_english_request') as client:
+    with corenlp.CoreNLPClient(properties='spanish', server_id='test_unknown_properties') as client:
         with pytest.raises(ValueError):
             ann = client.annotate(EN_DOC, properties_key='UNBAN_MOX_OPAL', output_format='text')
+
+def test_default_annotators():
+    """
+    Test case of creating a client with start_server=False and a set of annotators
+    The annotators should be used instead of the server's default annotators
+    """
+    with corenlp.CoreNLPClient(server_id='test_default_annotators',
+                               output_format='text',
+                               annotators=['tokenize','ssplit','pos','lemma','ner','depparse']) as client:
+        with corenlp.CoreNLPClient(start_server=False,
+                                   output_format='text',
+                                   annotators=['tokenize','ssplit','pos']) as client2:
+            ann = client2.annotate(EN_DOC)
+            print(ann)
 
 expected_codepoints = ((0, 1), (2, 4), (5, 8), (9, 15), (16, 20))
 expected_characters = ((0, 1), (2, 4), (5, 10), (11, 17), (18, 22))
