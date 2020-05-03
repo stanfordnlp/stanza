@@ -121,6 +121,12 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner', 'parse',
     matches["sentences"][1]["0"]["text"] == "wrote"
     matches["sentences"][1]["0"]["$subject"]["text"] == "Chris"
     matches["sentences"][1]["0"]["$object"]["text"] == "sentence"
+
+    # Tregex example
+    pattern = 'NP'
+    matches = client.tregex(text, pattern)
+    for match in matches:
+        print(matches)
 ```
 
 ## Customizing Properties For Server Start And Requests
