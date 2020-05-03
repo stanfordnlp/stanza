@@ -136,7 +136,7 @@ class RobustService(object):
                 stderr = open(os.devnull, 'w')
             else:
                 stderr = self.stderr
-            print(f"Starting server with command: {' '.join(self.start_cmd)}")
+            logger.info(f"Starting server with command: {' '.join(self.start_cmd)}")
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
                                            stdout=stderr)
@@ -318,7 +318,7 @@ class CoreNLPClient(RobustService):
         # ensure properties is str or dict
         if properties is None or (not isinstance(properties, str) and not isinstance(properties, dict)):
             if properties is not None:
-                print('Warning: properties passed invalid value (not a str or dict), setting properties = {}')
+                logger.warning('properties passed invalid value (not a str or dict), setting properties = {}')
             properties = {}
         # check if properties is a string
         if isinstance(properties, str):
@@ -332,8 +332,8 @@ class CoreNLPClient(RobustService):
                 else:
                     self.server_props_file['path'] = f'StanfordCoreNLP-{lang_name}.properties'
                 self.server_start_info['preload_annotators'] = LANGUAGE_DEFAULT_ANNOTATORS[lang_name]
-                print(f"Using Stanford CoreNLP default properties for: {lang_name}.  Make sure to have {lang_name} "
-                      f"models jar (available for download here: https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
+                logger.info(f"Using Stanford CoreNLP default properties for: {lang_name}.  Make sure to have {lang_name} "
+                            f"models jar (available for download here: https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
             # otherwise assume properties string is a path
             else:
                 self.server_props_file['path'] = properties
@@ -342,16 +342,16 @@ class CoreNLPClient(RobustService):
                     self.server_start_info['props'] = props_from_file
                     self.server_start_info['preload_annotators'] = props_from_file.get('annotators')
                 else:
-                    print(f"Warning: {properties} does not correspond to a file path.")
-            print(f"Setting server defaults from: {self.server_props_file['path']}")
+                    logger.warning(f"{properties} does not correspond to a file path.")
+            logger.info(f"Setting server defaults from: {self.server_props_file['path']}")
             self.server_start_info['props_file'] = self.server_props_file['path']
             self.server_start_info['server_side'] = True
             self.annotators = None
             if annotators is not None:
-                print(f"Warning: Server defaults being set server side, ignoring annotators={annotators}")
+                logger.warning(f"Server defaults being set server side, ignoring annotators={annotators}")
             self.output_format = None
             if output_format is not None:
-                print(f"Warning: Server defaults being set server side, ignoring output_format={output_format}")
+                logger.warning(f"Server defaults being set server side, ignoring output_format={output_format}")
         # check if client side should set default properties
         else:
             # set up properties from client side
@@ -420,12 +420,11 @@ class CoreNLPClient(RobustService):
     def register_properties_key(self, key, props):
         """ Register a properties dictionary with a key in the client's properties_cache """
         if key in CoreNLPClient.PIPELINE_LANGUAGES:
-            print(f'Key {key} not registered in properties cache.  Names of Stanford CoreNLP supported languages are '
-                  f'reserved for Stanford CoreNLP defaults for that language.  For instance "french" or "fr" '
-                  f'corresponds to using the defaults in StanfordCoreNLP-french.properties which are stored with the '
-                  f'server.  If you want to store custom defaults for that language, it is suggested to use a key like '
-                  f' "fr-custom", etc...'
-                  )
+            logger.warning(f'Key {key} not registered in properties cache.  Names of Stanford CoreNLP supported languages are '
+                           f'reserved for Stanford CoreNLP defaults for that language.  For instance "french" or "fr" '
+                           f'corresponds to using the defaults in StanfordCoreNLP-french.properties which are stored with the '
+                           f'server.  If you want to store custom defaults for that language, it is suggested to use a key like '
+                           f' "fr-custom", etc...')
         else:
             self.properties_cache[key] = props
 
