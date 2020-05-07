@@ -543,7 +543,7 @@ class CoreNLPClient(RobustService):
         # HACK: For some stupid reason, CoreNLPServer will timeout if we
         # need to annotate something from scratch. So, we need to call
         # this to ensure that the _regex call doesn't timeout.
-        self.annotate(text, properties=properties)
+        #self.annotate(text, properties=properties)
 
         try:
             # Error occurs unless put properties in params
