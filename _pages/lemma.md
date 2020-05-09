@@ -54,6 +54,39 @@ word: Hawaii    lemma: Hawaii
 word: .         lemma: .
 ```
 
+### Improving the Lemmatizer by Providing Key-Value Dictionary
+
+It is possible to improve the lemmatizer by providing a key-value dictionary. Lemmatizer will check it first and then use statistical model if the word is not in dictionary.
+
+First, load your downloaded lemmatizer model. For English lemmatizer using `ewt` package, it can be found at `~/stanza_resources/en/lemma/ewt.pt`.
+
+Second, customize two dictionaries: 1) `composite_dict` which maps `(word, pos)` to `lemma`; 2) `word_dict` which maps `word` to `lemma`. The lemmatizer will first check the composite dictionary, then word dictionary.
+
+Finally, save your customized model and load it with `Stanza`.
+
+Here is an example of customizing the lemmatizer by providing a key-value dictionary:
+
+```python
+# Load word_dict and composite_dict
+import torch
+model = torch.load('~/stanza_resources/en/lemma/ewt.pt', map_location='cpu')
+word_dict, composite_dict = model['dicts']
+
+# Customize your own dictionary
+composite_dict[('myword', 'NOUN')] = 'mylemma'
+word_dict['myword'] = 'mylemma'
+
+# Save your model
+torch.save(model, '~/stanza_resources/en/lemma/ewt_customized.pt')
+
+# Load your customized model with Stanza
+import stanza
+nlp = stanza.Pipeline('en', package='ewt', processors='tokenize,pos,lemma', lemma_model_path='~/stanza_resources/en/lemma/ewt_customized.pt'
+print(nlp('myword')) # Should get lemma 'mylemma'
+```
+
+As can be seen in the result, Stanza should lemmatize the word _myword_ as _mylemma_.
+
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/lemmatizer.py#L22) of the lemmatizer.

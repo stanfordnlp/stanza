@@ -28,6 +28,8 @@ While our [Installation & Getting Started](installation_usage) page covers basic
 
 [Accessing Lemma of a Word](lemma.md#accessing-lemma-for-word)
 
+[Improving the Lemmatizer by Providing Key-Value Dictionary](lemma.md#improving-the-lemmatizer-by-providing-key-value-dictionary)
+
 [Accessing Head and Dependency Relation of a Word](depparse.md#accessing-syntactic-dependency-information)
 
 [Running Dependency Parsing with Pre-annotated Document](depparse.md#start-with-pretagged-document)
