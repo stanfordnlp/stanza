@@ -25,7 +25,7 @@ Downloading models is as simple as calling the `stanza.download()` method. We pr
 
 {% include alerts.html %}
 {{ note }}
-{{ "You can override the default location `'~/stanza_resources'` by setting an environmental variable called `STANZA_RESOURCES_DIR`." | markdownify }}
+{{ "You can override the default location `~/stanza_resources` by setting an environmental variable called `STANZA_RESOURCES_DIR`." | markdownify }}
 {{ end }}
 
 ## Available UD Models
