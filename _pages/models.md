@@ -23,7 +23,10 @@ Downloading models is as simple as calling the `stanza.download()` method. We pr
 | logging_level | `str` | `'INFO'` | Controls the level of logging information to display during download. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less information will be displayed going from `'DEBUG'` to `'FATAL'`. |
 | verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'` (i.e., only show errors).  |
 
-
+{% include alerts.html %}
+{{ note }}
+{{ "You can override the default location `'~/stanza_resources'` by setting an environmental variable called `STANZA_RESOURCES_DIR`." | markdownify }}
+{{ end }}
 
 ## Available UD Models
 
