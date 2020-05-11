@@ -16,6 +16,7 @@ install:
   - mkdir ~/stanza_test/scripts
   - cp tests/data/external_server.properties ~/stanza_test/scripts
   - cp tests/data/example_french.json ~/stanza_test/out
+  - cp tests/data/tiny_emb.* ~/stanza_test/in
   - export STANZA_TEST_HOME=~/stanza_test
 script:
   - python -m pytest -m travis tests/

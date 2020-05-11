@@ -16,8 +16,7 @@ mkdir -p $test_dir/out
 mkdir -p $test_dir/scripts
 cp tests/data/external_server.properties $test_dir/scripts
 cp tests/data/example_french.json $test_dir/out
-cp tests/data/tiny_emb.txt $test_dir/in
-cp tests/data/tiny_emb.xz $test_dir/in
+cp tests/data/tiny_emb.* $test_dir/in
 
 models_dir=$test_dir/models
 mkdir -p $models_dir
