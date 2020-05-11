@@ -225,7 +225,7 @@ class CoreNLPClient(RobustService):
     PIPELINE_LANGUAGES = \
         ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
-    def __init__(self, start_server=None,
+    def __init__(self, start_server=True,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
