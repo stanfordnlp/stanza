@@ -234,7 +234,7 @@ class CoreNLPClient(RobustService):
     DEFAULT_MEMORY = "5G"
     DEFAULT_MAX_CHAR_LENGTH = 100000
 
-    def __init__(self, start_server=None,
+    def __init__(self, start_server=True,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
