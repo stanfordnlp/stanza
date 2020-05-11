@@ -101,7 +101,7 @@ class RobustService(object):
     CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr, be_quiet=False, host=None, port=None):
+                 stderr=sys.stderr, be_quiet=False, host=None, port=None, ignore_binding_error=False):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -113,6 +113,7 @@ class RobustService(object):
         self.be_quiet = be_quiet
         self.host = host
         self.port = port
+        self.ignore_binding_error = ignore_binding_error
         atexit.register(self.atexit_kill)
 
     def is_alive(self):
@@ -130,7 +131,10 @@ class RobustService(object):
                     try:
                         sock.bind((self.host, self.port))
                     except socket.error:
-                        raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d (possibly something is already running there)" % self.port)
+                        if self.ignore_binding_error:
+                            logger.warn(f"Ignoring binding error to port {self.port}.")
+                        else:
+                            raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d (possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
                 stderr = open(os.devnull, 'w')
@@ -221,7 +225,7 @@ class CoreNLPClient(RobustService):
     PIPELINE_LANGUAGES = \
         ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
-    def __init__(self, start_server=True,
+    def __init__(self, start_server=None,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
@@ -241,7 +245,7 @@ class CoreNLPClient(RobustService):
         self.properties_cache = {}
         self.server_props_file = {'is_temp': False, 'path': None}
         # start the server
-        if start_server:
+        if start_server or start_server is None:
             # set up default properties for server
             self._setup_default_server_props(properties, annotators, output_format)
             # at this point self.server_start_info and self.server_props_file should be set
@@ -293,7 +297,7 @@ class CoreNLPClient(RobustService):
             self.output_format = output_format
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet, host=host, port=port)
+                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server is None))
 
         self.timeout = timeout
 
