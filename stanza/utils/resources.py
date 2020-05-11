@@ -58,7 +58,7 @@ def unzip(dir, filename):
     with zipfile.ZipFile(os.path.join(dir, filename)) as f:
         f.extractall(dir)
 
-def is_file_existed(path, md5):
+def file_exists(path, md5):
     return os.path.exists(path) and get_md5(path) == md5
 
 def download_file(url, path):
@@ -77,11 +77,11 @@ def download_file(url, path):
 
 def request_file(url, path, md5=None):
     ensure_dir(Path(path).parent)
-    if is_file_existed(path, md5):
+    if file_exists(path, md5):
         logger.info(f'File exists: {path}.')
         return
     download_file(url, path)
-    assert(not md5 or is_file_existed(path, md5))
+    assert(not md5 or file_exists(path, md5))
 
 def sort_processors(processor_list):
     sorted_list = []
