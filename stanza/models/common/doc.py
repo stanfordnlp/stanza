@@ -117,18 +117,21 @@ class Document:
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False, from_token=False):
-        """ Get fields from a list of field names. If only one field name is provided, return a list
-        of that field; if more than one, return a list of list. Note that all returned fields are after
-        multi-word expansion.
+        """ Get fields from a list of field names. 
+        If only one field name (string or singleton list) is provided,
+        return a list of that field; if more than one, return a list of list. 
+        Note that all returned fields are after multi-word expansion.
 
         Args:
-            fields: name of the fields as a list
+            fields: name of the fields as a list or a single string
             as_sentences: if True, return the fields as a list of sentences; otherwise as a whole list
             from_token: if True, get the fields from Token; otherwise from Word
         
         Returns:
             All requested fields.
         """
+        if isinstance(fields, str):
+            fields = [fields]
         assert isinstance(fields, list), "Must provide field names as a list."
         assert len(fields) >= 1, "Must have at least one field."
 
@@ -153,37 +156,52 @@ class Document:
                 results += cursent
         return results
 
-    def set(self, fields, contents, to_token=False):
-        """ Set fields based on contents. If only one field (singleton list) is provided, then a list
-        of content will be expected; otherwise a list of list of contents will be expected.
+    def set(self, fields, contents, to_token=False, to_sentence=False):
+        """Set fields based on contents. If only one field (string or
+        singleton list) is provided, then a list of content will be
+        expected; otherwise a list of list of contents will be expected.
 
         Args:
-            fields: name of the fields as a list
+            fields: name of the fields as a list or a single string
             contents: field values to set; total length should be equal to number of words/tokens
             to_token: if True, set field values to tokens; otherwise to words
+
         """
-        assert isinstance(fields, list), "Must provide field names as a list."
-        assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
+        if isinstance(fields, str):
+            fields = [fields]
+        assert isinstance(fields, (tuple, list)), "Must provide field names as a list."
+        assert isinstance(contents, (tuple, list)), "Must provide contents as a list (one item per line)."
         assert len(fields) >= 1, "Must have at least one field."
 
-        assert (to_token and self.num_tokens == len(contents)) or self.num_words == len(contents), \
-            "Contents must have the same number as the original file."
+        assert not to_sentence or not to_token, "Both to_token and to_sentence set to True, which is very confusing"
 
-        cidx = 0
-        for sentence in self.sentences:
-            # decide word or token
-            if to_token:
-                units = sentence.tokens
-            else:
-                units = sentence.words
-            for unit in units:
+        if to_sentence:
+            assert len(self.sentences) == len(contents), \
+                "Contents must have the same length as the sentences"
+            for sentence, content in zip(self.sentences, contents):
                 if len(fields) == 1:
-                    setattr(unit, fields[0], contents[cidx])
+                    setattr(sentence, fields[0], content)
                 else:
-                    for field, content in zip(fields, contents[cidx]):
-                        setattr(unit, field, content)
-                cidx += 1
-        return
+                    for field, piece in zip(fields, content):
+                        setattr(sentence, field, piece)
+        else:
+            assert (to_token and self.num_tokens == len(contents)) or self.num_words == len(contents), \
+                "Contents must have the same length as the original file."
+
+            cidx = 0
+            for sentence in self.sentences:
+                # decide word or token
+                if to_token:
+                    units = sentence.tokens
+                else:
+                    units = sentence.words
+                for unit in units:
+                    if len(fields) == 1:
+                        setattr(unit, fields[0], contents[cidx])
+                    else:
+                        for field, content in zip(fields, contents[cidx]):
+                            setattr(unit, field, content)
+                    cidx += 1
 
     def set_mwt_expansions(self, expansions):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
