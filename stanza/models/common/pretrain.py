@@ -43,6 +43,7 @@ class Pretrain:
         if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
+                logger.info("Loaded pretrain from {}".format(self.filename))
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
