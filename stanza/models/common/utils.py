@@ -13,7 +13,7 @@ import stanza.models.common.seq2seq_constant as constant
 import stanza.utils.conll18_ud_eval as ud_eval
 
 # filenames
-def get_wordvec_file(wordvec_dir, shorthand):
+def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
     """ Lookup the name of the word vectors file, given a directory and the language shorthand.
     """
     lcode, tcode = shorthand.split('_', 1)
@@ -21,12 +21,17 @@ def get_wordvec_file(wordvec_dir, shorthand):
     # locate language folder
     word2vec_dir = os.path.join(wordvec_dir, 'word2vec', lang)
     fasttext_dir = os.path.join(wordvec_dir, 'fasttext', lang)
-    if os.path.exists(word2vec_dir): # first try word2vec
+    lang_dir = None
+    if wordvec_type is not None:
+        lang_dir = os.path.join(wordvec_dir, wordvec_type, lang)
+        if not os.path.exists(lang_dir):
+            raise FileNotFoundError("Word vector type {} was specified, but directory {} does not exist".format(wordvec_type, lang_dir))
+    elif os.path.exists(word2vec_dir): # first try word2vec
         lang_dir = word2vec_dir
     elif os.path.exists(fasttext_dir): # otherwise try fasttext
         lang_dir = fasttext_dir
     else:
-        raise Exception("Cannot locate word vector directory for language: {}".format(lang))
+        raise FileNotFoundError("Cannot locate word vector directory for language: {}  Looked in {} and {}".format(lang, word2vec_dir, fasttext_dir))
     # look for wordvec filename in {lang_dir}
     filename = os.path.join(lang_dir, '{}.vectors'.format(lcode))
     if os.path.exists(filename + ".xz"):
