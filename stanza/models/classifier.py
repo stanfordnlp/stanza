@@ -18,14 +18,6 @@ import stanza.models.classifiers.cnn_classifier as cnn_classifier
 
 logger = logging.getLogger('stanza')
 
-#DEFAULT_TRAIN='extern_data/sentiment/sst-processed/binary/train-binary-phrases.txt'
-#DEFAULT_DEV='extern_data/sentiment/sst-processed/binary/dev-binary-roots.txt'
-#DEFAULT_TEST='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt'
-
-#DEFAULT_TRAIN='extern_data/sentiment/sst-processed/threeclass/train-3class-phrases.txt'
-#DEFAULT_DEV='extern_data/sentiment/sst-processed/threeclass/dev-3class-roots.txt'
-#DEFAULT_TEST='extern_data/sentiment/sst-processed/threeclass/test-3class-roots.txt'
-
 DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
 DEFAULT_DEV='extern_data/sentiment/sst-processed/fiveclass/dev-roots.txt'
 DEFAULT_TEST='extern_data/sentiment/sst-processed/fiveclass/test-roots.txt'
