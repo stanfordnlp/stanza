@@ -1,5 +1,12 @@
-"""
-Processor that attaches a sentiment score to a sentence
+"""Processor that attaches a sentiment score to a sentence
+
+The model used is a generally a model trained on the Stanford
+Sentiment Treebank or some similar dataset.  When run, this processor
+attachs a score in the form of a string to each sentence in the
+document.
+
+TODO: a possible way to generalize this would be to make it a
+ClassifierProcessor and have "sentiment" be an option.
 """
 
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
