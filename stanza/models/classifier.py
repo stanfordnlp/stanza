@@ -6,7 +6,6 @@ import os
 import random
 import re
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -247,22 +246,6 @@ def check_labels(labels, dataset):
     if not_found:
         raise RuntimeError('Dataset contains labels which the model does not know about:' + str(not_found))
 
-def set_random_seed(seed, cuda):
-    """
-    Set a random seed on all of the things which might need it.
-    torch, np, python random, and torch.cuda
-    """
-    if seed is None:
-        seed = random.randint(0, 1000000000)
-
-    logger.info("Using random seed: %d" % seed)
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    if cuda:
-        torch.cuda.manual_seed(seed)
-
-
 def checkpoint_name(filename, epoch, acc):
     """
     Build an informative checkpoint name from a base name, epoch #, and accuracy
@@ -360,7 +343,8 @@ def load_pretrain(args):
 
 def main():
     args = parse_args()
-    set_random_seed(args.seed, args.cuda)
+    seed = utils.set_random_seed(args.seed, args.cuda)
+    logger.info("Using random seed: %d" % seed)
 
     utils.ensure_dir(args.save_dir)
 
