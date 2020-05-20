@@ -32,6 +32,10 @@ class CNNClassifier(nn.Module):
         self.unsaved_modules = []
 
         # TODO: make retraining vectors an option
+        #   - note: this would greatly increase the size of the models
+        #           we could make that an optional improvement, though
+        #   - another alternative: make a set of delta vectors, possibly of
+        #     lower dimension.  won't make the models too much bigger
         # TODO: make this trans_pretrained as with the pos model?
         #   - we could train the trans matrix too
         #   - for 1 word phrases we could just use the trans matrix and
