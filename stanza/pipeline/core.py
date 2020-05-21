@@ -31,17 +31,6 @@ NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: 
                            LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor,
                            SENTIMENT: SentimentProcessor}
 
-# list of settings for each processor
-PROCESSOR_SETTINGS = {
-    TOKENIZE: ['batch_size', 'pretokenized', 'no_ssplit'],
-    MWT: ['batch_size', 'dict_only', 'ensemble_dict'],
-    POS: ['batch_size'],
-    LEMMA: ['batch_size', 'beam_size', 'dict_only', 'ensemble_dict', 'use_identity'],
-    DEPPARSE: ['batch_size', 'pretagged'],
-    NER: ['batch_size'],
-    SENTIMENT: ['batch_size']
-} # TODO: ducumentation
-
 class PipelineRequirementsException(Exception):
     """
     Exception indicating one or more requirements failures while attempting to build a pipeline.
