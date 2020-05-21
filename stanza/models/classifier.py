@@ -181,6 +181,70 @@ def shuffle_dataset(sorted_dataset):
         dataset.extend(items)
     return dataset
 
+def confusion_dataset(model, dataset, device=None):
+    """
+    Returns a confusion matrix
+
+    First key: gold
+    Second key: predicted
+    so: confusion[gold][predicted]
+    """
+    model.eval()
+    index_label_map = {x: y for (x, y) in enumerate(model.labels)}
+    if device is None:
+        device = next(model.parameters()).device
+
+    dataset_lengths = sort_dataset_by_len(dataset)
+
+    confusion = {}
+    for label in model.labels:
+        confusion[label] = {}
+
+    for length in dataset_lengths.keys():
+        batch = dataset_lengths[length]
+        text = [x[1] for x in batch]
+        expected_labels = [x[0] for x in batch]
+
+        output = model(text, device)
+        for i in range(len(expected_labels)):
+            predicted = torch.argmax(output[i])
+            predicted_label = index_label_map[predicted.item()]
+            confusion[expected_labels[i]][predicted_label] = confusion[expected_labels[i]].get(predicted_label, 0) + 1
+
+    return confusion
+
+def format_confusion(confusion, labels, hide_zeroes=False):
+    """
+    pretty print for confusion matrixes
+    adapted from https://gist.github.com/zachguo/10296432
+    """
+    columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
+    empty_cell = " " * columnwidth
+
+    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
+
+    if len(fst_empty_cell) < len(empty_cell):
+        fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
+    # Print header
+    header = "    " + fst_empty_cell + " "
+
+    for label in labels:
+        header = header + "%{0}s ".format(columnwidth) % label
+    text = [header]
+
+    # Print rows
+    for i, label1 in enumerate(labels):
+        row = "    %{0}s ".format(columnwidth) % label1
+        for j, label2 in enumerate(labels):
+            confusion_cell = confusion.get(label1, {}).get(label2, 0)
+            cell = "%{0}.1f".format(columnwidth) % confusion_cell
+            if hide_zeroes:
+                cell = cell if confusion_cell else empty_cell
+            row = row + cell + " "
+        text.append(row)
+    return "\n".join(text)
+
+
 def score_dataset(model, dataset, label_map=None, device=None,
                   remap_labels=None, forgive_unmapped_labels=False):
     """
@@ -203,13 +267,13 @@ def score_dataset(model, dataset, label_map=None, device=None,
     dataset_lengths = sort_dataset_by_len(dataset)
 
     for length in dataset_lengths.keys():
+        # TODO: possibly break this up into smaller batches
         batch = dataset_lengths[length]
         text = [x[1] for x in batch]
         expected_labels = [label_map[x[0]] for x in batch]
 
         output = model(text, device)
 
-        # TODO: confusion matrix, etc
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = predicted.item()
@@ -404,6 +468,9 @@ def main():
                             forgive_unmapped_labels=args.forgive_unmapped_labels)
     logger.info("Test set: %d correct of %d examples.  Accuracy: %f" %
                 (correct, len(test_set), correct / len(test_set)))
+    if args.test_remap_labels is None:
+        confusion = confusion_dataset(model, test_set)
+        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
 
 
 if __name__ == '__main__':
