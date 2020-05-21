@@ -4,7 +4,7 @@ Base classes for processors
 
 from abc import ABC, abstractmethod
 
-from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 
 class ProcessorRequirementsException(Exception):
     """ Exception indicating a processor's requirements will not be met """
@@ -90,6 +90,18 @@ class Processor(ABC):
             raise ProcessorRequirementsException(load_names, self, provided_reqs)
 
 
+class ProcessorVariant(ABC):
+    """ Base class for all processor variants """
+
+    @abstractmethod
+    def process(self, doc):
+        """
+        Process a document that is potentially preprocessed by the processor.
+        This is the main method of a processor variant.
+        """
+        pass
+
+
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """
     def __init__(self, config, pipeline, use_gpu):
@@ -160,5 +172,11 @@ def register_processor(name):
     def wrapper(Cls):
         NAME_TO_PROCESSOR_CLASS[name] = Cls
         PIPELINE_NAMES.append(name)
+        return Cls
+    return wrapper
+
+def register_processor_variant(name, variant):
+    def wrapper(Cls):
+        PROCESSOR_VARIANTS[name][variant] = Cls
         return Cls
     return wrapper
