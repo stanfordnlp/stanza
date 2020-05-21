@@ -227,7 +227,7 @@ def update_text(sentence, wordvec_type):
         raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
 
 
-def label_text(model, text, reverse_label_map=None, device=None):
+def label_text(model, text, batch_size=None, reverse_label_map=None, device=None):
     """
     Given a list of sentences, return the model's results on that text.
     """
@@ -238,11 +238,18 @@ def label_text(model, text, reverse_label_map=None, device=None):
         device = next(model.parameters()).device
 
     text = [update_text(s, model.config.wordvec_type) for s in text]
+
+    if batch_size is None:
+        intervals = [(0, len(text))]
+    else:
+        # TODO: results would be better if we sort by length and then unsort
+        intervals = [(i, min(i+batch_size, len(text))) for i in range(0, len(text), batch_size)]
     labels = []
-    output = model(text, device)
-    for i in range(len(text)):
-        predicted = torch.argmax(output[i])
-        labels.append(reverse_label_map[predicted.item()])
+    for interval in intervals:
+        output = model(text[interval[0]:interval[1]], device)
+        for i in range(interval[1] - interval[0]):
+            predicted = torch.argmax(output[i])
+            labels.append(reverse_label_map[predicted.item()])
 
     logger.debug("Found labels")
     for (label, sentence) in zip(labels, text):

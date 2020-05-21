@@ -27,6 +27,7 @@ class SentimentProcessor(UDProcessor):
         self._pretrain = Pretrain(config['pretrain_path'])
         # set up model
         self._model = cnn_classifier.load(filename=config['model_path'], pretrain=self._pretrain)
+        self._batch_size = config.get('batch_size', None)
 
         # TODO: move this call to load()
         if use_gpu:
@@ -35,7 +36,7 @@ class SentimentProcessor(UDProcessor):
     def process(self, document):
         sentences = document.sentences
         text = [" ".join(token.text for token in sentence.tokens) for sentence in sentences]
-        labels = cnn_classifier.label_text(self._model, text)
+        labels = cnn_classifier.label_text(self._model, text, batch_size=self._batch_size)
         # TODO: allow a classifier processor for any attribute, not just sentiment
         document.set(SENTIMENT, labels, to_sentence=True)
         return document

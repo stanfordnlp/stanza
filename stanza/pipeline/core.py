@@ -38,7 +38,8 @@ PROCESSOR_SETTINGS = {
     POS: ['batch_size'],
     LEMMA: ['batch_size', 'beam_size', 'dict_only', 'ensemble_dict', 'use_identity'],
     DEPPARSE: ['batch_size', 'pretagged'],
-    NER: ['batch_size']
+    NER: ['batch_size'],
+    SENTIMENT: ['batch_size']
 } # TODO: ducumentation
 
 class PipelineRequirementsException(Exception):
