@@ -183,6 +183,17 @@ def shuffle_dataset(sorted_dataset):
 
 def score_dataset(model, dataset, label_map=None, device=None,
                   remap_labels=None, forgive_unmapped_labels=False):
+    """
+    remap_labels: a dict from old label to new label to use when
+    testing a classifier on a dataset with a simpler label set.
+    For example, a model trained on 5 class sentiment can be tested
+    on a binary distribution with {"0": "0", "1": "0", "3": "1", "4": "1"}
+
+    forgive_unmapped_labels says the following: in the case that the
+    model predicts "2" in the above example for remap_labels, instead
+    treat the model's prediction as whichever label it gave the
+    highest score
+    """
     model.eval()
     if label_map is None:
         label_map = {x: y for (y, x) in enumerate(model.labels)}
