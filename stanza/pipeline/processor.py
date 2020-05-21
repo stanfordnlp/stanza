@@ -4,6 +4,7 @@ Base classes for processors
 
 from abc import ABC, abstractmethod
 
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
 
 class ProcessorRequirementsException(Exception):
     """ Exception indicating a processor's requirements will not be met """
@@ -154,3 +155,10 @@ class UDProcessor(Processor):
             return True
         else:
             return False
+
+def register_processor(name):
+    def wrapper(Cls):
+        NAME_TO_PROCESSOR_CLASS[name] = Cls
+        PIPELINE_NAMES.append(name)
+        return Cls
+    return wrapper

@@ -9,7 +9,7 @@ from stanza.models.tokenize.data import DataLoader
 from stanza.models.tokenize.trainer import Trainer
 from stanza.models.tokenize.utils import output_predictions
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
 from stanza.utils.jieba import JiebaTokenizer
@@ -18,6 +18,7 @@ from stanza.utils.spacy import SpacyTokenizer
 logger = logging.getLogger('stanza')
 
 # class for running the tokenizer
+@register_processor(name=TOKENIZE)
 class TokenizeProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills

@@ -8,9 +8,9 @@ from stanza.models.common.utils import unsort
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
-
+@register_processor(name=POS)
 class POSProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills

@@ -6,8 +6,9 @@ from stanza.models.common import doc
 from stanza.models.lemma.data import DataLoader
 from stanza.models.lemma.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
+@register_processor(name=LEMMA)
 class LemmaProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills

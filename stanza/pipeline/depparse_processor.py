@@ -8,9 +8,10 @@ from stanza.models.common.utils import unsort
 from stanza.models.depparse.data import DataLoader
 from stanza.models.depparse.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
 
+@register_processor(name=DEPPARSE)
 class DepparseProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
