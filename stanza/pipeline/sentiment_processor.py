@@ -14,8 +14,9 @@ import stanza.models.classifiers.cnn_classifier as cnn_classifier
 from stanza.models.common import doc
 from stanza.models.common.pretrain import Pretrain
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
+@register_processor(SENTIMENT)
 class SentimentProcessor(UDProcessor):
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([SENTIMENT])
