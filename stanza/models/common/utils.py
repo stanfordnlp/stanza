@@ -7,6 +7,7 @@ import random
 import json
 import unicodedata
 import torch
+import numpy as np
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
@@ -209,3 +210,19 @@ def tensor_unsort(sorted_tensor, oidx):
     assert sorted_tensor.size(0) == len(oidx), "Number of list elements must match with original indices."
     backidx = [x[0] for x in sorted(enumerate(oidx), key=lambda x: x[1])]
     return sorted_tensor[backidx]
+
+
+def set_random_seed(seed, cuda):
+    """
+    Set a random seed on all of the things which might need it.
+    torch, np, python random, and torch.cuda
+    """
+    if seed is None:
+        seed = random.randint(0, 1000000000)
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if cuda:
+        torch.cuda.manual_seed(seed)
+    return seed
