@@ -247,9 +247,8 @@ def label_text(model, text, batch_size=None, reverse_label_map=None, device=None
     labels = []
     for interval in intervals:
         output = model(text[interval[0]:interval[1]], device)
-        for i in range(interval[1] - interval[0]):
-            predicted = torch.argmax(output[i])
-            labels.append(reverse_label_map[predicted.item()])
+        predicted = torch.argmax(output, dim=1)
+        labels.extend(predicted.tolist())
 
     logger.debug("Found labels")
     for (label, sentence) in zip(labels, text):
