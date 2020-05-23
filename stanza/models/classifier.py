@@ -5,16 +5,23 @@ import logging
 import os
 import random
 import re
+from enum import Enum
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from stanza.models.common import loss
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+
+class Loss(Enum):
+    CROSS = 1
+    WEIGHTED_CROSS = 2
+    LOG_CROSS = 3
 
 logger = logging.getLogger('stanza')
 
@@ -123,6 +130,8 @@ def parse_args():
     parser.add_argument('--no_forgive_unmapped_labels', dest='forgive_unmapped_labels', action='store_false',
                         help="When remapping labels, such as from 5 class to 2 class, DON'T pick a different label if the first guess is not remapped.")
 
+    parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
+                        help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
 
     args = parser.parse_args()
     return args
@@ -324,12 +333,6 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
-    # TODO different loss functions appropriate?
-    loss_function = nn.CrossEntropyLoss()
-
-    if args.cuda:
-        loss_function.cuda()
-
     device = next(model.parameters()).device
     logger.info("Current device: %s" % device)
 
@@ -347,6 +350,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     label_map = {x: y for (y, x) in enumerate(labels)}
     label_tensors = {x: torch.tensor(y, requires_grad=False, device=device)
                      for (y, x) in enumerate(labels)}
+
+    if args.loss == Loss.CROSS:
+        loss_function = nn.CrossEntropyLoss()
+    elif args.loss == Loss.WEIGHTED_CROSS:
+        loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=False)
+    elif args.loss == Loss.LOG_CROSS:
+        loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
+    else:
+        raise ValueError("Unknown loss function {}".format(args.loss))
+    if args.cuda:
+        loss_function.cuda()
 
     train_set_by_len = sort_dataset_by_len(train_set)
 
@@ -374,12 +388,12 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             optimizer.zero_grad()
 
             outputs = model(text, device)
-            loss = loss_function(outputs, label)
-            loss.backward()
+            batch_loss = loss_function(outputs, label)
+            batch_loss.backward()
             optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
+            running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
                 logger.info('[%d, %5d] average loss: %.3f' %
                             (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
