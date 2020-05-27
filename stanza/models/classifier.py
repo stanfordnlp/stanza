@@ -67,6 +67,11 @@ A model trained on the 3 class dataset can be tested on the 2 class dataset with
 
 python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 2:1}"
 
+To train models on combined 3 class datasets:
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+
+
 """
 
 def convert_fc_shapes(arg):
@@ -105,9 +110,9 @@ def parse_args():
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
 
-    parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
-    parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file to use as the dev set.')
-    parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file to use as the test set.')
+    parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file(s) to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.  Comma separated list.')
+    parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
+    parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
@@ -142,7 +147,10 @@ def read_dataset(dataset, wordvec_type):
     returns a list where the values of the list are
       label, [token...]
     """
-    lines = open(dataset).readlines()
+    lines = []
+    for filename in dataset.split(","):
+        new_lines = open(filename).readlines()
+        lines.extend(new_lines)
     lines = [x.strip() for x in lines]
     lines = [x.split(maxsplit=1) for x in lines if x]
     # TODO: maybe do this processing later, once the model is built.
