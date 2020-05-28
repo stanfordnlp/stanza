@@ -27,7 +27,8 @@ class CNNClassifier(nn.Module):
                                       fc_shapes = args.fc_shapes,
                                       dropout = args.dropout,
                                       num_classes = len(labels),
-                                      wordvec_type = args.wordvec_type)
+                                      wordvec_type = args.wordvec_type,
+                                      model_type = 'CNNClassifier')
 
         self.unsaved_modules = []
 
@@ -190,9 +191,13 @@ def load(filename, pretrain):
         raise
     logger.info("Loaded model {}".format(filename))
 
-    model = CNNClassifier(pretrain.emb, pretrain.vocab,
-                          checkpoint['labels'],
-                          checkpoint['config'])
+    model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
+    if model_type == 'CNNClassifier':
+        model = CNNClassifier(pretrain.emb, pretrain.vocab,
+                              checkpoint['labels'],
+                              checkpoint['config'])
+    else:
+        raise ValueError("Unknown model type {}".format(model_type))
     model.load_state_dict(checkpoint['model'], strict=False)
 
     logger.debug("-- MODEL CONFIG --")

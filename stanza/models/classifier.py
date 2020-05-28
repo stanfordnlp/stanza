@@ -5,16 +5,23 @@ import logging
 import os
 import random
 import re
+from enum import Enum
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from stanza.models.common import loss
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+
+class Loss(Enum):
+    CROSS = 1
+    WEIGHTED_CROSS = 2
+    LOG_CROSS = 3
 
 logger = logging.getLogger('stanza')
 
@@ -60,6 +67,11 @@ A model trained on the 3 class dataset can be tested on the 2 class dataset with
 
 python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 2:1}"
 
+To train models on combined 3 class datasets:
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+
+
 """
 
 def convert_fc_shapes(arg):
@@ -98,9 +110,9 @@ def parse_args():
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
 
-    parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.')
-    parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file to use as the dev set.')
-    parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file to use as the test set.')
+    parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file(s) to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.  Comma separated list.')
+    parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
+    parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
@@ -123,6 +135,8 @@ def parse_args():
     parser.add_argument('--no_forgive_unmapped_labels', dest='forgive_unmapped_labels', action='store_false',
                         help="When remapping labels, such as from 5 class to 2 class, DON'T pick a different label if the first guess is not remapped.")
 
+    parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
+                        help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
 
     args = parser.parse_args()
     return args
@@ -133,7 +147,10 @@ def read_dataset(dataset, wordvec_type):
     returns a list where the values of the list are
       label, [token...]
     """
-    lines = open(dataset).readlines()
+    lines = []
+    for filename in dataset.split(","):
+        new_lines = open(filename).readlines()
+        lines.extend(new_lines)
     lines = [x.strip() for x in lines]
     lines = [x.split(maxsplit=1) for x in lines if x]
     # TODO: maybe do this processing later, once the model is built.
@@ -181,6 +198,70 @@ def shuffle_dataset(sorted_dataset):
         dataset.extend(items)
     return dataset
 
+def confusion_dataset(model, dataset, device=None):
+    """
+    Returns a confusion matrix
+
+    First key: gold
+    Second key: predicted
+    so: confusion[gold][predicted]
+    """
+    model.eval()
+    index_label_map = {x: y for (x, y) in enumerate(model.labels)}
+    if device is None:
+        device = next(model.parameters()).device
+
+    dataset_lengths = sort_dataset_by_len(dataset)
+
+    confusion = {}
+    for label in model.labels:
+        confusion[label] = {}
+
+    for length in dataset_lengths.keys():
+        batch = dataset_lengths[length]
+        text = [x[1] for x in batch]
+        expected_labels = [x[0] for x in batch]
+
+        output = model(text, device)
+        for i in range(len(expected_labels)):
+            predicted = torch.argmax(output[i])
+            predicted_label = index_label_map[predicted.item()]
+            confusion[expected_labels[i]][predicted_label] = confusion[expected_labels[i]].get(predicted_label, 0) + 1
+
+    return confusion
+
+def format_confusion(confusion, labels, hide_zeroes=False):
+    """
+    pretty print for confusion matrixes
+    adapted from https://gist.github.com/zachguo/10296432
+    """
+    columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
+    empty_cell = " " * columnwidth
+
+    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
+
+    if len(fst_empty_cell) < len(empty_cell):
+        fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
+    # Print header
+    header = "    " + fst_empty_cell + " "
+
+    for label in labels:
+        header = header + "%{0}s ".format(columnwidth) % label
+    text = [header]
+
+    # Print rows
+    for i, label1 in enumerate(labels):
+        row = "    %{0}s ".format(columnwidth) % label1
+        for j, label2 in enumerate(labels):
+            confusion_cell = confusion.get(label1, {}).get(label2, 0)
+            cell = "%{0}.1f".format(columnwidth) % confusion_cell
+            if hide_zeroes:
+                cell = cell if confusion_cell else empty_cell
+            row = row + cell + " "
+        text.append(row)
+    return "\n".join(text)
+
+
 def score_dataset(model, dataset, label_map=None, device=None,
                   remap_labels=None, forgive_unmapped_labels=False):
     """
@@ -203,13 +284,13 @@ def score_dataset(model, dataset, label_map=None, device=None,
     dataset_lengths = sort_dataset_by_len(dataset)
 
     for length in dataset_lengths.keys():
+        # TODO: possibly break this up into smaller batches
         batch = dataset_lengths[length]
         text = [x[1] for x in batch]
         expected_labels = [label_map[x[0]] for x in batch]
 
         output = model(text, device)
 
-        # TODO: confusion matrix, etc
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = predicted.item()
@@ -260,12 +341,6 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
-    # TODO different loss functions appropriate?
-    loss_function = nn.CrossEntropyLoss()
-
-    if args.cuda:
-        loss_function.cuda()
-
     device = next(model.parameters()).device
     logger.info("Current device: %s" % device)
 
@@ -283,6 +358,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     label_map = {x: y for (y, x) in enumerate(labels)}
     label_tensors = {x: torch.tensor(y, requires_grad=False, device=device)
                      for (y, x) in enumerate(labels)}
+
+    if args.loss == Loss.CROSS:
+        loss_function = nn.CrossEntropyLoss()
+    elif args.loss == Loss.WEIGHTED_CROSS:
+        loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=False)
+    elif args.loss == Loss.LOG_CROSS:
+        loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
+    else:
+        raise ValueError("Unknown loss function {}".format(args.loss))
+    if args.cuda:
+        loss_function.cuda()
 
     train_set_by_len = sort_dataset_by_len(train_set)
 
@@ -310,12 +396,12 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             optimizer.zero_grad()
 
             outputs = model(text, device)
-            loss = loss_function(outputs, label)
-            loss.backward()
+            batch_loss = loss_function(outputs, label)
+            batch_loss.backward()
             optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
+            running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
                 logger.info('[%d, %5d] average loss: %.3f' %
                             (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
@@ -404,6 +490,9 @@ def main():
                             forgive_unmapped_labels=args.forgive_unmapped_labels)
     logger.info("Test set: %d correct of %d examples.  Accuracy: %f" %
                 (correct, len(test_set), correct / len(test_set)))
+    if args.test_remap_labels is None:
+        confusion = confusion_dataset(model, test_set)
+        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
 
 
 if __name__ == '__main__':
