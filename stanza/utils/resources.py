@@ -113,7 +113,7 @@ def maintain_processor_list(resources, lang, package, processors):
                 processor_list[key] = value
             # allow lemma to be set to "identity"
             elif key == LEMMA and value == 'identity':
-                logger.debug(f'Found {key}: {value}. Using identical lemmatizer.')
+                logger.debug(f'Found {key}: {value}. Using identity lemmatizer.')
                 processor_list[key] = value
             # not a processor in the officially supported processor list
             elif key not in resources[lang]:
