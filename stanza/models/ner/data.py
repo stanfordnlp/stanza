@@ -12,7 +12,7 @@ from stanza.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):
+    def __init__(self, doc, batch_size, args, pretrain_vocab=None, vocab=None, evaluation=False, preprocess_tags=True):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -24,7 +24,7 @@ class DataLoader:
         self.tags = [[w[1] for w in sent] for sent in data]
 
         # handle vocab
-        self.pretrain = pretrain
+        self.pretrain_vocab = pretrain_vocab
         if vocab is None:
             self.vocab = self.init_vocab(data)
         else:
@@ -59,7 +59,7 @@ class DataLoader:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
         else: 
             charvocab = CharVocab(data, self.args['shorthand'])
-        wordvocab = self.pretrain.vocab
+        wordvocab = self.pretrain_vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,

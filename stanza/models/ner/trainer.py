@@ -32,17 +32,17 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, pretrain_emb_matrix=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file, args)
         else:
-            assert all(var is not None for var in [args, vocab, pretrain])
+            assert all(var is not None for var in [args, vocab, pretrain_emb_matrix])
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb)
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain_emb_matrix)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if self.use_cuda:
             self.model.cuda()

@@ -129,10 +129,10 @@ def train(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain.vocab, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(json.load(open(args['eval_file'])))
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain.vocab, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
     # skip training if the language does not have training or dev data
@@ -141,7 +141,7 @@ def train(args):
         sys.exit(0)
 
     logger.info("Training tagger...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, pretrain_emb_matrix=pretrain.emb, use_cuda=args['cuda'])
     logger.info(trainer.model)
 
     global_step = 0
