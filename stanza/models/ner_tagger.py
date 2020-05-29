@@ -38,6 +38,7 @@ def parse_args():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--finetune', action='store_false', help='Load existing model during `train` mode from `save_dir` path')
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
@@ -110,29 +111,38 @@ def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
-    # load pretrained vectors
-    if len(args['wordvec_file']) == 0:
-        vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+    pretrain_vocab = None
+    if args['finetune'] and os.path.exists(model_file):
+        logger.warning('Finetune is ON. Using model from "{}"'.format(model_file))
+        _, trainer, pretrain_vocab = load_model(args, model_file)
     else:
-        vec_file = args['wordvec_file']
-    # do not save pretrained embeddings individually
-    pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+        if args['finetune']:
+            logger.warning('Finetune is set to true but model file is not found. Continuing with training from scratch.')
 
-    if args['charlm']:
-        if args['charlm_shorthand'] is None: 
-            logger.info("CharLM Shorthand is required for loading pretrained CharLM model...")
-            sys.exit(0)
-        logger.info('Use pretrained contextualized char embedding')
-        args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-        args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        # load pretrained vectors
+        if len(args['wordvec_file']) == 0:
+            vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        else:
+            vec_file = args['wordvec_file']
+        # do not save pretrained embeddings individually
+        pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+        pretrain_vocab = pretrain.vocab
+
+        if args['charlm']:
+            if args['charlm_shorthand'] is None:
+                logger.info("CharLM Shorthand is required for loading pretrained CharLM model...")
+                sys.exit(0)
+            logger.info('Use pretrained contextualized char embedding')
+            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain.vocab, evaluation=False)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain_vocab, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(json.load(open(args['eval_file'])))
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain.vocab, vocab=vocab, evaluation=True)
+    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain_vocab, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
     # skip training if the language does not have training or dev data
@@ -141,7 +151,8 @@ def train(args):
         sys.exit(0)
 
     logger.info("Training tagger...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain_emb_matrix=pretrain.emb, use_cuda=args['cuda'])
+    if trainer is None: # init if model was not loaded previously from file
+        trainer = Trainer(args=args, vocab=vocab, pretrain_emb_matrix=pretrain.emb, use_cuda=args['cuda'])
     logger.info(trainer.model)
 
     global_step = 0
@@ -220,15 +231,7 @@ def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
             else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
-    # load model
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
-    loaded_args, vocab = trainer.args, trainer.vocab
-
-    # load config
-    for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
-            loaded_args[k] = args[k]
+    loaded_args, trainer, vocab = load_model(args, model_file)
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
@@ -245,6 +248,20 @@ def evaluate(args):
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+
+
+def load_model(args, model_file):
+    # load model
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
+    loaded_args, vocab = trainer.args, trainer.vocab
+
+    # load config
+    for k in args:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
+            loaded_args[k] = args[k]
+    return loaded_args, trainer, vocab
+
 
 if __name__ == '__main__':
     main()
