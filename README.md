@@ -37,7 +37,7 @@ If you use the CoreNLP software through Stanza, please cite the CoreNLP software
 
 ## Issues and Usage Q&A
 
-To ask questions, report issues or request features, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues).
+To ask questions, report issues or request features 🤔, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues). Before creating a new issue, please make sure to search for existing issues that may solve your problem, or visit the [Frequently Asked Questions (FAQ) page] on our website.
 
 ## Contributing to Stanza
 
