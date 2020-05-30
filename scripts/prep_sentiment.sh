@@ -39,7 +39,13 @@ if [ "$language" = "english" ]; then
 
     echo "airline"
     $PYTHON scripts/sentiment/convert_airline.py extern_data/sentiment/airline/Tweets.csv extern_data/sentiment/airline/train.txt
-    # TODO: add the corenlp converstion script here
+
+    echo "sst"
+    if [ -z "$SENTIMENT_SST_HOME" ]; then
+        SENTIMENT_SST_HOME=$SENTIMENT_DATA_DIR/sentiment-treebank
+        echo "  Assuming git download of SST is at " $SENTIMENT_SST_HOME
+    fi
+    scripts/sentiment/process_sst.sh -i$SENTIMENT_SST_HOME -o$SENTIMENT_DATA_DIR/sst-processed
 elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
