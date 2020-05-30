@@ -27,18 +27,18 @@ done
 if [ "$language" = "english" ]; then
     echo "PROCESSING ENGLISH"
     echo "ArguAna"
-    $PYTHON scripts/sentiment/parse_arguana_xml.py extern_data/sentiment/arguana/arguana-tripadvisor-annotated-v2/split/training extern_data/sentiment/arguana/train.txt
+    $PYTHON scripts/sentiment/process_arguana_xml.py extern_data/sentiment/arguana/arguana-tripadvisor-annotated-v2/split/training extern_data/sentiment/arguana/train.txt
 
     echo "MELD"
-    $PYTHON scripts/sentiment/convert_MELD.py extern_data/sentiment/MELD/MELD/train_sent_emo.csv extern_data/sentiment/MELD/train.txt
-    $PYTHON scripts/sentiment/convert_MELD.py extern_data/sentiment/MELD/MELD/dev_sent_emo.csv extern_data/sentiment/MELD/dev.txt
-    $PYTHON scripts/sentiment/convert_MELD.py extern_data/sentiment/MELD/MELD/test_sent_emo.csv extern_data/sentiment/MELD/test.txt
+    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/train_sent_emo.csv extern_data/sentiment/MELD/train.txt
+    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/dev_sent_emo.csv extern_data/sentiment/MELD/dev.txt
+    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/test_sent_emo.csv extern_data/sentiment/MELD/test.txt
 
     echo "SLSD"
-    $PYTHON scripts/sentiment/convert_slsd.py extern_data/sentiment/slsd/slsd extern_data/sentiment/slsd/train.txt
+    $PYTHON scripts/sentiment/process_slsd.py extern_data/sentiment/slsd/slsd extern_data/sentiment/slsd/train.txt
 
     echo "airline"
-    $PYTHON scripts/sentiment/convert_airline.py extern_data/sentiment/airline/Tweets.csv extern_data/sentiment/airline/train.txt
+    $PYTHON scripts/sentiment/process_airline.py extern_data/sentiment/airline/Tweets.csv extern_data/sentiment/airline/train.txt
 
     echo "sst"
     if [ -z "$SENTIMENT_SST_HOME" ]; then
