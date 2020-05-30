@@ -27,18 +27,18 @@ done
 if [ "$language" = "english" ]; then
     echo "PROCESSING ENGLISH"
     echo "ArguAna"
-    $PYTHON scripts/sentiment/process_arguana_xml.py extern_data/sentiment/arguana/arguana-tripadvisor-annotated-v2/split/training extern_data/sentiment/arguana/train.txt
+    $PYTHON scripts/sentiment/process_arguana_xml.py $SENTIMENT_DATA_DIR/arguana/arguana-tripadvisor-annotated-v2/split/training $SENTIMENT_DATA_DIR/arguana/train.txt
 
     echo "MELD"
-    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/train_sent_emo.csv extern_data/sentiment/MELD/train.txt
-    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/dev_sent_emo.csv extern_data/sentiment/MELD/dev.txt
-    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD/MELD/test_sent_emo.csv extern_data/sentiment/MELD/test.txt
+    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/train_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/train.txt
+    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/dev_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/dev.txt
+    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/test_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/test.txt
 
     echo "SLSD"
-    $PYTHON scripts/sentiment/process_slsd.py extern_data/sentiment/slsd/slsd extern_data/sentiment/slsd/train.txt
+    $PYTHON scripts/sentiment/process_slsd.py $SENTIMENT_DATA_DIR/slsd/slsd $SENTIMENT_DATA_DIR/slsd/train.txt
 
     echo "airline"
-    $PYTHON scripts/sentiment/process_airline.py extern_data/sentiment/airline/Tweets.csv extern_data/sentiment/airline/train.txt
+    $PYTHON scripts/sentiment/process_airline.py $SENTIMENT_DATA_DIR/airline/Tweets.csv $SENTIMENT_DATA_DIR/airline/train.txt
 
     echo "sst"
     if [ -z "$SENTIMENT_SST_HOME" ]; then
@@ -49,7 +49,7 @@ if [ "$language" = "english" ]; then
 elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
-    python3 -m scripts.sentiment.process_scare extern_data/sentiment/german/scare
+    python3 -m scripts.sentiment.process_scare $SENTIMENT_DATA_DIR/german/scare
 else
     echo "Unknown language $language"
 fi
