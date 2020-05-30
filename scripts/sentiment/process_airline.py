@@ -1,4 +1,8 @@
 """
+Airline tweets from Kaggle
+from https://www.kaggle.com/crowdflower/twitter-airline-sentiment/data#
+Some ratings seem questionable, but it doesn't hurt performance much, if at all
+
 Files in the airline repo are csv, with quotes in "..." if they contained commas themselves.
 
 Accordingly, we use the csv module to read the files and output them in the format
@@ -6,7 +10,14 @@ Accordingly, we use the csv module to read the files and output them in the form
 
 Run using 
 
-python3 convert_airline.py airline.csv train.txt
+python3 convert_airline.py Tweets.csv train.txt
+
+If the first word is an @, it is removed, and after that, leading @ or # are removed.
+For example:
+
+@AngledLuffa you must hate having Mox Opal #banned
+-> 
+you must hate having Mox Opal banned
 """
 
 import csv

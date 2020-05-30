@@ -13,6 +13,11 @@ Extracts positive, neutral, and negative phrases from the ArguAna hotel review c
 Run as follows:
 
 python3 parse_arguana_xml.py split/training arguana_train.txt
+
+ArguAna can be downloaded here:
+
+http://argumentation.bplaced.net/arguana/data
+http://argumentation.bplaced.net/arguana-data/arguana-tripadvisor-annotated-v2.zip
 """
 
 def get_phrases(filename):

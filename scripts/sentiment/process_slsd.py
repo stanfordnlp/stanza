@@ -1,4 +1,13 @@
 """
+A small dataset of 1500 positive and 1500 negative sentences.
+Supposedly has no neutral sentences by design
+
+https://archive.ics.uci.edu/ml/datasets/Sentiment+Labelled+Sentences
+
+https://archive.ics.uci.edu/ml/machine-learning-databases/00331/
+
+See the existing readme for citation requirements etc
+
 Files in the slsd repo were one line per annotation, with labels 0
 for negative and 1 for positive.  No neutral labels existed.
 
@@ -7,6 +16,7 @@ Accordingly, we rearrange the text and adjust the label to fit the
 
 <class> <sentence>
 
+process_slsd.py <directory> <outputfile>
 """
 
 import os

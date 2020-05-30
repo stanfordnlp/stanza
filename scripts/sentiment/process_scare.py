@@ -1,3 +1,16 @@
+"""
+SCARE is a dataset of German text with sentiment annotations.
+
+http://romanklinger.de/scare/
+
+You need to fill out a license agreement to not redistribute the data
+in order to get the data, but the process is not onerous.
+
+Although it sounds interesting, there are unfortunately a lot of very
+short items.  Not sure the long items will be enough
+"""
+
+
 import csv
 import glob
 import os

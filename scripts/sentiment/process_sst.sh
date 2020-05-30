@@ -4,6 +4,9 @@
 # The default directories are what I set up on my local machine.
 # -i and -o change the input and output dirs.
 
+# The latest version of the sentiment treebank can be cloned from
+#   https://github.com/stanfordnlp/sentiment-treebank
+
 INPUT_DIR=extern_data/sentiment/sentiment-treebank
 OUTPUT_DIR=extern_data/sentiment/sst-processed
 
