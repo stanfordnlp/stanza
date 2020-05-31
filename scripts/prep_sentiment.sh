@@ -11,6 +11,9 @@ fi
 # Manipulates various downloads from their original form to a form
 # usable by the classifier model
 
+# Notes on the individual datasets can be found in the relevant
+# process_dataset script
+
 # Run as follows:
 # prep_sentiment -lenglish
 # prep_sentiment -lgerman
