@@ -1,8 +1,8 @@
 import argparse
 import glob
 
-import stanza.models.classifier
-import stanza.models.classifiers.classifier_args
+import stanza.models.classifier as classifier
+import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
 
