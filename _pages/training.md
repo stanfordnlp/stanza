@@ -8,7 +8,7 @@ permalink: '/training.html'
 
 All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer, the dependency parser, and the named entity tagger, can be trained with your own data. 
 
-To train your own models, you will need to clone the source code from the [git repository](https://github.com/stanfordnlp/stanza) and follow the procedures below.
+To train your own models, you will need to clone the source code from the [stanza git repository](https://github.com/stanfordnlp/stanza) and follow the procedures below. We also provide runnable scripts coupled with toy data that makes it much easier for users to get started with model training, and you can find at [stanza-train git repository](https://github.com/stanfordnlp/stanza-train).
 
 If you only want to run the processors with the pretrained models, please skip this and go to [the Pipeline page](pipeline.md).
 
