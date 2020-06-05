@@ -3,6 +3,9 @@ SCARE is a dataset of German text with sentiment annotations.
 
 http://romanklinger.de/scare/
 
+To run the script, pass in the directory where scare was unpacked.  It
+should have subdirectories scare_v1.0.0 and scare_v1.0.0_text
+
 You need to fill out a license agreement to not redistribute the data
 in order to get the data, but the process is not onerous.
 
@@ -18,6 +21,8 @@ import random
 import sys
 
 import stanza
+
+from scripts.sentiment.process_utils import get_scare_snippets
 
 def write_list(out_filename, dataset):
     with open(out_filename, 'w') as fout:
@@ -43,39 +48,9 @@ for filename in text_files:
 
 print(len(text_id_map))
 
-num_short_items = 0
-
-snippets = []
-csv_files = glob.glob(os.path.join(basedir, "scare_v1.0.0/annotations/*csv"))
-for csv_filename in csv_files:
-    with open(csv_filename, newline='') as fin:
-        cin = csv.reader(fin, delimiter='\t', quotechar='"')
-        lines = list(cin)
-
-        for line in lines:
-            ann_id, begin, end, sentiment = [line[i] for i in [1, 2, 3, 6]]
-            begin = int(begin)
-            end = int(end)
-            if sentiment == 'Unknown':
-                continue
-            elif sentiment == 'Positive':
-                sentiment = 2
-            elif sentiment == 'Neutral':
-                sentiment = 1
-            elif sentiment == 'Negative':
-                sentiment = 0
-            else:
-                raise ValueError("Tell John he screwed up and this is why he can't have Mox Opal")
-            snippet = text_id_map[ann_id][begin:end]
-            doc = nlp(snippet)
-            text = " ".join(sentence.text for sentence in doc.sentences)
-            num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
-            if num_tokens < 4:
-                num_short_items = num_short_items + 1
-            snippets.append("%d %s" % (sentiment, text))
+snippets = get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
 
 print(len(snippets))
-print("Number of short items: {}".format(num_short_items))
 random.seed(1000)
 random.shuffle(snippets)
 train_limit = int(len(snippets) * 0.8)
