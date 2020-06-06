@@ -53,6 +53,8 @@ elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
     python3 -m scripts.sentiment.process_scare $SENTIMENT_DATA_DIR/german/scare
+    echo "Usage"
+    python3 -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE
 else
     echo "Unknown language $language"
 fi
