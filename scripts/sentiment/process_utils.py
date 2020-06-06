@@ -2,11 +2,18 @@ import csv
 import glob
 import os
 
-def get_scare_snippets(nlp, csv_dir_path, text_id_map):
+def write_list(out_filename, dataset):
+    with open(out_filename, 'w') as fout:
+        for line in dataset:
+            fout.write(line)
+            fout.write("\n")
+
+
+def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv"):
     num_short_items = 0
 
     snippets = []
-    csv_files = glob.glob(os.path.join(csv_dir_path, "*csv"))
+    csv_files = glob.glob(os.path.join(csv_dir_path, filename_pattern))
     for csv_filename in csv_files:
         with open(csv_filename, newline='') as fin:
             cin = csv.reader(fin, delimiter='\t', quotechar='"')
@@ -16,16 +23,19 @@ def get_scare_snippets(nlp, csv_dir_path, text_id_map):
                 ann_id, begin, end, sentiment = [line[i] for i in [1, 2, 3, 6]]
                 begin = int(begin)
                 end = int(end)
-                if sentiment == 'Unknown':
+                if sentiment.lower() == 'unknown':
                     continue
-                elif sentiment == 'Positive':
+                elif sentiment.lower() == 'positive':
                     sentiment = 2
-                elif sentiment == 'Neutral':
+                elif sentiment.lower() == 'neutral':
                     sentiment = 1
-                elif sentiment == 'Negative':
+                elif sentiment.lower() == 'negative':
                     sentiment = 0
                 else:
-                    raise ValueError("Tell John he screwed up and this is why he can't have Mox Opal")
+                    raise ValueError("Tell John he screwed up and this is why he can't have Mox Opal: {}".format(sentiment))
+                if ann_id not in text_id_map:
+                    print("Found snippet which can't be found: {}-{}".format(csv_filename, ann_id))
+                    continue
                 snippet = text_id_map[ann_id][begin:end]
                 doc = nlp(snippet)
                 text = " ".join(sentence.text for sentence in doc.sentences)

@@ -22,13 +22,7 @@ import sys
 
 import stanza
 
-from scripts.sentiment.process_utils import get_scare_snippets
-
-def write_list(out_filename, dataset):
-    with open(out_filename, 'w') as fout:
-        for line in dataset:
-            fout.write(line)
-            fout.write("\n")
+import scripts.sentiment.process_utils as process_utils
 
 basedir = sys.argv[1]
 nlp = stanza.Pipeline('de', processors='tokenize')
@@ -48,14 +42,14 @@ for filename in text_files:
 
 print(len(text_id_map))
 
-snippets = get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
+snippets = process_utils.get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
 
 print(len(snippets))
 random.seed(1000)
 random.shuffle(snippets)
 train_limit = int(len(snippets) * 0.8)
 dev_limit = int(len(snippets) * 0.9)
-write_list(os.path.join(basedir, "train.txt"), snippets[:train_limit])
-write_list(os.path.join(basedir, "dev.txt"), snippets[train_limit:dev_limit])
-write_list(os.path.join(basedir, "test.txt"), snippets[dev_limit:])
+process_utils.write_list(os.path.join(basedir, "train.txt"), snippets[:train_limit])
+process_utils.write_list(os.path.join(basedir, "dev.txt"), snippets[train_limit:dev_limit])
+process_utils.write_list(os.path.join(basedir, "test.txt"), snippets[dev_limit:])
 
