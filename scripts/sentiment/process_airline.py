@@ -56,6 +56,10 @@ os.unlink(tmp_filename)
 lines = open(tmp2_filename).readlines()
 lines = [x.strip().split() for x in lines if x.strip()]
 for line in lines:
+    if len(line) > 3 and line[1] == 'RT' and line[2][0] == '@' and line[3] == ':':
+        line[1] = ' '
+        line[2] = ' '
+        line[3] = ' '
     if line[1][0] == '@':
         line[1] = ' '
     for i in range(len(line)):
