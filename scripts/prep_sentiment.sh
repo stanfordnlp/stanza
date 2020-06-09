@@ -56,7 +56,7 @@ elif [ "$language" = "german" ]; then
     echo "Usage"
     $PYTHON -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE
     echo "SB-10k"
-    $PYTHON -m scripts.sentiment.process_sb10k extern_data/sentiment/german/sb-10k/sb_10k.tsv extern_data/sentiment/german/sb-10k
+    $PYTHON -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/sb_10k.tsv --out_dir extern_data/sentiment/german/sb-10k
 else
     echo "Unknown language $language"
 fi
