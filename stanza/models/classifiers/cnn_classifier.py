@@ -228,6 +228,10 @@ def update_text(sentence, wordvec_type):
                 word = re.sub('[0-9]', '#', word)
             new_sentence.append(word)
         return new_sentence
+    elif wordvec_type == classifier_args.WVType.FASTTEXT:
+        return sentence
+    elif wordvec_type == classifier_args.WVType.OTHER:
+        return sentence
     else:
         raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
 

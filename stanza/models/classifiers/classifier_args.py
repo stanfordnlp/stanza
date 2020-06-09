@@ -9,6 +9,7 @@ class WVType(Enum):
     WORD2VEC = 1
     GOOGLE = 2
     FASTTEXT = 3
+    OTHER = 4
 
 # NLP machines:
 # word2vec are in
