@@ -11,11 +11,11 @@ def write_list(out_filename, dataset):
 def clean_tokenized_tweet(line):
     line = list(line)
     if len(line) > 3 and line[0] == 'RT' and line[1][0] == '@' and line[2] == ':':
-        line[0] = ' '
-        line[1] = ' '
-        line[2] = ' '
-    if line[0][0] == '@':
-        line[0] = ' '
+        line = line[3:]
+    elif len(line) > 4 and line[0] == 'RT' and line[1] == '@' and line[3] == ':':
+        line = line[4:]
+    elif line[0][0] == '@':
+        line = line[1:]
     for i in range(len(line)):
         if line[i][0] == '@' or line[i][0] == '#':
             line[i] = line[i][1:]

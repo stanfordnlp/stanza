@@ -45,11 +45,5 @@ print(len(text_id_map))
 snippets = process_utils.get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
 
 print(len(snippets))
-random.seed(1000)
-random.shuffle(snippets)
-train_limit = int(len(snippets) * 0.8)
-dev_limit = int(len(snippets) * 0.9)
-process_utils.write_list(os.path.join(basedir, "train.txt"), snippets[:train_limit])
-process_utils.write_list(os.path.join(basedir, "dev.txt"), snippets[train_limit:dev_limit])
-process_utils.write_list(os.path.join(basedir, "test.txt"), snippets[dev_limit:])
+process_utils.write_list(os.path.join(basedir, "train.txt"), snippets)
 
