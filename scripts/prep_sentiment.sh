@@ -41,7 +41,7 @@ if [ "$language" = "english" ]; then
     $PYTHON scripts/sentiment/process_slsd.py $SENTIMENT_DATA_DIR/slsd/slsd $SENTIMENT_DATA_DIR/slsd/train.txt
 
     echo "airline"
-    $PYTHON scripts/sentiment/process_airline.py $SENTIMENT_DATA_DIR/airline/Tweets.csv $SENTIMENT_DATA_DIR/airline/train.txt
+    $PYTHON -m scripts.sentiment.process_airline $SENTIMENT_DATA_DIR/airline/Tweets.csv $SENTIMENT_DATA_DIR/airline/train.txt
 
     echo "sst"
     if [ -z "$SENTIMENT_SST_HOME" ]; then
@@ -52,9 +52,9 @@ if [ "$language" = "english" ]; then
 elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
-    python3 -m scripts.sentiment.process_scare $SENTIMENT_DATA_DIR/german/scare
+    $PYTHON -m scripts.sentiment.process_scare $SENTIMENT_DATA_DIR/german/scare
     echo "Usage"
-    python3 -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE
+    $PYTHON -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE
 else
     echo "Unknown language $language"
 fi

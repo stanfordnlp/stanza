@@ -25,6 +25,8 @@ import os
 import sys
 import tempfile
 
+import scripts.sentiment.process_utils as process_utils
+
 in_filename = sys.argv[1]
 out_filename = sys.argv[2]
 
@@ -55,18 +57,7 @@ os.unlink(tmp_filename)
 # filter leading @United, @American, etc from the tweets
 lines = open(tmp2_filename).readlines()
 lines = [x.strip().split() for x in lines if x.strip()]
-for line in lines:
-    if len(line) > 3 and line[1] == 'RT' and line[2][0] == '@' and line[3] == ':':
-        line[1] = ' '
-        line[2] = ' '
-        line[3] = ' '
-    if line[1][0] == '@':
-        line[1] = ' '
-    for i in range(len(line)):
-        if line[i][0] == '@' or line[i][0] == '#':
-            line[i] = line[i][1:]
-        if line[i].startswith("http:") or line[i].startswith("https:"):
-            line[i] = ' '
+lines = [[line[0]] + process_utils.clean_tokenized_tweet(line[1:]) for line in lines]
 
 lines = [' '.join(x) for x in lines]
 

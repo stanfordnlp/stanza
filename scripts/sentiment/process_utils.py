@@ -8,6 +8,20 @@ def write_list(out_filename, dataset):
             fout.write(line)
             fout.write("\n")
 
+def clean_tokenized_tweet(line):
+    line = list(line)
+    if len(line) > 3 and line[0] == 'RT' and line[1][0] == '@' and line[2] == ':':
+        line[0] = ' '
+        line[1] = ' '
+        line[2] = ' '
+    if line[0][0] == '@':
+        line[0] = ' '
+    for i in range(len(line)):
+        if line[i][0] == '@' or line[i][0] == '#':
+            line[i] = line[i][1:]
+        if line[i].startswith("http:") or line[i].startswith("https:"):
+            line[i] = ' '
+    return line
 
 def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv"):
     num_short_items = 0
