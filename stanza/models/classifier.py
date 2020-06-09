@@ -420,9 +420,18 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     cnn_classifier.save(model_file, model)
 
 def load_pretrain(args):
-    if args.wordvec_type:
-        vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
+    if args.wordvec_pretrain_file:
+        pretrain_file = args.wordvec_pretrain_file
+        vec_file = None
+        logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
+    elif args.wordvec_type:
         pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
+        logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
+        if os.path.exists(pretrain_file):
+            vec_file = None
+        else:
+            vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
+            logger.info("Vectors not found.  Looking in {}".format(vec_file))
     else:
         raise Exception("TODO: need to get the wv type back from get_wordvec_file")
     pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)

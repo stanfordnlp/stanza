@@ -20,6 +20,7 @@ class WVType(Enum):
 def add_pretrain_args(parser):
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
     parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data', help='Directory of word vectors')
     parser.add_argument('--wordvec_type', type=lambda x: WVType[x.upper()], default='word2vec', help='Different vector types have different options, such as google 300d replacing numbers with #')
     # TODO: the second particle should reflect the actual treebank, eg SST for sentiment treebank
