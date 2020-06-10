@@ -153,6 +153,7 @@ def read_dataset(dataset, wordvec_type):
         lines.extend(new_lines)
     lines = [x.strip() for x in lines]
     lines = [x.split(maxsplit=1) for x in lines if x]
+    lines = [x for x in lines if len(x) > 1]
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
     # overloading to potentially make future model types
