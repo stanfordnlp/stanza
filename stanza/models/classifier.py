@@ -72,6 +72,11 @@ To train models on combined 3 class datasets:
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
 
 
+Here is an example for training a model in a different language:
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k > de_sb10k.out 2>&1 &
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext > zh_ren.out 2>&1 &
 """
 
 def convert_fc_shapes(arg):
