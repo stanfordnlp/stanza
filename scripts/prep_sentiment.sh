@@ -59,6 +59,10 @@ elif [ "$language" = "german" ]; then
     $PYTHON  -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_test.tsv --out_dir extern_data/sentiment/german/sb-10k --split test --sentiment_column 2 --text_column 3
     $PYTHON  -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_train.tsv --out_dir extern_data/sentiment/german/sb-10k --split train_dev --sentiment_column 2 --text_column 3
     #$PYTHON -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/sb_10k.tsv --out_dir extern_data/sentiment/german/sb-10k
+elif [ "$language" = "chinese" ]; then
+    echo "PROCESSING CHINESE"
+    echo "Ren-CECps"
+    $PYTHON -m scripts.sentiment.process_ren_chinese extern_data/sentiment/chinese/RenCECps extern_data/sentiment/chinese/RenCECps
 else
     echo "Unknown language $language"
 fi

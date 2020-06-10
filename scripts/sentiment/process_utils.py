@@ -2,11 +2,29 @@ import csv
 import glob
 import os
 
+from collections import namedtuple
+
+Split = namedtuple('Split', ['filename', 'weight'])
+
 def write_list(out_filename, dataset):
     with open(out_filename, 'w') as fout:
         for line in dataset:
             fout.write(line)
             fout.write("\n")
+
+def write_splits(out_directory, snippets, splits):
+    total_weight = sum(split.weight for split in splits)
+    divs = []
+    subtotal = 0.0
+    for split in splits:
+        divs.append(int(len(snippets) * subtotal / total_weight))
+        subtotal = subtotal + split.weight
+    divs.append(len(snippets))
+
+    for i, split in enumerate(splits):
+        filename = os.path.join(out_directory, split.filename)
+        print("Writing {}:{} to {}".format(divs[i], divs[i+1], filename))
+        write_list(filename, snippets[divs[i]:divs[i+1]])
 
 def clean_tokenized_tweet(line):
     line = list(line)
