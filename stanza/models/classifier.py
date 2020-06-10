@@ -137,12 +137,14 @@ def parse_args():
 
     parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
                         help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
+    parser.add_argument('--min_train_len', type=int, default=0,
+                        help="Filter sentences less than this length")
 
     args = parser.parse_args()
     return args
 
 
-def read_dataset(dataset, wordvec_type):
+def read_dataset(dataset, wordvec_type, min_len):
     """
     returns a list where the values of the list are
       label, [token...]
@@ -158,6 +160,8 @@ def read_dataset(dataset, wordvec_type):
     # then move the processing into the model so we can use
     # overloading to potentially make future model types
     lines = [(x[0], cnn_classifier.update_text(x[1], wordvec_type)) for x in lines]
+    if min_len:
+        lines = [x for x in lines if len(x[1]) >= min_len]
     return lines
 
 def dataset_labels(dataset):
@@ -449,7 +453,7 @@ def main():
     # TODO: maybe the dataset needs to be in a torch data loader in order to
     # make cuda operations faster
     if args.train:
-        train_set = read_dataset(args.train_file, args.wordvec_type)
+        train_set = read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
     elif not args.load_name:
@@ -484,13 +488,13 @@ def main():
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
-        dev_set = read_dataset(args.dev_file, args.wordvec_type)
+        dev_set = read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s" % args.dev_file)
         check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)
 
-    test_set = read_dataset(args.test_file, args.wordvec_type)
+    test_set = read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
     check_labels(model.labels, test_set)
 
