@@ -32,25 +32,25 @@ for glob_piece in args.glob.split():
 model_files = sorted(set(model_files))
 
 test_set = classifier.read_dataset(args.test_file, args.wordvec_type, min_len=None)
-print("Using test set: %s" % args.test_file)
+logger.info("Using test set: %s" % args.test_file)
 
 pretrain = classifier.load_pretrain(args)
 
 device = None
 for load_name in model_files:
-    print("Testing %s" % load_name)
+    logger.info("Testing %s" % load_name)
     model = cnn_classifier.load(load_name, pretrain)
     if args.cuda:
         model.cuda()
     if device is None:
         device = next(model.parameters()).device
-        print("Current device: %s" % device)
+        logger.info("Current device: %s" % device)
 
     labels = model.labels
     classifier.check_labels(labels, test_set)
 
     confusion = classifier.confusion_dataset(model, test_set, device=device)
     correct, total = classifier.confusion_to_accuracy(confusion)
-    print("  Results: %d correct of %d examples.  Accuracy: %f" %
-          (correct, total, correct / total))
+    logger.info("  Results: %d correct of %d examples.  Accuracy: %f" %
+                (correct, total, correct / total))
     logger.info("Confusion matrix:\n{}".format(classifier.format_confusion(confusion, model.labels)))
