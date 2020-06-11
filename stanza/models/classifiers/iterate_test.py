@@ -2,6 +2,7 @@ import argparse
 import glob
 
 import stanza.models.classifier as classifier
+import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
@@ -27,7 +28,7 @@ for glob_piece in args.glob.split():
     model_files.extend(glob.glob(glob_piece))
 model_files = sorted(set(model_files))
 
-test_set = classifier.read_dataset(args.test_file, args.wordvec_type)
+test_set = classifier.read_dataset(args.test_file, args.wordvec_type, min_len=None)
 print("Using test set: %s" % args.test_file)
 
 pretrain = classifier.load_pretrain(args)
@@ -35,7 +36,7 @@ pretrain = classifier.load_pretrain(args)
 device = None
 for load_name in model_files:
     print("Testing %s" % load_name)
-    model = classifier.load(load_name, pretrain)
+    model = cnn_classifier.load(load_name, pretrain)
     if args.cuda:
         model.cuda()
     if device is None:
