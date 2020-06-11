@@ -240,6 +240,22 @@ def confusion_dataset(model, dataset, device=None):
 
     return confusion
 
+
+def confusion_to_accuracy(confusion):
+    """
+    Given a confusion dictionary returned by confusion_dataset, return correct, total
+    """
+    correct = 0
+    total = 0
+    for l1 in confusion.keys():
+        for l2 in confusion[l1].keys():
+            if l1 == l2:
+                correct = correct + confusion[l1][l2]
+            else:
+                total = total + confusion[l1][l2]
+    return correct, (correct + total)
+
+
 def format_confusion(confusion, labels, hide_zeroes=False):
     """
     pretty print for confusion matrixes

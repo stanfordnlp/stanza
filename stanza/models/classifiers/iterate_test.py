@@ -1,11 +1,14 @@
 import argparse
 import glob
+import logging
 
 import stanza.models.classifier as classifier
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
+
+logger = logging.getLogger('stanza')
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -46,6 +49,8 @@ for load_name in model_files:
     labels = model.labels
     classifier.check_labels(labels, test_set)
 
-    correct = classifier.score_dataset(model, test_set, device=device)
+    confusion = classifier.confusion_dataset(model, test_set, device=device)
+    correct, total = classifier.confusion_to_accuracy(confusion)
     print("  Results: %d correct of %d examples.  Accuracy: %f" %
-          (correct, len(test_set), correct / len(test_set)))
+          (correct, total, correct / total))
+    logger.info("Confusion matrix:\n{}".format(classifier.format_confusion(confusion, model.labels)))
