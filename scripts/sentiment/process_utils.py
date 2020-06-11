@@ -70,7 +70,7 @@ def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv")
                     continue
                 snippet = text_id_map[ann_id][begin:end]
                 doc = nlp(snippet)
-                text = " ".join(sentence.text for sentence in doc.sentences)
+                text = " ".join(" ".join(token.text for token in sentence.tokens) for sentence in doc.sentences)
                 num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
                 if num_tokens < 4:
                     num_short_items = num_short_items + 1

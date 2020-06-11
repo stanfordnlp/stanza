@@ -48,7 +48,7 @@ for csv_filename in csv_files:
             else:
                 raise ValueError("Tell John he screwed up and this is why he can't have Mox Opal: {}".format(sentiment))
             doc = nlp(snippet)
-            text = " ".join(sentence.text for sentence in doc.sentences)
+            text = " ".join(" ".join(token.text for token in sentence.tokens) for sentence in doc.sentences)
             num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
             if num_tokens < 4:
                 num_short_items = num_short_items + 1
