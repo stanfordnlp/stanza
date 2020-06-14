@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.classifier_args as classifier_args
+from stanza.models.common.vocab import PAD_ID
 
 logger = logging.getLogger('stanza')
 
@@ -48,8 +49,6 @@ class CNNClassifier(nn.Module):
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
         # possibly want to train UNK while freezing the rest of the embedding
-        self.pad = vocab[0]
-
         # note that the /10.0 operation has to be inside nn.Parameter unless
         # you want to spend a long time debugging this
         self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
@@ -91,47 +90,46 @@ class CNNClassifier(nn.Module):
         if self.max_window > max_phrase_len:
             max_phrase_len = self.max_window
 
-        if max_phrase_len > min(len(x) for x in inputs):
-            idx = torch.tensor(self.vocab_map[self.pad], requires_grad=False, device=device)
-            pad_vector = self.embedding(idx)
-
         input_tensor = []
         for phrase in inputs:
-            # build a list of the vectors we want for this sentence / phrase
-            input_vectors = []
             # TODO: random is good for train mode.  try something else at test time?
             begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
+            indices = []
+            unknowns = []
             for i in range(begin_pad_width):
-                input_vectors.append(pad_vector)
+                indices.append(PAD_ID)
 
             for word in phrase:
                 # our current word vectors are all entirely lowercased
                 word = word.lower()
                 if word in self.vocab_map:
-                    idx = torch.tensor(self.vocab_map[word], requires_grad=False, device=device)
-                    input_vectors.append(self.embedding(idx))
+                    indices.append(self.vocab_map[word])
                     continue
                 new_word = word.replace("-", "")
                 # google vectors have words which are all dashes
                 if len(new_word) == 0:
                     new_word = word
                 if new_word in self.vocab_map:
-                    idx = torch.tensor(self.vocab_map[new_word], requires_grad=False, device=device)
-                    input_vectors.append(self.embedding(idx))
+                    indices.append(self.vocab_map[new_word])
                     continue
 
                 if new_word[-1] == "'":
                     new_word = new_word[:-1]
                     if new_word in self.vocab_map:
-                        idx = torch.tensor(self.vocab_map[new_word], requires_grad=False, device=device)
-                        input_vectors.append(self.embedding(idx))
+                        indices.append(self.vocab_map[new_word])
                         continue
 
                 # TODO: split UNK based on part of speech?  might be an interesting experiment
-                input_vectors.append(self.unk)
+                unknowns.append(len(indices))
+                indices.append(PAD_ID)
             for i in range(end_pad_width):
-                input_vectors.append(pad_vector)
+                indices.append(PAD_ID)
+
+            indices = torch.tensor(indices, requires_grad=False, device=device)
+            input_vectors = self.embedding(indices)
+            for unknown in unknowns:
+                input_vectors[unknown, :] = self.unk
 
             # we will now have an N x emb_size tensor
             # this is the input to the CNN
@@ -141,10 +139,9 @@ class CNNClassifier(nn.Module):
             # the second is that a sentence S will have more or less padding
             #   depending on what other sentences are in its batch
             # we assume these effects are pretty minimal
-            x = torch.stack(input_vectors)
 
             # reshape x to 1xNxE
-            x = x.unsqueeze(0)
+            x = input_vectors.unsqueeze(0)
             input_tensor.append(x)
         x = torch.stack(input_tensor)
 
