@@ -33,11 +33,6 @@ class TokenizeProcessor(UDProcessor):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
-        elif any(config.get(f'with_{variant}', False) for variant in PROCESSOR_VARIANTS[TOKENIZE]):
-            self._trainer = None
-            variant_name = [variant for variant in PROCESSOR_VARIANTS[TOKENIZE] if config.get(f'with_{variant}', False)][0]
-            self._tokenizer_variant = PROCESSOR_VARIANTS[TOKENIZE][variant_name](config.get('lang'))
-            logger.info(f"Using {variant_name} as tokenizer")
         else:
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
@@ -72,8 +67,8 @@ class TokenizeProcessor(UDProcessor):
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)
-        elif hasattr(self, '_tokenizer_variant'):
-            return self._tokenizer_variant.process(document)
+        elif hasattr(self, '_variant'):
+            return self._variant.process(document)
         else:
             raw_text = '\n\n'.join(document) if isinstance(document, list) else document
             # set up batches

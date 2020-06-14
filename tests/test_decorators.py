@@ -36,6 +36,18 @@ EN_DOC_LOL_TOKENS = '''<Token id=1;words=[<Word id=1;text=LOL>]>
 <Token id=7;words=[<Word id=7;text=LOL>]>
 <Token id=8;words=[<Word id=8;text=LOL>]>'''
 
+EN_DOC_COOL_LEMMAS = '''<Token id=1;words=[<Word id=1;text=This;lemma=cool;upos=PRON;xpos=DT;feats=Number=Sing|PronType=Dem>]>
+<Token id=2;words=[<Word id=2;text=is;lemma=cool;upos=AUX;xpos=VBZ;feats=Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin>]>
+<Token id=3;words=[<Word id=3;text=a;lemma=cool;upos=DET;xpos=DT;feats=Definite=Ind|PronType=Art>]>
+<Token id=4;words=[<Word id=4;text=test;lemma=cool;upos=NOUN;xpos=NN;feats=Number=Sing>]>
+<Token id=5;words=[<Word id=5;text=sentence;lemma=cool;upos=NOUN;xpos=NN;feats=Number=Sing>]>
+<Token id=6;words=[<Word id=6;text=.;lemma=cool;upos=PUNCT;xpos=.>]>
+
+<Token id=1;words=[<Word id=1;text=This;lemma=cool;upos=PRON;xpos=DT;feats=Number=Sing|PronType=Dem>]>
+<Token id=2;words=[<Word id=2;text=is;lemma=cool;upos=AUX;xpos=VBZ;feats=Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin>]>
+<Token id=3;words=[<Word id=3;text=another;lemma=cool;upos=DET;xpos=DT>]>
+<Token id=4;words=[<Word id=4;text=!;lemma=cool;upos=PUNCT;xpos=.>]>'''
+
 @register_processor("lowercase")
 class LowercaseProcessor(Processor):
     ''' Processor that lowercases all text '''
@@ -79,3 +91,24 @@ def test_register_processor_variant():
     nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "lol"}, package=None)
     doc = nlp(EN_DOC)
     assert EN_DOC_LOL_TOKENS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
+
+@register_processor_variant("lemma", "cool")
+class LOLTokenizer(ProcessorVariant):
+    ''' An alternative lemmatizer that lemmatizes every word to "cool". '''
+
+    TAKE_OVER = True
+
+    def __init__(self, lang):
+        pass
+
+    def process(self, document):
+        for sentence in document.sentences:
+            for word in sentence.words:
+                word.lemma = "cool"
+
+        return document
+
+def test_register_processor_variant_with_takeover():
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "ewt", "pos": "ewt", "lemma": "cool"}, package=None)
+    doc = nlp(EN_DOC)
+    assert EN_DOC_COOL_LEMMAS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)

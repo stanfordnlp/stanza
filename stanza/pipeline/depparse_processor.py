@@ -24,13 +24,13 @@ class DepparseProcessor(UDProcessor):
         super().__init__(config, pipeline, use_gpu)
 
     def _set_up_requires(self):
+        self._pretagged = self._config.get('pretagged')
         if self._pretagged:
             self._requires = set()
         else:
             self._requires = self.__class__.REQUIRES_DEFAULT
 
     def _set_up_model(self, config, use_gpu):
-        self._pretagged = config.get('pretagged')
         self._pretrain = Pretrain(config['pretrain_path'])
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
