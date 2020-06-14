@@ -156,7 +156,11 @@ def read_dataset(dataset, wordvec_type, min_len):
     """
     lines = []
     for filename in dataset.split(","):
-        new_lines = open(filename).readlines()
+        try:
+            new_lines = open(filename, encoding="utf-8").readlines()
+        except UnicodeDecodeError:
+            logger.error("Could not read {}".format(filename))
+            raise
         lines.extend(new_lines)
     lines = [x.strip() for x in lines]
     lines = [x.split(maxsplit=1) for x in lines if x]
