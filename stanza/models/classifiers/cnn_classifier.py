@@ -90,46 +90,45 @@ class CNNClassifier(nn.Module):
         if self.max_window > max_phrase_len:
             max_phrase_len = self.max_window
 
-        input_tensor = []
+        batch_indices = []
+        batch_unknowns = []
         for phrase in inputs:
             # TODO: random is good for train mode.  try something else at test time?
             begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
-            indices = []
-            unknowns = []
+            sentence_indices = []
+            sentence_unknowns = []
             for i in range(begin_pad_width):
-                indices.append(PAD_ID)
+                sentence_indices.append(PAD_ID)
 
             for word in phrase:
                 # our current word vectors are all entirely lowercased
                 word = word.lower()
                 if word in self.vocab_map:
-                    indices.append(self.vocab_map[word])
+                    sentence_indices.append(self.vocab_map[word])
                     continue
                 new_word = word.replace("-", "")
                 # google vectors have words which are all dashes
                 if len(new_word) == 0:
                     new_word = word
                 if new_word in self.vocab_map:
-                    indices.append(self.vocab_map[new_word])
+                    sentence_indices.append(self.vocab_map[new_word])
                     continue
 
                 if new_word[-1] == "'":
                     new_word = new_word[:-1]
                     if new_word in self.vocab_map:
-                        indices.append(self.vocab_map[new_word])
+                        sentence_indices.append(self.vocab_map[new_word])
                         continue
 
                 # TODO: split UNK based on part of speech?  might be an interesting experiment
-                unknowns.append(len(indices))
-                indices.append(PAD_ID)
+                sentence_unknowns.append(len(sentence_indices))
+                sentence_indices.append(PAD_ID)
             for i in range(end_pad_width):
-                indices.append(PAD_ID)
+                sentence_indices.append(PAD_ID)
 
-            indices = torch.tensor(indices, requires_grad=False, device=device)
-            input_vectors = self.embedding(indices)
-            for unknown in unknowns:
-                input_vectors[unknown, :] = self.unk
+            batch_indices.append(sentence_indices)
+            batch_unknowns.append(sentence_unknowns)
 
             # we will now have an N x emb_size tensor
             # this is the input to the CNN
@@ -141,9 +140,14 @@ class CNNClassifier(nn.Module):
             # we assume these effects are pretty minimal
 
             # reshape x to 1xNxE
-            x = input_vectors.unsqueeze(0)
-            input_tensor.append(x)
-        x = torch.stack(input_tensor)
+
+        batch_indices = torch.tensor(batch_indices, requires_grad=False, device=device)
+        input_vectors = self.embedding(batch_indices)
+        for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
+            for unknown in sentence_unknowns:
+                input_vectors[phrase_num, unknown, :] = self.unk
+
+        x = input_vectors.unsqueeze(1)
 
         conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
                      for conv in self.conv_layers]
