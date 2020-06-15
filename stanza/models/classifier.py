@@ -523,15 +523,17 @@ def main():
     logger.info("Using test set: %s" % args.test_file)
     check_labels(model.labels, test_set)
 
-    correct = score_dataset(model, test_set,
-                            remap_labels=args.test_remap_labels,
-                            forgive_unmapped_labels=args.forgive_unmapped_labels)
-    logger.info("Test set: %d correct of %d examples.  Accuracy: %f" %
-                (correct, len(test_set), correct / len(test_set)))
     if args.test_remap_labels is None:
         confusion = confusion_dataset(model, test_set)
         logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
-
+        correct, total = confusion_to_accuracy(confusion)
+    else:
+        correct = score_dataset(model, test_set,
+                                remap_labels=args.test_remap_labels,
+                                forgive_unmapped_labels=args.forgive_unmapped_labels)
+        total = len(test_set)
+    logger.info("Test set: %d correct of %d examples.  Accuracy: %f" %
+                (correct, total, correct / total))
 
 if __name__ == '__main__':
     main()
