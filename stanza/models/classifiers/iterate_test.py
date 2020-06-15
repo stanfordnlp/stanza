@@ -8,6 +8,18 @@ import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
 
+"""
+A script for running the same test file on several different classifiers.
+
+For each one, it will output the accuracy and, if possible, the confusion matrix.
+
+Includes the arguments for pretrain, which allows for passing in a
+different directory for the pretrain file.
+
+Example command line:
+  python3 -m stanza.models.classifiers.iterate_test  --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt --glob "saved_models/classifier/FC41_3class_en_ewt_FS*ACC66*"
+"""
+
 logger = logging.getLogger('stanza')
 
 def parse_args():
