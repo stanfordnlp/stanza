@@ -130,23 +130,26 @@ class CNNClassifier(nn.Module):
             batch_indices.append(sentence_indices)
             batch_unknowns.append(sentence_unknowns)
 
-            # we will now have an N x emb_size tensor
-            # this is the input to the CNN
-            # there are two ways in which this padding is suboptimal
-            # the first is that for short sentences, smaller windows will
-            #   be padded to the point that some windows are entirely pad
-            # the second is that a sentence S will have more or less padding
-            #   depending on what other sentences are in its batch
-            # we assume these effects are pretty minimal
-
-            # reshape x to 1xNxE
-
+        # creating a single large list with all the indices lets us
+        # create a single tensor, which is much faster than creating
+        # many tiny tensors
+        # we can convert this to the input to the CNN
+        # it is padded at one or both ends so that it is now num_phrases x max_len x emb_size
+        # there are two ways in which this padding is suboptimal
+        # the first is that for short sentences, smaller windows will
+        #   be padded to the point that some windows are entirely pad
+        # the second is that a sentence S will have more or less padding
+        #   depending on what other sentences are in its batch
+        # we assume these effects are pretty minimal
         batch_indices = torch.tensor(batch_indices, requires_grad=False, device=device)
         input_vectors = self.embedding(batch_indices)
+        # we use the random unk so that we are not necessarily
+        # learning to match 0s for unk
         for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
             for unknown in sentence_unknowns:
                 input_vectors[phrase_num, unknown, :] = self.unk
 
+        # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
 
         conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
