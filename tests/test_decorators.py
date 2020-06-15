@@ -96,7 +96,7 @@ def test_register_processor_variant():
 class LOLTokenizer(ProcessorVariant):
     ''' An alternative lemmatizer that lemmatizes every word to "cool". '''
 
-    TAKE_OVER = True
+    OVERRIDE = True
 
     def __init__(self, lang):
         pass

@@ -65,7 +65,7 @@ class Processor(ABC):
         # given pipeline constructing this processor, check if requirements are met, throw exception if not
         self._check_requirements()
 
-        if hasattr(self, '_variant') and self._variant.TAKE_OVER:
+        if hasattr(self, '_variant') and self._variant.OVERRIDE:
             self.process = self._variant.process
 
     @abstractmethod
@@ -117,7 +117,7 @@ class Processor(ABC):
 class ProcessorVariant(ABC):
     """ Base class for all processor variants """
 
-    TAKE_OVER = False # Set to true to take over all the processing from the processor
+    OVERRIDE = False # Set to true to override all the processing from the processor
 
     @abstractmethod
     def process(self, doc):
@@ -125,7 +125,7 @@ class ProcessorVariant(ABC):
         Process a document that is potentially preprocessed by the processor.
         This is the main method of a processor variant.
 
-        If `TAKE_OVER` is set to True, all preprocessing by the processor would be bypassed, and the processor variant
+        If `OVERRIDE` is set to True, all preprocessing by the processor would be bypassed, and the processor variant
         would serve as a drop-in replacement of the entire processor, and has to be able to interpret all the configs
         that are typically handled by the processor it replaces.
         """
