@@ -17,6 +17,11 @@ class WVType(Enum):
 # google vectors are in
 # /scr/nlp/data/wordvectors/en/google/GoogleNews-vectors-negative300.txt
 
+def add_common_args(parser):
+    parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
+    add_pretrain_args(parser)
+    add_device_args(parser)
+
 def add_pretrain_args(parser):
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
     parser.add_argument('--pretrain_max_vocab', type=int, default=-1)

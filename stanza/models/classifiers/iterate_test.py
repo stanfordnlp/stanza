@@ -25,8 +25,7 @@ logger = logging.getLogger('stanza')
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    classifier_args.add_pretrain_args(parser)
-    classifier_args.add_device_args(parser)
+    classifier_args.add_common_args(parser)
 
     parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
 
@@ -36,7 +35,7 @@ def parse_args():
     return args
 
 args = parse_args()
-
+seed = utils.set_random_seed(args.seed, args.cuda)
 
 model_files = []
 for glob_piece in args.glob.split():

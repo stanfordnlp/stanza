@@ -103,8 +103,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
 
-    classifier_args.add_pretrain_args(parser)
-    classifier_args.add_device_args(parser)
+    classifier_args.add_common_args(parser)
 
     parser.add_argument('--train', dest='train', default=True, action='store_true', help='Train the model (default)')
     parser.add_argument('--no_train', dest='train', action='store_false', help="Don't train the model")
@@ -124,8 +123,6 @@ def parse_args():
     parser.add_argument('--filter_channels', default=100, type=int, help='Number of channels for layers after the word vectors')
     parser.add_argument('--fc_shapes', default="100", type=convert_fc_shapes, help='Extra fully connected layers to put after the initial filters.  If set to blank, will FC directly from the max pooling to the output layer.')
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
-
-    parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
 
