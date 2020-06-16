@@ -10,6 +10,28 @@ import torch.nn.functional as F
 import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common.vocab import PAD_ID
 
+"""
+The CNN classifier is based on Yoon Kim's work:
+
+https://arxiv.org/abs/1408.5882
+
+The architecture is simple:
+
+- Embedding at the bottom layer
+  - separate learnable entry for UNK, since many of the embeddings we have use 0 for UNK
+- Some number of conv2d layers over the embedding
+- Maxpool layers over small windows, window size being a parameter
+- FC layer to the classification layer
+
+One experiment which was run and found to be a bit of a negative was
+putting a layer on top of the pretrain.  You would think that might
+help, but dev performance went down for each variation of
+  - trans(emb)
+  - relu(trans(emb))
+  - dropout(trans(emb))
+  - dropout(relu(trans(emb)))
+"""
+
 logger = logging.getLogger('stanza')
 
 class CNNClassifier(nn.Module):
