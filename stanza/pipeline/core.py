@@ -14,6 +14,7 @@ from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
@@ -21,15 +22,12 @@ from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
+from stanza.utils.resources import DEFAULT_MODEL_DIR, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
 
-NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
-                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor,
-                           SENTIMENT: SentimentProcessor}
 
 class PipelineRequirementsException(Exception):
     """
@@ -55,10 +53,10 @@ class PipelineRequirementsException(Exception):
 
 
 class Pipeline:
-    
+
     def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
-        
+
         # set global logging level
         set_logging_level(logging_level, verbose)
         self.logging_level = logging.getLevelName(logger.level)
@@ -98,7 +96,7 @@ class Pipeline:
         pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
         self.use_gpu = torch.cuda.is_available() and use_gpu
         logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
-        
+
         # set up processors
         pipeline_reqs_exceptions = []
         for item in self.load_list:

@@ -14,6 +14,7 @@ import logging
 
 from stanza.utils.helper_func import make_table
 from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SENTIMENT, SUPPORTED_TOKENIZERS
+from stanza.pipeline.registry import PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza._version import __resources_version__
 
 logger = logging.getLogger('stanza')
@@ -22,7 +23,6 @@ logger = logging.getLogger('stanza')
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
 DEFAULT_MODEL_DIR = os.getenv('STANZA_RESOURCES_DIR', os.path.join(HOME_DIR, 'stanza_resources'))
-PIPELINE_NAMES = [TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SENTIMENT]
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, dir, load_list):
@@ -30,9 +30,9 @@ def build_default_config(resources, lang, dir, load_list):
     for item in load_list:
         processor, package, dependencies = item
 
-        # handle case when spacy or jieba is specified as tokenizer
-        if processor == TOKENIZE and package in SUPPORTED_TOKENIZERS:
-            default_config[f"{TOKENIZE}_with_{package}"] = True
+        # handle case when processor variants are used
+        if package in PROCESSOR_VARIANTS[processor]:
+            default_config[f"{processor}_with_{package}"] = True
         # handle case when identity is specified as lemmatizer
         elif processor == LEMMA and package == 'identity':
             default_config[f"{LEMMA}_use_identity"] = True
@@ -101,21 +101,25 @@ def maintain_processor_list(resources, lang, package, processors):
             assert(isinstance(key, str) and isinstance(value, str))
             # check if keys and values can be found
             if key in resources[lang] and value in resources[lang][key]:
-                logger.debug(f'Find {key}: {value}.')
+                logger.debug(f'Found {key}: {value}.')
                 processor_list[key] = value
             # allow values to be default in some cases
             elif key in resources[lang]['default_processors'] and value == 'default':
-                logger.debug(f'Find {key}: {resources[lang]["default_processors"][key]}.')
+                logger.debug(f'Found {key}: {resources[lang]["default_processors"][key]}.')
                 processor_list[key] = resources[lang]['default_processors'][key]
-            # allow tokenize to be set to "spacy" or "jieba"
-            elif key == TOKENIZE and value in SUPPORTED_TOKENIZERS:
-                logger.debug(f'Find {key}: {value}. Using external {value} library as tokenizer.')
+            # allow processors to be set to variants that we didn't implement
+            elif value in PROCESSOR_VARIANTS[key]:
+                logger.debug(f'Found {key}: {value}. Using external {value} variant for the {key} processor.')
                 processor_list[key] = value
             # allow lemma to be set to "identity"
             elif key == LEMMA and value == 'identity':
-                logger.debug(f'Find {key}: {value}. Using identical lemmatizer.')
+                logger.debug(f'Found {key}: {value}. Using identity lemmatizer.')
                 processor_list[key] = value
-            # cannot find and warn user
+            # not a processor in the officially supported processor list
+            elif key not in resources[lang]:
+                logger.debug(f'{key}: {value} is not officially supported by Stanza, loading it anyway.')
+                processor_list[key] = value
+            # cannot find the package for a processor and warn user
             else:
                 logger.warning(f'Can not find {key}: {value} from official model list. Ignoring it.')
     # resolve package
@@ -124,7 +128,7 @@ def maintain_processor_list(resources, lang, package, processors):
         if package == 'default':
             for key, value in resources[lang]['default_processors'].items():
                 if key not in processor_list:
-                    logger.debug(f'Find {key}: {value}.')
+                    logger.debug(f'Found {key}: {value}.')
                     processor_list[key] = value
         else:
             flag = False
@@ -133,7 +137,7 @@ def maintain_processor_list(resources, lang, package, processors):
                 if package in resources[lang][key]:
                     flag = True
                     if key not in processor_list:
-                        logger.debug(f'Find {key}: {package}.')
+                        logger.debug(f'Found {key}: {package}.')
                         processor_list[key] = package
                     else:
                         logger.debug(f'{key}: {package} is overwritten by {key}: {processors[key]}.')
@@ -147,9 +151,9 @@ def add_dependencies(resources, lang, processor_list):
     for item in processor_list:
         processor, package = item
         dependencies = default_dependencies.get(processor, None)
-        # skip dependency checking for special spacy/jieba tokenizer and identity lemmatizer
-        if not any([processor == TOKENIZE and package in SUPPORTED_TOKENIZERS, processor == LEMMA and package == 'identity']):
-            dependencies = resources[lang][processor][package].get('dependencies', dependencies)
+        # skip dependency checking for external variants of processors and identity lemmatizer
+        if not any([package in PROCESSOR_VARIANTS[processor], processor == LEMMA and package == 'identity']):
+            dependencies = resources[lang].get(processor, {}).get(package, {}).get('dependencies', dependencies)
         if dependencies:
             dependencies = [[dependency['model'], dependency['package']] for dependency in dependencies]
         item.append(dependencies)

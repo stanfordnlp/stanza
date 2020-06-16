@@ -7,9 +7,9 @@ import io
 from stanza.models.mwt.data import DataLoader
 from stanza.models.mwt.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
-
+@register_processor(MWT)
 class MWTProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills

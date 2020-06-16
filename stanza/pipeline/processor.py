@@ -4,6 +4,7 @@ Base classes for processors
 
 from abc import ABC, abstractmethod
 
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 
 class ProcessorRequirementsException(Exception):
     """ Exception indicating a processor's requirements will not be met """
@@ -50,6 +51,23 @@ class ProcessorRequirementsException(Exception):
 class Processor(ABC):
     """ Base class for all processors """
 
+    def __init__(self, config, pipeline, use_gpu):
+        # overall config for the processor
+        self._config = config
+        # pipeline building this processor (presently processors are only meant to exist in one pipeline)
+        self._pipeline = pipeline
+        self._set_up_variants(config, use_gpu)
+        # run set up process
+        # set up what annotations are required based on config
+        self._set_up_requires()
+        # set up what annotations are provided based on config
+        self._set_up_provides()
+        # given pipeline constructing this processor, check if requirements are met, throw exception if not
+        self._check_requirements()
+
+        if hasattr(self, '_variant') and self._variant.OVERRIDE:
+            self.process = self._variant.process
+
     @abstractmethod
     def process(self, doc):
         """ Process a Document.  This is the main method of a processor. """
@@ -62,6 +80,13 @@ class Processor(ABC):
     def _set_up_requires(self):
         """ Set up requirements for this processor.  Default is to use a class defined list. """
         self._requires = self.__class__.REQUIRES_DEFAULT
+
+    def _set_up_variants(self, config, use_gpu):
+        processor_name = list(self.__class__.PROVIDES_DEFAULT)[0]
+        if any(config.get(f'with_{variant}', False) for variant in PROCESSOR_VARIANTS[processor_name]):
+            self._trainer = None
+            variant_name = [variant for variant in PROCESSOR_VARIANTS[processor_name] if config.get(f'with_{variant}', False)][0]
+            self._variant = PROCESSOR_VARIANTS[processor_name][variant_name](config)
 
     @property
     def config(self):
@@ -89,27 +114,39 @@ class Processor(ABC):
             raise ProcessorRequirementsException(load_names, self, provided_reqs)
 
 
+class ProcessorVariant(ABC):
+    """ Base class for all processor variants """
+
+    OVERRIDE = False # Set to true to override all the processing from the processor
+
+    @abstractmethod
+    def process(self, doc):
+        """
+        Process a document that is potentially preprocessed by the processor.
+        This is the main method of a processor variant.
+
+        If `OVERRIDE` is set to True, all preprocessing by the processor would be bypassed, and the processor variant
+        would serve as a drop-in replacement of the entire processor, and has to be able to interpret all the configs
+        that are typically handled by the processor it replaces.
+        """
+        pass
+
+
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """
+
     def __init__(self, config, pipeline, use_gpu):
-        # overall config for the processor
-        self._config = None
-        # pipeline building this processor (presently processors are only meant to exist in one pipeline)
-        self._pipeline = pipeline
+        super().__init__(config, pipeline, use_gpu)
+
         # UD model resources, set up is processor specific
         self._pretrain = None
         self._trainer = None
         self._vocab = None
-        self._set_up_model(config, use_gpu)
-        # run set up process
+        if not hasattr(self, '_variant'):
+            self._set_up_model(config, use_gpu)
+
         # build the final config for the processor
         self._set_up_final_config(config)
-        # set up what annotations are required based on config
-        self._set_up_requires()
-        # set up what annotations are provided based on config
-        self._set_up_provides()
-        # given pipeline constructing this processor, check if requirements are met, throw exception if not
-        self._check_requirements()
 
     @abstractmethod
     def _set_up_model(self, config, gpu):
@@ -154,3 +191,16 @@ class UDProcessor(Processor):
             return True
         else:
             return False
+
+def register_processor(name):
+    def wrapper(Cls):
+        NAME_TO_PROCESSOR_CLASS[name] = Cls
+        PIPELINE_NAMES.append(name)
+        return Cls
+    return wrapper
+
+def register_processor_variant(name, variant):
+    def wrapper(Cls):
+        PROCESSOR_VARIANTS[name][variant] = Cls
+        return Cls
+    return wrapper
