@@ -93,7 +93,7 @@ def test_register_processor_variant():
     assert EN_DOC_LOL_TOKENS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
 
 @register_processor_variant("lemma", "cool")
-class LOLTokenizer(ProcessorVariant):
+class CoolLemmatizer(ProcessorVariant):
     ''' An alternative lemmatizer that lemmatizes every word to "cool". '''
 
     OVERRIDE = True
@@ -108,7 +108,7 @@ class LOLTokenizer(ProcessorVariant):
 
         return document
 
-def test_register_processor_variant_with_takeover():
+def test_register_processor_variant_with_override():
     nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "ewt", "pos": "ewt", "lemma": "cool"}, package=None)
     doc = nlp(EN_DOC)
     assert EN_DOC_COOL_LEMMAS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
