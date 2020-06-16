@@ -27,7 +27,38 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 
-class Document:
+def _readonly_setter(self, name):
+    full_classname = self.__class__.__module__
+    if full_classname is None:
+        full_classname = self.__class__.__qualname__
+    else:
+        full_classname += '.' + self.__class__.__qualname__
+    raise ValueError(f'Property "{name}" of "{full_classname}" is read-only.')
+
+class StanzaObject(object):
+    """
+    Base class for all Stanza data objects that allows for some flexibility handling annotations
+    """
+
+    @classmethod
+    def add_property(cls, name, default=None, getter=None, setter=None):
+        """
+        Add a property accessible through self.{name} with underlying variable self._{name}.
+        Optionally setup a setter as well.
+        """
+
+        if hasattr(cls, name):
+            raise ValueError(f'Property by the name of {name} already exists in {cls}. Maybe you want to find another name?')
+
+        setattr(cls, f'_{name}', default)
+        if getter is None:
+            getter = lambda self: getattr(self, f'_{name}')
+        if setter is None:
+            setter = lambda self, value: _readonly_setter(self, name)
+
+        setattr(cls, name, property(getter, setter))
+
+class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
@@ -66,7 +97,7 @@ class Document:
     def sentences(self, value):
         """ Set the list of tokens for this document. """
         self._sentences = value
-    
+
     @property
     def num_tokens(self):
         """ Access the number of tokens for this document. """
@@ -118,16 +149,16 @@ class Document:
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False, from_token=False):
-        """ Get fields from a list of field names. 
+        """ Get fields from a list of field names.
         If only one field name (string or singleton list) is provided,
-        return a list of that field; if more than one, return a list of list. 
+        return a list of that field; if more than one, return a list of list.
         Note that all returned fields are after multi-word expansion.
 
         Args:
             fields: name of the fields as a list or a single string
             as_sentences: if True, return the fields as a list of sentences; otherwise as a whole list
             from_token: if True, get the fields from Token; otherwise from Word
-        
+
         Returns:
             All requested fields.
         """
@@ -278,7 +309,7 @@ class Document:
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
 
-class Sentence:
+class Sentence(StanzaObject):
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
     """
 
@@ -319,7 +350,7 @@ class Sentence:
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
         is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == int(self.words[-1].id))
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
-    
+
     @property
     def doc(self):
         """ Access the parent doc of this span. """
@@ -369,7 +400,7 @@ class Sentence:
     def words(self, value):
         """ Set the list of words for this sentence. """
         self._words = value
-    
+
     @property
     def ents(self):
         """ Access the list of entities in this sentence. """
@@ -389,10 +420,10 @@ class Sentence:
     def entities(self, value):
         """ Set the list of entities in this sentence. """
         self._ents = value
-    
+
     def build_ents(self):
-        """ Build the list of entities by iterating over all tokens. Return all entities as a list. 
-        
+        """ Build the list of entities by iterating over all tokens. Return all entities as a list.
+
         Note that unlike other attributes, since NER requires raw text, the actual tagging are always
         performed at and attached to the `Token`s, instead of `Word`s.
         """
@@ -475,7 +506,7 @@ class Sentence:
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
 
-class Token:
+class Token(StanzaObject):
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
     text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French,
     a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
@@ -561,7 +592,7 @@ class Token:
     def end_char(self):
         """ Access the end character index for this token in the raw text. """
         return self._end_char
-    
+
     @property
     def ner(self):
         """ Access the NER tag of this token. Example: 'B-ORG'"""
@@ -597,7 +628,7 @@ class Token:
     def _is_null(self, value):
         return (value is None) or (value == '_')
 
-class Word:
+class Word(StanzaObject):
     """ A word class that stores attributes of a word.
     """
 
@@ -780,7 +811,7 @@ class Word:
         return (value is None) or (value == '_')
 
 
-class Span:
+class Span(StanzaObject):
     """ A span class that stores attributes of a textual span. A span can be typed.
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
@@ -852,7 +883,7 @@ class Span:
     def tokens(self, value):
         """ Set the span's list of tokens. """
         self._tokens = value
-    
+
     @property
     def words(self):
         """ Access reference to a list of words that correspond to this span. """
