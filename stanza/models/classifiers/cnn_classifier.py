@@ -38,10 +38,6 @@ class CNNClassifier(nn.Module):
         #           we could make that an optional improvement, though
         #   - another alternative: make a set of delta vectors, possibly of
         #     lower dimension.  won't make the models too much bigger
-        # TODO: make this trans_pretrained as with the pos model?
-        #   - we could train the trans matrix too
-        #   - for 1 word phrases we could just use the trans matrix and
-        #     label based on that
         # TODO: freeze everything except pad & unk as an option
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
         self.vocab_size = emb_matrix.shape[0]
