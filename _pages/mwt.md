@@ -1,7 +1,10 @@
 ---
+layout: default
 title: MWTProcessor
 keywords: mwt
 permalink: '/mwt.html'
+nav_order: 5
+parent: Neural Pipeline
 ---
 
 ## Description

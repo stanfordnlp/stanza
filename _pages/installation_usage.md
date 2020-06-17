@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Installation & Getting Started
 keywords: installation-download
 permalink: '/installation_usage.html'
+nav_order: 1
+parent: Usage
 ---
 
 To use Stanza for text analysis, a first step is to install the package and download the models for the languages you want to analyze. After the download is done, an NLP pipeline can be constructed, which can process input documents and create annotations.
@@ -45,9 +48,9 @@ pip install -e .
 
 ## Building a Pipeline
 
-Stanza provides simple, flexible, and unified interfaces for downloading and running various NLP models. At a high level, to start annotating text, you need to first initialize a [Pipeline](pipeline.md#pipeline), which pre-loads and chains up a series of [Processor](pipeline.md#processors)s, with each processor performing a specific NLP task (e.g., tokenization, dependency parsing, or named entity recognition). 
+Stanza provides simple, flexible, and unified interfaces for downloading and running various NLP models. At a high level, to start annotating text, you need to first initialize a [Pipeline](pipeline.md#pipeline), which pre-loads and chains up a series of [Processor](pipeline.md#processors)s, with each processor performing a specific NLP task (e.g., tokenization, dependency parsing, or named entity recognition).
 
-Downloading models and building a pipeline of models shares roughly the same interface. Additionally, when building a pipeline, you can add customized options that control devices (CPU or GPU), allow pretokenized text, or specify model path, etc. Here we aim to provide examples that cover most use cases, and for all available options in the download and pipeline interface, please refer to the [Downloading Models](models#downloading-and-using-models) and [Pipeline](pipeline.md#pipeline) pages. 
+Downloading models and building a pipeline of models shares roughly the same interface. Additionally, when building a pipeline, you can add customized options that control devices (CPU or GPU), allow pretokenized text, or specify model path, etc. Here we aim to provide examples that cover most use cases, and for all available options in the download and pipeline interface, please refer to the [Downloading Models](models#downloading-and-using-models) and [Pipeline](pipeline.md#pipeline) pages.
 
 <br />
 The following minimal example shows how to download and load default processors into a pipeline for English:

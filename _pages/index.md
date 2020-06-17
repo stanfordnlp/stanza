@@ -1,12 +1,16 @@
 ---
-title: Stanza Python Library
+layout: default
+title: Overview
 keywords: Stanza, Python, NLP, Natural Language Processing, Deep Learning, PyTorch
 type: first_page
 permalink: '/index.html'
+nav_order: 1
 homepage: true
 ---
 
 ## About
+
+<img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545" /> <img alt="Conda Versions" src="https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda" /> <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545" />
 
 Stanza is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, to give a syntactic structure dependency parse, and to recognize named entities. The toolkit is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org).
 
@@ -96,3 +100,4 @@ If you use Stanford CoreNLP through the Stanza python client, please also follow
 * [GitHub](https://github.com/stanfordnlp/stanza)
 * [PyPI](https://pypi.org/project/stanza/)
 * [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
+* [The Stanford NLP Group](https://nlp.stanford.edu/)

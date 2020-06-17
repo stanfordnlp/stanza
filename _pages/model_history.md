@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Model History
 keywords: models history
 permalink: '/model_history.html'
+nav_order: 3
+parent: Resources
 ---
 
 This page contains links to downloadable models for all historical versions of Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).

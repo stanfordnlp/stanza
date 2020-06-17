@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Pipeline and Processors
 keywords: pipeline
 permalink: '/pipeline.html'
+nav_order: 1
+parent: Neural Pipeline
 ---
 
 ## Pipeline

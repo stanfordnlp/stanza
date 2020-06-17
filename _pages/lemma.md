@@ -1,7 +1,10 @@
 ---
+layout: default
 title: LemmaProcessor
 keywords: lemma
 permalink: '/lemma.html'
+nav_order: 7
+parent: Neural Pipeline
 ---
 
 ## Description

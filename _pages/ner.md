@@ -1,7 +1,10 @@
 ---
+layout: default
 title: NERProcessor
 keywords: ner
 permalink: '/ner.html'
+nav_order: 9
+parent: Neural Pipeline
 ---
 
 ## Description

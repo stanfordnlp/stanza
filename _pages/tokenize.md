@@ -1,7 +1,10 @@
 ---
+layout: default
 title: TokenizeProcessor
 keywords: tokenize
 permalink: '/tokenize.html'
+nav_order: 4
+parent: Neural Pipeline
 ---
 
 ## Description

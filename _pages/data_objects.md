@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Data Objects and Annotations
 keywords: data objects
 permalink: '/data_objects.html'
+nav_order: 2
+parent: Neural Pipeline
 ---
 
 This page describes the data objects and annotations used in Stanza, and how they interact with each other.

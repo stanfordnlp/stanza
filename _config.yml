@@ -1,72 +1,67 @@
-# project definitions
-project: doc
-audience: all
-product: all
-platform: all
-version: all
-destination: _site
-topnav_title: Stanza
-homepage_title: Stanza - A Python NLP Library for Many Human Languages
-site_title: Stanza
-#disqus_shortname: idrbwjekyll
-google_analytics: UA-133356038-1
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole site, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing these this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'jekyll serve'. If you change this file, please restart the server process.
 
-# variables
+# Site settings
+# These are used to personalize your new site. If you look in the HTML files,
+# you will see them accessed via {{ site.title }}, {{ site.github_repo }}, and so on.
+# You can create any custom variable you would like, and they will be accessible
+# in the templates via {{ site.myvariable }}.
+title: Stanza
+description: A Python NLP Library for Many Human Languages
+url: https://stanfordnlp.github.io/stanza
 
-sidebar_tagline: <img src="images/stanza.png" style="width:70%; margin-bottom:5px" />
-sidebar_version: <img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545" /> <img alt="Conda Versions" src="https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda" /> <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545" />
-project_file_name: doc
-company_name: Stanford NLP
-
-port: 4001
-
-exclude:
-  - configs/
-  - _site
-  - di_multi*
+permalink: pretty
+exclude: ["node_modules/", "*.gemspec", "*.gem", "Gemfile", "Gemfile.lock", "package.json", "package-lock.json",  "script/", "LICENSE.txt", "lib/", "bin/", "README.md", "Rakefile", "configs/", "_site", "di_multi*"]
 
 include:
   - _pages
 
-# avoid https mixed content?
-url: https://stanfordnlp.github.io/stanza
-# same for all
-host: 127.0.0.1
-sidebar_accordion: true
-markdown: kramdown
-print: false
-theme_file: theme-cardinal.css
-# only use suffix if you need to force index.html to display
-# suffix: index.html
+# Set a path/url to a logo that will be displayed instead of the title
+logo: images/stanza.png
 
-redcarpet:
-  extensions: ["no_intra_emphasis", "fenced_code_blocks", "tables", "with_toc_data"]
+# Enable or disable the site search
+search_enabled: true
 
-highlighter: rouge
+# Set the search token separator for hyphenated-word search:
+search_tokenizer_separator: /[\s/]+/
 
-collections:
-  tooltips:
-    output: true
+# Enable or disable heading anchors
+heading_anchors: true
 
-defaults:
-  -
-    scope:
-      path: ""
-      type: "pages"
-    values:
-      layout: "page"
-      comments: true
-  -
-    scope:
-      path: ""
-      type: "posts"
-    values:
-      layout: "post"
-      comments: true
+# Aux links for the upper right navigation
+#aux_links:
+#    "<img alt='PyPI Version' src='https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545' />"
+#      - "//pypi.org/project/stanza/"
+#    "<img alt='Conda Versions' src='https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda' />"
+#      - "//anaconda.org/stanfordnlp/stanza"
+#    "<img alt='Python Versions' src='https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545' />"
+#      - "//pypi.org/project/stanza/"
 
-relative_links:
-  enabled:     true
-  collections: false
+# Footer content appears at the bottom of every page's main content
+footer_content: "Copyright &copy; 2020 Stanford NLP Group."
+
+# Color scheme currently only supports "dark" or nil (default)
+color_scheme: nil
+
+# Google Analytics Tracking (optional)
+# e.g, UA-1234567-89
+ga_tracking: UA-133356038-1
 
 plugins:
+  - jekyll-seo-tag
   - jekyll-relative-links
+
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  startings: []
+  blanklines: false
+  profile: false

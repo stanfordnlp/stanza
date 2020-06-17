@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Data Conversion
 keywords: data conversion
 permalink: '/data_conversion.html'
+nav_order: 3
+parent: Neural Pipeline
 ---
 
 This page describes how to seamlessly convert between Stanza's [`Document`](data_objects.md#document), the [CoNLL-U format](https://universaldependencies.org/format.html), and native Python objects. We show four examples that represent exactly the same document.

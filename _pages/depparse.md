@@ -1,7 +1,10 @@
 ---
+layout: default
 title: DepparseProcessor
 keywords: depparse
 permalink: '/depparse.html'
+nav_order: 8
+parent: Neural Pipeline
 ---
 
 ## Description

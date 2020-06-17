@@ -1,12 +1,15 @@
 ---
+layout: default
 title: Model Training and Evaluation
 keywords: stanza, model training
 permalink: '/training.html'
+nav_order: 5
+parent: Usage
 ---
 
 ## Overview
 
-All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer, the dependency parser, and the named entity tagger, can be trained with your own data. 
+All neural modules, including the tokenzier, the multi-word token (MWT) expander, the POS/morphological features tagger, the lemmatizer, the dependency parser, and the named entity tagger, can be trained with your own data.
 
 To train your own models, you will need to clone the source code from the [stanza git repository](https://github.com/stanfordnlp/stanza) and follow the procedures below. We also provide runnable scripts coupled with toy data that makes it much easier for users to get started with model training, and you can find at [stanza-train git repository](https://github.com/stanfordnlp/stanza-train).
 
@@ -28,7 +31,7 @@ To train modules that make use of word representations, such as the POS/morpholo
 ```bash
 bash scripts/download_vectors.sh ${wordvec_dir}
 ```
-where `${wordvec_dir}` is the target directory to store the word vector files, and should be the same as where the environment variable `WORDVEC_DIR` is pointed to. 
+where `${wordvec_dir}` is the target directory to store the word vector files, and should be the same as where the environment variable `WORDVEC_DIR` is pointed to.
 
 The above script will first download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, it will download the [FastText embeddings](https://fasttext.cc/docs/en/crawl-vectors.html) from Facebook. Note that the total size of all downloaded vector files will be ~30G, therefore please use this script with caution.
 

@@ -1,7 +1,10 @@
 ---
+layout: default
 title: Frequently Asked Questions (FAQ)
 keywords: stanza, frequently asked questions, faq
 permalink: '/faq.html'
+nav_order: 1
+parent: Resources
 ---
 
 ## Model Output

@@ -1,7 +1,10 @@
 ---
+layout: default
 title: POSProcessor
 keywords: pos
 permalink: '/pos.html'
+nav_order: 6
+parent: Neural Pipeline
 ---
 
 ## Description
