@@ -10,6 +10,28 @@ import torch.nn.functional as F
 import stanza.models.classifiers.classifier_args as classifier_args
 from stanza.models.common.vocab import PAD_ID
 
+"""
+The CNN classifier is based on Yoon Kim's work:
+
+https://arxiv.org/abs/1408.5882
+
+The architecture is simple:
+
+- Embedding at the bottom layer
+  - separate learnable entry for UNK, since many of the embeddings we have use 0 for UNK
+- Some number of conv2d layers over the embedding
+- Maxpool layers over small windows, window size being a parameter
+- FC layer to the classification layer
+
+One experiment which was run and found to be a bit of a negative was
+putting a layer on top of the pretrain.  You would think that might
+help, but dev performance went down for each variation of
+  - trans(emb)
+  - relu(trans(emb))
+  - dropout(trans(emb))
+  - dropout(relu(trans(emb)))
+"""
+
 logger = logging.getLogger('stanza')
 
 class CNNClassifier(nn.Module):
@@ -38,10 +60,6 @@ class CNNClassifier(nn.Module):
         #           we could make that an optional improvement, though
         #   - another alternative: make a set of delta vectors, possibly of
         #     lower dimension.  won't make the models too much bigger
-        # TODO: make this trans_pretrained as with the pos model?
-        #   - we could train the trans matrix too
-        #   - for 1 word phrases we could just use the trans matrix and
-        #     label based on that
         # TODO: freeze everything except pad & unk as an option
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
         self.vocab_size = emb_matrix.shape[0]
@@ -130,23 +148,26 @@ class CNNClassifier(nn.Module):
             batch_indices.append(sentence_indices)
             batch_unknowns.append(sentence_unknowns)
 
-            # we will now have an N x emb_size tensor
-            # this is the input to the CNN
-            # there are two ways in which this padding is suboptimal
-            # the first is that for short sentences, smaller windows will
-            #   be padded to the point that some windows are entirely pad
-            # the second is that a sentence S will have more or less padding
-            #   depending on what other sentences are in its batch
-            # we assume these effects are pretty minimal
-
-            # reshape x to 1xNxE
-
+        # creating a single large list with all the indices lets us
+        # create a single tensor, which is much faster than creating
+        # many tiny tensors
+        # we can convert this to the input to the CNN
+        # it is padded at one or both ends so that it is now num_phrases x max_len x emb_size
+        # there are two ways in which this padding is suboptimal
+        # the first is that for short sentences, smaller windows will
+        #   be padded to the point that some windows are entirely pad
+        # the second is that a sentence S will have more or less padding
+        #   depending on what other sentences are in its batch
+        # we assume these effects are pretty minimal
         batch_indices = torch.tensor(batch_indices, requires_grad=False, device=device)
         input_vectors = self.embedding(batch_indices)
+        # we use the random unk so that we are not necessarily
+        # learning to match 0s for unk
         for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
             for unknown in sentence_unknowns:
                 input_vectors[phrase_num, unknown, :] = self.unk
 
+        # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
 
         conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
