@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: System Performance
 keywords: stanza, system performance
 permalink: '/performance.html'

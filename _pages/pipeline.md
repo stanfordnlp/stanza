@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Pipeline and Processors
 keywords: pipeline
 permalink: '/pipeline.html'

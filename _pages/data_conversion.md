@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Data Conversion
 keywords: data conversion
 permalink: '/data_conversion.html'

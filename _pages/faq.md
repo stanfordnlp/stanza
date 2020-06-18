@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Frequently Asked Questions (FAQ)
 keywords: stanza, frequently asked questions, faq
 permalink: '/faq.html'

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Installation & Getting Started
 keywords: installation-download
 permalink: '/installation_usage.html'

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: POSProcessor
 keywords: pos
 permalink: '/pos.html'

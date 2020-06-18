@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: MWTProcessor
 keywords: mwt
 permalink: '/mwt.html'

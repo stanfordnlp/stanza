@@ -18,7 +18,7 @@ Stanza is a collection of accurate and efficient tools for many human languages 
 ## Table of contents
 {: .no_toc .text-delta }
 
-1. TOC
+* TOC
 {:toc}
 
 <hr/>

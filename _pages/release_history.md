@@ -1,9 +1,10 @@
 ---
-layout: default
+layout: page
 title: Release History
 keywords: history
 permalink: '/release_history.html'
 nav_order: 3
+toc: false
 parent: Resources
 ---
 

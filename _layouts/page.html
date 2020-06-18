@@ -1,16 +1,16 @@
 ---
 layout: default
+toc: true
 ---
 
-# {{ title }}
-{: .no_toc }
+<h1> {{ page.title }} </h1>
 
-## Table of contents
-{: .no_toc .text-delta }
+{% if page.toc != false %}
+<h2 class='text-delta'>Table of contents</h2>
 
-1. TOC
-{:toc}
+{% include toc.html html=content %}
 
-<hr/>
+<hr>
+{% endif %}
 
 {{ content }}

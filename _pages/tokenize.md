@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: TokenizeProcessor
 keywords: tokenize
 permalink: '/tokenize.html'

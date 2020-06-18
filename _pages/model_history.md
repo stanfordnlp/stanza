@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Model History
 keywords: models history
 permalink: '/model_history.html'

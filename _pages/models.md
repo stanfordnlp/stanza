@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Available Models
 keywords: available models
 permalink: '/models.html'

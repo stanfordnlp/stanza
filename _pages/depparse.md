@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: DepparseProcessor
 keywords: depparse
 permalink: '/depparse.html'

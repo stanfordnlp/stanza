@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Model Training and Evaluation
 keywords: stanza, model training
 permalink: '/training.html'

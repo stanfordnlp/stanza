@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Data Objects and Annotations
 keywords: data objects
 permalink: '/data_objects.html'

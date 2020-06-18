@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: NERProcessor
 keywords: ner
 permalink: '/ner.html'
