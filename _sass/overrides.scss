@@ -2,3 +2,14 @@
 // Custom overrides from a user.
 //
 
+.alert {
+    padding: 10px;
+    margin: 10px 0;
+}
+.alert p {
+    margin: 0;
+}
+.alert.alert-info {
+    color: $blue-100;
+    background: #e4efff
+}

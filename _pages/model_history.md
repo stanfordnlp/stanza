@@ -3,7 +3,7 @@ layout: default
 title: Model History
 keywords: models history
 permalink: '/model_history.html'
-nav_order: 3
+nav_order: 4
 parent: Resources
 ---
 

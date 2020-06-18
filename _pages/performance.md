@@ -3,8 +3,8 @@ layout: default
 title: System Performance
 keywords: stanza, system performance
 permalink: '/performance.html'
-nav_order: 4
-parent: Usage
+nav_order: 2
+parent: Resources
 ---
 
 Here we report the performance of Stanza's pretrained models on all supported languages. Again, performances of models for tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing are reported on the Universal Dependencies (UD) treebanks, while performances of the NER models are reported separately.

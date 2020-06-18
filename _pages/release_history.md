@@ -3,7 +3,7 @@ layout: default
 title: Release History
 keywords: history
 permalink: '/release_history.html'
-nav_order: 2
+nav_order: 3
 parent: Resources
 ---
 
