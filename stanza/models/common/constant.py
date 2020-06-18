@@ -83,3 +83,4 @@ langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
+lcode2lang['zh'] = 'Simplified_Chinese'
