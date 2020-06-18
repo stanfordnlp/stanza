@@ -43,6 +43,10 @@ This is likely because you're using Python 2. Note that Stanza only supports Pyt
 
 Although we try our best to keep our model server available, it does become unavailable from time to time due to various reasons, e.g., hardware updates, power outages, etc. These will usually be resolved within a few hours. Please be patient while we fix issues on our side!
 
+### Getting `requests.exceptions.ConnectionError` when downloading models
+
+This is an known issue for users from some certain areas, such as China. A common reason for this is that a connection to the `raw.githubusercontent.com` URL cannot be established, and therefore the resource file required for downloading models cannot be accessed. Users have widely reported that using a VPN that provides stable access to GitHub services can solve this issue.
+
 ## Troubleshooting Running Stanza
 
 ### Why do I keep getting a `SyntaxError: invalid syntax` error message while trying to `import stanza`?
