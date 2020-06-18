@@ -125,3 +125,20 @@ A [`Span`](data_objects.md#span) object stores attributes of a contiguous span o
 | --- | --- | --- |
 | to_dict | `Dict` | Dumps the span into a dictionary containing all its information. |
 | pretty_print | `str` | Prints the span in one line with all its information. |
+
+## Adding new properties to Stanza data objects
+
+New in v1.1
+{: .label .label-green }
+
+All Stanza data objects can be extended easily should you need to attach new annotations of interest to them, either through a new [`Processor`](pipeline.md#processor) you are developing, or from some custom code you're writing.
+
+To add a new annotation or property to a Stanza object, say a `Document`, simply call
+
+```python
+Document.add_property('char_count', default=0, getter=lambda self: len(self.text), setter=None)
+```
+
+And then you should be able to access the `char_count` property from all instances of the `Document` class. The interface here should be familiar if you have used class properties in Python or other object-oriented language -- the first and only mandatory argument is the name of the property you wish to create, followed by `default` for the default value of this property, `getter` for reading the value of the property, and `setter` for setting the value of the property.
+
+By default, all created properties are read-only, unless you explicitly assign a `setter`. The underlying variable for the new property is named `_{property_name}`, so in our example above, Stanza will automatically create a class variable named `_char_count` to store the value of this property should it be necessary. This is the variable your `getter` and `setter` functions should use, if needed.

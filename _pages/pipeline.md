@@ -37,6 +37,93 @@ Processors are units of the neural pipeline that perform specific NLP functions 
 | depparse | DepparseProcessor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parsing analysis. |
 | ner | NERProcessor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
+### Processor variants
+
+New in v1.1
+{: .label .label-green }
+
+Sometimes you might want to build your own models to perform the tasks that existing processors already handle in the Stanza neural pipeline, or simply experiment with alternative toolkits for a specific task. Processor variants are here to help with that.
+
+One example use case is using your own tokenizer for tokenization. Previously we have added support for popular tokenizers like spaCy for English and jieba for Chinese, and now we have made it much easier to add your own. You simply need to implement a `ProcessorVariant` and register it with Stanza using the `@register_processor_variant` decorator. For instance, this is how our spaCy tokenizer is implemented
+
+```python
+from stanza.pipeline.processor import ProcessorVariant, register_processor_variant
+
+@register_processor_variant('tokenize', 'spacy')
+class SpacyTokenizer(ProcessorVariant):
+    def __init__(self, config):
+        # initialize spacy
+
+    def process(self, text):
+        # tokenize text with spacy
+```
+
+This allows the user to set `tokenize_with_spacy` as `True` (or `processors={"tokenize": "spacy"}`) when instantiating the pipeline to use it. In the case of the tokenizer, the `TokenizeProcessor` handles options such as pre-tokenization and pre-sengmentation, and only passes text to the variants when tokenization from raw text is needed.
+
+Alternatively, one can also implement a processor variant as a drop-in replacement for a processor by setting `OVERRIDE` as `True` in the `ProcessorVariant` class, for instance
+
+```python
+@register_processor_variant("lemma", "cool")
+class CoolLemmatizer(ProcessorVariant):
+    ''' An alternative lemmatizer that lemmatizes every word to "cool". '''
+
+    OVERRIDE = True
+
+    def __init__(self, lang):
+        pass
+
+    def process(self, document):
+        for sentence in document.sentences:
+            for word in sentence.words:
+                word.lemma = "cool"
+
+        return document
+```
+
+This lemmatizer will replace all of the functionality of the Stanza lemmatizer when it's used in the pipeline, and lemmatize every single word to "cool".
+
+### Building your own Processors and using them in the neural pipeline
+
+New in v1.1
+{: .label .label-green }
+
+If you're looking to implement annotation capabilities that don't currently exist in Stanza and want to use it in the neural pipeline, it hasn't been easier. You can simply implement a `Processor` class and register it with Stanza using the `@register_processor` decorator, and then it's easy to use it in your project, and/or publish it for other Stanza users to use.
+
+Here is an example:
+
+```python
+@register_processor("lowercase")
+class LowercaseProcessor(Processor):
+    ''' Processor that lowercases all text '''
+    _requires = set(['tokenize'])
+    _provides = set(['lowercase'])
+
+    def __init__(self, config, pipeline, use_gpu):
+        pass
+
+    def _set_up_model(self, *args):
+        pass
+
+    def process(self, doc):
+        doc.text = doc.text.lower()
+        for sent in doc.sentences:
+            for tok in sent.tokens:
+                tok.text = tok.text.lower()
+
+            for word in sent.words:
+                word.text = word.text.lower()
+
+        return doc
+```
+
+Once registered, you can use this processor in the pipeline as if it were one of Stanza's standard processors
+
+```python
+nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,lowercase')
+```
+
+and in this case the processor will lowercase all text in the document.
+
 ## Usage
 
 Using Stanza's neural Pipeline to annotate your text can be as simple as a few lines of Python code. Here we provide two simple examples, and refer the user to [our tutorials](tutorials.md) for further details on how to use each Processor.
