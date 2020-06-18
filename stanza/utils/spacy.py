@@ -19,11 +19,11 @@ def check_spacy():
     return True
 
 @register_processor_variant(TOKENIZE, 'spacy')
-class SpacyTokenizer():
-    def __init__(self, lang='en'):
+class SpacyTokenizer(ProcessorVariant):
+    def __init__(self, config):
         """ Construct a spaCy-based tokenizer by loading the spaCy pipeline.
         """
-        if lang != 'en':
+        if config['lang'] != 'en':
             raise Exception("spaCy tokenizer is currently only allowed in English pipeline.")
 
         try:

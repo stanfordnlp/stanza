@@ -22,12 +22,12 @@ def check_jieba():
 
 @register_processor_variant(TOKENIZE, 'jieba')
 class JiebaTokenizer(ProcessorVariant):
-    def __init__(self, lang='zh-hans'):
+    def __init__(self, config):
         """ Construct a Jieba-based tokenizer by loading the Jieba pipeline.
 
         Note that this tokenizer uses regex for sentence segmentation.
         """
-        if lang not in ['zh', 'zh-hans', 'zh-hant']:
+        if config['lang'] not in ['zh', 'zh-hans', 'zh-hant']:
             raise Exception("Jieba tokenizer is currently only allowed in Chinese (simplified or traditional) pipelines.")
 
         check_jieba()

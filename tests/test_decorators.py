@@ -6,7 +6,7 @@ import pytest
 import stanza
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import PipelineRequirementsException
-from stanza.pipeline.processor import Processor, ProcessorVariant, register_processor, register_processor_variant
+from stanza.pipeline.processor import Processor, ProcessorVariant, register_processor, register_processor_variant, ProcessorRegisterException
 from stanza.utils.conll import CoNLL
 from tests import *
 
@@ -76,6 +76,12 @@ def test_register_processor():
     doc = nlp(EN_DOC)
     assert EN_DOC_LOWERCASE_TOKENS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
 
+def test_register_nonprocessor():
+    with pytest.raises(ProcessorRegisterException):
+        @register_processor("nonprocessor")
+        class NonProcessor:
+            pass
+
 @register_processor_variant("tokenize", "lol")
 class LOLTokenizer(ProcessorVariant):
     ''' An alternative tokenizer that splits text by space and replaces all tokens with LOL '''
@@ -112,3 +118,9 @@ def test_register_processor_variant_with_override():
     nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "ewt", "pos": "ewt", "lemma": "cool"}, package=None)
     doc = nlp(EN_DOC)
     assert EN_DOC_COOL_LEMMAS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
+
+def test_register_nonprocessor_variant():
+    with pytest.raises(ProcessorRegisterException):
+        @register_processor_variant("tokenize", "nonvariant")
+        class NonVariant:
+            pass

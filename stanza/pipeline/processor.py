@@ -192,8 +192,25 @@ class UDProcessor(Processor):
         else:
             return False
 
+class ProcessorRegisterException(Exception):
+    """ Exception indicating processor or processor registration failure """
+
+    def __init__(self, processor_class, expected_parent):
+        self._processor_class = processor_class
+        self._expected_parent = expected_parent
+        self.build_message()
+
+    def build_message(self):
+        self.message = f"Failed to register '{self._processor_class}'. It must be a subclass of '{self._expected_parent}'."
+
+    def __str__(self):
+        return self.message
+
 def register_processor(name):
     def wrapper(Cls):
+        if not issubclass(Cls, Processor):
+            raise ProcessorRegisterException(Cls, Processor)
+
         NAME_TO_PROCESSOR_CLASS[name] = Cls
         PIPELINE_NAMES.append(name)
         return Cls
@@ -201,6 +218,9 @@ def register_processor(name):
 
 def register_processor_variant(name, variant):
     def wrapper(Cls):
+        if not issubclass(Cls, ProcessorVariant):
+            raise ProcessorRegisterException(Cls, ProcessorVariant)
+
         PROCESSOR_VARIANTS[name][variant] = Cls
         return Cls
     return wrapper
