@@ -9,4 +9,5 @@ has_children: true
 
 # Neural Pipeline
 
-In this section, we introduce in more detail the options of each processor in Stanza's neural pipeline, as well as the data objects that it produces.
+In this section, we introduce in more detail the options of Stanza's neural pipeline, each processor in it, as well as the data objects that it produces. We also introduce how you can covnert data between common formats used in NLP and Stanza data objects, as well as how to build your own processors to use in Stanza's pipeline.
+{: .fs-6 .fw-300 }

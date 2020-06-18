@@ -3,8 +3,9 @@
 //
 
 .alert {
-    padding: 10px;
+    padding: 10px 15px;
     margin: 10px 0;
+    border-radius: 4px;
 }
 .alert p {
     margin: 0;
@@ -12,4 +13,14 @@
 .alert.alert-info {
     color: $blue-200;
     background: #e4efff
+}
+
+.toc a {
+    white-space: normal;
+}
+td a, td a {
+    white-space: normal !important;
+}
+td, th {
+    min-width: 90px;
 }

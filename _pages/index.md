@@ -21,7 +21,7 @@ Stanza is a collection of accurate and efficient tools for many human languages 
 * TOC
 {:toc}
 
-<hr/>
+<hr>
 
 ## About
 
@@ -32,7 +32,6 @@ Stanza is built with highly accurate neural network components that also enable 
 
 In addition, Stanza includes a Python interface to the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
-<br />
 To summarize, Stanza features:
 
 * Native Python implementation requiring minimal efforts to set up;
@@ -40,7 +39,6 @@ To summarize, Stanza features:
 * Pretrained neural models supporting [66 (human) languages](models.md#human-languages-supported-by-stanza);
 * A stable, officially maintained Python interface to CoreNLP.
 
-<br />
 Below is an overview of Stanza's neural network NLP pipeline:
 
 <p align="center">
