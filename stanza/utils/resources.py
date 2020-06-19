@@ -22,6 +22,7 @@ logger = logging.getLogger('stanza')
 # set home dir for default
 HOME_DIR = str(Path.home())
 DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
+STANFORDNLP_RESOURCES_URL = 'https://nlp.stanford.edu/software/stanza/stanza-resources/'
 DEFAULT_MODEL_DIR = os.getenv('STANZA_RESOURCES_DIR', os.path.join(HOME_DIR, 'stanza_resources'))
 
 # given a language and models path, build a default configuration
@@ -216,7 +217,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     return lang, dir, package, processors
 
 # main download function
-def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None):
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, resources_url=DEFAULT_RESOURCES_URL):
     # set global logging level
     set_logging_level(logging_level, verbose)
     # process different pipeline parameters
@@ -224,7 +225,14 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
 
     # Download resources.json to obtain latest packages.
     logger.debug('Downloading resource file...')
-    request_file(f'{DEFAULT_RESOURCES_URL}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
+    # handle short name for resources urls; otherwise treat it as url
+    if resources_url.lower() == 'default':
+        resources_url = DEFAULT_RESOURCES_URL
+    elif resources_url.lower() in ('stanford', 'stanfordnlp'):
+        resources_url = STANFORDNLP_RESOURCES_URL
+    # make request
+    request_file(f'{resources_url}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
+    # unpack results
     resources = json.load(open(os.path.join(dir, 'resources.json')))
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
