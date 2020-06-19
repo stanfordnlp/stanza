@@ -109,7 +109,7 @@ If you use Stanford CoreNLP through the Stanza python client, please also follow
 
 ## Links
 
-* [GitHub](https://github.com/stanfordnlp/stanza)
-* [PyPI](https://pypi.org/project/stanza/)
-* [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
-* [The Stanford NLP Group](https://nlp.stanford.edu/)
+[GitHub <i class="fab fa-github"></i>](https://github.com/stanfordnlp/stanza){: .btn .mr-2}
+[PyPI <i class="fab fa-python"></i>](https://pypi.org/project/stanza/){: .btn .mr-2}
+[Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/){: .btn .mr-2}
+[The Stanford NLP Group](https://nlp.stanford.edu/){: .btn .mr-2}
