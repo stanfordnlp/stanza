@@ -89,7 +89,7 @@ A [`Word`](data_objects.md#word) object holds a syntactic word and all of its wo
 | lemma | `str` | The lemma of this word. |
 | upos (pos) | `str` | The universal part-of-speech of this word. Example: 'NOUN'. |
 | xpos | `str` | The treebank-specific part-of-speech of this word. Example: 'NNP'. |
-| feats | `str` | The morphological features of this word. Example: 'Gender=Fem|Person=3'. |
+| feats | `str` | The morphological features of this word. Example: 'Gender=Fem&#124;Person=3'. |
 | head | `int` | The id of the syntactic head of this word in the sentence, 1-based for actual words in the sentence (0 is reserved for an artificial symbol that represents the root of the syntactic tree). |
 | deprel | `str` | The dependency relation between this word and its syntactic head. Example: 'nmod'. |
 | deps | `str` | The combination of head and deprel that captures all syntactic dependency information. Seen in CoNLL-U files released from Universal Dependencies, not predicted by our [`Pipeline`](pipeline.md#pipeline).
