@@ -47,6 +47,15 @@ footer li a:hover {
     color: $link-color;
 }
 
+blockquote.citation {
+    border-left: 5px $link-color solid;
+    padding-left: 10px;
+
+    a {
+        white-space: normal;
+    }
+}
+
 @media(max-width:800px){
     body {
         padding-bottom: 5rem;
