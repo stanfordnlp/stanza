@@ -46,3 +46,15 @@ footer li a {
 footer li a:hover {
     color: $link-color;
 }
+
+@media(max-width:800px){
+    body {
+        padding-bottom: 5rem;
+    }
+}
+
+@media(max-width:600px){
+    body {
+        padding-bottom: 6rem;
+    }
+}
