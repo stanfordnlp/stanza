@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Usage
+permalink: '/usage.html'
 nav_order: 2
 has_children: true
 ---

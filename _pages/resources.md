@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Resources
-nav_order: 5
+permalink: '/resources.html'
+nav_order: 6
 has_children: true
 ---
 
