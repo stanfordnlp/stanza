@@ -14,6 +14,8 @@ Here we report the performance of Stanza's pretrained models on all supported la
 In the table below you can find the performance of Stanza's pretrained UD models. All models are trained and tested with the Universal Dependencies v2.5 treebanks.
 Note that all scores reported are from an end-to-end evaluation on the official test sets (from raw text to the full CoNLL-U file), and are generated with the CoNLL 2018 UD shared task official evaluation script. For detailed interpretation of these scores and the evaluation scripts we used, please refer to the [CoNLL 2018 UD Shared Task Evaluation](https://universaldependencies.org/conll18/evaluation.html) page. For details on how we handled treebanks with no training data, please refer to [our CoNLL 2018 system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf).
 
+For more detailed results and better viewing experience, please access the results in [this Google Spreadsheet](https://docs.google.com/spreadsheets/d/1t9h8QxjYA2XK4qs9Q7R4wiOwQHPykpBTjH8PGj_on5Y/edit?usp=sharing).
+
 | Treebank | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :------- | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
 | Macro Avg | 98.64 | 86.81 | 98.43 | 90.99 | 87.88 | 87.71 | 82.03 | 90.51 | 79.87 | 74.82 | 70.91 | 63.26 | 66.04 |
