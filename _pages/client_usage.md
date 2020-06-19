@@ -8,7 +8,7 @@ parent: Stanford CoreNLP Client
 # toc: false
 ---
 
-After CoreNLP has been properly set up, you can start using the client functions to obtain CoreNLP annotations in Stanza.
+After CoreNLP has been [properly set up](client_setup), you can start using the client functions to obtain CoreNLP annotations in Stanza.
 Below are some basic examples of starting a server, making requests, and accessing various annotations from the returned Document object.
 By default, CoreNLP Client uses `protobuf` for message passing. A full definition of our protocols (a.k.a., our supported annotations) can be found [here](https://github.com/stanfordnlp/stanza/blob/master/doc/CoreNLP.proto).
 
