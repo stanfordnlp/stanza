@@ -84,9 +84,15 @@ The following code shows how to manipulate the returned annotation object such t
 
 ### Using Tokensregex, Semgrex and Tregex with the client
 
-Separate client functions are provided to run [Tokensregex](https://nlp.stanford.edu/software/tokensregex.html), [Semgrex](https://nlp.stanford.edu/software/tregex.html), Tregex pattern matching with the CoreNLP client. The following example shows how to use these three functions:
+Separate client functions are provided to run [Tokensregex](https://nlp.stanford.edu/software/tokensregex.html), [Semgrex](https://nlp.stanford.edu/software/tregex.html), Tregex pattern matching with the CoreNLP client. The following example shows how to start a new client and use these three pattern matching functions:
 
 ```python
+text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
+with CoreNLPClient(
+        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse'], 
+        timeout=30000,
+        memory='16G') as client:
+    
     # Use tokensregex patterns to find who wrote a sentence.
     pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
     matches = client.tokensregex(text, pattern)
