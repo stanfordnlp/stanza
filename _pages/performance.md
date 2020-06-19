@@ -1,6 +1,6 @@
 ---
 layout: page
-title: System Performance
+title: Model Performance
 keywords: stanza, system performance
 permalink: '/performance.html'
 nav_order: 2

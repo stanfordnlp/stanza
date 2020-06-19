@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Available Models
+title: Available Models & Languages
 keywords: available models
 permalink: '/available_models.html'
 nav_order: 1
