@@ -111,25 +111,3 @@ hr {
   background-color: $border-color;
   border: 0;
 }
-
-
-footer ul {
-  list-style: none;
-  height: 20px;
-  padding: 0;
-}
-
-footer li {
-  width: 40px;
-  float: left;
-  height: 20px;
-}
-
-footer li a {
-  color: #222;
-  text-decoration: none;
-}
-
-footer li a:hover {
-  color: $link-color;
-}
