@@ -42,7 +42,7 @@ To summarize, Stanza features:
 Below is an overview of Stanza's neural network NLP pipeline:
 
 <p align="center">
-   <img src="images/pipeline.png" style="width:60%">
+   <img src="assets/images/pipeline.png" style="width:60%">
 </p>
 
 ## Getting Started
