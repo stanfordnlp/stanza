@@ -1,7 +1,7 @@
 ---
 layout: page
-title: NERProcessor
-keywords: ner
+title: Named Entity Recognition
+keywords: ner, named entity recognition, NERProcessor
 permalink: '/ner.html'
 nav_order: 9
 parent: Neural Pipeline
@@ -9,7 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-Recognize named entities for all token spans in the corpus.
+The named entity recognition (NER) module recognizes mention spans of a particular entity type (e.g., Person or Organization) in the input sentence. NER is widely used in many NLP applications such as information extraction or question answering systems. In Stanza, NER is performed by the `NERProcessor` and can be invoked by the name `ner`.
 
 {% include alerts.html %}
 {{ note }}

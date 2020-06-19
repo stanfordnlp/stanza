@@ -1,7 +1,7 @@
 ---
 layout: page
-title: POSProcessor
-keywords: pos
+title: Part-of-Speech & Morphological Features
+keywords: POS, part-of-speech, morphological features, POSProcessor
 permalink: '/pos.html'
 nav_order: 6
 parent: Neural Pipeline
@@ -9,7 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-Labels tokens with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html).
+The Part-of-Speech (POS) & morphological features tagging module labels words with their [universal POS (UPOS) tags](https://universaldependencies.org/u/pos/), treebank-specific POS (XPOS) tags, and [universal morphological features (UFeats)](https://universaldependencies.org/u/feat/index.html). This is jointly performed by the `POSProcessor` in Stanza, and can be invoked with the name `pos`.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- |

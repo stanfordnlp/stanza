@@ -1,7 +1,7 @@
 ---
 layout: page
-title: MWTProcessor
-keywords: mwt
+title: Multi-Word Token (MWT) Expansion
+keywords: mwt, multi-word token expansion, MWTProcessor
 permalink: '/mwt.html'
 nav_order: 5
 parent: Neural Pipeline
@@ -9,11 +9,13 @@ parent: Neural Pipeline
 
 ## Description
 
-Expands [multi-word tokens (MWT)](https://universaldependencies.org/u/overview/tokenization.html) predicted by the [TokenizeProcessor](tokenize.md).
+The Multi-Word Token (MWT) expansion module can expand a raw token into multiple [syntactic words](https://universaldependencies.org/u/overview/tokenization.html), which makes it easier to carry out Universal Dependencies analysis in some languages. This was handled by the `MWTProcessor` in Stanza, and can be invoked with the name `mwt`. The token upon which an expansion will be performed is predicted by the `TokenizeProcessor`, before the invocation of the `MWTProcessor`.
+
+For more details on why MWT is necessary for Universal Dependencies analysis, please visit the [UD tokenization page](https://universaldependencies.org/u/overview/tokenization.html).
 
 {% include alerts.html %}
 {{ note }}
-Only languages with <a href='https://universaldependencies.org/u/overview/tokenization.html'>multi-word tokens (MWT)</a> require MWTProcessor.
+Only languages with <a href='https://universaldependencies.org/u/overview/tokenization.html'>multi-word tokens (MWT)</a>, such as German or French, require MWTProcessor; other languages, such as English or Chinese, do not support this processor in the pipeline.
 {{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |

@@ -1,7 +1,7 @@
 ---
 layout: page
-title: LemmaProcessor
-keywords: lemma
+title: Lemmatization
+keywords: lemma, lemmatization, LemmaProcessor
 permalink: '/lemma.html'
 nav_order: 7
 parent: Neural Pipeline
@@ -9,7 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-Generates the word lemmas for all tokens in the corpus.
+The lemmatization module recovers the lemma form for each input word. For example, the input sequence "I ate an apple" will be lemmatized into "I eat a apple". This type of word normalization is useful in many real-world applications. In Stanza, lemmatization is performed by the `LemmaProcessor` and can be invoked with the name `lemma`.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- |

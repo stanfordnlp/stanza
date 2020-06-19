@@ -1,7 +1,7 @@
 ---
 layout: page
-title: DepparseProcessor
-keywords: depparse
+title: Dependency Parsing
+keywords: depparse, DepparseProcessor, dependency parsing
 permalink: '/depparse.html'
 nav_order: 8
 parent: Neural Pipeline
@@ -9,7 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-Provides an accurate syntactic dependency parser.
+The dependency parsing module builds a tree structure of words from the input sentence, which represents the syntactic dependency relations between words. The resulting tree representations, which follow the [Universal Dependencies formalism](https://universaldependencies.org/), are useful in many downstream applications. In Stanza, dependency parsing is performed by the `DepparseProcessor`, and can be invoked with the name `depparse`.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- |

@@ -1,7 +1,7 @@
 ---
 layout: page
-title: TokenizeProcessor
-keywords: tokenize
+title: Tokenization & Sentence Segmentation
+keywords: tokenize, TokenizeProcessor, tokenization, sentence segmentation
 permalink: '/tokenize.html'
 nav_order: 4
 parent: Neural Pipeline
@@ -9,7 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-The `TokenizeProcessor` tokenizes the text and performs sentence segmentation, so that downstream annotation can happen at the sentence level.
+Tokenization and sentence segmentation in Stanza are jointly performed by the `TokenizeProcessor`. This processor splits the raw input text into tokens and sentences, so that downstream annotation can happen at the sentence level. This processor can be invoked by the name `tokenize`.
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- |
