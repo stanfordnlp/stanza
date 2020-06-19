@@ -21,8 +21,10 @@ logger = logging.getLogger('stanza')
 
 # set home dir for default
 HOME_DIR = str(Path.home())
-DEFAULT_RESOURCES_URL = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
 STANFORDNLP_RESOURCES_URL = 'https://nlp.stanford.edu/software/stanza/stanza-resources/'
+DEFAULT_RESOURCES_URL = os.getenv('STANZA_RESOURCES_URL', 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master')
+DEFAULT_RESOURCES_VERSION = os.getenv('STANZA_RESOURCES_VERSION', __resources_version__)
+DEFAULT_MODEL_URL = os.getenv('STANZA_MODEL_URL', 'default')
 DEFAULT_MODEL_DIR = os.getenv('STANZA_RESOURCES_DIR', os.path.join(HOME_DIR, 'stanza_resources'))
 
 # given a language and models path, build a default configuration
@@ -217,7 +219,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     return lang, dir, package, processors
 
 # main download function
-def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, resources_url=DEFAULT_RESOURCES_URL):
+def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, resources_url=DEFAULT_RESOURCES_URL, resources_version=DEFAULT_RESOURCES_VERSION, model_url=DEFAULT_MODEL_URL):
     # set global logging level
     set_logging_level(logging_level, verbose)
     # process different pipeline parameters
@@ -226,26 +228,27 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
     # Download resources.json to obtain latest packages.
     logger.debug('Downloading resource file...')
     # handle short name for resources urls; otherwise treat it as url
-    if resources_url.lower() == 'default':
-        resources_url = DEFAULT_RESOURCES_URL
-    elif resources_url.lower() in ('stanford', 'stanfordnlp'):
+    if resources_url.lower() in ('stanford', 'stanfordnlp'):
         resources_url = STANFORDNLP_RESOURCES_URL
     # make request
-    request_file(f'{resources_url}/resources_{__resources_version__}.json', os.path.join(dir, 'resources.json'))
+    request_file(f'{resources_url}/resources_{resources_version}.json', os.path.join(dir, 'resources.json'))
     # unpack results
-    resources = json.load(open(os.path.join(dir, 'resources.json')))
+    try:
+        resources = json.load(open(os.path.join(dir, 'resources.json')))
+    except:
+        raise Exception(f'Cannot load resource file. Please check your network connection, or provided resource url and resource version.')
     if lang not in resources:
         raise Exception(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
     lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
-    url = resources['url']
+    url = resources['url'] if model_url.lower() == 'default' else model_url
 
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
         logger.info(f'Downloading default packages for language: {lang} ({lang_name})...')
-        request_file(f'{url}/{__resources_version__}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
+        request_file(f'{url}/{resources_version}/{lang}/default.zip', os.path.join(dir, lang, f'default.zip'), md5=resources[lang]['default_md5'])
         unzip(os.path.join(dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
@@ -258,7 +261,7 @@ def download(lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={},
         # Download packages
         for key, value in download_list:
             try:
-                request_file(f'{url}/{__resources_version__}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
+                request_file(f'{url}/{resources_version}/{lang}/{key}/{value}.pt', os.path.join(dir, lang, key, f'{value}.pt'), md5=resources[lang][key][value]['md5'])
             except KeyError as e:
-                raise Exception(f"Cannot find the following processor and model name combination: {key}, {value}. Please check if you have provided the correct model name.") from e
+                raise Exception(f'Cannot find the following processor and model name combination: {key}, {value}. Please check if you have provided the correct model name.') from e
     logger.info(f'Finished downloading models and saved to {dir}.')
