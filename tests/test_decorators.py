@@ -90,7 +90,7 @@ class LOLTokenizer(ProcessorVariant):
         pass
 
     def process(self, text):
-        sentence = [{'id': f'{i+1}', 'text': 'LOL'} for i, tok in enumerate(text.split())]
+        sentence = [{'id': (i+1, ), 'text': 'LOL'} for i, tok in enumerate(text.split())]
         return Document([sentence], text)
 
 def test_register_processor_variant():

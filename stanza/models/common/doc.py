@@ -244,21 +244,21 @@ class Document(StanzaObject):
             idx_w = 0
             for token in sentence.tokens:
                 idx_w += 1
-                m = multi_word_token_id.match(token.id)
+                m = (len(token.id) > 1)
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if not m and not n:
                     for word in token.words:
-                        word.id = str(idx_w)
+                        word.id = idx_w
                         word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
                     token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
-                    token.id = f'{idx_w}-{idx_w_end}'
+                    token.id = (idx_w, idx_w_end)
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({ID: str(idx_w + i), TEXT: e_word}))
+                        token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
             sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
         self._process_sentences(self.to_dict()) # reprocess to update number of words
@@ -273,7 +273,7 @@ class Document(StanzaObject):
         expansions = []
         for sentence in self.sentences:
             for token in sentence.tokens:
-                m = multi_word_token_id.match(token.id)
+                m = (len(token.id) > 1)
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if m or n:
                     src = token.text
@@ -330,16 +330,18 @@ class Sentence(StanzaObject):
         self.tokens, self.words = [], []
         for i, entry in enumerate(tokens):
             if ID not in entry: # manually set a 1-based id for word if not exist
-                entry[ID] = str(i+1)
-            m = multi_word_token_id.match(entry.get(ID))
+                entry[ID] = (i+1, )
+            if isinstance(entry[ID], int):
+                entry[ID] = (entry[ID], )
+            m = (len(entry.get(ID)) > 1)
             n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
             if m or n: # if this token is a multi-word token
-                if m: st, en = int(m.group(1)), int(m.group(2))
+                if m: st, en = entry[ID]
                 self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
                 self.words.append(new_word)
-                idx = int(entry.get(ID))
+                idx = entry.get(ID)[0]
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
@@ -348,7 +350,7 @@ class Sentence(StanzaObject):
 
         # check if there is dependency info
         is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
-        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == int(self.words[-1].id))
+        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
 
     @property
@@ -451,14 +453,16 @@ class Sentence(StanzaObject):
         """
         self.dependencies = []
         for word in self.words:
-            if int(word.head) == 0:
+            if word.head == 0:
                 # make a word for the ROOT
-                word_entry = {ID: "0", TEXT: "ROOT"}
+                word_entry = {ID: 0, TEXT: "ROOT"}
                 head = Word(word_entry)
             else:
                 # id is index in words list + 1
-                head = self.words[int(word.head) - 1]
-                assert(int(word.head) == int(head.id))
+                head = self.words[word.head - 1]
+                if word.head != head.id:
+                    import pdb; pdb.set_trace()
+                assert(word.head == head.id)
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
@@ -611,7 +615,7 @@ class Token(StanzaObject):
         if the token is a multi-word token.
         """
         ret = []
-        if multi_word_token_id.match(self.id):
+        if len(self.id) > 1:
             token_dict = {}
             for field in fields:
                 if getattr(self, field) is not None:
@@ -623,7 +627,7 @@ class Token(StanzaObject):
 
     def pretty_print(self):
         """ Print this token with its extended words in one line. """
-        return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
+        return f"<{self.__class__.__name__} id={'-'.join([str(x) for x in self.id])};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
 
     def _is_null(self, value):
         return (value is None) or (value == '_')
@@ -635,11 +639,14 @@ class Word(StanzaObject):
     def __init__(self, word_entry):
         """ Construct a word given a dictionary format word entry.
         """
-        assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
+        assert word_entry.get(ID, None) is not None and word_entry.get(TEXT, None) is not None, 'id and text should be included for the word. {}'.format(word_entry)
         self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, \
             self._misc, self._parent = [None] * 11
 
         self.id = word_entry.get(ID)
+        if isinstance(self.id, tuple):
+            assert len(self.id) == 1
+            self.id = self.id[0]
         self.text = word_entry.get(TEXT)
         self.lemma = word_entry.get(LEMMA, None)
         self.upos = word_entry.get(UPOS, None)
