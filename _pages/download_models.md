@@ -5,6 +5,7 @@ keywords: download models
 permalink: '/download_models.html'
 nav_order: 3
 parent: Usage
+toc: false
 ---
 
 Stanza provides pretrained NLP models for a total 66 human languages. On this page we provide detailed information on how to download these models to process text in a language of your choosing.
