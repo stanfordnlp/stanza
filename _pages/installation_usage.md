@@ -63,8 +63,8 @@ The following minimal example shows how to download and load default processors 
 
 You can specify the processors to download or load, by listing the processor names in a comma-separated string. For example, here we only download and load the default `tokenize` ([TokenizeProcessor](tokenize.md)) and `pos` ([POSProcessor](pos.md)) processors for Chinese:
 ```python
->>> stanza.download('zh', processors='tokenize,pos')
->>> nlp = stanza.Pipeline('zh', processors='tokenize,pos')
+stanza.download('zh', processors='tokenize,pos')
+nlp = stanza.Pipeline('zh', processors='tokenize,pos')
 ```
 
 Note that the model of a processor has to be downloaded before it can be loaded into a pipeline.
@@ -78,26 +78,32 @@ Note that the model of a processor has to be downloaded before it can be loaded 
 
 By default, all languages are shipped with a `default` package, which will be downloaded and loaded when no package name is specified. However, you can tell Stanza to download or load a specific package with the optional `package` option. For example, we can download and load the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md) trained on the `GSD` dataset for German with:
 ```python
->>> stanza.download('de', processors='tokenize,mwt', package='gsd')
->>> nlp = stanza.Pipeline('de', processors='tokenize,mwt', package='gsd')
+stanza.download('de', processors='tokenize,mwt', package='gsd')
+nlp = stanza.Pipeline('de', processors='tokenize,mwt', package='gsd')
 ```
 
 In some cases, you may want to use a specific package for one processor, but remain `default` for the rest of the processors. This can be done with a dictionary-based `processors` argument. This example shows how to download and load the [NERProcessor](ner.md) trained on the Dutch `CoNLL02` dataset, but use `default` package for all other processors for Dutch:
 ```python
->>> stanza.download('nl', processors={'ner': 'conll02'})
->>> nlp = stanza.Pipeline('nl', processors={'ner': 'conll02'})
+stanza.download('nl', processors={'ner': 'conll02'})
+nlp = stanza.Pipeline('nl', processors={'ner': 'conll02'})
 ```
 
 Similarly, the following example shows how to use the [NERProcessor](ner.md) trained on the `WikiNER` dataset, while use models trained on the `lassysmall` dataset for all other processors for Dutch:
 ```python
->>> stanza.download('nl', processors={'ner': 'wikiner'}, package='lassysmall')
->>> nlp = stanza.Pipeline('nl', processors={'ner': 'wikiner'}, package='lassysmall')
+stanza.download('nl', processors={'ner': 'wikiner'}, package='lassysmall')
+nlp = stanza.Pipeline('nl', processors={'ner': 'wikiner'}, package='lassysmall')
 ```
 
 Rarely, you may want to have full control over package names for all processors, instead of relying on the `default` package at all. This can be enabled by setting `package=None`. The following example shows how to use a `GSD` [TokenizeProcessor](tokenize.md), a `HDT` [POSProcessor](pos.md), and a `CoNLL03` [NERProcessor](ner.md), and a `default` [LemmaProcessor](lemma.md) for German:
 ```python
->>> stanza.download('de', processors={'tokenize': 'gsd', 'pos': 'hdt', 'ner': 'conll03', 'lemma': 'default'}, package=None)
->>> nlp = stanza.Pipeline('de', processors={'tokenize': 'gsd', 'pos': 'hdt', 'ner': 'conll03', 'lemma': 'default'}, package=None)
+processor_dict = {
+    'tokenize': 'gsd', 
+    'pos': 'hdt', 
+    'ner': 'conll03', 
+    'lemma': 'default'
+}
+stanza.download('de', processors=processor_dict, package=None)
+nlp = stanza.Pipeline('de', processors=processor_dict, package=None)
 ```
 
 {{ note }}
@@ -108,8 +114,8 @@ Rarely, you may want to have full control over package names for all processors,
 
 By default, the pipeline will print model loading info and processor-specific logs to the standard output stream. The level of logs printed can be specified with the `logging_level` argument. The following example shows how to download and load the English pipeline while printing only warnings and errors:
 ```python
->>> stanza.download('en', dir='.', logging_level='WARN')
->>> nlp = stanza.Pipeline('en', dir='.', logging_level='WARN')
+stanza.download('en', logging_level='WARN')
+nlp = stanza.Pipeline('en', logging_level='WARN')
 ```
 
 The pipeline interface also allows the use of a `verbose` option to quickly suppress all non-error logs when running the pipeline:
@@ -130,7 +136,7 @@ nlp = stanza.Pipeline('en', use_gpu=False)
 Annotating text is simple after a [Pipeline](pipeline.md#pipeline) is built and finishes loading: you can simply pass the text to the pipeline instance and access all annotations from the returned [Document](data_objects#document) object:
 
 ```python
->>> doc = nlp('Barack Obama was born in Hawaii.')
+doc = nlp('Barack Obama was born in Hawaii.')
 ```
 
 Within a [Document](data_objects#document), annotations are further stored in [Sentence](data_objects#sentence)s, [Token](data_objects#token)s, [Word](data_objects#word)s in a top-down fashion. An additional [Span](data_objects#span) object may be used to store annotations such as named entity mentions. Here we provide some simple examples to manipulate the returned annotations.
