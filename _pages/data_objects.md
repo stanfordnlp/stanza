@@ -61,7 +61,7 @@ A [`Token`](data_objects.md#token) object holds a token, and a list of its under
 
 | Property | Type | Description |
 | --- | --- | --- |
-| id | `str` | The index of this token in the sentence, 1-based. This index is a span representation (e.g., `"1-2"`) when the corresponding token is a multi-word token. |
+| id | `Tuple[int]` | The index of this token in the sentence, 1-based. This index contains two elements (e.g., `(1, 2)`) when the corresponding token is a multi-word token, otherwise it contains just a single element (e.g., `(1, )`). |
 | text | `str` | The text of this token. Example: 'The'. |
 | misc | `str` | Miscellaneous annotations with regard to this token. Used in the pipeline to store whether a token is a multi-word token, for instance. |
 | words | `List[Word]` | The list of syntactic words underlying this token. |
@@ -84,7 +84,7 @@ A [`Word`](data_objects.md#word) object holds a syntactic word and all of its wo
 
 | Property | Type | Description |
 | --- | --- | --- |
-| id | `str` | The index of this word in the sentence, 1-based (index 0 is reserved for an artificial symbol that represents the root of the syntactic tree). |
+| id | `int` | The index of this word in the sentence, 1-based (index 0 is reserved for an artificial symbol that represents the root of the syntactic tree). |
 | text | `str` | The text of this word. Example: 'The'. |
 | lemma | `str` | The lemma of this word. |
 | upos (pos) | `str` | The universal part-of-speech of this word. Example: 'NOUN'. |
