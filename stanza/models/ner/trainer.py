@@ -32,18 +32,18 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain_emb_matrix=None, model_file=None, use_cuda=False,
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
                  train_classifier_only=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file, args)
         else:
-            assert all(var is not None for var in [args, vocab, pretrain_emb_matrix])
+            assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain_emb_matrix)
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb)
 
         if train_classifier_only:
             logger.info('Disabling gradient for non-classifier layers')
