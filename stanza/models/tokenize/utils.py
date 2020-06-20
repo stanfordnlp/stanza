@@ -43,7 +43,7 @@ def process_sentence(sentence, mwt_dict=None):
             sent.append({ID: (i+1, i+len(expansion)), TEXT: tok})
             if infostr is not None: sent[-1][MISC] = infostr
             for etok in expansion:
-                sent.append({ID: i+1, TEXT: etok})
+                sent.append({ID: (i+1, ), TEXT: etok})
                 i += 1
         else:
             if len(tok) <= 0:
