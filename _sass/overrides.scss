@@ -56,6 +56,13 @@ blockquote.citation {
     }
 }
 
+.code-output{
+    &::before {
+        @extend .text-delta;
+        content: "Output";
+    }
+}
+
 @media(max-width:800px){
     body {
         padding-bottom: 5rem;

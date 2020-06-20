@@ -36,7 +36,7 @@ Here we are going to run CoreNLP annotation on some example sentences. We start 
 ```python
 text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
 with CoreNLPClient(
-        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse','coref'], 
+        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse','coref'],
         timeout=30000,
         memory='16G') as client:
     ann = client.annotate(text)
@@ -46,41 +46,113 @@ The CoreNLP server will be automatically started in the background upon the inst
 
 ### Accessing basic annotation results
 
-The following code shows how to manipulate the returned annotation object such that the sentences, tokens and various annotations can be accessed:
+The returned annotation object contains various annotations for sentences, tokens, and the entire document that can be accessed as native Python objects. For instance, the following code shows how to access various syntactic information of the first sentence in the piece of text in our example above:
 
 ```python
-    # get the first sentence
-    sentence = ann.sentence[0]
+# get the first sentence
+sentence = ann.sentence[0]
 
-    # get the constituency parse of the first sentence
-    constituency_parse = sentence.parseTree
-    print(constituency_parse)
-
-    # get the first subtree of the constituency parse and its value
-    print(constituency_parse.child[0])
-    print(constituency_parse.child[0].value)
-    
-    # get the dependency parse of the first sentence
-    dependency_parse = sentence.basicDependencies
-    print(dependency_parse)
-
-    # get an entity mention from the first sentence
-    print(sentence.mentions[0])
-
-    # get the first token of the first sentence
-    token = sentence.token[0]
-    print(token)
-
-    # get the part-of-speech tag
-    token.pos
-    print(token.pos)
-
-    # get the named entity tag
-    print(token.ner)
-
-    # access the coref chain in the input text
-    print(ann.corefChain)
+# get the constituency parse of the first sentence
+constituency_parse = sentence.parseTree
+print(constituency_parse)
 ```
+
+This prints the constituency parse of the sentence, where the first child and its value can be accessed through `constituency_parse.child[0]` and `constituency_parse.child[0].value`, respectively
+
+```
+child {
+  child {
+    child {
+      child {
+        value: "Chris"
+      }
+      value: "NNP"
+      score: -9.281864166259766
+    }
+    ...
+  }
+  ...
+  value: "S"
+  score: -50.052059173583984
+}
+value: "ROOT"
+score: -50.20326614379883
+```
+{: .code-output }
+
+Similarly, we can access the dependency parse of the first sentence as follows
+
+```python
+print(sentence.basicDependencies)
+```
+which prints output like the following
+
+```
+node {
+  sentenceIndex: 0
+  index: 1
+}
+...
+edge {
+  source: 2
+  target: 1
+  dep: "compound"
+  isExtra: false
+  sourceCopy: 0
+  targetCopy: 0
+  language: UniversalEnglish
+}
+...
+root: 6
+```
+{: .code-output }
+
+Here is an example to access token information, where we inspect the textual value of the token, its part-of-speech tag and named entity tag
+
+```python
+# get the first token of the first sentence
+token = sentence.token[0]
+print(token.value, token.pos, token.ner)
+```
+```
+Chris NNP PERSON
+```
+{: .code-output }
+
+
+Last but not least, we can examine the entity mentions in the first sentence and the coreference chain in the input text as follows
+
+```python
+# get an entity mention from the first sentence
+print(sentence.mentions[0].entityMentionText)
+
+# access the coref chain in the input text
+print(ann.corefChain)
+```
+This gives us the mention text of the first entity mention in the first sentence, as well as a coref chain between entity mentions in the original text (the three mentions are "Chris Manning", "Chris", and "He", respectively, where CoreNLP has identified "Chris Manning" as the canonical mention of the cluster)
+```
+Chris Manning
+[
+mention {
+  mentionID: 0
+  mentionType: "PROPER"
+  ...
+}
+mention {
+  mentionID: 2
+  mentionType: "PROPER"
+  ...
+}
+mention {
+  mentionID: 5
+  mentionType: "PRONOMINAL"
+  ...
+}
+representative: 0
+...
+]
+```
+{: .code-output}
 
 ### Using Tokensregex, Semgrex and Tregex with the client
 
@@ -89,10 +161,10 @@ Separate client functions are provided to run [Tokensregex](https://nlp.stanford
 ```python
 text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
 with CoreNLPClient(
-        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse'], 
+        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse'],
         timeout=30000,
         memory='16G') as client:
-    
+
     # Use tokensregex patterns to find who wrote a sentence.
     pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
     matches = client.tokensregex(text, pattern)
