@@ -16,7 +16,6 @@ import numpy as np
 import random
 import json
 import torch
-from stanza.models.ner.vocab import TagVocab
 from torch import nn, optim
 
 from stanza.models.ner.data import DataLoader
