@@ -12,13 +12,13 @@ In this section, we introduce how to customize the client options such that you 
 
 ## Switching Language
 
-Stanza by default starts an English CoreNLP pipeline when a client is initialized. Switching to a different language can be done by setting a simple `properties` argument when the client is initialized. The following example shows how to start a client with default French models:
+Stanza by default starts an English CoreNLP pipeline when a client is initialized. You can switch to a different language by setting a simple `properties` argument when the client is initialized. The following example shows how to start a client with default French models:
 
 ```python
 with CoreNLPClient(properties='french') as client:
 ```
 
-Alternatively, you can also use a shorthand name for a language:
+Alternatively, you can also use the [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) for a language:
 ```python
 with CoreNLPClient(properties='fr') as client:
 ```
@@ -54,7 +54,7 @@ As introduced above, this option allows quick switch between languages, and a de
 - Using a Python dictionary
 ```python
 with CoreNLPClient(properties={
-        'annotators': 'tokenize,ssplit,pos', 
+        'annotators': 'tokenize,ssplit,pos',
         'pos.model': '/path/to/custom-model.ser.gz'
     }) as client:
 ```
@@ -69,7 +69,7 @@ This option allows the finest level of control over what annotators and models a
 
 ## Commonly-used CoreNLP Client Options
 
-Using customized `properties` is the most common way that you want to customize your CoreNLP server. However, sometimes you may want to have even more control on different aspects of your client-server, such as the port that the client uses to communicate with the server, the output format from the server, or the memory that you want to allocate to your server.
+Using customized `properties` is the most common way to customize your CoreNLP server. However, sometimes you may want to have even more control on different aspects of your client-server, such as the port that the client uses to communicate with the server, the output format from the server, or the memory that you want to allocate to your server.
 
 Here we provide a list of commonly-used arguments that you can initialize your `CoreNLPClient` with, along with their default values and descriptions:
 
@@ -94,7 +94,7 @@ Here is a quick example that specifies a list of annotators to load, allocates 8
 
 ```python
 with CoreNLPClient(
-    annotators='tokenize,ssplit,pos,lemma,ner', 
+    annotators='tokenize,ssplit,pos,lemma,ner',
     output_format='text',
     memory='8G',
     be_quiet=False) as client:
@@ -124,7 +124,7 @@ Apart from the above options, there are some very advanced settings that you may
 | password | The password component of a username/password basic auth credential |
 | blacklist | a list of IPv4 addresses to ban from using the server |
 
-You can also find more documention for the server's start up options [on the CoreNLP Server website](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html) 
+You can also find more documention for the server's start up options on [the CoreNLP Server website](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html).
 
 Here we highlight two common use cases on why you may need these options.
 

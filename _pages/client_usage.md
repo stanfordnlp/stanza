@@ -156,7 +156,7 @@ representative: 0
 
 ## Using Tokensregex, Semgrex and Tregex with the client
 
-Separate client functions are provided to run [Tokensregex](https://nlp.stanford.edu/software/tokensregex.html), [Semgrex](https://nlp.stanford.edu/software/tregex.html), Tregex pattern matching with the CoreNLP client. The following example shows how to start a new client and use these three pattern matching functions:
+Separate client functions are provided to run [Tokensregex](https://nlp.stanford.edu/software/tokensregex.html), [Semgrex](https://nlp.stanford.edu/software/tregex.html), Tregex pattern matching with the CoreNLP client. The following example shows how to start a new client and use TokensRegex to find patterns in text:
 
 ```python
 text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
@@ -169,28 +169,38 @@ with CoreNLPClient(
     pattern = '([ner: PERSON]+) /wrote/ /an?/ []{0,3} /sentence|article/'
     matches = client.tokensregex(text, pattern)
     # sentences contains a list with matches for each sentence.
-    assert len(matches["sentences"]) == 3
+    print(len(matches["sentences"])) # prints: 3
     # length tells you whether or not there are any matches in this
-    assert matches["sentences"][1]["length"] == 1
+    print(matches["sentences"][1]["length"]) # prints: 1
     # You can access matches like most regex groups.
-    matches["sentences"][1]["0"]["text"] == "Chris wrote a simple sentence"
-    matches["sentences"][1]["0"]["1"]["text"] == "Chris"
+    print(matches["sentences"][1]["0"]["text"]) # prints: "Chris wrote a simple sentence"
+    print(matches["sentences"][1]["0"]["1"]["text"]) # prints: "Chris"
+```
+
+Aside from surface level patterns, the `CoreNLPClient` also allows you to use CoreNLP to extract patterns in syntactic structures. Here is an example shows how to use Semgrex and Tregex on the same piece of text:
+
+```python
+text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
+with CoreNLPClient(
+        annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse'],
+        timeout=30000,
+        memory='16G') as client:
 
     # Use semgrex patterns to directly find who wrote what.
     pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
     matches = client.semgrex(text, pattern)
     # sentences contains a list with matches for each sentence.
-    assert len(matches["sentences"]) == 3
+    print(len(matches["sentences"])) # prints: 3
     # length tells you whether or not there are any matches in this
-    assert matches["sentences"][1]["length"] == 1
+    print(matches["sentences"][1]["length"]) # prints: 1
     # You can access matches like most regex groups.
-    matches["sentences"][1]["0"]["text"] == "wrote"
-    matches["sentences"][1]["0"]["$subject"]["text"] == "Chris"
-    matches["sentences"][1]["0"]["$object"]["text"] == "sentence"
+    print(matches["sentences"][1]["0"]["text"]) # prints: "wrote"
+    print(matches["sentences"][1]["0"]["$subject"]["text"]) # prints: "Chris"
+    print(matches["sentences"][1]["0"]["$object"]["text"]) # prints: "sentence"
 
     # Tregex example
     pattern = 'NP'
     matches = client.tregex(text, pattern)
-    for match in matches:
-        print(matches)
+    # You can access matches similarly
+    print(matches['sentences'][1]['1']['match']) # prints: "(NP (DT a) (JJ simple) (NN sentence))\n"
 ```
