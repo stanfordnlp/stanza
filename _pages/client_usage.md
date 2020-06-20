@@ -21,7 +21,7 @@ the server is properly shut down when your Python application finishes." | markd
 {{end}}
 
 
-### Importing the client
+## Importing the client
 
 Importing the client from Stanza is as simple as a one-liner:
 
@@ -29,7 +29,7 @@ Importing the client from Stanza is as simple as a one-liner:
 from stanza.server import CoreNLPClient
 ```
 
-### Starting a client-server communication and running annotation
+## Starting a client-server communication and running annotation
 
 Here we are going to run CoreNLP annotation on some example sentences. We start by first instantiating a `CoreNLPClient` object, and then pass the text into the client with the `annotate` function. Note that here we use the recommended Python `with` statement to start the client, which can make sure that the client and server are properly closed after the annotation:
 
@@ -44,7 +44,7 @@ with CoreNLPClient(
 
 The CoreNLP server will be automatically started in the background upon the instantiation of the client, so normally you don't need to worry about it.
 
-### Accessing basic annotation results
+## Accessing basic annotation results
 
 The returned annotation object contains various annotations for sentences, tokens, and the entire document that can be accessed as native Python objects. For instance, the following code shows how to access various syntactic information of the first sentence in the piece of text in our example above:
 
@@ -154,7 +154,7 @@ representative: 0
 ```
 {: .code-output}
 
-### Using Tokensregex, Semgrex and Tregex with the client
+## Using Tokensregex, Semgrex and Tregex with the client
 
 Separate client functions are provided to run [Tokensregex](https://nlp.stanford.edu/software/tokensregex.html), [Semgrex](https://nlp.stanford.edu/software/tregex.html), Tregex pattern matching with the CoreNLP client. The following example shows how to start a new client and use these three pattern matching functions:
 
