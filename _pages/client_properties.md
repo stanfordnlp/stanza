@@ -64,14 +64,14 @@ This option allows you to override the default models used by the server, by pro
 ```python
 with CoreNLPClient(properties='/path/to/server.props') as client:
 ```
-This option allows the finest levels of control over what annotators and models are going to be used in the server. For details on how to write a property file, please see [the instructions on configuring CoreNLP property files](https://stanfordnlp.github.io/CoreNLP/cmdline.html#configuring-corenlp-properties).
+This option allows the finest level of control over what annotators and models are going to be used in the server. For details on how to write a property file, please see the [instructions on configuring CoreNLP property files](https://stanfordnlp.github.io/CoreNLP/cmdline.html#configuring-corenlp-properties).
 
 
 ## Commonly-used CoreNLP Client Options
 
-Using customized `properties` is the most common way that you want to customize your CoreNLP server. However, sometimes you may want to have even more control on different aspects of the client, such as the port that it uses to communicate with the server, the output format from the server, or the memory that you want to allocate to your server.
+Using customized `properties` is the most common way that you want to customize your CoreNLP server. However, sometimes you may want to have even more control on different aspects of your client-server, such as the port that the client uses to communicate with the server, the output format from the server, or the memory that you want to allocate to your server.
 
-Here we provide a list of commonly-used arguments that you can initialize your `CoreNLPClient` with, along with their descriptions:
+Here we provide a list of commonly-used arguments that you can initialize your `CoreNLPClient` with, along with their default values and descriptions:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -90,7 +90,7 @@ Here we provide a list of commonly-used arguments that you can initialize your `
 | max_char_length | int | 100000 | The max number of characters that will be accepted and processed by the CoreNLP server in a single request. |
 | preload | bool | True | Load the annotators immediately upon server start; otherwise the annotators will be lazily loaded upon the first annotation request is made. |
 
-Here is a quick example that specifies a list of annotators to load, 8G of memory allocated to the server, using plain text output format, and printing detailed error logs during annotation:
+Here is a quick example that specifies a list of annotators to load, allocates 8G of memory to the server, uses plain text output format, and requests the server to print detailed error logs during annotation:
 
 ```python
 with CoreNLPClient(
@@ -102,7 +102,7 @@ with CoreNLPClient(
 
 ### Using a CoreNLP server on a remote machine
 
-With the endpoint option, you can even connect a remote CoreNLP server running in a different machine:
+With the endpoint option, you can even connect to a remote CoreNLP server running in a different machine:
 ```python
 with CoreNLPClient(endpoint='http://remote-server-address:9000') as client:
 ```
@@ -131,7 +131,7 @@ Here we highlight two common use cases on why you may need these options.
 ### Changing server ID when using multiple CoreNLP servers on a machine
 
 When a CoreNLP server is started, it will write a special shutdown key file to the local disk, to indicate its running status.
-This will create an issue when multiple server needs to be run simultaneously on a single machine, since a second server won't be able to write and delete its own shutdown key file.
+This will create an issue when multiple servers need to be run simultaneously on a single machine, since a second server won't be able to write and delete its own shutdown key file.
 This is easily solvable by giving a special server ID to the second server instance, when the client is initialized:
 ```python
 with CoreNLPClient(server_id='second-server-name') as client:
@@ -151,11 +151,11 @@ ann = client.annotate(text, username='myusername', password='1234')
 
 Easy, right?
 
-## Changing Properties for Each Annotation Request
+## Dynamically Changing Properties for Each Annotation Request
 
 Properties for the CoreNLP pipeline run on text can be set for each particular annotation request.
-If properties is set for a particular request, the server's initialization properties will be overridden.
-This allows you to dynamically change your annotation need, without needing to start a client-server from scratch.
+If properties are set for a particular request, the server's initialization properties will be overridden.
+This allows you to dynamically change your annotation need, without needing to start a new client-server from scratch.
 
 Request-level properties can be registered with Stanza's `CoreNLPClient` to maximize efficiency.
 Upon registration, the client will maintain a `properties_cache` to map keys to particular property settings.
