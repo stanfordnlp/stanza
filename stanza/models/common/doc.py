@@ -460,8 +460,6 @@ class Sentence(StanzaObject):
             else:
                 # id is index in words list + 1
                 head = self.words[word.head - 1]
-                if word.head != head.id:
-                    import pdb; pdb.set_trace()
                 assert(word.head == head.id)
             self.dependencies.append((head, word.deprel, word))
 
