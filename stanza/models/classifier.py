@@ -259,6 +259,34 @@ def confusion_to_accuracy(confusion):
                 total = total + confusion[l1][l2]
     return correct, (correct + total)
 
+def confusion_to_macro_f1(confusion):
+    """
+    Return the macro f1 for a confusion matrix.
+    """
+    keys = set()
+    for k in confusion.keys():
+        keys.add(k)
+        for k2 in confusion.get(k).keys():
+            keys.add(k2)
+
+    sum_f1 = 0
+    for k in keys:
+        tp = 0
+        fn = 0
+        fp = 0
+        for k2 in keys:
+            if k == k2:
+                tp = confusion[k][k]
+            else:
+                fn = fn + confusion.get(k, {}).get(k2, 0)
+                fp = fp + confusion.get(k2, {}).get(k, 0)
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        f1 = 2 * (precision * recall) / (precision + recall)
+        sum_f1 = sum_f1 + f1
+
+    return sum_f1 / len(keys)
+
 
 def format_confusion(confusion, labels, hide_zeroes=False):
     """
@@ -527,6 +555,7 @@ def main():
         confusion = confusion_dataset(model, test_set)
         logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
         correct, total = confusion_to_accuracy(confusion)
+        logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion)))
     else:
         correct = score_dataset(model, test_set,
                                 remap_labels=args.test_remap_labels,
