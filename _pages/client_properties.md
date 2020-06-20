@@ -12,7 +12,7 @@ In this section, we introduce how to customize the client options such that you 
 
 ## Switching Language
 
-Stanza by default starts an English CoreNLP pipeline when a client is initialized. Switching to a different language can be done by setting a simple `properties` argument when the client is intialized. The following example shows how to start a client with default French models:
+Stanza by default starts an English CoreNLP pipeline when a client is initialized. Switching to a different language can be done by setting a simple `properties` argument when the client is initialized. The following example shows how to start a client with default French models:
 
 ```python
 with CoreNLPClient(properties='french') as client:
