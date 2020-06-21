@@ -13,6 +13,7 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
+from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.common.pretrain import Pretrain
 
 import stanza.models.classifiers.classifier_args as classifier_args
@@ -186,6 +187,16 @@ def dataset_labels(dataset):
     else:
         labels = sorted(list(labels))
     return labels
+
+def dataset_vocab(dataset):
+    vocab = set()
+    for line in dataset:
+        for word in line[1]:
+            vocab.add(word)
+    vocab = [PAD, UNK] + list(vocab)
+    if vocab[PAD_ID] != PAD or vocab[UNK_ID] != UNK:
+        raise ValueError("Unexpected values for PAD and UNK!")
+    return vocab
 
 def sort_dataset_by_len(dataset):
     """
@@ -524,7 +535,8 @@ def main():
     else:
         assert train_set is not None
         labels = dataset_labels(train_set)
-        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, labels, args)
+        extra_vocab = dataset_vocab(train_set)
+        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, extra_vocab, labels, args)
 
     if args.cuda:
         model.cuda()

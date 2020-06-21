@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.classifier_args as classifier_args
-from stanza.models.common.vocab import PAD_ID
+from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
 The CNN classifier is based on Yoon Kim's work:
@@ -36,7 +36,7 @@ help, but dev performance went down for each variation of
 logger = logging.getLogger('stanza')
 
 class CNNClassifier(nn.Module):
-    def __init__(self, emb_matrix, vocab, labels, args):
+    def __init__(self, emb_matrix, vocab, extra_vocab, labels, args):
         """
         emb_matrix is a giant matrix of the pretrained embeddings
 
@@ -52,16 +52,12 @@ class CNNClassifier(nn.Module):
                                       dropout = args.dropout,
                                       num_classes = len(labels),
                                       wordvec_type = args.wordvec_type,
+                                      extra_wordvec_method = args.extra_wordvec_method,
+                                      extra_wordvec_dim = args.extra_wordvec_dim,
                                       model_type = 'CNNClassifier')
 
         self.unsaved_modules = []
 
-        # TODO: make retraining vectors an option
-        #   - note: this would greatly increase the size of the models
-        #           we could make that an optional improvement, though
-        #   - another alternative: make a set of delta vectors, possibly of
-        #     lower dimension.  won't make the models too much bigger
-        # TODO: freeze everything except pad & unk as an option
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
@@ -74,11 +70,43 @@ class CNNClassifier(nn.Module):
 
         self.vocab_map = { word: i for i, word in enumerate(vocab) }
 
+        if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
+            if not extra_vocab:
+                raise ValueError("Should have had extra_vocab set for extra_wordvec_method {}".format(self.config.extra_wordvec_method))
+            if not args.extra_wordvec_dim:
+                self.config.extra_wordvec_dim = self.embedding_dim
+            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+                if self.config.extra_wordvec_dim != self.embedding_dim:
+                    raise ValueError("extra_wordvec_dim must equal embedding_dim for {}".format(self.config.extra_wordvec_method))
+
+            self.extra_vocab = list(extra_vocab)
+            self.extra_vocab_map = { word: i for i, word in enumerate(self.extra_vocab) }
+            # TODO: experiment with smaller norm vectors to make the
+            # delta a bit less drastic in its effect
+            self.extra_embedding = nn.Embedding(num_embeddings = len(extra_vocab),
+                                                embedding_dim = self.config.extra_wordvec_dim,
+                                                padding_idx = 0)
+            logger.info("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
+        else:
+            self.extra_vocab = None
+            self.extra_vocab_map = None
+            self.config.extra_wordvec_dim = 0
+            self.extra_embedding = None
+
         # Pytorch is "aware" of the existence of the nn.Modules inside
         # an nn.ModuleList in terms of parameters() etc
+        if self.config.extra_wordvec_method is classifier_args.ExtraVectors.NONE:
+            total_embedding_dim = self.embedding_dim
+        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            total_embedding_dim = self.embedding_dim
+        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+            total_embedding_dim = self.embedding_dim + self.config.extra_wordvec_dim
+        else:
+            raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
+
         self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
                                                     out_channels=self.config.filter_channels,
-                                                    kernel_size=(filter_size, self.embedding_dim))
+                                                    kernel_size=(filter_size, total_embedding_dim))
                                           for filter_size in self.config.filter_sizes])
 
         previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
@@ -111,18 +139,21 @@ class CNNClassifier(nn.Module):
 
         batch_indices = []
         batch_unknowns = []
+        extra_batch_indices = []
+        extra_batch_unknowns = []
         for phrase in inputs:
             # TODO: random is good for train mode.  try something else at test time?
             begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
             sentence_indices = []
             sentence_unknowns = []
+            extra_sentence_indices = []
+            extra_sentence_unknowns = []
             for i in range(begin_pad_width):
                 sentence_indices.append(PAD_ID)
+                extra_sentence_indices.append(PAD_ID)
 
             for word in phrase:
-                # our current word vectors are all entirely lowercased
-                word = word.lower()
                 if word in self.vocab_map:
                     sentence_indices.append(self.vocab_map[word])
                     continue
@@ -143,11 +174,23 @@ class CNNClassifier(nn.Module):
                 # TODO: split UNK based on part of speech?  might be an interesting experiment
                 sentence_unknowns.append(len(sentence_indices))
                 sentence_indices.append(PAD_ID)
+            if self.extra_vocab:
+                for word in phrase:
+                    if word in self.extra_vocab_map:
+                        if self.training and random.random() < 0.01:
+                            extra_sentence_indices.append(UNK_ID)
+                        else:
+                            extra_sentence_indices.append(self.extra_vocab_map[word])
+                    else:
+                        extra_sentence_indices.append(UNK_ID)
+
             for i in range(end_pad_width):
                 sentence_indices.append(PAD_ID)
+                extra_sentence_indices.append(PAD_ID)
 
             batch_indices.append(sentence_indices)
             batch_unknowns.append(sentence_unknowns)
+            extra_batch_indices.append(extra_sentence_indices)
 
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
@@ -167,6 +210,15 @@ class CNNClassifier(nn.Module):
         for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
             for unknown in sentence_unknowns:
                 input_vectors[phrase_num, unknown, :] = self.unk
+        if self.extra_vocab:
+            extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
+            extra_input_vectors = self.extra_embedding(extra_batch_indices)
+            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+                input_vectors = torch.cat([input_vectors, extra_input_vectors], dim=2)
+            elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+                input_vectors = input_vectors + extra_input_vectors
+            else:
+                raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
 
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
@@ -197,6 +249,7 @@ def save(filename, model, skip_modules=True):
         'model': model_state,
         'config': model.config,
         'labels': model.labels,
+        'extra_vocab': model.extra_vocab,
     }
     try:
         torch.save(params, filename)
@@ -216,7 +269,9 @@ def load(filename, pretrain):
 
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
     if model_type == 'CNNClassifier':
+        extra_vocab = checkpoint.get('extra_vocab', None)
         model = CNNClassifier(pretrain.emb, pretrain.vocab,
+                              extra_vocab,
                               checkpoint['labels'],
                               checkpoint['config'])
     else:
@@ -242,6 +297,8 @@ def update_text(sentence, wordvec_type):
     sentence = sentence.replace("-", " ")
     sentence = sentence.replace("/", " ")
     sentence = sentence.split()
+    # our current word vectors are all entirely lowercased
+    sentence = [word.lower() for word in sentence]
     if wordvec_type == classifier_args.WVType.WORD2VEC:
         return sentence
     elif wordvec_type == classifier_args.WVType.GOOGLE:
