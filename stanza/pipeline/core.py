@@ -22,7 +22,7 @@ from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resource.resources import DEFAULT_MODEL_DIR, \
+from stanza.resources.common import DEFAULT_MODEL_DIR, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 

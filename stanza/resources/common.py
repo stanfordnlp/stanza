@@ -1,5 +1,5 @@
 """
-utilities for getting resources
+Common utilities for Stanza resources.
 """
 
 import os

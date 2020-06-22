@@ -7,7 +7,7 @@ import logging
 import zipfile
 import shutil
 
-from stanza.resource.resources import HOME_DIR, request_file, unzip, set_logging_level
+from stanza.resources.common import HOME_DIR, request_file, unzip, set_logging_level
 
 logger = logging.getLogger('stanza')
 

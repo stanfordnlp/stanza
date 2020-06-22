@@ -7,7 +7,7 @@ import argparse
 import os
 
 import stanza
-from stanza.resource.resources import DEFAULT_MODEL_DIR
+from stanza.resources.common import DEFAULT_MODEL_DIR
 
 
 if __name__ == '__main__':
