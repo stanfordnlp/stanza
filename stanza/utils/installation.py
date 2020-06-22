@@ -28,6 +28,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, logging_leve
             set up with environment variable $STANZA_CORENLP_DIR
         set_corenlp_home: whether to point $CORENLP_HOME to the new directory
             at the end of installation; default to be True
+        logging_level: logging level to use duing installation
     """
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
