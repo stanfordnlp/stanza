@@ -7,7 +7,8 @@ import logging
 import zipfile
 import shutil
 
-from stanza.resources.common import HOME_DIR, request_file, unzip, set_logging_level
+from stanza.resources.common import HOME_DIR, request_file, unzip_into, \
+    get_root_from_zipfile, set_logging_level
 
 logger = logging.getLogger('stanza')
 
@@ -67,23 +68,3 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, logging_leve
         os.environ[CORENLP_ENV_NAME] = dir
         logger.info(f"Set environement variable {CORENLP_ENV_NAME} = {dir}")
     logger.info("CoreNLP installation completes.")
-
-def unzip_into(filename, dest_dir):
-    """
-    Unzip a file into a destination folder.
-    """
-    logger.debug(f'Unzip {filename} into directory {dest_dir}...')
-    with zipfile.ZipFile(filename) as f:
-        f.extractall(dest_dir)
-
-def get_root_from_zipfile(filename):
-    """
-    Get the root directory from a archived zip file.
-    """
-    try:
-        zf = zipfile.ZipFile(filename, "r")
-    except:
-        raise Exception(f"Failed loading zip file at {filename}.")
-    assert len(zf.filelist) > 0, \
-        f"Zip file at f{filename} seems to be corrupted. Please check it."
-    return os.path.dirname(zf.filelist[0].filename)
