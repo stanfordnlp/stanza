@@ -37,7 +37,7 @@ Processors are units of the neural pipeline that perform specific NLP functions 
 | depparse | Depparse&shy;Processor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parsing analysis. |
 | ner | NER&shy;Processor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
 
-### Processor variants
+<!-- ### Processor variants
 
 New in v1.1
 {: .label .label-green }
@@ -122,7 +122,7 @@ Once registered, you can use this processor in the pipeline as if it were one of
 nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,lowercase')
 ```
 
-and in this case the processor will lowercase all text in the document.
+and in this case the processor will lowercase all text in the document. -->
 
 ## Usage
 
