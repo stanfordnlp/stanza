@@ -29,7 +29,8 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     A automatic way to download the CoreNLP models.
 
     Args:
-        model: the name of the model, can be either 'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'
+        model: the name of the model, can be one of 'arabic', 'chinese', 'english',
+            'english-kbp', 'french', 'german', 'spanish'
         version: the version of the model
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
@@ -44,9 +45,15 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     logger.info(f"Downloading {model} models (version {version}) into directory {dir}...")
     model = model.strip().lower()
     if model not in AVAILABLE_MODELS:
-        raise KeyError(f'{model} is currently not supported. All the supported models: {list(AVAILABLE_MODELS)}.')
+        raise KeyError(
+            f'{model} is currently not supported. '
+            f'All the supported models: {list(AVAILABLE_MODELS)}.'
+        )
     try:
-        request_file(url + f'stanford-corenlp-{version}-models-{model}.jar', os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'))
+        request_file(
+            url + f'stanford-corenlp-{version}-models-{model}.jar',
+            os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
+        )
     except:
         raise Exception(
             "Downloading CoreNLP model file failed. "
@@ -102,5 +109,8 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
 
     # Warn user to set up env
     if dir != DEFAULT_CORENLP_DIR:
-        logger.warning(f"For customized downloading path, please set the `CORENLP_HOME` environment variable to the location of the folder: `export CORENLP_HOME={dir}`.")
+        logger.warning(
+            f"For customized installation location, please set the `CORENLP_HOME` "
+            f"environment variable to the location of the installation. "
+            f"In Unix, this is done with `export CORENLP_HOME={dir}`.")
 
