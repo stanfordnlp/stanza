@@ -8,6 +8,10 @@
     {% if page.description %}
       <meta name="Description" content="{{ page.description }}">
     {% endif %}
+
+    {% if page.keywords %}
+      <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %} {{page.keywords}}">
+    {% endif %}
   {% endif %}
 
   <link rel="shortcut icon" href="{{ 'favicon.ico' | absolute_url }}" type="image/x-icon">
