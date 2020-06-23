@@ -14,7 +14,7 @@ def test_install_corenlp():
     test_dir = "./test-corenlp-latest"
     # we do not reset the CORENLP_HOME variable since this may impact the 
     # client tests
-    stanza.install_corenlp(dir=test_dir, set_corenlp_home=False)
+    stanza.install_corenlp(dir=test_dir)
 
     assert os.path.isdir(test_dir), "Installation destination directory not found."
     jar_files = [f for f in os.listdir(test_dir) \
