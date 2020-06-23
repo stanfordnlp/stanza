@@ -1,7 +1,7 @@
 from stanza.pipeline.core import Pipeline
 from stanza.models.common.doc import Document
 from stanza.resources.common import download
-from stanza.resources.installation import install_corenlp
+from stanza.resources.installation import install_corenlp, download_corenlp_models
 from stanza._version import __version__, __resources_version__
 
 import logging
