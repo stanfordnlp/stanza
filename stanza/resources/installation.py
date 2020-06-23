@@ -23,16 +23,44 @@ DEFAULT_CORENLP_DIR = os.getenv(
 
 AVAILABLE_MODELS = set(['arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'])
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, model=None, model_version=None, logging_level='INFO'):
+
+def download_corenlp_models(model, model_version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
+    """
+    A automatic way to download the CoreNLP models.
+
+    Args:
+        model: the name of the model, can be either 'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'
+        model_version: the version of the model
+        dir: the directory to download CoreNLP model into; alternatively can be
+            set up with environment variable $CORENLP_HOME
+        url: the link to download CoreNLP models
+        logging_level: logging level to use duing installation
+    """
+    if model is None or model_version is None:
+        raise Exception(
+            "Both model and model version should be specified"
+        )
+    model = model.strip().lower()
+    if model not in AVAILABLE_MODELS:
+        raise KeyError(f'{model} is currently not supported. All the supported models: {list(AVAILABLE_MODELS)}.')
+    try:
+        request_file(url + f'stanford-corenlp-{model_version}-models-{model}.jar', os.path.join(dir, f'stanford-corenlp-{model_version}-models-{model}.jar'))
+    except:
+        raise Exception(
+            "Downloading CoreNLP model file failed. "
+            "Please try manual downloading: https://stanfordnlp.github.io/CoreNLP/."
+        )
+
+
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
 
     Args:
-        dir: the directory to install CoreNLP package into; alternatively can be
-            set up with environment variable $STANZA_CORENLP_DIR
-        set_corenlp_home: whether to point $CORENLP_HOME to the new directory
-            at the end of installation; default to be True
+        dir: the directory to download CoreNLP model into; alternatively can be
+            set up with environment variable $CORENLP_HOME
+        url: the link to download CoreNLP models
         logging_level: logging level to use duing installation
     """
     dir = os.path.expanduser(dir)
@@ -69,19 +97,6 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, model=None
     logger.debug("Removing downloaded zip file...")
     os.remove(os.path.join(dir, 'corenlp.zip'))
     shutil.rmtree(corenlp_dirname)
-
-    # Download model
-    if model is not None and model_version is not None:
-        model = model.strip().lower()
-        if model not in AVAILABLE_MODELS:
-            raise KeyError(f'{model} is currently not supported. All the supported models: {list(AVAILABLE_MODELS)}.')
-        try:
-            request_file(url + f'stanford-corenlp-{model_version}-models-{model}.jar', os.path.join(dir, f'stanford-corenlp-{model_version}-models-{model}.jar'))
-        except:
-            raise Exception(
-                "Downloading CoreNLP model file failed. "
-                "Please try manual downloading: https://stanfordnlp.github.io/CoreNLP/."
-            )
 
     # Warn user to set up env
     if dir != DEFAULT_CORENLP_DIR:
