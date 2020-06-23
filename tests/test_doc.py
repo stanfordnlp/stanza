@@ -8,11 +8,11 @@ pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 @pytest.fixture
 def sentences_dict():
-    return [[{ID: "1", TEXT: "unban"},
-             {ID: "2", TEXT: "mox"},
-             {ID: "3", TEXT: "opal"}],
-            [{ID: "4", TEXT: "ban"},
-             {ID: "5", TEXT: "Lurrus"}]]
+    return [[{ID: 1, TEXT: "unban"},
+             {ID: 2, TEXT: "mox"},
+             {ID: 3, TEXT: "opal"}],
+            [{ID: 4, TEXT: "ban"},
+             {ID: 5, TEXT: "Lurrus"}]]
 
 @pytest.fixture
 def doc(sentences_dict):

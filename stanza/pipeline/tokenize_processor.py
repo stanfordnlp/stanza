@@ -55,7 +55,7 @@ class TokenizeProcessor(UDProcessor):
         for sentence in sentences:
             sent = []
             for token_id, token in enumerate(sentence):
-                sent.append({doc.ID: str(token_id + 1), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
+                sent.append({doc.ID: (token_id + 1, ), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
                 idx += len(token) + 1
             document.append(sent)
         raw_text = ' '.join([' '.join(sentence) for sentence in sentences])

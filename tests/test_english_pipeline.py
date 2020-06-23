@@ -60,26 +60,26 @@ EN_DOC_WORDS_GOLD = """
 """.strip()
 
 EN_DOC_DEPENDENCY_PARSES_GOLD = """
-('Barack', '4', 'nsubj:pass')
-('Obama', '1', 'flat')
-('was', '4', 'aux:pass')
-('born', '0', 'root')
-('in', '6', 'case')
-('Hawaii', '4', 'obl')
-('.', '4', 'punct')
+('Barack', 4, 'nsubj:pass')
+('Obama', 1, 'flat')
+('was', 4, 'aux:pass')
+('born', 0, 'root')
+('in', 6, 'case')
+('Hawaii', 4, 'obl')
+('.', 4, 'punct')
 
-('He', '3', 'nsubj:pass')
-('was', '3', 'aux:pass')
-('elected', '0', 'root')
-('president', '3', 'xcomp')
-('in', '6', 'case')
-('2008', '3', 'obl')
-('.', '3', 'punct')
+('He', 3, 'nsubj:pass')
+('was', 3, 'aux:pass')
+('elected', 0, 'root')
+('president', 3, 'xcomp')
+('in', 6, 'case')
+('2008', 3, 'obl')
+('.', 3, 'punct')
 
-('Obama', '2', 'nsubj')
-('attended', '0', 'root')
-('Harvard', '2', 'obj')
-('.', '2', 'punct')
+('Obama', 2, 'nsubj')
+('attended', 0, 'root')
+('Harvard', 2, 'obj')
+('.', 2, 'punct')
 """.strip()
 
 EN_DOC_CONLLU_GOLD = """
@@ -117,7 +117,7 @@ def processed_doc():
 def test_text(processed_doc):
     assert processed_doc.text == EN_DOC
 
-    
+
 def test_conllu(processed_doc):
     assert CoNLL.conll_as_string(CoNLL.convert_dict(processed_doc.to_dict())) == EN_DOC_CONLLU_GOLD
 
