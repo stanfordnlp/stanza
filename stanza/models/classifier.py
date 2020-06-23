@@ -510,6 +510,16 @@ def load_pretrain(args):
     return pretrain
 
 
+def print_args(args):
+    """
+    For record keeping purposes, print out the arguments when training
+    """
+    args = vars(args)
+    keys = sorted(args.keys())
+    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
+    logger.info('ARGS USED AT TRAINGING TIME:\n%s\n' % '\n'.join(log_lines))
+
+
 def main():
     args = parse_args()
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -556,6 +566,8 @@ def main():
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
+        print_args(args)
+
         dev_set = read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s" % args.dev_file)
         check_labels(model.labels, dev_set)
