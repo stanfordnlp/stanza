@@ -1,5 +1,5 @@
 """
-utilities for getting resources
+Common utilities for Stanza resources.
 """
 
 import os
@@ -64,21 +64,48 @@ def build_default_config(resources, lang, dir, load_list):
     return default_config
 
 def ensure_dir(dir):
+    """
+    Create dir in case it does not exist.
+    """
     Path(dir).mkdir(parents=True, exist_ok=True)
 
 def get_md5(path):
+    """
+    Get the MD5 value of a path.
+    """
     data = open(path, 'rb').read()
     return hashlib.md5(data).hexdigest()
 
 def unzip(dir, filename):
+    """
+    Fully unzip a file `filename` that's in a directory `dir`.
+    """
     logger.debug(f'Unzip: {dir}/{filename}...')
     with zipfile.ZipFile(os.path.join(dir, filename)) as f:
         f.extractall(dir)
 
+def get_root_from_zipfile(filename):
+    """
+    Get the root directory from a archived zip file.
+    """
+    try:
+        zf = zipfile.ZipFile(filename, "r")
+    except:
+        raise Exception(f"Failed loading zip file at {filename}.")
+    assert len(zf.filelist) > 0, \
+        f"Zip file at f{filename} seems to be corrupted. Please check it."
+    return os.path.dirname(zf.filelist[0].filename)
+
 def file_exists(path, md5):
+    """
+    Check if the file at `path` exists and match the provided md5 value.
+    """
     return os.path.exists(path) and get_md5(path) == md5
 
 def download_file(url, path):
+    """
+    Download a URL into a file as specified by `path`.
+    """
     verbose = logger.level in [0, 10, 20]
     r = requests.get(url, stream=True)
     with open(path, 'wb') as f:
@@ -94,6 +121,10 @@ def download_file(url, path):
                     pbar.update(len(chunk))
 
 def request_file(url, path, md5=None):
+    """
+    A complete wrapper over download_file() that also make sure the directory of
+    `path` exists, and that a file matching the md5 value does not exist.
+    """
     ensure_dir(Path(path).parent)
     if file_exists(path, md5):
         logger.info(f'File exists: {path}.')
