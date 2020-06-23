@@ -13,8 +13,8 @@ from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
 from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
-from stanza.utils.jieba import JiebaTokenizer
-from stanza.utils.spacy import SpacyTokenizer
+from stanza.pipeline.external.jieba import JiebaTokenizer
+from stanza.pipeline.external.spacy import SpacyTokenizer
 
 logger = logging.getLogger('stanza')
 
