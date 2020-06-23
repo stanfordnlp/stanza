@@ -40,14 +40,14 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     dir = os.path.expanduser(dir)
     if model is None or version is None:
         raise Exception(
-            "Both model and model version should be specified"
+            "Both model and model version should be specified."
         )
     logger.info(f"Downloading {model} models (version {version}) into directory {dir}...")
     model = model.strip().lower()
     if model not in AVAILABLE_MODELS:
         raise KeyError(
             f'{model} is currently not supported. '
-            f'All the supported models: {list(AVAILABLE_MODELS)}.'
+            f'Must be one of: {list(AVAILABLE_MODELS)}.'
         )
     try:
         request_file(
@@ -75,7 +75,9 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
     if os.path.exists(dir):
-        logger.warn(f"{dir} is already existed. Please specify a new directory.")
+        logger.warn(
+            f"Directory {dir} already exists. "
+            f"Please install CoreNLP to a new directory.")
         return
 
     logger.info(f"Installing CoreNLP package into {dir}...")
@@ -90,7 +92,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
         )
 
     # Unzip corenlp into dir
-    logger.info("Unzipping downloaded zip file...")
+    logger.debug("Unzipping downloaded zip file...")
     unzip(dir, 'corenlp.zip')
 
     # By default CoreNLP will be unzipped into a version-dependent folder, 
