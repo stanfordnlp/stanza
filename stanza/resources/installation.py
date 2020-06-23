@@ -12,17 +12,16 @@ from stanza.resources.common import HOME_DIR, request_file, unzip, \
 
 logger = logging.getLogger('stanza')
 
-CORENLP_ENV_NAME = 'CORENLP_HOME'
 CORENLP_LATEST_URL = os.getenv(
-    'STANZA_CORENLP_LATEST_URL',
+    'CORENLP_URL',
     "http://nlp.stanford.edu/software/stanford-corenlp-latest.zip"
 )
 DEFAULT_CORENLP_DIR = os.getenv(
-    'STANZA_CORENLP_DIR',
+    'CORENLP_HOME',
     os.path.join(HOME_DIR, 'stanza_corenlp')
 )
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, url=CORENLP_LATEST_URL, logging_level='INFO'):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=CORENLP_LATEST_URL, logging_level='INFO'):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -36,6 +35,10 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, url=CORENLP_
     """
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
+    if os.path.exists(dir):
+        logger.warn(f"{dir} is already existed. Please specify a new directory.")
+        return
+
     logger.info(f"Installing CoreNLP package into {dir}...")
     # First download the URL package
     dest_file = os.path.join(dir, 'corenlp.zip')
@@ -66,8 +69,6 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, url=CORENLP_
     os.remove(dest_file)
     shutil.rmtree(corenlp_dirname)
 
-    # Set up env
-    if set_corenlp_home:
-        os.environ[CORENLP_ENV_NAME] = dir
-        logger.info(f"Set environement variable {CORENLP_ENV_NAME} = {dir}")
-    logger.info("CoreNLP installation completes.")
+    # Warn user to set up env
+    if dir != DEFAULT_CORENLP_DIR:
+        logger.warn(f"For customized downloading path, please set the `CORENLP_HOME` environment variable to the location of the folder: `export CORENLP_HOME={dir}`.")
