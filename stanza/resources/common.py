@@ -84,14 +84,6 @@ def unzip(dir, filename):
     with zipfile.ZipFile(os.path.join(dir, filename)) as f:
         f.extractall(dir)
 
-def unzip_into(filename, dest_dir):
-    """
-    Unzip a file into a destination folder.
-    """
-    logger.debug(f'Unzip {filename} into directory {dest_dir}...')
-    with zipfile.ZipFile(filename) as f:
-        f.extractall(dest_dir)
-
 def get_root_from_zipfile(filename):
     """
     Get the root directory from a archived zip file.

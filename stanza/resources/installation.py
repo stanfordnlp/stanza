@@ -7,19 +7,22 @@ import logging
 import zipfile
 import shutil
 
-from stanza.resources.common import HOME_DIR, request_file, unzip_into, \
+from stanza.resources.common import HOME_DIR, request_file, unzip, \
     get_root_from_zipfile, set_logging_level
 
 logger = logging.getLogger('stanza')
 
 CORENLP_ENV_NAME = 'CORENLP_HOME'
-CORENLP_LATEST_URL = "http://nlp.stanford.edu/software/stanford-corenlp-latest.zip"
+CORENLP_LATEST_URL = os.getenv(
+    'STANZA_CORENLP_LATEST_URL',
+    "http://nlp.stanford.edu/software/stanford-corenlp-latest.zip"
+)
 DEFAULT_CORENLP_DIR = os.getenv(
     'STANZA_CORENLP_DIR',
     os.path.join(HOME_DIR, 'stanza_corenlp')
 )
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, logging_level='INFO'):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, url=CORENLP_LATEST_URL, logging_level='INFO'):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -38,7 +41,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, logging_leve
     dest_file = os.path.join(dir, 'corenlp.zip')
     logger.debug(f"Download to destination file: {dest_file}")
     try:
-        request_file(CORENLP_LATEST_URL, dest_file)
+        request_file(url, dest_file)
     except:
         raise Exception(
             "Downloading CoreNLP zip file failed. "
@@ -47,7 +50,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, set_corenlp_home=True, logging_leve
 
     # Unzip corenlp into dir
     logger.info("Unzipping downloaded zip file...")
-    unzip_into(dest_file, dir)
+    unzip(dir, 'corenlp.zip')
 
     # By default CoreNLP will be unzipped into a version-dependent folder, 
     # e.g., stanford-corenlp-4.0.0. We need some hack around that and move
