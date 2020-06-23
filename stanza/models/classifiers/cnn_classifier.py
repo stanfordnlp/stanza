@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 from types import SimpleNamespace
 
 import numpy as np
