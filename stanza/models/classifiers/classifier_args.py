@@ -37,6 +37,7 @@ def add_pretrain_args(parser):
     parser.add_argument('--shorthand', type=str, default='en_ewt', help="Treebank shorthand, eg 'en' for English")
     parser.add_argument('--extra_wordvec_dim', type=int, default=0, help="Extra dim of word vectors - will be trained")
     parser.add_argument('--extra_wordvec_method', type=lambda x: ExtraVectors[x.upper()], default='none', help='How to train extra dimensions of word vectors, if at all')
+    parser.add_argument('--extra_wordvec_max_norm', type=float, default=None, help="Max norm for initializing the extra vectors")
 
 def add_device_args(parser):
     parser.add_argument('--cuda', action='store_true', help='Use CUDA for training/testing', default=torch.cuda.is_available())
