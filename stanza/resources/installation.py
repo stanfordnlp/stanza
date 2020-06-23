@@ -24,31 +24,33 @@ DEFAULT_CORENLP_DIR = os.getenv(
 AVAILABLE_MODELS = set(['arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'])
 
 
-def download_corenlp_models(model, model_version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
+def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
     """
     A automatic way to download the CoreNLP models.
 
     Args:
         model: the name of the model, can be either 'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'
-        model_version: the version of the model
+        version: the version of the model
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
         url: the link to download CoreNLP models
         logging_level: logging level to use duing installation
     """
-    if model is None or model_version is None:
+    dir = os.path.expanduser(dir)
+    if model is None or version is None:
         raise Exception(
             "Both model and model version should be specified"
         )
+    logger.info(f"Downloading {model} models (version {version}) into directory {dir}...")
     model = model.strip().lower()
     if model not in AVAILABLE_MODELS:
         raise KeyError(f'{model} is currently not supported. All the supported models: {list(AVAILABLE_MODELS)}.')
     try:
-        request_file(url + f'stanford-corenlp-{model_version}-models-{model}.jar', os.path.join(dir, f'stanford-corenlp-{model_version}-models-{model}.jar'))
+        request_file(url + f'stanford-corenlp-{version}-models-{model}.jar', os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'))
     except:
         raise Exception(
             "Downloading CoreNLP model file failed. "
-            "Please try manual downloading: https://stanfordnlp.github.io/CoreNLP/."
+            "Please try manual downloading at: https://stanfordnlp.github.io/CoreNLP/."
         )
 
 
@@ -100,5 +102,5 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
 
     # Warn user to set up env
     if dir != DEFAULT_CORENLP_DIR:
-        logger.warn(f"For customized downloading path, please set the `CORENLP_HOME` environment variable to the location of the folder: `export CORENLP_HOME={dir}`.")
+        logger.warning(f"For customized downloading path, please set the `CORENLP_HOME` environment variable to the location of the folder: `export CORENLP_HOME={dir}`.")
 

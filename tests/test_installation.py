@@ -26,3 +26,18 @@ def test_install_corenlp():
     
     # cleanup after test
     shutil.rmtree(test_dir)
+
+def test_download_corenlp_models():
+    test_dir = "./test-corenlp-latest"
+    model_name = "arabic"
+    version = "4.0.0"
+
+    stanza.download_corenlp_models(model=model_name, version=version, dir=test_dir)
+
+    dest_file = os.path.join(test_dir, \
+        f"stanford-corenlp-{version}-models-{model_name}.jar"
+    )
+    assert os.path.isfile(dest_file), "Downloaded model file not found."
+    
+    # cleanup after test
+    shutil.rmtree(test_dir)
