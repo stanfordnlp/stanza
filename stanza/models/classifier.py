@@ -13,6 +13,7 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
+from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.common.pretrain import Pretrain
 
 import stanza.models.classifiers.classifier_args as classifier_args
@@ -69,12 +70,15 @@ python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir exte
 
 To train models on combined 3 class datasets:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt,extern_data/sentiment/sst-processed/threeclass/extra-train-threeclass-phrases.txt,extern_data/sentiment/sst-processed/threeclass/checked-extra-threeclass-phrases.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
 
+This tests that model:
+
+python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt
 
 Here is an example for training a model in a different language:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k > de_sb10k.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k --min_train_len 3 > de_sb10k.out 2>&1 &
 
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext > zh_ren.out 2>&1 &
 """
@@ -184,6 +188,16 @@ def dataset_labels(dataset):
         labels = sorted(list(labels))
     return labels
 
+def dataset_vocab(dataset):
+    vocab = set()
+    for line in dataset:
+        for word in line[1]:
+            vocab.add(word)
+    vocab = [PAD, UNK] + list(vocab)
+    if vocab[PAD_ID] != PAD or vocab[UNK_ID] != UNK:
+        raise ValueError("Unexpected values for PAD and UNK!")
+    return vocab
+
 def sort_dataset_by_len(dataset):
     """
     returns a dict mapping length -> list of items of that length
@@ -255,6 +269,34 @@ def confusion_to_accuracy(confusion):
             else:
                 total = total + confusion[l1][l2]
     return correct, (correct + total)
+
+def confusion_to_macro_f1(confusion):
+    """
+    Return the macro f1 for a confusion matrix.
+    """
+    keys = set()
+    for k in confusion.keys():
+        keys.add(k)
+        for k2 in confusion.get(k).keys():
+            keys.add(k2)
+
+    sum_f1 = 0
+    for k in keys:
+        tp = 0
+        fn = 0
+        fp = 0
+        for k2 in keys:
+            if k == k2:
+                tp = confusion[k][k]
+            else:
+                fn = fn + confusion.get(k, {}).get(k2, 0)
+                fp = fp + confusion.get(k2, {}).get(k, 0)
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        f1 = 2 * (precision * recall) / (precision + recall)
+        sum_f1 = sum_f1 + f1
+
+    return sum_f1 / len(keys)
 
 
 def format_confusion(confusion, labels, hide_zeroes=False):
@@ -457,12 +499,25 @@ def load_pretrain(args):
     logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
     if os.path.exists(pretrain_file):
         vec_file = None
+    elif args.wordvec_raw_file:
+        vec_file = args.wordvec_raw_file
+        logger.info("Pretrain not found.  Looking in {}".format(vec_file))
     else:
         vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
-        logger.info("Vectors not found.  Looking in {}".format(vec_file))
+        logger.info("Pretrain not found.  Looking in {}".format(vec_file))
     pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
     logger.info("Embedding shape: %s" % str(pretrain.emb.shape))
     return pretrain
+
+
+def print_args(args):
+    """
+    For record keeping purposes, print out the arguments when training
+    """
+    args = vars(args)
+    keys = sorted(args.keys())
+    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
+    logger.info('ARGS USED AT TRAINGING TIME:\n%s\n' % '\n'.join(log_lines))
 
 
 def main():
@@ -490,7 +545,8 @@ def main():
     else:
         assert train_set is not None
         labels = dataset_labels(train_set)
-        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, labels, args)
+        extra_vocab = dataset_vocab(train_set)
+        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, extra_vocab, labels, args)
 
     if args.cuda:
         model.cuda()
@@ -510,6 +566,8 @@ def main():
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
+        print_args(args)
+
         dev_set = read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s" % args.dev_file)
         check_labels(model.labels, dev_set)
@@ -524,6 +582,7 @@ def main():
         confusion = confusion_dataset(model, test_set)
         logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
         correct, total = confusion_to_accuracy(confusion)
+        logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion)))
     else:
         correct = score_dataset(model, test_set,
                                 remap_labels=args.test_remap_labels,
