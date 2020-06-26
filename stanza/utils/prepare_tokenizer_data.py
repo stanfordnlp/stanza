@@ -1,6 +1,18 @@
 import argparse
+import os
 import re
 import sys
+
+"""
+Data is output in 4 files:
+
+a file containing the mwt information
+a file containing the words and sentences in conllu format
+a file containing the raw text of each paragraph
+a file of 0,1,2 indicating word break or sentence break on a character level for the raw text
+  1: end of word
+  2: end of sentence
+"""
 
 PARAGRAPH_BREAK = re.compile('\n\s*\n')
 
@@ -17,7 +29,12 @@ with open(args.plaintext_file, 'r') as f:
     text = ''.join(f.readlines())
 textlen = len(text)
 
-output = sys.stdout if args.output is None else open(args.output, 'w')
+if args.output is None:
+    output = sys.stdout
+else:
+    outdir = os.path.split(args.output)[0]
+    os.makedirs(outdir, exist_ok=True)
+    output = open(args.output, 'w')
 
 index = 0 # character offset in rawtext
 
