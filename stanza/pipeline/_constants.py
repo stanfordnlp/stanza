@@ -10,4 +10,4 @@ NER = 'ner'
 SENTIMENT = 'sentiment'
 
 # supported external packages
-SUPPORTED_TOKENIZERS = ['spacy', 'jieba']
+SUPPORTED_TOKENIZERS = ['spacy', 'jieba', 'sudachipy']
