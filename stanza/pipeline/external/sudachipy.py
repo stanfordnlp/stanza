@@ -55,9 +55,13 @@ class SudachiPyTokenizer(ProcessorVariant):
         sentences = []
         current_sentence = []
         for token in tokens:
+            token_text = token.surface()
+            # by default sudachipy will output whitespace as a token
+            # we need to skip these tokens to be consistent with other tokenizers
+            if token_text.isspace():
+                continue
             start = token.begin()
             end = token.end()
-            token_text = token.surface()
 
             token_entry = {
                 doc.TEXT: token_text,
