@@ -10,7 +10,6 @@ from tests import *
 pytestmark = pytest.mark.pipeline
 
 EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
-
 EN_DOC_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text=Smith>]>
@@ -36,10 +35,8 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
 
-
 EN_DOC_PRETOKENIZED = \
     "Joe Smith lives in California .\nJoe's favorite  food is  pizza .\n\nHe enjoys going to the beach.\n"
-
 EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text=Smith>]>
@@ -63,9 +60,7 @@ EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=beach.>]>
 """.strip()
 
-
 EN_DOC_PRETOKENIZED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['He', 'loves', 'pizza', '.']]
-
 EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text=Smith>]>
@@ -81,9 +76,7 @@ EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 """.strip()
 
 EN_DOC_NO_SSPLIT = ["This is a sentence. This is another.", "This is a third."]
-
 EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is', 'another', '.'], ['This', 'is', 'a', 'third', '.']]
-
 
 JA_DOC = "北京は中国の首都です。 北京の人口は2152万人です。\n" # add some random whitespaces that need to be skipped
 JA_DOC_GOLD_TOKENS = """
@@ -103,6 +96,27 @@ JA_DOC_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=人>]>
 <Token id=7;words=[<Word id=7;text=です>]>
 <Token id=8;words=[<Word id=8;text=。>]>
+""".strip()
+
+ZH_DOC = "北京是中国的首都。 北京有2100万人口，是一个直辖市。\n"
+ZH_DOC_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=北京>]>
+<Token id=2;words=[<Word id=2;text=是>]>
+<Token id=3;words=[<Word id=3;text=中国>]>
+<Token id=4;words=[<Word id=4;text=的>]>
+<Token id=5;words=[<Word id=5;text=首都>]>
+<Token id=6;words=[<Word id=6;text=。>]>
+
+<Token id=1;words=[<Word id=1;text=北京>]>
+<Token id=2;words=[<Word id=2;text=有>]>
+<Token id=3;words=[<Word id=3;text=2100>]>
+<Token id=4;words=[<Word id=4;text=万>]>
+<Token id=5;words=[<Word id=5;text=人口>]>
+<Token id=6;words=[<Word id=6;text=，>]>
+<Token id=7;words=[<Word id=7;text=是>]>
+<Token id=8;words=[<Word id=8;text=一个>]>
+<Token id=9;words=[<Word id=9;text=直辖市>]>
+<Token id=10;words=[<Word id=10;text=。>]>
 """.strip()
 
 def test_tokenize():
@@ -140,4 +154,10 @@ def test_sudachipy():
     nlp = stanza.Pipeline(lang='ja', dir=TEST_MODELS_DIR, processors={'tokenize': 'sudachipy'}, package=None)
     doc = nlp(JA_DOC)
     assert JA_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_jieba():
+    nlp = stanza.Pipeline(lang='zh', dir=TEST_MODELS_DIR, processors={'tokenize': 'jieba'}, package=None)
+    doc = nlp(ZH_DOC)
+    assert ZH_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
