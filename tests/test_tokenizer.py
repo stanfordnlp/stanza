@@ -85,6 +85,26 @@ EN_DOC_NO_SSPLIT = ["This is a sentence. This is another.", "This is a third."]
 EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is', 'another', '.'], ['This', 'is', 'a', 'third', '.']]
 
 
+JA_DOC = "北京は中国の首都です。 北京の人口は2152万人です。\n" # add some random whitespaces that need to be skipped
+JA_DOC_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=北京>]>
+<Token id=2;words=[<Word id=2;text=は>]>
+<Token id=3;words=[<Word id=3;text=中国>]>
+<Token id=4;words=[<Word id=4;text=の>]>
+<Token id=5;words=[<Word id=5;text=首都>]>
+<Token id=6;words=[<Word id=6;text=です>]>
+<Token id=7;words=[<Word id=7;text=。>]>
+
+<Token id=1;words=[<Word id=1;text=北京>]>
+<Token id=2;words=[<Word id=2;text=の>]>
+<Token id=3;words=[<Word id=3;text=人口>]>
+<Token id=4;words=[<Word id=4;text=は>]>
+<Token id=5;words=[<Word id=5;text=2152万>]>
+<Token id=6;words=[<Word id=6;text=人>]>
+<Token id=7;words=[<Word id=7;text=です>]>
+<Token id=8;words=[<Word id=8;text=。>]>
+""".strip()
+
 def test_tokenize():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
     doc = nlp(EN_DOC)
@@ -114,4 +134,10 @@ def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_sudachipy():
+    nlp = stanza.Pipeline(lang='ja', dir=TEST_MODELS_DIR, processors={'tokenize': 'sudachipy'}, package=None)
+    doc = nlp(JA_DOC)
+    assert JA_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
