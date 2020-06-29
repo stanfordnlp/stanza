@@ -499,7 +499,10 @@ class Sentence(StanzaObject):
     def to_dict(self):
         """ Dumps the sentence into a list of dictionary for each token in the sentence.
         """
-        return [token.to_dict() for token in self.tokens]
+        ret = []
+        for token in self.tokens:		
+            ret += token.to_dict()		
+        return ret
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
@@ -617,7 +620,10 @@ class Token(StanzaObject):
                     token_dict[field] = getattr(self, field)
             ret.append(token_dict)
         for word in self.words:
-            ret.append(word.to_dict())
+            word_dict = word.to_dict()
+            if NER in fields and len(self.id) == 1: # propagate NER label to Word if it is a single-word token
+                word_dict[NER] = getattr(self, NER)
+            ret.append(word_dict)
         return ret
 
     def pretty_print(self):
