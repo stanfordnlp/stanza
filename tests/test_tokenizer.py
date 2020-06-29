@@ -112,6 +112,8 @@ def test_no_ssplit():
 
 def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
+    assert nlp.processors['tokenize']._variant is not None
+    assert nlp.processors['tokenize']._trainer is None
     doc = nlp(EN_DOC)
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])

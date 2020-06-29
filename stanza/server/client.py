@@ -16,6 +16,7 @@ import subprocess
 import time
 import sys
 import uuid
+from pathlib import Path
 
 from six.moves.urllib.parse import urlparse
 
@@ -251,10 +252,11 @@ class CoreNLPClient(RobustService):
             if classpath == '$CLASSPATH':
                 classpath = os.getenv("CLASSPATH")
             elif classpath is None:
-                classpath = os.getenv("CORENLP_HOME")
-                assert classpath is not None, \
-                    "Please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter"
-                classpath = classpath + "/*"
+                classpath = os.getenv("CORENLP_HOME", os.path.join(str(Path.home()), 'stanza_corenlp'))
+
+                assert os.path.exists(classpath), \
+                    "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
+                classpath = os.path.join(classpath, "*")
             start_cmd = f"java -Xmx{memory} -cp '{classpath}'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"

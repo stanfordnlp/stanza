@@ -1,5 +1,5 @@
 """
-Utilities related to using spaCy in the pipeline.
+Processors related to spaCy in the pipeline.
 """
 
 from stanza.models.common import doc

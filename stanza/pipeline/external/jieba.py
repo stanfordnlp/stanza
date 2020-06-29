@@ -1,5 +1,5 @@
 """
-Utilities related to using Jieba in the pipeline.
+Processors related to Jieba in the pipeline.
 """
 
 import re
