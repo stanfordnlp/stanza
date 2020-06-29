@@ -14,7 +14,7 @@ import logging
 
 from stanza.utils.helper_func import make_table
 from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, \
-    NER, SENTIMENT, SUPPORTED_TOKENIZERS
+    NER, SENTIMENT
 from stanza.pipeline.registry import PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza._version import __resources_version__
 

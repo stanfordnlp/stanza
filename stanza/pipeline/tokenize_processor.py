@@ -15,6 +15,7 @@ from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
 from stanza.pipeline.external.jieba import JiebaTokenizer
 from stanza.pipeline.external.spacy import SpacyTokenizer
+from stanza.pipeline.external.sudachipy import SudachiPyTokenizer
 
 logger = logging.getLogger('stanza')
 
