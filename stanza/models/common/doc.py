@@ -500,8 +500,8 @@ class Sentence(StanzaObject):
         """ Dumps the sentence into a list of dictionary for each token in the sentence.
         """
         ret = []
-        for token in self.tokens:		
-            ret += token.to_dict()		
+        for token in self.tokens:
+            ret += token.to_dict()
         return ret
 
     def __repr__(self):
