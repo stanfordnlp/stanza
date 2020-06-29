@@ -14,6 +14,11 @@ treebank=$1
 tbname=`echo $treebank | sed -e 's#^.*-##g' | tr [:upper:] [:lower:]`
 lang=`echo $treebank | sed -e 's#-.*$##g' -e 's#^[^_]*_##g'`
 lcode=${lang2lcode[$lang]}
+if [ -z "$lcode" ]; then
+    if [ $lang == "Chinese" -a $tbname == "gsdsimp" ]; then
+        lcode=zh
+    fi
+fi
 if [ $format == 'udpipe' ]; then
     echo `echo $lang | tr [:upper:] [:lower:]`-${tbname}
 else
