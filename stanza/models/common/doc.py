@@ -497,10 +497,7 @@ class Sentence(StanzaObject):
     def to_dict(self):
         """ Dumps the sentence into a list of dictionary for each token in the sentence.
         """
-        ret = []
-        for token in self.tokens:
-            ret += token.to_dict()
-        return ret
+        return [token.to_dict() for token in self.tokens]
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
