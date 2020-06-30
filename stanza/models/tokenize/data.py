@@ -44,7 +44,7 @@ class DataLoader:
 
             self.data = [[(re.sub('\s', ' ', char), int(label)) # substitute special whitespaces
                     for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
-                    for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.rstrip()) > 0]
+                    for pt, pc in zip(re.split('\n\s*\n', text), re.split('\n\s*\n', labels)) if len(pt.rstrip()) > 0]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
