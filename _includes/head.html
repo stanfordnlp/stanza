@@ -32,6 +32,40 @@
 
   {% endif %}
 
+  {% if page.datatable == true %}
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.21/fc-3.3.1/datatables.min.css"/>
+  <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.21/fc-3.3.1/datatables.min.js"></script>
+  <script>
+    $(document).ready(function(){
+
+        $('table.datatable').DataTable( {
+                    paging: false,
+                    fixedColumns: true,
+                    scrollX: true,
+                    stateSave: true,
+                    createdRow: function ( row, data, index ) {
+                        console.log(data);
+                        for (var i = 1; i < data.length; i++) {
+                            if (data[i] * 1 >= 80) {
+                                $('td', row).eq(i).css("background-color", "#ddffdd");
+                            } else if (data[i] * 1 >= 60) {
+                                $('td', row).eq(i).css("background-color", "#eeffdd");
+                            } else if (data[i] * 1 >= 40) {
+                                $('td', row).eq(i).css("background-color", "#ffffdd");
+                            } else if (data[i] * 1 >= 20) {
+                                $('td', row).eq(i).css("background-color", "#ffeedd");
+                            } else {
+                                $('td', row).eq(i).css("background-color", "#ffdddd");
+                            }
+                        }
+                    }
+                }
+        );
+    })
+  </script>
+  {% endif %}
+
   {% if site.search_enabled != false %}
     <script type="text/javascript" src="{{ '/assets/js/vendor/lunr.min.js' | absolute_url }}"></script>
   {% endif %}

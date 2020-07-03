@@ -5,6 +5,7 @@ keywords: stanza, system performance
 permalink: '/performance.html'
 nav_order: 2
 parent: Models
+datatable: true
 ---
 
 Here we report the performance of Stanza's pretrained models on all supported languages. Again, performances of models for tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing are reported on the Universal Dependencies (UD) treebanks, while performances of the NER models are reported separately.
@@ -119,7 +120,7 @@ For more detailed results and better viewing experience, please access the resul
 | UD_Uyghur-UDT | 99.79 | 86.9 | 99.79 | 89.45 | 91.92 | 87.92 | 80.54 | 96.16 | 75.55 | 63.61 | 57 | 46.06 | 54.39 |
 | UD_Vietnamese-VTB | 87.25 | 93.15 | 87.25 | 79.5 | 77.9 | 87.02 | 77.87 | 87.2 | 53.63 | 48.16 | 44.88 | 42.17 | 44.85 |
 | UD_Wolof-WTB | 99.97 | 91.06 | 99.42 | 94.09 | 94.03 | 93.11 | 91.26 | 94.6 | 83.25 | 77.05 | 70.94 | 64.25 | 66.99 |
-{: .compact #conll18-results }
+{: .compact #conll18-results .datatable }
 
 ## System Performance on NER Corpora
 
