@@ -10,7 +10,7 @@ homepage: true
 
 # Stanza -- A Python NLP Package for Many Human Languages
 {: .no_toc }
-<img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545" /> <img alt="Conda Versions" src="https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda" /> <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545" />
+<img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545&style=flat-square" /> <img alt="Conda Versions" src="https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda&style=flat-square" /> <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545&style=flat-square" />
 
 Stanza is a collection of accurate and efficient tools for many human languages in one place. Starting from raw text to syntactic analysis and entity recognition, Stanza brings state-of-the-art NLP models to languages of your choosing.
 {: .fs-5 .fw-300 }
