@@ -96,27 +96,29 @@ class DataLoader:
         def process_sentence(sent):
             return [(self.vocab.unit2id(y[0]), y[1], y[2], y[0]) for y in sent]
 
+        use_end_of_para = 'end_of_para' in self.args['feat_funcs']
+        use_start_of_para = 'start_of_para' in self.args['feat_funcs']
         current = []
         for i, (unit, label) in enumerate(para):
             label1 = label if not self.eval else 0
             feats = composite_func(unit)
             # position-dependent features
-            if 'end_of_para' in self.args['feat_funcs']:
+            if use_end_of_para:
                 f = 1 if i == len(para)-1 else 0
                 feats.append(f)
-            if 'start_of_para' in self.args['feat_funcs']:
+            if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
-            current += [[unit, label, feats]]
+            current += [(unit, label, feats)]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res += [process_sentence(current)]
+                    res.append(process_sentence(current))
                 current = []
 
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
-                res += [process_sentence(current)]
+                res.append(process_sentence(current))
 
         return res
 
