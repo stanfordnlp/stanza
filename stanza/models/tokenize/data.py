@@ -11,6 +11,10 @@ from .vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
+NEWLINE_WHITESPACE_RE = re.compile('\n\s*\n')
+NUMERIC_RE = re.compile('^([\d]+[,\.]*)+$')
+WHITESPACE_RE = re.compile('\s')
+
 class DataLoader:
     def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
         self.args = args
@@ -40,11 +44,11 @@ class DataLoader:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
             else:
-                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in re.split('\n\s*\n', text)])
+                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
 
-            self.data = [[(re.sub('\s', ' ', char), int(label)) # substitute special whitespaces
+            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
                     for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
-                    for pt, pc in zip(re.split('\n\s*\n', text), re.split('\n\s*\n', labels)) if len(pt.rstrip()) > 0]
+                    for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
@@ -80,7 +84,7 @@ class DataLoader:
             elif feat_func == 'all_caps':
                 func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
-                func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
+                func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 

@@ -4,6 +4,8 @@ import re
 from stanza.models.common.vocab import BaseVocab
 from stanza.models.common.vocab import UNK, PAD
 
+SPACE_RE = re.compile('\s')
+
 class Vocab(BaseVocab):
     def build_vocab(self):
         paras = self.data
@@ -26,7 +28,7 @@ class Vocab(BaseVocab):
         return normalized
 
     def normalize_token(self, token):
-        token = re.sub('\s', ' ', token.lstrip())
+        token = SPACE_RE.sub(' ', token.lstrip())
 
         if any([self.lang.startswith(x) for x in ['zh', 'ja', 'ko']]):
             token = token.replace(' ', '')

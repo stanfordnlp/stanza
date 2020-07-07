@@ -56,6 +56,8 @@ def process_sentence(sentence, mwt_dict=None):
             i += 1
     return sent
 
+SPACE_RE = re.compile(r'\s')
+
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
@@ -124,7 +126,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count = 0
     doc = []
 
-    text = re.sub('\s', ' ', orig_text) if orig_text is not None else None
+    text = SPACE_RE.sub(' ', orig_text) if orig_text is not None else None
     char_offset = 0
 
     for j in range(len(paragraphs)):
