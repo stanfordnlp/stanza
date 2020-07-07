@@ -124,7 +124,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count = 0
     doc = []
 
-    text = re.sub('\s', ' ', orig_text)
+    text = re.sub('\s', ' ', orig_text) if orig_text is not None else None
     char_offset = 0
 
     for j in range(len(paragraphs)):
