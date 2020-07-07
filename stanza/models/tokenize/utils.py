@@ -56,14 +56,6 @@ def process_sentence(sentence, mwt_dict=None):
             i += 1
     return sent
 
-def find_token(token, text):
-    """
-    Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
-    Ignores whitespace mismatches between the text and the token.
-    """
-    m = re.search(r'\s*'.join([r'\s' if re.match(r'\s', x) else re.escape(x) for x in token]), text)
-    return m.start(), m.group()
-
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
@@ -132,7 +124,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count = 0
     doc = []
 
-    text = orig_text
+    text = re.sub('\s', ' ', orig_text) if orig_text is not None else None
     char_offset = 0
 
     for j in range(len(paragraphs)):
@@ -160,11 +152,12 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    st0, tok0 = find_token(tok, text)
-                    st = char_offset + st0
-                    text = text[st0 + len(tok0):]
-                    char_offset += st0 + len(tok0)
-                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok0)}
+                    lstripped = current_tok.lstrip()
+                    st0 = text.index(current_tok)
+                    st = char_offset + st0 + (len(current_tok) - len(lstripped))
+                    text = text[st0 + len(current_tok):]
+                    char_offset += st0 + len(current_tok)
+                    additional_info = {START_CHAR: st, END_CHAR: st + len(lstripped)}
                 else:
                     additional_info = dict()
                 current_sent += [(tok, p, additional_info)]
