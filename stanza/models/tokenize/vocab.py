@@ -7,6 +7,10 @@ from stanza.models.common.vocab import UNK, PAD
 SPACE_RE = re.compile('\s')
 
 class Vocab(BaseVocab):
+    def __init__(self):
+        super().__init__()
+        self.lang_replaces_spaces = any([self.lang.startswith(x) for x in ['zh', 'ja', 'ko']])
+
     def build_vocab(self):
         paras = self.data
         counter = Counter()
@@ -30,7 +34,7 @@ class Vocab(BaseVocab):
     def normalize_token(self, token):
         token = SPACE_RE.sub(' ', token.lstrip())
 
-        if any([self.lang.startswith(x) for x in ['zh', 'ja', 'ko']]):
+        if self.lang_replaces_spaces:
             token = token.replace(' ', '')
 
         return token
