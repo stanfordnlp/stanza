@@ -535,16 +535,16 @@ class Token(StanzaObject):
     def __init__(self, token_entry, words=None):
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
-        assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._start_char, self._end_char, self._ner = [None] * 7
+        self._id = token_entry.get(ID)
+        self._text = token_entry.get(TEXT)
+        assert self._id and self._text, 'id and text should be included for the token'
+        self._misc = token_entry.get(MISC, None)
+        self._ner = token_entry.get(NER, None)
+        self._words = words if words is not None else []
+        self._start_char = None
+        self._end_char = None
 
-        self.id = token_entry.get(ID)
-        self.text = token_entry.get(TEXT)
-        self.misc = token_entry.get(MISC, None)
-        self.ner = token_entry.get(NER, None)
-        self.words = words if words is not None else []
-
-        if self.misc is not None:
+        if self._misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
@@ -554,7 +554,7 @@ class Token(StanzaObject):
             key_value = item.split('=', 1)
             if len(key_value) == 1: continue # some key_value can not be splited
             key, value = key_value
-            if key in [START_CHAR, END_CHAR]:
+            if key in (START_CHAR, END_CHAR):
                 value = int(value)
             # set attribute
             attr = f'_{key}'
