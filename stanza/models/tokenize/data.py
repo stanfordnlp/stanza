@@ -91,7 +91,7 @@ class DataLoader:
             funcs.append(func)
         
         # stacking all featurize functions
-        composite_func = lambda x: list(map(lambda f: f(x), funcs))
+        composite_func = lambda x: [f(x) for f in funcs]
 
         def process_sentence(sent):
             return [(self.vocab.unit2id(y[0]), y[1], y[2], y[0]) for y in sent]
