@@ -23,10 +23,8 @@ logger = logging.getLogger('stanza')
 # set home dir for default
 HOME_DIR = str(Path.home())
 STANFORDNLP_RESOURCES_URL = 'https://nlp.stanford.edu/software/stanza/stanza-resources/'
-DEFAULT_RESOURCES_URL = os.getenv(
-    'STANZA_RESOURCES_URL',
-    'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/master'
-)
+STANZA_RESOURCES_GITHUB = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/'
+DEFAULT_RESOURCES_URL = os.getenv('STANZA_RESOURCES_URL', STANZA_RESOURCES_GITHUB + 'master')
 DEFAULT_RESOURCES_VERSION = os.getenv(
     'STANZA_RESOURCES_VERSION',
     __resources_version__
@@ -316,6 +314,7 @@ def download(
         logging_level='INFO',
         verbose=None,
         resources_url=DEFAULT_RESOURCES_URL,
+        resources_branch=None,
         resources_version=DEFAULT_RESOURCES_VERSION,
         model_url=DEFAULT_MODEL_URL
     ):
@@ -326,6 +325,8 @@ def download(
         lang, dir, package, processors
     )
 
+    if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
+        resources_url = STANZA_RESOURCES_GITHUB + resources_branch
     # Download resources.json to obtain latest packages.
     logger.debug('Downloading resource file...')
     # handle short name for resources urls; otherwise treat it as url

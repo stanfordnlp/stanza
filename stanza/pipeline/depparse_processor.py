@@ -31,7 +31,7 @@ class DepparseProcessor(UDProcessor):
             self._requires = self.__class__.REQUIRES_DEFAULT
 
     def _set_up_model(self, config, use_gpu):
-        self._pretrain = Pretrain(config['pretrain_path'])
+        self._pretrain = Pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):

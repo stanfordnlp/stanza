@@ -20,7 +20,7 @@ class POSProcessor(UDProcessor):
 
     def _set_up_model(self, config, use_gpu):
         # get pretrained word vectors
-        self._pretrain = Pretrain(config['pretrain_path'])
+        self._pretrain = Pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         # set up trainer
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
