@@ -10,6 +10,7 @@ from tests import *
 pytestmark = pytest.mark.pipeline
 
 EN_DOC = "Joe Smith lives in California. Joe's favorite food is pizza. He enjoys going to the beach."
+EN_DOC_WITH_EXTRA_WHITESPACE = "Joe   Smith \n lives in\n California.   Joe's    favorite food \tis pizza. \t\t\tHe enjoys \t\tgoing to the beach."
 EN_DOC_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text=Smith>]>
@@ -125,6 +126,11 @@ def test_tokenize():
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
+def test_tokenize_ssplit_robustness():
+    nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
+    doc = nlp(EN_DOC_WITH_EXTRA_WHITESPACE)
+    assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
 def test_pretokenized():
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
@@ -147,7 +153,7 @@ def test_no_ssplit():
 def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
     doc = nlp(EN_DOC)
-    
+
     # make sure the loaded tokenizer is actually spacy
     assert "SpacyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
@@ -156,7 +162,7 @@ def test_spacy():
 def test_sudachipy():
     nlp = stanza.Pipeline(lang='ja', dir=TEST_MODELS_DIR, processors={'tokenize': 'sudachipy'}, package=None)
     doc = nlp(JA_DOC)
-    
+
     assert "SudachiPyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
     assert JA_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
