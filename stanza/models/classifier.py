@@ -287,7 +287,7 @@ def confusion_to_macro_f1(confusion):
         fp = 0
         for k2 in keys:
             if k == k2:
-                tp = confusion[k][k]
+                tp = confusion.get(k, {}).get(k, 0)
             else:
                 fn = fn + confusion.get(k, {}).get(k2, 0)
                 fp = fp + confusion.get(k2, {}).get(k, 0)
