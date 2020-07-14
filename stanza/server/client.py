@@ -446,7 +446,6 @@ class CoreNLPClient(RobustService):
             else:
                 request_properties.update(dict(self.properties_cache[properties_key]))
 
-        # add on custom properties for this request
         # add values from properties arg
         if type(properties) == str:
             if properties.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
@@ -462,7 +461,7 @@ class CoreNLPClient(RobustService):
             request_properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
 
         # if output format is specified, override with that
-        if output_format is not None:
+        if output_format is not None and type(output_format) == str:
             request_properties['outputFormat'] = output_format
 
         # make the request
