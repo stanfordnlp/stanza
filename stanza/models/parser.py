@@ -32,7 +32,8 @@ from stanza.models import _training_logging
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/depparse', help='Root dir for saving models.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
+    parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -109,7 +110,7 @@ def train(args):
     # load pretrained vectors if needed
     pretrain = None
     if args['pretrain']:
-        vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
         pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
         pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
 
