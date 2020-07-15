@@ -56,6 +56,8 @@ def process_sentence(sentence, mwt_dict=None):
             i += 1
     return sent
 
+SPACE_RE = re.compile(r'\s')
+
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
@@ -124,8 +126,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count = 0
     doc = []
 
-    text = re.sub('\s', ' ', orig_text) if orig_text is not None else None
+    text = SPACE_RE.sub(' ', orig_text) if orig_text is not None else None
     char_offset = 0
+    use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
 
     for j in range(len(paragraphs)):
         raw = all_raw[j]
@@ -138,7 +141,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             if t == '<PAD>':
                 break
             # hack la_ittb
-            if trainer.args['shorthand'] == 'la_ittb' and t in [":", ";"]:
+            if use_la_ittb_shorthand and t in (":", ";"):
                 p = 2
             offset += 1
             if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
@@ -160,7 +163,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     additional_info = {START_CHAR: st, END_CHAR: st + len(lstripped)}
                 else:
                     additional_info = dict()
-                current_sent += [(tok, p, additional_info)]
+                current_sent.append((tok, p, additional_info))
                 current_tok = ''
                 if (p == 2 or p == 4) and not no_ssplit:
                     doc.append(process_sentence(current_sent, mwt_dict))

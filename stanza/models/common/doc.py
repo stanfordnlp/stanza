@@ -367,7 +367,7 @@ class Sentence(StanzaObject):
                 new_word.parent = self.tokens[-1]
 
         # check if there is dependency info
-        is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
+        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
         is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
 
@@ -535,16 +535,16 @@ class Token(StanzaObject):
     def __init__(self, token_entry, words=None):
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
-        assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._start_char, self._end_char, self._ner = [None] * 7
+        self._id = token_entry.get(ID)
+        self._text = token_entry.get(TEXT)
+        assert self._id and self._text, 'id and text should be included for the token'
+        self._misc = token_entry.get(MISC, None)
+        self._ner = token_entry.get(NER, None)
+        self._words = words if words is not None else []
+        self._start_char = None
+        self._end_char = None
 
-        self.id = token_entry.get(ID)
-        self.text = token_entry.get(TEXT)
-        self.misc = token_entry.get(MISC, None)
-        self.ner = token_entry.get(NER, None)
-        self.words = words if words is not None else []
-
-        if self.misc is not None:
+        if self._misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
@@ -554,7 +554,7 @@ class Token(StanzaObject):
             key_value = item.split('=', 1)
             if len(key_value) == 1: continue # some key_value can not be splited
             key, value = key_value
-            if key in [START_CHAR, END_CHAR]:
+            if key in (START_CHAR, END_CHAR):
                 value = int(value)
             # set attribute
             attr = f'_{key}'
@@ -658,25 +658,25 @@ class Word(StanzaObject):
     def __init__(self, word_entry):
         """ Construct a word given a dictionary format word entry.
         """
-        assert word_entry.get(ID, None) is not None and word_entry.get(TEXT, None) is not None, 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, \
-            self._misc, self._parent = [None] * 11
+        self._id = word_entry.get(ID, None)
+        if isinstance(self._id, tuple):
+            assert len(self._id) == 1
+            self._id = self._id[0]
+        self._text = word_entry.get(TEXT, None)
 
-        self.id = word_entry.get(ID)
-        if isinstance(self.id, tuple):
-            assert len(self.id) == 1
-            self.id = self.id[0]
-        self.text = word_entry.get(TEXT)
-        self.lemma = word_entry.get(LEMMA, None)
-        self.upos = word_entry.get(UPOS, None)
-        self.xpos = word_entry.get(XPOS, None)
-        self.feats = word_entry.get(FEATS, None)
-        self.head = word_entry.get(HEAD, None)
-        self.deprel = word_entry.get(DEPREL, None)
-        self.deps = word_entry.get(DEPS, None)
-        self.misc = word_entry.get(MISC, None)
+        assert self._id is not None and self._text is not None, 'id and text should be included for the word. {}'.format(word_entry)
 
-        if self.misc is not None:
+        self._lemma = word_entry.get(LEMMA, None)
+        self._upos = word_entry.get(UPOS, None)
+        self._xpos = word_entry.get(XPOS, None)
+        self._feats = word_entry.get(FEATS, None)
+        self._head = word_entry.get(HEAD, None)
+        self._deprel = word_entry.get(DEPREL, None)
+        self._deps = word_entry.get(DEPS, None)
+        self._misc = word_entry.get(MISC, None)
+        self._parent = None
+
+        if self._misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
