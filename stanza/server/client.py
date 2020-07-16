@@ -492,7 +492,7 @@ class CoreNLPClient(RobustService):
                 'serializer': 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
             })
         if annotators:
-            properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
+            properties['annotators'] = annotators if type(annotators) == str else ",".join(annotators)
         with io.BytesIO() as stream:
             writeToDelimitedString(doc, stream)
             msg = stream.getvalue()
