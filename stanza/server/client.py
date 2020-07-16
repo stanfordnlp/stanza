@@ -17,6 +17,7 @@ import time
 import sys
 import uuid
 
+from datetime import datetime
 from pathlib import Path
 
 from six.moves.urllib.parse import urlparse
@@ -29,7 +30,9 @@ logger = logging.getLogger('stanza')
 # pattern tmp props file should follow
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 
-# info for Stanford CoreNLP supported languages
+# Check if str is CoreNLP supported language
+CORENLP_LANGS = ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
+
 LANGUAGE_SHORTHANDS_TO_FULL = {
     "ar": "arabic",
     "zh": "chinese",
@@ -38,6 +41,25 @@ LANGUAGE_SHORTHANDS_TO_FULL = {
     "de": "german",
     "es": "spanish"
 }
+
+
+def is_corenlp_lang(props_str):
+    """ Check if a string referencs a CoreNLP languauge """
+    return props_str.lower() in CORENLP_LANGS
+
+
+# Validate CoreNLP properties
+CORENLP_OUTPUT_VALS = ["conll", "conllu", "json", "serialized", "text", "xml"]
+
+
+def validate_corenlp_props(properties=None, annotators=None, output_format=None):
+    """ Do basic checks to validate CoreNLP properties """
+    if output_format and output_format.lower() not in CORENLP_OUTPUT_VALS:
+        raise ValueError(f"{output_format} not a valid CoreNLP outputFormat value! Choose from: {CORENLP_OUTPUT_VALS}")
+    if type(properties) == dict:
+        if "outputFormat" in properties and properties["outputFormat"].lower() not in CORENLP_OUTPUT_VALS:
+            raise ValueError(f"{properties['outputFormat']} not a valid CoreNLP outputFormat value! Choose from: "
+                             f"{CORENLP_OUTPUT_VALS}")
 
 
 class AnnotationException(Exception):
@@ -179,7 +201,7 @@ class RobustService(object):
 
 
 class CoreNLPClient(RobustService):
-    """ A CoreNLP client to the Stanford CoreNLP server. """
+    """ A client to the Stanford CoreNLP server. """
 
     DEFAULT_ENDPOINT = "http://localhost:9000"
     DEFAULT_TIMEOUT = 60000
@@ -187,8 +209,6 @@ class CoreNLPClient(RobustService):
     DEFAULT_OUTPUT_FORMAT = "serialized"
     DEFAULT_MEMORY = "5G"
     DEFAULT_MAX_CHAR_LENGTH = 100000
-    PIPELINE_LANGUAGES = \
-        ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
     def __init__(self, start_server=True,
                  endpoint=DEFAULT_ENDPOINT,
@@ -206,10 +226,10 @@ class CoreNLPClient(RobustService):
                  classpath=None,
                  **kwargs):
 
-        # properties cache maps keys to properties dictionaries for convenience
-        self.properties_cache = {}
         # whether or not server should be started by client
         self.start_server = start_server
+        # validate properties
+        validate_corenlp_props(properties=properties, annotators=annotators, output_format=output_format)
         # set up client defaults
         self.annotators = annotators
         self.output_format = output_format
@@ -218,6 +238,9 @@ class CoreNLPClient(RobustService):
         if start_server:
             # set up default properties for server
             self.properties = properties
+            # record info for server start
+            self.server_props_path = None
+            self.server_start_time = datetime.now()
             self._setup_server_defaults()
             host, port = urlparse(endpoint).netloc.split(":")
             port = int(port)
@@ -236,9 +259,13 @@ class CoreNLPClient(RobustService):
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} "
 
+            self.server_classpath = classpath
+            self.server_host = host
+            self.server_port = port
+
             # set up server defaults
-            if self.server_start_info['path'] is not None:
-                start_cmd += f" -serverProperties {self.server_start_info['path']}"
+            if self.server_props_path is not None:
+                start_cmd += f" -serverProperties {self.server_props_path}"
 
             # set annotators for server default
             if self.annotators is not None:
@@ -258,7 +285,7 @@ class CoreNLPClient(RobustService):
                     start_cmd += f" -preload {preload}"
 
             # set outputFormat for server default
-            # if no output format requested by user, always try to set to serialized
+            # if no output format requested by user, set to serialized
             start_cmd += f" -outputFormat {self.output_format}"
 
             # additional options for server:
@@ -319,9 +346,6 @@ class CoreNLPClient(RobustService):
 
         If no properties are specified, the standard Stanford CoreNLP English server will be launched. The outputFormat
         will be set to 'serialized' and use the ProtobufAnnotationSerializer.
-
-        Info about the properties used to start the server is stored in self.server_start_info
-        If a file is used, info about the file (path, whether tmp or not) is stored in self.server_start_info
         """
 
         # ensure properties is str or dict
@@ -332,7 +356,7 @@ class CoreNLPClient(RobustService):
         # check if properties is a string, pass on to server which can handle
         if isinstance(self.properties, str):
             # try to translate to Stanford CoreNLP language name, or assume properties is a path
-            if self.properties.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
+            if is_corenlp_lang(self.properties):
                 if self.properties.lower() in LANGUAGE_SHORTHANDS_TO_FULL:
                     self.properties = LANGUAGE_SHORTHANDS_TO_FULL[self.properties]
                 logger.info(
@@ -343,6 +367,7 @@ class CoreNLPClient(RobustService):
                 if not os.path.isfile(self.properties):
                     logger.warning(f"{self.properties} does not correspond to a file path. Make sure this file is in "
                                    f"your CLASSPATH.")
+            self.server_props_path = self.properties
         elif isinstance(self.properties, dict):
             # make a copy
             server_start_properties = dict(self.properties)
@@ -355,6 +380,7 @@ class CoreNLPClient(RobustService):
             tmp_path = write_corenlp_props(server_start_properties)
             logger.info(f"Writing properties to tmp file: {tmp_path}")
             atexit.register(clean_props_file, tmp_path)
+            self.server_props_path = tmp_path
 
     def _request(self, buf, properties, reset_default=False, **kwargs):
         """
@@ -391,26 +417,13 @@ class CoreNLPClient(RobustService):
             else:
                 raise AnnotationException(r.text)
 
-    def register_properties_key(self, key, props):
-        """ Register a properties dictionary with a key in the client's properties_cache """
-        if key in CoreNLPClient.PIPELINE_LANGUAGES:
-            logger.warning(f'Key {key} not registered in properties cache.  Names of Stanford CoreNLP supported '
-                           f'languages are reserved for Stanford CoreNLP defaults for that language.  For instance '
-                           f'"french" or "fr" corresponds to using the defaults in StanfordCoreNLP-french.properties '
-                           f'which are stored with the server.  If you want to store custom defaults for that '
-                           f'language, it is suggested to use a key like "fr-custom", etc...')
-        else:
-            self.properties_cache[key] = props
-
-    def annotate(self, text, annotators=None, output_format=None, properties_key=None, properties=None,
-                 reset_default=False, **kwargs):
+    def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=False, **kwargs):
         """
         Send a request to the CoreNLP server.
 
         :param (str | unicode) text: raw text for the CoreNLPServer to parse
         :param (list | string) annotators: list of annotators to use
         :param (str) output_format: output type from server: serialized, json, text, conll, conllu, or xml
-        :param (str) properties_key: key into properties cache for the client
         :param (dict) properties: additional request properties (written on top of defaults)
         :param (bool) reset_default: don't use server defaults
 
@@ -418,15 +431,17 @@ class CoreNLPClient(RobustService):
 
         1. annotators and output_format args
         2. Values from properties dict
-        3. Values from dict in properties cache corresponding to properties_key
-        4. Client defaults self.annotators and self.output_format (set during client construction)
-        5. Server defaults
+        3. Client defaults self.annotators and self.output_format (set during client construction)
+        4. Server defaults
 
-        Additional request parameters such as 'username' and 'password' can be specified with the kwargs.
+        Additional request parameters (apart from CoreNLP pipeline properties) such as 'username' and 'password'
+        can be specified with the kwargs.
 
         :return: request result
         """
 
+        # validate request properties
+        validate_corenlp_props(properties=properties, annotators=annotators, output_format=output_format)
         # set request properties
         request_properties = {}
 
@@ -436,29 +451,20 @@ class CoreNLPClient(RobustService):
         if self.output_format is not None:
             request_properties['outputFormat'] = self.output_format
 
-        # look for a cached default properties set
-        # if a Stanford CoreNLP supported language is specified, set pipelineLanguage property
-        if properties_key is not None:
-            if properties_key.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
-                request_properties['pipelineLanguage'] = properties_key.lower()
-            elif properties_key not in self.properties_cache:
-                raise ValueError("Properties cache does not have '%s'" % properties_key)
-            else:
-                request_properties.update(dict(self.properties_cache[properties_key]))
-
         # add values from properties arg
-        if type(properties) == str:
-            if properties.lower() in CoreNLPClient.PIPELINE_LANGUAGES:
-                properties = {'pipelineLanguage': properties.lower()}
-            else:
-                raise ValueError(f"Unrecognized properties keyword {properties}")
+        # handle str case
+        if type(properties) == str and is_corenlp_lang(properties):
+            properties = {'pipelineLanguage': properties.lower()}
+        else:
+            raise ValueError(f"Unrecognized properties keyword {properties}")
+
         if properties and type(properties) == dict:
             request_properties.update(properties)
 
         # if annotators list is specified, override with that
         # also can use the annotators field the object was created with
-        if annotators is not None:
-            request_properties['annotators'] = ",".join(annotators) if isinstance(annotators, list) else annotators
+        if annotators is not None and (type(annotators) == str or type(annotators) == list):
+            request_properties['annotators'] = annotators if type(self.annotators) == str else ",".join(annotators)
 
         # if output format is specified, override with that
         if output_format is not None and type(output_format) == str:
