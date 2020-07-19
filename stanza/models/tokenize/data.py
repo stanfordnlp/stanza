@@ -11,9 +11,21 @@ from .vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
+def filter_consecutive_whitespaces(para):
+    filtered = []
+    for i, (char, label) in enumerate(para):
+        if i > 0:
+            if char == ' ' and para[i-1][0] == ' ':
+                continue
+
+        filtered.append((char, label))
+
+    return filtered
+
 NEWLINE_WHITESPACE_RE = re.compile('\n\s*\n')
 NUMERIC_RE = re.compile('^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile('\s')
+
 
 class DataLoader:
     def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
@@ -49,6 +61,9 @@ class DataLoader:
             self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
                     for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
                     for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
+
+        # remove consecutive whitespaces
+        self.data = [filter_consecutive_whitespaces(x) for x in self.data]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
@@ -89,7 +104,7 @@ class DataLoader:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
-        
+
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
 
