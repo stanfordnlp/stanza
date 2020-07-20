@@ -155,12 +155,17 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    lstripped = current_tok.lstrip()
-                    st0 = text.index(current_tok)
-                    st = char_offset + st0 + (len(current_tok) - len(lstripped))
-                    text = text[st0 + len(current_tok):]
-                    char_offset += st0 + len(current_tok)
-                    additional_info = {START_CHAR: st, END_CHAR: st + len(lstripped)}
+                    st = -1
+                    tok_len = 0
+                    for part in re.split('( *[^ ]+)', current_tok):
+                        if len(part) == 0: continue
+                        st0 = text.index(part)
+                        lstripped = part.lstrip()
+                        if st < 0:
+                            st = char_offset + st0 + (len(part) - len(lstripped))
+                        text = text[st0 + len(part):]
+                        char_offset += st0 + len(part)
+                    additional_info = {START_CHAR: st, END_CHAR: char_offset}
                 else:
                     additional_info = dict()
                 current_sent.append((tok, p, additional_info))
