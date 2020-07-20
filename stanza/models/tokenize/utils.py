@@ -57,6 +57,7 @@ def process_sentence(sentence, mwt_dict=None):
     return sent
 
 SPACE_RE = re.compile(r'\s')
+SPACE_SPLIT_RE = re.compile('( *[^ ]+)')
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
@@ -157,7 +158,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 if orig_text is not None:
                     st = -1
                     tok_len = 0
-                    for part in re.split('( *[^ ]+)', current_tok):
+                    for part in SPACE_SPLIT_RE.split(current_tok):
                         if len(part) == 0: continue
                         st0 = text.index(part)
                         lstripped = part.lstrip()
