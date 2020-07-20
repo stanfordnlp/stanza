@@ -160,11 +160,10 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     tok_len = 0
                     for part in SPACE_SPLIT_RE.split(current_tok):
                         if len(part) == 0: continue
-                        st0 = text.index(part)
+                        st0 = text.index(part, char_offset) - char_offset
                         lstripped = part.lstrip()
                         if st < 0:
                             st = char_offset + st0 + (len(part) - len(lstripped))
-                        text = text[st0 + len(part):]
                         char_offset += st0 + len(part)
                     additional_info = {START_CHAR: st, END_CHAR: char_offset}
                 else:
