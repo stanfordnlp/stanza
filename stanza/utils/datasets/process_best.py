@@ -86,6 +86,7 @@ def read_data(input_dir):
     for filename in files:
         with open(filename) as fin:
             sentences = []
+            processed_lines = []
             for line in fin.readlines():
                 line = clean_line(line)
                 words = line.split("|")
@@ -94,7 +95,9 @@ def read_data(input_dir):
                     if len(word) > 1 and word[0] == '<':
                         raise ValueError("Unexpected word '{}' in document {}".format(word, filename))
                 words = [x for x in words if x]
+                processed_lines.append(words)
 
+            for words in processed_lines:
                 # turn the words into a sentence
                 sentence = []
                 for word in words:
