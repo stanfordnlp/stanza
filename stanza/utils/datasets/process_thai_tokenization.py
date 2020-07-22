@@ -53,6 +53,7 @@ def write_dataset(documents, output_dir, dataset_name):
     random.shuffle(documents)
     num_train = int(len(documents) * 0.8)
     num_dev = int(len(documents) * 0.1)
+    os.makedirs(output_dir, exist_ok=True)
     write_section(output_dir, dataset_name, 'train', documents[:num_train])
     write_section(output_dir, dataset_name, 'dev', documents[num_train:num_train+num_dev])
     write_section(output_dir, dataset_name, 'test', documents[num_train+num_dev:])
