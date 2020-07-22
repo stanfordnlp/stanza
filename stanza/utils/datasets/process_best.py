@@ -7,6 +7,13 @@ Note that the version of BEST we used actually had some strange
 sentence splits according to a native Thai speaker.  Not sure how to
 fix that.  Options include doing it automatically or finding some
 knowledgable annotators to resplit it for us (or just not using BEST)
+
+This outputs the tokenization results in a conll format similar to
+that of the UD treebanks, so we pretend to be a UD treebank for ease
+of compatibility with the stanza tools.
+
+python3 -m stanza.utils.datasets.process_best extern_data/thai/best data/tokenize
+
 """
 
 import glob
