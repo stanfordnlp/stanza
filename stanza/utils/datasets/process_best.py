@@ -22,6 +22,8 @@ import random
 import re
 import sys
 
+from pythainlp import sent_tokenize
+
 from stanza.utils.datasets.process_thai_tokenization import write_dataset
 
 def clean_line(line):
@@ -70,6 +72,43 @@ def clean_word(word):
         return word
     return word
 
+def reprocess_lines(processed_lines):
+    reprocessed_lines = []
+    for line in processed_lines:
+        text = "".join(line)
+        chunks = sent_tokenize(text)
+        if sum(len(x) for x in chunks) != len(text):
+            raise ValueError("Got unexpected text length: \n{}\nvs\n{}".format(text, chunks))
+
+        chunk_lengths = [len(x) for x in chunks]
+
+        current_length = 0
+        new_line = []
+        for word in line:
+            if len(word) + current_length < chunk_lengths[0]:
+                new_line.append(word)
+                current_length = current_length + len(word)
+            elif len(word) + current_length == chunk_lengths[0]:
+                new_line.append(word)
+                reprocessed_lines.append(new_line)
+                new_line = []
+                chunk_lengths = chunk_lengths[1:]
+                current_length = 0
+            else:
+                remaining_len = chunk_lengths[0] - current_length
+                new_line.append(word[:remaining_len])
+                reprocessed_lines.append(new_line)
+                word = word[remaining_len:]
+                chunk_lengths = chunk_lengths[1:]
+                while len(word) > chunk_lengths[0]:
+                    new_line = [word[:chunk_lengths[0]]]
+                    reprocessed_lines.append(new_line)
+                    word = word[chunk_lengths[0]:]
+                    chunk_lengths = chunk_lengths[1:]
+                new_line = [word]
+                current_length = len(word)
+        reprocessed_lines.append(new_line)
+    return reprocessed_lines
 
 def read_data(input_dir):
     subdirs = [os.path.join(input_dir, 'article'),
@@ -96,6 +135,8 @@ def read_data(input_dir):
                         raise ValueError("Unexpected word '{}' in document {}".format(word, filename))
                 words = [x for x in words if x]
                 processed_lines.append(words)
+
+            processed_lines = reprocess_lines(processed_lines)
 
             for words in processed_lines:
                 # turn the words into a sentence
