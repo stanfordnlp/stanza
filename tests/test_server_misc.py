@@ -32,8 +32,8 @@ obl(lives-3, California-5)
 punct(lives-3, .-6)
 
 Extracted the following NER entity mentions:
-Joe Smith       PERSON  PERSON:0.9972202689478088
-California      STATE_OR_PROVINCE       LOCATION:0.9990868267002156
+Joe Smith       PERSON              PERSON:0.9972202681743931
+California      STATE_OR_PROVINCE   LOCATION:0.9990868267559281
 """
 
 EN_DOC_POS_ONLY_GOLD = """
