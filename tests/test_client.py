@@ -4,6 +4,7 @@ Tests that call a running CoreNLPClient.
 
 import pytest
 import stanza.server as corenlp
+import stanza.server.client as client
 import shlex
 import subprocess
 
@@ -117,8 +118,8 @@ def test_semgrex(corenlp_client):
 
 def test_external_server():
     """ Test starting up an external server and accessing with a client with start_server=False """
-    corenlp_home = os.getenv('CORENLP_HOME')
-    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
+    corenlp_home = client.resolve_classpath(None)
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
                 f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
     start_cmd = start_cmd and shlex.split(start_cmd)
     external_server_process = subprocess.Popen(start_cmd)

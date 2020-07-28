@@ -206,6 +206,23 @@ class RobustService(object):
         # At this point we are guaranteed that the service is alive.
         self.is_active = True
 
+def resolve_classpath(classpath):
+    """
+    Returns the classpath to use for corenlp.
+
+    Prefers to use the given classpath parameter, if available.  If
+    not, uses the CORENLP_HOME environment variable.  Resolves $CLASSPATH
+    (the exact string) in either the classpath parameter or $CORENLP_HOME.
+    """
+    if classpath == '$CLASSPATH' or (classpath is None and os.getenv("CORENLP_HOME", None) == '$CLASSPATH'):
+        classpath = os.getenv("CLASSPATH")
+    elif classpath is None:
+        classpath = os.getenv("CORENLP_HOME", os.path.join(str(Path.home()), 'stanza_corenlp'))
+
+        assert os.path.exists(classpath), \
+            "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
+        classpath = os.path.join(classpath, "*")
+    return classpath
 
 class CoreNLPClient(RobustService):
     """ A CoreNLP client to the Stanford CoreNLP server. """
@@ -249,14 +266,7 @@ class CoreNLPClient(RobustService):
             host, port = urlparse(endpoint).netloc.split(":")
             port = int(port)
             assert host == "localhost", "If starting a server, endpoint must be localhost"
-            if classpath == '$CLASSPATH':
-                classpath = os.getenv("CLASSPATH")
-            elif classpath is None:
-                classpath = os.getenv("CORENLP_HOME", os.path.join(str(Path.home()), 'stanza_corenlp'))
-
-                assert os.path.exists(classpath), \
-                    "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
-                classpath = os.path.join(classpath, "*")
+            classpath = resolve_classpath(classpath)
             start_cmd = f"java -Xmx{memory} -cp '{classpath}'  edu.stanford.nlp.pipeline.StanfordCoreNLPServer " \
                         f"-port {port} -timeout {timeout} -threads {threads} -maxCharLength {max_char_length} " \
                         f"-quiet {be_quiet} -serverProperties {self.server_props_file['path']}"
