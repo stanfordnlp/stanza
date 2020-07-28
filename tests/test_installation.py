@@ -30,7 +30,7 @@ def test_install_corenlp():
 def test_download_corenlp_models():
     test_dir = "./test-corenlp-latest"
     model_name = "arabic"
-    version = "4.0.0"
+    version = "4.1.0"
 
     stanza.download_corenlp_models(model=model_name, version=version, dir=test_dir)
 
