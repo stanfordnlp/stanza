@@ -231,13 +231,12 @@ class CoreNLPClient(RobustService):
         # validate properties
         validate_corenlp_props(properties=properties, annotators=annotators, output_format=output_format)
         # set up client defaults
+        self.properties = properties
         self.annotators = annotators
         self.output_format = output_format
         self._setup_client_defaults()
         # start the server
         if start_server:
-            # set up default properties for server
-            self.properties = properties
             # record info for server start
             self.server_props_path = None
             self.server_start_time = datetime.now()
@@ -453,10 +452,11 @@ class CoreNLPClient(RobustService):
 
         # add values from properties arg
         # handle str case
-        if type(properties) == str and is_corenlp_lang(properties):
-            properties = {'pipelineLanguage': properties.lower()}
-        else:
-            raise ValueError(f"Unrecognized properties keyword {properties}")
+        if type(properties) == str:
+            if is_corenlp_lang(properties):
+                properties = {'pipelineLanguage': properties.lower()}
+            else:
+                raise ValueError(f"Unrecognized properties keyword {properties}")
 
         if properties and type(properties) == dict:
             request_properties.update(properties)
