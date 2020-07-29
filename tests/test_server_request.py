@@ -104,28 +104,6 @@ Constituency parse:
     (NP (DET quelques) (NOUN jours))
     (AdP (ADV plus) (ADV tôt))
     (PUNCT .)))
-
-
-Binary Constituency parse: 
-(ROOT
-  (SENT
-    (NP (DET Cette)
-      (MWN (NOUN enquête) (ADJ préliminaire)))
-    (@SENT
-      (@SENT
-        (@SENT
-          (@SENT
-            (VN
-              (MWV (VERB fait) (NOUN suite)))
-            (PP (ADP à)
-              (NP
-                (@NP (DET les) (NOUN révélations))
-                (PP (ADP de)
-                  (NP (NOUN l’)
-                    (AP (ADJ hebdomadaire)))))))
-          (NP (DET quelques) (NOUN jours)))
-        (AdP (ADV plus) (ADV tôt)))
-      (PUNCT .))))
 """
 
 FRENCH_EXTRA_GOLD = """

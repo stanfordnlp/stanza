@@ -35,8 +35,8 @@ obl:in(lives-3, California-5)
 punct(lives-3, .-6)
 
 Extracted the following NER entity mentions:
-Joe Smith	PERSON  PERSON:0.9972202689478088
-California	STATE_OR_PROVINCE       LOCATION:0.9990868267002156
+Joe Smith       PERSON              PERSON:0.9972202681743931
+California      STATE_OR_PROVINCE   LOCATION:0.9990868267559281
 """
 
 # results with an example properties file
@@ -85,8 +85,8 @@ appos(Bundesrepublik-8, Deutschland-9)
 punct(Bundeskanzlerin-6, .-10)
 
 Extracted the following NER entity mentions:
-Angela Merkel   PERSON  PERSON:0.9999981583355767
-Bundesrepublik Deutschland      LOCATION        LOCATION:0.968290232887181
+Angela Merkel              PERSON   PERSON:0.9999981583351504
+Bundesrepublik Deutschland LOCATION LOCATION:0.9682902289749544
 """
 
 
