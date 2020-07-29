@@ -228,6 +228,8 @@ class CoreNLPClient(RobustService):
 
         # whether or not server should be started by client
         self.start_server = start_server
+        self.server_props_path = None
+        self.server_start_time = None
         # validate properties
         validate_corenlp_props(properties=properties, annotators=annotators, output_format=output_format)
         # set up client defaults
@@ -238,7 +240,6 @@ class CoreNLPClient(RobustService):
         # start the server
         if start_server:
             # record info for server start
-            self.server_props_path = None
             self.server_start_time = datetime.now()
             self._setup_server_defaults()
             host, port = urlparse(endpoint).netloc.split(":")
