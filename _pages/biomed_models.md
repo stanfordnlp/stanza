@@ -6,7 +6,7 @@ nav_order: 5
 has_children: true
 ---
 
-# Models
+# Biomedical Models
 
 In this section, we cover the biomedical and clinical syntactic analysis and named entity recognition models offered in Stanza. We also report their performance, comparisons to other tools, and how to download and use these packages.
 {: .fs-5 .fw-300 }
