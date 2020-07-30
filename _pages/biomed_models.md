@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Biomedical Models
-permalink: '/biomed_models.html'
+permalink: '/biomed.html'
 nav_order: 5
 has_children: true
 ---
