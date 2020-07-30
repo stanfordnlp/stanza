@@ -106,6 +106,11 @@ If you use Stanza in your work, please cite this paper:
 > Peng Qi, Yuhao Zhang, Yuhui Zhang, Jason Bolton and Christopher D. Manning. 2020. [Stanza: A Python Natural Language Processing Toolkit for Many Human Languages.](https://arxiv.org/abs/2003.07082) In Association for Computational Linguistics (ACL) System Demonstrations. 2020. \[[pdf](https://nlp.stanford.edu/pubs/qi2020stanza.pdf)\]\[[bib](https://nlp.stanford.edu/pubs/qi2020stanza.bib)\]
 {: .citation }
 
+If you use the biomedical and clinical model packages in Stanza, please also cite our biomedical models paper:
+
+> Yuhao Zhang, Yuhui Zhang, Peng Qi, Christopher D. Manning, Curtis P. Langlotz. (2020). [Biomedical and Clinical English Model Packages in the Stanza Python NLP Library.](https://arxiv.org/abs/2007.14640) arXiv preprint arXiv:2004.14530.
+{: .citation }
+
 If you use Stanford CoreNLP through the Stanza python client, please also follow the instructions [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) to cite the proper publications.
 
 ## Links
