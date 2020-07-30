@@ -190,7 +190,6 @@ punct(presidente-7, .-10)
 def corenlp_client():
     """ Client to run tests on """
     client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos', server_id='stanza_request_tests_server')
-    client.register_properties_key('fr-custom', FRENCH_CUSTOM_PROPS)
     yield client
     client.stop()
 
@@ -207,33 +206,13 @@ def test_python_dict(corenlp_client):
     """ Test using a Python dictionary to specify all request properties """
     ann = corenlp_client.annotate(ES_DOC, properties=ES_PROPS, output_format="text")
     assert ann.strip() == ES_PROPS_GOLD.strip()
-
-
-def test_properties_key_and_python_dict(corenlp_client):
-    """ Test using a properties key and additional properties """
-    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom', properties=FRENCH_EXTRA_PROPS)
-    assert ann.strip() == FRENCH_EXTRA_GOLD.strip()
-
-
-def test_properties_key(corenlp_client):
-    """ Test using the properties_key which was registered with the properties cache """
-    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
-    assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
-
-
-def test_switching_back_and_forth(corenlp_client):
-    """ Test using a properties key, then properties key with python dict, then back to just properties key """
-    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
-    assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
-    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom', properties=FRENCH_EXTRA_PROPS)
-    assert ann.strip() == FRENCH_EXTRA_GOLD.strip()
-    ann = corenlp_client.annotate(FRENCH_DOC, properties_key='fr-custom')
+    ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_CUSTOM_PROPS)
     assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
 
 
 def test_lang_setting(corenlp_client):
     """ Test using a Stanford CoreNLP supported languages as a properties key """
-    ann = corenlp_client.annotate(GERMAN_DOC, properties_key="german", output_format="text")
+    ann = corenlp_client.annotate(GERMAN_DOC, properties="german", output_format="text")
     compare_ignoring_whitespace(ann, GERMAN_DOC_GOLD)
 
 
