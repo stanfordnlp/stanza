@@ -22,9 +22,9 @@ def filter_consecutive_whitespaces(para):
 
     return filtered
 
-NEWLINE_WHITESPACE_RE = re.compile('\n\s*\n')
-NUMERIC_RE = re.compile('^([\d]+[,\.]*)+$')
-WHITESPACE_RE = re.compile('\s')
+NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
+NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
+WHITESPACE_RE = re.compile(r'\s')
 
 
 class DataLoader:
