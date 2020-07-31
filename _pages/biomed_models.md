@@ -19,3 +19,13 @@ For more detailed information on how we created these models and our analysis of
 An online demo of our biomedical and clinical models is available at:
 
 [<i class="fas fa-desktop"></i> Online Demo](http://stanza.run/bio){: .btn .mr-2}
+
+Bibtext for citing our paper is:
+```
+@article{zhang2020biomedical,
+  title={Biomedical and Clinical English Model Packages in the Stanza Python NLP Library},
+  author={Zhang, Yuhao and Zhang, Yuhui and Qi, Peng and Manning, Christopher D. and Langlotz, Curtis P.},
+  journal={arXiv preprint arXiv:2007.14640},
+  year={2020}
+}
+```
