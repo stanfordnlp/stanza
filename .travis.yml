@@ -11,6 +11,7 @@ install:
   - unzip corenlp-latest.zip > unzip.log
   - export CORENLP_UNZIP=`grep creating unzip.log | head -n 1 | cut -d ":" -f 2`
   - mv $CORENLP_UNZIP $CORENLP_HOME
+  - export CLASSPATH="$CORENLP_HOME/*"
   - mkdir ~/stanza_test
   - mkdir ~/stanza_test/in
   - mkdir ~/stanza_test/out
