@@ -240,7 +240,7 @@ class CoreNLPClient(RobustService):
                  stdout=sys.stdout,
                  stderr=sys.stderr,
                  memory=DEFAULT_MEMORY,
-                 be_quiet=True,
+                 be_quiet=False,
                  max_char_length=DEFAULT_MAX_CHAR_LENGTH,
                  preload=True,
                  classpath=None,
