@@ -44,12 +44,12 @@ LANGUAGE_SHORTHANDS_TO_FULL = {
 
 
 def is_corenlp_lang(props_str):
-    """ Check if a string referencs a CoreNLP languauge """
+    """ Check if a string references a CoreNLP language """
     return props_str.lower() in CORENLP_LANGS
 
 
 # Validate CoreNLP properties
-CORENLP_OUTPUT_VALS = ["conll", "conllu", "json", "serialized", "text", "xml"]
+CORENLP_OUTPUT_VALS = ["conll", "conllu", "json", "serialized", "text", "xml", "inlinexml"]
 
 
 def validate_corenlp_props(properties=None, annotators=None, output_format=None):
@@ -214,7 +214,8 @@ def resolve_classpath(classpath):
         classpath = os.getenv("CORENLP_HOME", os.path.join(str(Path.home()), 'stanza_corenlp'))
 
         assert os.path.exists(classpath), \
-            "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define $CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
+            "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define " \
+            "$CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
         classpath = os.path.join(classpath, "*")
     return classpath
 
@@ -249,6 +250,9 @@ class CoreNLPClient(RobustService):
         self.start_server = start_server
         self.server_props_path = None
         self.server_start_time = None
+        self.server_host = None
+        self.server_port = None
+        self.server_classpath = None
         # validate properties
         validate_corenlp_props(properties=properties, annotators=annotators, output_format=output_format)
         # set up client defaults
@@ -427,7 +431,7 @@ class CoreNLPClient(RobustService):
             else:
                 raise AnnotationException(r.text)
 
-    def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=False, **kwargs):
+    def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=None, **kwargs):
         """
         Send a request to the CoreNLP server.
 
@@ -466,10 +470,12 @@ class CoreNLPClient(RobustService):
         if type(properties) == str:
             if is_corenlp_lang(properties):
                 properties = {'pipelineLanguage': properties.lower()}
+                if reset_default is None:
+                    reset_default = True
             else:
                 raise ValueError(f"Unrecognized properties keyword {properties}")
 
-        if properties and type(properties) == dict:
+        if type(properties) == dict:
             request_properties.update(properties)
 
         # if annotators list is specified, override with that
@@ -482,6 +488,9 @@ class CoreNLPClient(RobustService):
             request_properties['outputFormat'] = output_format
 
         # make the request
+        # if not explictly set or the case of pipelineLanguage, reset_default should be None
+        if reset_default is None:
+            reset_default = False
         r = self._request(text.encode('utf-8'), request_properties, reset_default, **kwargs)
         if request_properties["outputFormat"] == "json":
             return r.json()
