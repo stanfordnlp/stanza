@@ -18,7 +18,7 @@ For more detailed information on how we created these models and our analysis of
 
 An online demo of our biomedical and clinical models is available at:
 
-[<i class="fas fa-desktop"></i> Online Demo](http://stanza.run/bio){: .btn .mr-2}
+[<i class="fas fa-desktop"></i> &nbsp;Online Demo](http://stanza.run/bio){: .btn .mr-2}
 
 Bibtext for citing our paper is:
 ```
