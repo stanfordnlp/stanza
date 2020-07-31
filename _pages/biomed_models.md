@@ -20,7 +20,7 @@ An online demo of our biomedical and clinical models is available at:
 
 [<i class="fas fa-desktop"></i> &nbsp;Online Demo](http://stanza.run/bio){: .btn .mr-2}
 
-Bibtext for citing our paper is:
+Bibtex for citing our paper is:
 ```
 @article{zhang2020biomedical,
   title={Biomedical and Clinical English Model Packages in the Stanza Python NLP Library},
