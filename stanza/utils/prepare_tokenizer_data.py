@@ -14,7 +14,7 @@ a file of 0,1,2 indicating word break or sentence break on a character level for
   2: end of sentence
 """
 
-PARAGRAPH_BREAK = re.compile('\n\s*\n')
+PARAGRAPH_BREAK = re.compile(r'\n\s*\n')
 
 parser = argparse.ArgumentParser()
 

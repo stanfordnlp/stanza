@@ -97,7 +97,7 @@ class Pretrain:
         Open a vector file using the provided function and read from it.
         """
         # some vector files, such as Google News, use tabs
-        tab_space_pattern = re.compile("[ \t]+")
+        tab_space_pattern = re.compile(r"[ \t]+")
         first = True
         words = []
         failed = 0

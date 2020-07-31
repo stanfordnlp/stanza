@@ -57,7 +57,7 @@ def process_sentence(sentence, mwt_dict=None):
     return sent
 
 SPACE_RE = re.compile(r'\s')
-SPACE_SPLIT_RE = re.compile('( *[^ ]+)')
+SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []

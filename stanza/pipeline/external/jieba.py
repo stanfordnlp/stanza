@@ -45,7 +45,7 @@ class JiebaTokenizer(ProcessorVariant):
         current_sentence = []
         offset = 0
         for token in tokens:
-            if re.match('\s+', token):
+            if re.match(r'\s+', token):
                 offset += len(token)
                 continue
 

@@ -4,7 +4,7 @@ import re
 from stanza.models.common.vocab import BaseVocab
 from stanza.models.common.vocab import UNK, PAD
 
-SPACE_RE = re.compile('\s')
+SPACE_RE = re.compile(r'\s')
 
 class Vocab(BaseVocab):
     def __init__(self):
