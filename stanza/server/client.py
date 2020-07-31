@@ -481,7 +481,7 @@ class CoreNLPClient(RobustService):
         # if annotators list is specified, override with that
         # also can use the annotators field the object was created with
         if annotators is not None and (type(annotators) == str or type(annotators) == list):
-            request_properties['annotators'] = annotators if type(self.annotators) == str else ",".join(annotators)
+            request_properties['annotators'] = annotators if type(annotators) == str else ",".join(annotators)
 
         # if output format is specified, override with that
         if output_format is not None and type(output_format) == str:
