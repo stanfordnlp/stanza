@@ -10,7 +10,7 @@ from stanza.models.common.doc import Document
 
 from tests import *
 
-pytestmark = pytest.mark.client
+pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 TEST_ONE_SENTENCE = [[
     {

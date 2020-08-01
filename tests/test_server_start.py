@@ -37,6 +37,9 @@ punct(lives-3, .-6)
 Extracted the following NER entity mentions:
 Joe Smith       PERSON              PERSON:0.9972202681743931
 California      STATE_OR_PROVINCE   LOCATION:0.9990868267559281
+
+Extracted the following KBP triples:
+1.0 Joe Smith per:statesorprovinces_of_residence California
 """
 
 # results with an example properties file
