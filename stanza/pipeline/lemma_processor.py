@@ -14,7 +14,8 @@ class LemmaProcessor(UDProcessor):
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([LEMMA])
     # set of processor requirements for this processor
-    REQUIRES_DEFAULT = set([TOKENIZE, POS])
+    # pos will be added later for non-identity lemmatizerx
+    REQUIRES_DEFAULT = set([TOKENIZE])
     # default batch size
     DEFAULT_BATCH_SIZE = 5000
 
