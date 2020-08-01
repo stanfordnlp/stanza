@@ -26,9 +26,9 @@ The first argument `dir` sets where you want your CoreNLP to be installed; or if
 
 Apart from the default package distribution, CoreNLP also provides [additional models for six different languages](https://stanfordnlp.github.io/CoreNLP/index.html#download). To install these additional models, you can do:
 ```python
-stanza.download_corenlp_models(model='french', version='4.0.0', dir="YOUR_CORENLP_FOLDER")
+stanza.download_corenlp_models(model='french', version='4.1.0', dir="YOUR_CORENLP_FOLDER")
 ```
-Here the `model` argument specifies the model package that you want to install, and can be set to one of `'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'`; the `version` argument specifies the model version, for which `4.0.0` is the latest; and `dir` needs to point to your customized CoreNLP installation location, or the models will be installed to the default location.
+Here the `model` argument specifies the model package that you want to install, and can be set to one of `'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'`; the `version` argument specifies the model version, for which `4.1.0` is the latest; and `dir` needs to point to your customized CoreNLP installation location, or the models will be installed to the default location.
 
 
 ## Manual Installation
