@@ -19,6 +19,14 @@ import stanza.models.common.seq2seq_constant as constant
  Takes care of beams, back pointers, and scores.
 """
 
+# as of torch 1.5, torch.floor_divide is the proper way to divide two
+# integer tensors
+# versions which don't have floor_divide just use x / y instead
+if hasattr(torch, 'floor_divide'):
+    DIVIDE = torch.floor_divide
+else:
+    DIVIDE = lambda x, y: x / y
+
 
 class Beam(object):
     def __init__(self, size, cuda=False):
@@ -81,7 +89,9 @@ class Beam(object):
 
         # bestScoresId is flattened beam x word array, so calculate which
         # word and beam each score came from
-        prevK = bestScoresId / numWords
+        # bestScoreId is the integer ids, and numWords is the integer length.
+        # Need to do integer division
+        prevK = DIVIDE(bestScoresId, numWords)
         self.prevKs.append(prevK)
         self.nextYs.append(bestScoresId - prevK * numWords)
         if copy_indices is not None:
