@@ -44,7 +44,8 @@ TEST_ONE_SENTENCE = [[
         "feats": "Number=Sing",
         "head": 1,
         "deprel": "obj",
-        "misc": "start_char=10|end_char=14"
+        "misc": "start_char=10|end_char=14",
+        "ner": "GEM"
     },
     {
         "id": 4,
@@ -146,21 +147,21 @@ TEST_TWO_SENTENCES = [[
       "misc": "start_char=30|end_char=31"
     }]]
 
-def check_response(response, response_len=1, semgrex_len=1):
+def check_response(response, response_len=1, semgrex_len=1, source_index=1, target_index=3, reln='obj'):
     assert len(response.result) == response_len
     assert len(response.result[0].result) == semgrex_len
     for semgrex_result in response.result[0].result:
         assert len(semgrex_result.match) == 1
-        assert semgrex_result.match[0].index == 1
+        assert semgrex_result.match[0].index == source_index
         for match in semgrex_result.match:
             assert len(match.node) == 2
             assert match.node[0].name == 'source'
-            assert match.node[0].index == 1
+            assert match.node[0].index == source_index
             assert match.node[1].name == 'target'
-            assert match.node[1].index == 3
+            assert match.node[1].index == target_index
             assert len(match.reln) == 1
             assert match.reln[0].name == 'zzz'
-            assert match.reln[0].reln == 'obj'
+            assert match.reln[0].reln == reln
 
 def test_single_sentence():
     doc = Document(TEST_ONE_SENTENCE)
@@ -176,6 +177,33 @@ def test_two_sentences():
     doc = Document(TEST_TWO_SENTENCES)
     response = semgrex.process_doc(doc, "{}=source >obj=zzz {}=target")
     check_response(response, response_len=2)
+
+def test_word_attribute():
+    doc = Document(TEST_ONE_SENTENCE)
+    response = semgrex.process_doc(doc, "{word:Mox}=source <=zzz {word:Opal}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
+
+def test_lemma_attribute():
+    doc = Document(TEST_ONE_SENTENCE)
+    response = semgrex.process_doc(doc, "{lemma:Mox}=source <=zzz {lemma:Opal}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
+
+def test_xpos_attribute():
+    doc = Document(TEST_ONE_SENTENCE)
+    response = semgrex.process_doc(doc, "{tag:NNP}=source <=zzz {word:Opal}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
+    response = semgrex.process_doc(doc, "{pos:NNP}=source <=zzz {word:Opal}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
+
+def test_upos_attribute():
+    doc = Document(TEST_ONE_SENTENCE)
+    response = semgrex.process_doc(doc, "{cpos:PROPN}=source <=zzz {word:Opal}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
+
+def test_ner_attribute():
+    doc = Document(TEST_ONE_SENTENCE)
+    response = semgrex.process_doc(doc, "{cpos:PROPN}=source <=zzz {ner:GEM}=target")
+    check_response(response, response_len=1, source_index=2, reln='compound')
 
 def test_hand_built_request():
     """
