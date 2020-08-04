@@ -39,6 +39,14 @@ def process_doc(doc, *semgrex_patterns):
                 query_token = query.token.add()
                 query_token.word = word.text
                 query_token.value = word.text
+                if word.lemma is not None:
+                    query_token.lemma = word.lemma
+                if word.xpos is not None:
+                    query_token.pos = word.xpos
+                if word.upos is not None:
+                    query_token.coarseTag = word.upos
+                if token.ner is not None:
+                    query_token.ner = token.ner
 
                 node = query.graph.node.add()
                 node.sentenceIndex = sent_idx+1
