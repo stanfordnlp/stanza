@@ -19,6 +19,8 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_
         data_orig_idx = None
     elif sort_during_eval:
         (data, ), data_orig_idx = sort_all([data], [len(x[0]) for x in data])
+    else:
+        data_orig_idx = None
 
     current = []
     currentlen = 0

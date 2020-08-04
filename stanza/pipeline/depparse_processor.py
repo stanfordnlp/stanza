@@ -36,11 +36,12 @@ class DepparseProcessor(UDProcessor):
 
     def process(self, document):
         batch = DataLoader(document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
-                           sort_during_eval=True, max_sentence_size=self.config.get('max_sentence_size', None))
+                           sort_during_eval=self.config.get('sort_during_eval', True), max_sentence_size=self.config.get('max_sentence_size', None))
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
-        preds = unsort(preds, batch.data_orig_idx)
+        if batch.data_orig_idx is not None:
+            preds = unsort(preds, batch.data_orig_idx)
         batch.doc.set([doc.HEAD, doc.DEPREL], [y for x in preds for y in x])
         # build dependencies based on predictions
         for sentence in batch.doc.sentences:
