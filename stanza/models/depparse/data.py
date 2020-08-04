@@ -11,6 +11,21 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 
 def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_size):
+    """
+    Given a list of lists, where the first element of each sublist
+    represents the sentence, group the sentences into batches.
+
+    During training mode (not eval_mode) the sentences are sorted by
+    length with a bit of random shuffling.  During eval mode, the
+    sentences are sorted by length if sort_during_eval is true.
+
+    Refactored from the data structure in case other models could use
+    it and for ease of testing.
+
+    Returns (batches, original_order), where original_order is None
+    when in train mode or when unsorted and represents the original
+    location of each sentence in the sort
+    """
     res = []
 
     if not eval_mode:
