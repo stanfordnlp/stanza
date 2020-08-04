@@ -10,7 +10,7 @@ from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
-def data_to_batches(data, batch_size, eval_mode, sort_during_eval):
+def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_size):
     res = []
 
     if not eval_mode:
@@ -23,12 +23,19 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval):
     current = []
     currentlen = 0
     for x in data:
-        if len(x[0]) + currentlen > batch_size and currentlen > 0:
-            res.append(current)
-            current = []
-            currentlen = 0
-        current.append(x)
-        currentlen += len(x[0])
+        if max_sentence_size is not None and len(x[0]) > max_sentence_size:
+            if currentlen > 0:
+                res.append(current)
+                current = []
+                currentlen = 0
+            res.append([x])
+        else:
+            if len(x[0]) + currentlen > batch_size and currentlen > 0:
+                res.append(current)
+                current = []
+                currentlen = 0
+            current.append(x)
+            currentlen += len(x[0])
 
     if currentlen > 0:
         res.append(current)
@@ -38,8 +45,9 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval):
 
 class DataLoader:
 
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, max_sentence_size=None):
         self.batch_size = batch_size
+        self.max_sentence_size=max_sentence_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
@@ -180,7 +188,8 @@ class DataLoader:
 
     def chunk_batches(self, data):
         batches, data_orig_idx = data_to_batches(data=data, batch_size=self.batch_size,
-                                                 eval_mode=self.eval, sort_during_eval=self.sort_during_eval)
+                                                 eval_mode=self.eval, sort_during_eval=self.sort_during_eval,
+                                                 max_sentence_size=self.max_sentence_size)
         # data_orig_idx might be None at train time, since we don't anticipate unsorting
         self.data_orig_idx = data_orig_idx
         return batches

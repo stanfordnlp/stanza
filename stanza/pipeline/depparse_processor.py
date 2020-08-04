@@ -35,9 +35,8 @@ class DepparseProcessor(UDProcessor):
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
-        batch = DataLoader(
-            document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
-            sort_during_eval=True)
+        batch = DataLoader(document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
+                           sort_during_eval=True, max_sentence_size=self.config.get('max_sentence_size', None))
         preds = []
         for i, b in enumerate(batch):
             preds += self.trainer.predict(b)
