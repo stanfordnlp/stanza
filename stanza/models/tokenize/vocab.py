@@ -7,8 +7,8 @@ from stanza.models.common.vocab import UNK, PAD
 SPACE_RE = re.compile(r'\s')
 
 class Vocab(BaseVocab):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.lang_replaces_spaces = any([self.lang.startswith(x) for x in ['zh', 'ja', 'ko']])
 
     def build_vocab(self):
