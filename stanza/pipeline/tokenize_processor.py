@@ -86,4 +86,15 @@ class TokenizeProcessor(UDProcessor):
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
                                    orig_text=raw_text,
                                    no_ssplit=self.config.get('no_ssplit', False))
+
+        if self.config.get('suppress_mwt', False):
+            for sentence in document:
+                for token in sentence:
+                    if 'MWT=Yes' in token.get('misc', {}):
+                        misc = [x for x in token['misc'].split('|') if x != 'MWT=Yes']
+                        if len(misc) > 0:
+                            misc = '|'.join(misc)
+                        else:
+                            misc = '_'
+                        token['misc'] = misc
         return doc.Document(document, raw_text)

@@ -79,6 +79,38 @@ EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 EN_DOC_NO_SSPLIT = ["This is a sentence. This is another.", "This is a third."]
 EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is', 'another', '.'], ['This', 'is', 'a', 'third', '.']]
 
+FR_DOC_SUPPRESS_MWT = "Ceci est une phrase d'exemple pour le traitement du langage naturel."
+FR_DOC_SUPPRESS_MWT_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Ceci>]>
+<Token id=2;words=[<Word id=2;text=est>]>
+<Token id=3;words=[<Word id=3;text=une>]>
+<Token id=4;words=[<Word id=4;text=phrase>]>
+<Token id=5;words=[<Word id=5;text=d'>]>
+<Token id=6;words=[<Word id=6;text=exemple>]>
+<Token id=7;words=[<Word id=7;text=pour>]>
+<Token id=8;words=[<Word id=8;text=le>]>
+<Token id=9;words=[<Word id=9;text=traitement>]>
+<Token id=10;words=[<Word id=10;text=du>]>
+<Token id=11;words=[<Word id=11;text=langage>]>
+<Token id=12;words=[<Word id=12;text=naturel>]>
+<Token id=13;words=[<Word id=13;text=.>]>
+""".strip()
+FR_DOC_NO_SUPPRESS_MWT_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Ceci>]>
+<Token id=2;words=[<Word id=2;text=est>]>
+<Token id=3;words=[<Word id=3;text=une>]>
+<Token id=4;words=[<Word id=4;text=phrase>]>
+<Token id=5;words=[<Word id=5;text=d'>]>
+<Token id=6;words=[<Word id=6;text=exemple>]>
+<Token id=7;words=[<Word id=7;text=pour>]>
+<Token id=8;words=[<Word id=8;text=le>]>
+<Token id=9;words=[<Word id=9;text=traitement>]>
+<Token id=10;words=[]>
+<Token id=11;words=[<Word id=11;text=langage>]>
+<Token id=12;words=[<Word id=12;text=naturel>]>
+<Token id=13;words=[<Word id=13;text=.>]>
+""".strip()
+
 JA_DOC = "北京は中国の首都です。 北京の人口は2152万人です。\n" # add some random whitespaces that need to be skipped
 JA_DOC_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=北京>]>
@@ -149,6 +181,15 @@ def test_no_ssplit():
     doc = nlp(EN_DOC_NO_SSPLIT)
     assert EN_DOC_NO_SSPLIT_SENTENCES == [[w.text for w in s.words] for s in doc.sentences]
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_suppress_mwt():
+    nlp = stanza.Pipeline('fr', dir=TEST_MODELS_DIR, processors='tokenize')
+    doc = nlp(FR_DOC_SUPPRESS_MWT)
+    assert FR_DOC_NO_SUPPRESS_MWT_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+
+    nlp = stanza.Pipeline('fr', dir=TEST_MODELS_DIR, processors='tokenize', tokenize_suppress_mwt=True)
+    doc = nlp(FR_DOC_SUPPRESS_MWT)
+    assert FR_DOC_SUPPRESS_MWT_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
