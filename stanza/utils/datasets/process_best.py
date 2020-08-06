@@ -13,7 +13,7 @@ that of the UD treebanks, so we pretend to be a UD treebank for ease
 of compatibility with the stanza tools.
 
 python3 -m stanza.utils.datasets.process_best extern_data/thai/best data/tokenize
-
+./scripts/run_tokenize.sh UD_Thai-best --dropout 0.05 --unit_dropout 0.05 --steps 50000
 """
 
 import glob
