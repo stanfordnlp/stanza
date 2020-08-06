@@ -269,7 +269,17 @@ class CoreNLPClient(RobustService):
         self.output_format = output_format
         self._setup_client_defaults()
         # start the server
-        if start_server == StartServer.FORCE_START or start_server == StartServer.TRY_STARTING:
+        if isinstance(start_server, bool):
+            warning_msg = f"Setting 'start_server' to a boolean value when constructing {self.__class__.__name__} is deprecated and will stop" + \
+                " to function in a future version of stanza. Please consider switching to using a value from stanza.server.StartServer."
+            logger.warning(warning_msg)
+            start_server = StartServer.FORCE_START if start_server is True else StartServer.DONT_START
+
+        # properties cache maps keys to properties dictionaries for convenience
+        self.properties_cache = {}
+        self.server_props_file = {'is_temp': False, 'path': None}
+        # start the server
+        if start_server is StartServer.FORCE_START or start_server is StartServer.TRY_STARTING:
             # record info for server start
             self.server_start_time = datetime.now()
             # set up default properties for server
