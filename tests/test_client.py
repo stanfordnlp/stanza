@@ -137,7 +137,7 @@ def test_external_server():
                 f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
     start_cmd = start_cmd and shlex.split(start_cmd)
     external_server_process = subprocess.Popen(start_cmd)
-    with corenlp.CoreNLPClient(start_server=corenlp.client.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
     assert external_server_process
     external_server_process.terminate()
