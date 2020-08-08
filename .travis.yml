@@ -5,17 +5,20 @@ notifications:
   email: false
 install:
   - pip install --quiet -e .
-  - export CORENLP_HOME=~/corenlp400 CORENLP_VERSION=stanford-corenlp-full-2020-04-20
+  - export CORENLP_HOME=~/corenlp-latest CORENLP_VERSION=stanford-corenlp-latest
   - export CORENLP_URL="http://nlp.stanford.edu/software/${CORENLP_VERSION}.zip"
-  - wget $CORENLP_URL -O corenlp400.zip
-  - unzip corenlp400.zip
-  - mv $CORENLP_VERSION $CORENLP_HOME
+  - wget $CORENLP_URL -O corenlp-latest.zip
+  - unzip corenlp-latest.zip > unzip.log
+  - export CORENLP_UNZIP=`grep creating unzip.log | head -n 1 | cut -d ":" -f 2`
+  - mv $CORENLP_UNZIP $CORENLP_HOME
+  - export CLASSPATH="$CORENLP_HOME/*"
   - mkdir ~/stanza_test
   - mkdir ~/stanza_test/in
   - mkdir ~/stanza_test/out
   - mkdir ~/stanza_test/scripts
   - cp tests/data/external_server.properties ~/stanza_test/scripts
   - cp tests/data/example_french.json ~/stanza_test/out
+  - cp tests/data/tiny_emb.* ~/stanza_test/in
   - export STANZA_TEST_HOME=~/stanza_test
 script:
   - python -m pytest -m travis tests/

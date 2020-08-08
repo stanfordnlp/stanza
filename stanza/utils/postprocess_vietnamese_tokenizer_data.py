@@ -13,12 +13,12 @@ def para_to_chunks(text, char_level_pred):
         if re.match('^\w$', text[idx], flags=re.UNICODE):
             lastchunk += text[idx]
         else:
-            if len(lastchunk) > 0 and not re.match('^\W+$', lastchunk, flags=re.UNICODE):
+            if len(lastchunk) > 0 and not re.match(r'^\W+$', lastchunk, flags=re.UNICODE):
                 chunks += [lastchunk]
                 assert len(lastpred) > 0
                 preds += [int(lastpred)]
                 lastchunk = ''
-            if not re.match('^\s$', text[idx], flags=re.UNICODE):
+            if not re.match(r'^\s$', text[idx], flags=re.UNICODE):
                 # punctuation
                 chunks += [text[idx]]
                 preds += [int(char_level_pred[idx])]
@@ -34,7 +34,7 @@ def para_to_chunks(text, char_level_pred):
     return list(zip(chunks, preds))
 
 def paras_to_chunks(text, char_level_pred):
-    return [para_to_chunks(re.sub('\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
+    return [para_to_chunks(re.sub(r'\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

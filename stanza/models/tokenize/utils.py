@@ -40,10 +40,10 @@ def process_sentence(sentence, mwt_dict=None):
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
             infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            sent.append({ID: f'{i+1}-{i+len(expansion)}', TEXT: tok})
+            sent.append({ID: (i+1, i+len(expansion)), TEXT: tok})
             if infostr is not None: sent[-1][MISC] = infostr
             for etok in expansion:
-                sent.append({ID: f'{i+1}', TEXT: etok})
+                sent.append({ID: (i+1, ), TEXT: etok})
                 i += 1
         else:
             if len(tok) <= 0:
@@ -51,18 +51,13 @@ def process_sentence(sentence, mwt_dict=None):
             if p == 3 or p == 4:
                 additional_info['MWT'] = 'Yes'
             infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
-            sent.append({ID: f'{i+1}', TEXT: tok})
+            sent.append({ID: (i+1, ), TEXT: tok})
             if infostr is not None: sent[-1][MISC] = infostr
             i += 1
     return sent
 
-def find_token(token, text):
-    """
-    Robustly finds the first occurrence of token in the text, and return its offset and it's underlying original string.
-    Ignores whitespace mismatches between the text and the token.
-    """
-    m = re.search(r'\s*'.join([r'\s' if re.match(r'\s', x) else re.escape(x) for x in token]), text)
-    return m.start(), m.group()
+SPACE_RE = re.compile(r'\s')
+SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
     paragraphs = []
@@ -132,8 +127,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count = 0
     doc = []
 
-    text = orig_text
+    text = SPACE_RE.sub(' ', orig_text) if orig_text is not None else None
     char_offset = 0
+    use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
 
     for j in range(len(paragraphs)):
         raw = all_raw[j]
@@ -146,7 +142,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             if t == '<PAD>':
                 break
             # hack la_ittb
-            if trainer.args['shorthand'] == 'la_ittb' and t in [":", ";"]:
+            if use_la_ittb_shorthand and t in (":", ";"):
                 p = 2
             offset += 1
             if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
@@ -160,14 +156,19 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     current_tok = ''
                     continue
                 if orig_text is not None:
-                    st0, tok0 = find_token(tok, text)
-                    st = char_offset + st0
-                    text = text[st0 + len(tok0):]
-                    char_offset += st0 + len(tok0)
-                    additional_info = {START_CHAR: st, END_CHAR: st + len(tok0)}
+                    st = -1
+                    tok_len = 0
+                    for part in SPACE_SPLIT_RE.split(current_tok):
+                        if len(part) == 0: continue
+                        st0 = text.index(part, char_offset) - char_offset
+                        lstripped = part.lstrip()
+                        if st < 0:
+                            st = char_offset + st0 + (len(part) - len(lstripped))
+                        char_offset += st0 + len(part)
+                    additional_info = {START_CHAR: st, END_CHAR: char_offset}
                 else:
                     additional_info = dict()
-                current_sent += [(tok, p, additional_info)]
+                current_sent.append((tok, p, additional_info))
                 current_tok = ''
                 if (p == 2 or p == 4) and not no_ssplit:
                     doc.append(process_sentence(current_sent, mwt_dict))

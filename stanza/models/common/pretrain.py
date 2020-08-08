@@ -43,6 +43,7 @@ class Pretrain:
         if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
+                logger.debug("Loaded pretrain from {}".format(self.filename))
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
@@ -62,7 +63,7 @@ class Pretrain:
         try:
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=lzma.open)
         except lzma.LZMAError as err:
-            logging.warning("Cannot decode vector file as xz file. Retrying as text file...")
+            logger.warning("Cannot decode vector file %s as xz file. Retrying as text file..." % self._vec_filename)
             words, emb, failed = self.read_from_file(self._vec_filename, open_func=open)
 
         if failed > 0: # recover failure
@@ -96,7 +97,7 @@ class Pretrain:
         Open a vector file using the provided function and read from it.
         """
         # some vector files, such as Google News, use tabs
-        tab_space_pattern = re.compile("[ \t]+")
+        tab_space_pattern = re.compile(r"[ \t]+")
         first = True
         words = []
         failed = 0
@@ -133,3 +134,4 @@ if __name__ == '__main__':
     # 2nd load: load saved pt file
     pretrain = Pretrain('test.pt', 'test.txt')
     print(pretrain.emb)
+
