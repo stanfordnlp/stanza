@@ -85,7 +85,7 @@ class PermanentlyFailedException(Exception):
 class StartServer(enum.Enum):
     DONT_START = 0
     FORCE_START = 1
-    TRY_STARTING = 2
+    TRY_START = 2
 
 
 def clean_props_file(props_file):
@@ -126,11 +126,15 @@ class RobustService(object):
     def start(self):
         if self.start_cmd:
             if self.host and self.port:
-                if not self.ignore_binding_error:
-                    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-                        try:
-                            sock.bind((self.host, self.port))
-                        except socket.error:
+                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                    try:
+                        sock.bind((self.host, self.port))
+                    except socket.error:
+                        if self.ignore_binding_error:
+                            logger.info(f"Connecting to existing CoreNLP server at {self.host}:{self.port}")
+                            self.server = None
+                            return
+                        else:
                             raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
                                                          "(possibly something is already running there)" % self.port)
             if self.be_quiet:
@@ -276,7 +280,7 @@ class CoreNLPClient(RobustService):
             start_server = StartServer.FORCE_START if start_server is True else StartServer.DONT_START
 
         # start the server
-        if start_server is StartServer.FORCE_START or start_server is StartServer.TRY_STARTING:
+        if start_server is StartServer.FORCE_START or start_server is StartServer.TRY_START:
             # record info for server start
             self.server_start_time = datetime.now()
             # set up default properties for server
@@ -340,7 +344,7 @@ class CoreNLPClient(RobustService):
             host = port = None
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server == StartServer.TRY_STARTING))
+                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server == StartServer.TRY_START))
 
         self.timeout = timeout
 
