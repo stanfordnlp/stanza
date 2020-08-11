@@ -10,7 +10,7 @@ def para_to_chunks(text, char_level_pred):
     lastchunk = ''
     lastpred = ''
     for idx in range(len(text)):
-        if re.match('^\w$', text[idx], flags=re.UNICODE):
+        if re.match(r'^\w$', text[idx], flags=re.UNICODE):
             lastchunk += text[idx]
         else:
             if len(lastchunk) > 0 and not re.match(r'^\W+$', lastchunk, flags=re.UNICODE):
