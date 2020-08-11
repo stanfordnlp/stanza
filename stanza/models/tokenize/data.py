@@ -11,6 +11,22 @@ from .vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
+def filter_consecutive_whitespaces(para):
+    filtered = []
+    for i, (char, label) in enumerate(para):
+        if i > 0:
+            if char == ' ' and para[i-1][0] == ' ':
+                continue
+
+        filtered.append((char, label))
+
+    return filtered
+
+NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
+NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
+WHITESPACE_RE = re.compile(r'\s')
+
+
 class DataLoader:
     def __init__(self, args, input_files={'json': None, 'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
         self.args = args
@@ -40,11 +56,14 @@ class DataLoader:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
             else:
-                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in re.split('\n\s*\n', text)])
+                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
 
-            self.data = [[(re.sub('\s', ' ', char), int(label)) # substitute special whitespaces
+            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
                     for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
-                    for pt, pc in zip(re.split('\n\s*\n', text), labels.split('\n\n')) if len(pt.rstrip()) > 0]
+                    for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
+
+        # remove consecutive whitespaces
+        self.data = [filter_consecutive_whitespaces(x) for x in self.data]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
@@ -80,39 +99,41 @@ class DataLoader:
             elif feat_func == 'all_caps':
                 func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
-                func = lambda x: 1 if (re.match('^([\d]+[,\.]*)+$', x) is not None) else 0
+                func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
-        
+
         # stacking all featurize functions
-        composite_func = lambda x: list(map(lambda f: f(x), funcs))
+        composite_func = lambda x: [f(x) for f in funcs]
 
         def process_sentence(sent):
             return [(self.vocab.unit2id(y[0]), y[1], y[2], y[0]) for y in sent]
 
+        use_end_of_para = 'end_of_para' in self.args['feat_funcs']
+        use_start_of_para = 'start_of_para' in self.args['feat_funcs']
         current = []
         for i, (unit, label) in enumerate(para):
             label1 = label if not self.eval else 0
             feats = composite_func(unit)
             # position-dependent features
-            if 'end_of_para' in self.args['feat_funcs']:
+            if use_end_of_para:
                 f = 1 if i == len(para)-1 else 0
                 feats.append(f)
-            if 'start_of_para' in self.args['feat_funcs']:
+            if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
-            current += [[unit, label, feats]]
+            current += [(unit, label, feats)]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res += [process_sentence(current)]
+                    res.append(process_sentence(current))
                 current = []
 
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
-                res += [process_sentence(current)]
+                res.append(process_sentence(current))
 
         return res
 

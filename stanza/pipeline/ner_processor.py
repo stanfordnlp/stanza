@@ -8,10 +8,11 @@ from stanza.models.common.utils import unsort
 from stanza.models.ner.data import DataLoader
 from stanza.models.ner.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
 logger = logging.getLogger('stanza')
 
+@register_processor(name=NER)
 class NERProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills

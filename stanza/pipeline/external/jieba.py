@@ -1,10 +1,12 @@
 """
-Utilities related to using Jieba in the pipeline.
+Processors related to Jieba in the pipeline.
 """
 
 import re
 
 from stanza.models.common import doc
+from stanza.pipeline._constants import TOKENIZE
+from stanza.pipeline.processor import ProcessorVariant, register_processor_variant
 
 def check_jieba():
     """
@@ -18,20 +20,21 @@ def check_jieba():
         )
     return True
 
-class JiebaTokenizer():
-    def __init__(self, lang='zh-hans'):
+@register_processor_variant(TOKENIZE, 'jieba')
+class JiebaTokenizer(ProcessorVariant):
+    def __init__(self, config):
         """ Construct a Jieba-based tokenizer by loading the Jieba pipeline.
 
         Note that this tokenizer uses regex for sentence segmentation.
         """
-        if lang not in ['zh', 'zh-hans', 'zh-hant']:
+        if config['lang'] not in ['zh', 'zh-hans', 'zh-hant']:
             raise Exception("Jieba tokenizer is currently only allowed in Chinese (simplified or traditional) pipelines.")
 
         check_jieba()
         import jieba
         self.nlp = jieba
 
-    def tokenize(self, text):
+    def process(self, text):
         """ Tokenize a document with the Jieba tokenizer and wrap the results into a Doc object.
         """
         if not isinstance(text, str):
@@ -42,7 +45,7 @@ class JiebaTokenizer():
         current_sentence = []
         offset = 0
         for token in tokens:
-            if re.match('\s+', token):
+            if re.match(r'\s+', token):
                 offset += len(token)
                 continue
 

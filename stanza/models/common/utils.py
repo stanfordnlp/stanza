@@ -7,13 +7,14 @@ import random
 import json
 import unicodedata
 import torch
+import numpy as np
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
 import stanza.utils.conll18_ud_eval as ud_eval
 
 # filenames
-def get_wordvec_file(wordvec_dir, shorthand):
+def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
     """ Lookup the name of the word vectors file, given a directory and the language shorthand.
     """
     lcode, tcode = shorthand.split('_', 1)
@@ -21,12 +22,17 @@ def get_wordvec_file(wordvec_dir, shorthand):
     # locate language folder
     word2vec_dir = os.path.join(wordvec_dir, 'word2vec', lang)
     fasttext_dir = os.path.join(wordvec_dir, 'fasttext', lang)
-    if os.path.exists(word2vec_dir): # first try word2vec
+    lang_dir = None
+    if wordvec_type is not None:
+        lang_dir = os.path.join(wordvec_dir, wordvec_type, lang)
+        if not os.path.exists(lang_dir):
+            raise FileNotFoundError("Word vector type {} was specified, but directory {} does not exist".format(wordvec_type, lang_dir))
+    elif os.path.exists(word2vec_dir): # first try word2vec
         lang_dir = word2vec_dir
     elif os.path.exists(fasttext_dir): # otherwise try fasttext
         lang_dir = fasttext_dir
     else:
-        raise Exception("Cannot locate word vector directory for language: {}".format(lang))
+        raise FileNotFoundError("Cannot locate word vector directory for language: {}  Looked in {} and {}".format(lang, word2vec_dir, fasttext_dir))
     # look for wordvec filename in {lang_dir}
     filename = os.path.join(lang_dir, '{}.vectors'.format(lcode))
     if os.path.exists(filename + ".xz"):
@@ -204,3 +210,19 @@ def tensor_unsort(sorted_tensor, oidx):
     assert sorted_tensor.size(0) == len(oidx), "Number of list elements must match with original indices."
     backidx = [x[0] for x in sorted(enumerate(oidx), key=lambda x: x[1])]
     return sorted_tensor[backidx]
+
+
+def set_random_seed(seed, cuda):
+    """
+    Set a random seed on all of the things which might need it.
+    torch, np, python random, and torch.cuda
+    """
+    if seed is None:
+        seed = random.randint(0, 1000000000)
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if cuda:
+        torch.cuda.manual_seed(seed)
+    return seed

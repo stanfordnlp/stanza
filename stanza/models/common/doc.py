@@ -5,6 +5,7 @@ Basic data structures
 import io
 import re
 import json
+import pickle
 
 from stanza.models.ner.utils import decode_from_bioes
 
@@ -25,8 +26,40 @@ NER = 'ner'
 START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 TYPE = 'type'
+SENTIMENT = 'sentiment'
 
-class Document:
+def _readonly_setter(self, name):
+    full_classname = self.__class__.__module__
+    if full_classname is None:
+        full_classname = self.__class__.__qualname__
+    else:
+        full_classname += '.' + self.__class__.__qualname__
+    raise ValueError(f'Property "{name}" of "{full_classname}" is read-only.')
+
+class StanzaObject(object):
+    """
+    Base class for all Stanza data objects that allows for some flexibility handling annotations
+    """
+
+    @classmethod
+    def add_property(cls, name, default=None, getter=None, setter=None):
+        """
+        Add a property accessible through self.{name} with underlying variable self._{name}.
+        Optionally setup a setter as well.
+        """
+
+        if hasattr(cls, name):
+            raise ValueError(f'Property by the name of {name} already exists in {cls}. Maybe you want to find another name?')
+
+        setattr(cls, f'_{name}', default)
+        if getter is None:
+            getter = lambda self: getattr(self, f'_{name}')
+        if setter is None:
+            setter = lambda self, value: _readonly_setter(self, name)
+
+        setattr(cls, name, property(getter, setter))
+
+class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
@@ -65,7 +98,7 @@ class Document:
     def sentences(self, value):
         """ Set the list of tokens for this document. """
         self._sentences = value
-    
+
     @property
     def num_tokens(self):
         """ Access the number of tokens for this document. """
@@ -117,18 +150,21 @@ class Document:
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
     def get(self, fields, as_sentences=False, from_token=False):
-        """ Get fields from a list of field names. If only one field name is provided, return a list
-        of that field; if more than one, return a list of list. Note that all returned fields are after
-        multi-word expansion.
+        """ Get fields from a list of field names.
+        If only one field name (string or singleton list) is provided,
+        return a list of that field; if more than one, return a list of list.
+        Note that all returned fields are after multi-word expansion.
 
         Args:
-            fields: name of the fields as a list
+            fields: name of the fields as a list or a single string
             as_sentences: if True, return the fields as a list of sentences; otherwise as a whole list
             from_token: if True, get the fields from Token; otherwise from Word
-        
+
         Returns:
             All requested fields.
         """
+        if isinstance(fields, str):
+            fields = [fields]
         assert isinstance(fields, list), "Must provide field names as a list."
         assert len(fields) >= 1, "Must have at least one field."
 
@@ -153,37 +189,52 @@ class Document:
                 results += cursent
         return results
 
-    def set(self, fields, contents, to_token=False):
-        """ Set fields based on contents. If only one field (singleton list) is provided, then a list
-        of content will be expected; otherwise a list of list of contents will be expected.
+    def set(self, fields, contents, to_token=False, to_sentence=False):
+        """Set fields based on contents. If only one field (string or
+        singleton list) is provided, then a list of content will be
+        expected; otherwise a list of list of contents will be expected.
 
         Args:
-            fields: name of the fields as a list
+            fields: name of the fields as a list or a single string
             contents: field values to set; total length should be equal to number of words/tokens
             to_token: if True, set field values to tokens; otherwise to words
+
         """
-        assert isinstance(fields, list), "Must provide field names as a list."
-        assert isinstance(contents, list), "Must provide contents as a list (one item per line)."
+        if isinstance(fields, str):
+            fields = [fields]
+        assert isinstance(fields, (tuple, list)), "Must provide field names as a list."
+        assert isinstance(contents, (tuple, list)), "Must provide contents as a list (one item per line)."
         assert len(fields) >= 1, "Must have at least one field."
 
-        assert (to_token and self.num_tokens == len(contents)) or self.num_words == len(contents), \
-            "Contents must have the same number as the original file."
+        assert not to_sentence or not to_token, "Both to_token and to_sentence set to True, which is very confusing"
 
-        cidx = 0
-        for sentence in self.sentences:
-            # decide word or token
-            if to_token:
-                units = sentence.tokens
-            else:
-                units = sentence.words
-            for unit in units:
+        if to_sentence:
+            assert len(self.sentences) == len(contents), \
+                "Contents must have the same length as the sentences"
+            for sentence, content in zip(self.sentences, contents):
                 if len(fields) == 1:
-                    setattr(unit, fields[0], contents[cidx])
+                    setattr(sentence, fields[0], content)
                 else:
-                    for field, content in zip(fields, contents[cidx]):
-                        setattr(unit, field, content)
-                cidx += 1
-        return
+                    for field, piece in zip(fields, content):
+                        setattr(sentence, field, piece)
+        else:
+            assert (to_token and self.num_tokens == len(contents)) or self.num_words == len(contents), \
+                "Contents must have the same length as the original file."
+
+            cidx = 0
+            for sentence in self.sentences:
+                # decide word or token
+                if to_token:
+                    units = sentence.tokens
+                else:
+                    units = sentence.words
+                for unit in units:
+                    if len(fields) == 1:
+                        setattr(unit, fields[0], contents[cidx])
+                    else:
+                        for field, content in zip(fields, contents[cidx]):
+                            setattr(unit, field, content)
+                    cidx += 1
 
     def set_mwt_expansions(self, expansions):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
@@ -194,21 +245,21 @@ class Document:
             idx_w = 0
             for token in sentence.tokens:
                 idx_w += 1
-                m = multi_word_token_id.match(token.id)
+                m = (len(token.id) > 1)
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if not m and not n:
                     for word in token.words:
-                        word.id = str(idx_w)
+                        word.id = idx_w
                         word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
                     token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
-                    token.id = f'{idx_w}-{idx_w_end}'
+                    token.id = (idx_w, idx_w_end)
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({ID: str(idx_w + i), TEXT: e_word}))
+                        token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
             sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
         self._process_sentences(self.to_dict()) # reprocess to update number of words
@@ -223,7 +274,7 @@ class Document:
         expansions = []
         for sentence in self.sentences:
             for token in sentence.tokens:
-                m = multi_word_token_id.match(token.id)
+                m = (len(token.id) > 1)
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if m or n:
                     src = token.text
@@ -258,8 +309,25 @@ class Document:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+    def to_serialized(self):
+        """ Dumps the whole document including text to a byte array containing a list of list of dictionaries for each token in each sentence in the doc.
+        """
+        return pickle.dumps((self.text, self.to_dict()))
 
-class Sentence:
+    @classmethod
+    def from_serialized(cls, serialized_string):
+        """ Create and initialize a new document from a serialized string generated by Document.to_serialized_string():
+        """
+        try:
+            text, sentences = pickle.loads(serialized_string)
+            doc = cls(sentences, text)
+            doc.build_ents()
+            return doc
+        except:
+            raise Exception(f"Could not create new Document from serialised string.")
+
+
+class Sentence(StanzaObject):
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
     """
 
@@ -280,16 +348,18 @@ class Sentence:
         self.tokens, self.words = [], []
         for i, entry in enumerate(tokens):
             if ID not in entry: # manually set a 1-based id for word if not exist
-                entry[ID] = str(i+1)
-            m = multi_word_token_id.match(entry.get(ID))
+                entry[ID] = (i+1, )
+            if isinstance(entry[ID], int):
+                entry[ID] = (entry[ID], )
+            m = (len(entry.get(ID)) > 1)
             n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
             if m or n: # if this token is a multi-word token
-                if m: st, en = int(m.group(1)), int(m.group(2))
+                if m: st, en = entry[ID]
                 self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
                 self.words.append(new_word)
-                idx = int(entry.get(ID))
+                idx = entry.get(ID)[0]
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
@@ -297,10 +367,10 @@ class Sentence:
                 new_word.parent = self.tokens[-1]
 
         # check if there is dependency info
-        is_complete_dependencies = all([word.head is not None and word.deprel is not None for word in self.words])
-        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == int(self.words[-1].id))
+        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
+        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
         if is_complete_dependencies and is_complete_words: self.build_dependencies()
-    
+
     @property
     def doc(self):
         """ Access the parent doc of this span. """
@@ -350,7 +420,7 @@ class Sentence:
     def words(self, value):
         """ Set the list of words for this sentence. """
         self._words = value
-    
+
     @property
     def ents(self):
         """ Access the list of entities in this sentence. """
@@ -370,10 +440,10 @@ class Sentence:
     def entities(self, value):
         """ Set the list of entities in this sentence. """
         self._ents = value
-    
+
     def build_ents(self):
-        """ Build the list of entities by iterating over all tokens. Return all entities as a list. 
-        
+        """ Build the list of entities by iterating over all tokens. Return all entities as a list.
+
         Note that unlike other attributes, since NER requires raw text, the actual tagging are always
         performed at and attached to the `Token`s, instead of `Word`s.
         """
@@ -385,20 +455,30 @@ class Sentence:
             self.ents.append(Span(tokens=ent_tokens, type=e['type'], doc=self.doc, sent=self))
         return self.ents
 
+    @property
+    def sentiment(self):
+        """ Returns the sentiment value for this sentence """
+        return self._sentiment
+
+    @sentiment.setter
+    def sentiment(self, value):
+        """ Set the sentiment value """
+        self._sentiment = value
+
     def build_dependencies(self):
         """ Build the dependency graph for this sentence. Each dependency graph entry is
         a list of (head, deprel, word).
         """
         self.dependencies = []
         for word in self.words:
-            if int(word.head) == 0:
+            if word.head == 0:
                 # make a word for the ROOT
-                word_entry = {ID: "0", TEXT: "ROOT"}
+                word_entry = {ID: 0, TEXT: "ROOT"}
                 head = Word(word_entry)
             else:
                 # id is index in words list + 1
-                head = self.words[int(word.head) - 1]
-                assert(int(word.head) == int(head.id))
+                head = self.words[word.head - 1]
+                assert(word.head == head.id)
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
@@ -446,7 +526,7 @@ class Sentence:
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
 
-class Token:
+class Token(StanzaObject):
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
     text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French,
     a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
@@ -455,16 +535,16 @@ class Token:
     def __init__(self, token_entry, words=None):
         """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
         """
-        assert token_entry.get(ID) and token_entry.get(TEXT), 'id and text should be included for the token'
-        self._id, self._text, self._misc, self._words, self._start_char, self._end_char, self._ner = [None] * 7
+        self._id = token_entry.get(ID)
+        self._text = token_entry.get(TEXT)
+        assert self._id and self._text, 'id and text should be included for the token'
+        self._misc = token_entry.get(MISC, None)
+        self._ner = token_entry.get(NER, None)
+        self._words = words if words is not None else []
+        self._start_char = None
+        self._end_char = None
 
-        self.id = token_entry.get(ID)
-        self.text = token_entry.get(TEXT)
-        self.misc = token_entry.get(MISC, None)
-        self.ner = token_entry.get(NER, None)
-        self.words = words if words is not None else []
-
-        if self.misc is not None:
+        if self._misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
@@ -474,7 +554,7 @@ class Token:
             key_value = item.split('=', 1)
             if len(key_value) == 1: continue # some key_value can not be splited
             key, value = key_value
-            if key in [START_CHAR, END_CHAR]:
+            if key in (START_CHAR, END_CHAR):
                 value = int(value)
             # set attribute
             attr = f'_{key}'
@@ -532,7 +612,7 @@ class Token:
     def end_char(self):
         """ Access the end character index for this token in the raw text. """
         return self._end_char
-    
+
     @property
     def ner(self):
         """ Access the NER tag of this token. Example: 'B-ORG'"""
@@ -551,46 +631,52 @@ class Token:
         if the token is a multi-word token.
         """
         ret = []
-        if multi_word_token_id.match(self.id):
+        if len(self.id) > 1:
             token_dict = {}
             for field in fields:
                 if getattr(self, field) is not None:
                     token_dict[field] = getattr(self, field)
             ret.append(token_dict)
         for word in self.words:
-            ret.append(word.to_dict())
+            word_dict = word.to_dict()
+            if len(self.id) == 1 and NER in fields and getattr(self, NER) is not None: # propagate NER label to Word if it is a single-word token
+                word_dict[NER] = getattr(self, NER)
+            ret.append(word_dict)
         return ret
 
     def pretty_print(self):
         """ Print this token with its extended words in one line. """
-        return f"<{self.__class__.__name__} id={self.id};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
+        return f"<{self.__class__.__name__} id={'-'.join([str(x) for x in self.id])};words=[{', '.join([word.pretty_print() for word in self.words])}]>"
 
     def _is_null(self, value):
         return (value is None) or (value == '_')
 
-class Word:
+class Word(StanzaObject):
     """ A word class that stores attributes of a word.
     """
 
     def __init__(self, word_entry):
         """ Construct a word given a dictionary format word entry.
         """
-        assert word_entry.get(ID) and word_entry.get(TEXT), 'id and text should be included for the word. {}'.format(word_entry)
-        self._id, self._text, self._lemma, self._upos, self._xpos, self._feats, self._head, self._deprel, self._deps, \
-            self._misc, self._parent = [None] * 11
+        self._id = word_entry.get(ID, None)
+        if isinstance(self._id, tuple):
+            assert len(self._id) == 1
+            self._id = self._id[0]
+        self._text = word_entry.get(TEXT, None)
 
-        self.id = word_entry.get(ID)
-        self.text = word_entry.get(TEXT)
-        self.lemma = word_entry.get(LEMMA, None)
-        self.upos = word_entry.get(UPOS, None)
-        self.xpos = word_entry.get(XPOS, None)
-        self.feats = word_entry.get(FEATS, None)
-        self.head = word_entry.get(HEAD, None)
-        self.deprel = word_entry.get(DEPREL, None)
-        self.deps = word_entry.get(DEPS, None)
-        self.misc = word_entry.get(MISC, None)
+        assert self._id is not None and self._text is not None, 'id and text should be included for the word. {}'.format(word_entry)
 
-        if self.misc is not None:
+        self._lemma = word_entry.get(LEMMA, None)
+        self._upos = word_entry.get(UPOS, None)
+        self._xpos = word_entry.get(XPOS, None)
+        self._feats = word_entry.get(FEATS, None)
+        self._head = word_entry.get(HEAD, None)
+        self._deprel = word_entry.get(DEPREL, None)
+        self._deps = word_entry.get(DEPS, None)
+        self._misc = word_entry.get(MISC, None)
+        self._parent = None
+
+        if self._misc is not None:
             self.init_from_misc()
 
     def init_from_misc(self):
@@ -751,7 +837,7 @@ class Word:
         return (value is None) or (value == '_')
 
 
-class Span:
+class Span(StanzaObject):
     """ A span class that stores attributes of a textual span. A span can be typed.
     A range of objects (e.g., entity mentions) can be represented as spans.
     """
@@ -823,7 +909,7 @@ class Span:
     def tokens(self, value):
         """ Set the span's list of tokens. """
         self._tokens = value
-    
+
     @property
     def words(self):
         """ Access reference to a list of words that correspond to this span. """

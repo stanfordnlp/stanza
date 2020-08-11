@@ -10,10 +10,61 @@ from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
+def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_size):
+    """
+    Given a list of lists, where the first element of each sublist
+    represents the sentence, group the sentences into batches.
+
+    During training mode (not eval_mode) the sentences are sorted by
+    length with a bit of random shuffling.  During eval mode, the
+    sentences are sorted by length if sort_during_eval is true.
+
+    Refactored from the data structure in case other models could use
+    it and for ease of testing.
+
+    Returns (batches, original_order), where original_order is None
+    when in train mode or when unsorted and represents the original
+    location of each sentence in the sort
+    """
+    res = []
+
+    if not eval_mode:
+        # sort sentences (roughly) by length for better memory utilization
+        data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
+        data_orig_idx = None
+    elif sort_during_eval:
+        (data, ), data_orig_idx = sort_all([data], [len(x[0]) for x in data])
+    else:
+        data_orig_idx = None
+
+    current = []
+    currentlen = 0
+    for x in data:
+        if max_sentence_size is not None and len(x[0]) > max_sentence_size:
+            if currentlen > 0:
+                res.append(current)
+                current = []
+                currentlen = 0
+            res.append([x])
+        else:
+            if len(x[0]) + currentlen > batch_size and currentlen > 0:
+                res.append(current)
+                current = []
+                currentlen = 0
+            current.append(x)
+            currentlen += len(x[0])
+
+    if currentlen > 0:
+        res.append(current)
+
+    return res, data_orig_idx
+
+
 class DataLoader:
 
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, max_sentence_size=None):
         self.batch_size = batch_size
+        self.max_sentence_size=max_sentence_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
@@ -153,28 +204,12 @@ class DataLoader:
         random.shuffle(self.data)
 
     def chunk_batches(self, data):
-        res = []
-
-        if not self.eval:
-            # sort sentences (roughly) by length for better memory utilization
-            data = sorted(data, key = lambda x: len(x[0]), reverse=random.random() > .5)
-        elif self.sort_during_eval:
-            (data, ), self.data_orig_idx = sort_all([data], [len(x[0]) for x in data])
-
-        current = []
-        currentlen = 0
-        for x in data:
-            if len(x[0]) + currentlen > self.batch_size:
-                res.append(current)
-                current = []
-                currentlen = 0
-            current.append(x)
-            currentlen += len(x[0])
-
-        if currentlen > 0:
-            res.append(current)
-
-        return res
+        batches, data_orig_idx = data_to_batches(data=data, batch_size=self.batch_size,
+                                                 eval_mode=self.eval, sort_during_eval=self.sort_during_eval,
+                                                 max_sentence_size=self.max_sentence_size)
+        # data_orig_idx might be None at train time, since we don't anticipate unsorting
+        self.data_orig_idx = data_orig_idx
+        return batches
 
 def to_int(string, ignore_error=False):
     try:

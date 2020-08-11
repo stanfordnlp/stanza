@@ -159,4 +159,10 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# IDE-related
+.vscode/
 
+# Jekyll stuff, triggered by running the docs locally
+.jekyll-cache/
+.jekyll-metadata
+_site/

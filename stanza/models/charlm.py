@@ -6,6 +6,7 @@ import random
 import argparse
 from copy import copy
 from collections import Counter
+from types import GeneratorType
 import numpy as np
 import torch
 import math
@@ -17,11 +18,6 @@ from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.pos.vocab import CharVocab
 from stanza.models.common import utils
 from stanza.models import _training_logging
-
-# modify logging format
-formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-for h in logging.getLogger().handlers:
-    h.setFormatter(formatter)
 
 logger = logging.getLogger('stanza')
 
@@ -84,7 +80,7 @@ def load_data(path, vocab, direction):
     if os.path.isdir(path):
         filenames = sorted(os.listdir(path))
         for filename in filenames:
-            logging.info('Loading data from {}'.format(filename))
+            logger.info('Loading data from {}'.format(filename))
             data = load_file(path + '/' + filename, vocab, direction)
             yield data
     else:
@@ -121,6 +117,7 @@ def parse_args():
     parser.add_argument('--cutoff', type=int, default=1000, help="Frequency cutoff for char vocab. By default we assume a very large corpus.")
     
     parser.add_argument('--report_steps', type=int, default=50, help="Update step interval to report loss")
+    parser.add_argument('--eval_steps', type=int, default=-1, help="Update step interval to run eval on dev; set to -1 to eval after each epoch")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--vocab_save_name', type=str, default=None, help="File name to save the vocab")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
@@ -152,71 +149,23 @@ def main():
     else:
         evaluate(args)
 
-def train_epoch(args, vocab, data, model, params, optimizer, criterion, epoch):
-    model.train()
-    for data_chunk in data:
-        batches = batchify(data_chunk, args['batch_size'])
-        hidden = None
-        total_loss = 0.0
-        total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
-        iteration, i = 0, 0
-        while i < batches.size(1) - 1 - 1:
-            start_time = time.time()
-            bptt = args['bptt_size'] if np.random.random() < 0.95 else args['bptt_size']/ 2.
-            # prevent excessively small or negative sequence lengths
-            seq_len = max(5, int(np.random.normal(bptt, 5)))
-            # prevent very large sequence length, must be <= 1.2 x bptt
-            seq_len = min(seq_len, int(args['bptt_size'] * 1.2))
-            data, target = get_batch(batches, i, seq_len)
-            lens = [data.size(1) for i in range(data.size(0))]
-            if args['cuda']: 
-                data = data.cuda()
-                target = target.cuda()
-            
-            optimizer.zero_grad()
-
-            output, hidden, decoded = model.forward(data, lens, hidden)
-
-            loss = criterion(decoded.view(-1, len(vocab['char'])), target)
-            total_loss += loss.data.item()
-            loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(params, args['max_grad_norm'])
-            optimizer.step()
-
-            hidden = repackage_hidden(hidden)
-
-            if (iteration + 1) % args['report_steps'] == 0:
-                cur_loss = total_loss / args['report_steps']
-                elapsed = time.time() - start_time
-                logger.info(
-                    "| epoch {:5d} | {:5d}/{:5d} batches | sec/batch {:.6f} | loss {:5.2f} | ppl {:8.2f}".format(
-                        epoch,
-                        iteration + 1,
-                        total_batches,
-                        elapsed / args['report_steps'],
-                        cur_loss,
-                        math.exp(cur_loss),
-                    )
-                )
-                total_loss = 0.0
-
-            iteration += 1
-            i += seq_len
-    return
-
 def evaluate_epoch(args, vocab, data, model, criterion):
+    """
+    Run an evaluation over entire dataset.
+    """
     model.eval()
     hidden = None
     total_loss = 0
-    data = list(data)
-    assert len(data) == 1, 'Only support single dev/test file'
-    batches = batchify(data[0], args['batch_size'])
+    if isinstance(data, GeneratorType):
+        data = list(data)
+        assert len(data) == 1, 'Only support single dev/test file'
+        data = data[0]
+    batches = batchify(data, args['batch_size'])
     with torch.no_grad():
         for i in range(0, batches.size(1) - 1, args['bptt_size']):
             data, target = get_batch(batches, i, args['bptt_size'])
             lens = [data.size(1) for i in range(data.size(0))]
-            if args['cuda']: 
+            if args['cuda']:
                 data = data.cuda()
                 target = target.cuda()
 
@@ -226,7 +175,33 @@ def evaluate_epoch(args, vocab, data, model, criterion):
             hidden = repackage_hidden(hidden)
             total_loss += data.size(1) * loss.data.item()
     return total_loss / batches.size(1)
-           
+
+def evaluate_and_save(args, vocab, data, model, criterion, scheduler, best_loss, global_step, model_file, writer=None):
+    """
+    Run an evaluation over entire dataset, print progress and save the model if necessary.
+    """
+    start_time = time.time()
+    loss = evaluate_epoch(args, vocab, data, model, criterion)
+    ppl = math.exp(loss)
+    elapsed = int(time.time() - start_time)
+    scheduler.step(loss)
+    logger.info(
+        "| eval checkpoint @ global step {:10d} | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
+            global_step,
+            elapsed,
+            loss,
+            ppl,
+        )
+    )
+    if best_loss is None or loss < best_loss:
+        best_loss = loss
+        model.save(model_file)
+        logger.info('new best model saved at step {:10d}.'.format(global_step))
+    if writer:
+        writer.add_scalar('dev_loss', loss, global_step=global_step)
+        writer.add_scalar('dev_ppl', ppl, global_step=global_step)
+    return loss, ppl, best_loss
+
 def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
@@ -234,10 +209,10 @@ def train(args):
         else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
 
     if os.path.exists(vocab_file):
-        logging.info('Loading existing vocab file')
+        logger.info('Loading existing vocab file')
         vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
     else:
-        logging.info('Building and saving vocab')
+        logger.info('Building and saving vocab')
         vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
     logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
@@ -255,39 +230,85 @@ def train(args):
         summary_dir = '{}/{}_summary'.format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
             else '{}/{}_{}_charlm_summary'.format(args['save_dir'], args['shorthand'], args['direction'])
         writer = SummaryWriter(log_dir=summary_dir)
+    
+    # evaluate model within epoch if eval_interval is set
+    eval_within_epoch = False
+    if args['eval_steps'] > 0:
+        eval_within_epoch = True
 
     best_loss = None
-    for epoch in range(args['epochs']):
+    global_step = 0
+    for epoch in range(1,args['epochs']+1):
         # load train data from train_dir if not empty, otherwise load from file
         if args['train_dir'] is not None:
             train_path = args['train_dir']
         else:
             train_path = args['train_file']
         train_data = load_data(train_path, vocab, args['direction'])
-        dev_data = load_data(args['eval_file'], vocab, args['direction'])
-        train_epoch(args, vocab, train_data, model, params, optimizer, criterion, epoch+1)
+        dev_data = load_file(args['eval_file'], vocab, args['direction']) # dev must be a single file
 
-        start_time = time.time()
-        loss = evaluate_epoch(args, vocab, dev_data, model, criterion)
-        ppl = math.exp(loss)
-        elapsed = int(time.time() - start_time)
-        scheduler.step(loss)
-        logger.info(
-            "| {:5d}/{:5d} epochs | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
-                epoch + 1,
-                args['epochs'],
-                elapsed,
-                loss,
-                ppl,
-            )
-        )
-        if best_loss is None or loss < best_loss:
-            best_loss = loss
-            model.save(model_file)
-            logger.info('new best model saved.')
-        if writer:
-            writer.add_scalar('dev_loss', loss, global_step=epoch+1)
-            writer.add_scalar('dev_ppl', ppl, global_step=epoch+1)
+        # run over entire training set
+        for data_chunk in train_data:
+            batches = batchify(data_chunk, args['batch_size'])
+            hidden = None
+            total_loss = 0.0
+            total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
+            iteration, i = 0, 0
+            # over the data chunk
+            while i < batches.size(1) - 1 - 1:
+                model.train()
+                global_step += 1
+                start_time = time.time()
+                bptt = args['bptt_size'] if np.random.random() < 0.95 else args['bptt_size']/ 2.
+                # prevent excessively small or negative sequence lengths
+                seq_len = max(5, int(np.random.normal(bptt, 5)))
+                # prevent very large sequence length, must be <= 1.2 x bptt
+                seq_len = min(seq_len, int(args['bptt_size'] * 1.2))
+                data, target = get_batch(batches, i, seq_len)
+                lens = [data.size(1) for i in range(data.size(0))]
+                if args['cuda']:
+                    data = data.cuda()
+                    target = target.cuda()
+                
+                optimizer.zero_grad()
+                output, hidden, decoded = model.forward(data, lens, hidden)
+                loss = criterion(decoded.view(-1, len(vocab['char'])), target)
+                total_loss += loss.data.item()
+                loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(params, args['max_grad_norm'])
+                optimizer.step()
+
+                hidden = repackage_hidden(hidden)
+
+                if (iteration + 1) % args['report_steps'] == 0:
+                    cur_loss = total_loss / args['report_steps']
+                    elapsed = time.time() - start_time
+                    logger.info(
+                        "| epoch {:5d} | {:5d}/{:5d} batches | sec/batch {:.6f} | loss {:5.2f} | ppl {:8.2f}".format(
+                            epoch,
+                            iteration + 1,
+                            total_batches,
+                            elapsed / args['report_steps'],
+                            cur_loss,
+                            math.exp(cur_loss),
+                        )
+                    )
+                    total_loss = 0.0
+
+                iteration += 1
+                i += seq_len
+
+                # evaluate if necessary
+                if eval_within_epoch and global_step % args['eval_steps'] == 0:
+                    _, _, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
+                        global_step, model_file, writer)
+
+        # if eval_interval isn't provided, run evaluation after each epoch
+        if not eval_within_epoch:
+            _, _, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
+                        epoch, model_file, writer) # use epoch in place of global_step for logging
+
     if writer:
         writer.close()
     return

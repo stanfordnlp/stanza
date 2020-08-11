@@ -53,6 +53,7 @@ message Document {
   repeated Token      character = 10;
 
   repeated Quote      quote = 6;
+
   /**
    * This field is for entity mentions across the document.
    */
@@ -132,6 +133,8 @@ message Sentence {
   // quote stuff
   optional uint32             chapterIndex                     = 66;
   optional uint32             paragraphIndex                   = 67;
+  // the quote annotator can soometimes add merged sentences
+  optional Sentence           enhancedSentence                 = 70;
 
   extensions 100 to 255;
 }
@@ -193,6 +196,9 @@ message Token {
   optional string chineseChar     = 54;
   optional string chineseSeg      = 55;
   optional string chineseXMLChar  = 60;
+
+  //  Arabic character info
+  optional string arabicSeg       = 76;
 
   // Section info
   optional string sectionName     = 56;
@@ -592,5 +598,49 @@ message Section {
   optional uint32 authorCharBegin   = 7;
   optional uint32 authorCharEnd     = 8;
   required Token xmlTag             = 9;
+}
+
+
+
+// A message for requesting a semgrex
+// Each sentence stores information about the tokens making up the
+// corresponding graph
+message SemgrexRequest {
+  message Dependencies {
+    repeated Token           token   = 1;
+    required DependencyGraph graph   = 2;
+  }
+
+  repeated string          semgrex   = 1;
+  repeated Dependencies    query     = 2;
+}
+
+// The response from running a semgrex
+message SemgrexResponse {
+  message NamedNode {
+    required string          name   = 1;
+    required int32           index  = 2;
+  }
+
+  message NamedRelation {
+    required string          name   = 1;
+    required string          reln   = 2;
+  }
+
+  message Match {
+    required int32           index  = 1;
+    repeated NamedNode       node   = 2;
+    repeated NamedRelation   reln   = 3;
+  }
+
+  message SemgrexResult {
+    repeated Match           match  = 1;
+  }
+
+  message GraphResult {
+    repeated SemgrexResult   result = 1;
+  }
+
+  repeated GraphResult result = 1;
 }
 
