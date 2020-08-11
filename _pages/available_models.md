@@ -126,6 +126,22 @@ The following table lists all UD models supported by Stanza and pretrained on th
 | Vietnamese | vi | vtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/vi_vtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 | Wolof | wo | wtb | 1.0.0 | <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a> | [<i class="fas fa-file-alt"></i>](https://universaldependencies.org/treebanks/wo_wtb/index.html) |  <i class="fas fa-check" style="color:#33a02c"></i> |
 
+## Other Available Models for Tokenization
+
+We have trained a couple Thai tokenizer models based on publicly
+available datasets.  The Inter-BEST dataset had some strange sentence
+tokenization according to the authors of pythainlp, so we used their
+software to resegment the sentences before training.  As this is a
+questionable standard to use, we made the Orchid tokenizer the
+default.
+
+| Dataset | Token Accuracy | Sentence Accuracy |  Notes |
+| :------ | :------------- | :---------------- | :----- |
+| Orchid  | 87.98          |  70.99            |        |
+| BEST    | 95.73          |  77.93            | Sentences are re-split using pythainlp |
+
+
+
 ## Available NER Models
 
 The following table lists all NER models supported by Stanza, pretrained on various NER datasets. Again, you can find performance of all available models on the [System Performance](performance.md) page.
