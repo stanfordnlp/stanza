@@ -126,11 +126,15 @@ class RobustService(object):
     def start(self):
         if self.start_cmd:
             if self.host and self.port:
-                if not self.ignore_binding_error:
-                    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-                        try:
-                            sock.bind((self.host, self.port))
-                        except socket.error:
+                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                    try:
+                        sock.bind((self.host, self.port))
+                    except socket.error:
+                        if self.ignore_binding_error:
+                            logger.info(f"Connecting to existing CoreNLP server at {self.host}:{self.port}")
+                            self.server = None
+                            return
+                        else:
                             raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
                                                          "(possibly something is already running there)" % self.port)
             if self.be_quiet:

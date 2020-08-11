@@ -7,6 +7,7 @@ import stanza.server as corenlp
 import stanza.server.client as client
 import shlex
 import subprocess
+import time
 
 from tests import *
 
@@ -165,6 +166,10 @@ def test_external_server_force_start():
                 f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
     start_cmd = start_cmd and shlex.split(start_cmd)
     external_server_process = subprocess.Popen(start_cmd)
+    time.sleep(5) # wait and make sure the external CoreNLP server is up and running
     with pytest.raises(corenlp.PermanentlyFailedException):
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.FORCE_START, endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+    assert external_server_process
+    external_server_process.terminate()
+    external_server_process.wait(5)
