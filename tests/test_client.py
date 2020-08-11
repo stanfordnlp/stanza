@@ -145,7 +145,7 @@ def test_external_server():
     external_server_process.wait(5)
     assert ann.strip() == EN_GOLD
 
-def test_external_server_try_start():
+def test_external_server_try_start_with_external():
     """ Test starting up an external server and accessing with a client with start_server=StartServer.TRY_START """
     corenlp_home = os.getenv('CORENLP_HOME')
     start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
@@ -157,6 +157,13 @@ def test_external_server_try_start():
     assert external_server_process
     external_server_process.terminate()
     external_server_process.wait(5)
+    assert ann.strip() == EN_GOLD
+
+def test_external_server_try_start():
+    """ Test starting up a server with a client with start_server=StartServer.TRY_START """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START, endpoint="http://localhost:9001") as external_server_client:
+        ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
     assert ann.strip() == EN_GOLD
 
 def test_external_server_force_start():
