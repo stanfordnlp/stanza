@@ -117,7 +117,7 @@ class RobustService(object):
 
     def is_alive(self):
         try:
-            if self.server is not None and self.server.poll() is not None:
+            if not self.ignore_binding_error and self.server is not None and self.server.poll() is not None:
                 return False
             return requests.get(self.endpoint + "/ping").ok
         except requests.exceptions.ConnectionError as e:
