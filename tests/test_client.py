@@ -7,6 +7,7 @@ import stanza.server as corenlp
 import stanza.server.client as client
 import shlex
 import subprocess
+import time
 
 from tests import *
 
@@ -116,7 +117,7 @@ def test_semgrex(corenlp_client):
             "sentence": 0,}]
 
 
-def test_external_server():
+def test_external_server_legacy_start_server():
     """ Test starting up an external server and accessing with a client with start_server=False """
     corenlp_home = client.resolve_classpath(None)
     start_cmd = f'java -Xmx5g -cp "{corenlp_home}" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
@@ -129,3 +130,53 @@ def test_external_server():
     external_server_process.terminate()
     external_server_process.wait(5)
     assert ann.strip() == EN_GOLD
+
+def test_external_server():
+    """ Test starting up an external server and accessing with a client with start_server=StartServer.DONT_START """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
+                f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
+    start_cmd = start_cmd and shlex.split(start_cmd)
+    external_server_process = subprocess.Popen(start_cmd)
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
+        ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+    assert external_server_process
+    external_server_process.terminate()
+    external_server_process.wait(5)
+    assert ann.strip() == EN_GOLD
+
+def test_external_server_try_start_with_external():
+    """ Test starting up an external server and accessing with a client with start_server=StartServer.TRY_START """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
+                f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
+    start_cmd = start_cmd and shlex.split(start_cmd)
+    external_server_process = subprocess.Popen(start_cmd)
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START, endpoint="http://localhost:9001") as external_server_client:
+        ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+    assert external_server_process
+    external_server_process.terminate()
+    external_server_process.wait(5)
+    assert ann.strip() == EN_GOLD
+
+def test_external_server_try_start():
+    """ Test starting up a server with a client with start_server=StartServer.TRY_START """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START, endpoint="http://localhost:9001") as external_server_client:
+        ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+    assert ann.strip() == EN_GOLD
+
+def test_external_server_force_start():
+    """ Test starting up an external server and accessing with a client with start_server=StartServer.FORCE_START """
+    corenlp_home = os.getenv('CORENLP_HOME')
+    start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
+                f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
+    start_cmd = start_cmd and shlex.split(start_cmd)
+    external_server_process = subprocess.Popen(start_cmd)
+    time.sleep(5) # wait and make sure the external CoreNLP server is up and running
+    with pytest.raises(corenlp.PermanentlyFailedException):
+        with corenlp.CoreNLPClient(start_server=corenlp.StartServer.FORCE_START, endpoint="http://localhost:9001") as external_server_client:
+            ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+    assert external_server_process
+    external_server_process.terminate()
+    external_server_process.wait(5)

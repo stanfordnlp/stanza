@@ -4,6 +4,7 @@ Client for accessing Stanford CoreNLP in Python
 
 import atexit
 import contextlib
+import enum
 import io
 import os
 import re
@@ -81,6 +82,11 @@ class PermanentlyFailedException(Exception):
     """ Exception raised if the service should NOT retry the request. """
     pass
 
+class StartServer(enum.Enum):
+    DONT_START = 0
+    FORCE_START = 1
+    TRY_START = 2
+
 
 def clean_props_file(props_file):
     # check if there is a temp server props file to remove and remove it
@@ -94,7 +100,7 @@ class RobustService(object):
     CHECK_ALIVE_TIMEOUT = 120
 
     def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr, be_quiet=False, host=None, port=None):
+                 stderr=sys.stderr, be_quiet=False, host=None, port=None, ignore_binding_error=False):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -106,11 +112,12 @@ class RobustService(object):
         self.be_quiet = be_quiet
         self.host = host
         self.port = port
+        self.ignore_binding_error = ignore_binding_error
         atexit.register(self.atexit_kill)
 
     def is_alive(self):
         try:
-            if self.server is not None and self.server.poll() is not None:
+            if not self.ignore_binding_error and self.server is not None and self.server.poll() is not None:
                 return False
             return requests.get(self.endpoint + "/ping").ok
         except requests.exceptions.ConnectionError as e:
@@ -123,7 +130,12 @@ class RobustService(object):
                     try:
                         sock.bind((self.host, self.port))
                     except socket.error:
-                        raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
+                        if self.ignore_binding_error:
+                            logger.info(f"Connecting to existing CoreNLP server at {self.host}:{self.port}")
+                            self.server = None
+                            return
+                        else:
+                            raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
                                                          "(possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
@@ -230,7 +242,7 @@ class CoreNLPClient(RobustService):
     DEFAULT_MEMORY = "5G"
     DEFAULT_MAX_CHAR_LENGTH = 100000
 
-    def __init__(self, start_server=True,
+    def __init__(self, start_server=StartServer.FORCE_START,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
@@ -261,9 +273,17 @@ class CoreNLPClient(RobustService):
         self.output_format = output_format
         self._setup_client_defaults()
         # start the server
-        if start_server:
+        if isinstance(start_server, bool):
+            warning_msg = f"Setting 'start_server' to a boolean value when constructing {self.__class__.__name__} is deprecated and will stop" + \
+                " to function in a future version of stanza. Please consider switching to using a value from stanza.server.StartServer."
+            logger.warning(warning_msg)
+            start_server = StartServer.FORCE_START if start_server is True else StartServer.DONT_START
+
+        # start the server
+        if start_server is StartServer.FORCE_START or start_server is StartServer.TRY_START:
             # record info for server start
             self.server_start_time = datetime.now()
+            # set up default properties for server
             self._setup_server_defaults()
             host, port = urlparse(endpoint).netloc.split(":")
             port = int(port)
@@ -324,7 +344,7 @@ class CoreNLPClient(RobustService):
             host = port = None
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet, host=host, port=port)
+                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server == StartServer.TRY_START))
 
         self.timeout = timeout
 

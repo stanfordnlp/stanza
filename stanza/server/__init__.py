@@ -6,5 +6,5 @@ from stanza.protobuf import Quote, SpeakerInfo
 from stanza.protobuf import Operator, Polarity
 from stanza.protobuf import SentenceFragment, TokenLocation
 from stanza.protobuf import MapStringString, MapIntString
-from .client import CoreNLPClient, AnnotationException, TimeoutException, PermanentlyFailedException
+from .client import CoreNLPClient, AnnotationException, TimeoutException, PermanentlyFailedException, StartServer
 from .annotator import Annotator
