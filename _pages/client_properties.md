@@ -27,7 +27,7 @@ This will initialize a `CoreNLPClient` object with the default set of French mod
 
 {% include alerts.html %}
 {{ note }}
-{{ "Currently CoreNLP only provide official support for 6 human languages. For a full list of languages and models available, please see [the CoreNLP website](https://stanfordnlp.github.io/CoreNLP/index.html#human-languages-supported)." | markdownify }}
+{{ "Currently CoreNLP only provides official support for 6 human languages. For a full list of languages and models available, please see [the CoreNLP website](https://stanfordnlp.github.io/CoreNLP/index.html#human-languages-supported)." | markdownify }}
 {{ end }}
 
 
