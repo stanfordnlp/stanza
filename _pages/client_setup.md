@@ -37,4 +37,4 @@ You can manually install CoreNLP if the automated method fails. You need to:
 
 1. Download the latest version of Stanford CoreNLP from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and follow the instructions to setup the environment.
 2. Download model files for the language you want to annotate from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and store them in the extracted CoreNLP folder. You can skip this step if you only want to use the default English models shipped with the CoreNLP software.
-3. Set the `CORENLP_HOME` environment variable to the location of the CoreNLP root folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2020-04-20`. Stanza will use this environment variable to locate the CoreNLP package at runtime.
+3. Set the `CORENLP_HOME` environment variable to the location of the CoreNLP root folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-4.1.0`. Stanza will use this environment variable to locate the CoreNLP package at runtime.
