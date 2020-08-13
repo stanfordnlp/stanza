@@ -152,7 +152,9 @@ def test_external_server_try_start_with_external():
                 f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
     start_cmd = start_cmd and shlex.split(start_cmd)
     external_server_process = subprocess.Popen(start_cmd)
-    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START, endpoint="http://localhost:9001") as external_server_client:
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
+                               annotators='tokenize,ssplit,pos',
+                               endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
     assert external_server_process
     external_server_process.terminate()
@@ -162,7 +164,9 @@ def test_external_server_try_start_with_external():
 def test_external_server_try_start():
     """ Test starting up a server with a client with start_server=StartServer.TRY_START """
     corenlp_home = os.getenv('CORENLP_HOME')
-    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START, endpoint="http://localhost:9001") as external_server_client:
+    with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
+                               annotators='tokenize,ssplit,pos',
+                               endpoint="http://localhost:9001") as external_server_client:
         ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
     assert ann.strip() == EN_GOLD
 
