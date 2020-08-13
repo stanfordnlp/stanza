@@ -187,7 +187,7 @@ with CoreNLPClient(
         memory='16G') as client:
 
     # Use semgrex patterns to directly find who wrote what.
-    pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+    pattern = '{word:wrote} >nsubj {}=subject >obj {}=object'
     matches = client.semgrex(text, pattern)
     # sentences contains a list with matches for each sentence.
     print(len(matches["sentences"])) # prints: 3
