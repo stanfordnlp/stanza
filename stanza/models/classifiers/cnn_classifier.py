@@ -87,7 +87,7 @@ class CNNClassifier(nn.Module):
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
                                                 padding_idx = 0)
-            logger.info("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
+            logger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
         else:
             self.extra_vocab = None
             self.extra_vocab_map = None
@@ -266,7 +266,7 @@ def load(filename, pretrain):
     except BaseException:
         logger.exception("Cannot load model from {}".format(filename))
         raise
-    logger.info("Loaded model {}".format(filename))
+    logger.debug("Loaded model {}".format(filename))
 
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
     if model_type == 'CNNClassifier':
