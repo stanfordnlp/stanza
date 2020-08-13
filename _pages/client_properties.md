@@ -10,38 +10,85 @@ toc: true
 
 In this section, we introduce how to customize the client options such that you can annotate a different language, use a different CoreNLP model, or have finer control over how you want the CoreNLP client or server to start.
 
-## Switching Language
+## Overview
 
-Stanza by default starts an English CoreNLP pipeline when a client is initialized. You can switch to a different language by setting a simple `properties` argument when the client is initialized. The following example shows how to start a client with default French models:
+By default, the CoreNLP server will run the following English annotators:
 
-```python
-with CoreNLPClient(properties='french') as client:
+```
+tokenize,ssplit,pos,lemma,ner,depparse,coref,kbp
 ```
 
-Alternatively, you can also use the [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) for a language:
+There are a variety of ways to customize a CoreNLP pipeline, including:
+
+* using a different list of annotators (e.g. tokenize,ssplit,pos)
+* processing a different language (e.g. French)
+* using custom models (e.g. my-custom-depparse.gz)
+* returning different output formats (e.g. JSON)
+
+These customizations are achieved by specifying properties.
+
+The first step is always importing `CoreNLPClient`
+
 ```python
-with CoreNLPClient(properties='fr') as client:
+from stanza.server import CoreNLPClient
 ```
 
-This will initialize a `CoreNLPClient` object with the default set of French models. If you want to further customize the models used by the CoreNLP server, please read on.
+When starting a CoreNLP server via Stanza, a user can choose what
+properties to initialize the server with. For instance, here is
+an example of launching a server with a different parser model
+that returns JSON:
 
-{% include alerts.html %}
-{{ note }}
-{{ "Currently CoreNLP only provide official support for 6 human languages. For a full list of languages and models available, please see [the CoreNLP website](https://stanfordnlp.github.io/CoreNLP/index.html#human-languages-supported)." | markdownify }}
-{{ end }}
+```python
+CUSTOM_PROPS = {"parse.model": "edu/stanford/nlp/models/srparser/englishSR.beam.ser.gz"}
 
+with CoreNLPClient(properties=CUSTOM_PROPS, output_format="json") as client:
+```
 
-## Using Customized Models by Setting Client Properties
+Or one could launch a server with CoreNLP French defaults as in this example:
 
-Without further customization, a background CoreNLP server will use a default list of models for a language. This usually works very well out-of-the-box. However, sometimes it becomes useful to customize the models used by the CoreNLP server. For example, you might want to use a dictionary-based NER model instead of a statistical one, or you might want to switch to using the PCFG parser instead of the default shift-reduce parser.
+```python
+with CoreNLPClient(properties="french") as client:
+```
 
-Similar to switching languages, setting models used by the server can be done again via the `properties` argument when initializing the `CoreNLPClient` object. This argument can take three types of values:
+When communicating with a CoreNLP server via Stanza, a user can send specific
+properties for one time use with that request. These request level properties
+allow for a dynamic NLP application which can apply different pipelines 
+depending on input text.
+
+For instance, one could switch between German and French pipelines:
+
+```python
+french_text = "Emmanuel Macron est le président de la France."
+german_text = "Angela Merkel ist die deutsche Bundeskanzlerin."
+
+with CoreNLPClient() as client:
+    french_ann = client.annotate(french_text, properties="fr")
+    german_ann = client.annotate(german_text, properties="de")
+```
+
+Or move between custom biomedical and financial text processing pipelines:
+
+```python
+BIOMEDICAL_PROPS = {"depparse.model": "/path/to/biomedical-parser.gz"}
+FINANCE_PROPS = {"depparse.model": "/path/to/finance-parser.gz"}
+
+with CoreNLPClient() as client:
+    bio_ann = client.annotate(bio_text, properties=BIOMEDICAL_PROPS)
+    finance_ann = client.annotate(finance_text, properties=FINANCE_PROPS)
+```
+
+## CoreNLP Server Start Options (Pipeline)
+
+There are three ways to specify pipeline properties when starting a CoreNLP server:
 
 | Properties Type | Example | Description |
 | --- | --- | --- |
-| Stanford CoreNLP supported language | french | One of {arabic, chinese, english, french, german, spanish}, this will use Stanford CoreNLP defaults for that language |
+| Stanford CoreNLP supported language | french | One of {arabic, chinese, english, french, german, spanish} (or the ISO 639-1 code), this will use Stanford CoreNLP defaults for that language |
 | Python dictionary | {'annotators': 'tokenize,ssplit,pos', 'pos.model': '/path/to/custom-model.ser.gz'} | A Python dictionary specifying the properties, the properties will be written to a tmp file |
 | File path | /path/to/server.props | Path on the file system or CLASSPATH to a properties file |
+
+For convenience one can also specify the list of `annotators` and the desired `output_format` in the `CoreNLPClient` constructor.
+The values for those two arguments will override any additional properties supplied at construction time.
 
 Below are examples that illustrate how to use the three different types of `properties`:
 
@@ -66,27 +113,37 @@ with CoreNLPClient(properties='/path/to/server.props') as client:
 ```
 This option allows the finest level of control over what annotators and models are going to be used in the server. For details on how to write a property file, please see the [instructions on configuring CoreNLP property files](https://stanfordnlp.github.io/CoreNLP/cmdline.html#configuring-corenlp-properties).
 
+For convenience one can also specify the list of `annotators` and the desired `output_format` in the `CoreNLPClient` constructor.
 
-## Commonly-used CoreNLP Client Options
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| annotators | str | "tokenize,<wbr>ssplit,<wbr>lemma,<wbr>pos,<wbr>ner,<wbr>depparse" | The default list of CoreNLP annotators the server will use |
+| output_format | str | "serialized" | The default output format to use for the server response, unless otherwise specified. If set to be "serialized", the response will be converted to local Python objects (see usage examples [here](client_usage.md)).  |
 
-Using customized `properties` is the most common way to customize your CoreNLP server. However, sometimes you may want to have even more control on different aspects of your client-server, such as the port that the client uses to communicate with the server, the output format from the server, or the memory that you want to allocate to your server.
+The values for those two arguments will override any additional properties supplied at construction time.
+
+```python
+with CoreNLPClient(properties='french', annotators='tokenize,ssplit,mwt,pos,ner,parse', output_format='json') as client:
+```
+
+## CoreNLP Server Start Options (Server)
+
+In addition to customizing the pipeline the server will run, a variety of
+server specific properties can be specified at server construction time.
 
 Here we provide a list of commonly-used arguments that you can initialize your `CoreNLPClient` with, along with their default values and descriptions:
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| annotators | str | "tokenize,<wbr>ssplit,<wbr>lemma,<wbr>pos,<wbr>ner,<wbr>depparse" | The default list of CoreNLP annotators the server will use |
-| properties | - | None | See "Setting Client Properties" section above |
 | endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on; change this when the default port 9000 is occupied. |
 | classpath | str | None | Classpath to use for CoreNLP.  None means using the classpath as set by the `$CORENLP_HOME` environment variable, "$CLASSPATH" means to use the system CLASSPATH, and otherwise, the given string is used |
-| timeout | int | 15000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
+| timeout | int | 60000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
 | threads | int | 5 | The number of threads to hit the server with. If, for example, the server is running on an 8 core machine, you can specify this to be 8, and the client will allow you to make 8 simultaneous requests to the server. |
-| output_format | str | "serialized" | The default output format to use for the server response, unless otherwise specified. If set to be "serialized", the response will be converted to local Python objects (see usage examples [here](client_usage.md)). For a list of all supported output format, see the [CoreNLP output options page](https://stanfordnlp.github.io/CoreNLP/cmdline.html). |
-| memory | str | "4G" | This specifies the memory used by the CoreNLP server process. |
-| start_server | bool | True | Whether to start the CoreNLP server when initializing the Python `CoreNLPClient` object. By default the CoreNLP server will be started using the provided options. |
+| memory | str | "5G" | This specifies the memory used by the CoreNLP server process. |
+| start_server | stanza.<wbr>server.<wbr>StartServer | FORCE_START | Whether to start the CoreNLP server when initializing the Python `CoreNLPClient` object. By default the CoreNLP server will be started using the provided options. Alternatively, `DONT_START` doesn't start a new CoreNLP server and attempts to connect to an existing server instance at `endpoint`; `TRY_START` tries to start a new server instance at the endpoint provided, but doesn't fail like `FORCE_START` if one is already running there. Note that this Enum is new in Stanza v1.1, and in previous versions it only supports boolean input. |
 | stdout | file | sys.stdout | The standard output used by the CoreNLP server process. |
 | stderr | file | sys.stderr | The standard error used by the CoreNLP server process. |
-| be_quiet | bool | True | If set to False, the server process will print detailed error logs. Useful for diagnosing errors. |
+| be_quiet | bool | False | If set to False, the server process will print detailed error logs. Useful for diagnosing errors. |
 | max_char_length | int | 100000 | The max number of characters that will be accepted and processed by the CoreNLP server in a single request. |
 | preload | bool | True | Load the annotators immediately upon server start; otherwise the annotators will be lazily loaded upon the first annotation request is made. |
 
@@ -99,16 +156,14 @@ with CoreNLPClient(
     memory='8G',
     be_quiet=False) as client:
 ```
-
-### Using a CoreNLP server on a remote machine
-
-With the endpoint option, you can even connect to a remote CoreNLP server running in a different machine:
-```python
-with CoreNLPClient(endpoint='http://remote-server-address:9000') as client:
-```
+{% include alerts.html %}
+{{ note }}
+{{ "The be_quiet option is set to False by default! It is advised to review CoreNLP server logs when starting out to make sure any errors are not happening on the server side of your application. If your application is generally stable, you can set be_quiet=True to stop seeing CoreNLP server log output." | markdownify }}
+{{ end }}
 
 
-## More Advanced CoreNLP Server Settings
+
+## CoreNLP Server Start Options (Advanced)
 
 Apart from the above options, there are some very advanced settings that you may need to customize how the CoreNLP server will start in the background. They are summarized in the following table:
 
@@ -122,7 +177,7 @@ Apart from the above options, there are some very advanced settings that you may
 | key | .jks file to load if ssl is enabled |
 | username | The username component of a username/password basic auth credential |
 | password | The password component of a username/password basic auth credential |
-| blacklist | a list of IPv4 addresses to ban from using the server |
+| blockList | a list of IPv4 addresses to ban from using the server |
 
 You can also find more documention for the server's start up options on [the CoreNLP Server website](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html).
 
@@ -151,19 +206,43 @@ ann = client.annotate(text, username='myusername', password='1234')
 
 Easy, right?
 
+## Switching Languages
+
+Stanza by default starts an English CoreNLP pipeline when a client is initialized. You can switch to a different language by setting a simple `properties` argument when the client is initialized. The following example shows how to start a client with default French models:
+
+```python
+with CoreNLPClient(properties='french') as client:
+```
+
+Alternatively, you can also use the [ISO 639-1 code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) for a language:
+```python
+with CoreNLPClient(properties='fr') as client:
+```
+
+This will initialize a `CoreNLPClient` object with the default set of French models. If you want to further customize the models used by the CoreNLP server, please read on.
+
+{% include alerts.html %}
+{{ note }}
+{{ "Currently CoreNLP only provides official support for 6 human languages. For a full list of languages and models available, please see [the CoreNLP website](https://stanfordnlp.github.io/CoreNLP/index.html#human-languages-supported)." | markdownify }}
+{{ end }}
+
+## Using a CoreNLP server on a remote machine
+
+With the endpoint option, you can even connect to a remote CoreNLP server running in a different machine:
+```python
+with CoreNLPClient(endpoint='http://remote-server-address:9000') as client:
+```
+
 ## Dynamically Changing Properties for Each Annotation Request
 
 Properties for the CoreNLP pipeline run on text can be set for each particular annotation request.
 If properties are set for a particular request, the server's initialization properties will be overridden.
 This allows you to dynamically change your annotation need, without needing to start a new client-server from scratch.
 
-Request-level properties can be registered with Stanza's `CoreNLPClient` to maximize efficiency.
-Upon registration, the client will maintain a `properties_cache` to map keys to particular property settings.
-Alternatively, request-level properties can be specified as a Stanford CoreNLP support language
-to use the language defaults, or a full Python dictionary for maximal flexibility.
+Request level properties can be specified with a Python dictionary, or the name of a CoreNLP supported language.
 
-Here is an example of how to register a set of properties with the client's `properties_cache`,
-and how to use those properties via the key for annotation:
+Here is an example of making a request with a custom dictionary of properties:
+
 ```python
 FRENCH_CUSTOM_PROPS = {
     'annotators': 'tokenize,ssplit,pos,parse', 'tokenize.language': 'fr',
@@ -172,9 +251,8 @@ FRENCH_CUSTOM_PROPS = {
     'outputFormat': 'text'
 }
 
-with CoreNLPClient(annotators='tokenize,ssplit,pos') as client:
-    client.register_properties_key('fr-custom', FRENCH_CUSTOM_PROPS)
-    ann = client.annotate(text, properties_key='fr-custom')
+with CoreNLPClient() as client:
+    ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
 ```
 
 Alternatively, request-level properties can simply be a language that you want to run the CoreNLP pipeline for:
@@ -182,35 +260,13 @@ Alternatively, request-level properties can simply be a language that you want t
 ann = client.annotate(text, properties='german')
 ```
 
-Or, a dictionary that specifies all properties you want to set/override:
-```python
-ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS)
-```
+{% include alerts.html %}
+{{ note }}
+{{ "A subtle point to note is that when requests are sent with custom properties, those custom properties will overwrite the properties the server was started with, unless a CoreNLP language name is specified, in which case the server start properties will be ignored and the CoreNLP defaults for that language will be written on top of the original CoreNLP defaults." | markdownify }}
+{{ end }}
 
 Similarly to `CoreNLPClient` initialization, you can also specify the annotators and output format for CoreNLP for individual annotation requests as:
 ```python
 ann = client.annotate(text, properties=FRENCH_CUSTOM_PROPS, annotators='tokenize,ssplit,pos', output_format='json')
 ```
 
-<!-- There are a variety of ways to set properties for the server at start time.  Also, each request can have properties.
-For example, if your application may receive German or French input, you could start the server with the default
-German properties and you could send requests for French text with the default French properties, and alternate
-back and forth depending on the input text language.  You could also imagine having one pipeline
-
-For context, the Java server takes in requests, runs a StanfordCoreNLP pipeline, and sends a response.
-Annotators within a pipeline often use models to perform their work (e.g. a part-of-speech tagging model or
-a dependency parsing model).  For efficiency, the server maintains two caches.  One for the models (so they only
-have to be loaded once) and one for already built StanfordCoreNLP pipelines.
-
-The server actually maintains two caches, one for the models, and one for pre-built Stanford CoreNLP pipelines.
-Loading models takes a significant amount of time (potentially on the order of a minute in some cases).  But
-building a pipeline can also take some time (on the order of a half second).  So throughput would be significantly
-impacted if pipelines were built per request.  The server will keep around pipelines with particular configurations
-to avoid this penalty.  The first request using a particular model or pipeline configuration will have delay
-associated with loading the model or building the pipeline.  But future requests should not have this delay.
-
-To avoid the first request having a long delay, one can use the `preload` option to load a set of models when
-the server launches.
-
-Below are a collection of specific examples to demonstrate different ways to customize the server at start time
-or set specific properties for requests. -->

@@ -10,11 +10,9 @@ toc: false
 
 To use the CoreNLP client, please first make sure that you have correctly installed the Stanza library. Follow [these instructions](installation_usage#installation) to install the library.
 
-After the library is installed, you'll need to install the CoreNLP software package and make sure Stanza knows where the downloaded package is located on your computer. You need to:
+After the library is installed, you'll need to install the CoreNLP software package and make sure Stanza knows where the downloaded package is located on your computer. There are two ways to do this.
 
-<!-- There are two ways to do this. -->
-
-<!-- ## Automated Installation
+## Automated Installation
 
 New in v1.1
 {: .label .label-green }
@@ -28,15 +26,15 @@ The first argument `dir` sets where you want your CoreNLP to be installed; or if
 
 Apart from the default package distribution, CoreNLP also provides [additional models for six different languages](https://stanfordnlp.github.io/CoreNLP/index.html#download). To install these additional models, you can do:
 ```python
-stanza.download_corenlp_models(model='french', version='4.0.0', dir="YOUR_CORENLP_FOLDER")
+stanza.download_corenlp_models(model='french', version='4.1.0', dir="YOUR_CORENLP_FOLDER")
 ```
-Here the `model` argument specifies the model package that you want to install, and can be set to one of `'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'`; the `version` argument specifies the model version, for which `4.0.0` is the latest; and `dir` needs to point to your customized CoreNLP installation location, or the models will be installed to the default location.
+Here the `model` argument specifies the model package that you want to install, and can be set to one of `'arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'`; the `version` argument specifies the model version, for which `4.1.0` is the latest; and `dir` needs to point to your customized CoreNLP installation location, or the models will be installed to the default location.
 
 
 ## Manual Installation
 
-You can manually install CoreNLP if the automated method fails. You need to: -->
+You can manually install CoreNLP if the automated method fails. You need to:
 
 1. Download the latest version of Stanford CoreNLP from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and follow the instructions to setup the environment.
 2. Download model files for the language you want to annotate from [here](https://stanfordnlp.github.io/CoreNLP/download.html) and store them in the extracted CoreNLP folder. You can skip this step if you only want to use the default English models shipped with the CoreNLP software.
-3. Set the `CORENLP_HOME` environment variable to the location of the CoreNLP root folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-full-2020-04-20`. Stanza will use this environment variable to locate the CoreNLP package at runtime.
+3. Set the `CORENLP_HOME` environment variable to the location of the CoreNLP root folder.  Example: `export CORENLP_HOME=/path/to/stanford-corenlp-4.1.0`. Stanza will use this environment variable to locate the CoreNLP package at runtime.
