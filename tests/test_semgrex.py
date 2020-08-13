@@ -233,5 +233,5 @@ def test_hand_built_request():
     edge.target = 2
     edge.dep = 'compound'
 
-    response = semgrex.send_request(request)
+    response = semgrex.send_semgrex_request(request)
     check_response(response)
