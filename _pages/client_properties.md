@@ -66,11 +66,19 @@ with CoreNLPClient() as client:
     german_ann = client.annotate(german_text, properties="de")
 ```
 
-Or move between custom biomedical and financial text processing pipelines:
+If a user has created custom biomedical and finanical models,
+they could switch between them based on what kind of document
+they are processing:
 
 ```python
-BIOMEDICAL_PROPS = {"depparse.model": "/path/to/biomedical-parser.gz"}
-FINANCE_PROPS = {"depparse.model": "/path/to/finance-parser.gz"}
+BIOMEDICAL_PROPS = {
+    "depparse.model": "/path/to/biomedical-parser.gz",
+    "ner.model": "/path/to/biomedical-ner.ser.gz"
+}
+FINANCE_PROPS = {
+    "depparse.model": "/path/to/finance-parser.gz",
+    "ner.model": "/path/to/finance-ner.ser.gz"
+}
 
 with CoreNLPClient() as client:
     bio_ann = client.annotate(bio_text, properties=BIOMEDICAL_PROPS)
