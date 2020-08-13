@@ -7,19 +7,22 @@ import subprocess
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
 
-def send_request(request):
+def send_request(request, response_type, java_main):
     """
     Use subprocess to run the Semgrex processor on the given request
 
     Returns the protobuf response
     """
-    pipe = subprocess.run("java edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest".split(),
+    pipe = subprocess.run(["java", java_main],
                           input=request.SerializeToString(),
                           stdout=subprocess.PIPE)
-    response = SemgrexResponse()
+    response = response_type()
     response.ParseFromString(pipe.stdout)
     return response
 
+def send_semgrex_request(request):
+    return send_request(request, SemgrexResponse,
+                        "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest")
 
 def process_doc(doc, *semgrex_patterns):
     """
@@ -60,7 +63,7 @@ def process_doc(doc, *semgrex_patterns):
 
                 word_idx = word_idx + 1
 
-    return send_request(request)
+    return send_semgrex_request(request)
 
 def main():
     nlp = stanza.Pipeline('en',
