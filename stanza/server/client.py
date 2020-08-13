@@ -212,7 +212,7 @@ class RobustService(object):
         self.is_active = True
 
 
-def resolve_classpath(classpath):
+def resolve_classpath(classpath=None):
     """
     Returns the classpath to use for corenlp.
 
