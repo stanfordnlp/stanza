@@ -9,6 +9,10 @@ parent: Resources
 
 This page contains links to downloadable models for all historical versions of Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).
 
+### 1.1.0
+
+This version extends Stanza's v1.0.0 models with additional [sentiment analysis models](sentiment) for English, German and Chinese pipelines, a new [tokenizer for the Thai language](available_models#other-available-models-for-tokenization), and new suite of [Biomedical and Clinical English syntactic analysis and NER model packages](available_biomed_models). We've changed the default packages for a few languages for robustness. These changes include: Polish (default is now `PDB` model, from previous `LFG`), Korean (default is now `GSD`, from previous Kaist), Lithuanian (default is now `ALKSNIS`, from previous HSE).
+
 ### 1.0.0
 
 For models used by Stanza v1.0.0 (latest version), you can find all related information on the [Usage: Available Models](models) page.
