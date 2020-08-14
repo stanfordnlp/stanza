@@ -395,7 +395,7 @@ class CoreNLPClient(RobustService):
                 if self.properties.lower() in LANGUAGE_SHORTHANDS_TO_FULL:
                     self.properties = LANGUAGE_SHORTHANDS_TO_FULL[self.properties]
                 logger.info(
-                    f"Using Stanford CoreNLP default properties for: {self.properties}.  Make sure to have "
+                    f"Using CoreNLP default properties for: {self.properties}.  Make sure to have "
                     f"{self.properties} models jar (available for download here: "
                     f"https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
             else:
