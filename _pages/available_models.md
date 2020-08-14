@@ -165,4 +165,4 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 | Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
-
+| Ukrainian | uk | lang-uk | 4 | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  | |

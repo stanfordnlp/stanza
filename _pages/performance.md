@@ -124,7 +124,7 @@ For more detailed results and better viewing experience, please access the resul
 
 ## System Performance on NER Corpora
 
-In the table below you can find the performance of Stanza's pretrained NER models. All numbers reported are micro-averaged F1 scores. We used canonical train/dev/test splits for all datasets except for the WikiNER datasets, for which we used random splits.
+In the table below you can find the performance of Stanza's pretrained NER models. All numbers reported are micro-averaged F1 scores. We used canonical train/dev/test splits for all datasets except for the WikiNER datasets, for which we used random splits.  The Ukrainian model and its score [was provided by a user](https://github.com/stanfordnlp/stanza/issues/319).
 
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |
@@ -140,3 +140,4 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
+| Ukrainian | lang-uk | 4 | 86.05 |
