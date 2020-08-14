@@ -140,4 +140,4 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
-| Ukrainian | lang-uk | 4 | 86.05 |
+| Ukrainian | languk | 4 | 86.05 |
