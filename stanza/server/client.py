@@ -34,6 +34,7 @@ SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 # Check if str is CoreNLP supported language
 CORENLP_LANGS = ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
+# map shorthands to full language names
 LANGUAGE_SHORTHANDS_TO_FULL = {
     "ar": "arabic",
     "zh": "chinese",
