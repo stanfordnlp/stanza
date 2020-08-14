@@ -10,7 +10,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'echo "Done testing!"'
+        sh 'ls -lhd /var/jenkins_home/test_resources/*'
       }
     }
 
