@@ -10,7 +10,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'ls -lhd /var/jenkins_home/test_resources/*'
+        sh 'ls -lhd /var/jenkins_home/test_resources/*'
       }
     }
 
