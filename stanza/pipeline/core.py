@@ -117,6 +117,22 @@ class Pipeline:
                 # add the broken processor to the loaded processors for the sake of analyzing the validity of the
                 # entire proposed pipeline, but at this point the pipeline will not be built successfully
                 self.processors[processor_name] = e.err_processor
+            except FileNotFoundError as e:
+                # For a FileNotFoundError, we try to guess if there's
+                # a missing model directory or file.  If so, we
+                # suggest the user try to download the models
+                if 'model_path' in curr_processor_config:
+                    model_path = curr_processor_config['model_path']
+                    model_dir, model_name = os.path.split(model_path)
+                    lang_dir = os.path.dirname(model_dir)
+                    if not os.path.exists(lang_dir):
+                        raise FileNotFoundError('Could not find the model file {}.  The expected model directory {} is missing.  Perhaps you need to run stanza.download("{}")'.format(model_path, lang_dir, lang)) from e
+                    model_name, _ = os.path.splitext(model_name)
+                    raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
+
+                # if we couldn't find a more suitable description of the
+                # FileNotFoundError, just raise the old error
+                raise
 
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
