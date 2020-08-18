@@ -86,10 +86,7 @@ def get_root_from_zipfile(filename):
     """
     Get the root directory from a archived zip file.
     """
-    try:
-        zf = zipfile.ZipFile(filename, "r")
-    except:
-        raise Exception(f"Failed loading zip file at {filename}.")
+    zf = zipfile.ZipFile(filename, "r")
     assert len(zf.filelist) > 0, \
         f"Zip file at f{filename} seems to be corrupted. Please check it."
     return os.path.dirname(zf.filelist[0].filename)
@@ -252,7 +249,7 @@ def set_logging_level(logging_level, verbose):
     logging_level = logging_level.upper()
     all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
     if logging_level not in all_levels:
-        raise Exception(
+        raise ValueError(
             f"Unrecognized logging level for pipeline: "
             f"{logging_level}. Must be one of {', '.join(all_levels)}."
         )
@@ -264,7 +261,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     if isinstance(lang, str):
         lang = lang.strip().lower()
     elif lang is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'lang' should be str, "
             f"but got {type(lang).__name__} instead."
         )
@@ -272,7 +269,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     if isinstance(dir, str):
         dir = dir.strip()
     elif dir is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'dir' should be str, "
             f"but got {type(dir).__name__} instead."
         )
@@ -280,7 +277,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
     if isinstance(package, str):
         package = package.strip().lower()
     elif package is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'package' should be str, "
             f"but got {type(package).__name__} instead."
         )
@@ -298,7 +295,7 @@ def process_pipeline_parameters(lang, dir, package, processors):
                 for k, v in processors.items()
         }
     elif processors is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'processors' should be dict or str, "
             f"but got {type(processors).__name__} instead."
         )
@@ -338,15 +335,9 @@ def download(
         os.path.join(dir, 'resources.json')
     )
     # unpack results
-    try:
-        resources = json.load(open(os.path.join(dir, 'resources.json')))
-    except:
-        raise Exception(
-            f'Cannot load resource file. Please check your network connection, '
-            f'or provided resource url and resource version.'
-        )
+    resources = json.load(open(os.path.join(dir, 'resources.json')))
     if lang not in resources:
-        raise Exception(f'Unsupported language: {lang}.')
+        raise ValueError(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
@@ -386,7 +377,7 @@ def download(
                     md5=resources[lang][key][value]['md5']
                 )
             except KeyError as e:
-                raise Exception(
+                raise ValueError(
                     f'Cannot find the following processor and model name combination: '
                     f'{key}, {value}. Please check if you have provided the correct model name.'
                 ) from e
