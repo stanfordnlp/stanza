@@ -67,7 +67,7 @@ class Pipeline:
         logger.debug('Loading resource file...')
         resources_filepath = os.path.join(dir, 'resources.json')
         if not os.path.exists(resources_filepath):
-            raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
+            raise FileNotFoundError(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
         with open(resources_filepath) as infile:
             resources = json.load(infile)
         if lang in resources:
@@ -82,7 +82,8 @@ class Pipeline:
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
-        if len(self.load_list) == 0: raise Exception('No processor to load. Please check if your language or package is correctly set.')
+        if len(self.load_list) == 0:
+            raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
