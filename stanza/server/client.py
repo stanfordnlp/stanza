@@ -586,6 +586,10 @@ class CoreNLPClient(RobustService):
 
         # force output for regex requests to be json
         properties['outputFormat'] = 'json'
+        # if the server is trying to send back character offsets, it
+        # should send back codepoints counts as well in case the text
+        # has extra wide characters
+        properties['tokenize.codepoint'] = 'true'
 
         # TODO: get rid of this once corenlp 4.0.0 is released?
         # the "stupid reason" has hopefully been fixed on the corenlp side
