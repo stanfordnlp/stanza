@@ -3,7 +3,7 @@ layout: page
 title: Client Regex Usage
 keywords: CoreNLP, client, regex, semgrex, tregex, tokensregex, usage
 permalink: '/client_regex.html'
-nav_order: 2.5
+nav_order: 3
 parent: Stanford CoreNLP Client
 toc: false
 ---

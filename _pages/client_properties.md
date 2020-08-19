@@ -3,7 +3,7 @@ layout: page
 title: Advanced Usage & Client Customization
 keywords: CoreNLP, client, properties, server start, advanced usage, customization
 permalink: '/client_properties.html'
-nav_order: 3
+nav_order: 4
 parent: Stanford CoreNLP Client
 toc: true
 ---
