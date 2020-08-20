@@ -633,20 +633,15 @@ class CoreNLPClient(RobustService):
 def read_corenlp_props(props_path):
     """ Read a Stanford CoreNLP properties file into a dict """
     props_dict = {}
-    if os.path.exists(props_path):
-        with open(props_path) as props_file:
-            entry_lines = \
-                [entry_line for entry_line in props_file.read().split('\n')
-                 if entry_line.strip() and not entry_line.startswith('#')]
-            for entry_line in entry_lines:
-                k = entry_line.split('=')[0]
-                k_len = len(k+"=")
-                v = entry_line[k_len:]
-                props_dict[k.strip()] = v
-        return props_dict
-
-    else:
-        raise RuntimeError(f'Error: Properties file at {props_path} does not exist!')
+    with open(props_path) as props_file:
+        entry_lines = [entry_line for entry_line in props_file.read().split('\n')
+                       if entry_line.strip() and not entry_line.startswith('#')]
+        for entry_line in entry_lines:
+            k = entry_line.split('=')[0]
+            k_len = len(k+"=")
+            v = entry_line[k_len:]
+            props_dict[k.strip()] = v
+    return props_dict
 
 
 def write_corenlp_props(props_dict, file_path=None):
