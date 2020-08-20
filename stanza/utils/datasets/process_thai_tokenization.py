@@ -3,9 +3,15 @@ import random
 
 def write_section(output_dir, dataset_name, section, documents):
     """
-    Writes a list of documents for tokenization
+    Writes a list of documents for tokenization, including a file in conll format
+
+    The Thai datasets generally have no MWT (apparently not relevant for Thai)
+
+    output_dir: the destination directory for the output files
+    dataset_name: orchid, BEST, lst20, etc
+    section: train/dev/test
+    documents: a nested list of documents, paragraphs, sentences, words
     """
-    # TODO: no MWT in this dataset?
     with open(os.path.join(output_dir, 'th_%s-ud-%s-mwt.json' % (dataset_name, section)), 'w') as fout:
         fout.write("[]\n")
 
