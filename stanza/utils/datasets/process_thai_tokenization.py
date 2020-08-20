@@ -11,6 +11,7 @@ def write_section(output_dir, dataset_name, section, documents):
     dataset_name: orchid, BEST, lst20, etc
     section: train/dev/test
     documents: a nested list of documents, paragraphs, sentences, words
+      words is a list of (word, space_follows)
     """
     with open(os.path.join(output_dir, 'th_%s-ud-%s-mwt.json' % (dataset_name, section)), 'w') as fout:
         fout.write("[]\n")
