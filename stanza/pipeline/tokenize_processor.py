@@ -5,9 +5,9 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenize.data import DataLoader
-from stanza.models.tokenize.trainer import Trainer
-from stanza.models.tokenize.utils import output_predictions
+from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.trainer import Trainer
+from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
