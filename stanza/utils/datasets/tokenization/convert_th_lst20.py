@@ -17,7 +17,7 @@ import glob
 import os
 import sys
 
-from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section
+from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section, convert_processed_lines, reprocess_lines
 
 def read_document(lines):
     document = []
@@ -43,7 +43,30 @@ def read_document(lines):
         document.append(sentence)
         sentence = []
     # TODO: is there any way to divide up a single document into paragraphs?
-    return document
+    return [[document]]
+
+def retokenize_document(lines):
+    processed_lines = []
+    sentence = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if sentence:
+                processed_lines.append(sentence)
+                sentence = []
+        else:
+            pieces = line.split("\t")
+            if pieces[0] == '_':
+                sentence.append(' ')
+            else:
+                sentence.append(pieces[0])
+    if sentence:
+        processed_lines.append(sentence)
+
+    processed_lines = reprocess_lines(processed_lines)
+    paragraphs = convert_processed_lines(processed_lines)
+    return paragraphs
+
 
 def read_data(input_dir, section):
     input_dir = os.path.join(input_dir, section)
@@ -52,8 +75,8 @@ def read_data(input_dir, section):
     for filename in filenames:
         with open(filename) as fin:
             lines = fin.readlines()
-        document = read_document(lines)
-        documents.append([document])
+        document = retokenize_document(lines)
+        documents.extend(document)
     return documents
 
 def main(*args):
