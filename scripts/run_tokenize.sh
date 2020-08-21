@@ -46,6 +46,7 @@ DEV_GOLD=${TOKENIZE_DATA_DIR}/${short}.dev.gold.conllu
 seqlen=$($PYTHON -c "from math import ceil; print(ceil($($PYTHON stanza/utils/avg_sent_len.py $labels) * 3 / 100) * 100)")
 
 echo "Running tokenizer with $args..."
+echo $PYTHON -m stanza.models.tokenizer --${label_type} $labels --txt_file ${TOKENIZE_DATA_DIR}/${short}.train.txt --lang $lang --max_seqlen $seqlen --mwt_json_file ${TOKENIZE_DATA_DIR}/${short}-ud-dev-mwt.json $train_eval_file --dev_conll_gold $DEV_GOLD --conll_file ${TOKENIZE_DATA_DIR}/${short}.dev.pred.conllu --shorthand ${short} $args
 $PYTHON -m stanza.models.tokenizer --${label_type} $labels --txt_file ${TOKENIZE_DATA_DIR}/${short}.train.txt --lang $lang --max_seqlen $seqlen --mwt_json_file ${TOKENIZE_DATA_DIR}/${short}-ud-dev-mwt.json $train_eval_file --dev_conll_gold $DEV_GOLD --conll_file ${TOKENIZE_DATA_DIR}/${short}.dev.pred.conllu --shorthand ${short} $args
 $PYTHON -m stanza.models.tokenizer --mode predict $eval_file --lang $lang --conll_file ${TOKENIZE_DATA_DIR}/${short}.dev.pred.conllu --shorthand $short --mwt_json_file ${TOKENIZE_DATA_DIR}/${short}-ud-dev-mwt.json $args
 
