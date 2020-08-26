@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.classifier_args as classifier_args
+import stanza.models.classifiers.data as data
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -310,34 +311,6 @@ def load(filename, pretrain):
     return model
 
 
-def update_text(sentence, wordvec_type):
-    """
-    Process a line of text (with tokenization provided as whitespace)
-    into a list of strings.
-    """
-    # stanford sentiment dataset has a lot of random - and /
-    sentence = sentence.replace("-", " ")
-    sentence = sentence.replace("/", " ")
-    sentence = sentence.split()
-    # our current word vectors are all entirely lowercased
-    sentence = [word.lower() for word in sentence]
-    if wordvec_type == classifier_args.WVType.WORD2VEC:
-        return sentence
-    elif wordvec_type == classifier_args.WVType.GOOGLE:
-        new_sentence = []
-        for word in sentence:
-            if word != '0' and word != '1':
-                word = re.sub('[0-9]', '#', word)
-            new_sentence.append(word)
-        return new_sentence
-    elif wordvec_type == classifier_args.WVType.FASTTEXT:
-        return sentence
-    elif wordvec_type == classifier_args.WVType.OTHER:
-        return sentence
-    else:
-        raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
-
-
 def label_text(model, text, batch_size=None, reverse_label_map=None, device=None):
     """
     Given a list of sentences, return the model's results on that text.
@@ -348,7 +321,7 @@ def label_text(model, text, batch_size=None, reverse_label_map=None, device=None
     if device is None:
         device = next(model.parameters()).device
 
-    text = [update_text(s, model.config.wordvec_type) for s in text]
+    text = [data.update_text(s, model.config.wordvec_type) for s in text]
 
     if batch_size is None:
         intervals = [(0, len(text))]

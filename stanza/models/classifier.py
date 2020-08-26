@@ -18,6 +18,7 @@ from stanza.models.common.pretrain import Pretrain
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+import stanza.models.classifiers.data as data
 
 class Loss(Enum):
     CROSS = 1
@@ -149,30 +150,6 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-
-def read_dataset(dataset, wordvec_type, min_len):
-    """
-    returns a list where the values of the list are
-      label, [token...]
-    """
-    lines = []
-    for filename in dataset.split(","):
-        try:
-            new_lines = open(filename, encoding="utf-8").readlines()
-        except UnicodeDecodeError:
-            logger.error("Could not read {}".format(filename))
-            raise
-        lines.extend(new_lines)
-    lines = [x.strip() for x in lines]
-    lines = [x.split(maxsplit=1) for x in lines if x]
-    lines = [x for x in lines if len(x) > 1]
-    # TODO: maybe do this processing later, once the model is built.
-    # then move the processing into the model so we can use
-    # overloading to potentially make future model types
-    lines = [(x[0], cnn_classifier.update_text(x[1], wordvec_type)) for x in lines]
-    if min_len:
-        lines = [x for x in lines if len(x[1]) >= min_len]
-    return lines
 
 def dataset_labels(dataset):
     """
@@ -530,7 +507,7 @@ def main():
     # TODO: maybe the dataset needs to be in a torch data loader in order to
     # make cuda operations faster
     if args.train:
-        train_set = read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
+        train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
     elif not args.load_name:
@@ -568,13 +545,13 @@ def main():
     if args.train:
         print_args(args)
 
-        dev_set = read_dataset(args.dev_file, args.wordvec_type, min_len=None)
+        dev_set = data.read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s" % args.dev_file)
         check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)
 
-    test_set = read_dataset(args.test_file, args.wordvec_type, min_len=None)
+    test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
     check_labels(model.labels, test_set)
 
