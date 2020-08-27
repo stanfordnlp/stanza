@@ -546,7 +546,7 @@ def main():
         assert train_set is not None
         labels = dataset_labels(train_set)
         extra_vocab = dataset_vocab(train_set)
-        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, extra_vocab, labels, args)
+        model = cnn_classifier.CNNClassifier(pretrain, extra_vocab, labels, args)
 
     if args.cuda:
         model.cuda()

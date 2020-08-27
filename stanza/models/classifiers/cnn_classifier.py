@@ -36,7 +36,7 @@ help, but dev performance went down for each variation of
 logger = logging.getLogger('stanza')
 
 class CNNClassifier(nn.Module):
-    def __init__(self, emb_matrix, vocab, extra_vocab, labels, args):
+    def __init__(self, pretrain, extra_vocab, labels, args):
         """
         emb_matrix is a giant matrix of the pretrained embeddings
 
@@ -59,6 +59,7 @@ class CNNClassifier(nn.Module):
 
         self.unsaved_modules = []
 
+        emb_matrix = pretrain.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
@@ -69,7 +70,7 @@ class CNNClassifier(nn.Module):
         # you want to spend a long time debugging this
         self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
 
-        self.vocab_map = { word: i for i, word in enumerate(vocab) }
+        self.vocab_map = { word: i for i, word in enumerate(pretrain.vocab) }
 
         if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
             if not extra_vocab:
@@ -271,7 +272,7 @@ def load(filename, pretrain):
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
     if model_type == 'CNNClassifier':
         extra_vocab = checkpoint.get('extra_vocab', None)
-        model = CNNClassifier(pretrain.emb, pretrain.vocab,
+        model = CNNClassifier(pretrain,
                               extra_vocab,
                               checkpoint['labels'],
                               checkpoint['config'])
