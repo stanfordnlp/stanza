@@ -12,6 +12,7 @@ ClassifierProcessor and have "sentiment" be an option.
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 
 from stanza.models.common import doc
+from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.pretrain import Pretrain
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -26,8 +27,15 @@ class SentimentProcessor(UDProcessor):
     def _set_up_model(self, config, use_gpu):
         # get pretrained word vectors
         self._pretrain = Pretrain(config['pretrain_path'])
+        forward_charlm_path = config.get('forward_charlm_path', None)
+        charmodel_forward = CharacterLanguageModel.load(forward_charlm_path, finetune=False) if forward_charlm_path else None
+        backward_charlm_path = config.get('backward_charlm_path', None)
+        charmodel_backward = CharacterLanguageModel.load(backward_charlm_path, finetune=False) if backward_charlm_path else None
         # set up model
-        self._model = cnn_classifier.load(filename=config['model_path'], pretrain=self._pretrain)
+        self._model = cnn_classifier.load(filename=config['model_path'],
+                                          pretrain=self._pretrain,
+                                          charmodel_forward=charmodel_forward,
+                                          charmodel_backward=charmodel_backward)
         self._batch_size = config.get('batch_size', None)
 
         # TODO: move this call to load()
