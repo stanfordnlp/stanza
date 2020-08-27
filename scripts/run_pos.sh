@@ -5,9 +5,23 @@
 # where TREEBANK is the UD treebank name (e.g., UD_English-EWT) and OTHER_ARGS are additional training arguments (see tagger code) or empty.
 # This script assumes UDBASE and POS_DATA_DIR are correctly set in config.sh.
 
+set -e
+
+if hash python3 2>/dev/null; then
+    PYTHON=python3
+else
+    PYTHON=python
+fi
+
 source scripts/config.sh
 
 treebank=$1; shift
+
+if [ -z "$treebank" ]; then
+    echo "No treebank argument provided.  Please run with ./run_pos.sh TREEBANK OTHER_ARGS"
+    exit 1
+fi
+
 args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
@@ -32,11 +46,11 @@ fi
 echo "Using batch size $batch_size"
 
 echo "Running tagger with $args..."
-python -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $eval_file \
+$PYTHON -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --batch_size $batch_size --gold_file $gold_file --lang $lang --shorthand $short \
     --mode train $args
-python -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --eval_file $eval_file \
+$PYTHON -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --eval_file $eval_file \
     --output_file $output_file --gold_file $gold_file --lang $lang --shorthand $short --mode predict $args
-results=`python stanza/utils/conll18_ud_eval.py -v $gold_file $output_file | head -9 | tail -n+9 | awk '{print $7}'`
+results=`$PYTHON stanza/utils/conll18_ud_eval.py -v $gold_file $output_file | head -9 | tail -n+9 | awk '{print $7}'`
 echo $results $args >> ${POS_DATA_DIR}/${short}.results
 echo $short $results $args
