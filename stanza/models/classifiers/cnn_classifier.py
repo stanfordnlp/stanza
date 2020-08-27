@@ -38,11 +38,18 @@ logger = logging.getLogger('stanza')
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels, args):
         """
-        emb_matrix is a giant matrix of the pretrained embeddings
+        pretrain is a pretrained word embedding.  should have .emb and .vocab
+
+        extra_vocab is a collection of words in the training data to
+        be used for the delta word embedding, if used.  can be set to
+        None if delta word embedding is not used.
 
         labels is the list of labels we expect in the training data.
         Used to derive the number of classes.  Saving it in the model
         will let us check that test data has the same labels
+
+        args is either the complete arguments when training, or the
+        subset of arguments stored in the model save file
         """
         super(CNNClassifier, self).__init__()
         self.labels = labels
