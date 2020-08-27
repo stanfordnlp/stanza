@@ -155,7 +155,11 @@ def train(args):
                 trainer.save(args['save_name'])
             print('\t'.join(reports))
 
-    print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
+    if best_dev_step > -1:
+        print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
+    else:
+        print('Dev set never evaluated.  Saving final model')
+        trainer.save(args['save_name'])
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
