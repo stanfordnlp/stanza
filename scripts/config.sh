@@ -25,4 +25,4 @@ export CHARLM_DATA_DIR=$DATA_ROOT/charlm
 export SENTIMENT_DATA_DIR=$DATA_ROOT/sentiment
 
 # Set directories to store external word vector data
-export WORDVEC_DIR=./extern_data/word2vec
+export WORDVEC_DIR=./extern_data/wordvec
