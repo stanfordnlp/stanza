@@ -517,7 +517,7 @@ def print_args(args):
     args = vars(args)
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINGING TIME:\n%s\n' % '\n'.join(log_lines))
+    logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
 
 def main():
