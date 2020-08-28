@@ -8,6 +8,12 @@
 source scripts/config.sh
 
 treebank=$1; shift
+
+if [ -z "$treebank" ]; then
+    echo "No treebank argument provided.  Please run with ./prep_pos_data.sh TREEBANK"
+    exit 1
+fi
+
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
@@ -22,6 +28,9 @@ fi
 train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
 dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
 dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu
+
+# ensure that the needed data directory exists
+mkdir -p $POS_DATA_DIR
 
 train_in_file=$POS_DATA_DIR/${short}.train.in.conllu
 dev_in_file=$POS_DATA_DIR/${short}.dev.in.conllu

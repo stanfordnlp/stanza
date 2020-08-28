@@ -29,7 +29,7 @@ from stanza.models import _training_logging
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
     parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
@@ -207,8 +207,13 @@ def train(args):
 
     print("Training ended with {} steps.".format(global_step))
 
-    best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    if len(dev_score_history) > 0:
+        best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
+        print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    else:
+        print("Dev set never evaluated.  Saving final model.")
+        trainer.save(model_file)
+
 
 def evaluate(args):
     # file paths
