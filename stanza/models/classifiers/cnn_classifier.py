@@ -140,8 +140,8 @@ class CNNClassifier(nn.Module):
             # assume all pieces are on the same device
             device = next(self.parameters()).device
 
-        # pad each phrase so either it matches the longest conv or the
-        # longest phrase in the input, whichever is longer
+        # we will pad each phrase so either it matches the longest
+        # conv or the longest phrase in the input, whichever is longer
         max_phrase_len = max(len(x) for x in inputs)
         if self.max_window > max_phrase_len:
             max_phrase_len = self.max_window
