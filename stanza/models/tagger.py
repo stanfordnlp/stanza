@@ -194,6 +194,7 @@ def train(args):
                     using_amsgrad = True
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
                 else:
+                    print("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True
                     break
 
