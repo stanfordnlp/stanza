@@ -149,18 +149,17 @@ class CNNClassifier(nn.Module):
         batch_indices = []
         batch_unknowns = []
         extra_batch_indices = []
-        extra_batch_unknowns = []
         for phrase in inputs:
             # TODO: random is good for train mode.  try something else at test time?
             begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
-            sentence_indices = []
+
+            # the initial lists are the length of the begin padding
+            sentence_indices = [PAD_ID] * begin_pad_width
+            extra_sentence_indices = [PAD_ID] * begin_pad_width
+            # the "unknowns" will be the locations of the unknown words.
+            # these locations will get the specially trained unknown vector
             sentence_unknowns = []
-            extra_sentence_indices = []
-            extra_sentence_unknowns = []
-            for i in range(begin_pad_width):
-                sentence_indices.append(PAD_ID)
-                extra_sentence_indices.append(PAD_ID)
 
             for word in phrase:
                 if word in self.vocab_map:
@@ -186,6 +185,15 @@ class CNNClassifier(nn.Module):
             if self.extra_vocab:
                 for word in phrase:
                     if word in self.extra_vocab_map:
+                        # the extra vocab is initialized from the
+                        # words in the training set, which means there
+                        # would be no unknown words.  to occasionally
+                        # train the extra vocab's unknown words, we
+                        # replace 1% of the words with UNK
+                        # we don't do that for the original embedding
+                        # on the assumption that there may be some
+                        # unknown words in the training set anyway
+                        # TODO: maybe train unk for the original embedding?
                         if self.training and random.random() < 0.01:
                             extra_sentence_indices.append(UNK_ID)
                         else:
