@@ -150,8 +150,13 @@ class CNNClassifier(nn.Module):
         batch_unknowns = []
         extra_batch_indices = []
         for phrase in inputs:
-            # TODO: random is good for train mode.  try something else at test time?
-            begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
+            # we use random at training time to try to learn different
+            # positions of padding.  at test time, though, we want to
+            # have consistent results, so we set that to 0 begin_pad
+            if self.training:
+                begin_pad_width = random.randint(0, max_phrase_len - len(phrase))
+            else:
+                begin_pad_width = 0
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
 
             # the initial lists are the length of the begin padding
