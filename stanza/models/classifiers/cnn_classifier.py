@@ -162,7 +162,6 @@ class CNNClassifier(nn.Module):
 
             # the initial lists are the length of the begin padding
             sentence_indices = [PAD_ID] * begin_pad_width
-            extra_sentence_indices = [PAD_ID] * begin_pad_width
             # the "unknowns" will be the locations of the unknown words.
             # these locations will get the specially trained unknown vector
             sentence_unknowns = []
@@ -188,7 +187,13 @@ class CNNClassifier(nn.Module):
                 # TODO: split UNK based on part of speech?  might be an interesting experiment
                 sentence_unknowns.append(len(sentence_indices))
                 sentence_indices.append(PAD_ID)
+
+            sentence_indices.extend([PAD_ID] * end_pad_width)
+            batch_indices.append(sentence_indices)
+            batch_unknowns.append(sentence_unknowns)
+
             if self.extra_vocab:
+                extra_sentence_indices = [PAD_ID] * begin_pad_width
                 for word in phrase:
                     if word in self.extra_vocab_map:
                         # the extra vocab is initialized from the
@@ -206,14 +211,8 @@ class CNNClassifier(nn.Module):
                             extra_sentence_indices.append(self.extra_vocab_map[word])
                     else:
                         extra_sentence_indices.append(UNK_ID)
-
-            for i in range(end_pad_width):
-                sentence_indices.append(PAD_ID)
-                extra_sentence_indices.append(PAD_ID)
-
-            batch_indices.append(sentence_indices)
-            batch_unknowns.append(sentence_unknowns)
-            extra_batch_indices.append(extra_sentence_indices)
+                extra_sentence_indices.extend([PAD_ID] * end_pad_width)
+                extra_batch_indices.append(extra_sentence_indices)
 
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
