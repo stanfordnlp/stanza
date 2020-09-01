@@ -103,7 +103,10 @@ class CharacterLanguageModel(nn.Module):
             if self.pad:
                 res = pad_packed_sequence(res, batch_first=True)[0]
         return res
-    
+
+    def hidden_dim(self):
+        return self.args['char_hidden_dim']
+
     def train(self, mode=True):
         """
         Override the default train() function, so that when self.finetune == False, the training mode 
