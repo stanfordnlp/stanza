@@ -107,6 +107,9 @@ class CharacterLanguageModel(nn.Module):
     def hidden_dim(self):
         return self.args['char_hidden_dim']
 
+    def char_vocab(self):
+        return self.vocab['char']
+
     def train(self, mode=True):
         """
         Override the default train() function, so that when self.finetune == False, the training mode 
