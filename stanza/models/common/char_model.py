@@ -5,8 +5,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.utils import tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
-from stanza.models.common.vocab import UNK_ID
-from stanza.models.pos.vocab import CharVocab
+from stanza.models.common.vocab import UNK_ID, CharVocab
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=False, bidirectional=False, attention=True):
