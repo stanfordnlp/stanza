@@ -1,9 +1,8 @@
 from collections import Counter, OrderedDict
 
-from stanza.models.common.vocab import BaseVocab, BaseMultiVocab
+from stanza.models.common.vocab import BaseVocab, BaseMultiVocab, CharVocab
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common.pretrain import PretrainedWordVocab
-from stanza.models.pos.vocab import CharVocab, WordVocab
 
 class TagVocab(BaseVocab):
     """ A vocab for the output tag sequence. """

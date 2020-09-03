@@ -15,7 +15,7 @@ import time
 import os
 
 from stanza.models.common.char_model import CharacterLanguageModel
-from stanza.models.pos.vocab import CharVocab
+from stanza.models.common.vocab import CharVocab
 from stanza.models.common import utils
 from stanza.models import _training_logging
 
