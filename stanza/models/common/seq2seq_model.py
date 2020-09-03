@@ -113,10 +113,10 @@ class Seq2SeqModel(nn.Module):
 
     def encode(self, enc_inputs, lens):
         """ Encode source sequence. """
-        self.h0, self.c0 = self.zero_state(enc_inputs)
+        h0, c0 = self.zero_state(enc_inputs)
 
         packed_inputs = nn.utils.rnn.pack_padded_sequence(enc_inputs, lens, batch_first=True)
-        packed_h_in, (hn, cn) = self.encoder(packed_inputs, (self.h0, self.c0))
+        packed_h_in, (hn, cn) = self.encoder(packed_inputs, (h0, c0))
         h_in, _ = nn.utils.rnn.pad_packed_sequence(packed_h_in, batch_first=True)
         hn = torch.cat((hn[-1], hn[-2]), 1)
         cn = torch.cat((cn[-1], cn[-2]), 1)
