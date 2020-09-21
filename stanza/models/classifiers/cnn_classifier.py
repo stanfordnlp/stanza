@@ -236,11 +236,18 @@ class CNNClassifier(nn.Module):
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
             extra_input_vectors = self.extra_embedding(extra_batch_indices)
             if self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
-                input_vectors = torch.cat([input_vectors, extra_input_vectors], dim=2)
+                all_inputs = [input_vectors, extra_input_vectors]
             elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
-                input_vectors = input_vectors + extra_input_vectors
+                all_inputs = [input_vectors + extra_input_vectors]
             else:
                 raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
+        else:
+            all_inputs = [input_vectors]
+
+        if len(all_inputs) > 1:
+            input_vectors = torch.cat(all_inputs, dim=2)
+        else:
+            input_vectors = all_inputs[0]
 
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
