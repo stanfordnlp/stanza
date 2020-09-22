@@ -34,10 +34,16 @@ class SentimentProcessor(UDProcessor):
         backward_charlm_path = config.get('backward_charlm_path', None)
         charmodel_backward = pipeline.foundation_cache.load_charlm(backward_charlm_path)
         # set up model
+        # elmo does not have a convenient way to download intermediate
+        # models the way stanza downloads charlms & pretrains or
+        # transformers downloads bert etc
+        # however, elmo in general is not as good as using a
+        # transformer, so it is unlikely we will ever fix this
         self._model = cnn_classifier.load(filename=config['model_path'],
                                           pretrain=self._pretrain,
                                           charmodel_forward=charmodel_forward,
                                           charmodel_backward=charmodel_backward,
+                                          elmo_model=None,
                                           foundation_cache=pipeline.foundation_cache)
         # batch size counted as words
         self._batch_size = config.get('batch_size', SentimentProcessor.DEFAULT_BATCH_SIZE)
