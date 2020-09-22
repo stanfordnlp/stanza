@@ -37,6 +37,8 @@ class DevScoring(Enum):
 logger = logging.getLogger('stanza')
 tlogger = logging.getLogger('stanza.classifiers.trainer')
 
+logging.getLogger('elmoformanylangs').setLevel(logging.WARNING)
+
 DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
 DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
 DEFAULT_TEST='data/sentiment/en_sst3roots.test.txt'
@@ -186,6 +188,10 @@ def parse_args(args=None):
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
+
+    parser.add_argument('--elmo_model', default='extern_data/manyelmo/english', help='Directory with elmo model')
+    parser.add_argument('--use_elmo', dest='use_elmo', default=False, action='store_true', help='Use an elmo model as a source of parameters')
+    parser.add_argument('--elmo_projection', type=int, default=None, help='Project elmo to this many dimensions')
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
@@ -554,6 +560,7 @@ def load_model(args):
     Load both the pretrained embedding and other pieces from the args as well as the model itself
     """
     pretrain = load_pretrain(args)
+    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
     charmodel_forward = load_charlm(args.charlm_forward_file)
     charmodel_backward = load_charlm(args.charlm_backward_file)
 
@@ -563,7 +570,7 @@ def load_model(args):
         load_name = os.path.join(args.save_dir, args.load_name)
         if not os.path.exists(load_name):
             raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward, elmo_model)
 
 def build_new_model(args, train_set):
     """
@@ -573,6 +580,7 @@ def build_new_model(args, train_set):
         raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
 
     pretrain = load_pretrain(args)
+    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
     charmodel_forward = load_charlm(args.charlm_forward_file)
     charmodel_backward = load_charlm(args.charlm_backward_file)
 
@@ -586,6 +594,7 @@ def build_new_model(args, train_set):
                                         labels=labels,
                                         charmodel_forward=charmodel_forward,
                                         charmodel_backward=charmodel_backward,
+                                        elmo_model=elmo_model,
                                         bert_model=bert_model,
                                         bert_tokenizer=bert_tokenizer,
                                         args=args)

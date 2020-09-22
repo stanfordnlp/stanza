@@ -52,7 +52,7 @@ tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, bert_model, bert_tokenizer,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -82,6 +82,8 @@ class CNNClassifier(nn.Module):
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
+                                      use_elmo = args.use_elmo,
+                                      elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
@@ -94,6 +96,7 @@ class CNNClassifier(nn.Module):
 
         emb_matrix = pretrain.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.add_unsaved_module('elmo_model', elmo_model)
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
@@ -171,6 +174,19 @@ class CNNClassifier(nn.Module):
             else:
                 self.charmodel_backward_projection = None
                 total_embedding_dim += charmodel_backward.hidden_dim()
+
+        if self.config.use_elmo:
+            if elmo_model is None:
+                raise ValueError("Model requires elmo, but elmo_model not passed in")
+            elmo_dim = elmo_model.sents2elmo([["Test"]])[0].shape[1]
+
+            # this mapping will combine 3 layers of elmo to 1 layer of features
+            self.elmo_combine_layers = nn.Linear(in_features=3, out_features=1, bias=False)
+            if self.config.elmo_projection:
+                self.elmo_projection = nn.Linear(in_features=elmo_dim, out_features=self.config.elmo_projection)
+                total_embedding_dim = total_embedding_dim + self.config.elmo_projection
+            else:
+                total_embedding_dim = total_embedding_dim + elmo_dim
 
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -284,6 +300,9 @@ class CNNClassifier(nn.Module):
         extra_batch_indices = []
         begin_paddings = []
         end_paddings = []
+
+        elmo_batch_words = []
+
         for phrase in inputs:
             # we use random at training time to try to learn different
             # positions of padding.  at test time, though, we want to
@@ -332,6 +351,13 @@ class CNNClassifier(nn.Module):
                 extra_sentence_indices.extend([PAD_ID] * end_pad_width)
                 extra_batch_indices.append(extra_sentence_indices)
 
+            if self.config.use_elmo:
+                elmo_phrase_words = [""] * begin_pad_width
+                for word in phrase:
+                    elmo_phrase_words.append(word)
+                elmo_phrase_words.extend([""] * end_pad_width)
+                elmo_batch_words.append(elmo_phrase_words)
+
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
         # many tiny tensors
@@ -369,6 +395,25 @@ class CNNClassifier(nn.Module):
         if self.backward_charlm is not None:
             char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
+
+        if self.config.use_elmo:
+            # this will be N arrays of 3xMx1024 where M is the number of words
+            # and N is the number of sentences (and 1024 is actually the number of weights)
+            elmo_arrays = self.elmo_model.sents2elmo(elmo_batch_words, output_layer=-2)
+            elmo_tensors = [torch.tensor(x).to(device=device) for x in elmo_arrays]
+            # elmo_tensor will now be Nx3xMx1024
+            elmo_tensor = torch.stack(elmo_tensors)
+            # Nx1024xMx3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 3)
+            # NxMx1024x3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 2)
+            # NxMx1024x1
+            elmo_tensor = self.elmo_combine_layers(elmo_tensor)
+            # NxMx1024
+            elmo_tensor = elmo_tensor.squeeze(3)
+            if self.config.elmo_projection:
+                elmo_tensor = self.elmo_projection(elmo_tensor)
+            all_inputs.append(elmo_tensor)
 
         if self.bert_model is not None:
             bert_embeddings = self.extract_bert_embeddings(inputs, max_phrase_len, begin_paddings, device)
@@ -425,7 +470,7 @@ def save(filename, model, skip_modules=True):
     torch.save(params, filename, _use_new_zipfile_serialization=False)
     logger.info("Model saved to {}".format(filename))
 
-def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
+def load(filename, pretrain, charmodel_forward, charmodel_backward, elmo_model, foundation_cache=None):
     try:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
     except BaseException:
@@ -434,6 +479,8 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
     logger.debug("Loaded model {}".format(filename))
 
     # TODO: should not be needed when all models have this value set
+    setattr(checkpoint['config'], 'use_elmo', getattr(checkpoint['config'], 'use_elmo', False))
+    setattr(checkpoint['config'], 'elmo_projection', getattr(checkpoint['config'], 'elmo_projection', False))
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
     setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
     setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
@@ -453,6 +500,7 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
                               labels=checkpoint['labels'],
                               charmodel_forward=charmodel_forward,
                               charmodel_backward=charmodel_backward,
+                              elmo_model=elmo_model,
                               bert_model=bert_model,
                               bert_tokenizer=bert_tokenizer,
                               args=checkpoint['config'])

@@ -429,3 +429,13 @@ def checkpoint_name(save_dir, save_name, checkpoint_name):
         return save_name[:-3] + "_checkpoint.pt"
 
     return save_name + "_checkpoint"
+
+def load_elmo(elmo_model):
+    # This import is here so that Elmo integration can be treated
+    # as an optional feature
+    import elmoformanylangs
+
+    logger.info("Loading elmo: %s" % elmo_model)
+    elmo_model = elmoformanylangs.Embedder(elmo_model)
+    return elmo_model
+
