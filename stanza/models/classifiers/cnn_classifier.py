@@ -336,6 +336,9 @@ def label_text(model, text, batch_size=None, reverse_label_map=None, device=None
         intervals = [(i, min(i+batch_size, len(text))) for i in range(0, len(text), batch_size)]
     labels = []
     for interval in intervals:
+        if interval[1] - interval[0] == 0:
+            # this can happen for empty text
+            continue
         output = model(text[interval[0]:interval[1]], device)
         predicted = torch.argmax(output, dim=1)
         labels.extend(predicted.tolist())
