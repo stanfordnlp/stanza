@@ -34,6 +34,8 @@ def get_float_tensor(features_list, batch_size):
 
 def sort_all(batch, lens):
     """ Sort all fields by descending order of lens, and return the original indices. """
+    if batch == [[]]:
+        return [[]], []
     unsorted_all = [lens] + [range(len(lens))] + list(batch)
     sorted_all = [list(t) for t in zip(*sorted(zip(*unsorted_all), reverse=True))]
     return sorted_all[2:], sorted_all[1]

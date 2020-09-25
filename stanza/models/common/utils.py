@@ -200,6 +200,8 @@ def unsort(sorted_list, oidx):
     Unsort a sorted list, based on the original idx.
     """
     assert len(sorted_list) == len(oidx), "Number of list elements must match with original indices."
+    if len(sorted_list) == 0:
+        return []
     _, unsorted = [list(t) for t in zip(*sorted(zip(oidx, sorted_list)))]
     return unsorted
 
