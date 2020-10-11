@@ -130,6 +130,7 @@ def parse_args():
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
+    parser.add_argument('--dev_eval_steps', default=None, type=int, help='Run the dev set after this many train steps')
 
     parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
 
@@ -449,8 +450,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # print statistics
             running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
-                logger.info('[%d, %5d] average loss: %.3f' %
-                            (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
+                if (args.dev_eval_steps and
+                    ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
+                    correct = score_dataset(model, dev_set, label_map, device)
+                    logger.info('[%d, %5d] Dev set: %d correct of %d examples.  Accuracy: %f  Average loss: %.3f' %
+                                (epoch + 1, ((batch_num + 1) * args.batch_size),
+                                 correct, len(dev_set), correct / len(dev_set),
+                                 running_loss / 2000))
+                    model.train()
+                else:
+                    logger.info('[%d, %5d] Average loss: %.3f' %
+                                (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
