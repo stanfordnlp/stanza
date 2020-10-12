@@ -425,6 +425,8 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         logger.info("Reloaded model for continued training.  Dev set: %d correct of %d examples.  Accuracy: %f" %
                     (correct, len(dev_set), correct / len(dev_set)))
 
+    best_score = 0
+
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
     for epoch in range(args.max_epochs):
@@ -457,6 +459,10 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
                                 (epoch + 1, ((batch_num + 1) * args.batch_size),
                                  correct, len(dev_set), correct / len(dev_set),
                                  running_loss / 2000))
+                    if correct > best_score:
+                        best_score = correct
+                        cnn_classifier.save(model_file, model)
+                        logger.info("Saved new best score model!")
                     model.train()
                 else:
                     logger.info('[%d, %5d] Average loss: %.3f' %
@@ -469,11 +475,14 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         correct = score_dataset(model, dev_set, label_map, device)
         logger.info("Finished epoch %d.  Dev set: %d correct of %d examples.  Accuracy: %f  Total loss: %f" %
                     ((epoch + 1), correct, len(dev_set), correct / len(dev_set), epoch_loss))
-
         checkpoint_file = checkpoint_name(model_file, epoch + 1, correct / len(dev_set))
         cnn_classifier.save(checkpoint_file, model)
+        if correct > best_score:
+            best_score = correct
+            cnn_classifier.save(model_file, model)
+            logger.info("Saved new best score model!")
 
-    cnn_classifier.save(model_file, model)
+
 
 def load_pretrain(args):
     if args.wordvec_pretrain_file:
