@@ -269,9 +269,18 @@ def confusion_to_macro_f1(confusion):
             else:
                 fn = fn + confusion.get(k, {}).get(k2, 0)
                 fp = fp + confusion.get(k2, {}).get(k, 0)
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-        f1 = 2 * (precision * recall) / (precision + recall)
+        if tp + fp == 0:
+            precision = 0.0
+        else:
+            precision = tp / (tp + fp)
+        if tp + fn == 0:
+            recall = 0.0
+        else:
+            recall = tp / (tp + fn)
+        if precision + recall == 0.0:
+            f1 = 0.0
+        else:
+            f1 = 2 * (precision * recall) / (precision + recall)
         sum_f1 = sum_f1 + f1
 
     return sum_f1 / len(keys)
