@@ -25,6 +25,10 @@ class Loss(Enum):
     WEIGHTED_CROSS = 2
     LOG_CROSS = 3
 
+class DevScoring(Enum):
+    ACCURACY = 'ACC'
+    WEIGHTED_F1 = 'WF'
+
 logger = logging.getLogger('stanza')
 
 DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
@@ -131,6 +135,9 @@ def parse_args():
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
     parser.add_argument('--dev_eval_steps', default=None, type=int, help='Run the dev set after this many train steps')
+    parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.ACCURACY,
+                        help=('Scoring method to use for choosing the best model.  Options: %s' %
+                              " ".join(x.name for x in DevScoring)))
 
     parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
 
@@ -375,6 +382,21 @@ def score_dataset(model, dataset, label_map=None, device=None,
                 correct = correct + 1
     return correct
 
+def score_dev_set(model, dev_set, dev_eval_scoring):
+    confusion = confusion_dataset(model, dev_set)
+    logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
+    correct, total = confusion_to_accuracy(confusion)
+    macro_f1 = confusion_to_macro_f1(confusion)
+    logger.info("Dev set: %d correct of %d examples.  Accuracy: %f" %
+                (correct, len(dev_set), correct / len(dev_set)))
+    logger.info("Macro f1: {}".format(macro_f1))
+    if dev_eval_scoring is DevScoring.ACCURACY:
+        return correct / total
+    elif dev_eval_scoring is DevScoring.WEIGHTED_F1:
+        return macro_f1
+    else:
+        raise ValueError("Unknown scoring method {}".format(dev_eval_scoring))
+
 def check_labels(labels, dataset):
     """
     Check that all of the labels in the dataset are in the known labels.
@@ -386,12 +408,12 @@ def check_labels(labels, dataset):
     if not_found:
         raise RuntimeError('Dataset contains labels which the model does not know about:' + str(not_found))
 
-def checkpoint_name(filename, epoch, acc):
+def checkpoint_name(filename, epoch, dev_scoring, score):
     """
     Build an informative checkpoint name from a base name, epoch #, and accuracy
     """
     root, ext = os.path.splitext(filename)
-    return root + ".E{epoch:04d}-ACC{acc:05.2f}".format(**{"epoch": epoch, "acc": acc * 100}) + ext
+    return root + ".E{epoch:04d}-{score_type}{acc:05.2f}".format(**{"epoch": epoch, "score_type": dev_scoring.value, "acc": score * 100}) + ext
 
 def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
@@ -430,9 +452,8 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
     if args.load_name:
         # We reloaded the model, so let's report its current dev set score
-        correct = score_dataset(model, dev_set, label_map, device)
-        logger.info("Reloaded model for continued training.  Dev set: %d correct of %d examples.  Accuracy: %f" %
-                    (correct, len(dev_set), correct / len(dev_set)))
+        correct = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        logger.info("Reloaded model for continued training.")
 
     best_score = 0
 
@@ -463,13 +484,10 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
                 if (args.dev_eval_steps and
                     ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
-                    correct = score_dataset(model, dev_set, label_map, device)
-                    logger.info('[%d, %5d] Dev set: %d correct of %d examples.  Accuracy: %f  Average loss: %.3f' %
-                                (epoch + 1, ((batch_num + 1) * args.batch_size),
-                                 correct, len(dev_set), correct / len(dev_set),
-                                 running_loss / 2000))
-                    if correct > best_score:
-                        best_score = correct
+                    logger.info('[%d, %5d] Interim analysis' % (epoch + 1, ((batch_num + 1) * args.batch_size)))
+                    dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+                    if best_score is None or dev_score > best_score:
+                        best_score = dev_score
                         cnn_classifier.save(model_file, model)
                         logger.info("Saved new best score model!")
                     model.train()
@@ -481,13 +499,12 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         # Add any leftover loss to the epoch_loss
         epoch_loss += running_loss
 
-        correct = score_dataset(model, dev_set, label_map, device)
-        logger.info("Finished epoch %d.  Dev set: %d correct of %d examples.  Accuracy: %f  Total loss: %f" %
-                    ((epoch + 1), correct, len(dev_set), correct / len(dev_set), epoch_loss))
-        checkpoint_file = checkpoint_name(model_file, epoch + 1, correct / len(dev_set))
+        logger.info("Finished epoch %d" % (epoch + 1))
+        dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
         cnn_classifier.save(checkpoint_file, model)
-        if correct > best_score:
-            best_score = correct
+        if best_score is None or dev_score > best_score:
+            best_score = dev_score
             cnn_classifier.save(model_file, model)
             logger.info("Saved new best score model!")
 
