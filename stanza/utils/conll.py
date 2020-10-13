@@ -129,7 +129,7 @@ class CoNLL:
                 token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
         # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
         if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
-            token_conll[FIELD_TO_IDX[HEAD]] = str((token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
+            token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
         return token_conll
 
     @staticmethod
