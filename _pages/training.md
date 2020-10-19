@@ -38,6 +38,11 @@ The above script will first download the pretrained word2vec embeddings released
 After running the script, your embedding vector files will be organized in the following way:
 `${WORDVEC_DIR}/{language}/{language_code}.vectors.xz`. For example, the word2vec file for English should be put into `$WORDVEC_DIR/English/en.vectors.xz`. If you use your own vector files, please make sure you arrange them in a similar fashion as described above.
 
+{% include alerts.html %}
+{{ note }}
+{{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/ewt.pt` by default" | markdownify }}
+{{ end }}
+
 ## Training with Scripts
 
 We provide various bash scripts to ease the training process in the `scripts` directory. To train a model, you can run the following command from the code root directory:
