@@ -105,6 +105,14 @@ def main():
     else:
         evaluate(args)
 
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_tagger.pt"
+
+    return os.path.join(args['save_dir'], save_name)
+
 def load_pretrain(args):
     pretrain = None
     if args['pretrain']:
@@ -120,9 +128,8 @@ def load_pretrain(args):
     return pretrain
 
 def train(args):
-    utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
 
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
@@ -233,8 +240,7 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
 
     pretrain = load_pretrain(args)
 
