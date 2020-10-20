@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--data_dir', type=str, default='data/depparse', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
     parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -98,17 +99,35 @@ def main():
     else:
         evaluate(args)
 
-def train(args):
-    utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_parser.pt'.format(args['save_dir'], args['shorthand'])
+# TODO: refactor with tagger
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_parser.pt"
 
-    # load pretrained vectors if needed
+    return os.path.join(args['save_dir'], save_name)
+
+def load_pretrain(args):
     pretrain = None
     if args['pretrain']:
-        vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+        if args['wordvec_pretrain_file']:
+            pretrain_file = args['wordvec_pretrain_file']
+        else:
+            pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+        if os.path.exists(pretrain_file):
+            vec_file = None
+        else:
+            vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
         pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    return pretrain
+
+def train(args):
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
+
+    # load pretrained vectors if needed
+    pretrain = load_pretrain(args)
 
     # load data
     print("Loading data with batch size {}...".format(args['batch_size']))
@@ -208,12 +227,10 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_parser.pt'.format(args['save_dir'], args['shorthand'])
 
-    # load pretrain; note that we allow the pretrain_file to be non-existent
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file)
+    model_file = model_file_name(args)
+    # load pretrained vectors if needed
+    pretrain = load_pretrain(args)
 
     # load model
     print("Loading model from: {}".format(model_file))
