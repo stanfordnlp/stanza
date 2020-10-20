@@ -7,6 +7,8 @@
 
 source scripts/config.sh
 
+set -e
+
 if hash python3 2>/dev/null; then
     PYTHON=python3
 else
@@ -30,6 +32,9 @@ fi
 train_in_file=$DEPPARSE_DATA_DIR/${original_short}.train.in.conllu
 dev_in_file=$DEPPARSE_DATA_DIR/${original_short}.dev.in.conllu
 dev_gold_file=$DEPPARSE_DATA_DIR/${original_short}.dev.gold.conllu
+
+# ensure that the needed data directory exists
+mkdir -p $DEPPARSE_DATA_DIR
 
 # handle languages requiring special batch size
 batch_size=5000
