@@ -17,6 +17,7 @@ fi
 
 treebank=$1; shift
 tag_type=$1; shift
+
 original_short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
 
@@ -44,7 +45,9 @@ if [ $treebank == 'UD_Galician-TreeGal' ]; then
 fi
 echo "Using batch size $batch_size"
 
-if [ $tag_type == 'gold' ]; then
+if [ -z "$tag_type" ]; then
+    echo "Please specify either gold or predicted for tag type"
+elif [ $tag_type == 'gold' ]; then
     train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
     dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
     dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu
@@ -72,4 +75,6 @@ elif [ $tag_type == 'predicted' ]; then
     echo $dev_cmd
     eval $dev_cmd
     cp $dev_in_file $dev_gold_file
+else
+    echo "Please specify either gold or predicted for tag type"
 fi
