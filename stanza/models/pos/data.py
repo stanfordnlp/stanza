@@ -163,3 +163,36 @@ class DataLoader:
             res.append(current)
 
         return res
+
+def augment_punct(train_data, args):
+    """
+    Adds extra training data to compensate for some models having all sentences end with PUNCT
+
+    Some of the models (for example, UD_Hebrew-HTB) have the flaw that
+    all of the training sentences end with PUNCT.  The model therefore
+    learns to finish every sentence with punctuation, even if it is
+    given a sentence with non-punct at the end.
+
+    One simple way to fix this is to train on some fraction of training data with punct.
+    """
+    aug = args['augment_nopunct']
+    if aug <= 0:
+        return train_data
+
+    new_data = list(train_data)
+
+    n_nopunct = 0
+    for sentence in train_data:
+        last_word = sentence[-1]
+        if last_word[UPOS] == 'PUNCT':
+            if random.random() < aug:
+                # todo: could deep copy the words
+                #       or not deep copy any of this
+                new_sentence = list(sentence[:-1])
+                new_data.append(new_sentence)
+        else:
+            n_nopunct = n_nopunct + 1
+
+    logger.info("Augmenting dataset with non-punct-ending sentences.  Original length %d, with %d no-punct" % (len(train_data), n_nopunct))
+    logger.info("Added %d additional sentences.  New total length %d" % (len(new_data) - len(train_data), len(new_data)))
+    return new_data
