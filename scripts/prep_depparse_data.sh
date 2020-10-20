@@ -1,9 +1,10 @@
 #!/bin/bash
 #
 # Prepare data for training and evaluating parsers. Run as:
-#   ./prep_depparse_data.sh TREEBANK TAG_TYPE
+#   ./prep_depparse_data.sh TREEBANK TAG_TYPE [WORDVEC]
 # where TREEBANK is the UD treebank name (e.g., UD_English-EWT) and TAG_TYPE is one of gold or predicted.
 # This script assumes UDBASE and DEPPARSE_DATA_DIR are correctly set in config.sh.
+# Optional argument WORDVEC is a .pt file to use for the word vectors in "predicted" mode.
 
 source scripts/config.sh
 
@@ -16,7 +17,22 @@ else
 fi
 
 treebank=$1; shift
-tag_type=$1; shift
+tag_type=$1
+
+if [ -z "$tag_type" ]; then
+    echo "Please specify either gold or predicted for tag type"
+fi
+# this will cause an exit if tag_type is not set
+shift
+
+wordvec_pretrain=$1
+if [ -z "$wordvec_pretrain" ]; then
+    wordvec_pretrain=""
+else
+    wordvec_pretrain='--wordvec_pretrain_file '${wordvec_pretrain}
+    echo "Using wordvec pretrain argument: " $wordvec_pretrain
+    shift
+fi
 
 original_short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
 lang=`echo $short | sed -e 's#_.*##g'`
@@ -45,9 +61,7 @@ if [ $treebank == 'UD_Galician-TreeGal' ]; then
 fi
 echo "Using batch size $batch_size"
 
-if [ -z "$tag_type" ]; then
-    echo "Please specify either gold or predicted for tag type"
-elif [ $tag_type == 'gold' ]; then
+if [ $tag_type == 'gold' ]; then
     train_conllu=$UDBASE/$src_treebank/${src_short}-ud-train.conllu
     dev_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu # gold dev
     dev_gold_conllu=$UDBASE/$src_treebank/${src_short}-ud-dev.conllu
@@ -62,7 +76,7 @@ elif [ $tag_type == 'predicted' ]; then
     # run part-of-speech tagging on the train file
     echo '---'
     echo 'running part of speech model to generate predicted tags for train data'
-    train_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_train_file}' --gold_file '${gold_train_file}' --output_file '${train_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
+    train_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_train_file}' --gold_file '${gold_train_file}' --output_file '${train_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict '${wordvec_pretrain}
     echo ''
     echo $train_cmd
     echo ''
@@ -70,7 +84,7 @@ elif [ $tag_type == 'predicted' ]; then
     # run part-of-speech tagging on the train file
     echo '---'
     echo 'running part of speech model to generate predicted tags for dev data'
-    dev_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_dev_file}' --gold_file '${gold_dev_file}' --output_file '${dev_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
+    dev_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_dev_file}' --gold_file '${gold_dev_file}' --output_file '${dev_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict '${wordvec_pretrain}
     echo ''
     echo $dev_cmd
     eval $dev_cmd
