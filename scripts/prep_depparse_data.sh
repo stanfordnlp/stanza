@@ -7,6 +7,12 @@
 
 source scripts/config.sh
 
+if hash python3 2>/dev/null; then
+    PYTHON=python3
+else
+    PYTHON=python
+fi
+
 treebank=$1; shift
 tag_type=$1; shift
 original_short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
@@ -48,7 +54,7 @@ elif [ $tag_type == 'predicted' ]; then
     # run part-of-speech tagging on the train file
     echo '---'
     echo 'running part of speech model to generate predicted tags for train data'
-    train_cmd='python -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_train_file}' --gold_file '${gold_train_file}' --output_file '${train_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
+    train_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_train_file}' --gold_file '${gold_train_file}' --output_file '${train_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
     echo ''
     echo $train_cmd
     echo ''
@@ -56,7 +62,7 @@ elif [ $tag_type == 'predicted' ]; then
     # run part-of-speech tagging on the train file
     echo '---'
     echo 'running part of speech model to generate predicted tags for dev data'
-    dev_cmd='python -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_dev_file}' --gold_file '${gold_dev_file}' --output_file '${dev_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
+    dev_cmd='$PYTHON -m stanza.models.tagger --wordvec_dir '${WORDVEC_DIR}' --eval_file '${gold_dev_file}' --gold_file '${gold_dev_file}' --output_file '${dev_in_file}' --lang '${original_short}' --shorthand '${original_short}' --batch_size '${batch_size}' --mode predict'
     echo ''
     echo $dev_cmd
     eval $dev_cmd
