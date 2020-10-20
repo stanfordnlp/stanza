@@ -175,13 +175,31 @@ def augment_punct(train_data, args):
 
     One simple way to fix this is to train on some fraction of training data with punct.
     """
+    if len(train_data) == 0:
+        return train_data
+
     aug = args['augment_nopunct']
+
+    n_nopunct = 0
+    for sentence in train_data:
+        last_word = sentence[-1]
+        if last_word[UPOS] != 'PUNCT':
+            n_nopunct = n_nopunct + 1
+
+    if aug is None:
+        # x = # of sentences with punct
+        #   = len(train_data) - n_nopunct
+        # y = n_nopunct
+        # aug x + y = 0.1 (x + y)
+        # aug = (0.1 (x + y) - y) / x
+        aug = (0.1 * len(train_data) - n_nopunct) / (len(train_data) - n_nopunct)
+        logger.info("No-punct augmentation not specified.  Using %.4f to get 10%% training data with no punct at end" % aug)
+
     if aug <= 0:
         return train_data
 
     new_data = list(train_data)
 
-    n_nopunct = 0
     for sentence in train_data:
         last_word = sentence[-1]
         if last_word[UPOS] == 'PUNCT':
@@ -190,8 +208,6 @@ def augment_punct(train_data, args):
                 #       or not deep copy any of this
                 new_sentence = list(sentence[:-1])
                 new_data.append(new_sentence)
-        else:
-            n_nopunct = n_nopunct + 1
 
     logger.info("Augmenting dataset with non-punct-ending sentences.  Original length %d, with %d no-punct" % (len(train_data), n_nopunct))
     logger.info("Added %d additional sentences.  New total length %d" % (len(new_data) - len(train_data), len(new_data)))

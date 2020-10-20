@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
-    parser.add_argument('--augment_nopunct', type=float, default=0.0, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
 
     args = parser.parse_args()
     return args
