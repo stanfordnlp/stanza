@@ -63,6 +63,8 @@ class CNNClassifier(nn.Module):
         # TODO: this can be removed sometime after all models are rebuilt
         use_elmo = getattr(args, 'use_elmo', False)
         elmo_projection = getattr(args, 'elmo_projection', None)
+        char_lowercase = getattr(args, 'char_lowercase', False)
+        charlm_projection = getattr(args, 'charlm_projection', None)
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
                                       filter_sizes = args.filter_sizes,
                                       fc_shapes = args.fc_shapes,
@@ -72,13 +74,13 @@ class CNNClassifier(nn.Module):
                                       extra_wordvec_method = args.extra_wordvec_method,
                                       extra_wordvec_dim = args.extra_wordvec_dim,
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
-                                      char_lowercase = args.char_lowercase,
-                                      charlm_projection = args.charlm_projection,
+                                      char_lowercase = char_lowercase,
+                                      charlm_projection = charlm_projection,
                                       use_elmo = use_elmo,
                                       elmo_projection = elmo_projection,
                                       model_type = 'CNNClassifier')
 
-        if args.char_lowercase:
+        if self.config.char_lowercase:
             self.char_case = lambda x: x.lower()
         else:
             self.char_case = lambda x: x
@@ -143,17 +145,17 @@ class CNNClassifier(nn.Module):
             raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
 
         if charmodel_forward is not None:
-            if args.charlm_projection:
-                self.charmodel_forward_projection = nn.Linear(charmodel_forward.hidden_dim(), args.charlm_projection)
-                total_embedding_dim += args.charlm_projection
+            if self.config.charlm_projection:
+                self.charmodel_forward_projection = nn.Linear(charmodel_forward.hidden_dim(), self.config.charlm_projection)
+                total_embedding_dim += self.config.charlm_projection
             else:
                 self.charmodel_forward_projection = None
                 total_embedding_dim += charmodel_forward.hidden_dim()
 
         if charmodel_backward is not None:
-            if args.charlm_projection:
-                self.charmodel_backward_projection = nn.Linear(charmodel_backward.hidden_dim(), args.charlm_projection)
-                total_embedding_dim += args.charlm_projection
+            if self.config.charlm_projection:
+                self.charmodel_backward_projection = nn.Linear(charmodel_backward.hidden_dim(), self.config.charlm_projection)
+                total_embedding_dim += self.config.charlm_projection
             else:
                 self.charmodel_backward_projection = None
                 total_embedding_dim += charmodel_backward.hidden_dim()
@@ -449,10 +451,6 @@ def load(filename, pretrain, elmo_model, charmodel_forward, charmodel_backward):
         logger.exception("Cannot load model from {}".format(filename))
         raise
     logger.debug("Loaded model {}".format(filename))
-
-    # TODO: should not be needed when all models have this value set
-    setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
-    setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
