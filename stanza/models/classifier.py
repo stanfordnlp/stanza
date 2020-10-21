@@ -13,12 +13,15 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
+from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.pos.vocab import CharVocab
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
+
 
 class Loss(Enum):
     CROSS = 1
@@ -155,7 +158,17 @@ def parse_args():
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
+    parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in charater model.")
+
     args = parser.parse_args()
+
+    if args.charlm_shorthand is not None:
+        args.charlm = True
+
     return args
 
 
@@ -541,7 +554,6 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
-
 def main():
     args = parse_args()
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -562,13 +574,31 @@ def main():
 
     pretrain = load_pretrain(args)
 
+    if args.charlm:
+        if args.charlm_shorthand is None:
+            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
+        logger.info('Using pretrained contextualized char embedding')
+        charlm_forward_file = '{}/{}_forward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
+        charlm_backward_file = '{}/{}_backward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
+        charmodel_forward = CharacterLanguageModel.load(charlm_forward_file, finetune=False)
+        charmodel_backward = CharacterLanguageModel.load(charlm_backward_file, finetune=False)
+    else:
+        charmodel_forward = None
+        charmodel_backward = None
+
     if args.load_name:
-        model = cnn_classifier.load(args.load_name, pretrain)
+        model = cnn_classifier.load(args.load_name, pretrain,
+                                    charmodel_forward, charmodel_backward)
     else:
         assert train_set is not None
         labels = dataset_labels(train_set)
         extra_vocab = dataset_vocab(train_set)
-        model = cnn_classifier.CNNClassifier(pretrain, extra_vocab, labels, args)
+        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                             extra_vocab=extra_vocab,
+                                             labels=labels,
+                                             charmodel_forward=charmodel_forward,
+                                             charmodel_backward=charmodel_backward,
+                                             args=args)
 
     if args.cuda:
         model.cuda()
