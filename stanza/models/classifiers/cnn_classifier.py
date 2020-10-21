@@ -405,6 +405,7 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
 
     # TODO: should not be needed when all models have this value set
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
+    setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
