@@ -128,8 +128,9 @@ class Pipeline:
                     lang_dir = os.path.dirname(model_dir)
                     if not os.path.exists(lang_dir):
                         raise FileNotFoundError('Could not find the model file {}.  The expected model directory {} is missing.  Perhaps you need to run stanza.download("{}")'.format(model_path, lang_dir, lang)) from e
-                    model_name, _ = os.path.splitext(model_name)
-                    raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
+                    if not os.path.exists(model_path):
+                        model_name, _ = os.path.splitext(model_name)
+                        raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
 
                 # if we couldn't find a more suitable description of the
                 # FileNotFoundError, just raise the old error
