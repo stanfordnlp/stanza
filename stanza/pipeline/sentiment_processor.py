@@ -9,6 +9,7 @@ TODO: a possible way to generalize this would be to make it a
 ClassifierProcessor and have "sentiment" be an option.
 """
 
+import stanza.models.classifier as classifier
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 
 from stanza.models.common import doc
@@ -31,9 +32,17 @@ class SentimentProcessor(UDProcessor):
         charmodel_forward = CharacterLanguageModel.load(forward_charlm_path, finetune=False) if forward_charlm_path else None
         backward_charlm_path = config.get('backward_charlm_path', None)
         charmodel_backward = CharacterLanguageModel.load(backward_charlm_path, finetune=False) if backward_charlm_path else None
+
+        elmo_path = config.get('elmo_path', None)
+        if elmo_path is not None:
+            elmo_model = classifier.load_elmo(elmo_path)
+        else:
+            elmo_model = None
+
         # set up model
         self._model = cnn_classifier.load(filename=config['model_path'],
                                           pretrain=self._pretrain,
+                                          elmo_model=elmo_model,
                                           charmodel_forward=charmodel_forward,
                                           charmodel_backward=charmodel_backward)
         self._batch_size = config.get('batch_size', None)
