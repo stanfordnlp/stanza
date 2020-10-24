@@ -162,7 +162,10 @@ class CNNClassifier(nn.Module):
 
         if self.config.use_elmo:
             # TODO: could precache elmo values for training
+            if elmo_model is None:
+                raise ValueError("Model requires elmo, but elmo_model not passed in")
             elmo_dim = elmo_model.sents2elmo([["Test"]])[0].shape[1]
+
             # this mapping will combine 3 layers of elmo to 1 layer of features
             self.elmo_combine_layers = nn.Linear(in_features=3, out_features=1, bias=False)
             if self.config.elmo_projection:
