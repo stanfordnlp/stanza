@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 class Tokenizer(nn.Module):
-    def __init__(self, args, nchars, emb_dim, hidden_dim, N_CLASSES=5, dropout=0):
+    def __init__(self, args, nchars, emb_dim, hidden_dim, dropout):
         super().__init__()
 
         self.args = args
