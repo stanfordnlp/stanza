@@ -66,6 +66,10 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
+
+    parser.add_argument('--use_mwt', dest='use_mwt', default=True, action='store_true', help='Whether or not to include mwt output layers')
+    parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
+
     args = parser.parse_args()
     return args
 

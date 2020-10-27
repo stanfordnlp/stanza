@@ -25,14 +25,16 @@ class Tokenizer(nn.Module):
                 self.conv_res2 = nn.Conv1d(hidden_dim * 2 * len(self.conv_sizes), hidden_dim * 2, 1)
         self.tok_clf = nn.Linear(hidden_dim * 2, 1)
         self.sent_clf = nn.Linear(hidden_dim * 2, 1)
-        self.mwt_clf = nn.Linear(hidden_dim * 2, 1)
+        if self.args['use_mwt']:
+            self.mwt_clf = nn.Linear(hidden_dim * 2, 1)
 
         if args['hierarchical']:
             in_dim = hidden_dim * 2
             self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
             self.tok_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
             self.sent_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
-            self.mwt_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
+            if self.args['use_mwt']:
+                self.mwt_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         self.dropout = nn.Dropout(dropout)
         self.toknoise = nn.Dropout(self.args['tok_noise'])
@@ -64,7 +66,8 @@ class Tokenizer(nn.Module):
 
         tok0 = self.tok_clf(inp)
         sent0 = self.sent_clf(inp)
-        mwt0 = self.mwt_clf(inp)
+        if self.args['use_mwt']:
+            mwt0 = self.mwt_clf(inp)
 
         if self.args['hierarchical']:
             if self.args['hier_invtemp'] > 0:
@@ -76,15 +79,20 @@ class Tokenizer(nn.Module):
 
             tok0 = tok0 + self.tok_clf2(inp2)
             sent0 = sent0 + self.sent_clf2(inp2)
-            mwt0 = mwt0 + self.mwt_clf2(inp2)
+            if self.args['use_mwt']:
+                mwt0 = mwt0 + self.mwt_clf2(inp2)
 
         nontok = F.logsigmoid(-tok0)
         tok = F.logsigmoid(tok0)
         nonsent = F.logsigmoid(-sent0)
         sent = F.logsigmoid(sent0)
-        nonmwt = F.logsigmoid(-mwt0)
-        mwt = F.logsigmoid(mwt0)
+        if self.args['use_mwt']:
+            nonmwt = F.logsigmoid(-mwt0)
+            mwt = F.logsigmoid(mwt0)
 
-        pred = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2)
+        if self.args['use_mwt']:
+            pred = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2)
+        else:
+            pred = torch.cat([nontok, tok+nonsent, tok+sent], 2)
 
         return pred

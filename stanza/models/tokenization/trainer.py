@@ -87,6 +87,10 @@ class Trainer(BaseTrainer):
             logger.error("Cannot load model from {}".format(filename))
             raise
         self.args = checkpoint['config']
+        if self.args.get('use_mwt', None) is None:
+            # Default to True as many currently saved models
+            # were built with mwt layers
+            self.args['use_mwt'] = True
         self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
