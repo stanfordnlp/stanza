@@ -13,8 +13,8 @@ import sys
 import os
 import shutil
 import time
-from datetime import datetime
 import argparse
+import logging
 import numpy as np
 import random
 import torch
@@ -28,6 +28,8 @@ from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
+
+logger = logging.getLogger('stanza')
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -92,7 +94,7 @@ def main():
     utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
-    print("Running parser in {} mode".format(args['mode']))
+    logger.info("Running parser in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -130,7 +132,7 @@ def train(args):
     pretrain = load_pretrain(args)
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
@@ -143,10 +145,10 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
+        logger.info("Skip training because no data available...")
         sys.exit(0)
 
-    print("Training parser...")
+    logger.info("Training parser...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
 
     global_step = 0
@@ -155,7 +157,7 @@ def train(args):
     best_dev_preds = []
     current_lr = args['lr']
     global_start_time = time.time()
-    format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
+    format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     using_amsgrad = False
     last_best_step = 0
@@ -170,12 +172,11 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                        max_steps, loss, duration, current_lr))
+                logger.info(format_str.format(global_step, max_steps, loss, duration, current_lr))
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
-                print("Evaluating on dev set...")
+                logger.info("Evaluating on dev set...")
                 dev_preds = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
@@ -187,22 +188,21 @@ def train(args):
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
                 train_loss = 0
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     last_best_step = global_step
                     trainer.save(model_file)
-                    print("new best model saved.")
+                    logger.info("new best model saved.")
                     best_dev_preds = dev_preds
 
                 dev_score_history += [dev_score]
-                print("")
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
                 if not using_amsgrad:
-                    print("Switching to AMSGrad")
+                    logger.info("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
@@ -218,10 +218,10 @@ def train(args):
 
         train_batch.reshuffle()
 
-    print("Training ended with {} steps.".format(global_step))
+    logger.info("Training ended with {} steps.".format(global_step))
 
     best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    logger.info("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
 
 def evaluate(args):
     # file paths
@@ -233,7 +233,7 @@ def evaluate(args):
     pretrain = load_pretrain(args)
 
     # load model
-    print("Loading model from: {}".format(model_file))
+    logger.info("Loading model from: {}".format(model_file))
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
@@ -244,12 +244,12 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     if len(batch) > 0:
-        print("Start evaluation...")
+        logger.info("Start evaluation...")
         preds = []
         for i, b in enumerate(batch):
             preds += trainer.predict(b)
@@ -265,8 +265,8 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("Parser score:")
-        print("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("Parser score:")
+        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()
