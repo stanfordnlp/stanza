@@ -73,6 +73,16 @@ class DataLoader:
         self.init_sent_ids()
         logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
 
+    def has_mwt(self):
+        # presumably this only needs to be called either 0 or 1 times,
+        # 1 when training and 0 any other time, so no effort is put
+        # into caching the result
+        for sentence in self.data:
+            for word in sentence:
+                if word[1] > 2:
+                    return True
+        return False
+
     def init_vocab(self):
         vocab = Vocab(self.data, self.args['lang'])
         return vocab

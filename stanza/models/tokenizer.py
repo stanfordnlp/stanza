@@ -6,9 +6,10 @@ recurrent and convolutional architectures.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
-import random
 import argparse
 from copy import copy
+import logging
+import random
 import numpy as np
 import torch
 
@@ -17,6 +18,8 @@ from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.data import DataLoader
 from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions
 from stanza.models import _training_logging
+
+logger = logging.getLogger('stanza')
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -66,6 +69,10 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
+
+    parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
+    parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
+
     args = parser.parse_args()
     return args
 
@@ -81,7 +88,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running tokenizer in {} mode".format(args['mode']))
+    logger.info("Running tokenizer in {} mode".format(args['mode']))
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
@@ -113,6 +120,10 @@ def train(args):
             }
     dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True)
 
+    if args['use_mwt'] is None:
+        args['use_mwt'] = train_batches.has_mwt()
+        logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
+
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
@@ -133,7 +144,7 @@ def train(args):
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:
-            print("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
+            logger.info("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
 
         if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
             train_batches.shuffle()
@@ -153,12 +164,12 @@ def train(args):
                 best_dev_score = dev_score
                 best_dev_step = step
                 trainer.save(args['save_name'])
-            print('\t'.join(reports))
+            logger.info('\t'.join(reports))
 
     if best_dev_step > -1:
-        print('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
+        logger.info('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))
     else:
-        print('Dev set never evaluated.  Saving final model')
+        logger.info('Dev set never evaluated.  Saving final model')
         trainer.save(args['save_name'])
 
 def evaluate(args):
@@ -180,7 +191,7 @@ def evaluate(args):
 
     oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
-    print("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
+    logger.info("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 
 
 if __name__ == '__main__':

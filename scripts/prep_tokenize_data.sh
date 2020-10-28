@@ -19,6 +19,14 @@ fi
 treebank=$1; shift
 dataset=$1; shift
 
+if [ -z "$treebank" ]; then
+    echo "Error: please provide a treebank name, eg UD_English-EWT"
+    exit
+elif [ -z "$dataset" ]; then
+    echo "Error: please specify train, dev, or test"
+    exit
+fi
+
 #if [ -d $UDBASE/${treebank}_XV ] && [ ! $dataset=='test' ]; then
 #    treebank=${treebank}_XV
 #fi

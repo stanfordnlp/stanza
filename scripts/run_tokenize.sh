@@ -15,6 +15,8 @@ if [ -z "$TOKENIZE_DATA_DIR" ]; then
     source scripts/config.sh
 fi
 
+set -e
+
 treebank=$1; shift
 args=$@
 short=`bash scripts/treebank_to_shorthand.sh ud $treebank`
