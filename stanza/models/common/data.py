@@ -45,8 +45,45 @@ def sort_all(batch, lens):
     sorted_all = [list(t) for t in zip(*sorted(zip(*unsorted_all), reverse=True))]
     return sorted_all[2:], sorted_all[1]
 
+def get_augment_ratio(train_data, should_augment_predicate, can_augment_predicate, desired_ratio=0.1, max_ratio=0.5):
+    """
+    Returns X so that if you randomly select X * N sentences, you get 10%
 
-def augment_punct(train_data, augment_nopunct, sentence_nopunct_predicate, can_augment_nopunct_predicate):
+    The ratio will be chosen in the assumption that the final dataset
+    is of size N rather than N + X * N.
+
+    should_augment_predicate: returns True if the sentence has some
+      feature which we may want to change occasionally.  for example,
+      depparse sentences which end in punct
+    can_augment_predicate: in the depparse sentences example, it is
+      technically possible for the punct at the end to be the parent
+      of some other word in the sentence.  in that case, the sentence
+      should not be chosen.  should be at least as restrictive as
+      should_augment_predicate
+    """
+    n_data = len(train_data)
+    n_should_augment = sum(should_augment_predicate(sentence) for sentence in train_data)
+    n_can_augment = sum(can_augment_predicate(sentence) for sentence in train_data)
+    n_error = sum(can_augment_predicate(sentence) and not should_augment_predicate(sentence)
+                  for sentence in train_data)
+    if n_error > 0:
+        raise AssertionError("can_augment_predicate allowed sentences not allowed by should_augment_predicate")
+
+    if n_can_augment == 0:
+        logger.warning("Found no sentences which matched can_augment_predicate {}".format(can_augment_predicate))
+        return 0.0
+    n_needed = n_data * desired_ratio - (n_data - n_should_augment)
+    # if we want 10%, for example, and more than 10% already matches, we can skip
+    if n_needed < 0:
+        return 0.0
+    ratio = n_needed / n_can_augment
+    if ratio > max_ratio:
+        return max_ratio
+    return ratio
+
+
+def augment_punct(train_data, augment_ratio, should_augment_predicate, can_augment_predicate, keep_original_sentences=True):
+
     """
     Adds extra training data to compensate for some models having all sentences end with PUNCT
 
@@ -59,40 +96,32 @@ def augment_punct(train_data, augment_nopunct, sentence_nopunct_predicate, can_a
 
     Params:
     train_data: list of list of dicts, eg a conll doc
-    augment_nopunct: the fraction to augment.  if None, a best guess is made to get to 10%
+    augment_ratio: the fraction to augment.  if None, a best guess is made to get to 10%
 
-    sentence_nopunct_predicate: a function which returns T/F if a sentence already ends with not PUNCT
-    can_augment_nopunct_predicate: a function which returns T/F if it makes sense to remove the last PUNCT
+    should_augment_predicate: a function which returns T/F if a sentence already ends with not PUNCT
+    can_augment_predicate: a function which returns T/F if it makes sense to remove the last PUNCT
     """
     if len(train_data) == 0:
-        return train_data
+        return []
 
-    aug = augment_nopunct
+    if augment_ratio is None:
+        augment_ratio = get_augment_ratio(train_data, can_augment_predicate, should_augment_predicate)
 
-    n_nopunct = sum(sentence_nopunct_predicate(sentence) for sentence in train_data)
+    if augment_ratio <= 0:
+        if keep_original_sentences:
+            return list(train_data)
+        else:
+            return []
 
-    if aug is None:
-        # x = # of sentences with punct
-        #   = len(train_data) - n_nopunct
-        # y = n_nopunct
-        # aug x + y = 0.1 (x + y)
-        # aug = (0.1 (x + y) - y) / x
-        aug = (0.1 * len(train_data) - n_nopunct) / (len(train_data) - n_nopunct)
-        logger.info("No-punct augmentation not specified.  Using %.4f to get 10%% training data with no punct at end" % aug)
-
-    if aug <= 0:
-        return train_data
-
-    new_data = list(train_data)
-
+    new_data = []
     for sentence in train_data:
-        if can_augment_nopunct_predicate(sentence):
-            if random.random() < aug:
+        if can_augment_predicate(sentence):
+            if random.random() < augment_ratio:
                 # todo: could deep copy the words
                 #       or not deep copy any of this
                 new_sentence = list(sentence[:-1])
                 new_data.append(new_sentence)
+            elif keep_original_sentences:
+                new_data.append(new_sentence)
 
-    logger.info("Augmenting dataset with non-punct-ending sentences.  Original length %d, with %d no-punct" % (len(train_data), n_nopunct))
-    logger.info("Added %d additional sentences.  New total length %d" % (len(new_data) - len(train_data), len(new_data)))
     return new_data

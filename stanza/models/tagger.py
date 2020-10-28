@@ -142,9 +142,12 @@ def train(args):
     train_data = CoNLL.conll2dict(input_file=args['train_file'])
     # possibly augment the training data with some amount of fake data
     # based on the options chosen
-    train_data = augment_punct(train_data, args['augment_nopunct'],
-                               data.sentence_nopunct_predicate,
-                               data.can_augment_nopunct_predicate)
+    logger.info("Original data size: {}".format(len(train_data)))
+    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
+                                    data.augment_nopunct_predicate,
+                                    data.augment_nopunct_predicate,
+                                    keep_original_sentences=False))
+    logger.info("Augmented data size: {}".format(len(train_data)))
     train_doc = Document(train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab

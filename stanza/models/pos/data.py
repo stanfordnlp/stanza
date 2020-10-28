@@ -164,10 +164,6 @@ class DataLoader:
 
         return res
 
-def sentence_nopunct_predicate(sentence):
-    last_word = sentence[-1]
-    return last_word[UPOS] != 'PUNCT'
-
-def can_augment_nopunct_predicate(sentence):
+def augment_nopunct_predicate(sentence):
     last_word = sentence[-1]
     return last_word[UPOS] == 'PUNCT'
