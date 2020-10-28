@@ -67,7 +67,7 @@ def parse_args():
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
 
-    parser.add_argument('--use_mwt', dest='use_mwt', default=True, action='store_true', help='Whether or not to include mwt output layers')
+    parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
     parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
 
     args = parser.parse_args()
@@ -116,6 +116,10 @@ def train(args):
             'label': args['dev_label_file']
             }
     dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True)
+
+    if args['use_mwt'] is None:
+        args['use_mwt'] = train_batches.has_mwt()
+        print("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
 
