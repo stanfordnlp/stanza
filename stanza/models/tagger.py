@@ -157,7 +157,7 @@ def train(args):
     best_dev_preds = []
     current_lr = args['lr']
     global_start_time = time.time()
-    format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
+    format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     if args['adapt_eval_interval']:
         args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
@@ -176,8 +176,7 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                                              max_steps, loss, duration, current_lr))
+                logger.info(format_str.format(global_step, max_steps, loss, duration, current_lr))
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
