@@ -100,6 +100,10 @@ def augment_punct(train_data, augment_ratio, should_augment_predicate, can_augme
 
     should_augment_predicate: a function which returns T/F if a sentence already ends with not PUNCT
     can_augment_predicate: a function which returns T/F if it makes sense to remove the last PUNCT
+
+    TODO: do this dynamically, as part of the DataLoader or elsewhere?
+    One complication is the data comes back from the DataLoader as
+    tensors & indices, so it is much more complicated to manipulate
     """
     if len(train_data) == 0:
         return []
