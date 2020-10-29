@@ -18,11 +18,13 @@ import random
 import torch
 from torch import nn, optim
 
+import stanza.models.pos.data as data
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
@@ -84,6 +86,8 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
+
     args = parser.parse_args()
     return args
 
@@ -133,7 +137,18 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    # train_data is now a list of sentences, where each sentence is a
+    # list of words, in which each word is a dict of conll attributes
+    train_data = CoNLL.conll2dict(input_file=args['train_file'])
+    # possibly augment the training data with some amount of fake data
+    # based on the options chosen
+    logger.info("Original data size: {}".format(len(train_data)))
+    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
+                                    data.augment_nopunct_predicate,
+                                    data.augment_nopunct_predicate,
+                                    keep_original_sentences=False))
+    logger.info("Augmented data size: {}".format(len(train_data)))
+    train_doc = Document(train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))

@@ -220,3 +220,22 @@ def to_int(string, ignore_error=False):
         else:
             raise err
     return res
+
+
+def should_augment_nopunct_predicate(sentence):
+    last_word = sentence[-1]
+    return last_word[UPOS] == 'PUNCT'
+
+def can_augment_nopunct_predicate(sentence):
+    """
+    Check that the sentence ends with PUNCT and also doesn't have any words which depend on the last word
+    """
+    last_word = sentence[-1]
+    if last_word[UPOS] != 'PUNCT':
+        return False
+    # don't cut off MWT
+    if len(last_word[ID]) > 1:
+        return False
+    if any(len(word[ID]) == 1 and word[HEAD] == last_word[ID][0] for word in sentence):
+        return False
+    return True
