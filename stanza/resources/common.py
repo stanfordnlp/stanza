@@ -71,7 +71,8 @@ def get_md5(path):
     """
     Get the MD5 value of a path.
     """
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as fin:
+        data = fin.read()
     return hashlib.md5(data).hexdigest()
 
 def unzip(dir, filename):
@@ -335,7 +336,8 @@ def download(
         os.path.join(dir, 'resources.json')
     )
     # unpack results
-    resources = json.load(open(os.path.join(dir, 'resources.json')))
+    with open(os.path.join(dir, 'resources.json')) as fin:
+        resources = json.load(fin)
     if lang not in resources:
         raise ValueError(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:
