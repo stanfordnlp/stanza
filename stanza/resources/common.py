@@ -36,7 +36,7 @@ DEFAULT_MODEL_DIR = os.getenv(
 )
 
 # given a language and models path, build a default configuration
-def build_default_config(resources, lang, dir, load_list):
+def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for item in load_list:
         processor, package, dependencies = item
@@ -49,23 +49,23 @@ def build_default_config(resources, lang, dir, load_list):
             default_config[f"{LEMMA}_use_identity"] = True
         else:
             default_config[f"{processor}_model_path"] = os.path.join(
-                dir, lang, processor, package + '.pt'
+                model_dir, lang, processor, package + '.pt'
             )
 
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
             default_config[f"{processor}_{dep_processor}_path"] = os.path.join(
-                dir, lang, dep_processor, dep_model + '.pt'
+                model_dir, lang, dep_processor, dep_model + '.pt'
             )
 
     return default_config
 
-def ensure_dir(dir):
+def ensure_dir(path):
     """
     Create dir in case it does not exist.
     """
-    Path(dir).mkdir(parents=True, exist_ok=True)
+    Path(path).mkdir(parents=True, exist_ok=True)
 
 def get_md5(path):
     """
@@ -75,13 +75,13 @@ def get_md5(path):
         data = fin.read()
     return hashlib.md5(data).hexdigest()
 
-def unzip(dir, filename):
+def unzip(path, filename):
     """
     Fully unzip a file `filename` that's in a directory `dir`.
     """
-    logger.debug(f'Unzip: {dir}/{filename}...')
-    with zipfile.ZipFile(os.path.join(dir, filename)) as f:
-        f.extractall(dir)
+    logger.debug(f'Unzip: {path}/{filename}...')
+    with zipfile.ZipFile(os.path.join(path, filename)) as f:
+        f.extractall(path)
 
 def get_root_from_zipfile(filename):
     """
@@ -257,7 +257,7 @@ def set_logging_level(logging_level, verbose):
     logger.setLevel(logging_level)
     return logging_level
 
-def process_pipeline_parameters(lang, dir, package, processors):
+def process_pipeline_parameters(lang, model_dir, package, processors):
     # Check parameter types and convert values to lower case
     if isinstance(lang, str):
         lang = lang.strip().lower()
@@ -267,12 +267,12 @@ def process_pipeline_parameters(lang, dir, package, processors):
             f"but got {type(lang).__name__} instead."
         )
 
-    if isinstance(dir, str):
-        dir = dir.strip()
-    elif dir is not None:
+    if isinstance(model_dir, str):
+        model_dir = model_dir.strip()
+    elif model_dir is not None:
         raise TypeError(
-            f"The parameter 'dir' should be str, "
-            f"but got {type(dir).__name__} instead."
+            f"The parameter 'model_dir' should be str, "
+            f"but got {type(model_dir).__name__} instead."
         )
 
     if isinstance(package, str):
@@ -301,12 +301,12 @@ def process_pipeline_parameters(lang, dir, package, processors):
             f"but got {type(processors).__name__} instead."
         )
 
-    return lang, dir, package, processors
+    return lang, model_dir, package, processors
 
 # main download function
 def download(
         lang='en',
-        dir=DEFAULT_MODEL_DIR,
+        model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
         logging_level='INFO',
@@ -319,8 +319,8 @@ def download(
     # set global logging level
     set_logging_level(logging_level, verbose)
     # process different pipeline parameters
-    lang, dir, package, processors = process_pipeline_parameters(
-        lang, dir, package, processors
+    lang, model_dir, package, processors = process_pipeline_parameters(
+        lang, model_dir, package, processors
     )
 
     if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
@@ -333,10 +333,10 @@ def download(
     # make request
     request_file(
         f'{resources_url}/resources_{resources_version}.json',
-        os.path.join(dir, 'resources.json')
+        os.path.join(model_dir, 'resources.json')
     )
     # unpack results
-    with open(os.path.join(dir, 'resources.json')) as fin:
+    with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
     if lang not in resources:
         raise ValueError(f'Unsupported language: {lang}.')
@@ -353,10 +353,10 @@ def download(
         )
         request_file(
             f'{url}/{resources_version}/{lang}/default.zip',
-            os.path.join(dir, lang, f'default.zip'),
+            os.path.join(model_dir, lang, f'default.zip'),
             md5=resources[lang]['default_md5']
         )
-        unzip(os.path.join(dir, lang), 'default.zip')
+        unzip(os.path.join(model_dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
         download_list = maintain_processor_list(
@@ -375,7 +375,7 @@ def download(
             try:
                 request_file(
                     f'{url}/{resources_version}/{lang}/{key}/{value}.pt',
-                    os.path.join(dir, lang, key, f'{value}.pt'),
+                    os.path.join(model_dir, lang, key, f'{value}.pt'),
                     md5=resources[lang][key][value]['md5']
                 )
             except KeyError as e:
@@ -383,4 +383,4 @@ def download(
                     f'Cannot find the following processor and model name combination: '
                     f'{key}, {value}. Please check if you have provided the correct model name.'
                 ) from e
-    logger.info(f'Finished downloading models and saved to {dir}.')
+    logger.info(f'Finished downloading models and saved to {model_dir}.')
