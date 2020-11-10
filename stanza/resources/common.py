@@ -303,6 +303,40 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
 
     return lang, model_dir, package, processors
 
+def download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version):
+    """
+    Downloads resources.json to obtain latest packages.
+    """
+    logger.debug('Downloading resource file...')
+    if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
+        resources_url = STANZA_RESOURCES_GITHUB + resources_branch
+    # handle short name for resources urls; otherwise treat it as url
+    if resources_url.lower() in ('stanford', 'stanfordnlp'):
+        resources_url = STANFORDNLP_RESOURCES_URL
+    # make request
+    request_file(
+        f'{resources_url}/resources_{resources_version}.json',
+        os.path.join(model_dir, 'resources.json')
+    )
+
+
+def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
+                             resources_url=DEFAULT_RESOURCES_URL,
+                             resources_branch=None,
+                             resources_version=DEFAULT_RESOURCES_VERSION):
+    """
+    List the non-alias languages in the resources file
+    """
+    download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version)
+    with open(os.path.join(model_dir, 'resources.json')) as fin:
+        resources = json.load(fin)
+    languages = [lang for lang in resources if 'alias' not in resources[lang]]
+    languages = sorted(languages)
+    return languages
+
+
 # main download function
 def download(
         lang='en',
@@ -323,18 +357,8 @@ def download(
         lang, model_dir, package, processors
     )
 
-    if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
-        resources_url = STANZA_RESOURCES_GITHUB + resources_branch
-    # Download resources.json to obtain latest packages.
-    logger.debug('Downloading resource file...')
-    # handle short name for resources urls; otherwise treat it as url
-    if resources_url.lower() in ('stanford', 'stanfordnlp'):
-        resources_url = STANFORDNLP_RESOURCES_URL
-    # make request
-    request_file(
-        f'{resources_url}/resources_{resources_version}.json',
-        os.path.join(model_dir, 'resources.json')
-    )
+    download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version)
     # unpack results
     with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
