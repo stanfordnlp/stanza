@@ -141,6 +141,19 @@ def maintain_processor_list(resources, lang, package, processors):
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
+        # first, a hack!
+        # if tokenize is in the list, but mwt is not, and there is a corresponding
+        # tokenize & mwt pair in the resources file, we add mwt
+        # otherwise we'll get another 10 bugs regarding missing mwt errors
+        if TOKENIZE in processors and MWT not in processors:
+            value = processors[TOKENIZE]
+            if value == 'default' and MWT in resources[lang]['default_processors']:
+                logger.warning("Language %s package default expects mwt, which has been added" % lang)
+                processors[MWT] = 'default'
+            elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and
+                  value in resources[lang][MWT]):
+                logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
+                processors[MWT] = value
         for key, value in processors.items():
             assert(key in PIPELINE_NAMES)
             assert(isinstance(key, str) and isinstance(value, str))
