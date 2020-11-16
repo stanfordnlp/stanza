@@ -1,7 +1,10 @@
 import argparse
+import json
 import os
 import re
 import sys
+
+from collections import Counter
 
 """
 Data is output in 4 files:
@@ -15,28 +18,6 @@ a file of 0,1,2 indicating word break or sentence break on a character level for
 """
 
 PARAGRAPH_BREAK = re.compile(r'\n\s*\n')
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
-parser.add_argument('conllu_file', type=str, help="CoNLL-U file containing tokens and sentence breaks")
-parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
-parser.add_argument('-m', '--mwt_output', default=None, type=str, help="Output file name for MWT expansions; output to the console if not specified (the default)")
-
-args = parser.parse_args()
-
-with open(args.plaintext_file, 'r') as f:
-    text = ''.join(f.readlines())
-textlen = len(text)
-
-if args.output is None:
-    output = sys.stdout
-else:
-    outdir = os.path.split(args.output)[0]
-    os.makedirs(outdir, exist_ok=True)
-    output = open(args.output, 'w')
-
-index = 0 # character offset in rawtext
 
 def is_para_break(index, text):
     """ Detect if a paragraph break can be found, and return the length of the paragraph break sequence. """
@@ -74,6 +55,28 @@ def find_next_word(index, text, word, output):
             idx += 1
         index += 1
     return index, word_sofar
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
+parser.add_argument('conllu_file', type=str, help="CoNLL-U file containing tokens and sentence breaks")
+parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
+parser.add_argument('-m', '--mwt_output', default=None, type=str, help="Output file name for MWT expansions; output to the console if not specified (the default)")
+
+args = parser.parse_args()
+
+with open(args.plaintext_file, 'r') as f:
+    text = ''.join(f.readlines())
+textlen = len(text)
+
+if args.output is None:
+    output = sys.stdout
+else:
+    outdir = os.path.split(args.output)[0]
+    os.makedirs(outdir, exist_ok=True)
+    output = open(args.output, 'w')
+
+index = 0 # character offset in rawtext
 
 mwt_expansions = []
 with open(args.conllu_file, 'r') as f:
@@ -131,12 +134,10 @@ with open(args.conllu_file, 'r') as f:
 
 output.close()
 
-from collections import Counter
 mwts = Counter(mwt_expansions)
 if args.mwt_output is None:
     print('MWTs:', mwts)
 else:
-    import json
     with open(args.mwt_output, 'w') as f:
         json.dump(list(mwts.items()), f)
 
