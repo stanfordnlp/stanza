@@ -46,5 +46,5 @@ cp $UDBASE/$treebank/${short}-ud-${dataset}.conllu ${TOKENIZE_DATA_DIR}/${short}
 cp $UDBASE/$treebank/${short}-ud-${dataset}.txt ${TOKENIZE_DATA_DIR}/${short}.${dataset}.txt
 # handle Vietnamese data
 if [ $lang == "vi" ]; then
-    python stanza/utils/postprocess_vietnamese_tokenizer_data.py $UDBASE/$treebank/${short}-ud-${dataset}.txt --char_level_pred ${TOKENIZE_DATA_DIR}/${short}-ud-${dataset}.toklabels -o ${TOKENIZE_DATA_DIR}/${short}-ud-${dataset}.json
+    $PYTHON stanza/utils/postprocess_vietnamese_tokenizer_data.py $UDBASE/$treebank/${short}-ud-${dataset}.txt --char_level_pred ${TOKENIZE_DATA_DIR}/${short}-ud-${dataset}.toklabels -o ${TOKENIZE_DATA_DIR}/${short}-ud-${dataset}.json
 fi
