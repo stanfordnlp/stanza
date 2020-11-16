@@ -2,7 +2,7 @@ from collections import defaultdict
 import os
 import sys
 from stanza.models.common.vocab import VOCAB_PREFIX
-from stanza.models.common.constant import lang2lcode
+from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.pos.vocab import XPOSVocab, WordVocab
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
@@ -13,17 +13,6 @@ if len(sys.argv) != 3:
 
 # Read list of all treebanks of concern
 list_of_tb_file, output_file = sys.argv[1:]
-
-def treebank_to_short_name(treebank):
-    """ Convert treebank name to short code. """
-    if treebank.startswith('UD_'):
-        treebank = treebank[3:]
-    splits = treebank.split('-')
-    assert len(splits) == 2
-    lang, corpus = splits
-    lcode = lang2lcode[lang]
-    short = "{}_{}".format(lcode, corpus.lower())
-    return short
 
 shorthands = []
 fullnames = []

@@ -84,3 +84,15 @@ langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
 # added after dict invert to avoid conflict
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['zh'] = 'Simplified_Chinese'
+
+def treebank_to_short_name(treebank):
+    """ Convert treebank name to short code. """
+    if treebank.startswith('UD_'):
+        treebank = treebank[3:]
+    splits = treebank.split('-')
+    assert len(splits) == 2
+    lang, corpus = splits
+    lcode = lang2lcode[lang]
+    short = "{}_{}".format(lcode, corpus.lower())
+    return short
+
