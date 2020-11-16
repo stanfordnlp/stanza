@@ -1,5 +1,8 @@
 """
 Global constants.
+
+Please keep synced with
+  scripts/treebank_to_shorthand.sh
 """
 
 lcode2lang = {
@@ -31,7 +34,9 @@ lcode2lang = {
     "el": "Greek",
     "he": "Hebrew",
     "hi": "Hindi",
+    "qhe": "Hindi_English",
     "hu": "Hungarian",
+    "is": "Icelandic",
     "id": "Indonesian",
     "ga": "Irish",
     "it": "Italian",
@@ -57,6 +62,7 @@ lcode2lang = {
     "pt": "Portuguese",
     "ro": "Romanian",
     "ru": "Russian",
+    "sa": "Sanskrit",
     "gd": "Scottish_Gaelic",
     "sr": "Serbian",
     "zh-hans": "Simplified_Chinese",
@@ -69,11 +75,13 @@ lcode2lang = {
     "te": "Telugu",
     "th": "Thai",
     "tr": "Turkish",
+    "qtd": "Turkish_German",
     "uk": "Ukrainian",
     "hsb": "Upper_Sorbian",
     "ur": "Urdu",
     "ug": "Uyghur",
     "vi": "Vietnamese",
+    "cy": "Welsh",
     "wo": "Wolof"
 }
 
@@ -85,6 +93,8 @@ langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['zh'] = 'Simplified_Chinese'
 
+lang2lcode['Chinese'] = 'zh'
+
 def treebank_to_short_name(treebank):
     """ Convert treebank name to short code. """
     if treebank.startswith('UD_'):
@@ -92,7 +102,9 @@ def treebank_to_short_name(treebank):
     splits = treebank.split('-')
     assert len(splits) == 2
     lang, corpus = splits
+
     lcode = lang2lcode[lang]
+
     short = "{}_{}".format(lcode, corpus.lower())
     return short
 
