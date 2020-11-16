@@ -36,14 +36,14 @@ def para_to_chunks(text, char_level_pred):
 def paras_to_chunks(text, char_level_pred):
     return [para_to_chunks(re.sub(r'\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
 
-if __name__ == '__main__':
+def main(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
     parser.add_argument('--char_level_pred', type=str, default=None, help="Plaintext file containing character-level predictions")
     parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
     with open(args.plaintext_file, 'r') as f:
         text = ''.join(f.readlines()).rstrip()
@@ -62,3 +62,6 @@ if __name__ == '__main__':
     json.dump(paras_to_chunks(text, char_level_pred), output)
 
     output.close()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
