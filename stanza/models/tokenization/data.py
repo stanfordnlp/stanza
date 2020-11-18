@@ -239,8 +239,8 @@ class DataLoader:
             mask = np.random.random_sample(units.shape) < unit_dropout
             mask[units == padid] = 0
             units[mask] = unkid
-            for i in len(raw_units):
-                for j in len(raw_units[i]):
+            for i in range(len(raw_units)):
+                for j in range(len(raw_units[i])):
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
 
