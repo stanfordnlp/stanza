@@ -236,7 +236,7 @@ class DataLoader:
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         if unit_dropout > 0 and not self.eval:
-            mask = np.rand(units.shape) < unit_dropout
+            mask = np.random.rand(units.shape) < unit_dropout
             mask[units == padid] = 0
             units[mask] = unkid
             for i in len(raw_units):
