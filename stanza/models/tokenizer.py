@@ -79,13 +79,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
