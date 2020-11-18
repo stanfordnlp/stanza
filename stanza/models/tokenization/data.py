@@ -172,6 +172,7 @@ class DataLoader:
             raw_units = []
 
             for i in range(len(ounits)):
+                eval_offsets[i] = min(eval_offsets[i], lens[i])
                 units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
                 labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
                 features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
