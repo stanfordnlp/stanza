@@ -220,7 +220,8 @@ class DataLoader:
 
             offsets_pairs = list(zip(offsets, pairs))
         else:
-            offsets_pairs = [(0, x) for x in random.sample(self.sentence_ids, min(len(self.sentence_ids), self.args['batch_size']))]
+            id_pairs = random.sample(self.sentence_ids, min(len(self.sentence_ids), self.args['batch_size']))
+            offsets_pairs = [(0, x) for x in id_pairs]
             pad_len = self.args['max_seqlen']
 
         units = np.full((len(id_pairs), pad_len), padid, dtype=np.int64)
