@@ -95,8 +95,22 @@ lcode2lang['zh'] = 'Simplified_Chinese'
 
 lang2lcode['Chinese'] = 'zh'
 
+treebank_special_cases = {
+    "UD_Chinese-GSDSimp": "zh_gsdsimp",
+    "UD_Chinese-GSD": "zh-hant_gsd",
+    "UD_Chinese-HK": "zh-hant_hk",
+    "UD_Chinese-CFL": "zh-hant_cfl",
+    "UD_Chinese-PUD": "zh-hant_pud",
+    "UD_Norwegian-Bokmaal": "nb_bokmaal",
+    "UD_Norwegian-Nynorsk": "nn_nynorsk",
+    "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
+}
+
 def treebank_to_short_name(treebank):
     """ Convert treebank name to short code. """
+    if treebank in treebank_special_cases:
+        return treebank_special_cases.get(treebank)
+
     if treebank.startswith('UD_'):
         treebank = treebank[3:]
     splits = treebank.split('-')
