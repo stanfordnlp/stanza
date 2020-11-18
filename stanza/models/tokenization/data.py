@@ -155,26 +155,50 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0):
+    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
         null_feats = [0] * len(self.sentences[0][0][2][0])
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
 
+        if old_batch is not None:
+            ounits, olabels, ofeatures, oraw = old_batch
+            lens = (ounits != padid).sum(1).tolist()
+            pad_len = max(l-i for i, l in zip(eval_offsets, lens))
+
+            units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
+            labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
+            features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
+            raw_units = []
+
+            for i in range(len(ounits)):
+                units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
+                labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
+                features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
+                raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
+
+            units = torch.from_numpy(units)
+            labels = torch.from_numpy(labels)
+            features = torch.from_numpy(features)
+
+            return units, labels, features, raw_units
+
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
             pid, sid = id_pair
             units, labels, feats, raw_units = copy([x[offset:] for x in self.sentences[pid][sid]])
 
-            assert self.eval or len(res) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(res), ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
+            assert self.eval or len(units) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(units), ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
             for sid1 in range(sid+1, len(self.sentences[pid])):
-                res += list(zip(*self.sentences[pid][sid1]))
                 units.extend(self.sentences[pid][sid1][0])
                 labels.extend(self.sentences[pid][sid1][1])
                 feats.extend(self.sentences[pid][sid1][2])
                 raw_units.extend(self.sentences[pid][sid1][3])
 
-                if not self.eval and len(res) >= self.args['max_seqlen']:
-                    res = res[:self.args['max_seqlen']]
+                if len(units) >= self.args['max_seqlen']:
+                    units = units[:self.args['max_seqlen']]
+                    labels = labels[:self.args['max_seqlen']]
+                    feats = feats[:self.args['max_seqlen']]
+                    raw_units = raw_units[:self.args['max_seqlen']]
                     break
 
             return units, labels, feats, raw_units
@@ -186,13 +210,13 @@ class DataLoader:
                 if eval_offset < self.cumlen[-1]:
                     pair_id = bisect_right(self.cumlen, eval_offset) - 1
                     pair = self.sentence_ids[pair_id]
-                    pad_len = max(pad_len, len(strings_starting(pair, offset=eval_offset-self.cumlen[pair_id], pad_len=0)[0]))
+                    pad_len = max(pad_len, len(strings_starting(pair, offset=eval_offset-self.cumlen[pair_id])[0]))
 
             pad_len += 1
             id_pairs = [bisect_right(self.cumlen, eval_offset) - 1 for eval_offset in eval_offsets]
             pairs = [self.sentence_ids[pair_id] for pair_id in id_pairs]
             offsets = [eval_offset - self.cumlen[pair_id] for eval_offset, pair_id in zip(eval_offsets, id_pairs)]
-            
+
             offsets_pairs = list(zip(offsets, pairs))
         else:
             offsets_pairs = [(0, x) for x in random.sample(self.sentence_ids, min(len(self.sentence_ids), self.args['batch_size']))]
@@ -208,7 +232,7 @@ class DataLoader:
             labels[i, :len(l_)] = l_
             features[i, :len(f_)] = f_
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
-        
+
         if unit_dropout > 0 and not self.eval:
             mask = np.rand(units.shape) < unit_dropout
             mask[units == padid] = 0

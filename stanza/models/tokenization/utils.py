@@ -90,6 +90,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             pred = np.argmax(trainer.predict(batch), axis=2)
         else:
             idx = [0] * len(batchparas)
+            adv = [0] * len(batchparas)
             Ns = [p[3] for p in batchparas]
             pred = [[] for _ in batchparas]
             while True:
@@ -107,10 +108,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
                     pred[j] += [pred1[j, :advance]]
                     idx[j] += advance
+                    adv[j] = advance
 
                 if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
                     break
-                batch = data_generator.next(eval_offsets=[x+y for x, y in zip(idx, offsets)])
+                batch = data_generator.next(eval_offsets=adv, old_batch=batch)
 
             pred = [np.concatenate(p, 0) for p in pred]
 
