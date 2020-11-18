@@ -15,12 +15,19 @@ tbname=`echo $treebank | sed -e 's#^.*-##g' | tr [:upper:] [:lower:]`
 lang=`echo $treebank | sed -e 's#-.*$##g' -e 's#^[^_]*_##g'`
 lcode=${lang2lcode[$lang]}
 if [ -z "$lcode" ]; then
-    if [ $lang == "Chinese" -a $tbname == "gsdsimp" ]; then
-        lcode=zh
-    elif [ $lang == "Norwegian" -a $tbname == "bokmaal" ]; then
-        lcode=nb
-    elif [ $lang == "Norwegian" -a $tbname == "nynorsk" ]; then
-        lcode=nn
+    if [ $lang == "Chinese" ]; then
+        if [ $tbname == "gsdsimp" ]; then
+            # TODO why not zh-hans?
+            lcode=zh
+        elif [ $tbname == "gsd" -o $tbname == "hk" -o $tbname == "cfl" -o $tbname == "pud" ]; then
+            lcode=zh-hant
+        fi
+    elif [ $lang == "Norwegian" ]; then
+        if [ $tbname == "bokmaal" ]; then
+            lcode=nb
+        elif [ $tbname == "nynorsk" -o $tbname == "nynorsklia" ]; then
+            lcode=nn
+        fi
     fi
 fi
 if [ $format == 'udpipe' ]; then
