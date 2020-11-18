@@ -17,6 +17,10 @@ lcode=${lang2lcode[$lang]}
 if [ -z "$lcode" ]; then
     if [ $lang == "Chinese" -a $tbname == "gsdsimp" ]; then
         lcode=zh
+    elif [ $lang == "Norwegian" -a $tbname == "bokmaal" ]; then
+        lcode=nb
+    elif [ $lang == "Norwegian" -a $tbname == "nynorsk" ]; then
+        lcode=nn
     fi
 fi
 if [ $format == 'udpipe' ]; then
