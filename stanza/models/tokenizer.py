@@ -59,10 +59,11 @@ def parse_args():
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")
     parser.add_argument('--epochs', type=int, default=10, help="Total epochs to train the model for")
-    parser.add_argument('--steps', type=int, default=20000, help="Steps to train the model for, if unspecified use epochs")
+    parser.add_argument('--steps', type=int, default=50000, help="Steps to train the model for, if unspecified use epochs")
     parser.add_argument('--report_steps', type=int, default=20, help="Update step interval to report loss")
-    parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragragraph in the generator")
+    parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragraph in the generator")
     parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
+    parser.add_argument('--max_steps_before_stop', type=int, default=5000, help='Early terminates after this many steps if the dev scores are not improving')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
@@ -79,13 +80,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
@@ -164,6 +161,11 @@ def train(args):
                 best_dev_score = dev_score
                 best_dev_step = step
                 trainer.save(args['save_name'])
+            elif best_dev_step > 0 and step - best_dev_step > args['max_steps_before_stop']:
+                reports += ['Stopping training after {} steps with no improvement'.format(step - best_dev_step)]
+                logger.info('\t'.join(reports))
+                break
+
             logger.info('\t'.join(reports))
 
     if best_dev_step > -1:
