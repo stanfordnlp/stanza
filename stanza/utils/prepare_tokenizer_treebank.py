@@ -17,6 +17,7 @@ import sys
 import stanza.utils.default_paths as default_paths
 import stanza.utils.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
+import stanza.utils.preprocess_ssj_data as preprocess_ssj_data
 
 from stanza.models.common.constant import treebank_to_short_name
 
@@ -71,19 +72,25 @@ def get_ud_treebanks(udbase_dir, filtered=True):
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
     input_txt = find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
+    input_txt_copy = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+
     input_conllu = find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
-    prepare_tokenizer_data.main([input_txt,
-                                 input_conllu,
+    input_conllu_copy = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if short_name == "sl_ssj":
+        preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
+    else:
+        os.makedirs(tokenizer_dir, exist_ok=True)
+        shutil.copyfile(input_txt, input_txt_copy)
+        shutil.copyfile(input_conllu, input_conllu_copy)
+
+    prepare_tokenizer_data.main([input_txt_copy,
+                                 input_conllu_copy,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                  "-m", f"{tokenizer_dir}/{short_name}-ud-{dataset}-mwt.json"])
 
-    shutil.copyfile(input_conllu,
-                    f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu")
-    shutil.copyfile(input_txt,
-                    f"{tokenizer_dir}/{short_name}.{dataset}.txt")
-
     if short_language == "vi":
-        postprocess_vietnamese_tokenizer_data.main([input_txt,
+        postprocess_vietnamese_tokenizer_data.main([input_txt_copy,
                                                     "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                                     "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
