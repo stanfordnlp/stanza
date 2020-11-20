@@ -22,8 +22,13 @@ import stanza.utils.preprocess_ssj_data as preprocess_ssj_data
 from stanza.models.common.constant import treebank_to_short_name
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension):
-    # sometimes the short name we use is different from the short name
-    # used by UD.  For example, Norwegian or Chinese
+    """
+    For a given treebank, dataset, extension, look for the exact filename to use.
+
+    Sometimes the short name we use is different from the short name
+    used by UD.  For example, Norwegian or Chinese.  Hence the reason
+    to not hardcode it based on treebank
+    """
     files = glob.glob(f"{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}")
     if len(files) == 0:
         return None
@@ -63,7 +68,8 @@ def get_ud_treebanks(udbase_dir, filtered=True):
     if filtered:
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "train", "txt") and
-                         find_treebank_dataset_file(t, udbase_dir, "dev", "txt") and
+                         # this will be fixed using XV
+                         #find_treebank_dataset_file(t, udbase_dir, "dev", "txt") and
                          find_treebank_dataset_file(t, udbase_dir, "test", "txt"))]
         treebanks = [t for t in treebanks
                      if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
@@ -94,6 +100,26 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
                                                     "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                                     "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+    """
+    Process a normal UD treebank with train/dev/test splits
+
+    SL-SSJ and Vietnamese both use this code path as well.
+    """
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train")
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev")
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+
+
+def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+    """
+    Process a UD treebank with only train/test splits
+
+    For example, in UD 2.7, ... TODO
+    """
+    pass
+
+
 def process_treebank(treebank, paths):
     """
     Processes a single treebank into train, dev, test parts
@@ -108,14 +134,21 @@ def process_treebank(treebank, paths):
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
 
+    train_txt_file = find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
+    if not train_txt_file:
+        raise ValueError("Cannot find train file for treebank %s" % treebank)
+
     short_name = treebank_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+    if not find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
+        print("XV splitting is not implemented.  Please come back later")
+        #process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+    else:
+        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+
 
 def main():
     if len(sys.argv) == 1:
