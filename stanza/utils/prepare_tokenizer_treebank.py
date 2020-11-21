@@ -74,7 +74,7 @@ def split_train_file(treebank, train_input_conllu,
     random.shuffle(sents)
     if len(sents) < 100:
         print("Only %d sentences in %s.  Skipping" % (len(sents), treebank))
-        return
+        return False
     n_dev = int(len(sents) * XV_RATIO)
     assert n_dev >= 1, "Dev sentence number less than one."
     n_train = len(sents) - n_dev
@@ -93,6 +93,7 @@ def split_train_file(treebank, train_input_conllu,
     subprocess.run(f"perl {CONLLU_TO_TXT_PERL} {train_output_conllu} > {train_output_txt}", shell=True)
     subprocess.run(f"perl {CONLLU_TO_TXT_PERL} {dev_output_conllu} > {dev_output_txt}", shell=True)
 
+    return True
 
 def all_underscores(filename):
     """
@@ -132,6 +133,16 @@ def get_ud_treebanks(udbase_dir, filtered=True):
                      if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
     return treebanks
 
+def prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset):
+    prepare_tokenizer_data.main([input_txt_copy,
+                                 input_conllu_copy,
+                                 "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
+                                 "-m", f"{tokenizer_dir}/{short_name}-ud-{dataset}-mwt.json"])
+
+    if short_language == "vi":
+        postprocess_vietnamese_tokenizer_data.main([input_txt_copy,
+                                                    "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
+                                                    "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
     input_txt = find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -147,15 +158,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         shutil.copyfile(input_txt, input_txt_copy)
         shutil.copyfile(input_conllu, input_conllu_copy)
 
-    prepare_tokenizer_data.main([input_txt_copy,
-                                 input_conllu_copy,
-                                 "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
-                                 "-m", f"{tokenizer_dir}/{short_name}-ud-{dataset}-mwt.json"])
-
-    if short_language == "vi":
-        postprocess_vietnamese_tokenizer_data.main([input_txt_copy,
-                                                    "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
-                                                    "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
+    prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
     """
@@ -195,14 +198,16 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
     dev_output_txt = f"{tokenizer_dir}/{short_name}.dev.gold.txt"
 
-    split_train_file(treebank=treebank,
-                     train_input_conllu=train_input_conllu,
-                     train_output_conllu=train_output_conllu,
-                     train_output_txt=train_output_txt,
-                     dev_output_conllu=dev_output_conllu,
-                     dev_output_txt=dev_output_txt)
+    if not split_train_file(treebank=treebank,
+                            train_input_conllu=train_input_conllu,
+                            train_output_conllu=train_output_conllu,
+                            train_output_txt=train_output_txt,
+                            dev_output_conllu=dev_output_conllu,
+                            dev_output_txt=dev_output_txt):
+        return
 
-    # TODO: need to produce mwts and toklabels from txt & conllu files
+    prepare_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
+    prepare_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
