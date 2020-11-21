@@ -229,9 +229,9 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     """
     train_input_conllu = find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     train_output_conllu = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
-    train_output_txt = f"{tokenizer_dir}/{short_name}.train.gold.txt"
+    train_output_txt = f"{tokenizer_dir}/{short_name}.train.txt"
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
-    dev_output_txt = f"{tokenizer_dir}/{short_name}.dev.gold.txt"
+    dev_output_txt = f"{tokenizer_dir}/{short_name}.dev.txt"
 
     if not split_train_file(treebank=treebank,
                             train_input_conllu=train_input_conllu,
