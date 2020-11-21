@@ -73,9 +73,6 @@ def split_train_file(treebank, train_input_conllu,
     # read and shuffle conllu data
     sents = read_sentences_from_conllu(train_input_conllu)
     random.shuffle(sents)
-    if len(sents) < 100:
-        print("Only %d sentences in %s.  Skipping" % (len(sents), treebank))
-        return False
     n_dev = int(len(sents) * XV_RATIO)
     assert n_dev >= 1, "Dev sentence number less than one."
     n_train = len(sents) - n_dev
@@ -118,6 +115,19 @@ def all_underscores(filename):
             return False
     return True
 
+def num_words_in_file(conllu_file):
+    count = 0
+    with open(conllu_file) as fin:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("#"):
+                continue
+            count = count + 1
+    return count
+
+
 def get_ud_treebanks(udbase_dir, filtered=True):
     """
     Looks in udbase_dir for all the treebanks which have both train, dev, and test
@@ -132,6 +142,10 @@ def get_ud_treebanks(udbase_dir, filtered=True):
                          find_treebank_dataset_file(t, udbase_dir, "test", "txt"))]
         treebanks = [t for t in treebanks
                      if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
+        # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
+        treebanks = [t for t in treebanks
+                     if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
+                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000)]
     return treebanks
 
 def prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset):
