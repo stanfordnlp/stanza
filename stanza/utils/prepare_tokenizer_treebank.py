@@ -12,6 +12,7 @@ and it will prepare each of train, dev, test
 import glob
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -144,7 +145,19 @@ def prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name,
                                                     "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                                     "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
+MWT_RE = re.compile("^[0-9]+[-][0-9]+")
+
+def strip_mwt_from_conll(input_conllu, output_conllu):
+    with open(input_conllu) as fin:
+        with open(output_conllu, "w") as fout:
+            for line in fin:
+                if not MWT_RE.match(line):
+                    fout.write(line)
+
+
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
+    os.makedirs(tokenizer_dir, exist_ok=True)
+
     input_txt = find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
     input_txt_copy = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
@@ -153,8 +166,16 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     if short_name == "sl_ssj":
         preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
+    elif short_name == "en_ewt":
+        # For a variety of reasons we want to strip the MWT from English
+        # One reason in particular is that other English datasets do not
+        # have MWT, so if we have the eventual goal of mixing datasets,
+        # it will be impossible to do while keeping MWT.
+        # Another reason is even if we kept MWT in EWT when mixing datasets,
+        # it would be very difficult for users to switch between the two
+        strip_mwt_from_conll(input_conllu, input_conllu_copy)
+        shutil.copyfile(input_txt, input_txt_copy)
     else:
-        os.makedirs(tokenizer_dir, exist_ok=True)
         shutil.copyfile(input_txt, input_txt_copy)
         shutil.copyfile(input_conllu, input_conllu_copy)
 
