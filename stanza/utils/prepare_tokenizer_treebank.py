@@ -7,6 +7,19 @@ such as
   python -m stanza.utils.prepare_tokenizer_treebank UD_English-EWT
 
 and it will prepare each of train, dev, test
+
+There are macros for preparing all of the UD treebanks at once:
+  python -m stanza.utils.prepare_tokenizer_treebank ud_all
+  python -m stanza.utils.prepare_tokenizer_treebank all_ud
+Both are present because I kept forgetting which was the correct one
+
+There are a few special case handlings of treebanks in this file:
+  - UD_English-EWT has the MWTs stripped
+  - all Vietnamese treebanks have special post-processing to handle
+    some of the difficult spacing issues in Vietnamese text
+  - treebanks with train and test but no dev split have the
+    train data randomly split into two pieces
+  - however, instead of splitting very tiny treebanks, we skip those
 """
 
 import glob
