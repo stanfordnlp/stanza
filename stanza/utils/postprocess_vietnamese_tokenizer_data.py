@@ -4,21 +4,25 @@ import sys
 from collections import Counter
 import json
 
+WORDCHAR_RE = re.compile(r'^\w$', flags=re.UNICODE)
+NOT_WORDCHAR_RE = re.compile(r'^\W+$', flags=re.UNICODE)
+WHITESPACE_RE = re.compile(r'^\s$', flags=re.UNICODE)
+
 def para_to_chunks(text, char_level_pred):
     chunks = []
     preds = []
     lastchunk = ''
     lastpred = ''
     for idx in range(len(text)):
-        if re.match(r'^\w$', text[idx], flags=re.UNICODE):
+        if WORDCHAR_RE.match(text[idx]):
             lastchunk += text[idx]
         else:
-            if len(lastchunk) > 0 and not re.match(r'^\W+$', lastchunk, flags=re.UNICODE):
+            if len(lastchunk) > 0 and not NOT_WORDCHAR_RE.match(lastchunk):
                 chunks += [lastchunk]
                 assert len(lastpred) > 0
                 preds += [int(lastpred)]
                 lastchunk = ''
-            if not re.match(r'^\s$', text[idx], flags=re.UNICODE):
+            if not WHITESPACE_RE.match(text[idx]):
                 # punctuation
                 chunks += [text[idx]]
                 preds += [int(char_level_pred[idx])]
