@@ -129,6 +129,8 @@ def parse_args():
     parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
+    parser.add_argument('--save_intermediate_models', default=False, action='store_true',
+                        help='Save all intermediate models - this can be a lot!')
 
     parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file(s) to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.  Comma separated list.')
     parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
@@ -518,8 +520,9 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
         logger.info("Finished epoch %d" % (epoch + 1))
         dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
-        checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
-        cnn_classifier.save(checkpoint_file, model)
+        if args.save_intermediate_models:
+            checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
+            cnn_classifier.save(checkpoint_file, model)
         if best_score is None or dev_score > best_score:
             best_score = dev_score
             cnn_classifier.save(model_file, model)
