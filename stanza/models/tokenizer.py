@@ -21,7 +21,10 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args():
+def parse_args(args=None):
+    """
+    If args == None, the system args are used.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--txt_file', type=str, help="Input plaintext file")
     parser.add_argument('--label_file', type=str, default=None, help="Character-level label file")
@@ -74,11 +77,11 @@ def parse_args():
     parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
     parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
     if args.cpu:
         args.cuda = False
