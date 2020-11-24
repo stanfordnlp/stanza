@@ -81,6 +81,8 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension):
 def split_train_file(treebank, train_input_conllu,
                      train_output_conllu, train_output_txt,
                      dev_output_conllu, dev_output_txt):
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
     random.seed(1234)
 
     # read and shuffle conllu data

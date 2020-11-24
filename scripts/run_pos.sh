@@ -45,7 +45,9 @@ elif [ $treebank == 'UD_German-HDT' ]; then
 fi
 echo "Using batch size $batch_size"
 
-echo "Running tagger with $args..."
+echo Running $PYTHON -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $eval_file \
+    --output_file $output_file --batch_size $batch_size --gold_file $gold_file --lang $lang --shorthand $short \
+    --mode train $args
 $PYTHON -m stanza.models.tagger --wordvec_dir $WORDVEC_DIR --train_file $train_file --eval_file $eval_file \
     --output_file $output_file --batch_size $batch_size --gold_file $gold_file --lang $lang --shorthand $short \
     --mode train $args
