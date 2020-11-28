@@ -57,7 +57,35 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
         train_args = train_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         mwt_expander.main(train_args)
-   
+
+    if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
+        dev_args = ['--eval_file', dev_in_file,
+                    '--output_file', dev_output_file,
+                    '--gold_file', dev_gold_file,
+                    '--lang', short_language,
+                    '--shorthand', short_name,
+                    '--mode', 'predict']
+        dev_args = dev_args + extra_args
+        logger.info("Running dev step with args: {}".format(dev_args))
+        mwt_expander.main(dev_args)
+
+        results = common.run_eval_script(dev_gold_file, dev_output_file, 4)
+        logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
+
+    if mode == Mode.SCORE_TEST:
+        test_args = ['--eval_file', test_in_file,
+                     '--output_file', test_output_file,
+                     '--gold_file', test_gold_file,
+                     '--lang', short_language,
+                     '--shorthand', short_name,
+                     '--mode', 'predict']
+        test_args = test_args + extra_args
+        logger.info("Running test step with args: {}".format(test_args))
+        mwt_expander.main(test_args)
+
+        results = common.run_eval_script(test_gold_file, test_output_file, 4)
+        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
+
 def main():
     common.main(run_treebank, "mwt", "mwt_expander")
 
