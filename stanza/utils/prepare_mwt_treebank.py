@@ -19,7 +19,7 @@ import stanza.utils.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 import stanza.utils.datasets.common as common
 
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.utils.contract_mwt import contract_mwt
+from stanza.utils.datasets.contract_mwt import contract_mwt
 
 def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     input_conllu_tokenizer = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"

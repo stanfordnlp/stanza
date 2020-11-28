@@ -30,9 +30,9 @@ import shutil
 import subprocess
 
 import stanza.utils.prepare_tokenizer_data as prepare_tokenizer_data
-import stanza.utils.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
-import stanza.utils.preprocess_ssj_data as preprocess_ssj_data
 import stanza.utils.datasets.common as common
+import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
+import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
 from stanza.models.common.constant import treebank_to_short_name
 
