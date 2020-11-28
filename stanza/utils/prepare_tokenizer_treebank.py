@@ -28,12 +28,11 @@ import random
 import re
 import shutil
 import subprocess
-import sys
 
-import stanza.utils.default_paths as default_paths
 import stanza.utils.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
 import stanza.utils.preprocess_ssj_data as preprocess_ssj_data
+import stanza.utils.datasets.common as common
 
 from stanza.models.common.constant import treebank_to_short_name
 
@@ -61,22 +60,6 @@ def write_sentences_to_conllu(filename, sents):
             for line in lines:
                 print(line, file=outfile)
             print("", file=outfile)
-
-def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension):
-    """
-    For a given treebank, dataset, extension, look for the exact filename to use.
-
-    Sometimes the short name we use is different from the short name
-    used by UD.  For example, Norwegian or Chinese.  Hence the reason
-    to not hardcode it based on treebank
-    """
-    files = glob.glob(f"{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}")
-    if len(files) == 0:
-        return None
-    elif len(files) == 1:
-        return files[0]
-    else:
-        raise RuntimeError(f"Unexpected number of files matched '{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}'")
 
 def split_train_file(treebank, train_input_conllu,
                      train_output_conllu, train_output_txt,
@@ -108,61 +91,6 @@ def split_train_file(treebank, train_input_conllu,
 
     return True
 
-def all_underscores(filename):
-    """
-    Certain treebanks have proprietary data, so the text is hidden
-
-    For example:
-      UD_Arabic-NYUAD
-      UD_English-ESL
-      UD_English-GUMReddit
-      UD_Hindi_English-HIENCS
-      UD_Japanese-BCCWJ
-    """
-    for line in open(filename).readlines():
-        line = line.strip()
-        if not line:
-            continue
-        line = line.replace("_", "")
-        line = line.replace("-", "")
-        line = line.replace(" ", "")
-        if line:
-            return False
-    return True
-
-def num_words_in_file(conllu_file):
-    count = 0
-    with open(conllu_file) as fin:
-        for line in fin:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("#"):
-                continue
-            count = count + 1
-    return count
-
-
-def get_ud_treebanks(udbase_dir, filtered=True):
-    """
-    Looks in udbase_dir for all the treebanks which have both train, dev, and test
-    """
-    treebanks = sorted(glob.glob(udbase_dir + "/UD_*"))
-    treebanks = [os.path.split(t)[1] for t in treebanks]
-    if filtered:
-        treebanks = [t for t in treebanks
-                     if (find_treebank_dataset_file(t, udbase_dir, "train", "txt") and
-                         # this will be fixed using XV
-                         #find_treebank_dataset_file(t, udbase_dir, "dev", "txt") and
-                         find_treebank_dataset_file(t, udbase_dir, "test", "txt"))]
-        treebanks = [t for t in treebanks
-                     if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
-        # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
-        treebanks = [t for t in treebanks
-                     if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
-                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000)]
-    return treebanks
-
 def prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset):
     prepare_tokenizer_data.main([input_txt_copy,
                                  input_conllu_copy,
@@ -187,10 +115,10 @@ def strip_mwt_from_conll(input_conllu, output_conllu):
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    input_txt = find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
+    input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
     input_txt_copy = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
-    input_conllu = find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
+    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
     input_conllu_copy = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if short_name == "sl_ssj":
@@ -242,7 +170,7 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
       UD_Upper_Sorbian-UFAL
       UD_Welsh-CCG
     """
-    train_input_conllu = find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+    train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     train_output_conllu = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
     train_output_txt = f"{tokenizer_dir}/{short_name}.train.txt"
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
@@ -277,7 +205,7 @@ def process_treebank(treebank, paths):
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
 
-    train_txt_file = find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
+    train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
     if not train_txt_file:
         raise ValueError("Cannot find train file for treebank %s" % treebank)
 
@@ -286,24 +214,14 @@ def process_treebank(treebank, paths):
 
     print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-    if not find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
+    if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
         process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
     else:
         process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
 
 
 def main():
-    if len(sys.argv) == 1:
-        raise ValueError("Need to provide a treebank name")
-
-    treebank = sys.argv[1]
-    paths = default_paths.get_default_paths()
-    if treebank.lower() in ('ud_all', 'all_ud'):
-        treebanks = get_ud_treebanks(paths["UDBASE"])
-        for t in treebanks:
-            process_treebank(t, paths)
-    else:
-        process_treebank(treebank, paths)
+    common.main(process_treebank)
 
 if __name__ == '__main__':
     main()

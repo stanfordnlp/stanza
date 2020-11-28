@@ -15,8 +15,8 @@ import os
 import shutil
 import sys
 
-import stanza.utils.default_paths as default_paths
 import stanza.utils.prepare_tokenizer_treebank as prepare_tokenizer_treebank
+import stanza.utils.datasets.common as common
 
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.utils.contract_mwt import contract_mwt
@@ -47,18 +47,7 @@ def process_treebank(treebank, paths):
                  f"{mwt_dir}/{short_name}.test.in.conllu")
 
 def main():
-    # TODO: can refactor this with the tokenizer equivalent
-    if len(sys.argv) == 1:
-        raise ValueError("Need to provide a treebank name")
-
-    treebank = sys.argv[1]
-    paths = default_paths.get_default_paths()
-    if treebank.lower() in ('ud_all', 'all_ud'):
-        treebanks = prepare_tokenizer_treebank.get_ud_treebanks(paths["UDBASE"])
-        for t in treebanks:
-            process_treebank(t, paths)
-    else:
-        process_treebank(treebank, paths)
+    common.main(process_treebank)
 
 if __name__ == '__main__':
     main()
