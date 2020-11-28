@@ -18,7 +18,6 @@ After specifying the treebank, any further arguments will be passed to the token
 import logging
 import math
 import os
-import subprocess
 
 from stanza.models import tokenizer
 from stanza.utils.avg_sent_len import avg_sent_len
@@ -26,16 +25,6 @@ from stanza.utils.training import common
 from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
-
-def run_eval_script(eval_gold, eval_pred):
-    # TODO: this is a silly way of doing this
-    # but the eval script expects sys args and prints the results to stdout
-    eval_script = os.path.join(os.path.split(__file__)[0], "conll18_ud_eval.py")
-    results = subprocess.check_output([eval_script, "-v", eval_gold, eval_pred])
-    results = results.decode(encoding="utf-8")
-    results = [x.split("|")[3].strip() for x in results.split("\n")[2:5]]
-    return " ".join(results)
-    
 
 def run_treebank(mode, paths, treebank, short_name, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
@@ -95,7 +84,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
         # TODO: log these results?  The original script logged them to
         # echo $results $args >> ${TOKENIZE_DATA_DIR}/${short}.results
 
-        results = run_eval_script(dev_gold, dev_pred)
+        results = common.run_eval_script(dev_gold, dev_pred, 2, 5)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -105,7 +94,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
-        results = run_eval_script(test_gold, test_pred)
+        results = common.run_eval_script(test_gold, test_pred, 2, 5)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
