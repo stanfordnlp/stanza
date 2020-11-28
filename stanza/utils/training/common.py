@@ -33,12 +33,12 @@ def main(run_treebank, model_dir, model_name):
         for t in treebanks:
             short_name = treebank_to_short_name(t)
             model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
-            logger.info("Looking for %s" % model_path)
+            logger.debug("Looking for %s" % model_path)
             if mode == Mode.TRAIN and os.path.exists(model_path):
                 logger.info("%s: %s exists, skipping!" % (t, model_path))
                 continue
 
-            logger.info("%s: %s" % (t, short_name))
+            logger.debug("%s: %s" % (t, short_name))
             run_treebank(mode, paths, t, short_name, extra_args)
     else:
         short_name = treebank_to_short_name(treebank)
