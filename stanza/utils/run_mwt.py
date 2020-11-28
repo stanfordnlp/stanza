@@ -1,3 +1,20 @@
+"""
+This script allows for training or testing on dev / test of the UD mwt tools.
+
+If run with a single treebank name, it will train or test that treebank.
+If run with ud_all or all_ud, it will iterate over all UD treebanks it can find.
+
+Args are given as follows:
+
+python run_mwt.py [mode] <treebank> [mwt args...]
+
+The first argument, mode, is optional.  It can either be --train (or
+nothing) to train a model and report the dev score, --score_dev to
+just report the dev score, or --score_test to report the test score.
+
+After specifying the treebank, any further arguments will be passed to mwt_extractor.
+"""
+
 
 import logging
 import math
@@ -13,6 +30,9 @@ from stanza.utils.max_mwt_length import max_mwt_length
 logger = logging.getLogger('stanza')
 
 def check_mwt(filename):
+    """
+    Checks whether or not there are MWTs in the given conll file
+    """
     doc = Document(CoNLL.conll2dict(filename))
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
