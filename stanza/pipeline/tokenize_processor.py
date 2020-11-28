@@ -11,7 +11,7 @@ from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
-from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
+from stanza.utils.datasets.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
 from stanza.pipeline.external.jieba import JiebaTokenizer
 from stanza.pipeline.external.spacy import SpacyTokenizer
