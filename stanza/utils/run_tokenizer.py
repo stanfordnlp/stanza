@@ -18,33 +18,13 @@ After specifying the treebank, any further arguments will be passed to the token
 import logging
 import math
 import os
-import subprocess
-import sys
 
-from enum import Enum
-
-from stanza.models.common.constant import treebank_to_short_name
 from stanza.models import tokenizer
 from stanza.utils.avg_sent_len import avg_sent_len
-import stanza.utils.default_paths as default_paths
-import prepare_tokenizer_treebank
+from stanza.utils.training import common
+from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
-
-class Mode(Enum):
-    TRAIN = 1
-    SCORE_DEV = 2
-    SCORE_TEST = 3
-
-def run_eval_script(eval_gold, eval_pred):
-    # TODO: this is a silly way of doing this
-    # but the eval script expects sys args and prints the results to stdout
-    eval_script = os.path.join(os.path.split(__file__)[0], "conll18_ud_eval.py")
-    results = subprocess.check_output([eval_script, "-v", eval_gold, eval_pred])
-    results = results.decode(encoding="utf-8")
-    results = [x.split("|")[3].strip() for x in results.split("\n")[2:5]]
-    return " ".join(results)
-    
 
 def run_treebank(mode, paths, treebank, short_name, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
@@ -104,7 +84,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
         # TODO: log these results?  The original script logged them to
         # echo $results $args >> ${TOKENIZE_DATA_DIR}/${short}.results
 
-        results = run_eval_script(dev_gold, dev_pred)
+        results = common.run_eval_script(dev_gold, dev_pred, 2, 5)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -114,34 +94,11 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
-        results = run_eval_script(test_gold, test_pred)
+        results = common.run_eval_script(test_gold, test_pred, 2, 5)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
-    paths = default_paths.get_default_paths()
-    args = sys.argv[1:]
-    if args[0].startswith("--"):
-        mode = Mode[args[0][2:].upper()]
-        args = args[1:]
-    else:
-        mode = Mode.TRAIN
-    treebank = args[0]
-    extra_args = args[1:]
-
-    if treebank.lower() in ('ud_all', 'all_ud'):
-        treebanks = prepare_tokenizer_treebank.get_ud_treebanks(paths["UDBASE"])
-
-        for t in treebanks:
-            short_name = treebank_to_short_name(t)
-            if mode == Mode.TRAIN and os.path.exists("saved_models/tokenize/%s_tokenizer.pt" % short_name):
-                logger.info("%s: %s exists, skipping!" % (t, short_name))
-                continue
-
-            logger.info("%s: %s" % (t, short_name))
-            run_treebank(mode, paths, t, short_name, extra_args)
-    else:
-        short_name = treebank_to_short_name(treebank)
-        run_treebank(mode, paths, treebank, short_name, extra_args)    
-
+    common.main(run_treebank, "tokenize", "tokenizer")
+        
 if __name__ == "__main__":
     main()

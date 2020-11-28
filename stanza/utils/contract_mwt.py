@@ -1,8 +1,8 @@
 import sys
 
-def contract_mwt(ignore_gapping=True):
-    with open(sys.argv[2], 'w') as fout:
-        with open(sys.argv[1], 'r') as fin:
+def contract_mwt(infile, outfile, ignore_gapping=True):
+    with open(outfile, 'w') as fout:
+        with open(infile, 'r') as fin:
             idx = 0
             mwt_begin = 0
             mwt_end = -1
@@ -36,5 +36,5 @@ def contract_mwt(ignore_gapping=True):
                     print("{}\t{}".format(idx, "\t".join(line[1:])), file=fout)
 
 if __name__ == '__main__':
-    contract_mwt()
+    contract_mwt(sys.argv[1], sys.argv[2])
 

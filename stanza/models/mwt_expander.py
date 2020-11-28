@@ -12,6 +12,7 @@ import shutil
 import time
 from datetime import datetime
 import argparse
+import logging
 import numpy as np
 import random
 import torch
@@ -28,7 +29,9 @@ from stanza.models.common.doc import Document
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
-def parse_args():
+logger = logging.getLogger('stanza')
+
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/mwt', help='Root dir for saving models.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
@@ -68,11 +71,12 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
-    args = parser.parse_args()
+
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -83,7 +87,7 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running MWT expander in {} mode".format(args['mode']))
+    logger.info("Running MWT expander in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -92,8 +96,8 @@ def main():
 
 def train(args):
     # load data
-    print('max_dec_len:', args['max_dec_len'])
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.debug('max_dec_len: %d' % args['max_dec_len'])
+    logger.debug("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
     train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
@@ -111,27 +115,27 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
-        sys.exit(0)
+        logger.warning("Skip training because no data available...")
+        return
 
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
-    print("Training dictionary-based MWT expander...")
+    logger.info("Training dictionary-based MWT expander...")
     trainer.train_dict(train_batch.doc.get_mwt_expansions(evaluation=False))
-    print("Evaluating on dev set...")
+    logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
     doc.set_mwt_expansions(dev_preds)
     CoNLL.dict2conll(doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
-    print("Dev F1 = {:.2f}".format(dev_f * 100))
+    logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
 
     if args.get('dict_only', False):
         # save dictionaries
         trainer.save(model_file)
     else:
         # train a seq2seq model
-        print("Training seq2seq-based MWT expander...")
+        logger.info("Training seq2seq-based MWT expander...")
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
@@ -150,17 +154,17 @@ def train(args):
                 train_loss += loss
                 if global_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                            max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+                    logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
+                                                  max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
 
             # eval on dev
-            print("Evaluating on dev set...")
+            logger.info("Evaluating on dev set...")
             dev_preds = []
             for i, batch in enumerate(dev_batch):
                 preds = trainer.predict(batch)
                 dev_preds += preds
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
-                print("[Ensembling dict with seq2seq model...]")
+                logger.info("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds)
@@ -168,12 +172,12 @@ def train(args):
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
-            print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+            logger.info("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
                 trainer.save(model_file)
-                print("new best model saved.")
+                logger.info("new best model saved.")
                 best_dev_preds = dev_preds
 
             # lr schedule
@@ -182,22 +186,21 @@ def train(args):
                 trainer.change_lr(current_lr)
 
             dev_score_history += [dev_score]
-            print("")
 
-        print("Training ended with {} epochs.".format(epoch))
+        logger.info("Training ended with {} epochs.".format(epoch))
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-        print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+        logger.info("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
 
         # try ensembling with dict if necessary
         if args.get('ensemble_dict', False):
-            print("[Ensembling dict with seq2seq model...]")
+            logger.info("[Ensembling dict with seq2seq model...]")
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds)
             CoNLL.dict2conll(doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
-            print("Ensemble dev F1 = {:.2f}".format(dev_score*100))
+            logger.info("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
 
 def evaluate(args):
@@ -215,10 +218,10 @@ def evaluate(args):
     for k in args:
         if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand']:
             loaded_args[k] = args[k]
-    print('max_dec_len:', loaded_args['max_dec_len'])
+    logger.debug('max_dec_len: %d' % loaded_args['max_dec_len'])
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.debug("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
@@ -228,7 +231,7 @@ def evaluate(args):
         if loaded_args['dict_only']:
             preds = dict_preds
         else:
-            print("Running the seq2seq model...")
+            logger.info("Running the seq2seq model...")
             preds = []
             for i, b in enumerate(batch):
                 preds += trainer.predict(b)
@@ -247,8 +250,7 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("MWT expansion score:")
-        print("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("MWT expansion score: {} {:.2f}".format(args['shorthand'], score*100))
 
 
 if __name__ == '__main__':
