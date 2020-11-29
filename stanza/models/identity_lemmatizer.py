@@ -13,7 +13,7 @@ from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
@@ -26,11 +26,13 @@ def parse_args():
 
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--seed', type=int, default=1234)
-    args = parser.parse_args()
+
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
+
     random.seed(args.seed)
 
     args = vars(args)
