@@ -4,9 +4,9 @@ A script to prepare all MWT datasets.
 As a side effect, it prepares tokenization datasets as well.
 
 For example, do
-  python -m stanza.utils.prepare_mwt_treebank TREEBANK
+  python -m stanza.utils.datasets.prepare_mwt_treebank TREEBANK
 such as
-  python -m stanza.utils.prepare_mwt_treebank UD_English-EWT
+  python -m stanza.utils.datasets.prepare_mwt_treebank UD_English-EWT
 
 and it will prepare each of train, dev, test
 """
@@ -15,8 +15,8 @@ import os
 import shutil
 import sys
 
-import stanza.utils.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 import stanza.utils.datasets.common as common
+import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.utils.datasets.contract_mwt import contract_mwt

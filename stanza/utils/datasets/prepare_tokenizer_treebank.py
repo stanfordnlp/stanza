@@ -2,15 +2,15 @@
 Prepares train, dev, test for a treebank
 
 For example, do
-  python -m stanza.utils.prepare_tokenizer_treebank TREEBANK
+  python -m stanza.utils.datasets.prepare_tokenizer_treebank TREEBANK
 such as
-  python -m stanza.utils.prepare_tokenizer_treebank UD_English-EWT
+  python -m stanza.utils.datasets.prepare_tokenizer_treebank UD_English-EWT
 
 and it will prepare each of train, dev, test
 
 There are macros for preparing all of the UD treebanks at once:
-  python -m stanza.utils.prepare_tokenizer_treebank ud_all
-  python -m stanza.utils.prepare_tokenizer_treebank all_ud
+  python -m stanza.utils.datasets.prepare_tokenizer_treebank ud_all
+  python -m stanza.utils.datasets.prepare_tokenizer_treebank all_ud
 Both are present because I kept forgetting which was the correct one
 
 There are a few special case handlings of treebanks in this file:
@@ -24,19 +24,21 @@ There are a few special case handlings of treebanks in this file:
 
 import glob
 import os
+import pathlib
 import random
 import re
 import shutil
 import subprocess
 
-import stanza.utils.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
+import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
 from stanza.models.common.constant import treebank_to_short_name
 
-CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+CONLLU_TO_TXT_PERL = os.path.join(pathlib.Path(os.path.join(os.path.split(__file__)[0], "..")).resolve(),
+                                  "conllu_to_text.pl")
 
 def read_sentences_from_conllu(filename):
     sents = []
@@ -86,8 +88,8 @@ def split_train_file(treebank, train_input_conllu,
     write_sentences_to_conllu(dev_output_conllu, dev_sents)
 
     # use an external script to produce the txt files
-    subprocess.run(f"perl {CONLLU_TO_TXT_PERL} {train_output_conllu} > {train_output_txt}", shell=True)
-    subprocess.run(f"perl {CONLLU_TO_TXT_PERL} {dev_output_conllu} > {dev_output_txt}", shell=True)
+    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {train_output_conllu} > {train_output_txt}", shell=True)
+    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {dev_output_conllu} > {dev_output_txt}", shell=True)
 
     return True
 
