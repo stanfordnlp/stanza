@@ -6,6 +6,7 @@ and two dictionaries to produce robust lemmas from word forms.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
+import logging
 import sys
 import os
 import shutil
@@ -26,6 +27,8 @@ import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
+
+logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -87,7 +90,7 @@ def main(args=None):
         torch.cuda.manual_seed(args.seed)
 
     args = vars(args)
-    print("Running lemmatizer in {} mode".format(args['mode']))
+    logger.info("Running lemmatizer in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -96,7 +99,7 @@ def main(args=None):
 
 def train(args):
     # load data
-    print("[Loading data with batch size {}...]".format(args['batch_size']))
+    logger.info("[Loading data with batch size {}...]".format(args['batch_size']))
     train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
     train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
@@ -116,27 +119,27 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("[Skip training because no data available...]")
-        sys.exit(0)
+        logger.warning("[Skip training because no training data available...]")
+        return
 
     # start training
     # train a dictionary-based lemmatizer
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
-    print("[Training dictionary-based lemmatizer...]")
+    logger.info("[Training dictionary-based lemmatizer...]")
     trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
-    print("Evaluating on dev set...")
+    logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)
     CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
-    print("Dev F1 = {:.2f}".format(dev_f * 100))
+    logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
 
     if args.get('dict_only', False):
         # save dictionaries
         trainer.save(model_file)
     else:
         # train a seq2seq model
-        print("[Training seq2seq-based lemmatizer...]")
+        logger.info("[Training seq2seq-based lemmatizer...]")
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
@@ -155,11 +158,11 @@ def train(args):
                 train_loss += loss
                 if global_step % args['log_step'] == 0:
                     duration = time.time() - start_time
-                    print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                            max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+                    logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,
+                                                  max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
 
             # eval on dev
-            print("Evaluating on dev set...")
+            logger.info("Evaluating on dev set...")
             dev_preds = []
             dev_edits = []
             for i, batch in enumerate(dev_batch):
@@ -171,19 +174,19 @@ def train(args):
 
             # try ensembling with dict if necessary
             if args.get('ensemble_dict', False):
-                print("[Ensembling dict with seq2seq model...]")
+                logger.info("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get([TEXT, UPOS]), dev_preds)
             dev_batch.doc.set([LEMMA], dev_preds)
             CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
-            print("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+            logger.info("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
                 trainer.save(model_file)
-                print("new best model saved.")
+                logger.info("new best model saved.")
                 best_dev_preds = dev_preds
 
             # lr schedule
@@ -193,12 +196,12 @@ def train(args):
                 trainer.update_lr(current_lr)
 
             dev_score_history += [dev_score]
-            print("")
+            logger.info("")
 
-        print("Training ended with {} epochs.".format(epoch))
+        logger.info("Training ended with {} epochs.".format(epoch))
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-        print("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+        logger.info("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
 
 def evaluate(args):
     # file paths
@@ -216,23 +219,21 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # laod data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
-        print("Skip evaluation because no dev data is available...")
-        print("Lemma score:")
-        print("{} ".format(args['lang']))
-        sys.exit(0)
+        logger.warning("Skip evaluation because no dev data is available...\nLemma score:\n{} ".format(args['lang']))
+        return
 
     dict_preds = trainer.predict_dict(batch.doc.get([TEXT, UPOS]))
 
     if loaded_args.get('dict_only', False):
         preds = dict_preds
     else:
-        print("Running the seq2seq model...")
+        logger.info("Running the seq2seq model...")
         preds = []
         edits = []
         for i, b in enumerate(batch):
@@ -243,7 +244,7 @@ def evaluate(args):
         preds = trainer.postprocess(batch.doc.get([TEXT]), preds, edits=edits)
 
         if loaded_args.get('ensemble_dict', False):
-            print("[Ensembling dict with seq2seq lemmatizer...]")
+            logger.info("[Ensembling dict with seq2seq lemmatizer...]")
             preds = trainer.ensemble(batch.doc.get([TEXT, UPOS]), preds)
 
     # write to file and score
@@ -252,8 +253,7 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("Lemma score:")
-        print("{} {:.2f}".format(args['lang'], score*100))
+        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['lang'], score*100))
 
 if __name__ == '__main__':
     main()
