@@ -180,10 +180,10 @@ def train(args):
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=args['save_name'], use_cuda=use_cuda)
+    trainer = Trainer(model_file=args['load_name'] or args['save_name'], use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
     for k in loaded_args:
-        if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'save_name']:
+        if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'load_name', 'save_name']:
             args[k] = loaded_args[k]
 
     eval_input_files = {
