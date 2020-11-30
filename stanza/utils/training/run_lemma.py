@@ -44,7 +44,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
                           "--gold_file", dev_gold_file,
-                          "--lang", short_language]
+                          "--lang", short_name]
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)
         elif mode == Mode.SCORE_TEST:
@@ -53,7 +53,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
                           "--eval_file", test_in_file,
                           "--output_file", test_pred_file,
                           "--gold_file", test_gold_file,
-                          "--lang", short_language]
+                          "--lang", short_name]
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)            
     else:
@@ -68,7 +68,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
                           "--gold_file", dev_gold_file,
-                          "--lang", short_language,
+                          "--lang", short_name,
                           "--num_epoch", num_epochs,
                           "--mode", "train"]
             train_args = train_args + extra_args
@@ -80,7 +80,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
                         "--eval_file", dev_in_file,
                         "--output_file", dev_pred_file,
                         "--gold_file", dev_gold_file,
-                        "--lang", short_language,
+                        "--lang", short_name,
                         "--mode", "predict"]
             dev_args = dev_args + extra_args
             logger.info("Running dev lemmatizer for {} with args {}".format(treebank, dev_args))
@@ -91,7 +91,7 @@ def run_treebank(mode, paths, treebank, short_name, extra_args):
                          "--eval_file", test_in_file,
                          "--output_file", test_pred_file,
                          "--gold_file", test_gold_file,
-                         "--lang", short_language,
+                         "--lang", short_name,
                          "--mode", "predict"]
             test_args = test_args + extra_args
             logger.info("Running test lemmatizer for {} with args {}".format(treebank, test_args))
