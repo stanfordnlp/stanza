@@ -37,7 +37,8 @@ def check_mwt(filename):
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
 
-def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name,
+                 temp_output_file, command_args, extra_args):
     short_language = short_name.split("_")[0]
 
     tokenize_dir     = paths["TOKENIZE_DATA_DIR"]
@@ -46,10 +47,10 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     train_file       = f"{mwt_dir}/{short_name}.train.in.conllu"
     dev_in_file      = f"{mwt_dir}/{short_name}.dev.in.conllu"
     dev_gold_file    = f"{mwt_dir}/{short_name}.dev.gold.conllu"
-    dev_output_file  = f"{mwt_dir}/{short_name}.dev.pred.conllu"
+    dev_output_file  = temp_output_file if temp_output_file else f"{mwt_dir}/{short_name}.dev.pred.conllu"
     test_in_file     = f"{mwt_dir}/{short_name}.test.in.conllu"
     test_gold_file   = f"{mwt_dir}/{short_name}.test.gold.conllu"
-    test_output_file = f"{mwt_dir}/{short_name}.test.pred.conllu"
+    test_output_file = temp_output_file if temp_output_file else f"{mwt_dir}/{short_name}.test.pred.conllu"
 
     train_json       = f"{tokenize_dir}/{short_name}-ud-train-mwt.json"
     dev_json         = f"{tokenize_dir}/{short_name}-ud-dev-mwt.json"

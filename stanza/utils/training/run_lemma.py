@@ -25,17 +25,18 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
-def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name,
+                 temp_output_file, command_args, extra_args):
     short_language = short_name.split("_")[0]
 
     lemma_dir      = paths["LEMMA_DATA_DIR"]
     train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
     dev_in_file    = f"{lemma_dir}/{short_name}.dev.in.conllu"
     dev_gold_file  = f"{lemma_dir}/{short_name}.dev.gold.conllu"
-    dev_pred_file  = f"{lemma_dir}/{short_name}.dev.pred.conllu"
+    dev_pred_file  = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.dev.pred.conllu"
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
-    test_pred_file = f"{lemma_dir}/{short_name}.test.pred.conllu"
+    test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
     
     if short_language in ('vi', 'fro', 'th'):
         if mode == Mode.TRAIN or mode == Mode.SCORE_DEV:

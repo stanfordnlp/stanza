@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 from enum import Enum
 
@@ -61,8 +62,14 @@ def main(run_treebank, model_dir, model_name):
     for treebank in treebanks:
         short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
-        run_treebank(mode, paths, treebank, short_name, command_args, extra_args)
 
+        if command_args.temp_output:
+            with tempfile.NamedTemporaryFile() as temp_output_file:
+                run_treebank(mode, paths, treebank, short_name,
+                             temp_output_file.name, command_args, extra_args)
+        else:
+            run_treebank(mode, paths, treebank, short_name,
+                         None, command_args, extra_args)
 
 def run_eval_script(eval_gold, eval_pred, start_row, end_row=None):
     # TODO: this is a silly way of doing this

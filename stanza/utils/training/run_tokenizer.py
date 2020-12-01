@@ -26,7 +26,8 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
-def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name,
+                 temp_output_file, command_args, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
 
     short_language = short_name.split("_")[0]
@@ -60,9 +61,8 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     dev_mwt = f"{tokenize_dir}/{short_name}-ud-dev-mwt.json"
     test_mwt = f"{tokenize_dir}/{short_name}-ud-test-mwt.json"
 
-    # TODO: use a tmp file for this?
-    dev_pred = f"{tokenize_dir}/{short_name}.dev.pred.conllu"
-    test_pred = f"{tokenize_dir}/{short_name}.test.pred.conllu"
+    dev_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.dev.pred.conllu"
+    test_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.test.pred.conllu"
 
     if mode == Mode.TRAIN:
         seqlen = str(math.ceil(avg_sent_len(label_file) * 3 / 100) * 100)
