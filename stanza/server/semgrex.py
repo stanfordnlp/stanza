@@ -1,5 +1,35 @@
-"""
-Invokes the Java semgrex on a document
+"""Invokes the Java semgrex on a document
+
+The server client has a method "semgrex" which sends text to Java
+CoreNLP for processing with a semgrex (SEMantic GRaph regEX) query:
+
+https://nlp.stanford.edu/nlp/javadoc/javanlp/edu/stanford/nlp/semgraph/semgrex/SemgrexPattern.html
+
+However, this operates on text using the CoreNLP tools, which means
+the dependency graphs may not align with stanza's depparse module, and
+this also limits the languages for which it can be used.  This module
+allows for running semgrex commands on the graphs produced by
+depparse.
+
+To use, first process text into a doc using stanza.Pipeline
+
+Next, pass the processed doc and a list of semgrex patterns to
+process_doc in this module.  It will run the java semgrex module as a
+subprocess and return the result in the form of a SemgrexResponse,
+whose description is in the proto file included with stanza.
+
+A minimal example is the main method of this module.
+
+Note that launching the subprocess is potentially quite expensive
+relative to the search if used many times on small documents.  Ideally
+larger texts would be processed, and all of the desired semgrex
+patterns would be run at once.  The worst thing to do would be to call
+this multiple times on a large document, one invocation per semgrex
+pattern, as that would serialize the document each time.  There are of
+course multiple ways of making this more efficient, such as including
+it as a separate call in the server or keeping the subprocess alive
+for multiple queries, but we didn't do any of those.  We do, however,
+accept pull requests...
 """
 
 import subprocess
