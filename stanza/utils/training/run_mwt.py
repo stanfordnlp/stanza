@@ -4,15 +4,15 @@ This script allows for training or testing on dev / test of the UD mwt tools.
 If run with a single treebank name, it will train or test that treebank.
 If run with ud_all or all_ud, it will iterate over all UD treebanks it can find.
 
-Args are given as follows:
+Mode can be set to train&dev with --train, to dev set only
+with --score_dev, and to test set only with --score_test.
 
-python run_mwt.py [mode] <treebank> [mwt args...]
+Treebanks are specified as a list.  all_ud or ud_all means to look for
+all UD treebanks.
 
-The first argument, mode, is optional.  It can either be --train (or
-nothing) to train a model and report the dev score, --score_dev to
-just report the dev score, or --score_test to report the test score.
-
-After specifying the treebank, any further arguments will be passed to mwt_extractor.
+Extra arguments are passed to mwt.  In case the run script
+itself is shadowing arguments, you can specify --extra_args as a
+parameter to mark where the mwt arguments start.
 """
 
 
@@ -37,7 +37,7 @@ def check_mwt(filename):
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
 
-def run_treebank(mode, paths, treebank, short_name, extra_args):
+def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     short_language = short_name.split("_")[0]
 
     tokenize_dir     = paths["TOKENIZE_DATA_DIR"]
