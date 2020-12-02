@@ -345,7 +345,10 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
                             resources_branch, resources_version)
     with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
-    languages = [lang for lang in resources if 'alias' not in resources[lang]]
+    # isinstance(str) is because of fields such as "url"
+    # 'alias' is because we want to skip German, alias of de, for example
+    languages = [lang for lang in resources
+                 if not isinstance(resources[lang], str) and 'alias' not in resources[lang]]
     languages = sorted(languages)
     return languages
 
