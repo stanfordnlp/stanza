@@ -16,6 +16,7 @@ parameter to mark where the lemmatizer arguments start.
 """
 
 import logging
+import os
 
 from stanza.models import identity_lemmatizer
 from stanza.models import lemmatizer
@@ -63,6 +64,10 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
+
+    if not os.path.exists(train_file):
+        logger.error("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Skipping..." % (treebank, train_file))
+        return
 
     has_lemmas = check_lemmas(train_file)
     if not has_lemmas:
