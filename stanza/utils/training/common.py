@@ -68,7 +68,7 @@ def main(run_treebank, model_dir, model_name):
                 logger.info("%s: %s exists, skipping!" % (treebank, model_path))
                 continue
             else:
-                logger.info("%s: %s does not exist, training new model" % (t, model_path))
+                logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
         if command_args.temp_output:
             with tempfile.NamedTemporaryFile() as temp_output_file:
