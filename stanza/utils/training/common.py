@@ -45,6 +45,11 @@ def main(run_treebank, model_dir, model_name):
     treebanks = []
 
     for treebank in command_args.treebanks:
+        # this is a really annoying typo to make if you copy/paste a
+        # UD directory name on the cluster and your job dies 30s after
+        # being queued for an hour
+        if treebank.endswith("/"):
+            treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebank = common.get_ud_treebanks(paths["UDBASE"])
 
