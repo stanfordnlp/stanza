@@ -25,6 +25,32 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
+def check_lemmas(train_file):
+    """
+    Check if a treebank has any lemmas in it
+
+    For example, in Vietnamese-VTB, all the words and lemmas are exactly the same
+    in Telugu-MTG, all the lemmas are blank
+    """
+    # could eliminate a few languages immediately based on UD 2.7
+    # but what if a later dataset includes lemmas?
+    #if short_language in ('vi', 'fro', 'th'):
+    #    return False
+    with open(train_file) as fin:
+        for line in fin:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            word = pieces[1].lower().strip()
+            lemma = pieces[2].lower().strip()
+            if not lemma or lemma == '_' or lemma == '-':
+                continue
+            if word == lemma:
+                continue
+            return True
+    return False
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     short_language = short_name.split("_")[0]
@@ -37,8 +63,11 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
-    
-    if short_language in ('vi', 'fro', 'th'):
+
+    has_lemmas = check_lemmas(train_file)
+    if not has_lemmas:
+        logger.info("Treebank " + treebank + " (" + short_name +
+                    ") has no lemmas.  Using identity lemmatizer")
         if mode == Mode.TRAIN or mode == Mode.SCORE_DEV:
             train_args = ["--data_dir", lemma_dir,
                           "--train_file", train_file,
