@@ -28,6 +28,8 @@ def build_argparse():
     parser.add_argument('--train', dest='mode', default=Mode.TRAIN, action='store_const', const=Mode.TRAIN, help='Run in train mode')
     parser.add_argument('--score_dev', dest='mode', action='store_const', const=Mode.SCORE_DEV, help='Score the dev set')
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
+
+    parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
 def main(run_treebank, model_dir, model_name):
@@ -52,21 +54,21 @@ def main(run_treebank, model_dir, model_name):
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebank = common.get_ud_treebanks(paths["UDBASE"])
-
-            for t in ud_treebank:
-                short_name = treebank_to_short_name(t)
-                model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
-                logger.debug("Looking for %s" % model_path)
-                if mode == Mode.TRAIN and os.path.exists(model_path):
-                    logger.info("%s: %s exists, skipping!" % (t, model_path))
-                else:
-                    treebanks.append(t)
+            treebanks.append(t)
         else:
             treebanks.append(treebank)
 
     for treebank in treebanks:
         short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
+
+        if mode == Mode.TRAIN and not command_args.force:
+            model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
+            if os.path.exists(model_path):
+                logger.info("%s: %s exists, skipping!" % (treebank, model_path))
+                continue
+            else:
+                logger.info("%s: %s does not exist, training new model" % (t, model_path))
 
         if command_args.temp_output:
             with tempfile.NamedTemporaryFile() as temp_output_file:
