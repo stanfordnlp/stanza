@@ -59,7 +59,8 @@ def run_treebank(mode, paths, treebank, short_name,
             identity_lemmatizer.main(train_args)            
     else:
         if mode == Mode.TRAIN:
-            if treebank in ('UD_Czech-PDT', 'UD_Russian-SynTagRus', 'UD_German-HDT'):
+            # ('UD_Czech-PDT', 'UD_Russian-SynTagRus', 'UD_German-HDT')
+            if short_name in ('cs_pdt', 'ru_syntagrus', 'de_hdt'):
                 num_epochs = "30"
             else:
                 num_epochs = "60"
