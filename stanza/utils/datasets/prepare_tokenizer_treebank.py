@@ -24,7 +24,6 @@ There are a few special case handlings of treebanks in this file:
 
 import glob
 import os
-import pathlib
 import random
 import re
 import shutil
@@ -37,8 +36,7 @@ import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
 from stanza.models.common.constant import treebank_to_short_name
 
-CONLLU_TO_TXT_PERL = os.path.join(pathlib.Path(os.path.join(os.path.split(__file__)[0], "..")).resolve(),
-                                  "conllu_to_text.pl")
+CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
 def read_sentences_from_conllu(filename):
     sents = []
