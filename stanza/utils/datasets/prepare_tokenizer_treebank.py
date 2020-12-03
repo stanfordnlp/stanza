@@ -98,7 +98,7 @@ def prepare_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_lan
                                  "-m", f"{tokenizer_dir}/{short_name}-ud-{dataset}-mwt.json"])
 
     if short_language == "vi":
-        postprocess_vietnamese_tokenizer_data.main([input_txt_copy,
+        postprocess_vietnamese_tokenizer_data.main([input_txt,
                                                     "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                                     "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
