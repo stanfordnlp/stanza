@@ -61,6 +61,10 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
+def convert_conllu_to_txt(conllu, txt):
+    # use an external script to produce the txt files
+    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
+
 def split_train_file(treebank, train_input_conllu,
                      train_output_conllu, train_output_txt,
                      dev_output_conllu, dev_output_txt):
@@ -85,9 +89,8 @@ def split_train_file(treebank, train_input_conllu,
     write_sentences_to_conllu(train_output_conllu, train_sents)
     write_sentences_to_conllu(dev_output_conllu, dev_sents)
 
-    # use an external script to produce the txt files
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {train_output_conllu} > {train_output_txt}", shell=True)
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {dev_output_conllu} > {dev_output_txt}", shell=True)
+    convert_conllu_to_txt(train_output_conllu, train_output_txt)
+    convert_conllu_to_txt(dev_output_conllu, dev_output_txt)
 
     return True
 
@@ -114,8 +117,60 @@ def strip_mwt_from_conll(input_conllu, output_conllu):
                 if not MWT_RE.match(line):
                     fout.write(line)
 
+def augment_telugu(input_conllu, output_conllu, output_txt):
+    """Add a few sentences with modified punctuation to Telugu_MTG
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
+    The Telugu-MTG dataset has punctuation separated from the text in
+    almost all cases, which makes the tokenizer not learn how to
+    process that correctly.
+    """
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
+    random.seed(1234)
+
+    # read and shuffle conllu data
+    sents = read_sentences_from_conllu(input_conllu)
+
+    # all of the Telugu sentences end with their sentence final
+    # punctuation being separated.  Furthermore, all commas are
+    # separated.  We change that on some subset of the sentences to
+    # make the tools more generalizable on wild text.
+    # TODO: could refactor this, probably
+    new_sents = []
+    for sentence in sents:
+        if not sentence[1].startswith("# text"):
+            raise ValueError("Expected the second line of %s to start with # text" % sentence[0])
+        if not sentence[2].startswith("# translit"):
+            raise ValueError("Expected the second line of %s to start with # translit" % sentence[0])
+        if sentence[1].endswith(". . .") or sentence[1][-1] not in ('.', '?', '!'):
+            continue
+        if sentence[1][-1] in ('.', '?', '!') and sentence[1][-2] != ' ' and sentence[1][-3:] != ' ..' and sentence[1][-4:] != ' ...':
+            raise ValueError("Sentence %s does not end with space-punctuation, which is against our assumptions for the te_mtg treebank.  Please check the augment method to see if it is still needed" % sentence[0])
+        if random.random() < 0.1:
+            new_sentence = list(sentence)
+            new_sentence[1] = new_sentence[1][:-2] + new_sentence[1][-1]
+            new_sentence[2] = new_sentence[2][:-2] + new_sentence[2][-1]
+            new_sentence[-2] = new_sentence[-2] + "|SpaceAfter=No"
+            new_sents.append(new_sentence)
+        if sentence[1].find(",") > 1 and random.random() < 0.1:
+            new_sentence = list(sentence)
+            index = sentence[1].find(",")
+            new_sentence[1] = sentence[1][:index-1] + sentence[1][index:]
+            index = sentence[1].find(",")
+            new_sentence[2] = sentence[2][:index-1] + sentence[2][index:]
+            for idx, word in enumerate(new_sentence):
+                if idx < 4:
+                    # skip sent_id, text, transliteration, and the first word
+                    continue
+                if word.split("\t")[1] == ',':
+                    new_sentence[idx-1] = new_sentence[idx-1] + "|SpaceAfter=No"
+                    break
+            new_sents.append(new_sentence)
+
+    write_sentences_to_conllu(output_conllu, sents + new_sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -126,6 +181,8 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     if short_name == "sl_ssj":
         preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
+    elif short_name == "te_mtg" and dataset == 'train' and augment:
+        augment_telugu(input_conllu, input_conllu_copy, input_txt_copy)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
