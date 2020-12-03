@@ -91,9 +91,9 @@ def split_train_file(treebank, train_input_conllu,
 
     return True
 
-def prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset):
-    prepare_tokenizer_data.main([input_txt_copy,
-                                 input_conllu_copy,
+def prepare_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
+    prepare_tokenizer_data.main([input_txt,
+                                 input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                  "-m", f"{tokenizer_dir}/{short_name}-ud-{dataset}-mwt.json"])
 
