@@ -117,6 +117,65 @@ def strip_mwt_from_conll(input_conllu, output_conllu):
                 if not MWT_RE.match(line):
                     fout.write(line)
 
+def augment_arabic_padt(input_conllu, output_conllu, output_txt):
+    """
+    Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
+
+    Reason seems to be that there are almost no examples of "text ." in the dataset.
+    This function augments the Arabic-PADT dataset with a few such examples.
+    Note: it may very well be that a lot of tokeners have this problem.
+
+    Also, there are a few examples in UD2.7 which are apparently
+    headlines where there is a ' . ' in the middle of the text.  This
+    is quite confusing and possibly incorrect, but such is life.
+    """
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
+    random.seed(1234)
+
+    # read and shuffle conllu data
+    sents = read_sentences_from_conllu(input_conllu)
+
+    # TODO: could refactor this, probably
+    new_sents = []
+    for sentence in sents:
+        if len(sentence) < 4:
+            raise ValueError("Read a surprisingly short sentence")
+        text_line = None
+        if sentence[0].startswith("# newdoc") and sentence[3].startswith("# text"):
+            text_line = 3
+        elif sentence[0].startswith("# newpar") and sentence[2].startswith("# text"):
+            text_line = 2
+        elif sentence[0].startswith("# sent_id") and sentence[1].startswith("# text"):
+            text_line = 1
+        else:
+            raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
+
+        # for some reason performance starts dropping quickly at higher numbers
+        if (sentence[text_line][-1] in ('.', '؟', '?', '!') and
+            sentence[text_line][-2] not in ('.', '؟', '?', '!', ' ') and
+            sentence[-2].split()[-1].find("SpaceAfter=No") >= 0 and
+            len(sentence[-1].split()[1]) == 1 and
+            random.random() < 0.05):
+            new_sent = list(sentence)
+            new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
+            pieces = sentence[-2].split("\t")
+            if pieces[-1] == "SpaceAfter=No":
+                pieces[-1] = "_"
+            elif pieces[-1].startswith("SpaceAfter=No|"):
+                pieces[-1] = pieces[-1].replace("SpaceAfter=No|", "")
+            elif pieces[-1].find("|SpaceAfter=No") > 0:
+                pieces[-1] = piecse[-1].replace("|SpaceAfter=No", "")
+            else:
+                raise ValueError("WTF")
+            new_sent[-2] = "\t".join(pieces)
+            assert new_sent != sentence
+            new_sents.append(new_sent)
+
+    write_sentences_to_conllu(output_conllu, sents + new_sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+
 def augment_telugu(input_conllu, output_conllu, output_txt):
     """Add a few sentences with modified punctuation to Telugu_MTG
 
@@ -183,6 +242,8 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
     elif short_name == "te_mtg" and dataset == 'train' and augment:
         augment_telugu(input_conllu, input_conllu_copy, input_txt_copy)
+    elif short_name == "ar_padt" and dataset == 'train' and augment:
+        augment_arabic_padt(input_conllu, input_conllu_copy, input_txt_copy)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
