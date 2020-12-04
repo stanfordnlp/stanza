@@ -39,8 +39,10 @@ class SpacyTokenizer(ProcessorVariant):
         self.nlp = English()
         # by default spacy uses dependency parser to do ssplit
         # we need to add a sentencizer for fast rule-based ssplit
-        sentencizer = self.nlp.create_pipe('sentencizer')
-        self.nlp.add_pipe(sentencizer)
+        if spacy.__version__.startswith("2."):
+            self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
+        else:
+            self.nlp.add_pipe("sentencizer")
 
     def process(self, text):
         """ Tokenize a document with the spaCy tokenizer and wrap the results into a Doc object.
