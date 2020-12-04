@@ -198,15 +198,15 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
     Process a normal UD treebank with train/dev/test splits
 
     SL-SSJ and Vietnamese both use this code path as well.
     """
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
 
 
 XV_RATIO = 0.2
@@ -248,10 +248,11 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     prepare_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+    # currently we do not do any augmentation of these partial treebanks
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
 
 
-def process_treebank(treebank, paths):
+def process_treebank(treebank, paths, augment=True):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -277,7 +278,7 @@ def process_treebank(treebank, paths):
     if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
         process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
     else:
-        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment)
 
 
 def main():
