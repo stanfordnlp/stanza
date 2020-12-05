@@ -117,7 +117,7 @@ def strip_mwt_from_conll(input_conllu, output_conllu):
                 if not MWT_RE.match(line):
                     fout.write(line)
 
-def augment_arabic_padt(input_conllu, output_conllu, output_txt):
+def augment_arabic_padt(sents):
     """
     Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
 
@@ -126,17 +126,12 @@ def augment_arabic_padt(input_conllu, output_conllu, output_txt):
     Note: it may very well be that a lot of tokeners have this problem.
 
     Also, there are a few examples in UD2.7 which are apparently
-    headlines where there is a ' . ' in the middle of the text.  This
-    is quite confusing and possibly incorrect, but such is life.
+    headlines where there is a ' . ' in the middle of the text.
+    According to an Arabic speaking labmate, the sentences are
+    headlines which could be reasonably split into two items.  Having
+    them as one item is quite confusing and possibly incorrect, but
+    such is life.
     """
-    # set the seed for each data file so that the results are the same
-    # regardless of how many treebanks are processed at once
-    random.seed(1234)
-
-    # read and shuffle conllu data
-    sents = read_sentences_from_conllu(input_conllu)
-
-    # TODO: could refactor this, probably
     new_sents = []
     for sentence in sents:
         if len(sentence) < 4:
@@ -171,30 +166,22 @@ def augment_arabic_padt(input_conllu, output_conllu, output_txt):
             new_sent[-2] = "\t".join(pieces)
             assert new_sent != sentence
             new_sents.append(new_sent)
-
-    write_sentences_to_conllu(output_conllu, sents + new_sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    return new_sents
 
 
-def augment_telugu(input_conllu, output_conllu, output_txt):
-    """Add a few sentences with modified punctuation to Telugu_MTG
+def augment_telugu(sents):
+    """
+    Add a few sentences with modified punctuation to Telugu_MTG
 
     The Telugu-MTG dataset has punctuation separated from the text in
     almost all cases, which makes the tokenizer not learn how to
     process that correctly.
+
+    All of the Telugu sentences end with their sentence final
+    punctuation being separated.  Furthermore, all commas are
+    separated.  We change that on some subset of the sentences to
+    make the tools more generalizable on wild text.
     """
-    # set the seed for each data file so that the results are the same
-    # regardless of how many treebanks are processed at once
-    random.seed(1234)
-
-    # read and shuffle conllu data
-    sents = read_sentences_from_conllu(input_conllu)
-
-    # all of the Telugu sentences end with their sentence final
-    # punctuation being separated.  Furthermore, all commas are
-    # separated.  We change that on some subset of the sentences to
-    # make the tools more generalizable on wild text.
-    # TODO: could refactor this, probably
     new_sents = []
     for sentence in sents:
         if not sentence[1].startswith("# text"):
@@ -225,9 +212,22 @@ def augment_telugu(input_conllu, output_conllu, output_txt):
                     new_sentence[idx-1] = new_sentence[idx-1] + "|SpaceAfter=No"
                     break
             new_sents.append(new_sentence)
+    return new_sents
+
+def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_function):
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
+    random.seed(1234)
+
+    # read and shuffle conllu data
+    sents = read_sentences_from_conllu(input_conllu)
+
+    # the actual meat of the function - produce new sentences
+    new_sents = augment_function(sents)
 
     write_sentences_to_conllu(output_conllu, sents + new_sents)
     convert_conllu_to_txt(output_conllu, output_txt)
+
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
     os.makedirs(tokenizer_dir, exist_ok=True)
@@ -241,9 +241,9 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     if short_name == "sl_ssj":
         preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
     elif short_name == "te_mtg" and dataset == 'train' and augment:
-        augment_telugu(input_conllu, input_conllu_copy, input_txt_copy)
+        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
-        augment_arabic_padt(input_conllu, input_conllu_copy, input_txt_copy)
+        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
