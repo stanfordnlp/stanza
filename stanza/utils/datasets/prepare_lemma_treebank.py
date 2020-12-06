@@ -37,7 +37,7 @@ def process_treebank(treebank, paths):
 
         # first we process the tokenization data
         # TODO: we can skip processing the labels for the lemma datasets
-        prepare_tokenizer_treebank.process_treebank(treebank, paths, augment=False)
+        prepare_tokenizer_treebank.process_treebank(treebank, paths, augment=False, prepare_labels=False)
 
         # now we copy the processed conllu data files
         os.makedirs(lemma_dir, exist_ok=True)

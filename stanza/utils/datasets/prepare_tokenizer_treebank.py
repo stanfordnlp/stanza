@@ -97,7 +97,7 @@ def split_train_file(treebank, train_input_conllu,
 def mwt_name(base_dir, short_name, dataset):
     return f"{base_dir}/{short_name}-ud-{dataset}-mwt.json"
 
-def prepare_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
+def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
     prepare_tokenizer_data.main([input_txt,
                                  input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
@@ -335,7 +335,7 @@ def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_fun
     convert_conllu_to_txt(output_conllu, output_txt)
 
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -366,22 +366,23 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         shutil.copyfile(input_txt, input_txt_copy)
         shutil.copyfile(input_conllu, input_conllu_copy)
 
-    prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
+    if prepare_labels:
+        prepare_dataset_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True, prepare_labels=True):
     """
     Process a normal UD treebank with train/dev/test splits
 
     SL-SSJ and Vietnamese both use this code path as well.
     """
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment, prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment, prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment, prepare_labels)
 
 
 XV_RATIO = 0.2
 
-def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels=True):
     """
     Process a UD treebank with only train/test splits
 
@@ -414,15 +415,16 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
                             dev_output_txt=dev_output_txt):
         return
 
-    prepare_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
-    prepare_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
+    if prepare_labels:
+        prepare_dataset_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
+        prepare_dataset_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, prepare_labels=prepare_labels)
 
 
-def process_treebank(treebank, paths, augment=True):
+def process_treebank(treebank, paths, augment=True, prepare_labels=True):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -446,9 +448,9 @@ def process_treebank(treebank, paths, augment=True):
     print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
     if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
-        process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+        process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels)
     else:
-        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment)
+        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment, prepare_labels)
 
 
 def main():
