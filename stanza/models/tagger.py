@@ -31,7 +31,7 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
@@ -88,11 +88,11 @@ def parse_args():
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
     if args.cpu:
         args.cuda = False
