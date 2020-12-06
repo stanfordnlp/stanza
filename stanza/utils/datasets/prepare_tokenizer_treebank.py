@@ -61,6 +61,10 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
+def convert_conllu_to_txt(conllu, txt):
+    # use an external script to produce the txt files
+    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
+
 def split_train_file(treebank, train_input_conllu,
                      train_output_conllu, train_output_txt,
                      dev_output_conllu, dev_output_txt):
@@ -85,9 +89,8 @@ def split_train_file(treebank, train_input_conllu,
     write_sentences_to_conllu(train_output_conllu, train_sents)
     write_sentences_to_conllu(dev_output_conllu, dev_sents)
 
-    # use an external script to produce the txt files
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {train_output_conllu} > {train_output_txt}", shell=True)
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {dev_output_conllu} > {dev_output_txt}", shell=True)
+    convert_conllu_to_txt(train_output_conllu, train_output_txt)
+    convert_conllu_to_txt(dev_output_conllu, dev_output_txt)
 
     return True
 
@@ -114,8 +117,225 @@ def strip_mwt_from_conll(input_conllu, output_conllu):
                 if not MWT_RE.match(line):
                     fout.write(line)
 
+def augment_arabic_padt(sents):
+    """
+    Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset):
+    Reason seems to be that there are almost no examples of "text ." in the dataset.
+    This function augments the Arabic-PADT dataset with a few such examples.
+    Note: it may very well be that a lot of tokeners have this problem.
+
+    Also, there are a few examples in UD2.7 which are apparently
+    headlines where there is a ' . ' in the middle of the text.
+    According to an Arabic speaking labmate, the sentences are
+    headlines which could be reasonably split into two items.  Having
+    them as one item is quite confusing and possibly incorrect, but
+    such is life.
+    """
+    new_sents = []
+    for sentence in sents:
+        if len(sentence) < 4:
+            raise ValueError("Read a surprisingly short sentence")
+        text_line = None
+        if sentence[0].startswith("# newdoc") and sentence[3].startswith("# text"):
+            text_line = 3
+        elif sentence[0].startswith("# newpar") and sentence[2].startswith("# text"):
+            text_line = 2
+        elif sentence[0].startswith("# sent_id") and sentence[1].startswith("# text"):
+            text_line = 1
+        else:
+            raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
+
+        # for some reason performance starts dropping quickly at higher numbers
+        if (sentence[text_line][-1] in ('.', '؟', '?', '!') and
+            sentence[text_line][-2] not in ('.', '؟', '?', '!', ' ') and
+            sentence[-2].split()[-1].find("SpaceAfter=No") >= 0 and
+            len(sentence[-1].split()[1]) == 1 and
+            random.random() < 0.05):
+            new_sent = list(sentence)
+            new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
+            pieces = sentence[-2].split("\t")
+            if pieces[-1] == "SpaceAfter=No":
+                pieces[-1] = "_"
+            elif pieces[-1].startswith("SpaceAfter=No|"):
+                pieces[-1] = pieces[-1].replace("SpaceAfter=No|", "")
+            elif pieces[-1].find("|SpaceAfter=No") > 0:
+                pieces[-1] = piecse[-1].replace("|SpaceAfter=No", "")
+            else:
+                raise ValueError("WTF")
+            new_sent[-2] = "\t".join(pieces)
+            assert new_sent != sentence
+            new_sents.append(new_sent)
+    return new_sents
+
+
+def augment_telugu(sents):
+    """
+    Add a few sentences with modified punctuation to Telugu_MTG
+
+    The Telugu-MTG dataset has punctuation separated from the text in
+    almost all cases, which makes the tokenizer not learn how to
+    process that correctly.
+
+    All of the Telugu sentences end with their sentence final
+    punctuation being separated.  Furthermore, all commas are
+    separated.  We change that on some subset of the sentences to
+    make the tools more generalizable on wild text.
+    """
+    new_sents = []
+    for sentence in sents:
+        if not sentence[1].startswith("# text"):
+            raise ValueError("Expected the second line of %s to start with # text" % sentence[0])
+        if not sentence[2].startswith("# translit"):
+            raise ValueError("Expected the second line of %s to start with # translit" % sentence[0])
+        if sentence[1].endswith(". . .") or sentence[1][-1] not in ('.', '?', '!'):
+            continue
+        if sentence[1][-1] in ('.', '?', '!') and sentence[1][-2] != ' ' and sentence[1][-3:] != ' ..' and sentence[1][-4:] != ' ...':
+            raise ValueError("Sentence %s does not end with space-punctuation, which is against our assumptions for the te_mtg treebank.  Please check the augment method to see if it is still needed" % sentence[0])
+        if random.random() < 0.1:
+            new_sentence = list(sentence)
+            new_sentence[1] = new_sentence[1][:-2] + new_sentence[1][-1]
+            new_sentence[2] = new_sentence[2][:-2] + new_sentence[2][-1]
+            new_sentence[-2] = new_sentence[-2] + "|SpaceAfter=No"
+            new_sents.append(new_sentence)
+        if sentence[1].find(",") > 1 and random.random() < 0.1:
+            new_sentence = list(sentence)
+            index = sentence[1].find(",")
+            new_sentence[1] = sentence[1][:index-1] + sentence[1][index:]
+            index = sentence[1].find(",")
+            new_sentence[2] = sentence[2][:index-1] + sentence[2][index:]
+            for idx, word in enumerate(new_sentence):
+                if idx < 4:
+                    # skip sent_id, text, transliteration, and the first word
+                    continue
+                if word.split("\t")[1] == ',':
+                    new_sentence[idx-1] = new_sentence[idx-1] + "|SpaceAfter=No"
+                    break
+            new_sents.append(new_sentence)
+    return new_sents
+
+COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
+def augment_ancora(sents):
+    """
+    Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
+
+    This leaves the tokens and all of the other data the same.  The
+    only change made is to change SpaceAfter=No for the "," token and
+    adjust the #text line, with the assumption that the conllu->txt
+    conversion will correctly handle this change.
+    """
+    new_sents = []
+    for sentences in sents:
+        if not sentences[1].startswith("# text"):
+            raise ValueError("UD_Spanish-AnCora not in the expected format")
+
+    for sentence in sents:
+        match = COMMA_SEPARATED_RE.search(sentence[1])
+        if match and random.random() < 0.03:
+            for idx, word in enumerate(sentence):
+                if word.startswith("#"):
+                    continue
+                # find() doesn't work because we wind up finding substrings
+                if word.split("\t")[1] != match.group(1):
+                    continue
+                if sentence[idx+1].split("\t")[1] != ',':
+                    continue
+                if sentence[idx+2].split("\t")[2] != match.group(2):
+                    continue
+                break
+            if idx == len(sentence) - 1:
+                # this can happen with MWTs.  we may actually just
+                # want to skip MWTs anyway, so no big deal
+                continue
+            # now idx+1 should be the line with the comma in it
+            comma = sentence[idx+1]
+            pieces = comma.split("\t")
+            assert pieces[1] == ','
+            if pieces[-1] == '_':
+                pieces[-1] = "SpaceAfter=No"
+            else:
+                pieces[-1] = pieces[-1] + "|SpaceAfter=No"
+            comma = "\t".join(pieces)
+            new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
+
+            text_offset = sentence[1].find(match.group(1) + ", " + match.group(2))
+            text_len = len(match.group(1) + ", " + match.group(2))
+            new_text = sentence[1][:text_offset] + match.group(1) + "," + match.group(2) + sentence[1][text_offset+text_len:]
+            new_sent[1] = new_text
+
+            new_sents.append(new_sent)
+
+    return new_sents
+
+def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
+    """
+    The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
+
+    One possible problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there is a comma smashed next to a token.  Seems incorrect.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
+    """
+    random.seed(1234)
+    sents = read_sentences_from_conllu(input_conllu)
+
+    ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
+    NEW_FIXED = ["29	,	,	PUNCT	PUNCT	PunctType=Comm	32	punct	_	SpaceAfter=No",   # TODO dunno about the head
+                 "30	Comerç	Comerç	PROPN	PROPN	_	26	flat	_	_"]
+    new_sentences = []
+    found = False
+    for sentence in sents:
+        if sentence[0].strip() != '# sent_id = train-s14205':
+            new_sentences.append(sentence)
+            continue
+        assert not found, "WTF"
+        found = True
+
+        for idx, word in enumerate(sentence):
+            if word.strip() == ORIGINAL_BAD:
+                break
+        assert idx == 31, "Could not find ,Comerç at the expected line number.  Perhaps the treebank has been fixed?"
+        for word in sentence[3:idx]:
+            assert int(sentence[idx].strip().split("\t")[6]) < idx
+        new_sentence = sentence[:idx] + NEW_FIXED
+        # increase the token idx and the dep of each word as appropriate
+        for word in sentence[idx+1:]:
+            pieces = word.strip().split("\t")
+            pieces[0] = str(int(pieces[0]) + 1)
+            dep = int(pieces[6])
+            if dep > 29:
+                pieces[6] = str(dep + 1)
+            new_sentence.append("\t".join(pieces))
+
+        new_sentences.append(new_sentence)
+
+    assert found, "Could not find sentence train-s14205 in Spanish Ancora"
+
+    extra_sentences = augment_ancora(new_sentences)
+
+    write_sentences_to_conllu(output_conllu, new_sentences + extra_sentences)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+
+def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_function):
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
+    random.seed(1234)
+
+    # read and shuffle conllu data
+    sents = read_sentences_from_conllu(input_conllu)
+
+    # the actual meat of the function - produce new sentences
+    new_sents = augment_function(sents)
+
+    write_sentences_to_conllu(output_conllu, sents + new_sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -126,6 +346,13 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     if short_name == "sl_ssj":
         preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
+    elif short_name == "te_mtg" and dataset == 'train' and augment:
+        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
+    elif short_name == "ar_padt" and dataset == 'train' and augment:
+        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
+    elif short_name.startswith("es_ancora") and dataset == 'train':
+        # note that we always do this for AnCora, since this token is bizarre and confusing
+        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
@@ -141,15 +368,15 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
     Process a normal UD treebank with train/dev/test splits
 
     SL-SSJ and Vietnamese both use this code path as well.
     """
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev")
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
 
 
 XV_RATIO = 0.2
@@ -191,10 +418,11 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     prepare_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test")
+    # currently we do not do any augmentation of these partial treebanks
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
 
 
-def process_treebank(treebank, paths):
+def process_treebank(treebank, paths, augment=True):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -220,7 +448,7 @@ def process_treebank(treebank, paths):
     if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
         process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
     else:
-        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment)
 
 
 def main():

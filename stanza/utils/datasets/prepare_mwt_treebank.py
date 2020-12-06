@@ -35,7 +35,7 @@ def process_treebank(treebank, paths):
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
 
         # first we process the tokenization data
-        prepare_tokenizer_treebank.process_treebank(treebank, paths)
+        prepare_tokenizer_treebank.process_treebank(treebank, paths, augment=False)
 
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "train", "in")
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "dev", "gold")
