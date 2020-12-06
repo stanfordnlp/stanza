@@ -267,7 +267,7 @@ def augment_ancora(sents):
 
     return new_sents
 
-def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
+def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
     """
     The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
 
@@ -314,7 +314,10 @@ def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
 
     assert found, "Could not find sentence train-s14205 in Spanish Ancora"
 
-    extra_sentences = augment_ancora(new_sentences)
+    if augment:
+        extra_sentences = augment_ancora(new_sentences)
+    else:
+        extra_sentences = []
 
     write_sentences_to_conllu(output_conllu, new_sentences + extra_sentences)
     convert_conllu_to_txt(output_conllu, output_txt)
@@ -352,7 +355,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy)
+        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
