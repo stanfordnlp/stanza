@@ -214,14 +214,72 @@ def augment_telugu(sents):
             new_sents.append(new_sentence)
     return new_sents
 
+COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
+def augment_ancora(sents):
+    """
+    Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
+
+    This leaves the tokens and all of the other data the same.  The
+    only change made is to change SpaceAfter=No for the "," token and
+    adjust the #text line, with the assumption that the conllu->txt
+    conversion will correctly handle this change.
+    """
+    new_sents = []
+    for sentences in sents:
+        if not sentences[1].startswith("# text"):
+            raise ValueError("UD_Spanish-AnCora not in the expected format")
+
+    for sentence in sents:
+        match = COMMA_SEPARATED_RE.search(sentence[1])
+        if match and random.random() < 0.03:
+            for idx, word in enumerate(sentence):
+                if word.startswith("#"):
+                    continue
+                # find() doesn't work because we wind up finding substrings
+                if word.split("\t")[1] != match.group(1):
+                    continue
+                if sentence[idx+1].split("\t")[1] != ',':
+                    continue
+                if sentence[idx+2].split("\t")[2] != match.group(2):
+                    continue
+                break
+            if idx == len(sentence) - 1:
+                # this can happen with MWTs.  we may actually just
+                # want to skip MWTs anyway, so no big deal
+                continue
+            # now idx+1 should be the line with the comma in it
+            comma = sentence[idx+1]
+            pieces = comma.split("\t")
+            assert pieces[1] == ','
+            if pieces[-1] == '_':
+                pieces[-1] = "SpaceAfter=No"
+            else:
+                pieces[-1] = pieces[-1] + "|SpaceAfter=No"
+            comma = "\t".join(pieces)
+            new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
+
+            text_offset = sentence[1].find(match.group(1) + ", " + match.group(2))
+            text_len = len(match.group(1) + ", " + match.group(2))
+            new_text = sentence[1][:text_offset] + match.group(1) + "," + match.group(2) + sentence[1][text_offset+text_len:]
+            new_sent[1] = new_text
+
+            new_sents.append(new_sent)
+
+    return new_sents
+
 def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
     """
-    The basic Spanish tokenizer has an issue where asdf,zzzz does not get tokenized.
+    The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
 
     One possible problem is with this sentence:
     # orig_file_sentence 143#5
     In this sentence, there is a comma smashed next to a token.  Seems incorrect.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
     """
+    random.seed(1234)
     sents = read_sentences_from_conllu(input_conllu)
 
     ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
@@ -256,7 +314,9 @@ def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
 
     assert found, "Could not find sentence train-s14205 in Spanish Ancora"
 
-    write_sentences_to_conllu(output_conllu, new_sentences)
+    extra_sentences = augment_ancora(new_sentences)
+
+    write_sentences_to_conllu(output_conllu, new_sentences + extra_sentences)
     convert_conllu_to_txt(output_conllu, output_txt)
 
 
