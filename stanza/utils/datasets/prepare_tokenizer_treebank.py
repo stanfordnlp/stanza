@@ -28,6 +28,7 @@ import random
 import re
 import shutil
 import subprocess
+import tempfile
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
@@ -37,6 +38,40 @@ import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 from stanza.models.common.constant import treebank_to_short_name
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+
+
+def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
+    original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
+    copied = f"{dest_dir}/{short_name}.{dest_file}.conllu"
+
+    shutil.copyfile(original, copied)
+
+def copy_conllu_treebank(treebank, paths, dest_dir):
+    """
+    This utility method copies only the conllu files to the given destination directory.
+
+    Both POS and lemma annotators need this.
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+
+    short_name = treebank_to_short_name(treebank)
+    short_language = short_name.split("_")[0]
+
+    with tempfile.TemporaryDirectory() as tokenizer_dir:
+        paths = dict(paths)
+        paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
+
+        # first we process the tokenization data
+        process_treebank(treebank, paths, augment=False, prepare_labels=False)
+
+        # now we copy the processed conllu data files
+        os.makedirs(dest_dir, exist_ok=True)
+        copy_conllu_file(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
+        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
+        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
+        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
+        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
+
 
 def read_sentences_from_conllu(filename):
     sents = []
