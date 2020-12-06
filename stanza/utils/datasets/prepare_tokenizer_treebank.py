@@ -214,6 +214,52 @@ def augment_telugu(sents):
             new_sents.append(new_sentence)
     return new_sents
 
+def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
+    """
+    The basic Spanish tokenizer has an issue where asdf,zzzz does not get tokenized.
+
+    One possible problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there is a comma smashed next to a token.  Seems incorrect.
+    """
+    sents = read_sentences_from_conllu(input_conllu)
+
+    ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
+    NEW_FIXED = ["29	,	,	PUNCT	PUNCT	PunctType=Comm	32	punct	_	SpaceAfter=No",   # TODO dunno about the head
+                 "30	Comerç	Comerç	PROPN	PROPN	_	26	flat	_	_"]
+    new_sentences = []
+    found = False
+    for sentence in sents:
+        if sentence[0].strip() != '# sent_id = train-s14205':
+            new_sentences.append(sentence)
+            continue
+        assert not found, "WTF"
+        found = True
+
+        for idx, word in enumerate(sentence):
+            if word.strip() == ORIGINAL_BAD:
+                break
+        assert idx == 31, "Could not find ,Comerç at the expected line number.  Perhaps the treebank has been fixed?"
+        for word in sentence[3:idx]:
+            assert int(sentence[idx].strip().split("\t")[6]) < idx
+        new_sentence = sentence[:idx] + NEW_FIXED
+        # increase the token idx and the dep of each word as appropriate
+        for word in sentence[idx+1:]:
+            pieces = word.strip().split("\t")
+            pieces[0] = str(int(pieces[0]) + 1)
+            dep = int(pieces[6])
+            if dep > 29:
+                pieces[6] = str(dep + 1)
+            new_sentence.append("\t".join(pieces))
+
+        new_sentences.append(new_sentence)
+
+    assert found, "Could not find sentence train-s14205 in Spanish Ancora"
+
+    write_sentences_to_conllu(output_conllu, new_sentences)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+
 def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_function):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
@@ -244,6 +290,9 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
+    elif short_name.startswith("es_ancora") and dataset == 'train':
+        # note that we always do this for AnCora, since this token is bizarre and confusing
+        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
