@@ -366,6 +366,12 @@ class Sentence(StanzaObject):
                     self.tokens.append(Token(entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
 
+        # add back-pointers for words and tokens to the sentence
+        for w in self.words:
+            w.sent = self
+        for t in self.tokens:
+            t.sent = self
+
         # check if there is dependency info
         is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
         is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
@@ -543,6 +549,7 @@ class Token(StanzaObject):
         self._words = words if words is not None else []
         self._start_char = None
         self._end_char = None
+        self._sent = None
 
         if self._misc is not None:
             self.init_from_misc()
@@ -623,6 +630,16 @@ class Token(StanzaObject):
         """ Set the token's NER tag. Example: 'B-ORG'"""
         self._ner = value if self._is_null(value) == False else None
 
+    @property
+    def sent(self):
+        """ Access the pointer to the sentence that this token belongs to. """
+        return self._sent
+
+    @sent.setter
+    def sent(self, value):
+        """ Set the pointer to the sentence that this token belongs to. """
+        self._sent = value
+
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
@@ -675,6 +692,7 @@ class Word(StanzaObject):
         self._deps = word_entry.get(DEPS, None)
         self._misc = word_entry.get(MISC, None)
         self._parent = None
+        self._sent = None
 
         if self._misc is not None:
             self.init_from_misc()
@@ -815,6 +833,16 @@ class Word(StanzaObject):
         """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
 
+    @property
+    def sent(self):
+        """ Access the pointer to the sentence that this word belongs to. """
+        return self._sent
+
+    @sent.setter
+    def sent(self, value):
+        """ Set the pointer to the sentence that this word belongs to. """
+        self._sent = value
+
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
@@ -879,6 +907,8 @@ class Span(StanzaObject):
         self.text = self.doc.text[self.start_char:self.end_char]
         # collect the words of the span following tokens
         self.words = [w for t in tokens for w in t.words]
+        # set the sentence back-pointer to point to the sentence of the first token
+        self.sent = tokens[0].sent
 
     @property
     def doc(self):
@@ -949,6 +979,16 @@ class Span(StanzaObject):
     def end_char(self, value):
         """ Set the end character offset of this span. """
         self._end_char = value
+
+    @property
+    def sent(self):
+        """ Access the pointer to the sentence that this span belongs to. """
+        return self._sent
+
+    @sent.setter
+    def sent(self, value):
+        """ Set the pointer to the sentence that this span belongs to. """
+        self._sent = value
 
     def to_dict(self):
         """ Dumps the span into a dictionary. """
