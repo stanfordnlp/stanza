@@ -372,8 +372,74 @@ def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_fun
     write_sentences_to_conllu(output_conllu, sents + new_sents)
     convert_conllu_to_txt(output_conllu, output_txt)
 
+def remove_spaces_from_sentences(sents):
+    """
+    Makes sure every word in the list of sentences has SpaceAfter=No.
+
+    Returns a new list of sentences
+    """
+    new_sents = []
+    for sentence in sents:
+        new_sentence = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sentence.append(word)
+                continue
+            pieces = word.split("\t")
+            if pieces[-1] == "_":
+                pieces[-1] = "SpaceAfter=No"
+            elif pieces[-1].find("SpaceAfter=No") >= 0:
+                pass
+            else:
+                raise ValueError("oops")
+            word = "\t".join(pieces)
+            new_sentence.append(word)
+        new_sents.append(new_sentence)
+    return new_sents
+
+def remove_spaces(input_conllu, output_conllu, output_txt):
+    """
+    Turns a dataset into something appropriate for building a segmenter.
+
+    For example, this works well on the Korean datasets.
+    """
+    sents = read_sentences_from_conllu(input_conllu)
+
+    new_sents = remove_spaces_from_sentences(sents)
+
+    write_sentences_to_conllu(output_conllu, new_sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+
+def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels=True):
+    """
+    Builds a combined dataset out of multiple Korean datasets.
+
+    Currently this uses GSD and Kaist.  If a segmenter-appropriate
+    dataset was requested, spaces are removed.
+    """
+    gsd_conllu = common.find_treebank_dataset_file("UD_Korean-GSD", udbase_dir, dataset, "conllu")
+    kaist_conllu = common.find_treebank_dataset_file("UD_Korean-Kaist", udbase_dir, dataset, "conllu")
+    sents = read_sentences_from_conllu(gsd_conllu) + read_sentences_from_conllu(kaist_conllu)
+
+    segmenter = short_name.endswith("_seg")
+    if segmenter:
+        sents = remove_spaces_from_sentences(sents)
+
+    write_sentences_to_conllu(output_conllu, sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+    if prepare_labels:
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "ko", dataset)
+
+def build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels=True):
+    for dataset in ("train", "dev", "test"):
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels)
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
+    # TODO: do this higher up
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -400,6 +466,8 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         # it would be very difficult for users to switch between the two
         strip_mwt_from_conll(input_conllu, input_conllu_copy)
         shutil.copyfile(input_txt, input_txt_copy)
+    elif short_name.startswith("ko_") and short_name.endswith("_seg"):
+        remove_spaces(input_conllu, input_conllu_copy, input_txt_copy)
     else:
         shutil.copyfile(input_txt, input_txt_copy)
         shutil.copyfile(input_conllu, input_conllu_copy)
@@ -476,19 +544,22 @@ def process_treebank(treebank, paths, augment=True, prepare_labels=True):
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
 
-    train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
-    if not train_txt_file:
-        raise ValueError("Cannot find train file for treebank %s" % treebank)
-
     short_name = treebank_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
-    print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
-
-    if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
-        process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels)
+    if short_name.startswith("ko_combined"):
+        build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels)
     else:
-        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment, prepare_labels)
+        train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
+        if not train_txt_file:
+            raise ValueError("Cannot find train file for treebank %s" % treebank)
+
+        print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
+
+        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
+            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels)
+        else:
+            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment, prepare_labels)
 
 
 def main():

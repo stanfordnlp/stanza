@@ -13,6 +13,8 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension):
     used by UD.  For example, Norwegian or Chinese.  Hence the reason
     to not hardcode it based on treebank
     """
+    if treebank.startswith("UD_Korean") and treebank.endswith("_seg"):
+        treebank = treebank[:-4]
     files = glob.glob(f"{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}")
     if len(files) == 0:
         return None
