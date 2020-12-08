@@ -36,6 +36,29 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
 
+EN_DOC_GOLD_NOSSPLIT_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
+<Token id=7;words=[<Word id=7;text=Joe>]>
+<Token id=8;words=[<Word id=8;text='s>]>
+<Token id=9;words=[<Word id=9;text=favorite>]>
+<Token id=10;words=[<Word id=10;text=food>]>
+<Token id=11;words=[<Word id=11;text=is>]>
+<Token id=12;words=[<Word id=12;text=pizza>]>
+<Token id=13;words=[<Word id=13;text=.>]>
+<Token id=14;words=[<Word id=14;text=He>]>
+<Token id=15;words=[<Word id=15;text=enjoys>]>
+<Token id=16;words=[<Word id=16;text=going>]>
+<Token id=17;words=[<Word id=17;text=to>]>
+<Token id=18;words=[<Word id=18;text=the>]>
+<Token id=19;words=[<Word id=19;text=beach>]>
+<Token id=20;words=[<Word id=20;text=.>]>
+""".strip()
+
 EN_DOC_PRETOKENIZED = \
     "Joe Smith lives in California .\nJoe's favorite  food is  pizza .\n\nHe enjoys going to the beach.\n"
 EN_DOC_PRETOKENIZED_GOLD_TOKENS = """
@@ -194,6 +217,15 @@ def test_spacy():
     # make sure the loaded tokenizer is actually spacy
     assert "SpacyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
     assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_spacy_no_ssplit():
+    nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True, tokenize_no_ssplit=True)
+    doc = nlp(EN_DOC)
+
+    # make sure the loaded tokenizer is actually spacy
+    assert "SpacyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
+    assert EN_DOC_GOLD_NOSSPLIT_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
 def test_sudachipy():
