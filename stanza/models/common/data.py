@@ -120,7 +120,7 @@ def augment_punct(train_data, augment_ratio, should_augment_predicate, can_augme
     new_data = []
     for sentence in train_data:
         if can_augment_predicate(sentence):
-            if random.random() < augment_ratio:
+            if random.random() < augment_ratio and len(sentence) > 1:
                 # todo: could deep copy the words
                 #       or not deep copy any of this
                 new_sentence = list(sentence[:-1])
