@@ -28,6 +28,10 @@ from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
 
+class ResourcesFileNotFoundError(FileNotFoundError):
+    def __init__(self, resources_filepath):
+        super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
+        self.resources_filepath = resources_filepath
 
 class PipelineRequirementsException(Exception):
     """
@@ -67,7 +71,7 @@ class Pipeline:
         logger.debug('Loading resource file...')
         resources_filepath = os.path.join(dir, 'resources.json')
         if not os.path.exists(resources_filepath):
-            raise FileNotFoundError(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
+            raise ResourcesFileNotFoundError(resources_filepath)
         with open(resources_filepath) as infile:
             resources = json.load(infile)
         if lang in resources:
