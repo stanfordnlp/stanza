@@ -33,7 +33,7 @@ def build_argparse():
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
-SHORTNAME_RE = re.compile("[a-z]+_[a-z0-9]+")
+SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 
 def main(run_treebank, model_dir, model_name):
     logger.info("Training program called with:\n" + " ".join(sys.argv))
