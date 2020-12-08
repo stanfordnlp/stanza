@@ -28,6 +28,7 @@ import random
 import re
 import shutil
 import subprocess
+import tempfile
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
@@ -37,6 +38,40 @@ import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 from stanza.models.common.constant import treebank_to_short_name
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+
+
+def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
+    original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
+    copied = f"{dest_dir}/{short_name}.{dest_file}.conllu"
+
+    shutil.copyfile(original, copied)
+
+def copy_conllu_treebank(treebank, paths, dest_dir):
+    """
+    This utility method copies only the conllu files to the given destination directory.
+
+    Both POS and lemma annotators need this.
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+
+    short_name = treebank_to_short_name(treebank)
+    short_language = short_name.split("_")[0]
+
+    with tempfile.TemporaryDirectory() as tokenizer_dir:
+        paths = dict(paths)
+        paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
+
+        # first we process the tokenization data
+        process_treebank(treebank, paths, augment=False, prepare_labels=False)
+
+        # now we copy the processed conllu data files
+        os.makedirs(dest_dir, exist_ok=True)
+        copy_conllu_file(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
+        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
+        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
+        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
+        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
+
 
 def read_sentences_from_conllu(filename):
     sents = []
@@ -97,7 +132,7 @@ def split_train_file(treebank, train_input_conllu,
 def mwt_name(base_dir, short_name, dataset):
     return f"{base_dir}/{short_name}-ud-{dataset}-mwt.json"
 
-def prepare_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
+def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
     prepare_tokenizer_data.main([input_txt,
                                  input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
@@ -267,7 +302,7 @@ def augment_ancora(sents):
 
     return new_sents
 
-def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
+def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
     """
     The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
 
@@ -314,7 +349,10 @@ def fix_spanish_ancora(input_conllu, output_conllu, output_txt):
 
     assert found, "Could not find sentence train-s14205 in Spanish Ancora"
 
-    extra_sentences = augment_ancora(new_sentences)
+    if augment:
+        extra_sentences = augment_ancora(new_sentences)
+    else:
+        extra_sentences = []
 
     write_sentences_to_conllu(output_conllu, new_sentences + extra_sentences)
     convert_conllu_to_txt(output_conllu, output_txt)
@@ -335,7 +373,7 @@ def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_fun
     convert_conllu_to_txt(output_conllu, output_txt)
 
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
@@ -352,7 +390,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy)
+        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
     elif short_name == "en_ewt":
         # For a variety of reasons we want to strip the MWT from English
         # One reason in particular is that other English datasets do not
@@ -366,22 +404,23 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         shutil.copyfile(input_txt, input_txt_copy)
         shutil.copyfile(input_conllu, input_conllu_copy)
 
-    prepare_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
+    if prepare_labels:
+        prepare_dataset_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True, prepare_labels=True):
     """
     Process a normal UD treebank with train/dev/test splits
 
     SL-SSJ and Vietnamese both use this code path as well.
     """
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment, prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment, prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment, prepare_labels)
 
 
 XV_RATIO = 0.2
 
-def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels=True):
     """
     Process a UD treebank with only train/test splits
 
@@ -414,15 +453,16 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
                             dev_output_txt=dev_output_txt):
         return
 
-    prepare_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
-    prepare_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
+    if prepare_labels:
+        prepare_dataset_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
+        prepare_dataset_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, prepare_labels=prepare_labels)
 
 
-def process_treebank(treebank, paths, augment=True):
+def process_treebank(treebank, paths, augment=True, prepare_labels=True):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -446,9 +486,9 @@ def process_treebank(treebank, paths, augment=True):
     print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
     if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
-        process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+        process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels)
     else:
-        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment)
+        process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment, prepare_labels)
 
 
 def main():
