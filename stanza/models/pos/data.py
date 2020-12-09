@@ -163,7 +163,3 @@ class DataLoader:
             res.append(current)
 
         return res
-
-def augment_nopunct_predicate(sentence):
-    last_word = sentence[-1]
-    return last_word[UPOS] == 'PUNCT'

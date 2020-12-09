@@ -143,8 +143,6 @@ def train(args):
     # based on the options chosen
     logger.info("Original data size: {}".format(len(train_data)))
     train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                    data.should_augment_nopunct_predicate,
-                                    data.can_augment_nopunct_predicate,
                                     keep_original_sentences=False))
     logger.info("Augmented data size: {}".format(len(train_data)))
     train_doc = Document(train_data)

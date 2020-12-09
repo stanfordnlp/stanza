@@ -8,6 +8,7 @@ import random
 import torch
 
 import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.doc import HEAD, ID, UPOS
 
 logger = logging.getLogger('stanza')
 
@@ -82,7 +83,28 @@ def get_augment_ratio(train_data, should_augment_predicate, can_augment_predicat
     return ratio
 
 
-def augment_punct(train_data, augment_ratio, should_augment_predicate, can_augment_predicate, keep_original_sentences=True):
+def should_augment_nopunct_predicate(sentence):
+    last_word = sentence[-1]
+    return last_word[UPOS] == 'PUNCT'
+
+def can_augment_nopunct_predicate(sentence):
+    """
+    Check that the sentence ends with PUNCT and also doesn't have any words which depend on the last word
+    """
+    last_word = sentence[-1]
+    if last_word[UPOS] != 'PUNCT':
+        return False
+    # don't cut off MWT
+    if len(last_word[ID]) > 1:
+        return False
+    if any(len(word[ID]) == 1 and word[HEAD] == last_word[ID][0] for word in sentence):
+        return False
+    return True
+
+def augment_punct(train_data, augment_ratio,
+                  should_augment_predicate=should_augment_nopunct_predicate,
+                  can_augment_predicate=can_augment_nopunct_predicate,
+                  keep_original_sentences=True):
 
     """
     Adds extra training data to compensate for some models having all sentences end with PUNCT
@@ -109,7 +131,7 @@ def augment_punct(train_data, augment_ratio, should_augment_predicate, can_augme
         return []
 
     if augment_ratio is None:
-        augment_ratio = get_augment_ratio(train_data, can_augment_predicate, should_augment_predicate)
+        augment_ratio = get_augment_ratio(train_data, should_augment_predicate, can_augment_predicate)
 
     if augment_ratio <= 0:
         if keep_original_sentences:
