@@ -136,7 +136,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | English | OntoNotes | 18 | 88.8 |
 | French | WikiNER | 4 | 92.9 |
 | German | CoNLL03 | 4 | 81.9 |
-| German | GermEval14 | 4 | 85.2 |
+| German | GermEval2014 | 4 | 85.2 |
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |

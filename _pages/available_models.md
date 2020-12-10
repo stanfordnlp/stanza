@@ -161,7 +161,7 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 | English | en | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | French | fr | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | German | de | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German | de | GermEval14 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
+| German | de | GermEval2014 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
 | Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
