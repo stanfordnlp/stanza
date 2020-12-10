@@ -1,6 +1,7 @@
 
 
 import logging
+import os
 
 from stanza.models import tagger
 
@@ -24,6 +25,10 @@ def run_treebank(mode, paths, treebank, short_name,
     test_pred_file = temp_output_file if temp_output_file else f"{pos_dir}/{short_name}.test.pred.conllu"
 
     if mode == Mode.TRAIN:
+        if not os.path.exists(train_file):
+            logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_file)
+            return
+
         # some languages need reduced batch size
         if short_name == 'de_hdt':
             # 'UD_German-HDT'
