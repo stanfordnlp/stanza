@@ -71,7 +71,7 @@ for sh, fn in zip(shorthands, fullnames):
 # actual factory class as seen in models.pos.xpos_vocab_factory.
 first = True
 with open(output_file, 'w') as f:
-    print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_factory.
+    print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_vocab_factory.
 # Please don't edit it!
 
 from models.pos.vocab import WordVocab, XPOSVocab
