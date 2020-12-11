@@ -58,8 +58,8 @@ def main(run_treebank, model_dir, model_name):
         if treebank.endswith("/"):
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
-            ud_treebank = common.get_ud_treebanks(paths["UDBASE"])
-            treebanks.append(t)
+            ud_treebanks = common.get_ud_treebanks(paths["UDBASE"])
+            treebanks.extend(ud_treebanks)
         else:
             treebanks.append(treebank)
 
