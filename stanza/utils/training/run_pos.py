@@ -49,6 +49,11 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--shorthand", short_name,
                       "--mode", "train"]
 
+        if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
+            # we couldn't find word vectors for these languages:
+            # coptic, naija, old russian, turkish german, swedish sign language
+            train_args.append("--no_pretrain")
+
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
