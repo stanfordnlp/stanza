@@ -10,6 +10,14 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
+def wordvec_args(short_language):
+    if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
+        # we couldn't find word vectors for these languages:
+        # coptic, naija, old russian, turkish german, swedish sign language
+        logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
+        return ["--no_pretrain"]
+    else:
+        return []
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -48,12 +56,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-
-        if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
-            # we couldn't find word vectors for these languages:
-            # coptic, naija, old russian, turkish german, swedish sign language
-            train_args.append("--no_pretrain")
-
+        train_args = train_args + wordvec_args(short_language)
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
@@ -66,6 +69,13 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
+        dev_args = dev_args + wordvec_args(short_language)
+
+        if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
+            # we couldn't find word vectors for these languages:
+            # coptic, naija, old russian, turkish german, swedish sign language
+            dev_args.append("--no_pretrain")
+
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
@@ -81,6 +91,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
+        test_args = test_args + wordvec_args(short_language)
         test_args = test_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
