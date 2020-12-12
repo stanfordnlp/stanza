@@ -48,51 +48,55 @@ def get_factory(sh, fn):
                 best_size = length
     return key
 
-if len(sys.argv) != 3:
-    print('Usage: {} list_of_tb_file output_factory_file'.format(sys.argv[0]))
-    sys.exit(0)
+def main():
+    if len(sys.argv) != 3:
+        print('Usage: {} list_of_tb_file output_factory_file'.format(sys.argv[0]))
+        sys.exit(0)
 
-# Read list of all treebanks of concern
-list_of_tb_file, output_file = sys.argv[1:]
+    # Read list of all treebanks of concern
+    list_of_tb_file, output_file = sys.argv[1:]
 
-shorthands = []
-fullnames = []
-with open(list_of_tb_file) as f:
-    for line in f:
-        treebank = line.strip()
-        fullnames.append(treebank)
-        if SHORTNAME_RE.match(treebank):
-            shorthands.append(treebank)
-        else:
-            shorthands.append(treebank_to_short_name(treebank))
+    shorthands = []
+    fullnames = []
+    with open(list_of_tb_file) as f:
+        for line in f:
+            treebank = line.strip()
+            fullnames.append(treebank)
+            if SHORTNAME_RE.match(treebank):
+                shorthands.append(treebank)
+            else:
+                shorthands.append(treebank_to_short_name(treebank))
 
-# For each treebank, we would like to find the XPOS Vocab configuration that minimizes
-# the number of total classes needed to predict by all tagger classifiers. This is
-# achieved by enumerating different options of separators that different treebanks might
-# use, and comparing that to treating the XPOS tags as separate categories (using a
-# WordVocab).
-mapping = defaultdict(list)
-for sh, fn in zip(shorthands, fullnames):
-    factory = get_factory(sh, fn)
-    mapping[factory].append(sh)
+    # For each treebank, we would like to find the XPOS Vocab configuration that minimizes
+    # the number of total classes needed to predict by all tagger classifiers. This is
+    # achieved by enumerating different options of separators that different treebanks might
+    # use, and comparing that to treating the XPOS tags as separate categories (using a
+    # WordVocab).
+    mapping = defaultdict(list)
+    for sh, fn in zip(shorthands, fullnames):
+        factory = get_factory(sh, fn)
+        mapping[factory].append(sh)
 
-# Generate code. This takes the XPOS vocabulary classes selected above, and generates the
-# actual factory class as seen in models.pos.xpos_vocab_factory.
-first = True
-with open(output_file, 'w') as f:
-    print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_vocab_factory.
+    # Generate code. This takes the XPOS vocabulary classes selected above, and generates the
+    # actual factory class as seen in models.pos.xpos_vocab_factory.
+    first = True
+    with open(output_file, 'w') as f:
+        print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_vocab_factory.
 # Please don't edit it!
 
 from models.pos.vocab import WordVocab, XPOSVocab
 
 def xpos_vocab_factory(data, shorthand):''', file=f)
 
-    for key in mapping:
-        print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in mapping[key]])), file=f)
-        print("        return {}".format(key), file=f)
+        for key in mapping:
+            print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in mapping[key]])), file=f)
+            print("        return {}".format(key), file=f)
 
-        first = False
-    print('''    else:
+            first = False
+        print('''    else:
         raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))''', file=f)
 
-print('Done!')
+    print('Done!')
+
+if __name__ == "__main__":
+    main()
