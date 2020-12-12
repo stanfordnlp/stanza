@@ -38,25 +38,18 @@ def filter_data(data, idx):
         if flag: data_filtered.append(sentence)
     return data_filtered
 
-
-# For each treebank, we would like to find the XPOS Vocab configuration that minimizes
-# the number of total classes needed to predict by all tagger classifiers. This is
-# achieved by enumerating different options of separators that different treebanks might
-# use, and comparing that to treating the XPOS tags as separate categories (using a
-# WordVocab).
-mapping = defaultdict(list)
-for sh, fn in zip(shorthands, fullnames):
+def get_factory(sh, fn):
     print('Resolving vocab option for {}...'.format(sh))
-    if not os.path.exists('data/pos/{}.train.in.conllu'.format(sh)):
+    train_file = 'data/pos/{}.train.in.conllu'.format(sh)
+    if not os.path.exists(train_file):
         raise UserWarning('Training data for {} not found in the data directory, falling back to using WordVocab. To generate the '
-            'XPOS vocabulary for this treebank properly, please run the following command first:\n'
-            '\tbash scripts/prep_pos_data.sh {}'.format(fn, fn))
+                          'XPOS vocabulary for this treebank properly, please run the following command first:\n'
+                          '\tstanza/utils/datasets/prepare_pos_treebank.py {}'.format(fn, fn))
         # without the training file, there's not much we can do
         key = 'WordVocab(data, shorthand, idx=2)'
-        mapping[key].append(sh)
-        continue
+        return key
 
-    doc = Document(CoNLL.conll2dict(input_file='data/pos/{}.train.in.conllu'.format(sh)))
+    doc = Document(CoNLL.conll2dict(input_file=train_file))
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
     print(f'Original length = {len(data)}')
     data = filter_data(data, idx=2)
@@ -71,7 +64,17 @@ for sh, fn in zip(shorthands, fullnames):
             if length < best_size:
                 key = 'XPOSVocab(data, shorthand, idx=2, sep="{}")'.format(sep)
                 best_size = length
-    mapping[key].append(sh)
+    return key
+
+# For each treebank, we would like to find the XPOS Vocab configuration that minimizes
+# the number of total classes needed to predict by all tagger classifiers. This is
+# achieved by enumerating different options of separators that different treebanks might
+# use, and comparing that to treating the XPOS tags as separate categories (using a
+# WordVocab).
+mapping = defaultdict(list)
+for sh, fn in zip(shorthands, fullnames):
+    factory = get_factory(sh, fn)
+    mapping[factory].append(sh)
 
 # Generate code. This takes the XPOS vocabulary classes selected above, and generates the
 # actual factory class as seen in models.pos.xpos_vocab_factory.
