@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import re
 import sys
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common.constant import treebank_to_short_name
@@ -14,13 +15,18 @@ if len(sys.argv) != 3:
 # Read list of all treebanks of concern
 list_of_tb_file, output_file = sys.argv[1:]
 
+SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
+
 shorthands = []
 fullnames = []
 with open(list_of_tb_file) as f:
     for line in f:
         treebank = line.strip()
         fullnames.append(treebank)
-        shorthands.append(treebank_to_short_name(treebank))
+        if SHORTNAME_RE.match(treebank):
+            shorthands.append(treebank)
+        else:
+            shorthands.append(treebank_to_short_name(treebank))
 
 def filter_data(data, idx):
     data_filtered = []
