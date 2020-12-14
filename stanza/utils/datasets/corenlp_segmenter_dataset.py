@@ -44,7 +44,8 @@ def process_treebank(treebank, paths, output_dir):
         short_name = treebank_to_short_name(treebank)
         
         # first we process the tokenization data
-        prepare_tokenizer_treebank.process_treebank(treebank, paths, augment=False, prepare_labels=False)
+        args = argparse.Namespace()
+        prepare_tokenizer_treebank.process_treebank(treebank, paths, args, augment=False, prepare_labels=False)
 
         # TODO: these names should be refactored
         train_file = f"{tokenizer_dir}/{short_name}.train.gold.conllu"

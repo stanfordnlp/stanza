@@ -22,6 +22,7 @@ There are a few special case handlings of treebanks in this file:
   - however, instead of splitting very tiny treebanks, we skip those
 """
 
+import argparse
 import glob
 import os
 import random
@@ -62,7 +63,8 @@ def copy_conllu_treebank(treebank, paths, dest_dir):
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
 
         # first we process the tokenization data
-        process_treebank(treebank, paths, augment=False, prepare_labels=False)
+        args = argparse.Namespace()
+        process_treebank(treebank, paths, args, augment=False, prepare_labels=False)
 
         # now we copy the processed conllu data files
         os.makedirs(dest_dir, exist_ok=True)
@@ -532,7 +534,7 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, prepare_labels=prepare_labels)
 
 
-def process_treebank(treebank, paths, augment=True, prepare_labels=True):
+def process_treebank(treebank, paths, args, augment=True, prepare_labels=True):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -542,6 +544,8 @@ def process_treebank(treebank, paths, augment=True, prepare_labels=True):
 
     Also, there is no specific mechanism for UD_Arabic-NYUAD or
     similar treebanks, which need integration with LDC datsets
+
+    TODO: put augment & prepare_labels in the args
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]

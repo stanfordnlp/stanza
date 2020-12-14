@@ -1,9 +1,13 @@
 
+import argparse
 import glob
+import logging
 import os
 import sys
 
 import stanza.utils.default_paths as default_paths
+
+logger = logging.getLogger('stanza')
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension):
     """
@@ -81,16 +85,30 @@ def get_ud_treebanks(udbase_dir, filtered=True):
                          num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000)]
     return treebanks
 
-def main(process_treebank):
-    if len(sys.argv) == 1:
-        raise ValueError("Need to provide a treebank name")
+def build_argparse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
+    return parser
 
-    treebank = sys.argv[1]
+
+def main(process_treebank, add_specific_args=None):
+    logger.info("Datasets program called with:\n" + " ".join(sys.argv))
+
+    parser = build_argparse()
+    if add_specific_args is not None:
+        add_specific_args(parser)
+    args = parser.parse_args()
+
     paths = default_paths.get_default_paths()
-    if treebank.lower() in ('ud_all', 'all_ud'):
-        treebanks = get_ud_treebanks(paths["UDBASE"])
-        for t in treebanks:
-            process_treebank(t, paths)
-    else:
-        process_treebank(treebank, paths)
+
+    treebanks = []
+    for treebank in args.treebanks:
+        if treebank.lower() in ('ud_all', 'all_ud'):
+            ud_treebanks = get_ud_treebanks(paths["UDBASE"])
+            treebanks.extend(ud_treebanks)
+        else:
+            treebanks.append(treebank)
+
+    for treebank in treebanks:
+        process_treebank(treebank, paths, args)
 

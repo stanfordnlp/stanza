@@ -24,7 +24,7 @@ def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     input_conllu_mwt = f"{mwt_dir}/{short_name}.{dataset}.{particle}.conllu"
     shutil.copyfile(input_conllu_tokenizer, input_conllu_mwt)
 
-def process_treebank(treebank, paths):
+def process_treebank(treebank, paths, args):
     short_name = treebank_to_short_name(treebank)
 
     mwt_dir = paths["MWT_DATA_DIR"]
@@ -35,7 +35,7 @@ def process_treebank(treebank, paths):
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
 
         # first we process the tokenization data
-        prepare_tokenizer_treebank.process_treebank(treebank, paths, augment=False)
+        prepare_tokenizer_treebank.process_treebank(treebank, paths, args, augment=False)
 
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "train", "in")
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "dev", "gold")
