@@ -30,32 +30,32 @@ class CRFLoss(nn.Module):
             transitions: the transition matrix
         """
         # TODO: handle <start> and <end> tags
-        self.bs, self.sl, self.nc = inputs.size()
-        unary_scores = self.crf_unary_score(inputs, masks, tag_indices)
-        binary_scores = self.crf_binary_score(inputs, masks, tag_indices)
+        input_bs, input_sl, input_nc = inputs.size()
+        unary_scores = self.crf_unary_score(inputs, masks, tag_indices, input_bs, input_sl, input_nc)
+        binary_scores = self.crf_binary_score(inputs, masks, tag_indices, input_bs, input_sl, input_nc)
         log_norm = self.crf_log_norm(inputs, masks, tag_indices)
         log_likelihood = unary_scores + binary_scores - log_norm # batch_size
         loss = torch.sum(-log_likelihood)
         if self._batch_average:
-            loss = loss / self.bs
+            loss = loss / input_bs
         else:
             total = masks.eq(0).sum()
             loss = loss / (total + 1e-8)
         return loss, self._transitions
 
-    def crf_unary_score(self, inputs, masks, tag_indices):
+    def crf_unary_score(self, inputs, masks, tag_indices, input_bs, input_sl, input_nc):
         """
         @return:
             unary_scores: batch_size
         """
-        flat_inputs = inputs.view(self.bs, -1)
+        flat_inputs = inputs.view(input_bs, -1)
         flat_tag_indices = tag_indices + \
-                set_cuda(torch.arange(self.sl).long().unsqueeze(0) * self.nc, tag_indices.is_cuda)
-        unary_scores = torch.gather(flat_inputs, 1, flat_tag_indices).view(self.bs, -1)
+                set_cuda(torch.arange(input_sl).long().unsqueeze(0) * input_nc, tag_indices.is_cuda)
+        unary_scores = torch.gather(flat_inputs, 1, flat_tag_indices).view(input_bs, -1)
         unary_scores.masked_fill_(masks, 0)
         return unary_scores.sum(dim=1)
     
-    def crf_binary_score(self, inputs, masks, tag_indices):
+    def crf_binary_score(self, inputs, masks, tag_indices, input_bs, input_sl, input_nc):
         """
         @return:
             binary_scores: batch_size
@@ -65,11 +65,11 @@ class CRFLoss(nn.Module):
         start_indices = tag_indices[:, :nt]
         end_indices = tag_indices[:, 1:]
         # flat matrices
-        flat_transition_indices = start_indices * self.nc + end_indices
+        flat_transition_indices = start_indices * input_nc + end_indices
         flat_transition_indices = flat_transition_indices.view(-1)
         flat_transition_matrix = self._transitions.view(-1)
         binary_scores = torch.gather(flat_transition_matrix, 0, flat_transition_indices)\
-                .view(self.bs, -1)
+                .view(input_bs, -1)
         score_masks = masks[:, 1:]
         binary_scores.masked_fill_(score_masks, 0)
         return binary_scores.sum(dim=1)
