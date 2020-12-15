@@ -47,6 +47,7 @@ A [`Sentence`](data_objects.md#sentence) object represents a sentence (as is seg
 | tokens | `List[Token]` | The list of tokens in this sentence. |
 | words | `List[Word]` | The list of words in this sentence. |
 | entities (ents) | `List[Span]` | The list of entities in this sentence. |
+| sentiment | `str` | The sentiment value for this sentence, as a string. Note that only a few languages have a sentiment model. |
 
 [`Sentence`](data_objects.md#sentence) also contains the following methods:
 
@@ -56,6 +57,8 @@ A [`Sentence`](data_objects.md#sentence) object represents a sentence (as is seg
 | print_dependencies | `None` | Print the syntactic dependencies for this sentence. |
 | print_tokens | `None` | Print the tokens for this sentence. |
 | print_words | `None` | Print the words for this sentence. |
+| tokens_string | `str` | Similar to `print_tokens`, but instead of print the tokens, dump the tokens into a string. |
+| words_string | `str` | Similar to `print_words`, but instead of print the words, dump the words into a string. |
 
 ## Token
 
