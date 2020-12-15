@@ -70,12 +70,6 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--shorthand", short_name,
                     "--mode", "predict"]
         dev_args = dev_args + wordvec_args(short_language)
-
-        if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
-            # we couldn't find word vectors for these languages:
-            # coptic, naija, old russian, turkish german, swedish sign language
-            dev_args.append("--no_pretrain")
-
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
