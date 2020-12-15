@@ -16,7 +16,7 @@ import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 from stanza.models import tagger
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.utils.training.run_pos import wordvec_args
+from stanza.utils.training.run_pos import pos_batch_size, wordvec_args
 
 logger = logging.getLogger('stanza')
 
@@ -40,6 +40,7 @@ def process_treebank(treebank, paths, args):
         base_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                      "--lang", short_language,
                      "--shorthand", short_name,
+                     "--batch_size", pos_batch_size(short_name),
                      "--mode", "predict"]
         base_args = base_args + wordvec_args(short_language)
 
