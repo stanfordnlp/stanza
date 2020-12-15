@@ -47,7 +47,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
 
     shutil.copyfile(original, copied)
 
-def copy_conllu_treebank(treebank, paths, dest_dir):
+def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -68,14 +68,17 @@ def copy_conllu_treebank(treebank, paths, dest_dir):
         args.prepare_labels = False
         process_treebank(treebank, paths, args)
 
-        # now we copy the processed conllu data files
         os.makedirs(dest_dir, exist_ok=True)
-        copy_conllu_file(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
-        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
-        copy_conllu_file(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
-        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
-        copy_conllu_file(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
 
+        if postprocess is None:
+            postprocess = copy_conllu_file
+
+        # now we copy the processed conllu data files
+        postprocess(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
+        postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
+        copy_conllu_file(dest_dir, "dev.gold", dest_dir, "dev.in", short_name)
+        postprocess(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
+        copy_conllu_file(dest_dir, "test.gold", dest_dir, "test.in", short_name)
 
 def read_sentences_from_conllu(filename):
     sents = []
