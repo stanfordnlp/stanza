@@ -64,7 +64,9 @@ def copy_conllu_treebank(treebank, paths, dest_dir):
 
         # first we process the tokenization data
         args = argparse.Namespace()
-        process_treebank(treebank, paths, args, augment=False, prepare_labels=False)
+        args.augment = False
+        args.prepare_labels = False
+        process_treebank(treebank, paths, args)
 
         # now we copy the processed conllu data files
         os.makedirs(dest_dir, exist_ok=True)
@@ -533,8 +535,13 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     # currently we do not do any augmentation of these partial treebanks
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, prepare_labels=prepare_labels)
 
+def add_specific_args(parser):
+    parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
+                        help='Augment the dataset in various ways')
+    parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
+                        help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
 
-def process_treebank(treebank, paths, args, augment=True, prepare_labels=True):
+def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -544,8 +551,6 @@ def process_treebank(treebank, paths, args, augment=True, prepare_labels=True):
 
     Also, there is no specific mechanism for UD_Arabic-NYUAD or
     similar treebanks, which need integration with LDC datsets
-
-    TODO: put augment & prepare_labels in the args
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
@@ -554,7 +559,7 @@ def process_treebank(treebank, paths, args, augment=True, prepare_labels=True):
     short_language = short_name.split("_")[0]
 
     if short_name.startswith("ko_combined"):
-        build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels)
+        build_combined_korean(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
     else:
         train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
         if not train_txt_file:
@@ -563,13 +568,13 @@ def process_treebank(treebank, paths, args, augment=True, prepare_labels=True):
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
         if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
-            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels)
+            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.prepare_labels)
         else:
-            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment, prepare_labels)
+            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment, args.prepare_labels)
 
 
 def main():
-    common.main(process_treebank)
+    common.main(process_treebank, add_specific_args)
 
 if __name__ == '__main__':
     main()

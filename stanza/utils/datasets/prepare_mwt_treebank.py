@@ -9,6 +9,7 @@ such as
 and it will prepare each of train, dev, test
 """
 
+import argparse
 import os
 import shutil
 import tempfile
@@ -35,7 +36,10 @@ def process_treebank(treebank, paths, args):
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
 
         # first we process the tokenization data
-        prepare_tokenizer_treebank.process_treebank(treebank, paths, args, augment=False)
+        tokenizer_args = argparse.Namespace()
+        tokenizer_args.augment = False
+        tokenizer_args.prepare_labels = True
+        prepare_tokenizer_treebank.process_treebank(treebank, paths, tokenizer_args)
 
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "train", "in")
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "dev", "gold")
