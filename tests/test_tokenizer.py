@@ -180,6 +180,25 @@ ZH_DOC_GOLD_NOSSPLIT_TOKENS = """
 <Token id=16;words=[<Word id=16;text=。>]>
 """.strip()
 
+TH_DOC = "ข้าราชการได้รับการหมุนเวียนเป็นระยะ และเขาได้รับมอบหมายให้ประจำในระดับภูมิภาค"
+TH_DOC_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=ข้าราชการ>]>
+<Token id=2;words=[<Word id=2;text=ได้รับ>]>
+<Token id=3;words=[<Word id=3;text=การ>]>
+<Token id=4;words=[<Word id=4;text=หมุนเวียน>]>
+<Token id=5;words=[<Word id=5;text=เป็นระยะ>]>
+
+<Token id=1;words=[<Word id=1;text=และ>]>
+<Token id=2;words=[<Word id=2;text=เขา>]>
+<Token id=3;words=[<Word id=3;text=ได้>]>
+<Token id=4;words=[<Word id=4;text=รับมอบหมาย>]>
+<Token id=5;words=[<Word id=5;text=ให้>]>
+<Token id=6;words=[<Word id=6;text=ประจำ>]>
+<Token id=7;words=[<Word id=7;text=ใน>]>
+<Token id=8;words=[<Word id=8;text=ระดับ>]>
+<Token id=9;words=[<Word id=9;text=ภูมิภาค>]>
+""".strip()
+
 def test_tokenize():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
     doc = nlp(EN_DOC)
@@ -258,4 +277,11 @@ def test_jieba_no_ssplit():
 
     assert "JiebaTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
     assert ZH_DOC_GOLD_NOSSPLIT_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_pythainlp():
+    nlp = stanza.Pipeline(lang='th', dir=TEST_MODELS_DIR, processors={'tokenize': 'pythainlp'}, package=None)
+    doc = nlp(TH_DOC)
+    assert "PyThaiNLPTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
+    assert TH_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
