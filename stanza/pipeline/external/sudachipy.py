@@ -78,7 +78,3 @@ class SudachiPyTokenizer(ProcessorVariant):
             sentences.append(current_sentence)
 
         return doc.Document(sentences, text)
-
-
-
-
