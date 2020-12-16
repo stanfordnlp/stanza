@@ -8,6 +8,8 @@
 # set up config
 source scripts/config.sh
 
+set -e
+
 # show machine name
 echo '---'
 echo 'running full end to end pipeline'
