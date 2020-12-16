@@ -70,7 +70,7 @@ def main(run_treebank, model_dir, model_name):
             short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
 
-        if mode == Mode.TRAIN and not command_args.force:
+        if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
             model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
             if os.path.exists(model_path):
                 logger.info("%s: %s exists, skipping!" % (treebank, model_path))
@@ -78,7 +78,7 @@ def main(run_treebank, model_dir, model_name):
             else:
                 logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
-        if command_args.temp_output:
+        if command_args.temp_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
                 run_treebank(mode, paths, treebank, short_name,
                              temp_output_file.name, command_args, extra_args)
@@ -86,11 +86,11 @@ def main(run_treebank, model_dir, model_name):
             run_treebank(mode, paths, treebank, short_name,
                          None, command_args, extra_args)
 
-def run_eval_script(eval_gold, eval_pred, start_row, end_row=None):
+def run_eval_script(eval_gold, eval_pred, start_row=None, end_row=None):
     # TODO: this is a silly way of doing this
     # would prefer to call it as a module
     # but the eval script expects sys args and prints the results to stdout
-    if end_row is None:
+    if end_row is None and start_row is not None:
         end_row = start_row + 1
 
     path = pathlib.Path(os.path.join(os.path.split(__file__)[0], ".."))
@@ -99,5 +99,8 @@ def run_eval_script(eval_gold, eval_pred, start_row, end_row=None):
     eval_script = os.path.join(path, "conll18_ud_eval.py")
     results = subprocess.check_output([eval_script, "-v", eval_gold, eval_pred])
     results = results.decode(encoding="utf-8")
-    results = [x.split("|")[3].strip() for x in results.split("\n")[start_row:end_row]]
-    return " ".join(results)
+    if start_row is None:
+        return results
+    else:
+        results = [x.split("|")[3].strip() for x in results.split("\n")[start_row:end_row]]
+        return " ".join(results)
