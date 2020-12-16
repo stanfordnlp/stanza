@@ -39,6 +39,7 @@ class PyThaiNLPTokenizer(ProcessorVariant):
 
         self.pythai_sent_tokenize = pythai_sent_tokenize
         self.pythai_word_tokenize = pythai_word_tokenize
+        self.no_ssplit = config.get('no_ssplit', False)
     
     def process(self, text):
         """ Tokenize a document with the PyThaiNLP tokenizer and wrap the results into a Doc object.
@@ -50,7 +51,12 @@ class PyThaiNLPTokenizer(ProcessorVariant):
         current_sentence = []
         offset = 0
 
-        for sent_str in self.pythai_sent_tokenize(text, engine='crfcut'):
+        if self.no_ssplit:
+            # skip sentence segmentation
+            sent_strs = [text]
+        else:
+            sent_strs = self.pythai_sent_tokenize(text, engine='crfcut')
+        for sent_str in sent_strs:
             for token_str in self.pythai_word_tokenize(sent_str, engine='newmm'):
                 # by default pythainlp will output whitespace as a token
                 # we need to skip these tokens to be consistent with other tokenizers
