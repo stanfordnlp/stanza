@@ -26,6 +26,8 @@ def get_default_paths():
         # TODO: not sure what other people actually have
         # TODO: also, could make this automatically update to the latest
         "UDBASE": "extern_data/ud2/ud-treebanks-v2.7",
+
+        "EXTERN_DIR": "extern_data",
     }
 
     paths = { "DATA_ROOT" : DATA_ROOT }

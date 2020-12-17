@@ -36,8 +36,6 @@ import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postproces
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
-from stanza.models.common.constant import treebank_to_short_name
-
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
 
@@ -55,7 +53,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
     """
     os.makedirs(dest_dir, exist_ok=True)
 
-    short_name = treebank_to_short_name(treebank)
+    short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     with tempfile.TemporaryDirectory() as tokenizer_dir:
@@ -447,6 +445,47 @@ def build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels=
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels)
 
+def build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels):
+    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if dataset == 'train':
+        # could maybe add ParTUT, but that dataset has a slightly different xpos set
+        # (no DE or I)
+        # and I didn't feel like sorting through the differences
+        # Note: currently these each have small changes compared with
+        # the UD2.7 release.  See the issues (possibly closed by now)
+        # filed by AngledLuffa on each of the treebanks for more info.
+        treebanks = ["UD_Italian-ISDT", "UD_Italian-VIT", "UD_Italian-TWITTIRO", "UD_Italian-PoSTWITA"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
+        # TODO: some better way other than hard coding this path?
+        extra_italian = os.path.join(extern_dir, "italian", "italian.mwt")
+        if not os.path.exists(extra_italian):
+            raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_italian)
+        for sentence in extra_sents:
+            if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
+                raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
+            sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
+        sents = sents + extra_sents
+    else:
+        istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(istd_conllu)
+
+    write_sentences_to_conllu(output_conllu, sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+    if prepare_labels:
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+
+
+def build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, prepare_labels=True):
+    for dataset in ("train", "dev", "test"):
+        build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels)
+
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
     # TODO: do this higher up
     os.makedirs(tokenizer_dir, exist_ok=True)
@@ -557,12 +596,15 @@ def process_treebank(treebank, paths, args):
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
+    extern_dir = paths["EXTERN_DIR"]
 
-    short_name = treebank_to_short_name(treebank)
+    short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     if short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
+    elif short_name.startswith("it_combined"):
+        build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, args.prepare_labels)
     else:
         train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
         if not train_txt_file:
