@@ -35,12 +35,14 @@ def build_argparse():
 
 SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 
-def main(run_treebank, model_dir, model_name):
+def main(run_treebank, model_dir, model_name, add_specific_args=None):
     logger.info("Training program called with:\n" + " ".join(sys.argv))
 
     paths = default_paths.get_default_paths()
 
     parser = build_argparse()
+    if add_specific_args is not None:
+        add_specific_args(parser)
     if '--extra_args' in sys.argv:
         idx = sys.argv.index('--extra_args')
         extra_args = sys.argv[idx+1:]
