@@ -1,5 +1,20 @@
 """
 Runs a pipeline end-to-end, reports conll scores.
+
+For example, you can do
+  python3 stanza/utils/training/run_ete.py it_isdt --score_test
+You can run on all models at once:
+  python3 stanza/utils/training/run_ete.py ud_all --score_test
+
+You can also run one model on a different model's data:
+  python3 stanza/utils/training/run_ete.py it_isdt --score_dev --test_data it_vit
+  python3 stanza/utils/training/run_ete.py it_isdt --score_test --test_data it_vit
+
+Running multiple models with a --test_data flag will run them all on the same data:
+  python3 stanza/utils/training/run_ete.py it_combined it_isdt it_vit --score_test --test_data it_vit
+
+If run with no dataset arguments, then the dataset used is the train
+data, which may or may not be useful.
 """
 
 import logging
