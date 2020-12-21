@@ -108,7 +108,7 @@ lcode2lang = {
     "ur": "Urdu",
     "ug": "Uyghur",
     "vi": "Vietnamese",
-    "wbp": "Warlpipi",
+    "wbp": "Warlpiri",
     "cy": "Welsh",
     "wo": "Wolof",
     "yo": "Yoruba",

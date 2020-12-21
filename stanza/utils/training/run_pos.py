@@ -10,6 +10,7 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
+# TODO: move this somewhere common
 def wordvec_args(short_language):
     if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
         # we couldn't find word vectors for these languages:
@@ -18,6 +19,16 @@ def wordvec_args(short_language):
         return ["--no_pretrain"]
     else:
         return []
+
+def pos_batch_size(short_name):
+    if short_name == 'de_hdt':
+        # 'UD_German-HDT'
+        return "2000"
+    elif short_name == 'hr_set':
+        # 'UD_Croatian-SET'
+        return "3000"
+    else:
+        return "5000"
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -38,14 +49,7 @@ def run_treebank(mode, paths, treebank, short_name,
             return
 
         # some languages need reduced batch size
-        if short_name == 'de_hdt':
-            # 'UD_German-HDT'
-            batch_size = "2000"
-        elif short_name == 'hr_set':
-            # 'UD_Croatian-SET'
-            batch_size = "3000"
-        else:
-            batch_size = "5000"
+        batch_size = pos_batch_size(short_name)
 
         train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                       "--train_file", train_file,
@@ -70,12 +74,6 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--shorthand", short_name,
                     "--mode", "predict"]
         dev_args = dev_args + wordvec_args(short_language)
-
-        if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
-            # we couldn't find word vectors for these languages:
-            # coptic, naija, old russian, turkish german, swedish sign language
-            dev_args.append("--no_pretrain")
-
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)

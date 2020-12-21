@@ -74,8 +74,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Treebank " + treebank + " (" + short_name +
                     ") has no lemmas.  Using identity lemmatizer")
         if mode == Mode.TRAIN or mode == Mode.SCORE_DEV:
-            train_args = ["--data_dir", lemma_dir,
-                          "--train_file", train_file,
+            train_args = ["--train_file", train_file,
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
                           "--gold_file", dev_gold_file,
@@ -83,8 +82,7 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)
         elif mode == Mode.SCORE_TEST:
-            train_args = ["--data_dir", lemma_dir,
-                          "--train_file", train_file,
+            train_args = ["--train_file", train_file,
                           "--eval_file", test_in_file,
                           "--output_file", test_pred_file,
                           "--gold_file", test_gold_file,
@@ -99,8 +97,7 @@ def run_treebank(mode, paths, treebank, short_name,
             else:
                 num_epochs = "60"
 
-            train_args = ["--data_dir", lemma_dir,
-                          "--train_file", train_file,
+            train_args = ["--train_file", train_file,
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
                           "--gold_file", dev_gold_file,
@@ -112,8 +109,7 @@ def run_treebank(mode, paths, treebank, short_name,
             lemmatizer.main(train_args)
 
         if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-            dev_args = ["--data_dir", lemma_dir,
-                        "--eval_file", dev_in_file,
+            dev_args = ["--eval_file", dev_in_file,
                         "--output_file", dev_pred_file,
                         "--gold_file", dev_gold_file,
                         "--lang", short_name,
@@ -123,8 +119,7 @@ def run_treebank(mode, paths, treebank, short_name,
             lemmatizer.main(dev_args)
 
         if mode == Mode.SCORE_TEST:
-            test_args = ["--data_dir", lemma_dir,
-                         "--eval_file", test_in_file,
+            test_args = ["--eval_file", test_in_file,
                          "--output_file", test_pred_file,
                          "--gold_file", test_gold_file,
                          "--lang", short_name,
