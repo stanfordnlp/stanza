@@ -91,11 +91,11 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--mode", "predict"]
         test_args = test_args + wordvec_args(short_language)
         test_args = test_args + extra_args
-        logger.info("Running dev POS for {} with args {}".format(treebank, test_args))
+        logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
 
         results = common.run_eval_script(test_gold_file, test_pred_file, 5, 9)
-        logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
+        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 
 def main():
