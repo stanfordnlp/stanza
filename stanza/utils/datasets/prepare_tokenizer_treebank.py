@@ -14,7 +14,6 @@ There are macros for preparing all of the UD treebanks at once:
 Both are present because I kept forgetting which was the correct one
 
 There are a few special case handlings of treebanks in this file:
-  - UD_English-EWT has the MWTs stripped
   - all Vietnamese treebanks have special post-processing to handle
     some of the difficult spacing issues in Vietnamese text
   - treebanks with train and test but no dev split have the
@@ -151,6 +150,9 @@ def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, s
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
 
 def strip_mwt_from_conll(input_conllu, output_conllu):
+    """
+    TODO: currently unused.  Use this when building a combined EWT dataset
+    """
     with open(input_conllu) as fin:
         with open(output_conllu, "w") as fout:
             for line in fin:
@@ -505,15 +507,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
         fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
-    elif short_name == "en_ewt":
-        # For a variety of reasons we want to strip the MWT from English
-        # One reason in particular is that other English datasets do not
-        # have MWT, so if we have the eventual goal of mixing datasets,
-        # it will be impossible to do while keeping MWT.
-        # Another reason is even if we kept MWT in EWT when mixing datasets,
-        # it would be very difficult for users to switch between the two
-        strip_mwt_from_conll(input_conllu, input_conllu_copy)
-        shutil.copyfile(input_txt, input_txt_copy)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, input_conllu_copy, input_txt_copy)
     else:
