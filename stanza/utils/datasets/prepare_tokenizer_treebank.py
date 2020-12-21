@@ -417,6 +417,8 @@ def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset
 
     Currently this uses GSD and Kaist.  If a segmenter-appropriate
     dataset was requested, spaces are removed.
+
+    TODO: we need to handle the difference in xpos tags somehow.
     """
     gsd_conllu = common.find_treebank_dataset_file("UD_Korean-GSD", udbase_dir, dataset, "conllu")
     kaist_conllu = common.find_treebank_dataset_file("UD_Korean-Kaist", udbase_dir, dataset, "conllu")
