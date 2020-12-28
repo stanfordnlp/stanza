@@ -35,6 +35,11 @@ DEFAULT_MODEL_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_resources')
 )
 
+class UnknownProcessorError(ValueError):
+    def __init__(self, unknown):
+        super().__init__(f"Unknown processor type requested: {unknown}")
+        self.unknown_processor = unknown
+
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
@@ -155,8 +160,9 @@ def maintain_processor_list(resources, lang, package, processors):
                 logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
                 processors[MWT] = value
         for key, value in processors.items():
-            assert(key in PIPELINE_NAMES)
             assert(isinstance(key, str) and isinstance(value, str))
+            if key not in PIPELINE_NAMES:
+                raise UnknownProcessorError(key)
             # check if keys and values can be found
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Found {key}: {value}.')
