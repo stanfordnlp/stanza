@@ -265,6 +265,14 @@ def set_logging_level(logging_level, verbose):
     elif verbose == True:
         logging_level = 'INFO'
 
+    if logging_level is None:
+        # default logging level of INFO is set in stanza.__init__
+        # but the user may have set it via the logging API
+        # it should NOT be 0, but let's check to be sure...
+        if logger.level == 0:
+            logger.setLevel('INFO')
+        return logger.level
+
     # Set logging level
     logging_level = logging_level.upper()
     all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
@@ -274,7 +282,7 @@ def set_logging_level(logging_level, verbose):
             f"{logging_level}. Must be one of {', '.join(all_levels)}."
         )
     logger.setLevel(logging_level)
-    return logging_level
+    return logger.level
 
 def process_pipeline_parameters(lang, model_dir, package, processors):
     # Check parameter types and convert values to lower case
@@ -365,7 +373,7 @@ def download(
         model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
-        logging_level='INFO',
+        logging_level=None,
         verbose=None,
         resources_url=DEFAULT_RESOURCES_URL,
         resources_branch=None,

@@ -58,12 +58,11 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
 
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
 
         # set global logging level
         set_logging_level(logging_level, verbose)
-        self.logging_level = logging.getLevelName(logger.level)
         # process different pipeline parameters
         lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
