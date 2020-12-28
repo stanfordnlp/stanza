@@ -26,7 +26,8 @@ class SentimentProcessor(UDProcessor):
 
     def _set_up_model(self, config, use_gpu):
         # get pretrained word vectors
-        self._pretrain = Pretrain(config['pretrain_path'])
+        pretrain_path = config.get('pretrain_path', None)
+        self._pretrain = Pretrain(pretrain_path) if pretrain_path else None
         forward_charlm_path = config.get('forward_charlm_path', None)
         charmodel_forward = CharacterLanguageModel.load(forward_charlm_path, finetune=False) if forward_charlm_path else None
         backward_charlm_path = config.get('backward_charlm_path', None)
