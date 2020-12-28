@@ -31,10 +31,10 @@ def run_treebank(mode, paths, treebank, short_name,
         # some languages need reduced batch size
         if short_name == 'de_hdt':
             # 'UD_German-HDT'
-            batch_size = "1500"
-        elif short_name in ('hr_set', 'fi_tdt', 'ru_taiga', 'cs_cltt', 'gl_treegal', 'lv_lvtb'):
+            batch_size = "1300"
+        elif short_name in ('hr_set', 'fi_tdt', 'ru_taiga', 'cs_cltt', 'gl_treegal', 'lv_lvtb', 'ro_simonero'):
             # 'UD_Croatian-SET', 'UD_Finnish-TDT', 'UD_Russian-Taiga',
-            # 'UD_Czech-CLTT', 'UD_Galician-TreeGal', 'UD_Latvian-LVTB'
+            # 'UD_Czech-CLTT', 'UD_Galician-TreeGal', 'UD_Latvian-LVTB' 'Romanian-SiMoNERo'
             batch_size = "3000"
         else:
             batch_size = "5000"

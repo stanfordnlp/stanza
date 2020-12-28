@@ -1,5 +1,20 @@
 """
 Runs a pipeline end-to-end, reports conll scores.
+
+For example, you can do
+  python3 stanza/utils/training/run_ete.py it_isdt --score_test
+You can run on all models at once:
+  python3 stanza/utils/training/run_ete.py ud_all --score_test
+
+You can also run one model on a different model's data:
+  python3 stanza/utils/training/run_ete.py it_isdt --score_dev --test_data it_vit
+  python3 stanza/utils/training/run_ete.py it_isdt --score_test --test_data it_vit
+
+Running multiple models with a --test_data flag will run them all on the same data:
+  python3 stanza/utils/training/run_ete.py it_combined it_isdt it_vit --score_test --test_data it_vit
+
+If run with no dataset arguments, then the dataset used is the train
+data, which may or may not be useful.
 """
 
 import logging
@@ -13,6 +28,7 @@ from stanza.models import parser
 from stanza.models import tagger
 from stanza.models import tokenizer
 
+from stanza.utils.datasets.common import project_to_short_name
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode
 from stanza.utils.training.run_lemma import check_lemmas
@@ -21,7 +37,10 @@ from stanza.utils.training.run_pos import wordvec_args
 
 logger = logging.getLogger('stanza')
 
-def run_ete(paths, dataset, short_name, extra_args):
+def add_args(parser):
+    parser.add_argument('--test_data', default=None, type=str, help='Which data to test on, if not using the default data for this model')
+
+def run_ete(paths, dataset, short_name, command_args, extra_args):
     short_language = short_name.split("_")[0]
 
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
@@ -39,15 +58,20 @@ def run_ete(paths, dataset, short_name, extra_args):
     # the output of each step is either kept or discarded based on the
     # value of command_args.save_output
 
+    if command_args and command_args.test_data:
+        test_short_name = project_to_short_name(command_args.test_data)
+    else:
+        test_short_name = short_name
+
     # TOKENIZE step
     # the raw data to process starts in tokenize_dir
     # retokenize it using the saved model
     if short_language == 'vi':
         tokenizer_type = "--json_file"
-        tokenizer_file = f"{tokenize_dir}/{short_name}-ud-{dataset}.json"
+        tokenizer_file = f"{tokenize_dir}/{test_short_name}-ud-{dataset}.json"
     else:
         tokenizer_type = "--txt_file"
-        tokenizer_file = f"{tokenize_dir}/{short_name}.{dataset}.txt"
+        tokenizer_file = f"{tokenize_dir}/{test_short_name}.{dataset}.txt"
 
     tokenizer_output = f"{ete_dir}/{short_name}.{dataset}.tokenizer.conllu"
 
@@ -109,6 +133,10 @@ def run_ete(paths, dataset, short_name, extra_args):
         identity_lemmatizer.main(lemma_args)
 
     # Run the DEPPARSE step.  This is the last step
+    # Note that we do NOT use the depparse directory's data.  That is
+    # because it has either gold tags, or predicted tags based on
+    # retagging using gold tokenization, and we aren't sure which at
+    # this point in the process.
     # TODO: add batch args
     logger.info("-----  DEPPARSE   ----------")
     depparse_output = f"{ete_dir}/{short_name}.{dataset}.depparse.conllu"
@@ -123,10 +151,10 @@ def run_ete(paths, dataset, short_name, extra_args):
     parser.main(depparse_args)
 
     logger.info("-----  EVALUATION ----------")
-    gold_file = f"{tokenize_dir}/{short_name}.{dataset}.gold.conllu"
+    gold_file = f"{tokenize_dir}/{test_short_name}.{dataset}.gold.conllu"
     ete_file = depparse_output
     results = common.run_eval_script(gold_file, ete_file)
-    logger.info("End to end results:\n{}".format(results))
+    logger.info("End to end results for {} models on {} {} data:\n{}".format(short_name, test_short_name, dataset, results))
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -141,13 +169,13 @@ def run_treebank(mode, paths, treebank, short_name,
         with tempfile.TemporaryDirectory() as ete_dir:
             paths = dict(paths)
             paths["ETE_DATA_DIR"] = ete_dir
-            run_ete(paths, dataset, short_name, extra_args)
+            run_ete(paths, dataset, short_name, command_args, extra_args)
     else:
         os.makedirs(paths["ETE_DATA_DIR"], exist_ok=True)
-        run_ete(paths, dataset, short_name, extra_args)
+        run_ete(paths, dataset, short_name, command_args, extra_args)
 
 def main():
-    common.main(run_treebank, "lemma", "lemmatizer")
+    common.main(run_treebank, "lemma", "lemmatizer", add_args)
 
 if __name__ == "__main__":
     main()

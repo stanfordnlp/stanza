@@ -15,7 +15,6 @@ import logging
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 from stanza.models import tagger
-from stanza.models.common.constant import treebank_to_short_name
 from stanza.utils.training.run_pos import pos_batch_size, wordvec_args
 
 logger = logging.getLogger('stanza')
@@ -34,7 +33,7 @@ def process_treebank(treebank, paths, args):
     if args.tag_method is Tags.GOLD:
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
-        short_name = treebank_to_short_name(treebank)
+        short_name = common.project_to_short_name(treebank)
         short_language = short_name.split("_")[0]
 
         base_args = ["--wordvec_dir", paths["WORDVEC_DIR"],

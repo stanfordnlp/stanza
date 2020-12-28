@@ -14,7 +14,6 @@ There are macros for preparing all of the UD treebanks at once:
 Both are present because I kept forgetting which was the correct one
 
 There are a few special case handlings of treebanks in this file:
-  - UD_English-EWT has the MWTs stripped
   - all Vietnamese treebanks have special post-processing to handle
     some of the difficult spacing issues in Vietnamese text
   - treebanks with train and test but no dev split have the
@@ -36,8 +35,6 @@ import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postproces
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
-from stanza.models.common.constant import treebank_to_short_name
-
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
 
@@ -55,7 +52,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
     """
     os.makedirs(dest_dir, exist_ok=True)
 
-    short_name = treebank_to_short_name(treebank)
+    short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     with tempfile.TemporaryDirectory() as tokenizer_dir:
@@ -152,12 +149,18 @@ def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, s
 
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
 
-def strip_mwt_from_conll(input_conllu, output_conllu):
-    with open(input_conllu) as fin:
-        with open(output_conllu, "w") as fout:
-            for line in fin:
-                if not MWT_RE.match(line):
-                    fout.write(line)
+def strip_mwt_from_sentences(sents):
+    """
+    Removes all mwt lines from the given list of sentences
+
+    Useful for mixing MWT and non-MWT treebanks together (especially English)
+    """
+    new_sents = []
+    for sentence in sents:
+        new_sentence = [line for line in sentence if not MWT_RE.match(line)]
+        new_sents.append(new_sentence)
+    return new_sents
+
 
 def augment_arabic_padt(sents):
     """
@@ -447,6 +450,77 @@ def build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels=
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels)
 
+def build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels):
+    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if dataset == 'train':
+        # could maybe add ParTUT, but that dataset has a slightly different xpos set
+        # (no DE or I)
+        # and I didn't feel like sorting through the differences
+        # Note: currently these each have small changes compared with
+        # the UD2.7 release.  See the issues (possibly closed by now)
+        # filed by AngledLuffa on each of the treebanks for more info.
+        treebanks = ["UD_Italian-ISDT", "UD_Italian-VIT", "UD_Italian-TWITTIRO", "UD_Italian-PoSTWITA"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
+        # TODO: some better way other than hard coding this path?
+        extra_italian = os.path.join(extern_dir, "italian", "italian.mwt")
+        if not os.path.exists(extra_italian):
+            raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_italian)
+        for sentence in extra_sents:
+            if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
+                raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
+            sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
+        sents = sents + extra_sents
+    else:
+        istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(istd_conllu)
+
+    write_sentences_to_conllu(output_conllu, sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+    if prepare_labels:
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+
+
+def build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, prepare_labels=True):
+    for dataset in ("train", "dev", "test"):
+        build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels)
+
+def build_combined_english_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels):
+    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if dataset == 'train':
+        # TODO: include more UD treebanks, possibly with xpos removed
+        #  UD_English-ParTUT, UD_English-Pronouns, UD_English-Pronouns - xpos are different
+        # also include "external" treebanks such as PTB
+        treebanks = ["UD_English-EWT", "UD_English-GUM"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
+    else:
+        ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(ewt_conllu)
+
+    sents = strip_mwt_from_sentences(sents)
+    write_sentences_to_conllu(output_conllu, sents)
+    convert_conllu_to_txt(output_conllu, output_txt)
+
+    if prepare_labels:
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+
+
+def build_combined_english(udbase_dir, tokenizer_dir, extern_dir, short_name, prepare_labels=True):
+    for dataset in ("train", "dev", "test"):
+        build_combined_english_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels)
+
+
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
     # TODO: do this higher up
     os.makedirs(tokenizer_dir, exist_ok=True)
@@ -466,15 +540,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
         fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
-    elif short_name == "en_ewt":
-        # For a variety of reasons we want to strip the MWT from English
-        # One reason in particular is that other English datasets do not
-        # have MWT, so if we have the eventual goal of mixing datasets,
-        # it will be impossible to do while keeping MWT.
-        # Another reason is even if we kept MWT in EWT when mixing datasets,
-        # it would be very difficult for users to switch between the two
-        strip_mwt_from_conll(input_conllu, input_conllu_copy)
-        shutil.copyfile(input_txt, input_txt_copy)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, input_conllu_copy, input_txt_copy)
     else:
@@ -557,12 +622,17 @@ def process_treebank(treebank, paths, args):
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
+    extern_dir = paths["EXTERN_DIR"]
 
-    short_name = treebank_to_short_name(treebank)
+    short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     if short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
+    elif short_name.startswith("it_combined"):
+        build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, args.prepare_labels)
+    elif short_name.startswith("en_combined"):
+        build_combined_english(udbase_dir, tokenizer_dir, extern_dir, short_name, args.prepare_labels)
     else:
         train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
         if not train_txt_file:
