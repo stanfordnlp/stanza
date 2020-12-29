@@ -33,6 +33,19 @@ class ResourcesFileNotFoundError(FileNotFoundError):
         super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
         self.resources_filepath = resources_filepath
 
+class LanguageNotDownloadedError(FileNotFoundError):
+    def __init__(self, lang, lang_dir, model_path):
+        super().__init__(f'Could not find the model file {model_path}.  The expected model directory {lang_dir} is missing.  Perhaps you need to run stanza.download("{lang}")')
+        self.lang = lang
+        self.lang_dir = lang_dir
+        self.model_path = model_path
+
+class UnsupportedProcessorError(FileNotFoundError):
+    def __init__(self, processor, lang):
+        super().__init__(f'Processor {processor} is not known for language {lang}.  If you have created your own model, please specify the {processor}_model_path parameter when creating the pipeline.')
+        self.processor = processor
+        self.lang = lang
+
 class PipelineRequirementsException(Exception):
     """
     Exception indicating one or more requirements failures while attempting to build a pipeline.
@@ -58,12 +71,11 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
 
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
 
         # set global logging level
         set_logging_level(logging_level, verbose)
-        self.logging_level = logging.getLevelName(logger.level)
         # process different pipeline parameters
         lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
@@ -131,9 +143,15 @@ class Pipeline:
                     model_dir, model_name = os.path.split(model_path)
                     lang_dir = os.path.dirname(model_dir)
                     if not os.path.exists(lang_dir):
-                        raise FileNotFoundError('Could not find the model file {}.  The expected model directory {} is missing.  Perhaps you need to run stanza.download("{}")'.format(model_path, lang_dir, lang)) from e
+                        # model files for this language can't be found in the expected directory
+                        raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
+                    if processor_name not in resources[lang]:
+                        # user asked for a model which doesn't exist for this language?
+                        raise UnsupportedProcessorError(processor_name, lang)
                     if not os.path.exists(model_path):
                         model_name, _ = os.path.splitext(model_name)
+                        # TODO: before recommending this, check that such a thing exists in resources.json.
+                        # currently that case is handled by ignoring the model, anyway
                         raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
 
                 # if we couldn't find a more suitable description of the

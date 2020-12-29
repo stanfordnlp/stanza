@@ -35,6 +35,11 @@ DEFAULT_MODEL_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_resources')
 )
 
+class UnknownProcessorError(ValueError):
+    def __init__(self, unknown):
+        super().__init__(f"Unknown processor type requested: {unknown}")
+        self.unknown_processor = unknown
+
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
@@ -155,8 +160,9 @@ def maintain_processor_list(resources, lang, package, processors):
                 logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
                 processors[MWT] = value
         for key, value in processors.items():
-            assert(key in PIPELINE_NAMES)
             assert(isinstance(key, str) and isinstance(value, str))
+            if key not in PIPELINE_NAMES:
+                raise UnknownProcessorError(key)
             # check if keys and values can be found
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Found {key}: {value}.')
@@ -259,6 +265,14 @@ def set_logging_level(logging_level, verbose):
     elif verbose == True:
         logging_level = 'INFO'
 
+    if logging_level is None:
+        # default logging level of INFO is set in stanza.__init__
+        # but the user may have set it via the logging API
+        # it should NOT be 0, but let's check to be sure...
+        if logger.level == 0:
+            logger.setLevel('INFO')
+        return logger.level
+
     # Set logging level
     logging_level = logging_level.upper()
     all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
@@ -268,7 +282,7 @@ def set_logging_level(logging_level, verbose):
             f"{logging_level}. Must be one of {', '.join(all_levels)}."
         )
     logger.setLevel(logging_level)
-    return logging_level
+    return logger.level
 
 def process_pipeline_parameters(lang, model_dir, package, processors):
     # Check parameter types and convert values to lower case
@@ -359,7 +373,7 @@ def download(
         model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
-        logging_level='INFO',
+        logging_level=None,
         verbose=None,
         resources_url=DEFAULT_RESOURCES_URL,
         resources_branch=None,

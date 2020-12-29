@@ -63,7 +63,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         )
 
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -72,7 +72,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
         url: the link to download CoreNLP models
-        logging_level: logging level to use duing installation
+        logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
