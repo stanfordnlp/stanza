@@ -177,9 +177,13 @@ class Pipeline:
 
     def process(self, doc):
         # run the pipeline
+
+        # determine whether we are in bulk processing mode for multiple documents
+        bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document))
         for processor_name in PIPELINE_NAMES:
             if self.processors.get(processor_name):
-                doc = self.processors[processor_name].process(doc)
+                process = self.processors[processor_name].bulk_process if bulk else self.processors[processor_name].process
+                doc = process(doc)
         return doc
 
     def __call__(self, doc):
