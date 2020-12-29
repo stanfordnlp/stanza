@@ -175,8 +175,11 @@ class Pipeline:
         """
         return [self.processors[processor_name] for processor_name in PIPELINE_NAMES if self.processors.get(processor_name)]
 
-    def process(self, doc, bulk=False):
+    def process(self, doc):
         # run the pipeline
+
+        # determine whether we are in bulk processing mode for multiple documents
+        bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document))
         for processor_name in PIPELINE_NAMES:
             if self.processors.get(processor_name):
                 process = self.processors[processor_name].bulk_process if bulk else self.processors[processor_name].process
@@ -186,6 +189,6 @@ class Pipeline:
     def __call__(self, doc):
         assert any([isinstance(doc, str), isinstance(doc, list),
                     isinstance(doc, Document)]), 'input should be either str, list or Document'
-        doc = self.process(doc, bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document)))
+        doc = self.process(doc)
         return doc
 
