@@ -90,7 +90,7 @@ nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 
 
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_vietnamese  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM > vi_vsfc.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
 
 python3 -u -m stanza.models.classifier --no_train --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --load_name vi_vsfc.pt
 """
