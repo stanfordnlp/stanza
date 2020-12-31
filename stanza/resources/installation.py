@@ -35,7 +35,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
         url: the link to download CoreNLP models
-        logging_level: logging level to use duing installation
+        logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
     if model is None or version is None:

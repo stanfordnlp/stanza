@@ -45,7 +45,7 @@ def get_batch(source, i, seq_len):
     return data, target
 
 def build_vocab(path, cutoff=0):
-    # Requires a large amount of memeory, but only need to build once
+    # Requires a large amount of memory, but only need to build once
     if os.path.isdir(path):
         # here we need some trick to deal with excessively large files
         # for each file we accumulate the counter of characters, and 

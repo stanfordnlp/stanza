@@ -121,7 +121,7 @@ See [our getting started guide](https://stanfordnlp.github.io/stanza/installatio
 
 ### Accessing Java Stanford CoreNLP software
 
-Aside from the neural pipeline, this package also includes an official wrapper for acessing the Java Stanford CoreNLP software with Python code.
+Aside from the neural pipeline, this package also includes an official wrapper for accessing the Java Stanford CoreNLP software with Python code.
 
 There are a few initial setup steps.
 
