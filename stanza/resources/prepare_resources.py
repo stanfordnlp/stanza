@@ -243,6 +243,24 @@ def parse_args():
     return args
 
 
+def split_model_name(model):
+    """
+    Split model names by _
+
+    Takes into account packages with _ and processor types with _
+    """
+    model = model[:-3].replace('.', '_')
+    # sort by key length so that nertagger is checked before tagger, for example
+    for processor in sorted(ending_to_processor.keys(), key=lambda x: -len(x)):
+        if model.endswith(processor):
+            model = model[:-(len(processor)+1)]
+            processor = ending_to_processor[processor]
+            break
+    else:
+        raise AssertionError(f"Could not find a processor type in {model}")
+    lang, package = model.split('_', 1)
+    return lang, package, processor
+
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
@@ -253,8 +271,7 @@ def process_dirs(args):
         for model in models:
             if not model.endswith('.pt'): continue
             # get processor
-            lang, package, processor = model.replace('.pt', '').replace('.', '_').split('_', 2)
-            processor = ending_to_processor[processor]
+            lang, package, processor = split_model_name(model)
             # copy file
             input_path = os.path.join(args.input_dir, dir, model)
             output_path = os.path.join(args.output_dir, lang, processor, package + '.pt')
