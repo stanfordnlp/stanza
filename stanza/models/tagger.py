@@ -2,7 +2,7 @@
 Entry point for training and evaluating a POS/morphological features tagger.
 
 This tagger uses highway BiLSTM layers with character and word-level representations, and biaffine classifiers
-to produce consistant POS and UFeats predictions.
+to produce consistent POS and UFeats predictions.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 

@@ -2,7 +2,7 @@
 
 The model used is a generally a model trained on the Stanford
 Sentiment Treebank or some similar dataset.  When run, this processor
-attachs a score in the form of a string to each sentence in the
+attaches a score in the form of a string to each sentence in the
 document.
 
 TODO: a possible way to generalize this would be to make it a

@@ -116,7 +116,7 @@ def test_dependency_parse(doc_pb):
     # There are as many nodes as there are tokens.
     assert len(tree.node) == len(sentence.token)
 
-    # Enhanced++ depdencies often contain additional edges and are
+    # Enhanced++ dependencies often contain additional edges and are
     # not trees -- here, 'parsed' would also have an edge to
     # 'sentence'
     assert len(tree.edge) == 12

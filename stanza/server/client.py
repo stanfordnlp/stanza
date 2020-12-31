@@ -514,7 +514,7 @@ class CoreNLPClient(RobustService):
             request_properties['outputFormat'] = output_format
 
         # make the request
-        # if not explictly set or the case of pipelineLanguage, reset_default should be None
+        # if not explicitly set or the case of pipelineLanguage, reset_default should be None
         if reset_default is None:
             reset_default = False
         r = self._request(text.encode('utf-8'), request_properties, reset_default, **kwargs)

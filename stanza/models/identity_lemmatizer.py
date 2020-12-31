@@ -1,5 +1,5 @@
 """
-An indentity lemmatizer that mimics the behavior of a normal lemmatizer but directly uses word as lemma.
+An identity lemmatizer that mimics the behavior of a normal lemmatizer but directly uses word as lemma.
 """
 
 import os

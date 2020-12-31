@@ -30,7 +30,7 @@ class WordDropout(nn.Module):
 class LockedDropout(nn.Module):
     """
     A variant of dropout layer that consistently drops out the same parameters over time. Also known as the variational dropout. 
-    This implentation was modified from the LockedDropout implementation in the flair library (https://github.com/zalandoresearch/flair).
+    This implementation was modified from the LockedDropout implementation in the flair library (https://github.com/zalandoresearch/flair).
     """
     def __init__(self, dropprob, batch_first=True):
         super().__init__()

@@ -332,7 +332,7 @@ class Sentence(StanzaObject):
     """
 
     def __init__(self, tokens, doc=None):
-        """ Construct a setence given a list of tokens in the form of CoNLL-U dicts.
+        """ Construct a sentence given a list of tokens in the form of CoNLL-U dicts.
         """
         self._tokens = []
         self._words = []
@@ -771,7 +771,7 @@ class Word(StanzaObject):
 
     @property
     def head(self):
-        """ Access the id of the governer of this word. """
+        """ Access the id of the governor of this word. """
         return self._head
 
     @head.setter

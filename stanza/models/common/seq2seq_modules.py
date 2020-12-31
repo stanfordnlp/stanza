@@ -69,7 +69,7 @@ class SoftDotAttention(nn.Module):
         self.mask = None
 
     def forward(self, input, context, mask=None, attn_only=False):
-        """Propogate input through the network.
+        """Propagate input through the network.
 
         input: batch x dim
         context: batch x sourceL x dim
@@ -211,7 +211,7 @@ class LSTMAttention(nn.Module):
         logger.debug("Using {} attention for LSTM.".format(attn_type))
 
     def forward(self, input, hidden, ctx, ctx_mask=None):
-        """Propogate input through the network."""
+        """Propagate input through the network."""
         if self.batch_first:
             input = input.transpose(0,1)
 

@@ -27,7 +27,7 @@ def test_data_to_batches_eval_mode():
     """
     Tests the chunking of batches in eval_mode
 
-    A few options are tested, such as whther or not to sort and the maximum sentence size
+    A few options are tested, such as whether or not to sort and the maximum sentence size
     """
     data = make_fake_data(1, 2, 3)
     batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, max_sentence_size=None)

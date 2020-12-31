@@ -6,7 +6,7 @@ stanza, flask
 
 ### Run the demo locally
 
-1. Make sure you know how to disable your browser's CORS rule. For Chrome, [this extensionn](https://mybrowseraddon.com/access-control-allow-origin.html) works pretty well.
+1. Make sure you know how to disable your browser's CORS rule. For Chrome, [this extension](https://mybrowseraddon.com/access-control-allow-origin.html) works pretty well.
 2. From this directory, start the Stanza demo server
 
 ```bash

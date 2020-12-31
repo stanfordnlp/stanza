@@ -297,7 +297,7 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
         )
 
     if isinstance(processors, str):
-        # Special case: processors is str, compatible with older verson
+        # Special case: processors is str, compatible with older version
         processors = {
             processor.strip().lower(): package \
                 for processor in processors.split(',')
