@@ -112,6 +112,26 @@ default_charlms = {
   "zh-hans": "gigaword"
 }
 
+ner_charlms = {
+  "en": {
+    "conll03": "1billion",
+    "ontonotes": "1billion",
+    "anatem": "pubmed",
+    "bc4chemd": "pubmed",
+    "bc5cdr": "pubmed",
+    "bionlp13cg": "pubmed",
+    "i2b2": "mimic",
+    "jnlpba": "pubmed",
+    "linnaeus": "pubmed",
+    "ncbi_disease": "pubmed",
+    "radiology": "mimic",
+    "s800": "pubmed",
+  },
+  "uk": {
+    "languk": None,
+  }
+}
+
 # a few languages have sentiment classifier models
 default_sentiment = {
   "en": "sstplus",
@@ -261,6 +281,18 @@ def split_model_name(model):
     lang, package = model.split('_', 1)
     return lang, package, processor
 
+def get_ner_dependencies(lang, package):
+    if lang not in ner_charlms or package not in ner_charlms[lang]:
+        charlm_package = default_charlms[lang]
+    else:
+        charlm_package = ner_charlms[lang][package]
+
+    if charlm_package is None:
+        return None
+    else:
+        return [{'model': 'forward_charlm', 'package': charlm_package},
+                {'model': 'backward_charlm', 'package': charlm_package}]
+
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
@@ -282,12 +314,8 @@ def process_dirs(args):
             # maintain dependencies
             if processor == 'pos' or processor == 'depparse':
                 dependencies = [{'model': 'pretrain', 'package': package}]
-            elif processor == 'ner' and lang in default_charlms:
-                # so far, this invariant is true:
-                # the NER models either don't have a charlm (UK) or
-                # they use the language's default charlm
-                charlm_package = default_charlms[lang]
-                dependencies = [{'model': 'forward_charlm', 'package': charlm_package}, {'model': 'backward_charlm', 'package': charlm_package}]
+            elif processor == 'ner':
+                dependencies = get_ner_dependencies(lang, package)
             elif processor == 'sentiment':
                 # so far, this invariant is true:
                 # sentiment models use the default pretrain for the language
@@ -326,11 +354,9 @@ def process_defaults(args):
             sentiment_package = default_sentiment[lang]
 
         if lang in default_ners and lang in default_charlms:
-            # So far this assumption holds true.  There is a Ukrainian
-            # model for NER which does not use charlm, but there are
-            # no other charlm uses for Ukrainian anyway.
-            default_dependencies['ner'] = [{'model': 'forward_charlm', 'package': charlm_package},
-                                           {'model': 'backward_charlm', 'package': charlm_package}]
+            ner_dependencies = get_ner_dependencies(lang, ner_package)
+            if ner_dependencies is not None:
+                default_dependencies['ner'] = ner_dependencies
         if lang in default_sentiment:
             # All of the sentiment models created so far have used the default pretrain
             default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
