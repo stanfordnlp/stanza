@@ -154,7 +154,7 @@ def train(args):
 
     logger.info("Training tagger...")
     if trainer is None: # init if model was not loaded previously from file
-        trainer = Trainer(args=args, vocab=vocab, pretrain_emb_matrix=pretrain.emb, use_cuda=args['cuda'],
+        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'],
                           train_classifier_only=args['train_classifier_only'])
     logger.info(trainer.model)
 
