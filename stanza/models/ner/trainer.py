@@ -32,7 +32,8 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
+                 train_classifier_only=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -43,6 +44,13 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb)
+
+        if train_classifier_only:
+            logger.info('Disabling gradient for non-classifier layers')
+            exclude = ['tag_clf', 'crit']
+            for pname, p in self.model.named_parameters():
+                if pname.split('.')[0] not in exclude:
+                    p.requires_grad = False
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if self.use_cuda:
             self.model.cuda()
