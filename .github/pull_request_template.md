@@ -2,7 +2,7 @@
 We cannot accept pull requests against the `master` branch. 
 See our [contributing guide](https://github.com/stanfordnlp/stanza/blob/master/CONTRIBUTING.md) for details.
 
-## Desciption
+## Description
 A brief and concise description of what your pull request is trying to accomplish.
 
 ## Fixes Issues

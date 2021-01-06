@@ -14,6 +14,7 @@ from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
@@ -21,15 +22,29 @@ from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.utils.resources import DEFAULT_MODEL_DIR, PIPELINE_NAMES, \
+from stanza.resources.common import DEFAULT_MODEL_DIR, \
     maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
 
-NAME_TO_PROCESSOR_CLASS = {TOKENIZE: TokenizeProcessor, MWT: MWTProcessor, POS: POSProcessor,
-                           LEMMA: LemmaProcessor, DEPPARSE: DepparseProcessor, NER: NERProcessor,
-                           SENTIMENT: SentimentProcessor}
+class ResourcesFileNotFoundError(FileNotFoundError):
+    def __init__(self, resources_filepath):
+        super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
+        self.resources_filepath = resources_filepath
+
+class LanguageNotDownloadedError(FileNotFoundError):
+    def __init__(self, lang, lang_dir, model_path):
+        super().__init__(f'Could not find the model file {model_path}.  The expected model directory {lang_dir} is missing.  Perhaps you need to run stanza.download("{lang}")')
+        self.lang = lang
+        self.lang_dir = lang_dir
+        self.model_path = model_path
+
+class UnsupportedProcessorError(FileNotFoundError):
+    def __init__(self, processor, lang):
+        super().__init__(f'Processor {processor} is not known for language {lang}.  If you have created your own model, please specify the {processor}_model_path parameter when creating the pipeline.')
+        self.processor = processor
+        self.lang = lang
 
 class PipelineRequirementsException(Exception):
     """
@@ -55,13 +70,12 @@ class PipelineRequirementsException(Exception):
 
 
 class Pipeline:
-    
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level='INFO', verbose=None, use_gpu=True, **kwargs):
+
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
-        
+
         # set global logging level
         set_logging_level(logging_level, verbose)
-        self.logging_level = logging.getLevelName(logger.level)
         # process different pipeline parameters
         lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
 
@@ -69,7 +83,7 @@ class Pipeline:
         logger.debug('Loading resource file...')
         resources_filepath = os.path.join(dir, 'resources.json')
         if not os.path.exists(resources_filepath):
-            raise Exception(f"Resources file not found at: {resources_filepath}. Try to download the model again.")
+            raise ResourcesFileNotFoundError(resources_filepath)
         with open(resources_filepath) as infile:
             resources = json.load(infile)
         if lang in resources:
@@ -84,7 +98,8 @@ class Pipeline:
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
-        if len(self.load_list) == 0: raise Exception('No processor to load. Please check if your language or package is correctly set.')
+        if len(self.load_list) == 0:
+            raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
@@ -98,7 +113,7 @@ class Pipeline:
         pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
         self.use_gpu = torch.cuda.is_available() and use_gpu
         logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
-        
+
         # set up processors
         pipeline_reqs_exceptions = []
         for item in self.load_list:
@@ -119,6 +134,29 @@ class Pipeline:
                 # add the broken processor to the loaded processors for the sake of analyzing the validity of the
                 # entire proposed pipeline, but at this point the pipeline will not be built successfully
                 self.processors[processor_name] = e.err_processor
+            except FileNotFoundError as e:
+                # For a FileNotFoundError, we try to guess if there's
+                # a missing model directory or file.  If so, we
+                # suggest the user try to download the models
+                if 'model_path' in curr_processor_config:
+                    model_path = curr_processor_config['model_path']
+                    model_dir, model_name = os.path.split(model_path)
+                    lang_dir = os.path.dirname(model_dir)
+                    if not os.path.exists(lang_dir):
+                        # model files for this language can't be found in the expected directory
+                        raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
+                    if processor_name not in resources[lang]:
+                        # user asked for a model which doesn't exist for this language?
+                        raise UnsupportedProcessorError(processor_name, lang)
+                    if not os.path.exists(model_path):
+                        model_name, _ = os.path.splitext(model_name)
+                        # TODO: before recommending this, check that such a thing exists in resources.json.
+                        # currently that case is handled by ignoring the model, anyway
+                        raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
+
+                # if we couldn't find a more suitable description of the
+                # FileNotFoundError, just raise the old error
+                raise
 
         # if there are any processor exceptions, throw an exception to indicate pipeline build failure
         if pipeline_reqs_exceptions:
@@ -157,9 +195,13 @@ class Pipeline:
 
     def process(self, doc):
         # run the pipeline
+
+        # determine whether we are in bulk processing mode for multiple documents
+        bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document))
         for processor_name in PIPELINE_NAMES:
             if self.processors.get(processor_name):
-                doc = self.processors[processor_name].process(doc)
+                process = self.processors[processor_name].bulk_process if bulk else self.processors[processor_name].process
+                doc = process(doc)
         return doc
 
     def __call__(self, doc):

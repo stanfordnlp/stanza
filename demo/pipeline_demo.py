@@ -1,5 +1,5 @@
 """
-basic demo script
+A basic demo of the Stanza neural pipeline.
 """
 
 import sys
@@ -7,7 +7,7 @@ import argparse
 import os
 
 import stanza
-from stanza.utils.resources import DEFAULT_MODEL_DIR
+from stanza.resources.common import DEFAULT_MODEL_DIR
 
 
 if __name__ == '__main__':
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     example_sentences = {"en": "Barack Obama was born in Hawaii.  He was elected president in 2008.",
-            "zh": "達沃斯世界經濟論壇是每年全球政商界領袖聚在一起的年度盛事。",
+            "zh": "中国文化经历上千年的历史演变，是各区域、各民族古代文化长期相互交流、借鉴、融合的结果。",
             "fr": "Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie. Il tente d'abord de faire carrière comme marchand d'art chez Goupil & C.",
             "vi": "Trận Trân Châu Cảng (hay Chiến dịch Hawaii theo cách gọi của Bộ Tổng tư lệnh Đế quốc Nhật Bản) là một đòn tấn công quân sự bất ngờ được Hải quân Nhật Bản thực hiện nhằm vào căn cứ hải quân của Hoa Kỳ tại Trân Châu Cảng thuộc tiểu bang Hawaii vào sáng Chủ Nhật, ngày 7 tháng 12 năm 1941, dẫn đến việc Hoa Kỳ sau đó quyết định tham gia vào hoạt động quân sự trong Chiến tranh thế giới thứ hai."}
 
@@ -30,11 +30,11 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # download the models
-    stanza.download(args.lang, args.models_dir, confirm_if_exists=True)
+    stanza.download(args.lang, dir=args.models_dir)
     # set up a pipeline
     print('---')
     print('Building pipeline...')
-    pipeline = stanza.Pipeline(models_dir=args.models_dir, lang=args.lang, use_gpu=(not args.cpu))
+    pipeline = stanza.Pipeline(lang=args.lang, dir=args.models_dir, use_gpu=(not args.cpu))
     # process the document
     doc = pipeline(example_sentences[args.lang])
     # access nlp annotations

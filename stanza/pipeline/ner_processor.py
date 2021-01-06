@@ -8,10 +8,11 @@ from stanza.models.common.utils import unsort
 from stanza.models.ner.data import DataLoader
 from stanza.models.ner.trainer import Trainer
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
+from stanza.pipeline.processor import UDProcessor, register_processor
 
 logger = logging.getLogger('stanza')
 
+@register_processor(name=NER)
 class NERProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
@@ -21,7 +22,8 @@ class NERProcessor(UDProcessor):
 
     def _set_up_model(self, config, use_gpu):
         # set up trainer
-        args = {'charlm_forward_file': config['forward_charlm_path'], 'charlm_backward_file': config['backward_charlm_path']}
+        args = {'charlm_forward_file': config.get('forward_charlm_path', None),
+                'charlm_backward_file': config.get('backward_charlm_path', None)}
         self._trainer = Trainer(args=args, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):

@@ -78,7 +78,7 @@ def test_mwt():
         [f'token: {token.text.ljust(9)}\t\twords: [{", ".join([word.pretty_print() for word in token.words])}]' for sent in doc.sentences for token in sent.tokens]
     ).strip()
     word_to_token = "\n".join(
-        [f'word: {word.text.ljust(9)}\t\ttoken parent:{word.parent.id+"-"+word.parent.text}'
+        [f'word: {word.text.ljust(9)}\t\ttoken parent:{"-".join([str(x) for x in word.parent.id])}-{word.parent.text}'
          for sent in doc.sentences for word in sent.words]).strip()
     assert token_to_words == FR_MWT_TOKEN_TO_WORDS_GOLD
     assert word_to_token == FR_MWT_WORD_TO_TOKEN_GOLD

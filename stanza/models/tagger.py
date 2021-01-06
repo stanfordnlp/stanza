@@ -2,7 +2,7 @@
 Entry point for training and evaluating a POS/morphological features tagger.
 
 This tagger uses highway BiLSTM layers with character and word-level representations, and biaffine classifiers
-to produce consistant POS and UFeats predictions.
+to produce consistent POS and UFeats predictions.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
@@ -12,24 +12,31 @@ import shutil
 import time
 from datetime import datetime
 import argparse
+import logging
 import numpy as np
 import random
 import torch
 from torch import nn, optim
 
+import stanza.models.pos.data as data
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
-def parse_args():
+logger = logging.getLogger('stanza')
+
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
+    parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
@@ -68,7 +75,7 @@ def parse_args():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--fix_eval_interval', dest='adapt_eval_interval', action='store_false', \
             help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
-    parser.add_argument('--max_steps_before_stop', type=int, default=3000)
+    parser.add_argument('--max_steps_before_stop', type=int, default=3000, help='Changes learning method or early terminates after this many steps if the dev scores are not improving')
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
@@ -78,43 +85,68 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
-    args = parser.parse_args()
+
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
+
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
-    print("Running tagger in {} mode".format(args['mode']))
+    logger.info("Running tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
     else:
         evaluate(args)
 
-def train(args):
-    utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_tagger.pt"
 
-    # load pretrained vectors if needed
+    return os.path.join(args['save_dir'], save_name)
+
+def load_pretrain(args):
     pretrain = None
     if args['pretrain']:
-        vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+        if args['wordvec_pretrain_file']:
+            pretrain_file = args['wordvec_pretrain_file']
+        else:
+            pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+        if os.path.exists(pretrain_file):
+            vec_file = None
+        else:
+            vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
         pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    return pretrain
+
+def train(args):
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
+
+    # load pretrained vectors if needed
+    pretrain = load_pretrain(args)
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+    # train_data is now a list of sentences, where each sentence is a
+    # list of words, in which each word is a dict of conll attributes
+    train_data = CoNLL.conll2dict(input_file=args['train_file'])
+    # possibly augment the training data with some amount of fake data
+    # based on the options chosen
+    logger.info("Original data size: {}".format(len(train_data)))
+    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
+                                    keep_original_sentences=False))
+    logger.info("Augmented data size: {}".format(len(train_data)))
+    train_doc = Document(train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
@@ -126,10 +158,10 @@ def train(args):
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
-        print("Skip training because no data available...")
-        sys.exit(0)
+        logger.info("Skip training because no data available...")
+        return
 
-    print("Training tagger...")
+    logger.info("Training tagger...")
     trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
 
     global_step = 0
@@ -138,11 +170,11 @@ def train(args):
     best_dev_preds = []
     current_lr = args['lr']
     global_start_time = time.time()
-    format_str = '{}: step {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
+    format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     if args['adapt_eval_interval']:
         args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
-        print("Evaluating the model every {} steps...".format(args['eval_interval']))
+        logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
 
     using_amsgrad = False
     last_best_step = 0
@@ -157,12 +189,11 @@ def train(args):
             train_loss += loss
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
-                print(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
-                        max_steps, loss, duration, current_lr))
+                logger.info(format_str.format(global_step, max_steps, loss, duration, current_lr))
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
-                print("Evaluating on dev set...")
+                logger.info("Evaluating on dev set...")
                 dev_preds = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
@@ -173,26 +204,26 @@ def train(args):
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                print("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
+                logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
                 train_loss = 0
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     last_best_step = global_step
                     trainer.save(model_file)
-                    print("new best model saved.")
+                    logger.info("new best model saved.")
                     best_dev_preds = dev_preds
 
                 dev_score_history += [dev_score]
-                print("")
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
                 if not using_amsgrad:
-                    print("Switching to AMSGrad")
+                    logger.info("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
                     trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
                 else:
+                    logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True
                     break
 
@@ -204,24 +235,26 @@ def train(args):
 
         train_batch.reshuffle()
 
-    print("Training ended with {} steps.".format(global_step))
+    logger.info("Training ended with {} steps.".format(global_step))
 
-    best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
-    print("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    if len(dev_score_history) > 0:
+        best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
+        logger.info("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    else:
+        logger.info("Dev set never evaluated.  Saving final model.")
+        trainer.save(model_file)
+
 
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_tagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
 
-    # load pretrain; note that we allow the pretrain_file to be non-existent
-    pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
-    pretrain = Pretrain(pretrain_file)
+    pretrain = load_pretrain(args)
 
     # load model
-    print("Loading model from: {}".format(model_file))
+    logger.info("Loading model from: {}".format(model_file))
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
@@ -232,11 +265,11 @@ def evaluate(args):
             loaded_args[k] = args[k]
 
     # load data
-    print("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
     if len(batch) > 0:
-        print("Start evaluation...")
+        logger.info("Start evaluation...")
         preds = []
         for i, b in enumerate(batch):
             preds += trainer.predict(b)
@@ -252,8 +285,8 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("Tagger score:")
-        print("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("Tagger score:")
+        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

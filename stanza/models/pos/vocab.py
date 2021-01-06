@@ -1,19 +1,7 @@
 from collections import Counter, OrderedDict
 
-from stanza.models.common.vocab import BaseVocab, BaseMultiVocab
+from stanza.models.common.vocab import BaseVocab, BaseMultiVocab, CharVocab
 from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
-
-class CharVocab(BaseVocab):
-    def build_vocab(self):
-        if type(self.data[0][0]) is list: # general data from DataLoader
-            counter = Counter([c for sent in self.data for w in sent for c in w[self.idx]])
-            for k in list(counter.keys()):
-                if counter[k] < self.cutoff:
-                    del counter[k]
-        else: # special data from Char LM
-            counter = Counter([c for sent in self.data for c in sent])
-        self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: (counter[k], k), reverse=True))
-        self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
 class WordVocab(BaseVocab):
     def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, ignore=[]):

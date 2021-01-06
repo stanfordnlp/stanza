@@ -2,12 +2,13 @@ import sys
 
 import json
 
-with open(sys.argv[1]) as f:
-    d = json.load(f)
-    l = max([0] + [len(" ".join(x[0][1])) for x in d])
+def max_mwt_length(filenames):
+    max_len = 0
+    for filename in filenames:
+        with open(filename) as f:
+            d = json.load(f)
+            max_len = max([max_len] + [len(" ".join(x[0][1])) for x in d])
+    return max_len
 
-with open(sys.argv[2]) as f:
-    d = json.load(f)
-    l = max([l] + [len(" ".join(x[0][1])) for x in d])
-
-print(l)
+if __name__ == '__main__':
+    print(max_max_jlength(sys.argv[1:]))

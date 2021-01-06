@@ -14,6 +14,12 @@ CONLL17_TAR="word-embeddings-conll17.tar"
 
 FASTTEXT_BASE_URL="https://dl.fbaipublicfiles.com/fasttext/vectors-wiki"
 
+# TODO: some fasttext vectors are now at
+# https://fasttext.cc/docs/en/pretrained-vectors.html
+# there are also vectors for
+# Welsh, Icelandic, Thai, Sanskrit
+# https://fasttext.cc/docs/en/crawl-vectors.html
+
 declare -a FASTTEXT_LANG=("Afrikaans" "Armenian" "Breton" "Buryat" "Chinese" "Faroese" "Gothic" "Kurmanji" "North_Sami" "Serbian" "Upper_Sorbian")
 declare -a FASTTEXT_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
 declare -a LOCAL_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")

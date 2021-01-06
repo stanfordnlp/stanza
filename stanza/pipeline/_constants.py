@@ -8,6 +8,3 @@ LEMMA = 'lemma'
 DEPPARSE = 'depparse'
 NER = 'ner'
 SENTIMENT = 'sentiment'
-
-# supported external packages
-SUPPORTED_TOKENIZERS = ['spacy', 'jieba']

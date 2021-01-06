@@ -5,19 +5,23 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenize.data import DataLoader
-from stanza.models.tokenize.trainer import Trainer
-from stanza.models.tokenize.utils import output_predictions
+from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.trainer import Trainer
+from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor
-from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
+from stanza.pipeline.processor import UDProcessor, register_processor
+from stanza.pipeline.registry import PROCESSOR_VARIANTS
+from stanza.utils.datasets.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
-from stanza.utils.jieba import JiebaTokenizer
-from stanza.utils.spacy import SpacyTokenizer
+from stanza.pipeline.external.jieba import JiebaTokenizer
+from stanza.pipeline.external.spacy import SpacyTokenizer
+from stanza.pipeline.external.sudachipy import SudachiPyTokenizer
+from stanza.pipeline.external.pythainlp import PyThaiNLPTokenizer
 
 logger = logging.getLogger('stanza')
 
 # class for running the tokenizer
+@register_processor(name=TOKENIZE)
 class TokenizeProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
@@ -31,14 +35,6 @@ class TokenizeProcessor(UDProcessor):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
-        elif config.get('with_jieba', False):
-            self._trainer = None
-            self._jieba_tokenizer = JiebaTokenizer(config.get('lang'))
-            logger.info("Using jieba as tokenizer")
-        elif config.get('with_spacy', False):
-            self._trainer = None
-            self._spacy_tokenizer = SpacyTokenizer(config.get('lang'))
-            logger.info("Using spaCy as tokenizer")
         else:
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
@@ -61,22 +57,23 @@ class TokenizeProcessor(UDProcessor):
         for sentence in sentences:
             sent = []
             for token_id, token in enumerate(sentence):
-                sent.append({doc.ID: str(token_id + 1), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
+                sent.append({doc.ID: (token_id + 1, ), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
                 idx += len(token) + 1
             document.append(sent)
         raw_text = ' '.join([' '.join(sentence) for sentence in sentences])
         return raw_text, document
 
     def process(self, document):
-        assert isinstance(document, str) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
-            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string."
+        assert isinstance(document, str) or isinstance(document, doc.Document) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
+            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object."
+
+        if isinstance(document, doc.Document):
+            document = document.text
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)
-        elif self.config.get('with_jieba', False):
-            return self._jieba_tokenizer.tokenize(document)
-        elif self.config.get('with_spacy', False):
-            return self._spacy_tokenizer.tokenize(document)
+        elif hasattr(self, '_variant'):
+            return self._variant.process(document)
         else:
             raw_text = '\n\n'.join(document) if isinstance(document, list) else document
             # set up batches

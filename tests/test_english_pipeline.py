@@ -5,6 +5,7 @@ Basic testing of the English pipeline
 import pytest
 import stanza
 from stanza.utils.conll import CoNLL
+from stanza.models.common.doc import Document
 
 from tests import *
 
@@ -12,6 +13,8 @@ pytestmark = pytest.mark.pipeline
 
 # data for testing
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."
+
+EN_DOCS = ["Barack Obama was born in Hawaii.", "He was elected president in 2008.", "Obama attended Harvard."]
 
 EN_DOC_TOKENS_GOLD = """
 <Token id=1;words=[<Word id=1;text=Barack;lemma=Barack;upos=PROPN;xpos=NNP;feats=Number=Sing;head=4;deprel=nsubj:pass>]>
@@ -60,26 +63,26 @@ EN_DOC_WORDS_GOLD = """
 """.strip()
 
 EN_DOC_DEPENDENCY_PARSES_GOLD = """
-('Barack', '4', 'nsubj:pass')
-('Obama', '1', 'flat')
-('was', '4', 'aux:pass')
-('born', '0', 'root')
-('in', '6', 'case')
-('Hawaii', '4', 'obl')
-('.', '4', 'punct')
+('Barack', 4, 'nsubj:pass')
+('Obama', 1, 'flat')
+('was', 4, 'aux:pass')
+('born', 0, 'root')
+('in', 6, 'case')
+('Hawaii', 4, 'obl')
+('.', 4, 'punct')
 
-('He', '3', 'nsubj:pass')
-('was', '3', 'aux:pass')
-('elected', '0', 'root')
-('president', '3', 'xcomp')
-('in', '6', 'case')
-('2008', '3', 'obl')
-('.', '3', 'punct')
+('He', 3, 'nsubj:pass')
+('was', 3, 'aux:pass')
+('elected', 0, 'root')
+('president', 3, 'xcomp')
+('in', 6, 'case')
+('2008', 3, 'obl')
+('.', 3, 'punct')
 
-('Obama', '2', 'nsubj')
-('attended', '0', 'root')
-('Harvard', '2', 'obj')
-('.', '2', 'punct')
+('Obama', 2, 'nsubj')
+('attended', 0, 'root')
+('Harvard', 2, 'obj')
+('.', 2, 'punct')
 """.strip()
 
 EN_DOC_CONLLU_GOLD = """
@@ -117,7 +120,7 @@ def processed_doc():
 def test_text(processed_doc):
     assert processed_doc.text == EN_DOC
 
-    
+
 def test_conllu(processed_doc):
     assert CoNLL.conll_as_string(CoNLL.convert_dict(processed_doc.to_dict())) == EN_DOC_CONLLU_GOLD
 
@@ -132,4 +135,25 @@ def test_words(processed_doc):
 
 def test_dependency_parse(processed_doc):
     assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == \
+           EN_DOC_DEPENDENCY_PARSES_GOLD
+
+
+@pytest.fixture(scope="module")
+def processed_multidoc():
+    """ Document created by running full English pipeline on a few sentences """
+    docs = [Document([], text=t) for t in EN_DOCS]
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR)
+    return nlp(docs)
+
+
+def test_tokens_multidoc(processed_multidoc):
+    assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
+
+
+def test_words_multidoc(processed_multidoc):
+    assert "\n\n".join([sent.words_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_WORDS_GOLD
+
+
+def test_dependency_parse_multidoc(processed_multidoc):
+    assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == \
            EN_DOC_DEPENDENCY_PARSES_GOLD

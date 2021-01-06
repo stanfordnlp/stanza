@@ -1,6 +1,7 @@
 """
 Utility functions.
 """
+import logging
 import os
 from collections import Counter
 import random
@@ -12,6 +13,8 @@ import numpy as np
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
 import stanza.utils.conll18_ud_eval as ud_eval
+
+logger = logging.getLogger('stanza')
 
 # filenames
 def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
@@ -133,8 +136,7 @@ def print_config(config):
     info = "Running with the following configs:\n"
     for k,v in config.items():
         info += "\t{} : {}\n".format(k, str(v))
-    print("\n" + info + "\n")
-    return
+    logger.info("\n" + info + "\n")
 
 def normalize_text(text):
     return unicodedata.normalize('NFD', text)
@@ -200,6 +202,8 @@ def unsort(sorted_list, oidx):
     Unsort a sorted list, based on the original idx.
     """
     assert len(sorted_list) == len(oidx), "Number of list elements must match with original indices."
+    if len(sorted_list) == 0:
+        return []
     _, unsorted = [list(t) for t in zip(*sorted(zip(oidx, sorted_list)))]
     return unsorted
 

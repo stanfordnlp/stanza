@@ -19,9 +19,11 @@
 
 The Stanford NLP Group's official Python NLP library. It contains support for running various accurate natural language processing tools on 60+ languages and for accessing the Java Stanford CoreNLP software from Python. For detailed information please visit our [official website](https://stanfordnlp.github.io/stanza/).
 
+🔥 &nbsp;A new collection of **biomedical** and **clinical** English model packages are now available, supporting syntactic analysis and named entity recognition (NER) from biomedical literature text and clinical notes. For more information, check out our [Biomedical models documentation page](https://stanfordnlp.github.io/stanza/biomed.html).
+
 ### References
 
-If you use this library in your research, please kindly cite our [Stanza system description paper](https://arxiv.org/abs/2003.07082):
+If you use this library in your research, please kindly cite our [ACL2020 Stanza system demo paper](https://arxiv.org/abs/2003.07082):
 
 ```bibtex
 @inproceedings{qi2020stanza,
@@ -31,13 +33,25 @@ If you use this library in your research, please kindly cite our [Stanza system 
     year={2020}
 }
 ```
+
+If you use our biomedical and clinical models, please also cite our [Stanza Biomedical Models description paper](https://arxiv.org/abs/2007.14640):
+
+```bibtex
+@article{zhang2020biomedical,
+  title={Biomedical and Clinical English Model Packages in the Stanza Python NLP Library},
+  author={Zhang, Yuhao and Zhang, Yuhui and Qi, Peng and Manning, Christopher D. and Langlotz, Curtis P.},
+  journal={arXiv preprint arXiv:2007.14640},
+  year={2020}
+}
+```
+
 The PyTorch implementation of the neural pipeline in this repository is due to [Peng Qi](http://qipeng.me), [Yuhao Zhang](http://yuhao.im), and [Yuhui Zhang](https://cs.stanford.edu/~yuhuiz/), with help from [Jason Bolton](mailto:jebolton@stanford.edu) and [Tim Dozat](https://web.stanford.edu/~tdozat/).
 
 If you use the CoreNLP software through Stanza, please cite the CoreNLP software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers"). The CoreNLP client is mostly written by [Arun Chaganty](http://arun.chagantys.org/), and [Jason Bolton](mailto:jebolton@stanford.edu) spearheaded merging the two projects together.
 
 ## Issues and Usage Q&A
 
-To ask questions, report issues or request features, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues).
+To ask questions, report issues or request features 🤔, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues). Before creating a new issue, please make sure to search for existing issues that may solve your problem, or visit the [Frequently Asked Questions (FAQ) page](https://stanfordnlp.github.io/stanza/faq.html) on our website.
 
 ## Contributing to Stanza
 
@@ -107,13 +121,13 @@ See [our getting started guide](https://stanfordnlp.github.io/stanza/installatio
 
 ### Accessing Java Stanford CoreNLP software
 
-Aside from the neural pipeline, this package also includes an official wrapper for acessing the Java Stanford CoreNLP software with Python code.
+Aside from the neural pipeline, this package also includes an official wrapper for accessing the Java Stanford CoreNLP software with Python code.
 
 There are a few initial setup steps.
 
 * Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use
 * Put the model jars in the distribution folder
-* Tell the Python code where Stanford CoreNLP is located by setting the `CORENLP_HOME` environment variable (e.g., in *nix): `export CORENLP_HOME=/path/to/stanford-corenlp-full-2018-10-05`
+* Tell the Python code where Stanford CoreNLP is located by setting the `CORENLP_HOME` environment variable (e.g., in *nix): `export CORENLP_HOME=/path/to/stanford-corenlp-4.1.0`
 
 We provide [comprehensive examples](https://stanfordnlp.github.io/stanza/corenlp_client.html) in our documentation that show how one can use CoreNLP through Stanza and extract various annotations from it.
 

@@ -43,7 +43,7 @@ class Pretrain:
         if self.filename is not None and os.path.exists(self.filename):
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
-                logger.info("Loaded pretrain from {}".format(self.filename))
+                logger.debug("Loaded pretrain from {}".format(self.filename))
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
@@ -97,7 +97,7 @@ class Pretrain:
         Open a vector file using the provided function and read from it.
         """
         # some vector files, such as Google News, use tabs
-        tab_space_pattern = re.compile("[ \t]+")
+        tab_space_pattern = re.compile(r"[ \t]+")
         first = True
         words = []
         failed = 0

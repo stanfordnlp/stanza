@@ -25,7 +25,7 @@ TEST_MODELS_DIR = f'{TEST_WORKING_DIR}/models'
 # server resources
 SERVER_TEST_PROPS = f'{TEST_WORKING_DIR}/scripts/external_server.properties'
 
-# langauge resources
+# language resources
 LANGUAGE_RESOURCES = {}
 
 TOKENIZE_MODEL = 'tokenizer.pt'
