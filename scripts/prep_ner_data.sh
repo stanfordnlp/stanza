@@ -23,17 +23,17 @@ test_json_file=$NER_DATA_DIR/${short}.test.json
 
 # create json file if exists; otherwise create empty files
 if [ -e $train_file ]; then
-    python stanza/utils/prepare_ner_data.py $train_file $train_json_file
+    python stanza/utils/datasets/prepare_ner_data.py $train_file $train_json_file
 else
     touch $train_json_file
 fi
 if [ -e $dev_file ]; then
-    python stanza/utils/prepare_ner_data.py $dev_file $dev_json_file
+    python stanza/utils/datasets/prepare_ner_data.py $dev_file $dev_json_file
 else
     touch $dev_json_file
 fi
 if [ -e $test_file ]; then
-    python stanza/utils/prepare_ner_data.py $test_file $test_json_file
+    python stanza/utils/datasets/prepare_ner_data.py $test_file $test_json_file
 else
     touch $test_json_file
 fi
