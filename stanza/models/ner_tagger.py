@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
 
@@ -124,12 +125,16 @@ def train(args):
             logger.warning('Finetune is set to true but model file is not found. Continuing with training from scratch.')
 
         # load pretrained vectors
-        if len(args['wordvec_file']) == 0:
-            vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        if args['wordvec_pretrain_file']:
+            pretrain_file = args['wordvec_pretrain_file']
+            pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
         else:
-            vec_file = args['wordvec_file']
-        # do not save pretrained embeddings individually
-        pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+            if len(args['wordvec_file']) == 0:
+                vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+            else:
+                vec_file = args['wordvec_file']
+            # do not save pretrained embeddings individually
+            pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
         if args['charlm']:
             if args['charlm_shorthand'] is None:
