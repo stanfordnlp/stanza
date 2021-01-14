@@ -37,7 +37,8 @@ class DepparseProcessor(UDProcessor):
     def process(self, document):
         try:
             batch = DataLoader(document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
-                               sort_during_eval=self.config.get('sort_during_eval', True), max_sentence_size=self.config.get('max_sentence_size', None))
+                               sort_during_eval=self.config.get('sort_during_eval', True),
+                               min_length_to_batch_separately=self.config.get('min_length_to_batch_separately', None))
             preds = []
             for i, b in enumerate(batch):
                 preds += self.trainer.predict(b)
@@ -50,7 +51,7 @@ class DepparseProcessor(UDProcessor):
             return batch.doc
         except RuntimeError as e:
             if str(e).startswith("CUDA out of memory. Tried to allocate"):
-                new_message = str(e) + " ... You may be able to compensate for this by separating long sentences into their own batch with a parameter such as depparse_max_sentence_size=150 or by limiting the overall batch size with depparse_batch_size=400."
+                new_message = str(e) + " ... You may be able to compensate for this by separating long sentences into their own batch with a parameter such as depparse_min_length_to_batch_separately=150 or by limiting the overall batch size with depparse_batch_size=400."
                 raise RuntimeError(new_message) from e
             else:
                 raise
