@@ -108,8 +108,8 @@ def main(args=None):
 
 def train(args):
     utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     pretrain = None
     vocab = None
@@ -233,8 +233,8 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     loaded_args, trainer, vocab = load_model(args, model_file)
 
