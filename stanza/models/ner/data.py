@@ -54,7 +54,7 @@ class DataLoader:
             return state_dict['vocab']
 
         if self.eval:
-            raise Exception("Vocab must exist for evaluation.")
+            raise AssertionError("Vocab must exist for evaluation.")
         if self.args['charlm']:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
         else: 
@@ -151,7 +151,7 @@ class DataLoader:
             words, tags = zip(*sent)
             # NER field sanity checking
             if any([x is None or x == '_' for x in tags]):
-                raise Exception("NER tag not found for some input data.")
+                raise ValueError("NER tag not found for some input data.")
             # first ensure BIO2 scheme
             tags = to_bio2(tags)
             # then convert to BIOES

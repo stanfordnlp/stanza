@@ -29,11 +29,12 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
 
@@ -86,22 +87,19 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
-    args = parser.parse_args()
+
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
-    logger.info("Running tagger in {} mode".format(args['mode']))
+    logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -110,8 +108,8 @@ def main():
 
 def train(args):
     utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     pretrain = None
     vocab = None
@@ -124,12 +122,16 @@ def train(args):
             logger.warning('Finetune is set to true but model file is not found. Continuing with training from scratch.')
 
         # load pretrained vectors
-        if len(args['wordvec_file']) == 0:
-            vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        if args['wordvec_pretrain_file']:
+            pretrain_file = args['wordvec_pretrain_file']
+            pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
         else:
-            vec_file = args['wordvec_file']
-        # do not save pretrained embeddings individually
-        pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+            if len(args['wordvec_file']) == 0:
+                vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+            else:
+                vec_file = args['wordvec_file']
+            # do not save pretrained embeddings individually
+            pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
         if args['charlm']:
             if args['charlm_shorthand'] is None:
@@ -231,8 +233,8 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     loaded_args, trainer, vocab = load_model(args, model_file)
 
