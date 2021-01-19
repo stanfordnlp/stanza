@@ -136,10 +136,10 @@ class ProcessorVariant(ABC):
         """
         pass
 
-    @abstractmethod
     def bulk_process(self, docs):
-        """ Process a list of Documents that are potentially preprocessed by the processor. """
-        pass
+        """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
+
+        return [self.process(doc) for doc in docs]
 
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """
