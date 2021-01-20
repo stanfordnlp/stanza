@@ -10,6 +10,7 @@ from stanza.models.depparse.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+DEFAULT_SEPARATE_BATCH=150
 
 @register_processor(name=DEPPARSE)
 class DepparseProcessor(UDProcessor):
@@ -38,7 +39,7 @@ class DepparseProcessor(UDProcessor):
         try:
             batch = DataLoader(document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
                                sort_during_eval=self.config.get('sort_during_eval', True),
-                               min_length_to_batch_separately=self.config.get('min_length_to_batch_separately', None))
+                               min_length_to_batch_separately=self.config.get('min_length_to_batch_separately', DEFAULT_SEPARATE_BATCH))
             preds = []
             for i, b in enumerate(batch):
                 preds += self.trainer.predict(b)
