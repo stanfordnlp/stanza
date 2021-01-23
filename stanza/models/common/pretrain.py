@@ -83,7 +83,7 @@ class Pretrain:
             # save to file
             data = {'vocab': vocab.state_dict(), 'emb': emb}
             try:
-                torch.save(data, self.filename)
+                torch.save(data, self.filename, _use_new_zipfile_serialization=False)
                 logger.info("Saved pretrained vocab and vectors to {}".format(self.filename))
             except (KeyboardInterrupt, SystemExit):
                 raise

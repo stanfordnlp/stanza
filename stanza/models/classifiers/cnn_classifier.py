@@ -388,7 +388,7 @@ def save(filename, model, skip_modules=True):
         'extra_vocab': model.extra_vocab,
     }
     try:
-        torch.save(params, filename)
+        torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
     except (KeyboardInterrupt, SystemExit):
         raise
