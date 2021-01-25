@@ -30,13 +30,13 @@ class Pretrain:
     @property
     def vocab(self):
         if not hasattr(self, '_vocab'):
-            self._vocab, self._emb = self.load()
+            self.load()
         return self._vocab
 
     @property
     def emb(self):
         if not hasattr(self, '_emb'):
-            self._vocab, self._emb = self.load()
+            self.load()
         return self._emb
 
     def load(self):
@@ -44,14 +44,35 @@ class Pretrain:
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
                 logger.debug("Loaded pretrain from {}".format(self.filename))
+                self._vocab, self._emb = PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
+                return
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
                 logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
-                return self.read_pretrain()
-            return PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
+                vocab, emb = self.read_pretrain()
         else:
-            return self.read_pretrain()
+            vocab, emb = self.read_pretrain()
+
+        self._vocab = vocab
+        self._emb = emb
+
+        if self._save_to_file:
+            # save to file
+            assert self.filename is not None, "Filename must be provided to save pretrained vector to file."
+            self.save(self.filename)
+
+    def save(self, filename):
+        # should not infinite loop since the load function sets _vocab and _emb before trying to save
+        data = {'vocab': self.vocab.state_dict(), 'emb': self.emb}
+        try:
+            torch.save(data, filename, _use_new_zipfile_serialization=False)
+            logger.info("Saved pretrained vocab and vectors to {}".format(filename))
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as e:
+            logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
+
 
     def read_pretrain(self):
         # load from pretrained filename
@@ -78,18 +99,6 @@ class Pretrain:
 
         vocab = PretrainedWordVocab(words)
         
-        if self._save_to_file:
-            assert self.filename is not None, "Filename must be provided to save pretrained vector to file."
-            # save to file
-            data = {'vocab': vocab.state_dict(), 'emb': emb}
-            try:
-                torch.save(data, self.filename, _use_new_zipfile_serialization=False)
-                logger.info("Saved pretrained vocab and vectors to {}".format(self.filename))
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except BaseException as e:
-                logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
-
         return vocab, emb
 
     def read_from_file(self, filename, open_func=open):
