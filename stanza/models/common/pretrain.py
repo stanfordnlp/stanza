@@ -66,7 +66,7 @@ class Pretrain:
         # should not infinite loop since the load function sets _vocab and _emb before trying to save
         data = {'vocab': self.vocab.state_dict(), 'emb': self.emb}
         try:
-            torch.save(data, filename, _use_new_zipfile_serialization=False)
+            torch.save(data, filename, _use_new_zipfile_serialization=False, pickle_protocol=3)
             logger.info("Saved pretrained vocab and vectors to {}".format(filename))
         except (KeyboardInterrupt, SystemExit):
             raise
