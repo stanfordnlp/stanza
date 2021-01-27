@@ -93,7 +93,7 @@ limitations under the License.
 
 ## Main Contributors
 
-The PyTorch implementation of Stanza's neural pipeline is due to [Peng Qi](http://qipeng.me), [Yuhao Zhang](http://yuhao.im), and [Yuhui Zhang](https://cs.stanford.edu/~yuhuiz/), with help from [Jason Bolton](mailto:jebolton@stanford.edu) and [Tim Dozat](https://web.stanford.edu/~tdozat/).
+The PyTorch implementation of Stanza's neural pipeline is due to [Peng Qi](http://qipeng.me), [Yuhao Zhang](http://yuhao.im), and [Yuhui Zhang](https://cs.stanford.edu/~yuhuiz/), with help from [Jason Bolton](mailto:jebolton@stanford.edu), [Tim Dozat](https://web.stanford.edu/~tdozat/) and [John Bauer](https://www.linkedin.com/in/john-bauer-b3883b60/). [John Bauer](https://www.linkedin.com/in/john-bauer-b3883b60/) currently leads the maintenance of this package.
 
 The CoreNLP client is mostly written by [Arun Chaganty](http://arun.chagantys.org/), and [Jason Bolton](mailto:jebolton@stanford.edu) spearheaded merging the two projects together.
 
