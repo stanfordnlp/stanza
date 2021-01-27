@@ -128,7 +128,7 @@ class CharacterLanguageModel(nn.Module):
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
         }
-        torch.save(state, filename)
+        torch.save(state, filename, _use_new_zipfile_serialization=False)
 
     @classmethod
     def load(cls, filename, finetune=False):

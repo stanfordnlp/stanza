@@ -75,7 +75,7 @@ class Trainer(BaseTrainer):
                 'config': self.args
                 }
         try:
-            torch.save(params, filename)
+            torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
