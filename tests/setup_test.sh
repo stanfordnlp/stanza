@@ -20,8 +20,8 @@ cp tests/data/tiny_emb.* $test_dir/in
 
 models_dir=$test_dir/models
 mkdir -p $models_dir
-$PYTHON -c "import stanza; stanza.download(lang='en', dir='${models_dir}', logging_level='info')" || echo "failed to download english model"
-$PYTHON -c "import stanza; stanza.download(lang='fr', dir='${models_dir}', logging_level='info')" || echo "failed to download french model"
+$PYTHON -c "import stanza; stanza.download(lang='en', model_dir='${models_dir}', logging_level='info')" || echo "failed to download english model"
+$PYTHON -c "import stanza; stanza.download(lang='fr', model_dir='${models_dir}', logging_level='info')" || echo "failed to download french model"
 echo "Models downloaded to ${models_dir}."
 
 export STANZA_TEST_HOME=$test_dir

@@ -13,16 +13,24 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
+from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.pos.vocab import CharVocab
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+import stanza.models.classifiers.data as data
+
 
 class Loss(Enum):
     CROSS = 1
     WEIGHTED_CROSS = 2
     LOG_CROSS = 3
+
+class DevScoring(Enum):
+    ACCURACY = 'ACC'
+    WEIGHTED_F1 = 'WF'
 
 logger = logging.getLogger('stanza')
 
@@ -70,7 +78,7 @@ python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir exte
 
 To train models on combined 3 class datasets:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt,extern_data/sentiment/sst-processed/threeclass/extra-train-threeclass-phrases.txt,extern_data/sentiment/sst-processed/threeclass/checked-extra-threeclass-phrases.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt,extern_data/sentiment/sst-processed/threeclass/extra-train-threeclass-phrases.txt,extern_data/sentiment/sst-processed/threeclass/checked-extra-threeclass-phrases.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
 
 This tests that model:
 
@@ -81,6 +89,10 @@ Here is an example for training a model in a different language:
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
 
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
+
+python3 -u -m stanza.models.classifier --no_train --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --load_name vi_vsfc.pt
 """
 
 def convert_fc_shapes(arg):
@@ -117,6 +129,8 @@ def parse_args():
     parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
+    parser.add_argument('--save_intermediate_models', default=False, action='store_true',
+                        help='Save all intermediate models - this can be a lot!')
 
     parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file(s) to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.  Comma separated list.')
     parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
@@ -129,6 +143,10 @@ def parse_args():
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
+    parser.add_argument('--dev_eval_steps', default=None, type=int, help='Run the dev set after this many train steps')
+    parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.ACCURACY,
+                        help=('Scoring method to use for choosing the best model.  Options: %s' %
+                              " ".join(x.name for x in DevScoring)))
 
     parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
 
@@ -146,33 +164,19 @@ def parse_args():
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
+    parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
+
     args = parser.parse_args()
+
+    if args.charlm_shorthand is not None:
+        args.charlm = True
+
     return args
 
-
-def read_dataset(dataset, wordvec_type, min_len):
-    """
-    returns a list where the values of the list are
-      label, [token...]
-    """
-    lines = []
-    for filename in dataset.split(","):
-        try:
-            new_lines = open(filename, encoding="utf-8").readlines()
-        except UnicodeDecodeError:
-            logger.error("Could not read {}".format(filename))
-            raise
-        lines.extend(new_lines)
-    lines = [x.strip() for x in lines]
-    lines = [x.split(maxsplit=1) for x in lines if x]
-    lines = [x for x in lines if len(x) > 1]
-    # TODO: maybe do this processing later, once the model is built.
-    # then move the processing into the model so we can use
-    # overloading to potentially make future model types
-    lines = [(x[0], cnn_classifier.update_text(x[1], wordvec_type)) for x in lines]
-    if min_len:
-        lines = [x for x in lines if len(x[1]) >= min_len]
-    return lines
 
 def dataset_labels(dataset):
     """
@@ -291,9 +295,18 @@ def confusion_to_macro_f1(confusion):
             else:
                 fn = fn + confusion.get(k, {}).get(k2, 0)
                 fp = fp + confusion.get(k2, {}).get(k, 0)
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-        f1 = 2 * (precision * recall) / (precision + recall)
+        if tp + fp == 0:
+            precision = 0.0
+        else:
+            precision = tp / (tp + fp)
+        if tp + fn == 0:
+            recall = 0.0
+        else:
+            recall = tp / (tp + fn)
+        if precision + recall == 0.0:
+            f1 = 0.0
+        else:
+            f1 = 2 * (precision * recall) / (precision + recall)
         sum_f1 = sum_f1 + f1
 
     return sum_f1 / len(keys)
@@ -388,6 +401,21 @@ def score_dataset(model, dataset, label_map=None, device=None,
                 correct = correct + 1
     return correct
 
+def score_dev_set(model, dev_set, dev_eval_scoring):
+    confusion = confusion_dataset(model, dev_set)
+    logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
+    correct, total = confusion_to_accuracy(confusion)
+    macro_f1 = confusion_to_macro_f1(confusion)
+    logger.info("Dev set: %d correct of %d examples.  Accuracy: %f" %
+                (correct, len(dev_set), correct / len(dev_set)))
+    logger.info("Macro f1: {}".format(macro_f1))
+    if dev_eval_scoring is DevScoring.ACCURACY:
+        return correct / total
+    elif dev_eval_scoring is DevScoring.WEIGHTED_F1:
+        return macro_f1
+    else:
+        raise ValueError("Unknown scoring method {}".format(dev_eval_scoring))
+
 def check_labels(labels, dataset):
     """
     Check that all of the labels in the dataset are in the known labels.
@@ -399,12 +427,12 @@ def check_labels(labels, dataset):
     if not_found:
         raise RuntimeError('Dataset contains labels which the model does not know about:' + str(not_found))
 
-def checkpoint_name(filename, epoch, acc):
+def checkpoint_name(filename, epoch, dev_scoring, score):
     """
     Build an informative checkpoint name from a base name, epoch #, and accuracy
     """
     root, ext = os.path.splitext(filename)
-    return root + ".E{epoch:04d}-ACC{acc:05.2f}".format(**{"epoch": epoch, "acc": acc * 100}) + ext
+    return root + ".E{epoch:04d}-{score_type}{acc:05.2f}".format(**{"epoch": epoch, "score_type": dev_scoring.value, "acc": score * 100}) + ext
 
 def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
@@ -443,9 +471,10 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
     if args.load_name:
         # We reloaded the model, so let's report its current dev set score
-        correct = score_dataset(model, dev_set, label_map, device)
-        logger.info("Reloaded model for continued training.  Dev set: %d correct of %d examples.  Accuracy: %f" %
-                    (correct, len(dev_set), correct / len(dev_set)))
+        correct = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        logger.info("Reloaded model for continued training.")
+
+    best_score = 0
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
@@ -472,21 +501,34 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # print statistics
             running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
-                logger.info('[%d, %5d] average loss: %.3f' %
-                            (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
+                if (args.dev_eval_steps and
+                    ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
+                    logger.info('[%d, %5d] Interim analysis' % (epoch + 1, ((batch_num + 1) * args.batch_size)))
+                    dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+                    if best_score is None or dev_score > best_score:
+                        best_score = dev_score
+                        cnn_classifier.save(model_file, model)
+                        logger.info("Saved new best score model!")
+                    model.train()
+                else:
+                    logger.info('[%d, %5d] Average loss: %.3f' %
+                                (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
         epoch_loss += running_loss
 
-        correct = score_dataset(model, dev_set, label_map, device)
-        logger.info("Finished epoch %d.  Dev set: %d correct of %d examples.  Accuracy: %f  Total loss: %f" %
-                    ((epoch + 1), correct, len(dev_set), correct / len(dev_set), epoch_loss))
+        logger.info("Finished epoch %d" % (epoch + 1))
+        dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        if args.save_intermediate_models:
+            checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
+            cnn_classifier.save(checkpoint_file, model)
+        if best_score is None or dev_score > best_score:
+            best_score = dev_score
+            cnn_classifier.save(model_file, model)
+            logger.info("Saved new best score model!")
 
-        checkpoint_file = checkpoint_name(model_file, epoch + 1, correct / len(dev_set))
-        cnn_classifier.save(checkpoint_file, model)
 
-    cnn_classifier.save(model_file, model)
 
 def load_pretrain(args):
     if args.wordvec_pretrain_file:
@@ -517,8 +559,7 @@ def print_args(args):
     args = vars(args)
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINGING TIME:\n%s\n' % '\n'.join(log_lines))
-
+    logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
 def main():
     args = parse_args()
@@ -530,7 +571,7 @@ def main():
     # TODO: maybe the dataset needs to be in a torch data loader in order to
     # make cuda operations faster
     if args.train:
-        train_set = read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
+        train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
     elif not args.load_name:
@@ -540,13 +581,31 @@ def main():
 
     pretrain = load_pretrain(args)
 
+    if args.charlm:
+        if args.charlm_shorthand is None:
+            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
+        logger.info('Using pretrained contextualized char embedding')
+        charlm_forward_file = '{}/{}_forward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
+        charlm_backward_file = '{}/{}_backward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
+        charmodel_forward = CharacterLanguageModel.load(charlm_forward_file, finetune=False)
+        charmodel_backward = CharacterLanguageModel.load(charlm_backward_file, finetune=False)
+    else:
+        charmodel_forward = None
+        charmodel_backward = None
+
     if args.load_name:
-        model = cnn_classifier.load(args.load_name, pretrain)
+        model = cnn_classifier.load(args.load_name, pretrain,
+                                    charmodel_forward, charmodel_backward)
     else:
         assert train_set is not None
         labels = dataset_labels(train_set)
         extra_vocab = dataset_vocab(train_set)
-        model = cnn_classifier.CNNClassifier(pretrain.emb, pretrain.vocab, extra_vocab, labels, args)
+        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                             extra_vocab=extra_vocab,
+                                             labels=labels,
+                                             charmodel_forward=charmodel_forward,
+                                             charmodel_backward=charmodel_backward,
+                                             args=args)
 
     if args.cuda:
         model.cuda()
@@ -568,13 +627,13 @@ def main():
     if args.train:
         print_args(args)
 
-        dev_set = read_dataset(args.dev_file, args.wordvec_type, min_len=None)
+        dev_set = data.read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s" % args.dev_file)
         check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)
 
-    test_set = read_dataset(args.test_file, args.wordvec_type, min_len=None)
+    test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
     check_labels(model.labels, test_set)
 

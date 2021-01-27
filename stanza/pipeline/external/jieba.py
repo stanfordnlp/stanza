@@ -33,6 +33,7 @@ class JiebaTokenizer(ProcessorVariant):
         check_jieba()
         import jieba
         self.nlp = jieba
+        self.no_ssplit = config.get('no_ssplit', False)
 
     def process(self, text):
         """ Tokenize a document with the Jieba tokenizer and wrap the results into a Doc object.
@@ -56,7 +57,7 @@ class JiebaTokenizer(ProcessorVariant):
             current_sentence.append(token_entry)
             offset += len(token)
 
-            if token in ['。', '！', '？', '!', '?']:
+            if not self.no_ssplit and token in ['。', '！', '？', '!', '?']:
                 sentences.append(current_sentence)
                 current_sentence = []
 

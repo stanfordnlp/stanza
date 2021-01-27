@@ -4,7 +4,7 @@ python:
 notifications:
   email: false
 install:
-  - pip install --quiet -e .
+  - pip install --quiet .
   - export CORENLP_HOME=~/corenlp-latest CORENLP_VERSION=stanford-corenlp-latest
   - export CORENLP_URL="http://nlp.stanford.edu/software/${CORENLP_VERSION}.zip"
   - wget $CORENLP_URL -O corenlp-latest.zip

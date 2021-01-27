@@ -35,11 +35,11 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
         url: the link to download CoreNLP models
-        logging_level: logging level to use duing installation
+        logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
     if model is None or version is None:
-        raise Exception(
+        raise ValueError(
             "Both model and model version should be specified."
         )
     logger.info(f"Downloading {model} models (version {version}) into directory {dir}...")
@@ -54,6 +54,8 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
             url + f'stanford-corenlp-{version}-models-{model}.jar',
             os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
         )
+    except (KeyboardInterrupt, SystemExit):
+        raise
     except:
         raise Exception(
             "Downloading CoreNLP model file failed. "
@@ -61,7 +63,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         )
 
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -70,7 +72,7 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
         url: the link to download CoreNLP models
-        logging_level: logging level to use duing installation
+        logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
@@ -85,6 +87,8 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
     try:
         request_file(url + 'stanford-corenlp-latest.zip', os.path.join(dir, 'corenlp.zip'))
+    except (KeyboardInterrupt, SystemExit):
+        raise
     except:
         raise Exception(
             "Downloading CoreNLP zip file failed. "

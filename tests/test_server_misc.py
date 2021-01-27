@@ -94,3 +94,22 @@ def test_codepoints():
             assert token.codepointOffsetEnd == codepoints[1]
             assert token.beginChar == characters[0]
             assert token.endChar == characters[1]
+
+def test_codepoint_text():
+    """ Test case of extracting the correct sentence text using codepoints """
+
+    text = 'Unban mox opal 🐱.  This is a second sentence.'
+
+    with corenlp.CoreNLPClient(annotators=["tokenize","ssplit"],
+                               properties={'tokenize.codepoint': 'true'}) as client:
+        ann = client.annotate(text)
+
+        text_start = ann.sentence[0].token[0].codepointOffsetBegin
+        text_end = ann.sentence[0].token[-1].codepointOffsetEnd
+        sentence_text = text[text_start:text_end]
+        assert sentence_text == 'Unban mox opal 🐱.'
+
+        text_start = ann.sentence[1].token[0].codepointOffsetBegin
+        text_end = ann.sentence[1].token[-1].codepointOffsetEnd
+        sentence_text = text[text_start:text_end]
+        assert sentence_text == 'This is a second sentence.'

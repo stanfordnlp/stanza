@@ -93,12 +93,12 @@ class Trainer(BaseTrainer):
                 'config': self.args
                 }
         try:
-            torch.save(params, filename)
+            torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
-            logger.warning("Saving failed... continuing anyway.")
+        except Exception as e:
+            logger.warning(f"Saving failed... {e} continuing anyway.")
 
     def load(self, filename, pretrain):
         """

@@ -5,17 +5,18 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenize.data import DataLoader
-from stanza.models.tokenize.trainer import Trainer
-from stanza.models.tokenize.utils import output_predictions
+from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.trainer import Trainer
+from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
-from stanza.utils.postprocess_vietnamese_tokenizer_data import paras_to_chunks
+from stanza.utils.datasets.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
 from stanza.pipeline.external.jieba import JiebaTokenizer
 from stanza.pipeline.external.spacy import SpacyTokenizer
 from stanza.pipeline.external.sudachipy import SudachiPyTokenizer
+from stanza.pipeline.external.pythainlp import PyThaiNLPTokenizer
 
 logger = logging.getLogger('stanza')
 
@@ -63,8 +64,11 @@ class TokenizeProcessor(UDProcessor):
         return raw_text, document
 
     def process(self, document):
-        assert isinstance(document, str) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
-            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string."
+        assert isinstance(document, str) or isinstance(document, doc.Document) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
+            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object."
+
+        if isinstance(document, doc.Document):
+            document = document.text
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)

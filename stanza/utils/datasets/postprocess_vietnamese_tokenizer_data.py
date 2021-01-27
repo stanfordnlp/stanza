@@ -4,23 +4,29 @@ import sys
 from collections import Counter
 import json
 
+WORDCHAR_RE = re.compile(r'^\w$', flags=re.UNICODE)
+NOT_WORDCHAR_RE = re.compile(r'^\W+$', flags=re.UNICODE)
+WHITESPACE_RE = re.compile(r'^\s$', flags=re.UNICODE)
+
 def para_to_chunks(text, char_level_pred):
     chunks = []
     preds = []
     lastchunk = ''
     lastpred = ''
     for idx in range(len(text)):
-        if re.match(r'^\w$', text[idx], flags=re.UNICODE):
+        if WORDCHAR_RE.match(text[idx]):
             lastchunk += text[idx]
         else:
-            if len(lastchunk) > 0 and not re.match(r'^\W+$', lastchunk, flags=re.UNICODE):
+            if len(lastchunk) > 0 and not NOT_WORDCHAR_RE.match(lastchunk):
                 chunks += [lastchunk]
                 assert len(lastpred) > 0
                 preds += [int(lastpred)]
                 lastchunk = ''
-            if not re.match(r'^\s$', text[idx], flags=re.UNICODE):
+            if not WHITESPACE_RE.match(text[idx]):
                 # punctuation
-                chunks += [text[idx]]
+                # we add lastchunk in case there was leading whitespace
+                chunks += [lastchunk + text[idx]]
+                lastchunk = ''
                 preds += [int(char_level_pred[idx])]
             else:
                 # prepend leading white spaces to chunks so we can tell the difference between "2 , 2" and "2,2"
@@ -36,14 +42,14 @@ def para_to_chunks(text, char_level_pred):
 def paras_to_chunks(text, char_level_pred):
     return [para_to_chunks(re.sub(r'\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
 
-if __name__ == '__main__':
+def main(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('plaintext_file', type=str, help="Plaintext file containing the raw input")
     parser.add_argument('--char_level_pred', type=str, default=None, help="Plaintext file containing character-level predictions")
     parser.add_argument('-o', '--output', default=None, type=str, help="Output file name; output to the console if not specified (the default)")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
     with open(args.plaintext_file, 'r') as f:
         text = ''.join(f.readlines()).rstrip()
@@ -62,3 +68,6 @@ if __name__ == '__main__':
     json.dump(paras_to_chunks(text, char_level_pred), output)
 
     output.close()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

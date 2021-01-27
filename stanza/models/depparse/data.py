@@ -3,14 +3,14 @@ import logging
 import torch
 
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab
-from stanza.models.pos.vocab import CharVocab, WordVocab, XPOSVocab, FeatureVocab, MultiVocab
+from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab, CharVocab
+from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
-def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_size):
+def data_to_batches(data, batch_size, eval_mode, sort_during_eval, min_length_to_batch_separately):
     """
     Given a list of lists, where the first element of each sublist
     represents the sentence, group the sentences into batches.
@@ -40,7 +40,7 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_
     current = []
     currentlen = 0
     for x in data:
-        if max_sentence_size is not None and len(x[0]) > max_sentence_size:
+        if min_length_to_batch_separately is not None and len(x[0]) > min_length_to_batch_separately:
             if currentlen > 0:
                 res.append(current)
                 current = []
@@ -62,9 +62,9 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval, max_sentence_
 
 class DataLoader:
 
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, max_sentence_size=None):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, min_length_to_batch_separately=None):
         self.batch_size = batch_size
-        self.max_sentence_size=max_sentence_size
+        self.min_length_to_batch_separately=min_length_to_batch_separately
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
@@ -206,7 +206,7 @@ class DataLoader:
     def chunk_batches(self, data):
         batches, data_orig_idx = data_to_batches(data=data, batch_size=self.batch_size,
                                                  eval_mode=self.eval, sort_during_eval=self.sort_during_eval,
-                                                 max_sentence_size=self.max_sentence_size)
+                                                 min_length_to_batch_separately=self.min_length_to_batch_separately)
         # data_orig_idx might be None at train time, since we don't anticipate unsorting
         self.data_orig_idx = data_orig_idx
         return batches
@@ -220,3 +220,4 @@ def to_int(string, ignore_error=False):
         else:
             raise err
     return res
+

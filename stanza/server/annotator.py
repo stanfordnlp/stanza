@@ -52,7 +52,7 @@ class Annotator(Process):
     @property
     def properties(self):
         """
-        Defines a Java property to define this anntoator to CoreNLP.
+        Defines a Java property to define this annotator to CoreNLP.
         """
         return {
             "customAnnotatorClass.{}".format(self.name): "edu.stanford.nlp.pipeline.GenericWebServiceAnnotator",

@@ -5,8 +5,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.utils import tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
-from stanza.models.common.vocab import UNK_ID
-from stanza.models.pos.vocab import CharVocab
+from stanza.models.common.vocab import UNK_ID, CharVocab
 
 class CharacterModel(nn.Module):
     def __init__(self, args, vocab, pad=False, bidirectional=False, attention=True):
@@ -103,7 +102,13 @@ class CharacterLanguageModel(nn.Module):
             if self.pad:
                 res = pad_packed_sequence(res, batch_first=True)[0]
         return res
-    
+
+    def hidden_dim(self):
+        return self.args['char_hidden_dim']
+
+    def char_vocab(self):
+        return self.vocab['char']
+
     def train(self, mode=True):
         """
         Override the default train() function, so that when self.finetune == False, the training mode 
@@ -123,7 +128,7 @@ class CharacterLanguageModel(nn.Module):
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
         }
-        torch.save(state, filename)
+        torch.save(state, filename, _use_new_zipfile_serialization=False)
 
     @classmethod
     def load(cls, filename, finetune=False):

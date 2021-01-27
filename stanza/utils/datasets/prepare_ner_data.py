@@ -20,9 +20,11 @@ def parse_args():
 
 def main():
     args = parse_args()
+    process_dataset(args.input, args.output)
 
-    sentences = load_conll03(args.input)
-    print("{} examples loaded from {}".format(len(sentences), args.input))
+def process_dataset(input_filename, output_filename):
+    sentences = load_conll03(input_filename)
+    print("{} examples loaded from {}".format(len(sentences), input_filename))
     
     document = []
     for (words, tags) in sentences:
@@ -31,10 +33,11 @@ def main():
             sent += [{'text': w, 'ner': t}]
         document += [sent]
 
-    with open(args.output, 'w') as outfile:
+    with open(output_filename, 'w') as outfile:
         json.dump(document, outfile)
-    print("Generated json file {}.".format(args.output))
+    print("Generated json file {}.".format(output_filename))
 
+# TODO: make skip_doc_start an argument
 def load_conll03(filename, skip_doc_start=True):
     cached_lines = []
     examples = []

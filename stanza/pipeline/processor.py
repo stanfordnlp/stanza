@@ -73,6 +73,11 @@ class Processor(ABC):
         """ Process a Document.  This is the main method of a processor. """
         pass
 
+    def bulk_process(self, docs):
+        """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
+
+        return [self.process(doc) for doc in docs]
+
     def _set_up_provides(self):
         """ Set up what processor requirements this processor fulfills.  Default is to use a class defined list. """
         self._provides = self.__class__.PROVIDES_DEFAULT
@@ -131,6 +136,10 @@ class ProcessorVariant(ABC):
         """
         pass
 
+    def bulk_process(self, docs):
+        """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
+
+        return [self.process(doc) for doc in docs]
 
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """

@@ -35,8 +35,13 @@ DEFAULT_MODEL_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_resources')
 )
 
+class UnknownProcessorError(ValueError):
+    def __init__(self, unknown):
+        super().__init__(f"Unknown processor type requested: {unknown}")
+        self.unknown_processor = unknown
+
 # given a language and models path, build a default configuration
-def build_default_config(resources, lang, dir, load_list):
+def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for item in load_list:
         processor, package, dependencies = item
@@ -49,47 +54,45 @@ def build_default_config(resources, lang, dir, load_list):
             default_config[f"{LEMMA}_use_identity"] = True
         else:
             default_config[f"{processor}_model_path"] = os.path.join(
-                dir, lang, processor, package + '.pt'
+                model_dir, lang, processor, package + '.pt'
             )
 
         if not dependencies: continue
         for dependency in dependencies:
             dep_processor, dep_model = dependency
             default_config[f"{processor}_{dep_processor}_path"] = os.path.join(
-                dir, lang, dep_processor, dep_model + '.pt'
+                model_dir, lang, dep_processor, dep_model + '.pt'
             )
 
     return default_config
 
-def ensure_dir(dir):
+def ensure_dir(path):
     """
     Create dir in case it does not exist.
     """
-    Path(dir).mkdir(parents=True, exist_ok=True)
+    Path(path).mkdir(parents=True, exist_ok=True)
 
 def get_md5(path):
     """
     Get the MD5 value of a path.
     """
-    data = open(path, 'rb').read()
+    with open(path, 'rb') as fin:
+        data = fin.read()
     return hashlib.md5(data).hexdigest()
 
-def unzip(dir, filename):
+def unzip(path, filename):
     """
     Fully unzip a file `filename` that's in a directory `dir`.
     """
-    logger.debug(f'Unzip: {dir}/{filename}...')
-    with zipfile.ZipFile(os.path.join(dir, filename)) as f:
-        f.extractall(dir)
+    logger.debug(f'Unzip: {path}/{filename}...')
+    with zipfile.ZipFile(os.path.join(path, filename)) as f:
+        f.extractall(path)
 
 def get_root_from_zipfile(filename):
     """
     Get the root directory from a archived zip file.
     """
-    try:
-        zf = zipfile.ZipFile(filename, "r")
-    except:
-        raise Exception(f"Failed loading zip file at {filename}.")
+    zf = zipfile.ZipFile(filename, "r")
     assert len(zf.filelist) > 0, \
         f"Zip file at f{filename} seems to be corrupted. Please check it."
     return os.path.dirname(zf.filelist[0].filename)
@@ -143,9 +146,23 @@ def maintain_processor_list(resources, lang, package, processors):
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
+        # first, a hack!
+        # if tokenize is in the list, but mwt is not, and there is a corresponding
+        # tokenize & mwt pair in the resources file, we add mwt
+        # otherwise we'll get another 10 bugs regarding missing mwt errors
+        if TOKENIZE in processors and MWT not in processors:
+            value = processors[TOKENIZE]
+            if value == 'default' and MWT in resources[lang]['default_processors']:
+                logger.warning("Language %s package default expects mwt, which has been added" % lang)
+                processors[MWT] = 'default'
+            elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and
+                  value in resources[lang][MWT]):
+                logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
+                processors[MWT] = value
         for key, value in processors.items():
-            assert(key in PIPELINE_NAMES)
             assert(isinstance(key, str) and isinstance(value, str))
+            if key not in PIPELINE_NAMES:
+                raise UnknownProcessorError(key)
             # check if keys and values can be found
             if key in resources[lang] and value in resources[lang][key]:
                 logger.debug(f'Found {key}: {value}.')
@@ -248,45 +265,53 @@ def set_logging_level(logging_level, verbose):
     elif verbose == True:
         logging_level = 'INFO'
 
+    if logging_level is None:
+        # default logging level of INFO is set in stanza.__init__
+        # but the user may have set it via the logging API
+        # it should NOT be 0, but let's check to be sure...
+        if logger.level == 0:
+            logger.setLevel('INFO')
+        return logger.level
+
     # Set logging level
     logging_level = logging_level.upper()
     all_levels = ['DEBUG', 'INFO', 'WARNING', 'WARN', 'ERROR', 'CRITICAL', 'FATAL']
     if logging_level not in all_levels:
-        raise Exception(
+        raise ValueError(
             f"Unrecognized logging level for pipeline: "
             f"{logging_level}. Must be one of {', '.join(all_levels)}."
         )
     logger.setLevel(logging_level)
-    return logging_level
+    return logger.level
 
-def process_pipeline_parameters(lang, dir, package, processors):
+def process_pipeline_parameters(lang, model_dir, package, processors):
     # Check parameter types and convert values to lower case
     if isinstance(lang, str):
         lang = lang.strip().lower()
     elif lang is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'lang' should be str, "
             f"but got {type(lang).__name__} instead."
         )
 
-    if isinstance(dir, str):
-        dir = dir.strip()
-    elif dir is not None:
-        raise Exception(
-            f"The parameter 'dir' should be str, "
-            f"but got {type(dir).__name__} instead."
+    if isinstance(model_dir, str):
+        model_dir = model_dir.strip()
+    elif model_dir is not None:
+        raise TypeError(
+            f"The parameter 'model_dir' should be str, "
+            f"but got {type(model_dir).__name__} instead."
         )
 
     if isinstance(package, str):
         package = package.strip().lower()
     elif package is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'package' should be str, "
             f"but got {type(package).__name__} instead."
         )
 
     if isinstance(processors, str):
-        # Special case: processors is str, compatible with older verson
+        # Special case: processors is str, compatible with older version
         processors = {
             processor.strip().lower(): package \
                 for processor in processors.split(',')
@@ -298,20 +323,57 @@ def process_pipeline_parameters(lang, dir, package, processors):
                 for k, v in processors.items()
         }
     elif processors is not None:
-        raise Exception(
+        raise TypeError(
             f"The parameter 'processors' should be dict or str, "
             f"but got {type(processors).__name__} instead."
         )
 
-    return lang, dir, package, processors
+    return lang, model_dir, package, processors
+
+def download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version):
+    """
+    Downloads resources.json to obtain latest packages.
+    """
+    logger.debug('Downloading resource file...')
+    if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
+        resources_url = STANZA_RESOURCES_GITHUB + resources_branch
+    # handle short name for resources urls; otherwise treat it as url
+    if resources_url.lower() in ('stanford', 'stanfordnlp'):
+        resources_url = STANFORDNLP_RESOURCES_URL
+    # make request
+    request_file(
+        f'{resources_url}/resources_{resources_version}.json',
+        os.path.join(model_dir, 'resources.json')
+    )
+
+
+def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
+                             resources_url=DEFAULT_RESOURCES_URL,
+                             resources_branch=None,
+                             resources_version=DEFAULT_RESOURCES_VERSION):
+    """
+    List the non-alias languages in the resources file
+    """
+    download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version)
+    with open(os.path.join(model_dir, 'resources.json')) as fin:
+        resources = json.load(fin)
+    # isinstance(str) is because of fields such as "url"
+    # 'alias' is because we want to skip German, alias of de, for example
+    languages = [lang for lang in resources
+                 if not isinstance(resources[lang], str) and 'alias' not in resources[lang]]
+    languages = sorted(languages)
+    return languages
+
 
 # main download function
 def download(
         lang='en',
-        dir=DEFAULT_MODEL_DIR,
+        model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
-        logging_level='INFO',
+        logging_level=None,
         verbose=None,
         resources_url=DEFAULT_RESOURCES_URL,
         resources_branch=None,
@@ -321,32 +383,17 @@ def download(
     # set global logging level
     set_logging_level(logging_level, verbose)
     # process different pipeline parameters
-    lang, dir, package, processors = process_pipeline_parameters(
-        lang, dir, package, processors
+    lang, model_dir, package, processors = process_pipeline_parameters(
+        lang, model_dir, package, processors
     )
 
-    if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
-        resources_url = STANZA_RESOURCES_GITHUB + resources_branch
-    # Download resources.json to obtain latest packages.
-    logger.debug('Downloading resource file...')
-    # handle short name for resources urls; otherwise treat it as url
-    if resources_url.lower() in ('stanford', 'stanfordnlp'):
-        resources_url = STANFORDNLP_RESOURCES_URL
-    # make request
-    request_file(
-        f'{resources_url}/resources_{resources_version}.json',
-        os.path.join(dir, 'resources.json')
-    )
+    download_resources_json(model_dir, resources_url,
+                            resources_branch, resources_version)
     # unpack results
-    try:
-        resources = json.load(open(os.path.join(dir, 'resources.json')))
-    except:
-        raise Exception(
-            f'Cannot load resource file. Please check your network connection, '
-            f'or provided resource url and resource version.'
-        )
+    with open(os.path.join(model_dir, 'resources.json')) as fin:
+        resources = json.load(fin)
     if lang not in resources:
-        raise Exception(f'Unsupported language: {lang}.')
+        raise ValueError(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
@@ -360,10 +407,10 @@ def download(
         )
         request_file(
             f'{url}/{resources_version}/{lang}/default.zip',
-            os.path.join(dir, lang, f'default.zip'),
+            os.path.join(model_dir, lang, f'default.zip'),
             md5=resources[lang]['default_md5']
         )
-        unzip(os.path.join(dir, lang), 'default.zip')
+        unzip(os.path.join(model_dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
         download_list = maintain_processor_list(
@@ -382,12 +429,12 @@ def download(
             try:
                 request_file(
                     f'{url}/{resources_version}/{lang}/{key}/{value}.pt',
-                    os.path.join(dir, lang, key, f'{value}.pt'),
+                    os.path.join(model_dir, lang, key, f'{value}.pt'),
                     md5=resources[lang][key][value]['md5']
                 )
             except KeyError as e:
-                raise Exception(
+                raise ValueError(
                     f'Cannot find the following processor and model name combination: '
                     f'{key}, {value}. Please check if you have provided the correct model name.'
                 ) from e
-    logger.info(f'Finished downloading models and saved to {dir}.')
+    logger.info(f'Finished downloading models and saved to {model_dir}.')

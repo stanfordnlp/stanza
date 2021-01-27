@@ -14,6 +14,7 @@ EN_DOC = "This is a test document. Pretty cool!"
 
 EN_DOC_UPOS_XPOS = (('PRON_DT', 'AUX_VBZ', 'DET_DT', 'NOUN_NN', 'NOUN_NN', 'PUNCT_.'), ('ADV_RB', 'ADJ_JJ', 'PUNCT_.'))
 
+EN_DOC2 = "Chris wrote a sentence. Then another."
 
 def test_readonly():
     Document.add_property('some_property', 123)
@@ -48,3 +49,11 @@ def test_setter_getter():
     # don't try this at home
     sentence._classname = 2
     assert sentence.classname == 'bad'
+
+def test_backpointer():
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en')
+    doc = nlp(EN_DOC2)
+    ent = doc.ents[0]
+    assert ent.sent is doc.sentences[0]
+    assert list(doc.iter_words())[0].sent is doc.sentences[0]
+    assert list(doc.iter_tokens())[-1].sent is doc.sentences[-1]

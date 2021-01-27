@@ -27,7 +27,7 @@ def unpack_batch(batch, use_cuda):
     orig_idx = batch[4]
     return inputs, orig_idx
 
-class Trainer(object):
+class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
@@ -131,7 +131,7 @@ class Trainer(object):
                 'config': self.args
                 }
         try:
-            torch.save(params, filename)
+            torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")

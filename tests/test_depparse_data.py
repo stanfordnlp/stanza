@@ -27,34 +27,34 @@ def test_data_to_batches_eval_mode():
     """
     Tests the chunking of batches in eval_mode
 
-    A few options are tested, such as whther or not to sort and the maximum sentence size
+    A few options are tested, such as whether or not to sort and the maximum sentence size
     """
     data = make_fake_data(1, 2, 3)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, max_sentence_size=None)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, min_length_to_batch_separately=None)
     check_batches(batched_data[0], [5, 1], ['C', 'B', 'A'])
 
     data = make_fake_data(1, 2, 6)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, max_sentence_size=None)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, min_length_to_batch_separately=None)
     check_batches(batched_data[0], [6, 3], ['C', 'B', 'A'])
 
     data = make_fake_data(3, 2, 1)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, max_sentence_size=None)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, min_length_to_batch_separately=None)
     check_batches(batched_data[0], [5, 1], ['A', 'B', 'C'])
 
     data = make_fake_data(3, 5, 2)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, max_sentence_size=None)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=True, min_length_to_batch_separately=None)
     check_batches(batched_data[0], [5, 5], ['B', 'A', 'C'])
 
     data = make_fake_data(3, 5, 2)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, max_sentence_size=3)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, min_length_to_batch_separately=3)
     check_batches(batched_data[0], [3, 5, 2], ['A', 'B', 'C'])
 
     data = make_fake_data(4, 1, 1)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, max_sentence_size=3)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, min_length_to_batch_separately=3)
     check_batches(batched_data[0], [4, 2], ['A', 'B', 'C'])
 
     data = make_fake_data(1, 4, 1)
-    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, max_sentence_size=3)
+    batched_data = data_to_batches(data, batch_size=5, eval_mode=True, sort_during_eval=False, min_length_to_batch_separately=3)
     check_batches(batched_data[0], [1, 4, 1], ['A', 'B', 'C'])
 
 if __name__ == '__main__':

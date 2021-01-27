@@ -29,15 +29,19 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
+    parser.add_argument('--train_classifier_only', action='store_true',
+                        help='In case of applying Transfer-learning approach and training only the classifier layer this will freeze gradient propagation for all other layers.')
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
@@ -54,11 +58,11 @@ def parse_args():
     parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Character recurrent dropout")
     parser.add_argument('--char_dropout', type=float, default=0, help="Character-level language model dropout")
-    parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
-    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using character-level language model.")
+    parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off training a character model.")
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
-    parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in charater model.")
+    parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
     parser.add_argument('--no_emb_finetune', dest='emb_finetune', action='store_false', help="Turn off finetuning of the embedding matrix.")
     parser.add_argument('--no_input_transform', dest='input_transform', action='store_false', help="Do not use input transformation layer before tagger lstm.")
@@ -83,22 +87,19 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
-    args = parser.parse_args()
+
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed, args.cuda)
 
     args = vars(args)
-    logger.info("Running tagger in {} mode".format(args['mode']))
+    logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
@@ -107,29 +108,42 @@ def main():
 
 def train(args):
     utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
-    # load pretrained vectors
-    if len(args['wordvec_file']) == 0:
-        vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+    pretrain = None
+    vocab = None
+    trainer = None
+    if args['finetune'] and os.path.exists(model_file):
+        logger.warning('Finetune is ON. Using model from "{}"'.format(model_file))
+        _, trainer, vocab = load_model(args, model_file)
     else:
-        vec_file = args['wordvec_file']
-    # do not save pretrained embeddings individually
-    pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+        if args['finetune']:
+            logger.warning('Finetune is set to true but model file is not found. Continuing with training from scratch.')
 
-    if args['charlm']:
-        if args['charlm_shorthand'] is None: 
-            logger.info("CharLM Shorthand is required for loading pretrained CharLM model...")
-            sys.exit(0)
-        logger.info('Use pretrained contextualized char embedding')
-        args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-        args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        # load pretrained vectors
+        if args['wordvec_pretrain_file']:
+            pretrain_file = args['wordvec_pretrain_file']
+            pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
+        else:
+            if len(args['wordvec_file']) == 0:
+                vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+            else:
+                vec_file = args['wordvec_file']
+            # do not save pretrained embeddings individually
+            pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+
+        if args['charlm']:
+            if args['charlm_shorthand'] is None:
+                raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
+            logger.info('Using pretrained contextualized char embedding')
+            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(json.load(open(args['eval_file'])))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
@@ -141,7 +155,9 @@ def train(args):
         sys.exit(0)
 
     logger.info("Training tagger...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    if trainer is None: # init if model was not loaded previously from file
+        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'],
+                          train_classifier_only=args['train_classifier_only'])
     logger.info(trainer.model)
 
     global_step = 0
@@ -217,18 +233,10 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
-    # load model
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
-    loaded_args, vocab = trainer.args, trainer.vocab
-
-    # load config
-    for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
-            loaded_args[k] = args[k]
+    loaded_args, trainer, vocab = load_model(args, model_file)
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
@@ -245,6 +253,20 @@ def evaluate(args):
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+
+
+def load_model(args, model_file):
+    # load model
+    use_cuda = args['cuda'] and not args['cpu']
+    trainer = Trainer(model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    loaded_args, vocab = trainer.args, trainer.vocab
+
+    # load config
+    for k in args:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
+            loaded_args[k] = args[k]
+    return loaded_args, trainer, vocab
+
 
 if __name__ == '__main__':
     main()

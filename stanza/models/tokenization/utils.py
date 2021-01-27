@@ -56,14 +56,67 @@ def process_sentence(sentence, mwt_dict=None):
             i += 1
     return sent
 
+
+# https://stackoverflow.com/questions/201323/how-to-validate-an-email-address-using-a-regular-expression
+EMAIL_RAW_RE = r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(?:2(?:5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(?:2(?:5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"""
+
+# https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+# modification: disallow " as opposed to all ^\s
+URL_RAW_RE = r"""(?:https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s"]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s"]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s"]{2,}|www\.[a-zA-Z0-9]+\.[^\s"]{2,})"""
+
+MASK_RE = re.compile(f"(?:{EMAIL_RAW_RE}|{URL_RAW_RE})")
+
+def find_spans(raw):
+    """
+    Return spans of text which don't contain <PAD> and are split by <PAD>
+    """
+    pads = [idx for idx, char in enumerate(raw) if char == '<PAD>']
+    if len(pads) == 0:
+        spans = [(0, len(raw))]
+    else:
+        prev = 0
+        spans = []
+        for pad in pads:
+            if pad != prev:
+                spans.append( (prev, pad) )
+            prev = pad + 1
+        if prev < len(raw):
+            spans.append( (prev, len(raw)) )
+    return spans
+
+def update_pred_regex(raw, pred):
+    """
+    Update the results of a tokenization batch by checking the raw text against a couple regular expressions
+
+    Currently, emails and urls are handled
+    TODO: this might work better as a constraint on the inference
+
+    for efficiency pred is modified in place
+    """
+    spans = find_spans(raw)
+
+    for span_begin, span_end in spans:
+        text = "".join(raw[span_begin:span_end])
+        for match in MASK_RE.finditer(text):
+            match_begin, match_end = match.span()
+            # first, update all characters touched by the regex to not split
+            # with the exception of the last character...
+            for char in range(match_begin+span_begin, match_end+span_begin-1):
+                pred[char] = 0
+            # if the last character is not currently a split, make it a word split
+            if pred[match_end+span_begin-1] == 0:
+                pred[match_end+span_begin-1] = 1
+
+    return pred
+
 SPACE_RE = re.compile(r'\s')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
-        length = sum([len(x) for x in p])
+        length = sum([len(x[0]) for x in p])
         paragraphs += [(i, start, start+length, length+1)] # para idx, start idx, end idx, length
 
     paragraphs = list(sorted(paragraphs, key=lambda x: x[3], reverse=True))
@@ -90,6 +143,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             pred = np.argmax(trainer.predict(batch), axis=2)
         else:
             idx = [0] * len(batchparas)
+            adv = [0] * len(batchparas)
             Ns = [p[3] for p in batchparas]
             pred = [[] for _ in batchparas]
             while True:
@@ -107,10 +161,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
                     pred[j] += [pred1[j, :advance]]
                     idx[j] += advance
+                    adv[j] = advance
 
                 if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
                     break
-                batch = data_generator.next(eval_offsets=[x+y for x, y in zip(idx, offsets)])
+                batch = data_generator.next(eval_offsets=adv, old_batch=batch)
 
             pred = [np.concatenate(p, 0) for p in pred]
 
@@ -120,7 +175,10 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 pred[j][len1-1] = 2
             elif pred[j][len1-1] > 2:
                 pred[j][len1-1] = 4
-            all_preds[p[0]] = pred[j][:len1]
+            if use_regex_tokens:
+                all_preds[p[0]] = update_pred_regex(raw[j], pred[j][:len1])
+            else:
+                all_preds[p[0]] = pred[j][:len1]
             all_raw[p[0]] = raw[j]
 
     offset = 0

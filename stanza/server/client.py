@@ -34,6 +34,7 @@ SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 # Check if str is CoreNLP supported language
 CORENLP_LANGS = ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
+# map shorthands to full language names
 LANGUAGE_SHORTHANDS_TO_FULL = {
     "ar": "arabic",
     "zh": "chinese",
@@ -99,8 +100,8 @@ class RobustService(object):
     """ Service that resuscitates itself if it is not available. """
     CHECK_ALIVE_TIMEOUT = 120
 
-    def __init__(self, start_cmd, stop_cmd, endpoint, stdout=sys.stdout,
-                 stderr=sys.stderr, be_quiet=False, host=None, port=None, ignore_binding_error=False):
+    def __init__(self, start_cmd, stop_cmd, endpoint, stdout=None,
+                 stderr=None, be_quiet=False, host=None, port=None, ignore_binding_error=False):
         self.start_cmd = start_cmd and shlex.split(start_cmd)
         self.stop_cmd = stop_cmd and shlex.split(stop_cmd)
         self.endpoint = endpoint
@@ -139,13 +140,18 @@ class RobustService(object):
                                                          "(possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
-                stderr = open(os.devnull, 'w')
+                if hasattr(subprocess, 'DEVNULL'):
+                    stderr = subprocess.DEVNULL
+                else:
+                    stderr = open(os.devnull, 'w')
+                stdout = stderr
             else:
+                stdout = self.stdout
                 stderr = self.stderr
             logger.info(f"Starting server with command: {' '.join(self.start_cmd)}")
             self.server = subprocess.Popen(self.start_cmd,
                                            stderr=stderr,
-                                           stdout=stderr)
+                                           stdout=stdout)
 
     def atexit_kill(self):
         # make some kind of effort to stop the service (such as a
@@ -249,8 +255,8 @@ class CoreNLPClient(RobustService):
                  annotators=None,
                  output_format=None,
                  properties=None,
-                 stdout=sys.stdout,
-                 stderr=sys.stderr,
+                 stdout=None,
+                 stderr=None,
                  memory=DEFAULT_MEMORY,
                  be_quiet=False,
                  max_char_length=DEFAULT_MAX_CHAR_LENGTH,
@@ -394,7 +400,7 @@ class CoreNLPClient(RobustService):
                 if self.properties.lower() in LANGUAGE_SHORTHANDS_TO_FULL:
                     self.properties = LANGUAGE_SHORTHANDS_TO_FULL[self.properties]
                 logger.info(
-                    f"Using Stanford CoreNLP default properties for: {self.properties}.  Make sure to have "
+                    f"Using CoreNLP default properties for: {self.properties}.  Make sure to have "
                     f"{self.properties} models jar (available for download here: "
                     f"https://stanfordnlp.github.io/CoreNLP/) in CLASSPATH")
             else:
@@ -508,7 +514,7 @@ class CoreNLPClient(RobustService):
             request_properties['outputFormat'] = output_format
 
         # make the request
-        # if not explictly set or the case of pipelineLanguage, reset_default should be None
+        # if not explicitly set or the case of pipelineLanguage, reset_default should be None
         if reset_default is None:
             reset_default = False
         r = self._request(text.encode('utf-8'), request_properties, reset_default, **kwargs)
@@ -580,14 +586,10 @@ class CoreNLPClient(RobustService):
 
         # force output for regex requests to be json
         properties['outputFormat'] = 'json'
-
-        # TODO: get rid of this once corenlp 4.0.0 is released?
-        # the "stupid reason" has hopefully been fixed on the corenlp side
-        # but maybe people are married to corenlp 3.9.2 for some reason
-        # HACK: For some stupid reason, CoreNLPServer will timeout if we
-        # need to annotate something from scratch. So, we need to call
-        # this to ensure that the _regex call doesn't timeout.
-        self.annotate(text, properties=properties)
+        # if the server is trying to send back character offsets, it
+        # should send back codepoints counts as well in case the text
+        # has extra wide characters
+        properties['tokenize.codepoint'] = 'true'
 
         try:
             # Error occurs unless put properties in params
@@ -623,20 +625,15 @@ class CoreNLPClient(RobustService):
 def read_corenlp_props(props_path):
     """ Read a Stanford CoreNLP properties file into a dict """
     props_dict = {}
-    if os.path.exists(props_path):
-        with open(props_path) as props_file:
-            entry_lines = \
-                [entry_line for entry_line in props_file.read().split('\n')
-                 if entry_line.strip() and not entry_line.startswith('#')]
-            for entry_line in entry_lines:
-                k = entry_line.split('=')[0]
-                k_len = len(k+"=")
-                v = entry_line[k_len:]
-                props_dict[k.strip()] = v
-        return props_dict
-
-    else:
-        raise RuntimeError(f'Error: Properties file at {props_path} does not exist!')
+    with open(props_path) as props_file:
+        entry_lines = [entry_line for entry_line in props_file.read().split('\n')
+                       if entry_line.strip() and not entry_line.startswith('#')]
+        for entry_line in entry_lines:
+            k = entry_line.split('=')[0]
+            k_len = len(k+"=")
+            v = entry_line[k_len:]
+            props_dict[k.strip()] = v
+    return props_dict
 
 
 def write_corenlp_props(props_dict, file_path=None):

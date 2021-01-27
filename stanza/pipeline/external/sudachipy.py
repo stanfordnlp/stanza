@@ -40,6 +40,7 @@ class SudachiPyTokenizer(ProcessorVariant):
         from sudachipy import dictionary
 
         self.tokenizer = dictionary.Dictionary().create()
+        self.no_ssplit = config.get('no_ssplit', False)
 
     def process(self, text):
         """ Tokenize a document with the SudachiPy tokenizer and wrap the results into a Doc object.
@@ -69,7 +70,7 @@ class SudachiPyTokenizer(ProcessorVariant):
             }
             current_sentence.append(token_entry)
 
-            if token_text in ['。', '！', '？', '!', '?']:
+            if not self.no_ssplit and token_text in ['。', '！', '？', '!', '?']:
                 sentences.append(current_sentence)
                 current_sentence = []
 
@@ -77,7 +78,3 @@ class SudachiPyTokenizer(ProcessorVariant):
             sentences.append(current_sentence)
 
         return doc.Document(sentences, text)
-
-
-
-
