@@ -55,10 +55,13 @@ own word vectors.
 Character LMs are included for a few languages.  You can look in
 resources.json for `forward_charlm` and `backward_charlm`
 
-For those which aren't, if you want to pretrain a character model,
-there are instructions here:
+For adding a new languages, we provide scripts to automate large parts of the process.  Scripts for converting raw text to conllu and conllu to a charlm dataset can be found in https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/conll17_to_text.py and https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/make_lm_data.py
 
-https://github.com/stanfordnlp/stanza-train#charlm
+* Gather a ton of tokenized text.  Ideally gigabytes.  Wikipedia is a good place to start for raw text, but in that case you will need to tokenize it.
+* If the data you gathered was from the conll17 shared task, we provide a script to turn it into txt files.  Run ```python3 stanza/utils/charlm/conll17_to_text.py ~/extern_data/finnish/conll17/Finnish/```  This will convert conllu or conllu.xz files to txt and put them in the same directory.
+* Run ```python3 stanza/utils/charlm/make_lm_data.py extern_data/charlm_raw extern_data/charlm```  This will convert text files in the `charlm_raw` directory to a suitable dataset in `extern_data/charlm`.  You may need to adjust your paths.
+* Run ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt --direction forward --lang fi --shorthand fi_conll17  --mode train```
+* This will take days or weeks to fully train.
 
 ## Building models
 
