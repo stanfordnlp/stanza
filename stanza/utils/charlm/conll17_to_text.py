@@ -60,7 +60,7 @@ def process_file(input_filename, output_directory, compress):
     if sentence:
         sentences.append(sentence)
 
-    print(len(sentences))
+    print("  Read in {} sentences".format(len(sentences)))
     with output_fn(output_filename) as fout:
         fout.write('\n'.join([' '.join(sentence) for sentence in sentences]))
 
