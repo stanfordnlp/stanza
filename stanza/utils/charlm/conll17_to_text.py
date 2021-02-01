@@ -9,11 +9,12 @@ Extension of this script:
   https://github.com/stanfordnlp/stanza-scripts/blob/master/charlm/conll17/conll2txt.py
 """
 
+import argparse
 import lzma
 import sys
 import os
 
-def process_file(input_filename):
+def process_file(input_filename, output_directory):
     if not input_filename.endswith('.conllu') and not input_filename.endswith(".conllu.xz"):
         print("Skipping {}".format(input_filename))
         return
@@ -24,6 +25,8 @@ def process_file(input_filename):
     else:
         open_fn = lambda x: open(x)
         output_filename = input_filename.replace('.conllu', '.txt')
+    if output_directory:
+        output_filename = os.path.join(output_directory, os.path.split(output_filename)[1])
     if os.path.exists(output_filename):
         print("Cowardly refusing to overwrite %s" % output_filename)
         return
@@ -53,11 +56,22 @@ def process_file(input_filename):
     with open(output_filename, 'w') as fout:
         fout.write('\n'.join([' '.join(sentence) for sentence in sentences]))
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_directory", help="Root directory with conllu or conllu.xz files.")
+    parser.add_argument("--output_directory", default=None, help="Directory to output to.  Will output to input_directory if None")
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == '__main__':
-    directory = sys.argv[1]
+    args = parse_args()
+    directory = args.input_directory
     filenames = sorted(os.listdir(directory))
     print("Files to process in {}: {}".format(directory, filenames))
 
+    if args.output_directory:
+        os.makedirs(args.output_directory, exist_ok=True)
     for filename in filenames:
-        process_file(os.path.join(directory, filename))
+        process_file(os.path.join(directory, filename), args.output_directory)
 
