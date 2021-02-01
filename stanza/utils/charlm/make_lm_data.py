@@ -79,8 +79,12 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name):
     if os.path.exists(tgt_tmp):
         os.remove(tgt_tmp)
     print(f"--> Copying files into {tgt_tmp}...")
+    # TODO: we can do this without the shell commands
     for src_fn in glob.glob(str(src_dir) + '/*.txt'):
         cmd = f"cat {src_fn} >> {tgt_tmp}"
+        subprocess.run(cmd, shell=True)
+    for src_fn in glob.glob(str(src_dir) + '/*.txt.xz'):
+        cmd = f"xzcat {src_fn} >> {tgt_tmp}"
         subprocess.run(cmd, shell=True)
     tgt_tmp_shuffled = Path(str(tgt_tmp) + ".shuffled")
 
