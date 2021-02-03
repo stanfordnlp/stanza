@@ -91,3 +91,41 @@ class TokenizeProcessor(UDProcessor):
                                    orig_text=raw_text,
                                    no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
+
+    def bulk_process(self, docs):
+        """
+        The tokenizer cannot use UDProcessor's sentence-level cross-document batching interface, and requires special handling
+        """
+        if hasattr(self, '_variant'):
+            return self._variant.bulk_process(docs)
+
+        combined_text = '\n\n'.join([thisdoc.text for thisdoc in docs])
+        processed_combined = self.process(doc.Document([], text=combined_text))
+
+        # postprocess sentences and tokens to reset back pointers and char offsets
+        charoffset = 0
+        sentst = senten = 0
+        for thisdoc in docs:
+            while senten < len(processed_combined.sentences) and processed_combined.sentences[senten].tokens[-1].end_char - charoffset <= len(thisdoc.text):
+                senten += 1
+
+            sentences = processed_combined.sentences[sentst:senten]
+            thisdoc.sentences = sentences
+            for sent in sentences:
+                # fix doc back pointers for sentences
+                sent.doc = thisdoc
+
+                # fix char offsets for tokens
+                for token in sent.tokens:
+                    token.misc = token.misc.replace(f"{doc.START_CHAR}={token.start_char}", f"{doc.START_CHAR}={token.start_char - charoffset}")
+                    token.misc = token.misc.replace(f"{doc.END_CHAR}={token.end_char}", f"{doc.END_CHAR}={token.end_char - charoffset}")
+                    token._start_char -= charoffset
+                    token._end_char -= charoffset
+
+            thisdoc.num_tokens = sum(len(sent.tokens) for sent in sentences)
+            thisdoc.num_words = sum(len(sent.words) for sent in sentences)
+            sentst = senten
+
+            charoffset += len(thisdoc.text) + 2
+
+        return docs
