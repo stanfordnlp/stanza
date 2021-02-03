@@ -4,7 +4,7 @@ Common utilities for Stanza resources.
 
 import os
 import requests
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from pathlib import Path
 import json
 import hashlib
