@@ -9,7 +9,7 @@ from stanza.models.common.doc import Document
 
 from tests import *
 
-pytestmark = pytest.mark.pipeline
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 # data for testing
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."
