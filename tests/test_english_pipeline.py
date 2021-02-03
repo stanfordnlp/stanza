@@ -157,3 +157,15 @@ def test_words_multidoc(processed_multidoc):
 def test_dependency_parse_multidoc(processed_multidoc):
     assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == \
            EN_DOC_DEPENDENCY_PARSES_GOLD
+
+
+@pytest.fixture(scope="module")
+def processed_multidoc_variant():
+    """ Document created by running full English pipeline on a few sentences """
+    docs = [Document([], text=t) for t in EN_DOCS]
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors={'tokenize': 'spacy'})
+    return nlp(docs)
+
+def test_dependency_parse_multidoc_variant(processed_multidoc_variant):
+    assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc_variant for sent in processed_doc.sentences]) == \
+           EN_DOC_DEPENDENCY_PARSES_GOLD

@@ -42,11 +42,15 @@ class SudachiPyTokenizer(ProcessorVariant):
         self.tokenizer = dictionary.Dictionary().create()
         self.no_ssplit = config.get('no_ssplit', False)
 
-    def process(self, text):
+    def process(self, document):
         """ Tokenize a document with the SudachiPy tokenizer and wrap the results into a Doc object.
         """
+        if isinstance(document, doc.Document):
+            text = document.text
+        else:
+            text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string to the SudachiPy tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the SudachiPy tokenizer.")
 
         # we use the default sudachipy tokenization mode (i.e., mode C)
         # more config needs to be added to support other modes

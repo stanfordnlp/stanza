@@ -35,9 +35,13 @@ class JiebaTokenizer(ProcessorVariant):
         self.nlp = jieba
         self.no_ssplit = config.get('no_ssplit', False)
 
-    def process(self, text):
+    def process(self, document):
         """ Tokenize a document with the Jieba tokenizer and wrap the results into a Doc object.
         """
+        if isinstance(document, doc.Document):
+            text = document.text
+        else:
+            text = document
         if not isinstance(text, str):
             raise Exception("Must supply a string to the Jieba tokenizer.")
         tokens = self.nlp.cut(text, cut_all=False)
