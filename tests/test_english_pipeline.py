@@ -109,6 +109,30 @@ EN_DOC_CONLLU_GOLD = """
 
 """.lstrip()
 
+EN_DOC_CONLLU_GOLD_MULTIDOC = """
+1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6
+2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16
+4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21
+5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32
+
+1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=0|end_char=2
+2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=3|end_char=6
+3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part	0	root	_	start_char=7|end_char=14
+4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=15|end_char=24
+5	in	in	ADP	IN	_	6	case	_	start_char=25|end_char=27
+6	2008	2008	NUM	CD	NumType=Card	3	obl	_	start_char=28|end_char=32
+7	.	.	PUNCT	.	_	3	punct	_	start_char=32|end_char=33
+
+1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5
+2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22
+4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23
+
+""".lstrip()
+
 
 @pytest.fixture(scope="module")
 def processed_doc():
@@ -145,6 +169,9 @@ def processed_multidoc():
     nlp = stanza.Pipeline(dir=TEST_MODELS_DIR)
     return nlp(docs)
 
+
+def test_conllu_multidoc(processed_multidoc):
+    assert "".join([CoNLL.conll_as_string(CoNLL.convert_dict(doc.to_dict())) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
 def test_tokens_multidoc(processed_multidoc):
     assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD

@@ -113,12 +113,13 @@ class TokenizeProcessor(UDProcessor):
             thisdoc.sentences = sentences
             for sent in sentences:
                 # fix doc back pointers for sentences
-                sent.doc = thisdoc
+                sent._doc = thisdoc
 
-                # fix char offsets for tokens
+                # fix char offsets for tokens and words
                 for token in sent.tokens:
-                    token.misc = token.misc.replace(f"{doc.START_CHAR}={token.start_char}", f"{doc.START_CHAR}={token.start_char - charoffset}")
-                    token.misc = token.misc.replace(f"{doc.END_CHAR}={token.end_char}", f"{doc.END_CHAR}={token.end_char - charoffset}")
+                    token._misc = token._misc.replace(f"{doc.START_CHAR}={token.start_char}", f"{doc.START_CHAR}={token.start_char - charoffset}")
+                    token._misc = token._misc.replace(f"{doc.END_CHAR}={token.end_char}", f"{doc.END_CHAR}={token.end_char - charoffset}")
+                    token.words[0]._misc = token._misc
                     token._start_char -= charoffset
                     token._end_char -= charoffset
 

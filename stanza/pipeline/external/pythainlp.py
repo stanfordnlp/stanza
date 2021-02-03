@@ -49,7 +49,7 @@ class PyThaiNLPTokenizer(ProcessorVariant):
         else:
             text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string or stanza Document object to the PyThaiNLP tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the PyThaiNLP tokenizer.")
 
         sentences = []
         current_sentence = []

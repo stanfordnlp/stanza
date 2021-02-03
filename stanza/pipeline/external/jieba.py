@@ -43,7 +43,7 @@ class JiebaTokenizer(ProcessorVariant):
         else:
             text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string to the Jieba tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the Jieba tokenizer.")
         tokens = self.nlp.cut(text, cut_all=False)
 
         sentences = []

@@ -53,7 +53,7 @@ class SpacyTokenizer(ProcessorVariant):
         else:
             text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string or Document to the spaCy tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the spaCy tokenizer.")
         spacy_doc = self.nlp(text)
 
         sentences = []
