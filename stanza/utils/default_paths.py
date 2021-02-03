@@ -29,7 +29,9 @@ def get_default_paths():
 
         "NERBASE": "extern_data/ner",
 
-        "EXTERN_DIR": "extern_data",
+        # there's a stanford github, stanfordnlp/handparsed-treebank,
+        # with some data for different languages
+        "HANDPARSED_DIR": "extern_data/handparsed-treebank",
     }
 
     paths = { "DATA_ROOT" : DATA_ROOT }
