@@ -115,7 +115,7 @@ class CoolLemmatizer(ProcessorVariant):
         return document
 
 def test_register_processor_variant_with_override():
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "ewt", "pos": "ewt", "lemma": "cool"}, package=None)
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "combined", "pos": "combined", "lemma": "cool"}, package=None)
     doc = nlp(EN_DOC)
     assert EN_DOC_COOL_LEMMAS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
 

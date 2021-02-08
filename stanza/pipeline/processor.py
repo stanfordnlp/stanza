@@ -4,6 +4,7 @@ Base classes for processors
 
 from abc import ABC, abstractmethod
 
+from stanza.models.common.doc import Document
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 
 class ProcessorRequirementsException(Exception):
@@ -75,6 +76,9 @@ class Processor(ABC):
 
     def bulk_process(self, docs):
         """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
+
+        if hasattr(self, '_variant'):
+            return self._variant.bulk_process(docs)
 
         return [self.process(doc) for doc in docs]
 
@@ -200,6 +204,26 @@ class UDProcessor(Processor):
             return True
         else:
             return False
+
+    def bulk_process(self, docs):
+        """
+        Most processors operate on the sentence level, where each sentence is processed independently and processors can benefit
+        a lot from the ability to combine sentences from multiple documents for faster batched processing. This is a transparent
+        implementation that allows these processors to batch process a list of Documents as if they were from a single Document.
+        """
+
+        if hasattr(self, '_variant'):
+            return self._variant.bulk_process(docs)
+
+        combined_sents = [sent for doc in docs for sent in doc.sentences]
+        combined_doc = Document([])
+        combined_doc.sentences = combined_sents
+        combined_doc.num_tokens = sum(doc.num_tokens for doc in docs)
+        combined_doc.num_words = sum(doc.num_words for doc in docs)
+
+        self.process(combined_doc) # annotations are attached to sentence objects
+
+        return docs
 
 class ProcessorRegisterException(Exception):
     """ Exception indicating processor or processor registration failure """

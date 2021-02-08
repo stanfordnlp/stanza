@@ -41,11 +41,15 @@ class PyThaiNLPTokenizer(ProcessorVariant):
         self.pythai_word_tokenize = pythai_word_tokenize
         self.no_ssplit = config.get('no_ssplit', False)
     
-    def process(self, text):
+    def process(self, document):
         """ Tokenize a document with the PyThaiNLP tokenizer and wrap the results into a Doc object.
         """
+        if isinstance(document, doc.Document):
+            text = document.text
+        else:
+            text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string to the PyThaiNLP tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the PyThaiNLP tokenizer.")
 
         sentences = []
         current_sentence = []
