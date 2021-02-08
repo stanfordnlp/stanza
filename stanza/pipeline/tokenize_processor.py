@@ -94,10 +94,19 @@ class TokenizeProcessor(UDProcessor):
 
     def bulk_process(self, docs):
         """
-        The tokenizer cannot use UDProcessor's sentence-level cross-document batching interface, and requires special handling
+        The tokenizer cannot use UDProcessor's sentence-level cross-document batching interface, and requires special handling.
+        Essentially, this method concatenates the text of multiple documents with "\n\n", tokenizes it with the neural tokenizer,
+        then splits the result into the original Documents and recovers the original character offsets.
         """
         if hasattr(self, '_variant'):
             return self._variant.bulk_process(docs)
+
+        if self.config.get('pretokenized'):
+            res = []
+            for document in docs:
+                raw_text, document = self.process_pre_tokenized_text(document.text)
+                res.append(doc.Document(document, raw_text))
+            return res
 
         combined_text = '\n\n'.join([thisdoc.text for thisdoc in docs])
         processed_combined = self.process(doc.Document([], text=combined_text))
