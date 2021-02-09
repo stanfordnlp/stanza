@@ -188,6 +188,10 @@ class DataLoader:
             pid, sid = id_pair
             units, labels, feats, raw_units = copy([x[offset:] for x in self.sentences[pid][sid]])
 
+            drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
+            if drop_sents:
+                cumlens = []
+
             assert self.eval or len(units) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(units), ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
             for sid1 in range(sid+1, len(self.sentences[pid])):
                 units.extend(self.sentences[pid][sid1][0])
@@ -195,12 +199,28 @@ class DataLoader:
                 feats.extend(self.sentences[pid][sid1][2])
                 raw_units.extend(self.sentences[pid][sid1][3])
 
+                if drop_sents:
+                    cumlens.append(len(units))
+
                 if len(units) >= self.args['max_seqlen']:
                     units = units[:self.args['max_seqlen']]
                     labels = labels[:self.args['max_seqlen']]
                     feats = feats[:self.args['max_seqlen']]
                     raw_units = raw_units[:self.args['max_seqlen']]
                     break
+
+            if drop_sents and len(cumlens) > 0:
+                # len(cumlens) == 0 can happen if the first sentence
+                # is longer than one entire batch
+                if cumlens[-1] > self.args['max_seqlen']:
+                    cumlens = cumlens[:-1]
+                if len(cumlens) > 0:
+                    p = [.5 ** i for i in range(1, len(cumlens) + 1)] # drop a large number of sentences with smaller probability
+                    cutoff = random.choices(cumlens, weights=list(reversed(p)))[0]
+                    units = units[:cutoff]
+                    labels = labels[:cutoff]
+                    feats = feats[:cutoff]
+                    raw_units = raw_units[:cutoff]
 
             return units, labels, feats, raw_units
 
