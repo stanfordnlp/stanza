@@ -1,7 +1,7 @@
 """
 Entry point for training and evaluating a neural tokenizer.
 
-This tokenizer treats tokenization and sentence segmentation as a tagging problem, and uses a combination of 
+This tokenizer treats tokenization and sentence segmentation as a tagging problem, and uses a combination of
 recurrent and convolutional architectures.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
