@@ -168,3 +168,23 @@ print(doc) # Look at the result
 ```
 
 Here, we can specify the language, processors, and paths for many Processor models all at once, and pass that to the Pipeline initializer. Note that config dictionaries and keyword arguments can be combined as well, to maximize your flexibility in using Stanza's neural pipeline.
+
+### Processing Multiple Documents
+
+New in v1.2
+{: .label .label-green }
+
+If you are annotating multiple pieces of text with Stanza, you might find it helpful to pass them all into the neural pipeline at once, and get back a list of documents on the output end. To achieve this, you can simply pass a list of stanza Documents into the pipeline for processing. For instance,
+
+```python
+import stanza
+nlp = stanza.Pipeline(lang="en") # Initialize the default English pipeline
+documents = ["This is a test document.", "I wrote another document for fun."] # Documents that we are going to process
+in_docs = [stanza.Document([], text=d) for d in documents] # Wrap each document with a stanza.Document object
+out_docs = nlp(in_docs) # Call the neural pipeline on this list of documents
+print(out_docs[1]) # The output is also a list of stanza.Document objects, each output corresponding to an input Document object
+```
+
+You might find this useful when you have a large number of documents to process, but you would prefer Stanza to respect document boundaries. In future releases, we will optimize this interface behind the scenes to further speed up batched processing, and this would be significantly more efficient than processing your documents one by one.
+
+The same usage pattern also applies to other Pipeline use cases, e.g., partially annotated documents (that are already in `stanza.Document` objects), pretokenized text (should be assigned to the `text` argument similarly to the raw text example above), etc.
