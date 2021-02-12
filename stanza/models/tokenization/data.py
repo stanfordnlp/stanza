@@ -189,12 +189,12 @@ class DataLoader:
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
 
             drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
-            total_len = len(sentences[0])
+            total_len = len(sentences[0][0])
 
-            assert self.eval or len(units) <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], len(units), ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
+            assert self.eval or total_len <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], total_len, ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
             for sid1 in range(sid+1, len(self.sentences[pid])):
-                total_len += len(self.sentences[pid][sid][0])
-                sentences.append(self.sentences[pid][sid])
+                total_len += len(self.sentences[pid][sid1][0])
+                sentences.append(self.sentences[pid][sid1])
 
                 if total_len >= self.args['max_seqlen']:
                     break
@@ -204,8 +204,6 @@ class DataLoader:
                 random.shuffle(sentences)
 
             if drop_sents and len(sentences) > 1:
-                # len(cumlens) == 0 can happen if the first sentence
-                # is longer than one entire batch
                 if total_len > self.args['max_seqlen']:
                     sentences = sentences[:-1]
                 if len(sentences) > 1:
@@ -213,10 +211,14 @@ class DataLoader:
                     cutoff = random.choices(list(range(len(sentences))), weights=list(reversed(p)))[0]
                     sentences = sentences[:cutoff+1]
 
-            units = [val for s in sentences for val in s[0]][:self.args['max_seqlen']]
-            labels = [val for s in sentences for val in s[1]][:self.args['max_seqlen']]
-            feats = [val for s in sentences for val in s[2]][:self.args['max_seqlen']]
-            raw_units = [val for s in sentences for val in s[3]][:self.args['max_seqlen']]
+            units = [val for s in sentences for val in s[0]]
+            labels = [val for s in sentences for val in s[1]]
+            feats = [val for s in sentences for val in s[2]]
+            raw_units = [val for s in sentences for val in s[3]]
+
+            if not self.eval:
+                cutoff = self.args['max_seqlen']
+                units, labels, feats, raw_units = units[:cutoff], labels[:cutoff], feats[:cutoff], raw_units[:cutoff]
 
             return units, labels, feats, raw_units
 
