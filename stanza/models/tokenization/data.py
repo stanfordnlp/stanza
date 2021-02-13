@@ -185,23 +185,28 @@ class DataLoader:
             return units, labels, features, raw_units
 
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
-            pid, sid = id_pair
+            pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
 
             drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
             total_len = len(sentences[0][0])
 
             assert self.eval or total_len <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], total_len, ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
-            for sid1 in range(sid+1, len(self.sentences[pid])):
-                total_len += len(self.sentences[pid][sid1][0])
-                sentences.append(self.sentences[pid][sid1])
+            if self.eval:
+                for sid1 in range(sid+1, len(self.sentences[pid])):
+                    total_len += len(self.sentences[pid][sid1][0])
+                    sentences.append(self.sentences[pid][sid1])
 
-                if total_len >= self.args['max_seqlen']:
-                    break
+                    if total_len >= self.args['max_seqlen']:
+                        break
+            else:
+                while True:
+                    pid1, sid1 = random.choice(self.sentence_ids)
+                    total_len += len(self.sentences[pid1][sid1][0])
+                    sentences.append(self.sentences[pid1][sid1])
 
-            if not self.eval:
-                # shuffle within batch
-                random.shuffle(sentences)
+                    if total_len >= self.args['max_seqlen']:
+                        break
 
             if drop_sents and len(sentences) > 1:
                 if total_len > self.args['max_seqlen']:
