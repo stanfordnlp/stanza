@@ -365,12 +365,10 @@ def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
     write_sentences_to_conllu(output_conllu, new_sentences)
     convert_conllu_to_txt(output_conllu, output_txt)
 
-def augment_punct(sents):
+def augment_apos(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
-
-    TODO: do the same with "..." and the ellipses character
     """
     has_unicode_apos = False
     has_ascii_apos = False
@@ -404,6 +402,58 @@ def augment_punct(sents):
                 pieces[1] = pieces[1].replace("'", "’")
                 new_sent.append("\t".join(pieces))
         new_sents.append(new_sent)
+
+    return new_sents
+
+def augment_ellipses(sents):
+    """
+    Replaces a fraction of '...' with '…'
+    """
+    has_ellipses = False
+    has_unicode_ellipses = False
+    for sent in sents:
+        for line in sent:
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if pieces[1] == '...':
+                has_ellipses = True
+            elif pieces[1] == '…':
+                has_unicode_ellipses = True
+
+    if has_unicode_ellipses or not has_ellipses:
+        return sents
+
+    new_sents = []
+
+    for sent in sents:
+        if random.random() > 0.05:
+            new_sents.append(sent)
+            continue
+        new_sent = []
+        for line in sent:
+            if line.startswith("#"):
+                new_sent.append(line)
+            else:
+                pieces = line.split("\t")
+                if pieces[1] == '...':
+                    pieces[1] = '…'
+                new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+
+    return new_sents
+
+def augment_punct(sents):
+    """
+    If there are no instances of ’ in the dataset, but there are instances of ',
+    we replace some fraction of ' with ’ so that the tokenizer will recognize it.
+
+    Also augments with ... / …
+
+    TODO: handle the wide variety of quotes which are possible
+    """
+    new_sents = augment_apos(sents)
+    new_sents = augment_ellipses(new_sents)
 
     return new_sents
 
