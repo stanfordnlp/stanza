@@ -121,7 +121,7 @@ class TokenizeProcessor(UDProcessor):
 
             _, predictions = torch.max(self.trainer.model(units_tensors, features_tensors), 1)
             predictions = predictions.cpu().tolist()
-            # print(predictions)
+            #print(predictions)
 
 
         return []
