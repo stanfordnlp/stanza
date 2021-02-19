@@ -100,17 +100,22 @@ class TokenizeProcessor(UDProcessor):
                                    no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
 
-    def bulk_process(self, docs):
+    def bulk_process(self, docs, num_workers=8, batch_size=128):
+        """
+        A torch-based bulk-processing pipeline that uses torch dataloader and batch-wise inferencing.
+        """
 
+        """Create the dataset. Includes the transformation to prepare the text."""
         docs_dset = DocsDataset(docs=docs, transform=transform(self.config, self.vocab))
 
-        dloader = TorchDataLoader(docs_dset, batch_size=256, num_workers=8)
+        """Build a DataLoader from it"""
+        dloader = TorchDataLoader(docs_dset, batch_size=batch_size, num_workers=num_workers)
 
-        print(self.trainer.model)
         self.trainer.model.eval()
 
+        """Push each batch to GPU and perform a feed-forward push through the model"""
         for batch in tqdm(dloader):
-            """One batch contains batch_size doc"""
+            """One batch contains batch_size docs"""
 
             units_tensors = batch[0]
             features_tensors = batch[1]
