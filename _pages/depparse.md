@@ -65,7 +65,7 @@ import stanza
 from stanza.models.common.doc import Document
 
 nlp = stanza.Pipeline(lang='en', processors='depparse', depparse_pretagged=True)
-pretagged_doc = Document([[{'id': '1', 'text': 'Test', 'lemma': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '2', 'text': 'sentence', 'lemma': 'sentence', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': '3', 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'xpos': '.'}]])
+pretagged_doc = Document([[{'id': 1, 'text': 'Test', 'lemma': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': 2, 'text': 'sentence', 'lemma': 'sentence', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing'}, {'id': 3, 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'xpos': '.'}]])
 doc = nlp(pretagged_doc)
 ```
 
