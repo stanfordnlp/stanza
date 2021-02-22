@@ -72,24 +72,26 @@ class TokenizeProcessor(UDProcessor):
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)
-        elif hasattr(self, '_variant'):
+            return doc.Document(document, raw_text)
+
+        if hasattr(self, '_variant'):
             return self._variant.process(document)
+
+        raw_text = '\n\n'.join(document) if isinstance(document, list) else document
+        # set up batches
+        if self.config.get('lang') == 'vi':
+            # special processing is due for Vietnamese
+            text = '\n\n'.join([x for x in raw_text.split('\n\n')]).rstrip()
+            dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
+            data = paras_to_chunks(text, dummy_labels)
+            batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
         else:
-            raw_text = '\n\n'.join(document) if isinstance(document, list) else document
-            # set up batches
-            if self.config.get('lang') == 'vi':
-                # special processing is due for Vietnamese
-                text = '\n\n'.join([x for x in raw_text.split('\n\n')]).rstrip()
-                dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
-                data = paras_to_chunks(text, dummy_labels)
-                batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
-            else:
-                batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
-            # get dict data
-            _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
-                                   self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
-                                   orig_text=raw_text,
-                                   no_ssplit=self.config.get('no_ssplit', False))
+            batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
+        # get dict data
+        _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
+                                               self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
+                                               orig_text=raw_text,
+                                               no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
 
     def bulk_process(self, docs):
