@@ -156,7 +156,6 @@ class DataLoader:
         self.init_sent_ids()
 
     def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
-        null_feats = [0] * len(self.sentences[0][0][2][0])
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
