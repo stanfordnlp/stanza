@@ -112,7 +112,7 @@ def update_pred_regex(raw, pred):
 SPACE_RE = re.compile(r'\s')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, skip_newline=False):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -218,11 +218,17 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     tok_len = 0
                     for part in SPACE_SPLIT_RE.split(current_tok):
                         if len(part) == 0: continue
-                        st0 = text.index(part, char_offset) - char_offset
+                        if skip_newline:
+                            match = re.search(r'\s*'.join(part), text[char_offset:])
+                            st0 = match.start(0)
+                            partlen = match.end(0) - match.start(0)
+                        else:
+                            st0 = text.index(part, char_offset) - char_offset
+                            partlen = len(part)
                         lstripped = part.lstrip()
                         if st < 0:
                             st = char_offset + st0 + (len(part) - len(lstripped))
-                        char_offset += st0 + len(part)
+                        char_offset += st0 + partlen
                     additional_info = {START_CHAR: st, END_CHAR: char_offset}
                 else:
                     additional_info = dict()

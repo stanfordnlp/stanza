@@ -89,7 +89,8 @@ class TokenizeProcessor(UDProcessor):
             _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                    self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
                                    orig_text=raw_text,
-                                   no_ssplit=self.config.get('no_ssplit', False))
+                                   no_ssplit=self.config.get('no_ssplit', False),
+                                   skip_newline=self.config.get('skip_newline', False))
         return doc.Document(document, raw_text)
 
     def bulk_process(self, docs):
