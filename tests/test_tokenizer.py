@@ -141,6 +141,7 @@ JA_DOC_GOLD_NOSSPLIT_TOKENS = """
 """.strip()
 
 ZH_DOC = "北京是中国的首都。 北京有2100万人口，是一个直辖市。\n"
+ZH_DOC1 = "北\n京是中\n国的首\n都。 北京有2100万人口，是一个直辖市。\n"
 ZH_DOC_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=北京>]>
 <Token id=2;words=[<Word id=2;text=是>]>
@@ -159,6 +160,28 @@ ZH_DOC_GOLD_TOKENS = """
 <Token id=8;words=[<Word id=8;text=一个>]>
 <Token id=9;words=[<Word id=9;text=直辖市>]>
 <Token id=10;words=[<Word id=10;text=。>]>
+""".strip()
+
+ZH_DOC1_GOLD_TOKENS="""
+<Token id=1;words=[<Word id=1;text=北京;lemma=北京;upos=PROPN;xpos=NNP;head=5;deprel=nsubj>]>
+<Token id=2;words=[<Word id=2;text=是;lemma=是;upos=AUX;xpos=VC;head=5;deprel=cop>]>
+<Token id=3;words=[<Word id=3;text=中国;lemma=中国;upos=PROPN;xpos=NNP;head=5;deprel=nmod>]>
+<Token id=4;words=[<Word id=4;text=的;lemma=的;upos=PART;xpos=DEC;feats=Case=Gen;head=3;deprel=case:dec>]>
+<Token id=5;words=[<Word id=5;text=首都;lemma=首都;upos=NOUN;xpos=NN;head=0;deprel=root>]>
+<Token id=6;words=[<Word id=6;text=。;lemma=。;upos=PUNCT;xpos=.;head=5;deprel=punct>]>
+
+<Token id=1;words=[<Word id=1;text=北京;lemma=北京;upos=PROPN;xpos=NNP;head=2;deprel=nsubj>]>
+<Token id=2;words=[<Word id=2;text=有;lemma=有;upos=VERB;xpos=VV;head=11;deprel=acl>]>
+<Token id=3;words=[<Word id=3;text=2100万;lemma=2100万;upos=NUM;xpos=CD;feats=NumType=Card;head=4;deprel=nummod>]>
+<Token id=4;words=[<Word id=4;text=人;lemma=人;upos=NOUN;xpos=NN;head=5;deprel=compound>]>
+<Token id=5;words=[<Word id=5;text=口;lemma=口;upos=PART;xpos=SFN;head=2;deprel=obj>]>
+<Token id=6;words=[<Word id=6;text=，;lemma=，;upos=PUNCT;xpos=,;head=11;deprel=punct>]>
+<Token id=7;words=[<Word id=7;text=是;lemma=是;upos=AUX;xpos=VC;head=11;deprel=cop>]>
+<Token id=8;words=[<Word id=8;text=一;lemma=一;upos=NUM;xpos=CD;feats=NumType=Card;head=9;deprel=nummod>]>
+<Token id=9;words=[<Word id=9;text=个;lemma=个;upos=NOUN;xpos=NNB;head=11;deprel=nmod>]>
+<Token id=10;words=[<Word id=10;text=直辖;lemma=直辖;upos=VERB;xpos=VV;head=11;deprel=compound>]>
+<Token id=11;words=[<Word id=11;text=市;lemma=市;upos=PART;xpos=SFN;head=0;deprel=root>]>
+<Token id=12;words=[<Word id=12;text=。;lemma=。;upos=PUNCT;xpos=.;head=11;deprel=punct>]>
 """.strip()
 
 ZH_DOC_GOLD_NOSSPLIT_TOKENS = """
@@ -256,6 +279,13 @@ def test_no_ssplit():
     assert EN_DOC_NO_SSPLIT_SENTENCES == [[w.text for w in s.words] for s in doc.sentences]
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
+def test_zh_tokenizer_skip_newline():
+    nlp = stanza.Pipeline(lang='zh', dir=TEST_MODELS_DIR)
+    doc = nlp(ZH_DOC1)
+
+    assert ZH_DOC1_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert all([doc.text[token._start_char: token._end_char].replace('\n', '') == token.text for sent in doc.sentences for token in sent.tokens])
+
 def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
     doc = nlp(EN_DOC)
@@ -319,3 +349,4 @@ def test_pythainlp_no_ssplit():
     assert "PyThaiNLPTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
     assert TH_DOC_GOLD_NOSSPLIT_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
