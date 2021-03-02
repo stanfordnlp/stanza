@@ -52,7 +52,7 @@ def run_treebank(mode, paths, treebank, short_name,
         train_file = f"{tokenize_dir}/{short_name}.train.txt"
         train_dev_args = ["--dev_txt_file", dev_file, "--dev_label_file", f"{tokenize_dir}/{short_name}-ud-dev.toklabels"]
     
-    if short_language == "zh":
+    if short_language == "zh" or short_language.startswith("zh-"):
         extra_args = ["--skip_newline"] + extra_args
 
     dev_gold = f"{tokenize_dir}/{short_name}.dev.gold.conllu"
