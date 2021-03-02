@@ -112,7 +112,7 @@ def update_pred_regex(raw, pred):
 SPACE_RE = re.compile(r'\s')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, skip_newline=False):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True):
     paragraphs = []
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
@@ -127,6 +127,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     eval_limit = max(3000, max_seqlen)
 
     batch_size = trainer.args['batch_size']
+    skip_newline = trainer.args['skip_newline']
     batches = int((len(paragraphs) + batch_size - 1) / batch_size)
 
     t = 0
