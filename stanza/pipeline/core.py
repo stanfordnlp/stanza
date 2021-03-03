@@ -71,17 +71,19 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
 
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, **kwargs):
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, model_dir=None, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
+        if model_dir is not None and dir == DEFAULT_MODEL_DIR:
+            self.dir = model_dir
 
         # set global logging level
         set_logging_level(logging_level, verbose)
         # process different pipeline parameters
-        lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
+        lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
 
         # Load resources.json to obtain latest packages.
         logger.debug('Loading resource file...')
-        resources_filepath = os.path.join(dir, 'resources.json')
+        resources_filepath = os.path.join(self.dir, 'resources.json')
         if not os.path.exists(resources_filepath):
             raise ResourcesFileNotFoundError(resources_filepath)
         with open(resources_filepath) as infile:
@@ -103,7 +105,7 @@ class Pipeline:
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
-        self.config = build_default_config(resources, lang, dir, self.load_list)
+        self.config = build_default_config(resources, lang, self.dir, self.load_list)
         self.config.update(kwargs)
 
         # Load processors
