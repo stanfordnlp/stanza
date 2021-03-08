@@ -103,12 +103,12 @@ def file_exists(path, md5):
     """
     return os.path.exists(path) and get_md5(path) == md5
 
-def download_file(url, path):
+def download_file(proxies, url, path):
     """
     Download a URL into a file as specified by `path`.
     """
     verbose = logger.level in [0, 10, 20]
-    r = requests.get(url, stream=True)
+    r = requests.get(url, stream=True, proxies=proxies)
     with open(path, 'wb') as f:
         file_size = int(r.headers.get('content-length'))
         default_chunk_size = 131072
@@ -121,7 +121,7 @@ def download_file(url, path):
                     f.flush()
                     pbar.update(len(chunk))
 
-def request_file(url, path, md5=None):
+def request_file(proxies, url, path, md5=None):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
@@ -130,7 +130,7 @@ def request_file(url, path, md5=None):
     if file_exists(path, md5):
         logger.info(f'File exists: {path}.')
         return
-    download_file(url, path)
+    download_file(proxies, url, path)
     assert(not md5 or file_exists(path, md5))
 
 def sort_processors(processor_list):
@@ -330,7 +330,7 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
 
     return lang, model_dir, package, processors
 
-def download_resources_json(model_dir, resources_url,
+def download_resources_json(proxies, model_dir, resources_url,
                             resources_branch, resources_version):
     """
     Downloads resources.json to obtain latest packages.
@@ -343,6 +343,7 @@ def download_resources_json(model_dir, resources_url,
         resources_url = STANFORDNLP_RESOURCES_URL
     # make request
     request_file(
+        proxies,
         f'{resources_url}/resources_{resources_version}.json',
         os.path.join(model_dir, 'resources.json')
     )
@@ -355,7 +356,7 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
     """
     List the non-alias languages in the resources file
     """
-    download_resources_json(model_dir, resources_url,
+    download_resources_json(proxies, model_dir, resources_url,
                             resources_branch, resources_version)
     with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
@@ -370,6 +371,7 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
 # main download function
 def download(
         lang='en',
+        proxies=None,
         model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
@@ -387,7 +389,7 @@ def download(
         lang, model_dir, package, processors
     )
 
-    download_resources_json(model_dir, resources_url,
+    download_resources_json(proxies, model_dir, resources_url,
                             resources_branch, resources_version)
     # unpack results
     with open(os.path.join(model_dir, 'resources.json')) as fin:
@@ -406,6 +408,7 @@ def download(
             f'Downloading default packages for language: {lang} ({lang_name})...'
         )
         request_file(
+            proxies,
             f'{url}/{resources_version}/{lang}/default.zip',
             os.path.join(model_dir, lang, f'default.zip'),
             md5=resources[lang]['default_md5']
@@ -428,6 +431,7 @@ def download(
         for key, value in download_list:
             try:
                 request_file(
+                    proxies,
                     f'{url}/{resources_version}/{lang}/{key}/{value}.pt',
                     os.path.join(model_dir, lang, key, f'{value}.pt'),
                     md5=resources[lang][key][value]['md5']
