@@ -110,8 +110,8 @@ If you encounter `requests.exceptions.ConnectionError`, please try to use a prox
 ```python
 >>> import stanza
 >>> proxies = {'http': 'http://ip:port', 'https': 'http://ip:port'}
->>> stanza.download('en', proxies)  # This downloads the English models for the neural pipeline
->>> nlp = stanza.Pipeline('en')     # This sets up a default neural pipeline in English
+>>> stanza.download('en', proxies=proxies)  # This downloads the English models for the neural pipeline
+>>> nlp = stanza.Pipeline('en')             # This sets up a default neural pipeline in English
 >>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
 >>> doc.sentences[0].print_dependencies()
 ```

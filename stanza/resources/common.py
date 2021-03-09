@@ -103,7 +103,7 @@ def file_exists(path, md5):
     """
     return os.path.exists(path) and get_md5(path) == md5
 
-def download_file(proxies, url, path):
+def download_file(url, path, proxies):
     """
     Download a URL into a file as specified by `path`.
     """
@@ -121,7 +121,7 @@ def download_file(proxies, url, path):
                     f.flush()
                     pbar.update(len(chunk))
 
-def request_file(proxies, url, path, md5=None):
+def request_file(url, path, proxies, md5=None):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
@@ -130,7 +130,7 @@ def request_file(proxies, url, path, md5=None):
     if file_exists(path, md5):
         logger.info(f'File exists: {path}.')
         return
-    download_file(proxies, url, path)
+    download_file(url, path, proxies)
     assert(not md5 or file_exists(path, md5))
 
 def sort_processors(processor_list):
@@ -330,8 +330,8 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
 
     return lang, model_dir, package, processors
 
-def download_resources_json(proxies, model_dir, resources_url,
-                            resources_branch, resources_version):
+def download_resources_json(model_dir, resources_url, resources_branch,
+                            resources_version, proxies):
     """
     Downloads resources.json to obtain latest packages.
     """
@@ -343,21 +343,22 @@ def download_resources_json(proxies, model_dir, resources_url,
         resources_url = STANFORDNLP_RESOURCES_URL
     # make request
     request_file(
-        proxies,
         f'{resources_url}/resources_{resources_version}.json',
-        os.path.join(model_dir, 'resources.json')
+        os.path.join(model_dir, 'resources.json'),
+        proxies
     )
 
 
 def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
                              resources_url=DEFAULT_RESOURCES_URL,
                              resources_branch=None,
-                             resources_version=DEFAULT_RESOURCES_VERSION):
+                             resources_version=DEFAULT_RESOURCES_VERSION,
+                             proxies=None):
     """
     List the non-alias languages in the resources file
     """
-    download_resources_json(proxies, model_dir, resources_url,
-                            resources_branch, resources_version)
+    download_resources_json(model_dir, resources_url, resources_branch,
+                            resources_version, proxies)
     with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
     # isinstance(str) is because of fields such as "url"
@@ -371,7 +372,6 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
 # main download function
 def download(
         lang='en',
-        proxies=None,
         model_dir=DEFAULT_MODEL_DIR,
         package='default',
         processors={},
@@ -380,7 +380,8 @@ def download(
         resources_url=DEFAULT_RESOURCES_URL,
         resources_branch=None,
         resources_version=DEFAULT_RESOURCES_VERSION,
-        model_url=DEFAULT_MODEL_URL
+        model_url=DEFAULT_MODEL_URL,
+        proxies=None
     ):
     # set global logging level
     set_logging_level(logging_level, verbose)
@@ -389,8 +390,8 @@ def download(
         lang, model_dir, package, processors
     )
 
-    download_resources_json(proxies, model_dir, resources_url,
-                            resources_branch, resources_version)
+    download_resources_json(model_dir, resources_url, resources_branch,
+                            resources_version, proxies)
     # unpack results
     with open(os.path.join(model_dir, 'resources.json')) as fin:
         resources = json.load(fin)
@@ -408,10 +409,10 @@ def download(
             f'Downloading default packages for language: {lang} ({lang_name})...'
         )
         request_file(
-            proxies,
             f'{url}/{resources_version}/{lang}/default.zip',
             os.path.join(model_dir, lang, f'default.zip'),
-            md5=resources[lang]['default_md5']
+            proxies,
+            md5=resources[lang]['default_md5'],
         )
         unzip(os.path.join(model_dir, lang), 'default.zip')
     # Customize: maintain download list
@@ -431,9 +432,9 @@ def download(
         for key, value in download_list:
             try:
                 request_file(
-                    proxies,
                     f'{url}/{resources_version}/{lang}/{key}/{value}.pt',
                     os.path.join(model_dir, lang, key, f'{value}.pt'),
+                    proxies,
                     md5=resources[lang][key][value]['md5']
                 )
             except KeyError as e:
