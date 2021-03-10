@@ -53,4 +53,4 @@ word: .         upos: PUNCT     xpos: .         feats: _
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/tagger.py#L21) of the POS/UFeats tagger.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/tagger.py#L21) of the POS/UFeats tagger.

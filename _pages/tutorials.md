@@ -52,6 +52,6 @@ While our [Installation & Getting Started](installation_usage) page covers basic
 
 ## Interactive Tutorials
 
-[A Beginner's Guide to Stanza](https://github.com/stanfordnlp/stanza/blob/master/demo/Stanza_Beginners_Guide.ipynb)
+[A Beginner's Guide to Stanza](https://github.com/stanfordnlp/stanza/blob/main/demo/Stanza_Beginners_Guide.ipynb)
 
-[Using CoreNLP with Stanza](https://github.com/stanfordnlp/stanza/blob/master/demo/Stanza_CoreNLP_Interface.ipynb)
+[Using CoreNLP with Stanza](https://github.com/stanfordnlp/stanza/blob/main/demo/Stanza_CoreNLP_Interface.ipynb)

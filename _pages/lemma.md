@@ -92,5 +92,5 @@ As can be seen in the result, Stanza should lemmatize the word _myword_ as _myle
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/lemmatizer.py#L22) of the lemmatizer.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/lemmatizer.py#L22) of the lemmatizer.
 

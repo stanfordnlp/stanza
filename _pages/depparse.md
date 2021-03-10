@@ -71,5 +71,5 @@ doc = nlp(pretagged_doc)
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/parser.py#L21) of the dependency parser.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/parser.py#L21) of the dependency parser.
 

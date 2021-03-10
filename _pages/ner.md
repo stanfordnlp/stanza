@@ -97,4 +97,4 @@ token: .	ner: O
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/ner_tagger.py#L32) of the NER tagger.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/ner_tagger.py#L32) of the NER tagger.

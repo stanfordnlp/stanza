@@ -87,4 +87,4 @@ word: .         parent token: .
 
 ## Training-Only Options
 
-Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/master/stanza/models/mwt_expander.py#L22) of the MWT expander.
+Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/mwt_expander.py#L22) of the MWT expander.
