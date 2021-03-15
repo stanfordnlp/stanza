@@ -40,3 +40,12 @@ class MWTProcessor(UDProcessor):
 
         batch.doc.set_mwt_expansions(preds)
         return batch.doc
+
+    def bulk_process(self, docs):
+        """
+        MWT processor recreates the docs, so the new docs need to be returned
+
+        This could be done more efficiently - about 1-2% of the runtime of a complete pipeline
+        """
+        docs = [self.process(doc) for doc in docs]
+        return docs
