@@ -24,7 +24,7 @@ logger = logging.getLogger('stanza')
 HOME_DIR = str(Path.home())
 STANFORDNLP_RESOURCES_URL = 'https://nlp.stanford.edu/software/stanza/stanza-resources/'
 STANZA_RESOURCES_GITHUB = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/'
-DEFAULT_RESOURCES_URL = os.getenv('STANZA_RESOURCES_URL', STANZA_RESOURCES_GITHUB + 'master')
+DEFAULT_RESOURCES_URL = os.getenv('STANZA_RESOURCES_URL', STANZA_RESOURCES_GITHUB + 'main')
 DEFAULT_RESOURCES_VERSION = os.getenv(
     'STANZA_RESOURCES_VERSION',
     __resources_version__
