@@ -283,15 +283,19 @@ EXPECTED_RESULT = """
 ]
 """
 
-def test_single():
+@pytest.fixture(scope="module")
+def pipeline():
+    """ Document created by running full English pipeline on a few sentences """
     pipeline = stanza.Pipeline(processors='tokenize,mwt,pos,lemma,depparse', dir=TEST_MODELS_DIR, lang='fr')
+    return pipeline
 
+
+def test_single(pipeline):
     doc = pipeline(FR_MWT_SENTENCE)
     compare_ignoring_whitespace(str(doc), EXPECTED_RESULT)
     
-def test_bulk():
+def test_bulk(pipeline):
     NUM_DOCS = 10
-    pipeline = stanza.Pipeline(processors='tokenize,mwt,pos,lemma,depparse', dir=TEST_MODELS_DIR, lang='fr')
     raw_text = [FR_MWT_SENTENCE] * NUM_DOCS
     raw_doc = [Document([], text=doccontent) for doccontent in raw_text]
     
@@ -306,5 +310,6 @@ def test_bulk():
 
 
 if __name__ == '__main__':
-    test_single()
-    test_bulk()
+    pipeline = stanza.Pipeline(processors='tokenize,mwt,pos,lemma,depparse', dir=TEST_MODELS_DIR, lang='fr')
+    test_single(pipeline)
+    test_bulk(pipeline)
