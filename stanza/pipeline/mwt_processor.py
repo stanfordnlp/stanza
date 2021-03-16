@@ -43,9 +43,9 @@ class MWTProcessor(UDProcessor):
 
     def bulk_process(self, docs):
         """
-        MWT processor recreates the docs, so the new docs need to be returned
-
-        This could be done more efficiently - about 1-2% of the runtime of a complete pipeline
+        MWT processor counts some statistics on the individual docs, so we need to separately redo those stats
         """
-        docs = [self.process(doc) for doc in docs]
+        docs = super().bulk_process(docs)
+        for doc in docs:
+            doc._count_words()
         return docs
