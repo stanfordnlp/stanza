@@ -300,6 +300,9 @@ def test_bulk():
     assert len(result) == NUM_DOCS
     for doc in result:
         compare_ignoring_whitespace(str(doc), EXPECTED_RESULT)
+        assert len(doc.sentences) == 1
+        assert doc.num_words == 26
+        assert doc.num_tokens == 24
 
 
 if __name__ == '__main__':
