@@ -267,8 +267,18 @@ class Document(StanzaObject):
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
-            # TODO: rebuild self.words from the tokens instead rebuilding the whole thing
-            sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
+
+            # reprocess the words using the new tokens
+            sentence.words = []
+            for token in sentence.tokens:
+                token.sent = sentence
+                for word in token.words:
+                    word.sent = sentence
+                    word.parent = token
+                    sentence.words.append(word)
+
+            sentence.rebuild_dependencies()
+
         self._count_words() # update number of words & tokens
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
         return
@@ -379,10 +389,7 @@ class Sentence(StanzaObject):
         for t in self.tokens:
             t.sent = self
 
-        # check if there is dependency info
-        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
-        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
-        if is_complete_dependencies and is_complete_words: self.build_dependencies()
+        self.rebuild_dependencies()
 
     @property
     def doc(self):
@@ -477,6 +484,12 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+
+    def rebuild_dependencies(self):
+        # rebuild dependencies if there is dependency info
+        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
+        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
+        if is_complete_dependencies and is_complete_words: self.build_dependencies()
 
     def build_dependencies(self):
         """ Build the dependency graph for this sentence. Each dependency graph entry is
