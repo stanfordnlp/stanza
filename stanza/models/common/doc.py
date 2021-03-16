@@ -146,6 +146,12 @@ class Document(StanzaObject):
             begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
 
+        self._count_words()
+
+    def _count_words(self):
+        """
+        Count the number of tokens and words
+        """
         self.num_tokens = sum([len(sentence.tokens) for sentence in self.sentences])
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
@@ -261,8 +267,9 @@ class Document(StanzaObject):
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
+            # TODO: rebuild self.words from the tokens instead rebuilding the whole thing
             sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
-        self._process_sentences(self.to_dict()) # reprocess to update number of words
+        self._count_words() # update number of words & tokens
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
         return
 
