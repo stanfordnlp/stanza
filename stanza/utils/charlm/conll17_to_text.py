@@ -5,8 +5,14 @@ Part of the process for building a charlm dataset
 
 python conll17_to_text.py <directory>
 
-Extension of this script:
+This is an extension of the original script:
   https://github.com/stanfordnlp/stanza-scripts/blob/master/charlm/conll17/conll2txt.py
+
+To build a new charlm for a new language from a conll17 dataset:
+- look for conll17 shared task data, possibly here:
+  https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-1989
+- python3 stanza/utils/charlm/conll17_to_text.py ~/extern_data/conll17/Bulgarian
+- python3 stanza/utils/charlm/make_lm_data.py --langs bg extern_data/charlm_raw extern_data/charlm/
 """
 
 import argparse
