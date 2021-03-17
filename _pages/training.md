@@ -43,26 +43,40 @@ After running the script, your embedding vector files will be organized in the f
 {{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/ewt.pt` by default" | markdownify }}
 {{ end }}
 
+## Converting UD data
+
+A large repository of data is available at [www.universaldependencies.org].  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
+```bash
+python stanza/utils/datasets/prepare_${module}_treebank.py ${corpus} ${other_args}
+```
+where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
+
+Note that for the dependency parser, you also need to specify `gold|predicted` for the used POS tag type in the training/dev data.
+```bash
+python stanza/utils/datasets/prepare_depparse_treebank.py UD_English-EWT --gold
+```
+If `predicted` is used, the trained tagger model will first be run on the training/dev data to generate the predicted tags.  `predicted` is the default.
+
+
 ## Training with Scripts
 
-We provide various bash scripts to ease the training process in the `scripts` directory. To train a model, you can run the following command from the code root directory:
+We provide various scripts to ease the training process in the `scripts` and `stanza/utils/training` directories. To train a model, you can run the following command from the code root directory:
 ```bash
-bash scripts/run_${module}.sh ${corpus} ${other_args}
+python stanza/utils/training/run_${module}.py ${corpus} ${other_args}
 ```
-where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, `depparse` or `ner`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
+where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
+
+NER is trained differently:
+
+```bash
+bash scripts/run_ner.sh ${corpus} ${other_args}
+```
 
 For example, you can use the following command to train a tokenizer with batch size 32 and a dropout rate of 0.33 on the `UD_English-EWT` corpus:
 
 ```bash
-bash scripts/run_tokenize.sh UD_English-EWT --batch_size 32 --dropout 0.33
+python stanza/utils/training/run_tokenize.py UD_English-EWT --batch_size 32 --dropout 0.33
 ```
-
-Note that for the dependency parser, you also need to specify `gold|predicted` for the used POS tag type in the training/dev data.
-```bash
-bash scripts/run_depparse.sh UD_English-EWT gold
-```
-If `predicted` is used, the trained tagger model will first be run on the training/dev data to generate the predicted tags.
-
 
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
 
