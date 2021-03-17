@@ -255,6 +255,7 @@ class Document(StanzaObject):
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if not m and not n:
                     for word in token.words:
+                        token.id = (idx_w, )
                         word.id = idx_w
                         word.head, word.deprel = None, None # delete dependency information
                 else:
