@@ -24,7 +24,7 @@ DEFAULT_CORENLP_DIR = os.getenv(
 AVAILABLE_MODELS = set(['arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'])
 
 
-def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO'):
+def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO', proxies=None):
     """
     A automatic way to download the CoreNLP models.
 
@@ -52,18 +52,19 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     try:
         request_file(
             url + f'stanford-corenlp-{version}-models-{model}.jar',
-            os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
+            os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'),
+            proxies
         )
     except (KeyboardInterrupt, SystemExit):
         raise
-    except:
-        raise Exception(
+    except Exception as e:
+        raise RuntimeError(
             "Downloading CoreNLP model file failed. "
             "Please try manual downloading at: https://stanfordnlp.github.io/CoreNLP/."
-        )
+        ) from e
 
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None, proxies=None):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -86,14 +87,14 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     # First download the URL package
     logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
     try:
-        request_file(url + 'stanford-corenlp-latest.zip', os.path.join(dir, 'corenlp.zip'))
+        request_file(url + 'stanford-corenlp-latest.zip', os.path.join(dir, 'corenlp.zip'), proxies)
     except (KeyboardInterrupt, SystemExit):
         raise
-    except:
-        raise Exception(
+    except Exception as e:
+        raise RuntimeError(
             "Downloading CoreNLP zip file failed. "
             "Please try manual installation: https://stanfordnlp.github.io/CoreNLP/."
-        )
+        ) from e
 
     # Unzip corenlp into dir
     logger.debug("Unzipping downloaded zip file...")

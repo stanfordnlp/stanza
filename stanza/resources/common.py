@@ -121,7 +121,7 @@ def download_file(url, path, proxies):
                     f.flush()
                     pbar.update(len(chunk))
 
-def request_file(url, path, proxies, md5=None):
+def request_file(url, path, proxies=None, md5=None):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
@@ -331,7 +331,7 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
     return lang, model_dir, package, processors
 
 def download_resources_json(model_dir, resources_url, resources_branch,
-                            resources_version, proxies):
+                            resources_version, proxies=None):
     """
     Downloads resources.json to obtain latest packages.
     """
