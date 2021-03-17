@@ -130,11 +130,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     skip_newline = trainer.args['skip_newline']
     batches = int((len(paragraphs) + batch_size - 1) / batch_size)
 
-    t = 0
     for i in range(batches):
         batchparas = paragraphs[i * batch_size : (i + 1) * batch_size]
         offsets = [x[1] for x in batchparas]
-        t += sum([x[3] for x in batchparas])
 
         batch = data_generator.next(eval_offsets=offsets)
         raw = batch[3]
