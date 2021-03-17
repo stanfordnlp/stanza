@@ -218,7 +218,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     for part in SPACE_SPLIT_RE.split(current_tok):
                         if len(part) == 0: continue
                         if skip_newline:
-                            match = re.search(r'\s*'.join(part), text[char_offset:])
+                            match = re.search(r'\s*'.join(re.escape(c) for c in part), text[char_offset:])
                             st0 = match.start(0)
                             partlen = match.end(0) - match.start(0)
                         else:

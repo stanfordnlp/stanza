@@ -203,6 +203,8 @@ ZH_DOC_GOLD_NOSSPLIT_TOKENS = """
 <Token id=16;words=[<Word id=16;text=。>]>
 """.strip()
 
+ZH_PARENS_DOC = "我们一起学(猫叫)"
+
 TH_DOC = "ข้าราชการได้รับการหมุนเวียนเป็นระยะ และเขาได้รับมอบหมายให้ประจำในระดับภูมิภาค"
 TH_DOC_GOLD_TOKENS = """
 <Token id=1;words=[<Word id=1;text=ข้าราชการ>]>
@@ -285,6 +287,16 @@ def test_zh_tokenizer_skip_newline():
 
     assert ZH_DOC1_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char].replace('\n', '') == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_zh_tokenizer_parens():
+    """
+    The original fix for newlines in Chinese text broke () in Chinese text
+    """
+    nlp = stanza.Pipeline(lang='zh', processors="tokenize", dir=TEST_MODELS_DIR)
+    doc = nlp(ZH_PARENS_DOC)
+
+    # ... the results are kind of bad for this expression, so no testing of the results yet
+    #assert ZH_PARENS_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
 
 def test_spacy():
     nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', tokenize_with_spacy=True)
