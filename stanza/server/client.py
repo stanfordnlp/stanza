@@ -149,9 +149,12 @@ class RobustService(object):
                 stdout = self.stdout
                 stderr = self.stderr
             logger.info(f"Starting server with command: {' '.join(self.start_cmd)}")
-            self.server = subprocess.Popen(self.start_cmd,
-                                           stderr=stderr,
-                                           stdout=stdout)
+            try:
+                self.server = subprocess.Popen(self.start_cmd,
+                                               stderr=stderr,
+                                               stdout=stdout)
+            except FileNotFoundError as e:
+                raise FileNotFoundError("When trying to run CoreNLP, a FileNotFoundError occurred, which frequently means Java was not installed or was not in the classpath.") from e
 
     def atexit_kill(self):
         # make some kind of effort to stop the service (such as a
