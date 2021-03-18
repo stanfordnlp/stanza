@@ -67,7 +67,10 @@ class DataLoader:
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
-        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels
+        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels.
+        # At evaluation time, each paragraph is treated as single "sentence" as we don't know a priori where
+        # sentence breaks occur. We make prediction from left to right for each paragraph and move forward to
+        # the last predicted sentence break to start afresh.
         self.sentences = [self.para_to_sentences(para) for para in self.data]
 
         self.init_sent_ids()
@@ -96,6 +99,7 @@ class DataLoader:
                 self.cumlen += [self.cumlen[-1] + len(self.sentences[i][j][0])]
 
     def para_to_sentences(self, para):
+        """ Convert a paragraph to a list of processed sentences. """
         res = []
         funcs = []
         for feat_func in self.args['feat_funcs']:
@@ -156,11 +160,15 @@ class DataLoader:
         self.init_sent_ids()
 
     def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
+        ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
 
         if old_batch is not None:
+            # If we have previously built a batch of data and made predictions on them, then when we are trying to make
+            # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
+            # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
             ounits, olabels, ofeatures, oraw = old_batch
             lens = (ounits != padid).sum(1).tolist()
             pad_len = max(l-i for i, l in zip(eval_offsets, lens))
@@ -184,6 +192,9 @@ class DataLoader:
             return units, labels, features, raw_units
 
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
+            # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed 
+            # by id_pair[1]) into a long string for evaluation. At training time, we just select random sentences
+            # from the entire dataset until we reach max_seqlen.
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
 
@@ -246,6 +257,7 @@ class DataLoader:
             offsets_pairs = [(0, x) for x in id_pairs]
             pad_len = self.args['max_seqlen']
 
+        # put everything into padded and nicely shaped NumPy arrays and eventually convert to PyTorch tensors
         units = np.full((len(id_pairs), pad_len), padid, dtype=np.int64)
         labels = np.full((len(id_pairs), pad_len), -1, dtype=np.int64)
         features = np.zeros((len(id_pairs), pad_len, feat_size), dtype=np.float32)
@@ -258,6 +270,7 @@ class DataLoader:
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         if unit_dropout > 0 and not self.eval:
+            # dropout characters/units at training time and replace them with UNKs
             mask = np.random.random_sample(units.shape) < unit_dropout
             mask[units == padid] = 0
             units[mask] = unkid
