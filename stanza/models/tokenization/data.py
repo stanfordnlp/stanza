@@ -169,6 +169,7 @@ class DataLoader:
             # If we have previously built a batch of data and made predictions on them, then when we are trying to make
             # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
             # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
+            # In this case, eval_offsets index within the old_batch to advance the strings to process.
             ounits, olabels, ofeatures, oraw = old_batch
             lens = (ounits != padid).sum(1).tolist()
             pad_len = max(l-i for i, l in zip(eval_offsets, lens))

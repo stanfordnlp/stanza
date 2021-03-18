@@ -131,6 +131,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     batches = int((len(paragraphs) + batch_size - 1) / batch_size)
 
     for i in range(batches):
+        # At evaluation time, each paragraph is treated as a single "sentence", and a batch of `batch_size` paragraphs 
+        # are tokenized together. `offsets` here are used by the data generator to identify which paragraphs to use
+        # for the next batch of evaluation.
         batchparas = paragraphs[i * batch_size : (i + 1) * batch_size]
         offsets = [x[1] for x in batchparas]
 
@@ -164,6 +167,8 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
                 if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
                     break
+                # once we've made predictions on a certain number of characters for each paragraph (recorded in `adv`),
+                # we skip the first `adv` characters to make the updated batch
                 batch = data_generator.next(eval_offsets=adv, old_batch=batch)
 
             pred = [np.concatenate(p, 0) for p in pred]
@@ -188,6 +193,8 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     char_offset = 0
     use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
 
+    # Once everything is fed through the tokenizer model, it's time to decode the predictions
+    # into actual tokens and sentences that the rest of the pipeline uses
     for j in range(len(paragraphs)):
         raw = all_raw[j]
         pred = all_preds[j]
