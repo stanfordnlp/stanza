@@ -58,8 +58,9 @@ class DataLoader:
             else:
                 labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
 
+            skip_newline = args.get('skip_newline', False)
             self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
-                    for char, label in zip(pt.rstrip(), pc) if not (args.get('skip_newline', False) and char == '\n')] # check if newline needs to be eaten
+                    for char, label in zip(pt.rstrip(), pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
                     for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
 
         # remove consecutive whitespaces
