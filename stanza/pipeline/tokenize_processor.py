@@ -5,7 +5,7 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.data import DataLoader, NEWLINE_WHITESPACE_RE
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
@@ -81,7 +81,7 @@ class TokenizeProcessor(UDProcessor):
         # set up batches
         if self.config.get('lang') == 'vi':
             # special processing is due for Vietnamese
-            text = '\n\n'.join([x for x in raw_text.split('\n\n')]).rstrip()
+            text = '\n\n'.join([x.rstrip() for x in NEWLINE_WHITESPACE_RE.split(raw_text)]).rstrip()
             dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
             data = paras_to_chunks(text, dummy_labels)
             batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
