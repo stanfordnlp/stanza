@@ -193,6 +193,8 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     char_offset = 0
     use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
 
+    UNK_ID = vocab.unit2id('<UNK>')
+
     # Once everything is fed through the tokenizer model, it's time to decode the predictions
     # into actual tokens and sentences that the rest of the pipeline uses
     for j in range(len(paragraphs)):
@@ -209,7 +211,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             if use_la_ittb_shorthand and t in (":", ";"):
                 p = 2
             offset += 1
-            if vocab.unit2id(t) == vocab.unit2id('<UNK>'):
+            if vocab.unit2id(t) == UNK_ID:
                 oov_count += 1
 
             current_tok += t
