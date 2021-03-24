@@ -122,12 +122,12 @@ class TokenizeProcessor(UDProcessor):
 
                 # fix char offsets for tokens and words
                 for token in sent.tokens:
-                    token._misc = token._misc.replace(f"{doc.START_CHAR}={token.start_char}", f"{doc.START_CHAR}={token.start_char - charoffset}")
-                    token._misc = token._misc.replace(f"{doc.END_CHAR}={token.end_char}", f"{doc.END_CHAR}={token.end_char - charoffset}")
                     token._start_char -= charoffset
                     token._end_char -= charoffset
                     if token.words:  # not-yet-processed MWT can leave empty tokens
-                        token.words[0]._misc = token._misc
+                        for word in token.words:
+                            word._start_char -= charoffset
+                            word._end_char -= charoffset
 
             thisdoc.num_tokens = sum(len(sent.tokens) for sent in sentences)
             thisdoc.num_words = sum(len(sent.words) for sent in sentences)

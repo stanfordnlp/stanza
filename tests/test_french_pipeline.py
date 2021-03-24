@@ -27,7 +27,8 @@ EXPECTED_RESULT = """
       "upos": "ADV",
       "head": 3,
       "deprel": "advmod",
-      "misc": "start_char=0|end_char=5"
+      "start_char": 0,
+      "end_char": 5
     },
     {
       "id": 2,
@@ -36,7 +37,8 @@ EXPECTED_RESULT = """
       "upos": "ADV",
       "head": 3,
       "deprel": "advmod",
-      "misc": "start_char=6|end_char=12"
+      "start_char": 6,
+      "end_char": 12
     },
     {
       "id": 3,
@@ -46,7 +48,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Masc|Number=Sing",
       "head": 11,
       "deprel": "advcl",
-      "misc": "start_char=13|end_char=20"
+      "start_char": 13,
+      "end_char": 20
     },
     {
       "id": [
@@ -54,7 +57,8 @@ EXPECTED_RESULT = """
         5
       ],
       "text": "du",
-      "misc": "start_char=21|end_char=23"
+      "start_char": 21,
+      "end_char": 23
     },
     {
       "id": 4,
@@ -81,7 +85,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Masc|Number=Sing",
       "head": 7,
       "deprel": "amod",
-      "misc": "start_char=24|end_char=29"
+      "start_char": 24,
+      "end_char": 29
     },
     {
       "id": 7,
@@ -91,7 +96,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Masc|Number=Sing",
       "head": 3,
       "deprel": "obl:arg",
-      "misc": "start_char=30|end_char=36"
+      "start_char": 30,
+      "end_char": 36
     },
     {
       "id": 8,
@@ -100,7 +106,8 @@ EXPECTED_RESULT = """
       "upos": "PUNCT",
       "head": 3,
       "deprel": "punct",
-      "misc": "start_char=36|end_char=37"
+      "start_char": 36,
+      "end_char": 37
     },
     {
       "id": 9,
@@ -109,7 +116,8 @@ EXPECTED_RESULT = """
       "upos": "PROPN",
       "head": 11,
       "deprel": "nsubj",
-      "misc": "start_char=38|end_char=46"
+      "start_char": 38,
+      "end_char": 46
     },
     {
       "id": 10,
@@ -118,7 +126,8 @@ EXPECTED_RESULT = """
       "upos": "PROPN",
       "head": 9,
       "deprel": "flat:name",
-      "misc": "start_char=47|end_char=53"
+      "start_char": 47,
+      "end_char": 53
     },
     {
       "id": 11,
@@ -128,7 +137,8 @@ EXPECTED_RESULT = """
       "feats": "Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin",
       "head": 0,
       "deprel": "root",
-      "misc": "start_char=54|end_char=61"
+      "start_char": 54,
+      "end_char": 61
     },
     {
       "id": 12,
@@ -137,7 +147,8 @@ EXPECTED_RESULT = """
       "upos": "ADP",
       "head": 13,
       "deprel": "case",
-      "misc": "start_char=62|end_char=64"
+      "start_char": 62,
+      "end_char": 64
     },
     {
       "id": 13,
@@ -147,7 +158,8 @@ EXPECTED_RESULT = """
       "feats": "Number=Plur",
       "head": 11,
       "deprel": "obl:mod",
-      "misc": "start_char=65|end_char=69"
+      "start_char": 65,
+      "end_char": 69
     },
     {
       "id": 14,
@@ -157,7 +169,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Masc|Number=Sing",
       "head": 11,
       "deprel": "xcomp:pred",
-      "misc": "start_char=70|end_char=78"
+      "start_char": 70,
+      "end_char": 78
     },
     {
       "id": 15,
@@ -166,7 +179,8 @@ EXPECTED_RESULT = """
       "upos": "ADP",
       "head": 17,
       "deprel": "case",
-      "misc": "start_char=79|end_char=81"
+      "start_char": 79,
+      "end_char": 81
     },
     {
       "id": 16,
@@ -176,7 +190,8 @@ EXPECTED_RESULT = """
       "feats": "Definite=Def|Number=Sing|PronType=Art",
       "head": 17,
       "deprel": "det",
-      "misc": "start_char=82|end_char=84"
+      "start_char": 82,
+      "end_char": 84
     },
     {
       "id": 17,
@@ -186,7 +201,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Fem|Number=Sing",
       "head": 14,
       "deprel": "nmod",
-      "misc": "start_char=84|end_char=92"
+      "start_char": 84,
+      "end_char": 92
     },
     {
       "id": 18,
@@ -195,7 +211,8 @@ EXPECTED_RESULT = """
       "upos": "PUNCT",
       "head": 21,
       "deprel": "punct",
-      "misc": "start_char=92|end_char=93"
+      "start_char": 92,
+      "end_char": 93
     },
     {
       "id": 19,
@@ -204,7 +221,8 @@ EXPECTED_RESULT = """
       "upos": "ADP",
       "head": 21,
       "deprel": "case",
-      "misc": "start_char=94|end_char=96"
+      "start_char": 94,
+      "end_char": 96
     },
     {
       "id": 20,
@@ -214,7 +232,8 @@ EXPECTED_RESULT = """
       "feats": "Definite=Def|Number=Sing|PronType=Art",
       "head": 21,
       "deprel": "det",
-      "misc": "start_char=97|end_char=99"
+      "start_char": 97,
+      "end_char": 99
     },
     {
       "id": 21,
@@ -224,7 +243,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Fem|Number=Sing",
       "head": 17,
       "deprel": "conj",
-      "misc": "start_char=99|end_char=108"
+      "start_char": 99,
+      "end_char": 108
     },
     {
       "id": 22,
@@ -233,7 +253,8 @@ EXPECTED_RESULT = """
       "upos": "CCONJ",
       "head": 25,
       "deprel": "cc",
-      "misc": "start_char=109|end_char=111"
+      "start_char": 109,
+      "end_char": 111
     },
     {
       "id": [
@@ -241,7 +262,8 @@ EXPECTED_RESULT = """
         24
       ],
       "text": "du",
-      "misc": "start_char=112|end_char=114"
+      "start_char": 112,
+      "end_char": 114
     },
     {
       "id": 23,
@@ -268,7 +290,8 @@ EXPECTED_RESULT = """
       "feats": "Gender=Masc|Number=Sing",
       "head": 17,
       "deprel": "conj",
-      "misc": "start_char=115|end_char=124"
+      "start_char": 115,
+      "end_char": 124
     },
     {
       "id": 26,
@@ -277,7 +300,8 @@ EXPECTED_RESULT = """
       "upos": "PUNCT",
       "head": 11,
       "deprel": "punct",
-      "misc": "start_char=124|end_char=125"
+      "start_char": 124,
+      "end_char": 125
     }
   ]
 ]

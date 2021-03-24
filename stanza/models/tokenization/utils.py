@@ -30,7 +30,7 @@ def load_mwt_dict(filename):
 def process_sentence(sentence, mwt_dict=None):
     sent = []
     i = 0
-    for tok, p, additional_info in sentence:
+    for tok, p, position_info in sentence:
         expansion = None
         if (p == 3 or p == 4) and mwt_dict is not None:
             # MWT found, (attempt to) expand it!
@@ -39,20 +39,22 @@ def process_sentence(sentence, mwt_dict=None):
             elif tok.lower() in mwt_dict:
                 expansion = mwt_dict[tok.lower()][0]
         if expansion is not None:
-            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
             sent.append({ID: (i+1, i+len(expansion)), TEXT: tok})
-            if infostr is not None: sent[-1][MISC] = infostr
+            if position_info is not None:
+                sent[-1][START_CHAR] = position_info[0]
+                sent[-1][END_CHAR] = position_info[1]
             for etok in expansion:
                 sent.append({ID: (i+1, ), TEXT: etok})
                 i += 1
         else:
             if len(tok) <= 0:
                 continue
-            if p == 3 or p == 4:
-                additional_info['MWT'] = 'Yes'
-            infostr = None if len(additional_info) == 0 else '|'.join([f"{k}={additional_info[k]}" for k in additional_info])
             sent.append({ID: (i+1, ), TEXT: tok})
-            if infostr is not None: sent[-1][MISC] = infostr
+            if position_info is not None:
+                sent[-1][START_CHAR] = position_info[0]
+                sent[-1][END_CHAR] = position_info[1]
+            if p == 3 or p == 4:# MARK
+                sent[-1][MISC] = 'MWT=Yes'
             i += 1
     return sent
 
@@ -238,10 +240,10 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                         if st < 0:
                             st = char_offset + st0 + (len(part) - len(lstripped))
                         char_offset += st0 + partlen
-                    additional_info = {START_CHAR: st, END_CHAR: char_offset}
+                    position_info = (st, char_offset)
                 else:
-                    additional_info = dict()
-                current_sent.append((tok, p, additional_info))
+                    position_info = None
+                current_sent.append((tok, p, position_info))
                 current_tok = ''
                 if (p == 2 or p == 4) and not no_ssplit:
                     doc.append(process_sentence(current_sent, mwt_dict))
