@@ -40,7 +40,8 @@ def para_to_chunks(text, char_level_pred):
     return list(zip(chunks, preds))
 
 def paras_to_chunks(text, char_level_pred):
-    return [para_to_chunks(re.sub(r'\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n'))]
+    # if pt - skip empty chunks, which can happen when given a block of whitespace
+    return [para_to_chunks(re.sub(r'\s', ' ', pt.rstrip()), pc) for pt, pc in zip(text.split('\n\n'), char_level_pred.split('\n\n')) if pt]
 
 def main(args):
     parser = argparse.ArgumentParser()
