@@ -11,7 +11,6 @@ from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
-from stanza.utils.datasets.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
 from stanza.pipeline.external.jieba import JiebaTokenizer
 from stanza.pipeline.external.spacy import SpacyTokenizer
@@ -79,14 +78,7 @@ class TokenizeProcessor(UDProcessor):
 
         raw_text = '\n\n'.join(document) if isinstance(document, list) else document
         # set up batches
-        if self.config.get('lang') == 'vi':
-            # special processing is due for Vietnamese
-            text = '\n\n'.join([x.rstrip() for x in NEWLINE_WHITESPACE_RE.split(raw_text)]).rstrip()
-            dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
-            data = paras_to_chunks(text, dummy_labels)
-            batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
-        else:
-            batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
+        batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
         # get dict data
         _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                                self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),

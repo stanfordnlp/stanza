@@ -31,26 +31,15 @@ def run_treebank(mode, paths, treebank, short_name,
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
 
     short_language = short_name.split("_")[0]
-    if short_language == 'vi':
-        label_type = "--json_file"
-        label_file = f"{tokenize_dir}/{short_name}-ud-train.json"
-        dev_type = "--json_file"
-        dev_file = f"{tokenize_dir}/{short_name}-ud-dev.json"
-        test_type = "--json_file"
-        test_file = f"{tokenize_dir}/{short_name}-ud-test.json"
-        train_type = "--txt_file"
-        train_file = f"{tokenize_dir}/{short_name}.train.txt"
-        train_dev_args = ["--dev_json_file", dev_file]
-    else:
-        label_type = "--label_file"
-        label_file = f"{tokenize_dir}/{short_name}-ud-train.toklabels"
-        dev_type = "--txt_file"
-        dev_file = f"{tokenize_dir}/{short_name}.dev.txt"
-        test_type = "--txt_file"
-        test_file = f"{tokenize_dir}/{short_name}.test.txt"
-        train_type = "--txt_file"
-        train_file = f"{tokenize_dir}/{short_name}.train.txt"
-        train_dev_args = ["--dev_txt_file", dev_file, "--dev_label_file", f"{tokenize_dir}/{short_name}-ud-dev.toklabels"]
+    label_type = "--label_file"
+    label_file = f"{tokenize_dir}/{short_name}-ud-train.toklabels"
+    dev_type = "--txt_file"
+    dev_file = f"{tokenize_dir}/{short_name}.dev.txt"
+    test_type = "--txt_file"
+    test_file = f"{tokenize_dir}/{short_name}.test.txt"
+    train_type = "--txt_file"
+    train_file = f"{tokenize_dir}/{short_name}.train.txt"
+    train_dev_args = ["--dev_txt_file", dev_file, "--dev_label_file", f"{tokenize_dir}/{short_name}-ud-dev.toklabels"]
     
     if short_language == "zh" or short_language.startswith("zh-"):
         extra_args = ["--skip_newline"] + extra_args
