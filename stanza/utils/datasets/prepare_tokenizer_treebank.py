@@ -560,6 +560,8 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
                 raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
             sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
         sents = sents + extra_sents
+
+        sents = augment_punct(sents)
     else:
         istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(istd_conllu)
@@ -576,18 +578,28 @@ def build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name
         build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset, prepare_labels)
 
 def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset, prepare_labels):
+    """
+    en_combined is currently EWT, GUM, and a fork of Pronouns
+    """
     output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if dataset == 'train':
         # TODO: include more UD treebanks, possibly with xpos removed
-        #  UD_English-ParTUT, UD_English-Pronouns, UD_English-Pronouns - xpos are different
+        #  UD_English-ParTUT - xpos are different
         # also include "external" treebanks such as PTB
         treebanks = ["UD_English-EWT", "UD_English-GUM"]
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
+        # this fork of Pronouns addresses a few issues with the dataset
+        # features, tags, and lemmas were all improved
+        pronouns_fork = os.path.join(handparsed_dir, "english-pronouns", "en_pronouns-ud-test-GL.conllu")
+        pronouns_sents = read_sentences_from_conllu(pronouns_fork)
+        sents.extend(pronouns_sents)
+
+        sents = augment_punct(sents)
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
@@ -641,7 +653,7 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
     """
     Process a normal UD treebank with train/dev/test splits
 
-    SL-SSJ, the combined datasets, etc all use this code path as well.
+    SL-SSJ and other datasets with inline modifications all use this code path as well.
     """
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment, prepare_labels)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment, prepare_labels)
