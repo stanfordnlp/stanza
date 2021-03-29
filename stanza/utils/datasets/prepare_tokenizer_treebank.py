@@ -31,7 +31,6 @@ import subprocess
 import tempfile
 
 import stanza.utils.datasets.common as common
-import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
@@ -141,11 +140,6 @@ def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, s
                                  input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                  "-m", mwt_name(tokenizer_dir, short_name, dataset)])
-
-    if short_language == "vi":
-        postprocess_vietnamese_tokenizer_data.main([input_txt,
-                                                    "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
-                                                    "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
 
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
 
@@ -647,7 +641,7 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
     """
     Process a normal UD treebank with train/dev/test splits
 
-    SL-SSJ and Vietnamese both use this code path as well.
+    SL-SSJ, the combined datasets, etc all use this code path as well.
     """
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment, prepare_labels)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment, prepare_labels)
