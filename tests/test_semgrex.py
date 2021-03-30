@@ -152,13 +152,13 @@ def check_response(response, response_len=1, semgrex_len=1, source_index=1, targ
     assert len(response.result[0].result) == semgrex_len
     for semgrex_result in response.result[0].result:
         assert len(semgrex_result.match) == 1
-        assert semgrex_result.match[0].index == source_index
+        assert semgrex_result.match[0].matchIndex == source_index
         for match in semgrex_result.match:
             assert len(match.node) == 2
             assert match.node[0].name == 'source'
-            assert match.node[0].index == source_index
+            assert match.node[0].matchIndex == source_index
             assert match.node[1].name == 'target'
-            assert match.node[1].index == target_index
+            assert match.node[1].matchIndex == target_index
             assert len(match.reln) == 1
             assert match.reln[0].name == 'zzz'
             assert match.reln[0].reln == reln
