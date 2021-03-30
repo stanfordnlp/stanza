@@ -100,7 +100,7 @@ def main():
     nlp = stanza.Pipeline('en',
                           processors='tokenize,pos,lemma,depparse')
 
-    doc = nlp('Unban Mox Opal! Unban Mox Opal!')
+    doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him.')
     #print(doc.sentences[0].dependencies)
     print(doc)
     print(process_doc(doc, "{}=source >obj=zzz {}=target"))
