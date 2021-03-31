@@ -16,12 +16,12 @@ import glob
 import os
 import sys
 
+from stanza.models.common.constant import treebank_to_short_name
+import stanza.utils.default_paths as default_paths
+
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
-from stanza.models.common.constant import treebank_to_short_name
-
-import stanza.utils.default_paths as default_paths
-import stanza.utils.datasets.prepare_ner_data as prepare_ner_data
+import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 def process_turku(paths):
     short_name = 'fi_turku'
@@ -32,7 +32,7 @@ def process_turku(paths):
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        prepare_ner_data.process_dataset(input_filename, output_filename)
+        prepare_ner_file.process_dataset(input_filename, output_filename)
 
 def process_wikiner(paths, dataset):
     short_name = treebank_to_short_name(dataset)
@@ -61,7 +61,7 @@ def process_wikiner(paths, dataset):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         print("Converting %s to %s" % (input_filename, output_filename))
-        prepare_ner_data.process_dataset(input_filename, output_filename)
+        prepare_ner_file.process_dataset(input_filename, output_filename)
 
 
 def main():
