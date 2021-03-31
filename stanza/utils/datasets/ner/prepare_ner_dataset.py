@@ -8,8 +8,6 @@ https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recogni
 Also, Finnish Turku dataset, available here:
 
 https://turkunlp.org/fin-ner.html
-
-TODO: maybe a better name than treebank?  prepare_ner_data is already taken though
 """
 
 import glob
