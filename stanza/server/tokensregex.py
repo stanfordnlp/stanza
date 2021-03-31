@@ -2,6 +2,8 @@
 
 This operates tokensregex on docs processed with stanza models.
 
+https://nlp.stanford.edu/software/tokensregex.html
+
 A minimal example is the main method of this module.
 """
 
