@@ -50,7 +50,7 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-def process_wikiner(in_filename, directory):
+def split_wikiner(in_filename, directory):
     sents = read_sentences(in_filename)
     print(f"{len(sents)} sentences read from file.")
 
@@ -71,4 +71,4 @@ def process_wikiner(in_filename, directory):
 if __name__ == "__main__":
     in_filename = 'raw/wp2.txt'
     directory = "."
-    process_wikiner(in_filename, directory)
+    split_wikiner(in_filename, directory)
