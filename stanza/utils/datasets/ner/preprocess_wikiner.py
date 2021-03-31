@@ -4,11 +4,10 @@ Preprocess the WikiNER dataset, by
 2) split into train (70%), dev (15%), test (15%) datasets.
 """
 
+import os
 import random
 from collections import Counter
 random.seed(1234)
-
-in_filename = 'raw/wp2.txt'
 
 def read_sentences(filename):
     sents = []
@@ -51,19 +50,25 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-sents = read_sentences(in_filename)
-print(f"{len(sents)} sentences read from file.")
+def process_wikiner(in_filename, directory):
+    sents = read_sentences(in_filename)
+    print(f"{len(sents)} sentences read from file.")
 
-# split
-num = len(sents)
-train_num = int(num*0.7)
-dev_num = int(num*0.15)
+    # split
+    num = len(sents)
+    train_num = int(num*0.7)
+    dev_num = int(num*0.15)
 
-random.shuffle(sents)
-train_sents = sents[:train_num]
-dev_sents = sents[train_num:train_num+dev_num]
-test_sents = sents[train_num+dev_num:]
+    random.shuffle(sents)
+    train_sents = sents[:train_num]
+    dev_sents = sents[train_num:train_num+dev_num]
+    test_sents = sents[train_num+dev_num:]
 
-write_sentences_to_file(train_sents, 'train.bio')
-write_sentences_to_file(dev_sents, 'dev.bio')
-write_sentences_to_file(test_sents, 'test.bio')
+    write_sentences_to_file(train_sents, os.path.join(directory, 'train.bio'))
+    write_sentences_to_file(dev_sents, os.path.join(directory, 'dev.bio'))
+    write_sentences_to_file(test_sents, os.path.join(directory, 'test.bio'))
+
+if __name__ == "__main__":
+    in_filename = 'raw/wp2.txt'
+    directory = "."
+    process_wikiner(in_filename, directory)
