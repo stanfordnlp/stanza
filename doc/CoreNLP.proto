@@ -8,7 +8,7 @@ option java_outer_classname = "CoreNLPProtos";
 //
 // From JAVANLP_HOME, you can build me with the command:
 //
-//  protoc -I=projects/core/src/edu/stanford/nlp/pipeline/ --java_out=projects/core/src projects/core/src/edu/stanford/nlp/pipeline/CoreNLP.proto
+//  protoc -I=src/edu/stanford/nlp/pipeline/ --java_out=src src/edu/stanford/nlp/pipeline/CoreNLP.proto
 //
 
 //
@@ -136,6 +136,10 @@ message Sentence {
   // the quote annotator can soometimes add merged sentences
   optional Sentence           enhancedSentence                 = 70;
 
+  // speaker stuff
+  optional string          speaker                             = 71;  // The speaker speaking this sentence
+  optional string          speakerType                         = 72;  // The type of speaker speaking this sentence
+
   extensions 100 to 255;
 }
 
@@ -161,6 +165,7 @@ message Token {
   optional uint32 endChar           = 12;   // The character offset end, in the document
   optional uint32 utterance         = 13;   // The utterance tag used in dcoref
   optional string speaker           = 14;   // The speaker speaking this word
+  optional string speakerType       = 77;   // The type of speaker speaking this word
   optional uint32 beginIndex        = 15;   // The begin index of, e.g., a span
   optional uint32 endIndex          = 16;   // The begin index of, e.g., a span
   optional uint32 tokenBeginIndex   = 17;   // The begin index of the token
@@ -605,42 +610,79 @@ message Section {
 // A message for requesting a semgrex
 // Each sentence stores information about the tokens making up the
 // corresponding graph
+// An alternative would have been to use the existing Document or
+// Sentence classes, but the problem with that is it would be
+// ambiguous which dependency object to use.
 message SemgrexRequest {
   message Dependencies {
-    repeated Token           token   = 1;
-    required DependencyGraph graph   = 2;
+    repeated Token           token       = 1;
+    required DependencyGraph graph       = 2;
   }
 
-  repeated string          semgrex   = 1;
-  repeated Dependencies    query     = 2;
+  repeated string            semgrex     = 1;
+  repeated Dependencies      query       = 2;
 }
 
 // The response from running a semgrex
+// If you pass in M semgrex expressions and N dependency graphs,
+// this returns MxN nested results.  Each SemgrexResult can match
+// multiple times in one graph
 message SemgrexResponse {
   message NamedNode {
-    required string          name   = 1;
-    required int32           index  = 2;
+    required string          name        = 1;
+    required int32           matchIndex  = 2;
   }
 
   message NamedRelation {
-    required string          name   = 1;
-    required string          reln   = 2;
+    required string          name        = 1;
+    required string          reln        = 2;
   }
 
   message Match {
-    required int32           index  = 1;
-    repeated NamedNode       node   = 2;
-    repeated NamedRelation   reln   = 3;
+    required int32           matchIndex  = 1;
+    repeated NamedNode       node        = 2;
+    repeated NamedRelation   reln        = 3;
   }
 
   message SemgrexResult {
-    repeated Match           match  = 1;
+    repeated Match           match       = 1;
   }
 
   message GraphResult {
-    repeated SemgrexResult   result = 1;
+    repeated SemgrexResult   result      = 1;
   }
 
-  repeated GraphResult result = 1;
+  repeated GraphResult       result      = 1;
 }
 
+
+// It's possible to send in a whole document, but we
+// only care about the Sentences and Tokens
+message TokensRegexRequest {
+  required Document          doc         = 1;
+  repeated string            pattern     = 2;
+}
+
+// The result will be a nested structure:
+// repeated PatternMatch, one for each pattern
+// each PatternMatch has a repeated Match,
+//   which tells you which sentence matched and where
+message TokensRegexResponse {
+  message MatchLocation {
+    optional string          text        = 1;
+    optional int32           begin       = 2;
+    optional int32           end         = 3;
+  }
+
+  message Match {
+    required int32           sentence    = 1;
+    required MatchLocation   match       = 2;
+    repeated MatchLocation   group       = 3;
+  }
+
+  message PatternMatch {
+    repeated Match           match       = 1;
+  }
+
+  repeated PatternMatch      match       = 1;
+}
