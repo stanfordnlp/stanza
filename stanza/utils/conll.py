@@ -6,6 +6,7 @@ import io
 
 FIELD_NUM = 10
 
+# TODO: unify this list with the list in common/doc.py
 ID = 'id'
 TEXT = 'text'
 LEMMA = 'lemma'
@@ -16,6 +17,9 @@ HEAD = 'head'
 DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
+NER = 'ner'
+START_CHAR = 'start_char'
+END_CHAR = 'end_char'
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 
 class CoNLL:
@@ -122,11 +126,20 @@ class CoNLL:
         Output: CoNLL-U format token, which is a list for the token.
         """
         token_conll = ['_' for i in range(FIELD_NUM)]
+        misc = []
         for key in token_dict:
-            if key == ID:
+            if key == START_CHAR or key == END_CHAR:
+                misc.append("{}={}".format(key, token_dict[key]))
+            elif key == MISC:
+                misc.append(token_dict[key])
+            elif key == ID:
                 token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
             elif key in FIELD_TO_IDX:
                 token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+        if misc:
+            token_conll[FIELD_TO_IDX[MISC]] = "|".join(misc)
+        else:
+            token_conll[FIELD_TO_IDX[MISC]] = '_'
         # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
         if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
             token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int

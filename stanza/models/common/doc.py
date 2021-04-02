@@ -552,6 +552,29 @@ class Sentence(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+def init_from_misc(unit):
+    """Create attributes by parsing from the `misc` field.
+
+    Also, remove start_char, end_char, and any other values we can set
+    from the misc field if applicable, so that we don't repeat ourselves
+    """
+    remaining_values = []
+    for item in unit._misc.split('|'):
+        key_value = item.split('=', 1)
+        if len(key_value) == 2:
+            # some key_value can not be split
+            key, value = key_value
+            # start & end char are kept as ints
+            if key in (START_CHAR, END_CHAR):
+                value = int(value)
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(unit, attr):
+                setattr(unit, attr, value)
+                continue
+        remaining_values.append(item)
+    unit._misc = "|".join(remaining_values)
+
 
 class Token(StanzaObject):
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
@@ -568,26 +591,12 @@ class Token(StanzaObject):
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._words = words if words is not None else []
-        self._start_char = None
-        self._end_char = None
+        self._start_char = token_entry.get(START_CHAR, None)
+        self._end_char = token_entry.get(END_CHAR, None)
         self._sent = None
 
         if self._misc is not None:
-            self.init_from_misc()
-
-    def init_from_misc(self):
-        """ Create attributes by parsing from the `misc` field.
-        """
-        for item in self._misc.split('|'):
-            key_value = item.split('=', 1)
-            if len(key_value) == 1: continue # some key_value can not be splited
-            key, value = key_value
-            if key in (START_CHAR, END_CHAR):
-                value = int(value)
-            # set attribute
-            attr = f'_{key}'
-            if hasattr(self, attr):
-                setattr(self, attr, value)
+            init_from_misc(self)
 
     @property
     def id(self):
@@ -664,7 +673,7 @@ class Token(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
-    def to_dict(self, fields=[ID, TEXT, NER, MISC]):
+    def to_dict(self, fields=[ID, TEXT, NER, MISC, START_CHAR, END_CHAR]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -712,23 +721,13 @@ class Word(StanzaObject):
         self._deprel = word_entry.get(DEPREL, None)
         self._deps = word_entry.get(DEPS, None)
         self._misc = word_entry.get(MISC, None)
+        self._start_char = word_entry.get(START_CHAR, None)
+        self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
         self._sent = None
 
         if self._misc is not None:
-            self.init_from_misc()
-
-    def init_from_misc(self):
-        """ Create attributes by parsing from the `misc` field.
-        """
-        for item in self._misc.split('|'):
-            key_value = item.split('=', 1)
-            if len(key_value) == 1: continue # some key_value can not be splited
-            key, value = key_value
-            # set attribute
-            attr = f'_{key}'
-            if hasattr(self, attr):
-                setattr(self, attr, value)
+            init_from_misc(self)
 
     @property
     def id(self):
@@ -831,6 +830,16 @@ class Word(StanzaObject):
         self._misc = value if self._is_null(value) == False else None
 
     @property
+    def start_char(self):
+        """ Access the start character index for this token in the raw text. """
+        return self._start_char
+
+    @property
+    def end_char(self):
+        """ Access the end character index for this token in the raw text. """
+        return self._end_char
+
+    @property
     def parent(self):
         """ Access the parent token of this word. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that this should return a reference to the parent token object.
@@ -867,7 +876,7 @@ class Word(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
