@@ -166,6 +166,15 @@ def check_response(response, response_len=1, semgrex_len=1, source_index=1, targ
             assert match.reln[0].name == 'zzz'
             assert match.reln[0].reln == reln
 
+def test_multi():
+    with semgrex.Semgrex(classpath="$CLASSPATH") as sem:
+        response = sem.process(ONE_SENTENCE_DOC, "{}=source >obj=zzz {}=target")
+        check_response(response)
+        response = sem.process(ONE_SENTENCE_DOC, "{}=source >obj=zzz {}=target")
+        check_response(response)
+        response = sem.process(TWO_SENTENCE_DOC, "{}=source >obj=zzz {}=target")
+        check_response(response, response_len=2)
+
 def test_single_sentence():
     response = semgrex.process_doc(ONE_SENTENCE_DOC, "{}=source >obj=zzz {}=target")
     check_response(response)
