@@ -77,15 +77,19 @@ class JavaProtobufContext(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.pipe.stdin.write((0).to_bytes(4, 'big'))
-        self.pipe.stdin.flush()
+        if self.pipe.poll() is not None:
+            self.pipe.stdin.write((0).to_bytes(4, 'big'))
+            self.pipe.stdin.flush()
 
     def process_request(self, request):
         text = request.SerializeToString()
         self.pipe.stdin.write(len(text).to_bytes(4, 'big'))
         self.pipe.stdin.write(text)
         self.pipe.stdin.flush()
-        response_length = int.from_bytes(self.pipe.stdout.read(4), "big")
+        response_length = self.pipe.stdout.read(4)
+        if len(response_length) < 4:
+            raise RuntimeError("Could not communicate with java process!")
+        response_length = int.from_bytes(response_length, "big")
         response_text = self.pipe.stdout.read(response_length)
         response = self.build_response()
         response.ParseFromString(response_text)
