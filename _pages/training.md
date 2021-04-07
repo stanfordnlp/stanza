@@ -45,7 +45,7 @@ After running the script, your embedding vector files will be organized in the f
 
 ## Converting UD data
 
-A large repository of data is available at [www.universaldependencies.org].  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
+A large repository of data is available at [www.universaldependencies.org](www.universaldependencies.org).  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
 ```bash
 python stanza/utils/datasets/prepare_${module}_treebank.py ${corpus} ${other_args}
 ```
