@@ -24,7 +24,7 @@ We provide scripts that are useful for model training and evaluation in the `scr
 - `{module}_DATA_DIR`: The subdirectory for storing intermediate files used by each module.
 - `WORDVEC_DIR`: The directory to store all word vector files (see below).
 
-These variables are used by the `.sh` files in the `scripts` folder.  They are also used by the python scripts, and so they need to be part of your environment.  You can achieve this by running the `config.sh` script before using those python scripts or by adding them to your profile.
+These variables are used by the `.sh` files in the `scripts` folder.  They are also used by the python scripts, and so they need to be part of your environment.  You can achieve this by running `source config.sh` before using those python scripts or by adding them to your profile, eg `~/.bashrc` or wherever appropriate.
 
 Note that Windows users will not be able to run this `.sh` script, but they can still use the python tools after adding these variables via the control panel.
 
