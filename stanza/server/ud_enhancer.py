@@ -72,7 +72,7 @@ def main():
     nlp = stanza.Pipeline('en',
                           processors='tokenize,pos,lemma,depparse')
 
-    with UniversalEnhancer(language="en") as enhancer:
+    with UniversalEnhancer(language="en", classpath="$CLASSPATH") as enhancer:
         doc = nlp("This is the car that I bought")
         result = enhancer.process(doc)
         print(result.sentence[0].enhancedDependencies)
