@@ -2,13 +2,13 @@ import subprocess
 
 from stanza.server.client import resolve_classpath
 
-def send_request(request, response_type, java_main):
+def send_request(request, response_type, java_main, classpath=None):
     """
     Use subprocess to run a Java protobuf processor on the given request
 
     Returns the protobuf response
     """
-    pipe = subprocess.run(["java", "-cp", resolve_classpath(), java_main],
+    pipe = subprocess.run(["java", "-cp", resolve_classpath(classpath), java_main],
                           input=request.SerializeToString(),
                           stdout=subprocess.PIPE,
                           check=True)
