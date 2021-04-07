@@ -26,7 +26,7 @@ def process_doc(doc, *patterns):
     num_tokens = 0
     for sentence in doc.sentences:
         add_sentence(request_doc.sentence, sentence, num_tokens)
-        num_tokens = num_tokens + len(sentence.tokens)
+        num_tokens = num_tokens + sum(len(token.words) for token in sentence.tokens)
 
     return send_tokensregex_request(request)
 
