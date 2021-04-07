@@ -36,7 +36,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     """
     if treebank.startswith("UD_Korean") and treebank.endswith("_seg"):
         treebank = treebank[:-4]
-    filename = f"{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}"
+    filename = os.path.join(udbase_dir, treebank, f"*-ud-{dataset}.{extension}")
     files = glob.glob(filename)
     if len(files) == 0:
         if fail:

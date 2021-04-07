@@ -734,13 +734,12 @@ def process_treebank(treebank, paths, args):
     elif short_name.startswith("en_combined"):
         build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.prepare_labels)
     else:
-        train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
-        if not train_txt_file:
-            raise ValueError("Cannot find train file for treebank %s" % treebank)
+        # check that we can find the train file where we expect it
+        train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt", fail=True)
 
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
+        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt", fail=False):
             process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.prepare_labels)
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment, args.prepare_labels)
