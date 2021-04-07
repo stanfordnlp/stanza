@@ -10,7 +10,8 @@ def send_request(request, response_type, java_main):
     """
     pipe = subprocess.run(["java", "-cp", resolve_classpath(), java_main],
                           input=request.SerializeToString(),
-                          stdout=subprocess.PIPE)
+                          stdout=subprocess.PIPE,
+                          check=True)
     response = response_type()
     response.ParseFromString(pipe.stdout)
     return response
