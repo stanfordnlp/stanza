@@ -152,3 +152,118 @@ result {
 }
 ```
 
+### Semgrex as a context
+
+Coming Soon in v1.3
+{: .label .label-green }
+
+In the next release, it will be possible to use semgrex as a Python
+context.  This will allow multiple calls per Java process, hopefully
+reducing overhead in situations where there are lots of small queries.
+
+```python
+with Semgrex(classpath=???) as sem:
+  result = sem.process(doc, patterns)
+```
+
+## TokensRegex
+
+Coming Soon in v1.3
+{: .label .label-green }
+
+Similar to the semgrex interface, there is a tokensregex interface which allows use of tokensregex on documents processed with stanza.  For example:
+
+```python
+    nlp = stanza.Pipeline('en',
+                          processors='tokenize')
+
+    doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him')
+    print(process_doc(doc, "him", "ruined"))
+```
+
+The expected result of this is that it will return locations of `him` and `ruined`:
+
+```text
+match {
+  match {
+    sentence: 1
+    match {
+      text: "him"
+      begin: 4
+      end: 5
+    }
+  }
+}
+match {
+  match {
+    sentence: 0
+    match {
+      text: "ruined"
+      begin: 1
+      end: 2
+    }
+  }
+}
+```
+
+## Universal Enhancements
+
+Coming Soon in v1.3
+{: .label .label-green }
+
+Currently, the `depparse` annotator only processes basic dependencies.
+The CoreNLP package includes a tool to convert basic UD to enhanced UD.
+We now include a way to communicate with that tool.
+
+```python
+from stanza.client.ud_enhancer import UniversalEnhancer
+
+nlp = stanza.Pipeline('en',
+                      processors='tokenize,pos,lemma,depparse')
+
+with UniversalEnhancer(language="en", classpath="$CLASSPATH") as enhancer:
+    doc = nlp("This is the car that I bought")
+    result = enhancer.process(doc)
+    print(result.sentence[0].enhancedDependencies)
+```
+
+You can see that there is an "extra" dependency in the output:
+
+```text
+...
+edge {
+  source: 4
+  target: 7
+  dep: "acl:relcl"
+  isExtra: false
+  sourceCopy: 0
+  targetCopy: 0
+  language: UniversalEnglish
+}
+edge {
+  source: 7
+  target: 4
+  dep: "obl:relobj"
+  isExtra: true
+  sourceCopy: 0
+  targetCopy: 0
+  language: Any
+}
+edge {
+  source: 7
+  target: 6
+  dep: "nsubj"
+  isExtra: false
+  sourceCopy: 0
+  targetCopy: 0
+  language: UniversalEnglish
+}
+...
+```
+
+In order to use this, you either need to supply the language or supply
+a `pronouns_pattern` which describes how to identify relative pronouns
+in the language of interest.  For example, the pattern for English is
+`"(?i:that|what|which|who|whom|whose)"`.  Note that most languages are
+not yet supported by name, but we are more than happy to receive
+contributions for how to find relative pronouns in other languages.
