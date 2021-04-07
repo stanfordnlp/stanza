@@ -33,6 +33,18 @@ def add_token(token_list, word, token):
     if token.ner is not None:
         query_token.ner = token.ner
 
+def add_sentence(request_sentences, sentence, num_tokens):
+    """
+    Add the tokens for this stanza sentence to a list of protobuf sentences
+    """
+    request_sentence = request_sentences.add()
+    request_sentence.tokenOffsetBegin = num_tokens
+    request_sentence.tokenOffsetEnd = num_tokens + len(sentence.tokens)
+    for token in sentence.tokens:
+        for word in token.words:
+            add_token(request_sentence.token, word, token)
+    return request_sentence
+
 def add_word_to_graph(graph, word, sent_idx, word_idx):
     """
     Add a node and possibly an edge for a word in a basic dependency graph.

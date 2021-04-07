@@ -10,7 +10,7 @@ A minimal example is the main method of this module.
 import stanza
 
 from stanza.protobuf import TokensRegexRequest, TokensRegexResponse
-from stanza.server.java_protobuf_requests import send_request, add_token
+from stanza.server.java_protobuf_requests import send_request, add_sentence
 
 def send_tokensregex_request(request):
     return send_request(request, TokensRegexResponse,
@@ -24,14 +24,9 @@ def process_doc(doc, *patterns):
     request_doc = request.doc
     request_doc.text = doc.text
     num_tokens = 0
-    for sent_idx, sentence in enumerate(doc.sentences):
-        request_sentence = request_doc.sentence.add()
-        request_sentence.tokenOffsetBegin = num_tokens
-        request_sentence.tokenOffsetEnd = num_tokens + len(sentence.tokens)
+    for sentence in doc.sentences:
+        add_sentence(request_doc.sentence, sentence, num_tokens)
         num_tokens = num_tokens + len(sentence.tokens)
-        for token in sentence.tokens:
-            for word in token.words:
-                add_token(request_sentence.token, word, token)
 
     return send_tokensregex_request(request)
 
