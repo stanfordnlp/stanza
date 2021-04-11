@@ -128,7 +128,7 @@ def split_train_file(treebank, train_input_conllu,
 def mwt_name(base_dir, short_name, dataset):
     return f"{base_dir}/{short_name}-ud-{dataset}-mwt.json"
 
-def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
+def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, dataset):
     prepare_tokenizer_data.main([input_txt,
                                  input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
@@ -520,7 +520,7 @@ def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset
     common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "ko", dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
 def build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels=True):
     for dataset in ("train", "dev", "test"):
@@ -563,7 +563,7 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
 
 def build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name, prepare_labels=True):
@@ -612,7 +612,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "en", dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
 
 def build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name, prepare_labels=True):
@@ -643,7 +643,7 @@ def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, da
     common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "en", dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
 def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, prepare_labels=True):
     for dataset in ("train", "dev", "test"):
@@ -679,7 +679,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     # TODO: refactor this call everywhere
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, short_language, dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True, prepare_labels=True):
     """
@@ -728,8 +728,8 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
         return
 
     if prepare_labels:
-        prepare_dataset_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
-        prepare_dataset_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
+        prepare_dataset_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, "train")
+        prepare_dataset_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, "dev")
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
