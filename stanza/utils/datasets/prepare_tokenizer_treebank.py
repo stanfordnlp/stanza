@@ -570,10 +570,20 @@ def build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name
     for dataset in ("train", "dev", "test"):
         build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset, prepare_labels)
 
+def check_gum_ready(udbase_dir):
+    gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
+    if common.all_underscores(gum_conllu):
+        raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
+
 def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset, prepare_labels):
     """
     en_combined is currently EWT, GUM, and a fork of Pronouns
+
+    TODO: when 2.8 is released, update the mechanism for getting the Pronouns dataset
+    TODO: use more of the handparsed data
     """
+    check_gum_ready(udbase_dir)
+
     output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
@@ -581,7 +591,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         # TODO: include more UD treebanks, possibly with xpos removed
         #  UD_English-ParTUT - xpos are different
         # also include "external" treebanks such as PTB
-        treebanks = ["UD_English-EWT", "UD_English-GUM"]
+        treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
@@ -602,13 +612,42 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "en", dataset)
 
 
 def build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name, prepare_labels=True):
     for dataset in ("train", "dev", "test"):
         build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset, prepare_labels)
 
+def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, prepare_labels=True):
+    """
+    Build the GUM dataset by combining GUMReddit
+
+    It checks to make sure GUMReddit is filled out using the included script
+    """
+    check_gum_ready(udbase_dir)
+
+    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    treebanks = ["UD_English-GUM", "UD_English-GUMReddit"]
+    sents = []
+    for treebank in treebanks:
+        conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+        sents.extend(read_sentences_from_conllu(conllu_file))
+
+    if dataset == 'train':
+        sents = augment_punct(sents)
+
+    write_sentences_to_conllu(output_conllu, sents)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
+
+    if prepare_labels:
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "en", dataset)
+
+def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, prepare_labels=True):
+    for dataset in ("train", "dev", "test"):
+        build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, prepare_labels)
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
     # TODO: do this higher up
@@ -726,6 +765,11 @@ def process_treebank(treebank, paths, args):
         build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.prepare_labels)
     elif short_name.startswith("en_combined"):
         build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.prepare_labels)
+    elif short_name.startswith("en_gumreddit"):
+        print("Skipping %s as this is typically added to UD_English-GUM" % treebank)
+    elif short_name.startswith("en_gum"):
+        # we special case GUM because it should include a filled-out GUMReddit
+        build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
     else:
         # check that we can find the train file where we expect it
         train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
