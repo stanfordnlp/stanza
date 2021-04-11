@@ -614,33 +614,33 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     # TODO: do this higher up
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
-    input_txt_copy = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
     input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
-    input_conllu_copy = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_conllu, input_txt_copy, input_conllu_copy)
+        preprocess_ssj_data.process(input_conllu, output_txt, output_conllu)
     elif short_name == "te_mtg" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
+        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
+        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_arabic_padt)
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
+        fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment=augment)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
-        remove_spaces(input_conllu, input_conllu_copy, input_txt_copy)
+        remove_spaces(input_conllu, output_conllu, output_txt)
     elif dataset == 'train':
         # we treat the additional punct as something that always needs to be there
         # this will teach the tagger & depparse about unicode apos, for example
-        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_punct)
+        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_punct)
     else:
-        shutil.copyfile(input_txt, input_txt_copy)
-        shutil.copyfile(input_conllu, input_conllu_copy)
+        shutil.copyfile(input_conllu, output_conllu)
+        common.convert_conllu_to_txt(output_conllu, output_txt)
 
+    # TODO: refactor this call everywhere
     if prepare_labels:
-        prepare_dataset_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, short_language, dataset)
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True, prepare_labels=True):
     """
@@ -728,11 +728,11 @@ def process_treebank(treebank, paths, args):
         build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.prepare_labels)
     else:
         # check that we can find the train file where we expect it
-        train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt", fail=True)
+        train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
 
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt", fail=False):
+        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
             process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.prepare_labels)
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment, args.prepare_labels)
