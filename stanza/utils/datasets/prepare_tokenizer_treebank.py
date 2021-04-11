@@ -27,14 +27,11 @@ import os
 import random
 import re
 import shutil
-import subprocess
 import tempfile
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
-
-CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
@@ -99,10 +96,6 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
-def convert_conllu_to_txt(conllu, txt):
-    # use an external script to produce the txt files
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
-
 def split_train_file(treebank, train_input_conllu,
                      train_output_conllu, train_output_txt,
                      dev_output_conllu, dev_output_txt):
@@ -127,8 +120,8 @@ def split_train_file(treebank, train_input_conllu,
     write_sentences_to_conllu(train_output_conllu, train_sents)
     write_sentences_to_conllu(dev_output_conllu, dev_sents)
 
-    convert_conllu_to_txt(train_output_conllu, train_output_txt)
-    convert_conllu_to_txt(dev_output_conllu, dev_output_txt)
+    common.convert_conllu_to_txt(train_output_conllu, train_output_txt)
+    common.convert_conllu_to_txt(dev_output_conllu, dev_output_txt)
 
     return True
 
@@ -357,7 +350,7 @@ def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
         new_sentences = augment_ancora(new_sentences)
 
     write_sentences_to_conllu(output_conllu, new_sentences)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
 def augment_apos(sents):
     """
@@ -465,7 +458,7 @@ def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_fun
     new_sents = augment_function(sents)
 
     write_sentences_to_conllu(output_conllu, new_sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
 def remove_spaces_from_sentences(sents):
     """
@@ -503,7 +496,7 @@ def remove_spaces(input_conllu, output_conllu, output_txt):
     new_sents = remove_spaces_from_sentences(sents)
 
     write_sentences_to_conllu(output_conllu, new_sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
 
 def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels=True):
@@ -524,7 +517,7 @@ def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset
         sents = remove_spaces_from_sentences(sents)
 
     write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
         prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "ko", dataset)
@@ -567,7 +560,7 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         sents = read_sentences_from_conllu(istd_conllu)
 
     write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
         prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
@@ -606,7 +599,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
 
     sents = strip_mwt_from_sentences(sents)
     write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    common.convert_conllu_to_txt(output_conllu, output_txt)
 
     if prepare_labels:
         prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)

@@ -4,6 +4,7 @@ The SSJ dataset has an unusual bug: all of the sentences end with SpaceAfter=no
 This script fixes them and writes the fixed files to the given location.
 """
 
+import stanza.utils.datasets.common as common
 
 def process(input_txt, input_conllu, input_txt_copy, input_conllu_copy):
     conllu_lines = open(input_conllu).readlines()
@@ -65,3 +66,5 @@ def process(input_txt, input_conllu, input_txt_copy, input_conllu_copy):
     with open(input_conllu_copy, "w") as fout:
         for line in conllu_lines:
             fout.write(line)
+
+    common.convert_conllu_to_txt(input_conllu_copy, input_txt_copy)
