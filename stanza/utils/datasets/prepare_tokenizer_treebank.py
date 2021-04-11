@@ -769,6 +769,7 @@ def process_treebank(treebank, paths, args):
         print("Skipping %s as this is typically added to UD_English-GUM" % treebank)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
+        print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
         build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
     else:
         # check that we can find the train file where we expect it
