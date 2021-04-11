@@ -97,12 +97,12 @@ def get_ud_treebanks(udbase_dir, filtered=True):
     treebanks = [os.path.split(t)[1] for t in treebanks]
     if filtered:
         treebanks = [t for t in treebanks
-                     if (find_treebank_dataset_file(t, udbase_dir, "train", "txt") and
+                     if (find_treebank_dataset_file(t, udbase_dir, "train", "conllu") and
                          # this will be fixed using XV
-                         #find_treebank_dataset_file(t, udbase_dir, "dev", "txt") and
-                         find_treebank_dataset_file(t, udbase_dir, "test", "txt"))]
+                         #find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") and
+                         find_treebank_dataset_file(t, udbase_dir, "test", "conllu"))]
         treebanks = [t for t in treebanks
-                     if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
+                     if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
         # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
