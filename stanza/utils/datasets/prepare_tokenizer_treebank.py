@@ -621,7 +621,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     input_conllu_copy = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
+        preprocess_ssj_data.process(input_conllu, input_txt_copy, input_conllu_copy)
     elif short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:

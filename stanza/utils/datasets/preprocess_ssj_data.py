@@ -6,11 +6,9 @@ This script fixes them and writes the fixed files to the given location.
 
 import stanza.utils.datasets.common as common
 
-def process(input_txt, input_conllu, input_txt_copy, input_conllu_copy):
+def process(input_conllu, input_txt_copy, input_conllu_copy):
     conllu_lines = open(input_conllu).readlines()
-    txt_lines = open(input_txt).readlines()
 
-    inserts = []
     new_conllu_lines = list(conllu_lines)
 
     line_idx = 0
@@ -40,7 +38,6 @@ def process(input_txt, input_conllu, input_txt_copy, input_conllu_copy):
 
         # if not, need to add a new space
         if new_line != conllu_lines[last_word_idx]:
-            inserts.append(text_idx)
             conllu_lines[last_word_idx] = new_line
         text_idx = text_idx + 1
         
@@ -49,20 +46,6 @@ def process(input_txt, input_conllu, input_txt_copy, input_conllu_copy):
         while line_idx < len(conllu_lines) and not conllu_lines[line_idx].strip():
             line_idx = line_idx + 1
 
-    current_txt_len = 0
-    current_txt_idx = 0
-    for insert in inserts:
-        line = txt_lines[current_txt_idx]
-        while len(line) + current_txt_len < insert:
-            current_txt_len = current_txt_len + len(line)
-            current_txt_idx = current_txt_idx + 1
-            line = txt_lines[current_txt_idx]
-        new_line = line[:insert-current_txt_len] + " " + line[insert-current_txt_len:]
-        txt_lines[current_txt_idx] = new_line
-
-    with open(input_txt_copy, "w") as fout:
-        for line in txt_lines:
-            fout.write(line)
     with open(input_conllu_copy, "w") as fout:
         for line in conllu_lines:
             fout.write(line)
