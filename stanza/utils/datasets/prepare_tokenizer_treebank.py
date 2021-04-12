@@ -98,8 +98,7 @@ def write_sentences_to_conllu(filename, sents):
             print("", file=outfile)
 
 def split_train_file(treebank, train_input_conllu,
-                     train_output_conllu, train_output_txt,
-                     dev_output_conllu, dev_output_txt):
+                     train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -142,11 +141,11 @@ CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl
 
 def convert_conllu_to_txt(tokenizer_dir, short_name):
     for dataset in ("train", "dev", "test"):
-        conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-        txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
         # use an external script to produce the txt files
-        subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
+        subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
 
 
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
@@ -314,7 +313,7 @@ def augment_ancora(sents):
 
     return sents + new_sents
 
-def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
+def fix_spanish_ancora(input_conllu, output_conllu, augment):
     """
     The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
 
@@ -460,7 +459,7 @@ def augment_punct(sents):
 
 
 
-def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_function):
+def write_augmented_dataset(input_conllu, output_conllu, augment_function):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -498,7 +497,7 @@ def remove_spaces_from_sentences(sents):
         new_sents.append(new_sentence)
     return new_sents
 
-def remove_spaces(input_conllu, output_conllu, output_txt):
+def remove_spaces(input_conllu, output_conllu):
     """
     Turns a dataset into something appropriate for building a segmenter.
 
@@ -511,7 +510,7 @@ def remove_spaces(input_conllu, output_conllu, output_txt):
     write_sentences_to_conllu(output_conllu, new_sents)
 
 
-def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu):
+def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu):
     """
     Builds a combined dataset out of multiple Korean datasets.
 
@@ -532,12 +531,10 @@ def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset
 
 def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
     for dataset in ("train", "dev", "test"):
-        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu)
+        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
 
 def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if dataset == 'train':
@@ -587,7 +584,6 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     """
     check_gum_ready(udbase_dir)
 
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if dataset == 'train':
@@ -626,7 +622,6 @@ def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, da
     """
     check_gum_ready(udbase_dir)
 
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     treebanks = ["UD_English-GUM", "UD_English-GUMReddit"]
@@ -645,26 +640,24 @@ def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name):
         build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset)
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
-
     input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_conllu, output_txt, output_conllu)
+        preprocess_ssj_data.process(input_conllu, output_conllu)
     elif short_name == "te_mtg" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_telugu)
+        write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_arabic_padt)
+        write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
     elif short_name.startswith("es_ancora") and dataset == 'train':
         # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment=augment)
+        fix_spanish_ancora(input_conllu, output_conllu, augment=augment)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
-        remove_spaces(input_conllu, output_conllu, output_txt)
+        remove_spaces(input_conllu, output_conllu)
     elif dataset == 'train':
         # we treat the additional punct as something that always needs to be there
         # this will teach the tagger & depparse about unicode apos, for example
-        write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_punct)
+        write_augmented_dataset(input_conllu, output_conllu, augment_punct)
     else:
         shutil.copyfile(input_conllu, output_conllu)
 
@@ -704,16 +697,12 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     train_output_conllu = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
-    train_output_txt = f"{tokenizer_dir}/{short_name}.train.txt"
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
-    dev_output_txt = f"{tokenizer_dir}/{short_name}.dev.txt"
 
     if not split_train_file(treebank=treebank,
                             train_input_conllu=train_input_conllu,
                             train_output_conllu=train_output_conllu,
-                            train_output_txt=train_output_txt,
-                            dev_output_conllu=dev_output_conllu,
-                            dev_output_txt=dev_output_txt):
+                            dev_output_conllu=dev_output_conllu):
         return
 
     # the test set is already fine
