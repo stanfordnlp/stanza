@@ -14,8 +14,6 @@ logger = logging.getLogger('stanza')
 
 SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 
-CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
-
 def project_to_short_name(treebank):
     """
     Project either a treebank or a short name to a short name
@@ -135,9 +133,3 @@ def main(process_treebank, add_specific_args=None):
 
     for treebank in treebanks:
         process_treebank(treebank, paths, args)
-
-
-def convert_conllu_to_txt(conllu, txt):
-    # use an external script to produce the txt files
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
-
