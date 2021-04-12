@@ -216,7 +216,7 @@ The CoreNLP package includes a tool to convert basic UD to enhanced UD.
 We now include a way to communicate with that tool.
 
 ```python
-from stanza.client.ud_enhancer import UniversalEnhancer
+from stanza.server.ud_enhancer import UniversalEnhancer
 
 nlp = stanza.Pipeline('en',
                       processors='tokenize,pos,lemma,depparse')
