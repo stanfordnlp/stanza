@@ -579,7 +579,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     """
     en_combined is currently EWT, GUM, and a fork of Pronouns
 
-    TODO: when 2.8 is released, update the mechanism for getting the Pronouns dataset
+    TODO: when 2.8 is released, check that EWT, Pronouns, and PUD all have the recent updates correctly applied
     TODO: use more of the handparsed data
     """
     check_gum_ready(udbase_dir)
@@ -590,17 +590,18 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         # TODO: include more UD treebanks, possibly with xpos removed
         #  UD_English-ParTUT - xpos are different
         # also include "external" treebanks such as PTB
-        treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
+        # NOTE: in order to get the best results, make sure each of these treebanks have the latest edits applied
+        train_treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
+        test_treebanks = ["UD_English-PUD", "UD_English-Pronouns"]
         sents = []
-        for treebank in treebanks:
-            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
-        # this fork of Pronouns addresses a few issues with the dataset
-        # features, tags, and lemmas were all improved
-        pronouns_fork = os.path.join(handparsed_dir, "english-pronouns", "en_pronouns-ud-test-GL.conllu")
-        pronouns_sents = read_sentences_from_conllu(pronouns_fork)
-        sents.extend(pronouns_sents)
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
 
+        # TODO: refactor things like the augment_punct call
         sents = augment_punct(sents)
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
