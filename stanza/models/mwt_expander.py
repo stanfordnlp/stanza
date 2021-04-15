@@ -98,11 +98,11 @@ def train(args):
     # load data
     logger.debug('max_dec_len: %d' % args['max_dec_len'])
     logger.debug("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(CoNLL.conll2dict(input_file=args['train_file']))
+    train_doc = CoNLL.conll2doc(input_file=args['train_file'])
     train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab.size
-    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
@@ -222,7 +222,7 @@ def evaluate(args):
 
     # load data
     logger.debug("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
 
     if len(batch) > 0:

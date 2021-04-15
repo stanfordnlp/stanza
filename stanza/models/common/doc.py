@@ -63,7 +63,7 @@ class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
-    def __init__(self, sentences, text=None):
+    def __init__(self, sentences, text=None, comments=None):
         """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
 
         Args:

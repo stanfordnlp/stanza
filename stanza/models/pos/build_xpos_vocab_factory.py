@@ -31,7 +31,7 @@ def get_factory(sh, fn):
         key = 'WordVocab(data, shorthand, idx=2)'
         return key
 
-    doc = Document(CoNLL.conll2dict(input_file=train_file))
+    doc = CoNLL.conll2doc(input_file=train_file)
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
     print(f'Original length = {len(data)}')
     data = filter_data(data, idx=2)

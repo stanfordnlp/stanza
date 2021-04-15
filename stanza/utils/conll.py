@@ -22,25 +22,32 @@ START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 
+from stanza.models.common.doc import Document
+
 class CoNLL:
 
     @staticmethod
     def load_conll(f, ignore_gapping=True):
         """ Load the file or string into the CoNLL-U format data.
         Input: file or string reader, where the data is in CoNLL-U format.
-        Output: a list of list of list for each token in each sentence in the data, where the innermost list represents
-        all fields of a token.
+        Output: a tuple whose first element is a list of list of list for each token in each sentence in the data,
+        where the innermost list represents all fields of a token; and whose second element is a list of lists for each
+        comment in each sentence in the data.
         """
         # f is open() or io.StringIO()
         doc, sent = [], []
+        doc_comments, sent_comments = [], []
         for line in f:
             line = line.strip()
             if len(line) == 0:
                 if len(sent) > 0:
                     doc.append(sent)
                     sent = []
+                    doc_comments.append(sent_comments)
+                    sent_comments = []
             else:
-                if line.startswith('#'): # skip comment line
+                if line.startswith('#'): # read comment line
+                    sent_comments.append(line)
                     continue
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
@@ -50,7 +57,8 @@ class CoNLL:
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
-        return doc
+            doc_comments.append(sent_comments)
+        return doc, doc_comments
 
     @staticmethod
     def convert_conll(doc_conll):
@@ -98,10 +106,15 @@ class CoNLL:
             infile = io.StringIO(input_str)
         else:
             infile = open(input_file)
-        doc_conll = CoNLL.load_conll(infile, ignore_gapping)
+        doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
         doc_dict = CoNLL.convert_conll(doc_conll)
-        return doc_dict
+        return doc_dict, doc_comments
 
+    @staticmethod
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True):
+        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping)
+        return Document(doc_dict, text=None, comments=doc_comments)
+    
     @staticmethod
     def convert_dict(doc_dict):
         """ Convert the dictionary format input data to the CoNLL-U format output data. This is the reverse function of
