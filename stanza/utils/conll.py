@@ -164,3 +164,35 @@ class CoNLL:
         with open(filename, 'w') as outfile:
             outfile.write(conll_string)
         return
+
+
+    @staticmethod
+    def doc2conll(doc):
+        """ Convert a Document object to a list of list of strings
+
+        Each sentence is represented by a list of strings: first the comments, then the converted tokens
+        """
+        doc_conll = []
+        for sentence in doc.sentences:
+            sent_conll = list(sentence.comments)
+            for token_dict in sentence.to_dict():
+                token_conll = CoNLL.convert_token_dict(token_dict)
+                sent_conll.append("\t".join(token_conll))
+            doc_conll.append(sent_conll)
+
+        return doc_conll
+
+    @staticmethod
+    def doc2conll_text(doc):
+        """ Convert a Document to a big block of text.
+        """
+        doc_conll = CoNLL.doc2conll(doc)
+        return "\n\n".join("\n".join(line for line in sentence)
+                           for sentence in doc_conll) + "\n\n"
+
+    @staticmethod
+    def write_doc2conll(doc, filename):
+        """ Writes the doc as a conll file to the given filename
+        """
+        with open(filename, 'w') as outfile:
+            outfile.write(CoNLL.doc2conll_text(doc))

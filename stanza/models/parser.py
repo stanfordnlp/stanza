@@ -196,7 +196,7 @@ def train(args):
                 dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
+                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
@@ -272,7 +272,7 @@ def evaluate(args):
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
-    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

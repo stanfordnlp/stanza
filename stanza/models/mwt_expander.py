@@ -126,7 +126,7 @@ def train(args):
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
     doc.set_mwt_expansions(dev_preds)
-    CoNLL.dict2conll(doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(doc, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -168,7 +168,7 @@ def train(args):
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds)
-            CoNLL.dict2conll(doc.to_dict(), system_pred_file)
+            CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -198,7 +198,7 @@ def train(args):
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds)
-            CoNLL.dict2conll(doc.to_dict(), system_pred_file)
+            CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             logger.info("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
@@ -245,7 +245,7 @@ def evaluate(args):
     # write to file and score
     doc = copy.deepcopy(batch.doc)
     doc.set_mwt_expansions(preds)
-    CoNLL.dict2conll(doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(doc, system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

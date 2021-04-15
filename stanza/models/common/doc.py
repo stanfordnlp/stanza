@@ -358,6 +358,7 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
+        self._comments = []
 
         self._process_tokens(tokens)
 
@@ -485,6 +486,16 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+
+    @property
+    def comments(self):
+        """ Returns CoNLL-style comments for this sentence """
+        return self._comments
+
+    def add_comment(self, comment):
+        if not comment.startswith("#"):
+            comment = "#" + comment
+        self._comments.append(comment)
 
     def rebuild_dependencies(self):
         # rebuild dependencies if there is dependency info

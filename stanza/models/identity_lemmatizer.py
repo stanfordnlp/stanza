@@ -52,7 +52,7 @@ def main(args=None):
 
     # write to file and score
     batch.doc.set([LEMMA], preds)
-    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(batch.doc, system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
