@@ -34,18 +34,14 @@ accept pull requests...
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph
+from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext
+
+SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
 
 def send_semgrex_request(request):
-    return send_request(request, SemgrexResponse,
-                        "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest")
+    return send_request(request, SemgrexResponse, SEMGREX_JAVA)
 
-def process_doc(doc, *semgrex_patterns):
-    """
-    Returns the result of processing the given semgrex expression on the stanza doc.
-
-    Currently the return is a SemgrexResponse from CoreNLP.proto
-    """
+def build_request(doc, semgrex_patterns):
     request = SemgrexRequest()
     for semgrex in semgrex_patterns:
         request.semgrex.append(semgrex)
@@ -60,7 +56,32 @@ def process_doc(doc, *semgrex_patterns):
 
                 word_idx = word_idx + 1
 
+    return request
+
+def process_doc(doc, *semgrex_patterns):
+    """
+    Returns the result of processing the given semgrex expression on the stanza doc.
+
+    Currently the return is a SemgrexResponse from CoreNLP.proto
+    """
+    request = build_request(doc, semgrex_patterns)
+
     return send_semgrex_request(request)
+
+class Semgrex(JavaProtobufContext):
+    """
+    Semgrex context window
+
+    This is a context window which keeps a process open.  Should allow
+    for multiple requests without launching new java processes each time.
+    """
+    def __init__(self, classpath=None):
+        super(Semgrex, self).__init__(classpath, SemgrexResponse, SEMGREX_JAVA)
+
+    def process(self, doc, *semgrex_patterns):
+        request = build_request(doc, semgrex_patterns)
+        return self.process_request(request)
+
 
 def main():
     nlp = stanza.Pipeline('en',
