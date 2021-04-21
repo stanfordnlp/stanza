@@ -71,6 +71,7 @@ class Document(StanzaObject):
             text: the raw text of the document.
         """
         self._sentences = []
+        self._lang = None
         self._text = None
         self._num_tokens = 0
         self._num_words = 0
@@ -78,6 +79,16 @@ class Document(StanzaObject):
         self.text = text
         self._process_sentences(sentences)
         self._ents = []
+
+    @property
+    def lang(self):
+        """ Access the language of this document """
+        return self._lang
+
+    @property
+    def lang(self, value):
+        """ Set the language of this document """
+        self._lang = value
 
     @property
     def text(self):
