@@ -83,9 +83,9 @@ default_treebanks = {
   "te": "mtg",
   "orv": "torot",
   "nn": "nynorsk",
-  "mr": "ufal"
+  "mr": "ufal",
+  "multilingual": "ud"
 }
-
 
 # default ner for languages
 default_ners = {
@@ -103,7 +103,6 @@ default_ners = {
   "vi": "vlsp",
   "zh-hans": "ontonotes",
 }
-
 
 # default charlms for languages
 default_charlms = {
@@ -167,7 +166,8 @@ processor_to_ending = {
   "sentiment": "sentiment",
   "pretrain": "pretrain",
   "forward_charlm": "forward_charlm",
-  "backward_charlm": "backward_charlm"
+  "backward_charlm": "backward_charlm",
+  "langid": "langid"
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
 
@@ -269,9 +269,11 @@ def get_md5(path):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, help='Input dir for various models.')
-    parser.add_argument('--output_dir', type=str, help='Output dir for various models.')
+    parser.add_argument('--input-dir', type=str, help='Input dir for various models.')
+    parser.add_argument('--output-dir', type=str, help='Output dir for various models.')
     args = parser.parse_args()
+    args.input_dir = os.path.abspath(args.input_dir)
+    args.output_dir = os.path.abspath(args.output_dir)
     return args
 
 
@@ -309,15 +311,15 @@ def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
 
-    for dir in dirs:
-        print(f"Processing models in {dir}")
-        models = sorted(os.listdir(os.path.join(args.input_dir, dir)))
+    for model_dir in dirs:
+        print(f"Processing models in {model_dir}")
+        models = sorted(os.listdir(os.path.join(args.input_dir, model_dir)))
         for model in models:
             if not model.endswith('.pt'): continue
             # get processor
             lang, package, processor = split_model_name(model)
             # copy file
-            input_path = os.path.join(args.input_dir, dir, model)
+            input_path = os.path.join(args.input_dir, model_dir, model)
             output_path = os.path.join(args.output_dir, lang, processor, package + '.pt')
             ensure_dir(Path(output_path).parent)
             shutil.copy(input_path, output_path)
@@ -381,17 +383,23 @@ def process_defaults(args):
         if lang in default_sentiment:
             processors.append('sentiment')
 
+        if lang == 'multilingual':
+            processors = ['langid']
+            default_dependencies = {}
+
         with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
                 if processor == 'ner': package = ner_package
                 elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
                 elif processor == 'sentiment': package = sentiment_package
+                elif processor == 'langid': package = 'ud' 
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
-                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment']:
+                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'langid']:
                         default_processors[processor] = package
                     zipf.write(processor)
                     zipf.write(os.path.join(processor, package + '.pt'))
@@ -420,6 +428,7 @@ def process_defaults(args):
 def process_lcode(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources_new = {}
+    resources_new["multilingual"] = resources["multilingual"]
     for lang in resources:
         if lang not in lcode2lang:
             print(lang + ' not found in lcode2lang!')
@@ -449,3 +458,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

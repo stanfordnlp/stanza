@@ -1,6 +1,7 @@
 """ Module defining constants """
 
 # string constants for processor names
+LANGID = 'langid'
 TOKENIZE = 'tokenize'
 MWT = 'mwt'
 POS = 'pos'
