@@ -74,6 +74,19 @@ class Pretrain:
             logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
 
 
+    def write_text(self, filename):
+        """
+        Write the vocab & values to a text file
+        """
+        with open(filename, "w") as fout:
+            for i in range(len(self.vocab)):
+                row = self.emb[i]
+                fout.write(self.vocab[i])
+                fout.write("\t")
+                fout.write("\t".join(map(str, row)))
+                fout.write("\n")
+
+
     def read_pretrain(self):
         # load from pretrained filename
         if self._vec_filename is None:
