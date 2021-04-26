@@ -13,6 +13,9 @@ all UD treebanks.
 Extra arguments are passed to tokenizer.  In case the run script
 itself is shadowing arguments, you can specify --extra_args as a
 parameter to mark where the tokenizer arguments start.
+
+Default behavior is to discard the output and just print the results.
+To keep the results instead, use --save_output
 """
 
 import logging

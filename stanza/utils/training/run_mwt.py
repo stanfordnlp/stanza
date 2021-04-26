@@ -33,7 +33,7 @@ def check_mwt(filename):
     """
     Checks whether or not there are MWTs in the given conll file
     """
-    doc = Document(CoNLL.conll2dict(filename))
+    doc = Document(CoNLL.conll2doc(filename))
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
 

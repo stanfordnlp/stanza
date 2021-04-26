@@ -72,7 +72,7 @@ def test_depparse_with_pretagged_doc():
     nlp = stanza.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en',
                                   'depparse_pretagged': True})
 
-    doc = stanza.Document(CoNLL.conll2dict(input_str=EN_DOC_CONLLU_PRETAGGED))
+    doc = CoNLL.conll2doc(input_str=EN_DOC_CONLLU_PRETAGGED)
     processed_doc = nlp(doc)
 
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join(

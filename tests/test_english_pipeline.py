@@ -146,7 +146,7 @@ def test_text(processed_doc):
 
 
 def test_conllu(processed_doc):
-    assert CoNLL.conll_as_string(CoNLL.convert_dict(processed_doc.to_dict())) == EN_DOC_CONLLU_GOLD
+    assert CoNLL.doc2conll_text(processed_doc) == EN_DOC_CONLLU_GOLD
 
 
 def test_tokens(processed_doc):
@@ -171,7 +171,7 @@ def processed_multidoc():
 
 
 def test_conllu_multidoc(processed_multidoc):
-    assert "".join([CoNLL.conll_as_string(CoNLL.convert_dict(doc.to_dict())) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+    assert "".join([CoNLL.doc2conll_text(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
 def test_tokens_multidoc(processed_multidoc):
     assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD

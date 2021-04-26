@@ -139,7 +139,7 @@ def train(args):
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     # train_data is now a list of sentences, where each sentence is a
     # list of words, in which each word is a dict of conll attributes
-    train_data = CoNLL.conll2dict(input_file=args['train_file'])
+    train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
     # possibly augment the training data with some amount of fake data
     # based on the options chosen
     logger.info("Original data size: {}".format(len(train_data)))
@@ -149,7 +149,7 @@ def train(args):
     train_doc = Document(train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    dev_doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     # pred and gold path
@@ -200,7 +200,7 @@ def train(args):
                     dev_preds += preds
                 dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
                 dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
-                CoNLL.dict2conll(dev_batch.doc.to_dict(), system_pred_file)
+                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
@@ -266,7 +266,7 @@ def evaluate(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
     if len(batch) > 0:
         logger.info("Start evaluation...")
@@ -280,7 +280,7 @@ def evaluate(args):
 
     # write to file and score
     batch.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
-    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)

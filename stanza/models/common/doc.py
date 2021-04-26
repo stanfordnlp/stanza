@@ -63,12 +63,13 @@ class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
-    def __init__(self, sentences, text=None):
+    def __init__(self, sentences, text=None, comments=None):
         """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
 
         Args:
             sentences: a list of sentences, which being a list of token entry, in the form of a CoNLL-U dict.
             text: the raw text of the document.
+            comments: A list of list of strings to use as comments on the sentences, either None or the same length as sentences
         """
         self._sentences = []
         self._text = None
@@ -76,7 +77,7 @@ class Document(StanzaObject):
         self._num_words = 0
 
         self.text = text
-        self._process_sentences(sentences)
+        self._process_sentences(sentences, comments)
         self._ents = []
 
     @property
@@ -139,7 +140,7 @@ class Document(StanzaObject):
         """ Set the list of entities in this document. """
         self._ents = value
 
-    def _process_sentences(self, sentences):
+    def _process_sentences(self, sentences, comments=None):
         self.sentences = []
         for tokens in sentences:
             self.sentences.append(Sentence(tokens, doc=self))
@@ -147,6 +148,11 @@ class Document(StanzaObject):
             if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
 
         self._count_words()
+
+        if comments:
+            for sentence, sentence_comments in zip(self.sentences, comments):
+                for comment in sentence_comments:
+                    sentence.add_comment(comment)
 
     def _count_words(self):
         """
@@ -358,6 +364,9 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
+        # comments are a list of comment lines occurring before the
+        # sentence in a CoNLL-U file.  Can be empty
+        self._comments = []
 
         self._process_tokens(tokens)
 
@@ -485,6 +494,20 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+
+    @property
+    def comments(self):
+        """ Returns CoNLL-style comments for this sentence """
+        return self._comments
+
+    def add_comment(self, comment):
+        """ Adds a single comment to this sentence.
+
+        If the comment does not already have # at the start, it will be added.
+        """
+        if not comment.startswith("#"):
+            comment = "#" + comment
+        self._comments.append(comment)
 
     def rebuild_dependencies(self):
         # rebuild dependencies if there is dependency info
