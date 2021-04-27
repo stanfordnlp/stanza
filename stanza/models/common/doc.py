@@ -142,10 +142,12 @@ class Document(StanzaObject):
 
     def _process_sentences(self, sentences, comments=None):
         self.sentences = []
-        for tokens in sentences:
-            self.sentences.append(Sentence(tokens, doc=self))
-            begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
-            if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
+        for sent_idx, tokens in enumerate(sentences):
+            sentence = Sentence(tokens, doc=self)
+            self.sentences.append(sentence)
+            begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
+            if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
+            sentence.id = sent_idx
 
         self._count_words()
 
@@ -400,6 +402,16 @@ class Sentence(StanzaObject):
             t.sent = self
 
         self.rebuild_dependencies()
+
+    @property
+    def id(self):
+        """ Access the index of this sentence.  Indexed from 1 to match tokens """
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        """ Set the sentence's id value. """
+        self._id = value
 
     @property
     def doc(self):
