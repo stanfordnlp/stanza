@@ -30,6 +30,8 @@ import shutil
 import subprocess
 import tempfile
 
+from collections import Counter
+
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
@@ -443,17 +445,76 @@ def augment_ellipses(sents):
 
     return new_sents
 
+# https://en.wikipedia.org/wiki/Quotation_mark
+QUOTES = ['"', '“', '”', '«', '»', '「', '」', '《', '》', '„', '″']
+# Danish does '«' the other way around from most European languages
+START_QUOTES = ['"', '“', '”', '«', '»', '「', '《', '„', '„', '″']
+END_QUOTES   = ['"', '“', '”', '»', '«', '」', '》', '”', '“', '″']
+
+def augment_quotes(sents):
+    """
+    Go through the sentences and replace a fraction of sentences with alternate quotes
+
+    TODO: for certain languages we may want to make some language-specific changes
+      eg Danish, don't add «...»
+    """
+    assert len(START_QUOTES) == len(END_QUOTES)
+
+    counts = Counter()
+    new_sents = []
+    for sent in sents:
+        if random.random() > 0.15:
+            new_sents.append(sent)
+            continue
+
+        # count if there are exactly 2 quotes in this sentence
+        # this is for convenience - otherwise we need to figure out which pairs go together
+        count_quotes = sum(1 for x in sent
+                           if (not x.startswith("#") and
+                               x.split("\t")[1] in QUOTES))
+        if count_quotes != 2:
+            new_sents.append(sent)
+            continue
+
+        # choose a pair of quotes from the candidates
+        quote_idx = random.choice(range(len(START_QUOTES)))
+        start_quote = START_QUOTES[quote_idx]
+        end_quote = END_QUOTES[quote_idx]
+        counts[start_quote + end_quote] = counts[start_quote + end_quote] + 1
+
+        new_sent = []
+        saw_start = False
+        for line in sent:
+            if line.startswith("#"):
+                new_sent.append(line)
+                continue
+            pieces = line.split("\t")
+            if pieces[1] in QUOTES:
+                if saw_start:
+                    # Note that we don't change the lemma.  Presumably it's
+                    # set to the correct lemma for a quote for this treebank
+                    pieces[1] = end_quote
+                else:
+                    pieces[1] = start_quote
+                    saw_start = True
+                new_sent.append("\t".join(pieces))
+            else:
+                new_sent.append(line)
+        new_sents.append(new_sent)
+
+    print("Augmented {} quotes: {}".format(sum(counts.values()), counts))
+    return new_sents
+
 def augment_punct(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
 
     Also augments with ... / …
-
-    TODO: handle the wide variety of quotes which are possible
     """
     new_sents = augment_apos(sents)
     new_sents = augment_ellipses(new_sents)
+    new_sents = augment_quotes(new_sents)
 
     return new_sents
 
