@@ -165,6 +165,31 @@ def strip_mwt_from_sentences(sents):
     return new_sents
 
 
+def remove_space_after_no(piece, fail_if_missing=True):
+    """
+    Removes a SpaceAfter=No annotation from a single piece of a single word.
+    In other words, given a list of conll lines, first call split("\t"), then call this on the -1 column
+    """
+    if piece == "SpaceAfter=No":
+        piece = "_"
+    elif piece.startswith("SpaceAfter=No|"):
+        piece = piece.replace("SpaceAfter=No|", "")
+    elif piece.find("|SpaceAfter=No") > 0:
+        piece = piece.replace("|SpaceAfter=No", "")
+    elif fail_if_missing:
+        raise ValueError("Could not find SpaceAfter=No in the given notes field")
+    return piece
+
+def add_space_after_no(piece, fail_if_found=True):
+    if piece == '_':
+        return "SpaceAfter=No"
+    else:
+        if fail_if_found:
+            if piece.find("SpaceAfter=No") >= 0:
+                raise ValueError("Given notes field already contained SpaceAfter=No")
+        return piece + "|SpaceAfter=No"
+
+
 def augment_arabic_padt(sents):
     """
     Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
@@ -203,14 +228,7 @@ def augment_arabic_padt(sents):
             new_sent = list(sentence)
             new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
             pieces = sentence[-2].split("\t")
-            if pieces[-1] == "SpaceAfter=No":
-                pieces[-1] = "_"
-            elif pieces[-1].startswith("SpaceAfter=No|"):
-                pieces[-1] = pieces[-1].replace("SpaceAfter=No|", "")
-            elif pieces[-1].find("|SpaceAfter=No") > 0:
-                pieces[-1] = piecse[-1].replace("|SpaceAfter=No", "")
-            else:
-                raise ValueError("WTF")
+            pieces[-1] = remove_space_after_no(pieces[-1])
             new_sent[-2] = "\t".join(pieces)
             assert new_sent != sentence
             new_sents.append(new_sent)
@@ -299,10 +317,7 @@ def augment_ancora(sents):
             comma = sentence[idx+1]
             pieces = comma.split("\t")
             assert pieces[1] == ','
-            if pieces[-1] == '_':
-                pieces[-1] = "SpaceAfter=No"
-            else:
-                pieces[-1] = pieces[-1] + "|SpaceAfter=No"
+            pieces[-1] = add_space_after_no(pieces[-1])
             comma = "\t".join(pieces)
             new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
 
@@ -326,6 +341,9 @@ def fix_spanish_ancora(input_conllu, output_conllu, augment):
     Fixing just this one sentence is not sufficient to tokenize
     "asdf,zzzz" as desired, so we also augment by some fraction where
     we have squished "asdf, zzzz" into "asdf,zzzz".
+
+    NOTE: the incorrect token will be fixed in 2.8:
+    https://github.com/UniversalDependencies/UD_Spanish-AnCora/issues/4
     """
     random.seed(1234)
     sents = read_sentences_from_conllu(input_conllu)
@@ -367,7 +385,68 @@ def fix_spanish_ancora(input_conllu, output_conllu, augment):
 
     write_sentences_to_conllu(output_conllu, new_sentences)
 
+def augment_move_comma(sents):
+    """
+    Move the comma from after a word to before the next word some fraction of the time
+
+    We looks for this exact pattern:
+      w1, w2
+    and replace it with
+      w1 ,w2
+
+    The idea is that this is a relatively common typo, but the tool
+    won't learn how to tokenize it without some help.
+
+    Note that this modification replaces the original text.
+    """
+    new_sents = []
+    num_operations = 0
+    for sentence in sents:
+        if random.random() > 0.02:
+            new_sents.append(sentence)
+            continue
+
+        found = False
+        for word_idx, word in enumerate(sentence):
+            if word.startswith("#"):
+                continue
+            if word_idx == 0 or word_idx == len(sentence) - 1:
+                continue
+            pieces = word.split("\t")
+            if pieces[1] == ',' and pieces[-1].find("SpaceAfter=No") < 0:
+                # found a comma with a space after it
+                prev_word = sentence[word_idx-1]
+                if prev_word.split("\t")[-1].find("SpaceAfter=No") < 0:
+                    # unfortunately, the previous word also had a
+                    # space after it.  does not fit what we are
+                    # looking for
+                    continue
+                # at this point, the previous word has no space and the comma does
+                found = True
+                break
+
+        if not found:
+            new_sents.append(sentence)
+            continue
+
+        new_sentence = list(sentence)
+
+        pieces = new_sentence[word_idx].split("\t")
+        pieces[-1] = add_space_after_no(pieces[-1])
+        new_sentence[word_idx] = "\t".join(pieces)
+
+        pieces = new_sentence[word_idx-1].split("\t")
+        pieces[-1] = remove_space_after_no(pieces[-1])
+        new_sentence[word_idx-1] = "\t".join(pieces)
+
+        new_sents.append(new_sentence)
+        num_operations = num_operations + 1
+
+    print("Swapped 'w1, w2' for 'w1 ,w2' %d times" % num_operations)
+    return new_sents
+
 def augment_apos(sents):
+
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
@@ -515,6 +594,7 @@ def augment_punct(sents):
     new_sents = augment_apos(sents)
     new_sents = augment_ellipses(new_sents)
     new_sents = augment_quotes(new_sents)
+    new_sents = augment_move_comma(new_sents)
 
     return new_sents
 
