@@ -117,11 +117,9 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
         os.makedirs(corpus_folder)
 
     if len(ann_files) == 0 or len(tok_files) == 0:
-        log.warning(f'Token and annotation files are not found at specified path {ann_path}')
-        return
+        raise FileNotFoundError(f'Token and annotation files are not found at specified path {ann_path}')
     if len(ann_files) != len(tok_files):
-        log.warning(
-            f'Mismatch between Annotation and Token files. Ann files: {len(ann_files)}, token files: {len(tok_files)}')
+        raise RuntimeError(f'Mismatch between Annotation and Token files. Ann files: {len(ann_files)}, token files: {len(tok_files)}')
 
     train_set = []
     dev_set = []
