@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class LangIDBiLSTM(nn.Module):
     """
     Multi-layer BiLSTM model for language detecting. Based on \"A reproduction of Apple's bi-directional LSTM models
@@ -11,7 +12,7 @@ class LangIDBiLSTM(nn.Module):
     """
 
     def __init__(self, char_to_idx, tag_to_idx, num_layers, embedding_dim, hidden_dim, batch_size=64, weights=None):
-        super(LanguageIDBiLSTM, self).__init__()
+        super(LangIDBiLSTM, self).__init__()
         self.num_layers = num_layers
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim

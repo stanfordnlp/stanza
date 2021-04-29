@@ -15,6 +15,7 @@ from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
+from stanza.pipeline.langid_processor import LangIDProcessor
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor

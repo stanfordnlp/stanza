@@ -10,6 +10,7 @@ from stanza.models.langid.model import LangIDBiLSTM
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+
 @register_processor(name=LANGID)
 class LangIDProcessor(UDProcessor):
     """
@@ -24,7 +25,10 @@ class LangIDProcessor(UDProcessor):
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
     def _set_up_model(self, config, use_gpu):
-        self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu, batch_size=config["langid_batch_size"])
+        batch_size = config.get("langid_batch_size", 64)
+        self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu,
+                                        batch_size=batch_size)
+        self._device = torch.device("cuda") if use_gpu else None
         self._char_index = self._model.char_to_idx
 
     def _text_to_tensor(self, docs):
@@ -35,20 +39,19 @@ class LangIDProcessor(UDProcessor):
         all_docs = []
         max_len_sequence = max([len(x) for x in docs])
         for doc in docs:
-            doc_chars = [self.char_index.get(c, self.char_index["UNK"]) for c in list(doc)]
-            doc_chars = doc_chars + [self.char_index["<PAD>"]]*(max_len_sequence-len(doc_chars))
+            doc_chars = [self._char_index.get(c, self._char_index["UNK"]) for c in list(doc)]
+            doc_chars = doc_chars + [self._char_index["<PAD>"]]*(max_len_sequence-len(doc_chars))
             all_docs.append(doc_chars)
-        return torch.tensor(all_docs, device=self.device, dtype=torch.long)
-
+        return torch.tensor(all_docs, device=self._device, dtype=torch.long)
 
     def _id_langs(self, batch_tensor):
         """
         Identify languages for each sequence in a batch tensor
         """
 
-        scores = self.model(docs_tensor)
+        scores = self._model(batch_tensor)
         predictions = torch.argmax(scores, dim=1)
-        prediction_labels = [self.model.idx_to_tag[prediction] for prediction in predictions]
+        prediction_labels = [self._model.idx_to_tag[prediction] for prediction in predictions]
 
         return prediction_labels
 
@@ -80,7 +83,7 @@ class LangIDProcessor(UDProcessor):
             return
 
         # handle list of str vs. Document
-        inputs = [(doc.text if instance(doc,Document) else doc) for doc in docs]
+        inputs = [(doc.text if isinstance(doc, Document) else doc) for doc in docs]
 
         # get predictions
         predictions = self._id_langs(self._text_to_tensor(inputs))
