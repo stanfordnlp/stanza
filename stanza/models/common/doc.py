@@ -85,7 +85,7 @@ class Document(StanzaObject):
         """ Access the language of this document """
         return self._lang
 
-    @property
+    @lang.setter
     def lang(self, value):
         """ Set the language of this document """
         self._lang = value

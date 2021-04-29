@@ -2,12 +2,12 @@
 Class for running multilingual pipelines
 """
 
-import stanza
 import torch
 
 from stanza.models.common.doc import Document
-from stanza.models.langid.model import LangIDBiLSTM
+from stanza.pipeline.core import Pipeline
 from stanza.pipeline._constants import *
+
 
 class MultilingualPipeline:
     """
@@ -17,13 +17,13 @@ class MultilingualPipeline:
 
     def __init__(
         self,
+        lang_id_config: dict = None,
         lang_configs: dict = None,
-        ld_model: str = None,
         ld_batch_size: int = 64,
         max_cache_size: int = 10,
         use_gpu: bool = None
     ):
-        # set up configs and cache for various langauge pipelines
+        # set up configs and cache for various language pipelines
         self.lang_configs = {} if lang_configs is None else lang_configs
         self.max_cache_size = max_cache_size
         self.pipeline_cache = {}
@@ -35,8 +35,8 @@ class MultilingualPipeline:
         else:
             self.use_gpu = use_gpu
         
-        # build language detector
-        self.language_id = LangIDBiLSTM(model=ld_model, use_cuda=use_gpu, batch_size=ld_batch_size)
+        # build language id pipeline
+        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=use_gpu)
 
     def _update_pipeline_cache(self, lang):
         """
@@ -60,33 +60,43 @@ class MultilingualPipeline:
                 lru_lang = self.lang_request_history[0]
                 self.pipeline_cache.remove(lru_lang)
                 self.lang_request_history.remove(lru_lang)
-            self.pipeline_cache[lang] = stanza.Pipeline(**self.lang_configs[lang])
+            self.pipeline_cache[lang] = Pipeline(**self.lang_configs[lang])
 
     def process(self, doc):
         """
-        Run a Stanza pipeline on a string or list of strings. For each string identify language, and route text to a
-        pipeline for that language.
+        Run language detection on a string, a Document, or a list of either, route to language specific pipeline
         """
 
-        if isinstance(doc, str):
-            doc = [doc]
-        
-        # determine languages, create per-language batches
-        doc_languages = self.language_id.process(doc)
-        language_batches = {}
-        for text, lang in zip(doc, doc_languages):
-            if lang not in language_batches:
-                language_batches[lang] = []
-            language_batches[lang].append(text)
+        # only return a list if given a list
+        singleton_input = not isinstance(doc, list)
+        if singleton_input:
+            docs = [doc]
+        else:
+            docs = doc
+
+        if docs and isinstance(docs[0], str):
+            docs = [Document([], text=text) for text in docs]
+
+        # run language identification
+        docs_w_langid = self.lang_id_pipeline.process(docs)
+
+        # create language specific batches, store global idx with each doc
+        lang_batches = {}
+        for doc in docs_w_langid:
+            if doc.lang not in lang_batches:
+                lang_batches[doc.lang] = []
+            lang_batches[doc.lang].append(doc)
 
         # run through each language, submit a batch to the language specific pipeline
-        results = []
-        for lang in language_batches.keys():
+        for lang in lang_batches.keys():
             self._update_pipeline_cache(lang)
-            lang_batch = [stanza.Document([], text=d) for d in language_batches[lang]]
-            results += self.pipeline_cache[lang](lang_batch)
+            self.pipeline_cache[lang](lang_batches[lang])
 
-        return results
+        # only return a list if given a list
+        if singleton_input:
+            return docs_w_langid[0]
+        else:
+            return docs_w_langid
 
     def __call__(self, doc):
         doc = self.process(doc)
