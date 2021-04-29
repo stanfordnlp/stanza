@@ -91,6 +91,8 @@ def parse_bsf(bsf_data: str) -> list:
     return result
 
 
+CORPUS_NAME = 'Ukrainian-languk'
+
 def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str = 'beios',
                           doc_delim: str = '\n') -> None:
     """
@@ -101,9 +103,6 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
     :param converter: `beios` or `iob` output formats
     :return:
     """
-    # following 2 constants need to comply with stanza naming for corpus and language
-    corpus_name = 'Ukrainian-languk'
-
     ann_path = os.path.join(src_dir_path, '*.tok.ann')
     ann_files = glob.glob(ann_path)
     ann_files.sort()
@@ -112,7 +111,7 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
     tok_files = glob.glob(tok_path)
     tok_files.sort()
 
-    corpus_folder = os.path.join(dst_dir_path, corpus_name)
+    corpus_folder = os.path.join(dst_dir_path, CORPUS_NAME)
     if not os.path.exists(corpus_folder):
         os.makedirs(corpus_folder)
 
