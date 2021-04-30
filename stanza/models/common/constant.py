@@ -3,6 +3,8 @@ Global constants.
 
 Please keep synced with
   scripts/treebank_to_shorthand.sh
+
+These language codes mirror UD language codes when possible
 """
 
 lcode2lang = {
@@ -19,6 +21,7 @@ lcode2lang = {
     "bm": "Bambara",
     "eu": "Basque",
     "be": "Belarusian",
+    "bn": "Bengali",
     "bho": "Bhojpuri",
     "br": "Breton",
     "bg": "Bulgarian",
@@ -63,6 +66,7 @@ lcode2lang = {
     "olo": "Livvi",
     "la": "Latin",
     "lv": "Latvian",
+    "mal": "Malayalam",
     "mt": "Maltese",
     "gv": "Manx",
     "mr": "Marathi",
@@ -146,8 +150,14 @@ def treebank_to_short_name(treebank):
     assert len(splits) == 2
     lang, corpus = splits
 
-    lcode = lang2lcode[lang]
+    if lang in lang2lcode:
+        lcode = lang2lcode[lang]
+    elif lang in langlower2lcode:
+        lcode = langlower2lcode[lang]
+    elif lang in lcode2lang:
+        lcode = lang
+    else:
+        raise ValueError("Unable to find language code for %s" % lang)
 
     short = "{}_{}".format(lcode, corpus.lower())
     return short
-
