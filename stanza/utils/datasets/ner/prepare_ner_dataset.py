@@ -14,15 +14,24 @@ IJCNLP 2008 produced a few Indian language NER datasets.
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=3
   download:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=5
+  The models produced from these datasets have extremely low recall, unfortunately.
+
+FIRE 2013 also produced NER datasets for Indian languages.
+  http://au-kbc.org/nlp/NER-FIRE2013/index.html
+  The datasets are password locked.
+  For Stanford users, contact Chris Manning for license details.
+  For external users, please contact the organizers for more information.
+
 """
 
 import glob
 import os
 import sys
 
-from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.constant import treebank_to_short_name, lcode2lang
 import stanza.utils.default_paths as default_paths
 
+from stanza.utils.datasets.ner.convert_fire_2013 import convert_fire_2013
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
@@ -70,6 +79,35 @@ def process_ijc(paths, short_name):
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
 
+def process_fire_2013(paths, dataset):
+    """
+    Splits the FIRE 2013 dataset into train, dev, test
+
+    The provided datasets are all mixed together at this point, so it
+    is not possible to recreate the original test conditions used in
+    the bakeoff
+    """
+    short_name = treebank_to_short_name(dataset)
+    langcode, _ = short_name.split("_")
+    if not langcode in ("hi", "en", "ta", "bn", "mal"):
+        raise ValueError("Language %s not one of the FIRE 2013 languages")
+    language = lcode2lang[langcode].lower()
+    
+    # for example, FIRE2013/hindi_train
+    base_input_path = os.path.join(paths["NERBASE"], "FIRE2013", "%s_train" % language)
+    base_output_path = paths["NER_DATA_DIR"]
+
+    train_csv_file = os.path.join(base_output_path, "%s.train.csv" % short_name)
+    dev_csv_file   = os.path.join(base_output_path, "%s.dev.csv" % short_name)
+    test_csv_file  = os.path.join(base_output_path, "%s.test.csv" % short_name)
+
+    convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
+
+    for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), ("train", "dev", "test")):
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(csv_file, output_filename)
+
+    
 def process_wikiner(paths, dataset):
     short_name = treebank_to_short_name(dataset)
 
@@ -109,6 +147,8 @@ def main():
         process_turku(paths)
     elif dataset_name == 'hi_ijc':
         process_ijc(paths, dataset_name)
+    elif dataset_name.endswith("FIRE2013"):
+        process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
         process_wikiner(paths, dataset_name)
     else:
