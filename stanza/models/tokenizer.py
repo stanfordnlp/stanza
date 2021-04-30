@@ -11,6 +11,7 @@ from copy import copy
 import logging
 import random
 import numpy as np
+import os
 import torch
 
 from stanza.models.common import utils
@@ -91,7 +92,7 @@ def main(args=None):
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = "{}/{}".format(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+    args['save_name'] = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
             else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
     utils.ensure_dir(args['save_dir'])
 
