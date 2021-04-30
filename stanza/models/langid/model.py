@@ -4,8 +4,8 @@ import torch.nn as nn
 
 class LangIDBiLSTM(nn.Module):
     """
-    Multi-layer BiLSTM model for language detecting. Based on \"A reproduction of Apple's bi-directional LSTM models
-    for language identification in short strings.\" (Toftrup et al 2021)
+    Multi-layer BiLSTM model for language detecting. Based on "A reproduction of Apple's bi-directional LSTM models
+    for language identification in short strings." (Toftrup et al 2021)
 
     Arxiv: https://arxiv.org/abs/2102.06282
     GitHub: https://github.com/AU-DIS/LSTM_langid
@@ -47,27 +47,26 @@ class LangIDBiLSTM(nn.Module):
                 self.tagset_size
         )
 
-
     def loss(self, Y_hat, Y):
         return self.loss_train(Y_hat, Y)
 
-    def forward(self, X):
+    def forward(self, x):
         # embed input
-        X = self.char_embeds(X)
+        x = self.char_embeds(x)
         
         # run through LSTM
-        X, _ = self.lstm(X)
+        x, _ = self.lstm(x)
         
         # run through linear layer
-        X = self.hidden_to_tag(X)
+        x = self.hidden_to_tag(x)
         
         # sum character outputs for each sequence
-        X = torch.sum(X, dim=1)
+        x = torch.sum(x, dim=1)
 
-        return X
+        return x
 
-    def predict(self, X):
-        label_idx = torch.argmax(self(X), dim=1).item()
+    def predict(self, x):
+        label_idx = torch.argmax(self(x), dim=1).item()
         return self.idx_to_tag[label_idx]
 
     def save(self, path):
@@ -93,4 +92,3 @@ class LangIDBiLSTM(nn.Module):
         if use_cuda:
             model.to(torch.device("cuda"))
         return model
-
