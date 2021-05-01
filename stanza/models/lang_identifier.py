@@ -3,7 +3,10 @@ Entry point for training and evaluating a Bi-LSTM language identifier
 """
 
 import argparse
+import json
 import os
+import random
+import torch
 
 from datetime import datetime
 from stanza.models.langid.data import DataLoader
@@ -36,8 +39,8 @@ def build_indexes(args):
     tag_to_idx = {}
     char_to_idx = {}
     train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
-    for train_file in train_files(args):
-        lines = open(f"{args.data_dir}/{train_file}").read().split("\n")
+    for train_file in train_files:
+        lines = open(train_file).read().split("\n")
         examples = [json.loads(line) for line in lines if line.strip()]
         for example in examples:
             label = example["label"]
@@ -91,18 +94,11 @@ def train(args):
             total_correct += num_correct
             total_examples += dev_batch["sentences"].size()[0]
         current_dev_accuracy = float(total_correct)/float(total_examples)
-        print(f"Current dev accuracy: {current_accuracy}")
+        print(f"Current dev accuracy: {current_dev_accuracy}")
         if current_dev_accuracy > best_accuracy:
             trainer.save()
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
 
