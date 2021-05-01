@@ -22,6 +22,11 @@ FIRE 2013 also produced NER datasets for Indian languages.
   For Stanford users, contact Chris Manning for license details.
   For external users, please contact the organizers for more information.
 
+Ukranian NER is provided by lang-uk, available here:
+  https://github.com/lang-uk/ner-uk
+  git clone the repo to $NERBASE/lang-uk
+  There should be a subdirectory $NERBASE/lang-uk/ner-uk/data at that point
+  Conversion script graciously provided by Andrii Garkavyi @gawy
 """
 
 import glob
@@ -34,6 +39,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.convert_fire_2013 import convert_fire_2013
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
+import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
@@ -47,6 +53,19 @@ def process_turku(paths):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(input_filename, output_filename)
+
+def process_languk(paths):
+    short_name = 'uk_languk'
+    base_input_path = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'data')
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path)
+    for shard in ('train', 'dev', 'test'):
+        input_filename = os.path.join(base_output_path, convert_bsf_to_beios.CORPUS_NAME, "%s.bio" % shard)
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(input_filename, output_filename)
+
 
 def process_ijc(paths, short_name):
     """
@@ -145,6 +164,8 @@ def main():
 
     if dataset_name == 'fi_turku':
         process_turku(paths)
+    elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
+        process_languk(paths)
     elif dataset_name == 'hi_ijc':
         process_ijc(paths, dataset_name)
     elif dataset_name.endswith("FIRE2013"):
