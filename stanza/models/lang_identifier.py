@@ -84,7 +84,7 @@ def train(args):
         for train_batch in tqdm(train_data.batches):
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
-        print("Epoch complete. Evaluating on dev data.")
+        print(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
         total_correct = 0
         total_examples = 0
         for dev_batch in tqdm(dev_data.batches):
@@ -94,9 +94,12 @@ def train(args):
             total_correct += num_correct
             total_examples += dev_batch["sentences"].size()[0]
         current_dev_accuracy = float(total_correct)/float(total_examples)
-        print(f"Current dev accuracy: {current_dev_accuracy}")
+        print(f"{datetime.now()}\tCurrent dev accuracy: {current_dev_accuracy}")
         if current_dev_accuracy > best_accuracy:
             trainer.save()
+        # reload training data
+        print(f"{datetime.now()}\tResampling training data.")
+        train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
 
 
 if __name__ == "__main__":
