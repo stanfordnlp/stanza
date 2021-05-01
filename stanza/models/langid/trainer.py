@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 
-from stanza.models.langid import LangIDBiLSTM
+from stanza.models.langid.model import LangIDBiLSTM
 
 
 class Trainer:
