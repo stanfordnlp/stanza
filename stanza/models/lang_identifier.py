@@ -35,6 +35,7 @@ def main(args=None):
 def build_indexes(args):
     tag_to_idx = {}
     char_to_idx = {}
+    train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
     for train_file in train_files(args):
         lines = open(f"{args.data_dir}/{train_file}").read().split("\n")
         examples = [json.loads(line) for line in lines if line.strip()]
