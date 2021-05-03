@@ -281,14 +281,18 @@ def augment_telugu(sents):
     return sents + new_sents
 
 COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
-def augment_ancora(sents):
-    """
-    Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
+def augment_comma_separations(sents):
+    """Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
 
     This leaves the tokens and all of the other data the same.  The
     only change made is to change SpaceAfter=No for the "," token and
     adjust the #text line, with the assumption that the conllu->txt
     conversion will correctly handle this change.
+
+    This was particularly an issue for Spanish-AnCora, but it's
+    reasonable to think it could happen to any dataset.  Currently
+    this just operates on commas and ascii letters to avoid
+    accidentally squishing anything that shouldn't be squished.
     """
     new_sents = []
     for sentences in sents:
@@ -334,54 +338,21 @@ def fix_spanish_ancora(input_conllu, output_conllu, augment):
     """
     The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
 
-    One possible problem is with this sentence:
+    UD 2.7 had a problem is with this sentence:
     # orig_file_sentence 143#5
-    In this sentence, there is a comma smashed next to a token.  Seems incorrect.
+    In this sentence, there was a comma smashed next to a token.
 
     Fixing just this one sentence is not sufficient to tokenize
     "asdf,zzzz" as desired, so we also augment by some fraction where
     we have squished "asdf, zzzz" into "asdf,zzzz".
 
-    NOTE: the incorrect token will be fixed in 2.8:
-    https://github.com/UniversalDependencies/UD_Spanish-AnCora/issues/4
+    This particular example was later fixed in UD 2.8.
     """
     random.seed(1234)
-    sents = read_sentences_from_conllu(input_conllu)
-
-    ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
-    NEW_FIXED = ["29	,	,	PUNCT	PUNCT	PunctType=Comm	32	punct	_	SpaceAfter=No",   # TODO dunno about the head
-                 "30	Comerç	Comerç	PROPN	PROPN	_	26	flat	_	_"]
-    new_sentences = []
-    found = False
-    for sentence in sents:
-        if sentence[0].strip() != '# sent_id = train-s14205':
-            new_sentences.append(sentence)
-            continue
-        assert not found, "WTF"
-        found = True
-
-        for idx, word in enumerate(sentence):
-            if word.strip() == ORIGINAL_BAD:
-                break
-        assert idx == 31, "Could not find ,Comerç at the expected line number.  Perhaps the treebank has been fixed?"
-        for word in sentence[3:idx]:
-            assert int(sentence[idx].strip().split("\t")[6]) < idx
-        new_sentence = sentence[:idx] + NEW_FIXED
-        # increase the token idx and the dep of each word as appropriate
-        for word in sentence[idx+1:]:
-            pieces = word.strip().split("\t")
-            pieces[0] = str(int(pieces[0]) + 1)
-            dep = int(pieces[6])
-            if dep > 29:
-                pieces[6] = str(dep + 1)
-            new_sentence.append("\t".join(pieces))
-
-        new_sentences.append(new_sentence)
-
-    assert found, "Could not find sentence train-s14205 in Spanish Ancora"
+    new_sentences = read_sentences_from_conllu(input_conllu)
 
     if augment:
-        new_sentences = augment_ancora(new_sentences)
+        new_sentences = augment_comma_separations(new_sentences)
 
     write_sentences_to_conllu(output_conllu, new_sentences)
 
