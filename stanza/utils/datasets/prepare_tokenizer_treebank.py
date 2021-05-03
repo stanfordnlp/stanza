@@ -293,14 +293,30 @@ def augment_comma_separations(sents):
     reasonable to think it could happen to any dataset.  Currently
     this just operates on commas and ascii letters to avoid
     accidentally squishing anything that shouldn't be squished.
+
+    UD_Spanish-AnCora 2.7 had a problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there was a comma smashed next to a token.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
+
+    This exact example was later fixed in UD 2.8, but it should still
+    potentially be useful for compensating for typos.
     """
     new_sents = []
-    for sentences in sents:
-        if not sentences[1].startswith("# text"):
-            raise ValueError("UD_Spanish-AnCora not in the expected format")
-
     for sentence in sents:
-        match = COMMA_SEPARATED_RE.search(sentence[1])
+        for text_idx, text_line in enumerate(sentence):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                break
+        else:
+            continue
+
+        match = COMMA_SEPARATED_RE.search(sentence[text_idx])
         if match and random.random() < 0.03:
             for idx, word in enumerate(sentence):
                 if word.startswith("#"):
@@ -325,28 +341,19 @@ def augment_comma_separations(sents):
             comma = "\t".join(pieces)
             new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
 
-            text_offset = sentence[1].find(match.group(1) + ", " + match.group(2))
+            text_offset = sentence[text_idx].find(match.group(1) + ", " + match.group(2))
             text_len = len(match.group(1) + ", " + match.group(2))
-            new_text = sentence[1][:text_offset] + match.group(1) + "," + match.group(2) + sentence[1][text_offset+text_len:]
-            new_sent[1] = new_text
+            new_text = sentence[text_idx][:text_offset] + match.group(1) + "," + match.group(2) + sentence[text_idx][text_offset+text_len:]
+            new_sent[text_idx] = new_text
 
             new_sents.append(new_sent)
 
+    print("Added %d new sentences with asdf, zzzz -> asdf,zzzz" % len(new_sents))
+            
     return sents + new_sents
 
 def fix_spanish_ancora(input_conllu, output_conllu, augment):
     """
-    The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
-
-    UD 2.7 had a problem is with this sentence:
-    # orig_file_sentence 143#5
-    In this sentence, there was a comma smashed next to a token.
-
-    Fixing just this one sentence is not sufficient to tokenize
-    "asdf,zzzz" as desired, so we also augment by some fraction where
-    we have squished "asdf, zzzz" into "asdf,zzzz".
-
-    This particular example was later fixed in UD 2.8.
     """
     random.seed(1234)
     new_sentences = read_sentences_from_conllu(input_conllu)
