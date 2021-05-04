@@ -105,7 +105,7 @@ def score_log_path(file_path):
     Helper that will determine corresponding log file (e.g. /path/to/demo.pt to /path/to/demo.json
     """
     model_suffix = file_path.split(".")[-1]
-    return f"{file_path[:-1 * len(model_suffix)]}.json"
+    return f"{file_path[:-1 * len(model_suffix)]}json"
 
 
 def eval_trainer(trainer, dev_data):
@@ -123,18 +123,15 @@ def eval_trainer(trainer, dev_data):
             confusion_matrix[row_label][col_label] = 0
 
     # process dev batches
-    total_correct = 0
-    total_examples = 0
     for dev_batch in tqdm(dev_data.batches):
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
-        for target_idx, prediction in zip(dev_batch["targets"], prediction):
+        for target_idx, prediction in zip(dev_batch["targets"], predictions):
             confusion_matrix[idx_to_tag[target_idx]][idx_to_tag[prediction]] += 1
-        num_correct = torch.sum((predictions == dev_batch["targets"]).type(torch.long)).item()
-        total_correct += num_correct
-        total_examples += dev_batch["sentences"].size()[0]
 
     # calculate dev accuracy
+    total_examples = sum([sum([confusion_matrix[i][j] for j in confusion_matrix[i]]) for i in confusion_matrix])
+    total_correct = sum([confusion_matrix[i][i] for i in confusion_matrix])
     dev_accuracy = float(total_correct) / float(total_examples)
 
     # calculate precision, recall, F1
@@ -147,7 +144,7 @@ def eval_trainer(trainer, dev_data):
     for target_label in tag_to_idx:
         total = sum([confusion_matrix[target_label][k] for k in tag_to_idx])
         recall_scores[target_label] = float(confusion_matrix[target_label][target_label])/float(total)
-    for label in precision_scores:
+    for label in tag_to_idx:
         f1_scores[label] = \
             2.0 * (precision_scores[label] * recall_scores[label]) / (precision_scores[label] + recall_scores[label])
 
@@ -156,11 +153,4 @@ def eval_trainer(trainer, dev_data):
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
 
