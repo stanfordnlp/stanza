@@ -85,23 +85,78 @@ def train(args):
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
         print(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
-        total_correct = 0
-        total_examples = 0
-        for dev_batch in tqdm(dev_data.batches):
-            inputs = (dev_batch["sentences"], dev_batch["targets"])
-            predictions = trainer.predict(inputs)
-            num_correct = torch.sum((predictions == dev_batch["targets"]).type(torch.long)).item()
-            total_correct += num_correct
-            total_examples += dev_batch["sentences"].size()[0]
-        current_dev_accuracy = float(total_correct)/float(total_examples)
-        print(f"{datetime.now()}\tCurrent dev accuracy: {current_dev_accuracy}")
-        if current_dev_accuracy > best_accuracy:
+        curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
+            eval_trainer(trainer, dev_data)
+        print(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
+        if curr_dev_accuracy > best_accuracy:
             trainer.save()
-        # reload training data
-        print(f"{datetime.now()}\tResampling training data.")
-        train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
+            with open(score_log_path(args.save_name), "w") as score_log_file:
+                for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
+                                  curr_recalls, curr_f1s]:
+                    score_log_file.write(json.dumps(score_log) + "\n")
+
+
+def score_log_path(file_path):
+    """
+    Helper that will determine corresponding log file (e.g. /path/to/demo.pt to /path/to/demo.json
+    """
+    model_suffix = file_path.split(".")[-1]
+    return f"{file_path[:-1 * len(model_suffix)]}.json"
+
+
+def eval_trainer(trainer, dev_data):
+    """
+    Produce dev accuracy and confusion matrix for a trainer
+    """
+
+    # set up confusion matrix
+    tag_to_idx = trainer.model.tag_to_idx
+    idx_to_tag = trainer.model.idx_to_tag
+    confusion_matrix = {}
+    for row_label in tag_to_idx:
+        confusion_matrix[row_label] = {}
+        for col_label in tag_to_idx:
+            confusion_matrix[row_label][col_label] = 0
+
+    # process dev batches
+    total_correct = 0
+    total_examples = 0
+    for dev_batch in tqdm(dev_data.batches):
+        inputs = (dev_batch["sentences"], dev_batch["targets"])
+        predictions = trainer.predict(inputs)
+        for target_idx, prediction in zip(dev_batch["targets"], prediction):
+            confusion_matrix[idx_to_tag[target_idx]][idx_to_tag[prediction]] += 1
+        num_correct = torch.sum((predictions == dev_batch["targets"]).type(torch.long)).item()
+        total_correct += num_correct
+        total_examples += dev_batch["sentences"].size()[0]
+
+    # calculate dev accuracy
+    dev_accuracy = float(total_correct) / float(total_examples)
+
+    # calculate precision, recall, F1
+    precision_scores = {"type": "precision"}
+    recall_scores = {"type": "recall"}
+    f1_scores = {"type": "f1"}
+    for prediction_label in tag_to_idx:
+        total = sum([confusion_matrix[k][prediction_label] for k in tag_to_idx])
+        precision_scores[prediction_label] = float(confusion_matrix[prediction_label][prediction_label])/float(total)
+    for target_label in tag_to_idx:
+        total = sum([confusion_matrix[target_label][k] for k in tag_to_idx])
+        recall_scores[target_label] = float(confusion_matrix[target_label][target_label])/float(total)
+    for label in precision_scores:
+        f1_scores[label] = \
+            2.0 * (precision_scores[label] * recall_scores[label]) / (precision_scores[label] + recall_scores[label])
+
+    return dev_accuracy, confusion_matrix, precision_scores, recall_scores, f1_scores
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
 
