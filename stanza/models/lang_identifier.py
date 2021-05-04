@@ -95,6 +95,10 @@ def train(args):
                                   curr_recalls, curr_f1s]:
                     score_log_file.write(json.dumps(score_log) + "\n")
 
+        # reload training data
+        print(f"{datetime.now()}\tResampling training data.")
+        train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
+
 
 def score_log_path(file_path):
     """
