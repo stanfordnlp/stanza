@@ -743,6 +743,34 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     sents = strip_mwt_from_sentences(sents)
     write_sentences_to_conllu(output_conllu, sents)
 
+def replace_semicolons(sentences):
+    """
+    GSD and AnCora have different standards for semicolons.
+
+    GSD has semicolons at the end of sentences, AnCora has them in the middle as clause separators.
+    Consecutive sentences in GSD do not seem to be related, so there is no combining that can be done.
+    The easiest solution is to replace sentence final semicolons with "." in GSD
+    """
+    new_sents = []
+    count = 0
+    for sentence in sentences:
+        for text_idx, text_line in enumerate(sentence):
+            if text_line.startswith("# text"):
+                break
+        else:
+            raise ValueError("Expected every sentence in GSD to have a # text field")
+        if not text_line.endswith(";"):
+            new_sents.append(sentence)
+            continue
+        count = count + 1
+        new_sent = list(sentence)
+        new_sent[text_idx] = text_line[:-1] + "."
+        new_sent[-1] = new_sent[-1].replace(";", ".")
+        count = count + 1
+        new_sents.append(new_sent)
+    print("Updated %d sentences to replace sentence-final ; with ." % count)
+    return new_sents
+
 def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
     """
     es_combined is AnCora and GSD put together
@@ -757,7 +785,16 @@ def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
-            sents.extend(read_sentences_from_conllu(conllu_file))
+            new_sents = read_sentences_from_conllu(conllu_file)
+            if treebank.endswith("GSD"):
+                new_sents = replace_semicolons(new_sents)
+            sents.extend(new_sents)
+
+        extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "spanish.mwt")
+        if not os.path.exists(extra_spanish):
+            raise FileNotFoundError("Cannot find the extra dataset 'spanish.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_spanish)
+        sents.extend(extra_sents)
 
         # TODO: refactor things like the augment_punct call
         sents = augment_punct(sents)
