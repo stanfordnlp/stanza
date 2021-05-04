@@ -766,7 +766,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         for treebank in train_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
-        for treebank in train_treebanks:
+        for treebank in test_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
 
