@@ -620,9 +620,9 @@ def augment_punct(sents):
     Also augments with ... / …
     """
     new_sents = augment_apos(sents)
-    new_sents = augment_ellipses(new_sents)
     new_sents = augment_quotes(new_sents)
     new_sents = augment_move_comma(new_sents)
+    new_sents = augment_ellipses(new_sents)
 
     return new_sents
 
