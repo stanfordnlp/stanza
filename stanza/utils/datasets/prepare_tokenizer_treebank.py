@@ -526,6 +526,7 @@ def augment_ellipses(sents):
 
 # https://en.wikipedia.org/wiki/Quotation_mark
 QUOTES = ['"', '“', '”', '«', '»', '「', '」', '《', '》', '„', '″']
+QUOTES_RE = re.compile("(.+)[" + "".join(QUOTES) + "](.+)[" + "".join(QUOTES) + "](.+)")
 # Danish does '«' the other way around from most European languages
 START_QUOTES = ['"', '“', '”', '«', '»', '「', '《', '„', '„', '″']
 END_QUOTES   = ['"', '“', '”', '»', '«', '」', '》', '”', '“', '″']
@@ -579,6 +580,16 @@ def augment_quotes(sents):
                 new_sent.append("\t".join(pieces))
             else:
                 new_sent.append(line)
+
+        for text_idx, text_line in enumerate(new_sent):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                replacement = "\\1%s\\2%s\\3" % (start_quote, end_quote)
+                new_text_line = QUOTES_RE.sub(replacement, text_line)
+                new_sent[text_idx] = new_text_line
+
         new_sents.append(new_sent)
 
     print("Augmented {} quotes: {}".format(sum(counts.values()), counts))
