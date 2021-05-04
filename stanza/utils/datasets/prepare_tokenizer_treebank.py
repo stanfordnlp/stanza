@@ -352,17 +352,6 @@ def augment_comma_separations(sents):
             
     return sents + new_sents
 
-def fix_spanish_ancora(input_conllu, output_conllu, augment):
-    """
-    """
-    random.seed(1234)
-    new_sentences = read_sentences_from_conllu(input_conllu)
-
-    if augment:
-        new_sentences = augment_comma_separations(new_sentences)
-
-    write_sentences_to_conllu(output_conllu, new_sentences)
-
 def augment_move_comma(sents):
     """
     Move the comma from after a word to before the next word some fraction of the time
@@ -429,7 +418,7 @@ def augment_move_comma(sents):
                 new_chunk = prev_word + " ," + next_word
                 word_idx = text_line.find(old_chunk)
                 if word_idx < 0:
-                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified")
+                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified.  Looking for\n" + old_chunk + "\n" + text_line)
                 new_text_line = text_line[:word_idx] + new_chunk + text_line[word_idx+len(old_chunk):]
                 new_sentence[text_idx] = new_text_line
                 break
@@ -600,6 +589,7 @@ def augment_punct(sents):
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
     new_sents = augment_move_comma(new_sents)
+    new_sents = augment_comma_separations(new_sents)
     new_sents = augment_ellipses(new_sents)
 
     return new_sents
@@ -797,9 +787,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
-    elif short_name.startswith("es_ancora") and dataset == 'train':
-        # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, output_conllu, augment=augment)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
     elif dataset == 'train':
