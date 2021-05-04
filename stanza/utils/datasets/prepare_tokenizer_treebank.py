@@ -703,10 +703,6 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
 
     write_sentences_to_conllu(output_conllu, sents)
 
-def build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
-    for dataset in ("train", "dev", "test"):
-        build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
-
 def check_gum_ready(udbase_dir):
     gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
     if common.all_underscores(gum_conllu):
@@ -747,10 +743,43 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     sents = strip_mwt_from_sentences(sents)
     write_sentences_to_conllu(output_conllu, sents)
 
+def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    es_combined is AnCora and GSD put together
 
-def build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
+    TODO: remove features which aren't shared between datasets
+    TODO: consider mixing in PUD?
+    """
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if dataset == 'train':
+        treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
+
+        # TODO: refactor things like the augment_punct call
+        sents = augment_punct(sents)
+    else:
+        conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
+        sents = read_sentences_from_conllu(conllu_file)
+
+    write_sentences_to_conllu(output_conllu, sents)
+
+
+
+COMBINED_FNS = {
+    "en_combined": build_combined_english_dataset,
+    "es_combined": build_combined_spanish_dataset,
+    "it_combined": build_combined_italian_dataset,
+}
+
+def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
+    random.seed(1234)
+    build_fn = COMBINED_FNS[short_name]
     for dataset in ("train", "dev", "test"):
-        build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+        build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
 
 def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset):
     """
@@ -876,10 +905,8 @@ def process_treebank(treebank, paths, args):
 
     if short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
-    elif short_name.startswith("it_combined"):
-        build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
-    elif short_name.startswith("en_combined"):
-        build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
+    elif short_name in ("it_combined", "en_combined", "es_combined"):
+        build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
