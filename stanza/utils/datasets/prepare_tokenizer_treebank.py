@@ -410,7 +410,7 @@ def augment_move_comma(sents):
         for word_idx, word in enumerate(sentence):
             if word.startswith("#"):
                 continue
-            if word_idx == 0 or word_idx == len(sentence) - 1:
+            if word_idx == 0 or word_idx >= len(sentence) - 2:
                 continue
             pieces = word.split("\t")
             if pieces[1] == ',' and pieces[-1].find("SpaceAfter=No") < 0:
@@ -436,8 +436,25 @@ def augment_move_comma(sents):
         new_sentence[word_idx] = "\t".join(pieces)
 
         pieces = new_sentence[word_idx-1].split("\t")
+        prev_word = pieces[1]
         pieces[-1] = remove_space_after_no(pieces[-1])
         new_sentence[word_idx-1] = "\t".join(pieces)
+
+        next_word = new_sentence[word_idx+1].split("\t")[1]
+
+        for text_idx, text_line in enumerate(sentence):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                old_chunk = prev_word + ", " + next_word
+                new_chunk = prev_word + " ," + next_word
+                word_idx = text_line.find(old_chunk)
+                if word_idx < 0:
+                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified")
+                new_text_line = text_line[:word_idx] + new_chunk + text_line[word_idx+len(old_chunk):]
+                new_sentence[text_idx] = new_text_line
+                break
 
         new_sents.append(new_sentence)
         num_operations = num_operations + 1
