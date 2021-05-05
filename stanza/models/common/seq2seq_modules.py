@@ -210,22 +210,30 @@ class LSTMAttention(nn.Module):
             raise Exception("Unsupported LSTM attention type: {}".format(attn_type))
         logger.debug("Using {} attention for LSTM.".format(attn_type))
 
-    def forward(self, input, hidden, ctx, ctx_mask=None):
+    def forward(self, input, hidden, ctx, ctx_mask=None, return_attn=False):
         """Propagate input through the network."""
         if self.batch_first:
             input = input.transpose(0,1)
 
         output = []
+        attn = []
         steps = range(input.size(0))
         for i in steps:
             hidden = self.lstm_cell(input[i], hidden)
             hy, cy = hidden
             h_tilde, alpha = self.attention_layer(hy, ctx, mask=ctx_mask)
             output.append(h_tilde)
+            attn.append(alpha)
         output = torch.cat(output, 0).view(input.size(0), *output[0].size())
 
         if self.batch_first:
             output = output.transpose(0,1)
+
+        if return_attn:
+            attn = torch.stack(attn, 0)
+            if self.batch_first:
+                attn = attn.transpose(0, 1)
+            return output, hidden, attn
 
         return output, hidden
 
