@@ -745,7 +745,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
 
 def replace_semicolons(sentences):
     """
-    GSD and AnCora have different standards for semicolons.
+    Spanish GSD and AnCora have different standards for semicolons.
 
     GSD has semicolons at the end of sentences, AnCora has them in the middle as clause separators.
     Consecutive sentences in GSD do not seem to be related, so there is no combining that can be done.
