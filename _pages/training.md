@@ -88,9 +88,9 @@ For a full list of available training arguments, please refer to the specific en
 
 Model evaluation will be run automatically after each training run. Additionally, after you finish training all modules, you can evaluate the full universal dependency parsing pipeline with this command:
 ```bash
-bash scripts/run_ete.sh ${corpus} ${split}
+python stanza/utils/training/run_ete.py ${corpus} --score_${split}
 ```
-where `${split}` is one of train, dev or test.
+where `${split}` is one of dev or test.  Running with no `--score_` flag will give scores for the train data.
 
 
 ## Devices
