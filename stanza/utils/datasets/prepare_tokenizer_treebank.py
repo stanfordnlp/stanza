@@ -281,22 +281,42 @@ def augment_telugu(sents):
     return sents + new_sents
 
 COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
-def augment_ancora(sents):
-    """
-    Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
+def augment_comma_separations(sents):
+    """Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
 
     This leaves the tokens and all of the other data the same.  The
     only change made is to change SpaceAfter=No for the "," token and
     adjust the #text line, with the assumption that the conllu->txt
     conversion will correctly handle this change.
+
+    This was particularly an issue for Spanish-AnCora, but it's
+    reasonable to think it could happen to any dataset.  Currently
+    this just operates on commas and ascii letters to avoid
+    accidentally squishing anything that shouldn't be squished.
+
+    UD_Spanish-AnCora 2.7 had a problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there was a comma smashed next to a token.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
+
+    This exact example was later fixed in UD 2.8, but it should still
+    potentially be useful for compensating for typos.
     """
     new_sents = []
-    for sentences in sents:
-        if not sentences[1].startswith("# text"):
-            raise ValueError("UD_Spanish-AnCora not in the expected format")
-
     for sentence in sents:
-        match = COMMA_SEPARATED_RE.search(sentence[1])
+        for text_idx, text_line in enumerate(sentence):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                break
+        else:
+            continue
+
+        match = COMMA_SEPARATED_RE.search(sentence[text_idx])
         if match and random.random() < 0.03:
             for idx, word in enumerate(sentence):
                 if word.startswith("#"):
@@ -321,69 +341,16 @@ def augment_ancora(sents):
             comma = "\t".join(pieces)
             new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
 
-            text_offset = sentence[1].find(match.group(1) + ", " + match.group(2))
+            text_offset = sentence[text_idx].find(match.group(1) + ", " + match.group(2))
             text_len = len(match.group(1) + ", " + match.group(2))
-            new_text = sentence[1][:text_offset] + match.group(1) + "," + match.group(2) + sentence[1][text_offset+text_len:]
-            new_sent[1] = new_text
+            new_text = sentence[text_idx][:text_offset] + match.group(1) + "," + match.group(2) + sentence[text_idx][text_offset+text_len:]
+            new_sent[text_idx] = new_text
 
             new_sents.append(new_sent)
 
+    print("Added %d new sentences with asdf, zzzz -> asdf,zzzz" % len(new_sents))
+            
     return sents + new_sents
-
-def fix_spanish_ancora(input_conllu, output_conllu, augment):
-    """
-    The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
-
-    One possible problem is with this sentence:
-    # orig_file_sentence 143#5
-    In this sentence, there is a comma smashed next to a token.  Seems incorrect.
-
-    Fixing just this one sentence is not sufficient to tokenize
-    "asdf,zzzz" as desired, so we also augment by some fraction where
-    we have squished "asdf, zzzz" into "asdf,zzzz".
-
-    NOTE: the incorrect token will be fixed in 2.8:
-    https://github.com/UniversalDependencies/UD_Spanish-AnCora/issues/4
-    """
-    random.seed(1234)
-    sents = read_sentences_from_conllu(input_conllu)
-
-    ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
-    NEW_FIXED = ["29	,	,	PUNCT	PUNCT	PunctType=Comm	32	punct	_	SpaceAfter=No",   # TODO dunno about the head
-                 "30	Comerç	Comerç	PROPN	PROPN	_	26	flat	_	_"]
-    new_sentences = []
-    found = False
-    for sentence in sents:
-        if sentence[0].strip() != '# sent_id = train-s14205':
-            new_sentences.append(sentence)
-            continue
-        assert not found, "WTF"
-        found = True
-
-        for idx, word in enumerate(sentence):
-            if word.strip() == ORIGINAL_BAD:
-                break
-        assert idx == 31, "Could not find ,Comerç at the expected line number.  Perhaps the treebank has been fixed?"
-        for word in sentence[3:idx]:
-            assert int(sentence[idx].strip().split("\t")[6]) < idx
-        new_sentence = sentence[:idx] + NEW_FIXED
-        # increase the token idx and the dep of each word as appropriate
-        for word in sentence[idx+1:]:
-            pieces = word.strip().split("\t")
-            pieces[0] = str(int(pieces[0]) + 1)
-            dep = int(pieces[6])
-            if dep > 29:
-                pieces[6] = str(dep + 1)
-            new_sentence.append("\t".join(pieces))
-
-        new_sentences.append(new_sentence)
-
-    assert found, "Could not find sentence train-s14205 in Spanish Ancora"
-
-    if augment:
-        new_sentences = augment_ancora(new_sentences)
-
-    write_sentences_to_conllu(output_conllu, new_sentences)
 
 def augment_move_comma(sents):
     """
@@ -451,7 +418,7 @@ def augment_move_comma(sents):
                 new_chunk = prev_word + " ," + next_word
                 word_idx = text_line.find(old_chunk)
                 if word_idx < 0:
-                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified")
+                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified.  Looking for\n" + old_chunk + "\n" + text_line)
                 new_text_line = text_line[:word_idx] + new_chunk + text_line[word_idx+len(old_chunk):]
                 new_sentence[text_idx] = new_text_line
                 break
@@ -622,6 +589,7 @@ def augment_punct(sents):
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
     new_sents = augment_move_comma(new_sents)
+    new_sents = augment_comma_separations(new_sents)
     new_sents = augment_ellipses(new_sents)
 
     return new_sents
@@ -735,10 +703,6 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
 
     write_sentences_to_conllu(output_conllu, sents)
 
-def build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
-    for dataset in ("train", "dev", "test"):
-        build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
-
 def check_gum_ready(udbase_dir):
     gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
     if common.all_underscores(gum_conllu):
@@ -779,10 +743,80 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     sents = strip_mwt_from_sentences(sents)
     write_sentences_to_conllu(output_conllu, sents)
 
+def replace_semicolons(sentences):
+    """
+    Spanish GSD and AnCora have different standards for semicolons.
 
-def build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
+    GSD has semicolons at the end of sentences, AnCora has them in the middle as clause separators.
+    Consecutive sentences in GSD do not seem to be related, so there is no combining that can be done.
+    The easiest solution is to replace sentence final semicolons with "." in GSD
+    """
+    new_sents = []
+    count = 0
+    for sentence in sentences:
+        for text_idx, text_line in enumerate(sentence):
+            if text_line.startswith("# text"):
+                break
+        else:
+            raise ValueError("Expected every sentence in GSD to have a # text field")
+        if not text_line.endswith(";"):
+            new_sents.append(sentence)
+            continue
+        count = count + 1
+        new_sent = list(sentence)
+        new_sent[text_idx] = text_line[:-1] + "."
+        new_sent[-1] = new_sent[-1].replace(";", ".")
+        count = count + 1
+        new_sents.append(new_sent)
+    print("Updated %d sentences to replace sentence-final ; with ." % count)
+    return new_sents
+
+def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    es_combined is AnCora and GSD put together
+
+    TODO: remove features which aren't shared between datasets
+    TODO: consider mixing in PUD?
+    """
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if dataset == 'train':
+        treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            if treebank.endswith("GSD"):
+                new_sents = replace_semicolons(new_sents)
+            sents.extend(new_sents)
+
+        extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "spanish.mwt")
+        if not os.path.exists(extra_spanish):
+            raise FileNotFoundError("Cannot find the extra dataset 'spanish.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_spanish)
+        sents.extend(extra_sents)
+
+        # TODO: refactor things like the augment_punct call
+        sents = augment_punct(sents)
+    else:
+        conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
+        sents = read_sentences_from_conllu(conllu_file)
+
+    write_sentences_to_conllu(output_conllu, sents)
+
+
+
+COMBINED_FNS = {
+    "en_combined": build_combined_english_dataset,
+    "es_combined": build_combined_spanish_dataset,
+    "it_combined": build_combined_italian_dataset,
+}
+
+def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
+    random.seed(1234)
+    build_fn = COMBINED_FNS[short_name]
     for dataset in ("train", "dev", "test"):
-        build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+        build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
 
 def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset):
     """
@@ -819,9 +853,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
-    elif short_name.startswith("es_ancora") and dataset == 'train':
-        # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, output_conllu, augment=augment)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
     elif dataset == 'train':
@@ -911,10 +942,8 @@ def process_treebank(treebank, paths, args):
 
     if short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
-    elif short_name.startswith("it_combined"):
-        build_combined_italian(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
-    elif short_name.startswith("en_combined"):
-        build_combined_english(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
+    elif short_name in ("it_combined", "en_combined", "es_combined"):
+        build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
