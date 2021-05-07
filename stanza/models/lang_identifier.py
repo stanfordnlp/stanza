@@ -22,10 +22,16 @@ def parse_args(args=None):
     parser.add_argument("--mode", help="train or eval", default="train")
     parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
+    parser.add_argument("--randomize-range", help="range of lengths to use when random sampling text", 
+                        type=randomize_range, default="5,20")
     parser.add_argument("--save-name", help="where to save model", default=None)
     parser.add_argument("--use-gpu", help="whether to use gpu", type=bool, default=True)
     args = parser.parse_args(args=args)
     return args
+
+
+def randomize_range(range_list):
+    return [int(x) for x in range_list]
 
 
 def main(args=None):
