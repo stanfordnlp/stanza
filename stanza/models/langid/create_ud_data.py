@@ -39,7 +39,6 @@ def main(args=None):
     args = parse_args(args=args)
     if isinstance(args.languages, str):
         args.languages = args.languages.split(",")
-    args.splits = [float(x) for x in args.splits.split(",")]
     data_paths = [f"{args.save_path}/{data_split}.jsonl" for data_split in ["train", "dev", "test"]]
     lang_to_files = collect_files(args.ud_path, args.languages)
     print(f"Building UD data for languages: {','.join(args.languages)}")
