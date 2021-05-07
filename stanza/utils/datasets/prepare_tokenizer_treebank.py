@@ -945,10 +945,6 @@ def process_treebank(treebank, paths, args):
     short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
-    if short_name.startswith("en_gumreddit"):
-        print("Skipping %s as this is typically added to UD_English-GUM" % treebank)
-        return
-
     os.makedirs(tokenizer_dir, exist_ok=True)
 
     if short_name.startswith("ko_combined"):
