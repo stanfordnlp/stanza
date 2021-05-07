@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class LangIDBiLSTM(nn.Module):
     """
-    Multi-layer BiLSTM model for language detecting. Based on "A reproduction of Apple's bi-directional LSTM models
+    Multi-layer BiLSTM model for language detecting. A recreation of "A reproduction of Apple's bi-directional LSTM models
     for language identification in short strings." (Toftrup et al 2021)
 
     Arxiv: https://arxiv.org/abs/2102.06282
@@ -92,3 +92,4 @@ class LangIDBiLSTM(nn.Module):
         if use_cuda:
             model.to(torch.device("cuda"))
         return model
+

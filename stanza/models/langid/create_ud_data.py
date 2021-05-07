@@ -19,6 +19,7 @@ DEFAULT_LANGUAGES = ["da", "en", "sv", "no", "de", "cs", "es", "fr", "pt", "it",
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("--eval-length", help="length of eval strings", type=int, default=10)
     parser.add_argument("--languages", help="list of languages to use, or \"all\"", default=DEFAULT_LANGUAGES)
     parser.add_argument("--ud-path", help="path to ud data")
     parser.add_argument("--save-path", help="path to save data", default=".")
@@ -34,7 +35,7 @@ def main(args=None):
     lang_to_files = collect_files(args.ud_path, args.languages)
     print(f"Building UD data for languages: {','.join(args.languages)}")
     for lang_id in tqdm(lang_to_files):
-        lang_examples = generate_examples(lang_id, lang_to_files[lang_id])
+        lang_examples = generate_examples(lang_id, lang_to_files[lang_id], eval_length=args.eval_length)
         for (data_set, save_path) in zip(lang_examples, data_paths):
             with open(save_path, "a") as json_file:
                 for json_entry in data_set:
@@ -58,7 +59,8 @@ def collect_files(ud_path, languages):
     return lang_to_files
 
 
-def generate_examples(lang_id, list_of_files, splits=(0.8,0.1,0.1), min_window=10, max_window=50):
+def generate_examples(lang_id, list_of_files, splits=(0.8,0.1,0.1), min_window=10, max_window=50, 
+                      eval_length=10):
     """
     Generate train/dev/test examples for a given language
     """
@@ -73,8 +75,8 @@ def generate_examples(lang_id, list_of_files, splits=(0.8,0.1,0.1), min_window=1
     train_idx = int(splits[0] * len(examples))
     train_set = [example_json(lang_id, example) for example in examples[:train_idx]]
     dev_idx = int(splits[1] * len(examples)) + train_idx
-    dev_set = [example_json(lang_id, example) for example in examples[train_idx:dev_idx]]
-    test_set = [example_json(lang_id, example) for example in examples[dev_idx:]]
+    dev_set = [example_json(lang_id, example, eval_length=eval_length) for example in examples[train_idx:dev_idx]]
+    test_set = [example_json(lang_id, example, eval_length=eval_length) for example in examples[dev_idx:]]
     return train_set, dev_set, test_set
 
 
@@ -163,7 +165,9 @@ def clean_sentence(line):
     return new_line
 
 
-def example_json(lang_id, text):
+def example_json(lang_id, text, eval_length=None):
+    if eval_length is not None:
+        text = text[:eval_length]
     return {"text": text.strip(), "label": lang_id}
 
 
