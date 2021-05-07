@@ -150,7 +150,11 @@ def convert_conllu_to_txt(tokenizer_dir, short_name):
         subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
 
 
+# RE to see if the index of a conllu line represents an MWT
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
+
+# RE to see if the index of a conllu line represents an MWT or copy node
+MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
 
 def strip_mwt_from_sentences(sents):
     """
@@ -387,6 +391,13 @@ def augment_move_comma(sents):
                     # unfortunately, the previous word also had a
                     # space after it.  does not fit what we are
                     # looking for
+                    continue
+                # also, want to skip instances near MWT or copy nodes,
+                # since those are harder to rearrange
+                next_word = sentence[word_idx+1]
+                if MWT_OR_COPY_RE.match(next_word.split("\t")[0]):
+                    continue
+                if MWT_OR_COPY_RE.match(prev_word.split("\t")[0]):
                     continue
                 # at this point, the previous word has no space and the comma does
                 found = True
