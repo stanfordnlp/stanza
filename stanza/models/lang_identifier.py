@@ -18,7 +18,8 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch-size", help="batch size for training", type=int, default=64)
     parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
-    parser.add_argument("--mode", help="train or evaluate", default="train")
+    parser.add_argument("--load-model", help="path to load model from", default=None)
+    parser.add_argument("--mode", help="train or eval", default="train")
     parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
     parser.add_argument("--save-name", help="where to save model", default=None)
@@ -30,9 +31,9 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
     if args.mode == "train":
-        train(args)
+        train_model(args)
     else:
-        eval(args)
+        eval_model(args)
 
 
 def build_indexes(args):
@@ -56,7 +57,7 @@ def build_indexes(args):
     return tag_to_idx, char_to_idx
 
 
-def train(args):
+def train_model(args):
     # set up indexes
     tag_to_idx, char_to_idx = build_indexes(args)
     # load training data
@@ -75,6 +76,9 @@ def train(args):
         "batch_size": args.batch_size,
         "lang_weights": train_data.lang_weights
     }
+    if args.load_model:
+        trainer_config["load_model"] = args.load_model
+        print(f"{datetime.now()}\tLoading model from: {args.load_model}")
     trainer = Trainer(trainer_config, args.use_gpu)
     # run training
     best_accuracy = 0.0
@@ -94,6 +98,7 @@ def train(args):
                 for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
                                   curr_recalls, curr_f1s]:
                     score_log_file.write(json.dumps(score_log) + "\n")
+            best_accuracy = curr_dev_accuracy
 
         # reload training data
         print(f"{datetime.now()}\tResampling training data.")
@@ -106,6 +111,30 @@ def score_log_path(file_path):
     """
     model_suffix = file_path.split(".")[-1]
     return f"{file_path[:-1 * len(model_suffix)]}json"
+
+
+def eval_model(args):
+    # set up trainer
+    trainer_config = {
+        "model_path": None,
+        "load_model": args.load_model,
+        "batch_size": args.batch_size
+    }
+    trainer = Trainer(trainer_config, load_model=True, use_gpu=args.use_gpu)
+    # load test data
+    test_data = DataLoader()
+    test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "test" in x]
+    test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
+                        randomize=False)
+    curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
+        eval_trainer(trainer, test_data)
+    print(f"{datetime.now()}\tDev accuracy: {curr_dev_accuracy}")
+    if not os.path.exists(score_log_path(args.load_model)):
+        with open(score_log_path(args.load_model), "w") as score_log_file:
+            for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
+                              curr_recalls, curr_f1s]:
+                score_log_file.write(json.dumps(score_log) + "\n")
+        
 
 
 def eval_trainer(trainer, dev_data):
