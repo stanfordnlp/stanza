@@ -174,7 +174,8 @@ def remove_space_after_no(piece, fail_if_missing=True):
     Removes a SpaceAfter=No annotation from a single piece of a single word.
     In other words, given a list of conll lines, first call split("\t"), then call this on the -1 column
     """
-    if piece == "SpaceAfter=No":
+    # |SpaceAfter is in UD_Romanian-Nonstandard... seems fitting
+    if piece == "SpaceAfter=No" or piece == "|SpaceAfter=No":
         piece = "_"
     elif piece.startswith("SpaceAfter=No|"):
         piece = piece.replace("SpaceAfter=No|", "")
