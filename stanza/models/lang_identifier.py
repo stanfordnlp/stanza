@@ -93,6 +93,7 @@ def train_model(args):
             eval_trainer(trainer, dev_data)
         print(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
         if curr_dev_accuracy > best_accuracy:
+            print(f"{datetime.now()}\tNew best score. Saving model.")
             trainer.save()
             with open(score_log_path(args.save_name), "w") as score_log_file:
                 for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
