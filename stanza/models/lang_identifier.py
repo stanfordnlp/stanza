@@ -82,10 +82,11 @@ def train_model(args):
         "batch_size": args.batch_size,
         "lang_weights": train_data.lang_weights
     }
-    if args.load_model:
+    load_model = bool(args.load_model)
+    if load_model:
         trainer_config["load_model"] = args.load_model
         print(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, args.use_gpu)
+    trainer = Trainer(trainer_config, load_model=load_model, use_gpu=args.use_gpu)
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
