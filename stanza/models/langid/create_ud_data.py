@@ -21,21 +21,32 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval-length", help="length of eval strings", type=int, default=10)
     parser.add_argument("--languages", help="list of languages to use, or \"all\"", default=DEFAULT_LANGUAGES)
+    parser.add_argument("--min-window", help="minimal training example length", type=int, default=10)
+    parser.add_argument("--max-window", help="maximum training example length", type=int, default=50)
     parser.add_argument("--ud-path", help="path to ud data")
     parser.add_argument("--save-path", help="path to save data", default=".")
+    parser.add_argument("--splits", help="size of train/dev/test splits in percentages", type=splits_from_list, 
+                        default="0.8,0.1,0.1")
     args = parser.parse_args(args=args)
     return args
+
+
+def splits_from_list(value_list):
+    return [float(x) for x in value_list.split(",")]
 
 
 def main(args=None):
     args = parse_args(args=args)
     if isinstance(args.languages, str):
         args.languages = args.languages.split(",")
+    args.splits = [float(x) for x in args.splits.split(",")]
     data_paths = [f"{args.save_path}/{data_split}.jsonl" for data_split in ["train", "dev", "test"]]
     lang_to_files = collect_files(args.ud_path, args.languages)
     print(f"Building UD data for languages: {','.join(args.languages)}")
     for lang_id in tqdm(lang_to_files):
-        lang_examples = generate_examples(lang_id, lang_to_files[lang_id], eval_length=args.eval_length)
+        lang_examples = generate_examples(lang_id, lang_to_files[lang_id], splits=args.splits, 
+                                          min_window=args.min_window, max_window=args.max_window, 
+                                          eval_length=args.eval_length)
         for (data_set, save_path) in zip(lang_examples, data_paths):
             with open(save_path, "a") as json_file:
                 for json_entry in data_set:
