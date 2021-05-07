@@ -31,7 +31,7 @@ def parse_args(args=None):
 
 
 def randomize_range(range_list):
-    return [int(x) for x in range_list]
+    return [int(x) for x in range_list.split(",")]
 
 
 def main(args=None):
