@@ -115,7 +115,7 @@ def keep_partial_grad(grad, topk):
 def ensure_dir(d, verbose=True):
     if not os.path.exists(d):
         if verbose:
-            print("Directory {} do not exist; creating...".format(d))
+            logger.info("Directory {} does not exist; creating...".format(d))
         os.makedirs(d)
 
 def save_config(config, path, verbose=True):
