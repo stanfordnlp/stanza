@@ -129,9 +129,9 @@ class Seq2SeqModel(nn.Module):
     def decode(self, dec_inputs, hn, cn, ctx, ctx_mask=None, src=None):
         """ Decode a step, based on context encoding and source context states."""
         dec_hidden = (hn, cn)
-        decoder_output = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask, return_attn=self.copy)
+        decoder_output = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask, return_logattn=self.copy)
         if self.copy:
-            h_out, dec_hidden, attn = decoder_output
+            h_out, dec_hidden, log_attn = decoder_output
         else:
             h_out, dec_hidden = decoder_output
 
@@ -144,20 +144,27 @@ class Seq2SeqModel(nn.Module):
             copy_logit = self.copy_gate(h_out)
             if self.use_pos:
                 # can't copy the UPOS
-                attn = attn[:, :, 1:]
+                log_attn = log_attn[:, :, 1:]
 
             # renormalize
-            attn = attn / (attn.sum(-1, keepdim=True) + 1e-12)
+            log_attn = torch.log_softmax(log_attn, -1)
             # calculate copy probability for each word in the vocab
-            copy_prob = torch.sigmoid(copy_logit) * attn
-            copied_vocab_prob = log_probs.new_zeros(log_probs.size()).scatter_add(-1, 
-                src.unsqueeze(1).expand(src.size(0), copy_prob.size(1), src.size(1)), 
+            log_copy_prob = torch.nn.functional.logsigmoid(copy_logit) + log_attn
+            # scatter logsumexp
+            mx = log_copy_prob.max(-1, keepdim=True)[0]
+            log_copy_prob = log_copy_prob - mx
+            copy_prob = torch.exp(log_copy_prob)
+            copied_vocab_prob = log_probs.new_zeros(log_probs.size()).scatter_add(-1,
+                src.unsqueeze(1).expand(src.size(0), copy_prob.size(1), src.size(1)),
                 copy_prob)
+            zero_mask = (copied_vocab_prob == 0)
+            log_copied_vocab_prob = torch.log(copied_vocab_prob.masked_fill(zero_mask, 1e-12)) + mx
+            log_copied_vocab_prob = log_copied_vocab_prob.masked_fill(zero_mask, -1e12)
 
             # combine with normal vocab probability
             log_nocopy_prob = -torch.log(1 + torch.exp(copy_logit))
             log_probs = log_probs + log_nocopy_prob
-            log_probs = torch.logsumexp(torch.stack([torch.log(copied_vocab_prob + 1e-12), log_probs]), 0)
+            log_probs = torch.logsumexp(torch.stack([log_copied_vocab_prob, log_probs]), 0)
 
         return log_probs, dec_hidden
 
