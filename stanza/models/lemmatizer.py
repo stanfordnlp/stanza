@@ -59,6 +59,7 @@ def parse_args(args=None):
     parser.add_argument('--num_edit', type=int, default=len(edit.EDIT_TO_ID))
     parser.add_argument('--alpha', type=float, default=1.0)
     parser.add_argument('--no_pos', dest='pos', action='store_false', help='Do not use UPOS in lemmatization. By default UPOS is used.')
+    parser.add_argument('--no_copy', dest='copy', action='store_false', help='Do not use copy mechanism in lemmatization. By default copy mechanism is used to improve generalization.')
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
