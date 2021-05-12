@@ -83,6 +83,20 @@ python stanza/utils/training/run_tokenize.py UD_English-EWT --batch_size 32 --dr
 
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
 
+## Using alternate word vectors
+
+The simplest way to retrain models with new data is to use the existing word vectors.  Generally we redistribute word vectors built with word2vec or fasttext.
+
+If you retrain the models with new word vectors, you will need to provide the path for those word vectors when creating a pipeline.  Otherwise, the pipeline will try to use the default word vectors for that language and/or package.  To specify a different set of word vectors, you can supply the following arguments as relevant:
+
+```
+pos_pretrain_path
+depparse_pretrain_path
+sentiment_pretrain_path
+```
+
+Currently the NER model includes the word vectors in the finished model, so no such argument is necessary, although that may change in the future.
+
 
 ## Evaluation
 
