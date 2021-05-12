@@ -52,6 +52,8 @@ class Pretrain:
                 logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
                 vocab, emb = self.read_pretrain()
         else:
+            if self.filename is not None:
+                logger.info("Pretrained filename specified, but file does not exist.  Attempting to load from text file")
             vocab, emb = self.read_pretrain()
 
         self._vocab = vocab
@@ -90,7 +92,7 @@ class Pretrain:
     def read_pretrain(self):
         # load from pretrained filename
         if self._vec_filename is None:
-            raise Exception("Vector file is not provided.")
+            raise RuntimeError("Vector file is not provided.")
         logger.info("Reading pretrained vectors from {}...".format(self._vec_filename))
 
         # first try reading as xz file, if failed retry as text file
@@ -103,7 +105,7 @@ class Pretrain:
         if failed > 0: # recover failure
             emb = emb[:-failed]
         if len(emb) - len(VOCAB_PREFIX) != len(words):
-            raise Exception("Loaded number of vectors does not match number of words.")
+            raise RuntimeError("Loaded number of vectors does not match number of words.")
         
         # Use a fixed vocab size
         if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words):
