@@ -174,7 +174,7 @@ class CoNLL:
         """
         doc_conll = CoNLL.convert_dict(doc_dict)
         conll_string = CoNLL.conll_as_string(doc_conll)
-        with open(filename, 'w') as outfile:
+        with open(filename, 'w', encoding='utf-8') as outfile:
             outfile.write(conll_string)
         return
 
