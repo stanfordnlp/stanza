@@ -123,6 +123,11 @@ class Pipeline:
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
+            # TODO: this is obviously a hack
+            # a better solution overall would be to make a pretagged version of the pos annotator
+            # and then subsequent modules can use those tags without knowing where those tags came from
+            if "pretagged" in self.config and "pretagged" not in curr_processor_config:
+                curr_processor_config["pretagged"] = self.config["pretagged"]
             logger.debug('With settings: ')
             logger.debug(curr_processor_config)
             try:
@@ -167,10 +172,14 @@ class Pipeline:
 
         logger.info("Done loading processors!")
 
-    def update_kwargs(self, kwargs, processor_list):
+    @staticmethod
+    def update_kwargs(kwargs, processor_list):
         processor_dict = {processor: {'package': package, 'dependencies': dependencies} for (processor, package, dependencies) in processor_list}
         for key, value in kwargs.items():
-            k, v = key.split('_', 1)
+            pieces = key.split('_', 1)
+            if len(pieces) == 1:
+                continue
+            k, v = pieces
             if v == 'model_path':
                 package = value if len(value) < 25 else value[:10]+ '...' + value[-10:]
                 dependencies = processor_dict.get(k, {}).get('dependencies')
@@ -179,10 +188,14 @@ class Pipeline:
         processor_list = sort_processors(processor_list)
         return processor_list
 
-    def filter_config(self, prefix, config_dict):
+    @staticmethod
+    def filter_config(prefix, config_dict):
         filtered_dict = {}
         for key in config_dict.keys():
-            k, v = key.split('_', 1) # split tokenize_pretokenize to tokenize+pretokenize
+            pieces = key.split('_', 1)  # split tokenize_pretokenize to tokenize+pretokenize
+            if len(pieces) == 1:
+                continue
+            k, v = pieces
             if k == prefix:
                 filtered_dict[v] = config_dict[key]
         return filtered_dict
