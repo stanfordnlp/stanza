@@ -97,6 +97,14 @@ sentiment_pretrain_path
 
 Currently the NER model includes the word vectors in the finished model, so no such argument is necessary, although that may change in the future.
 
+The pretrain embedding file expected by the pipeline is the `.pt` format Torch uses to save models.  The module which loads embeddings will convert a text file to a `.pt` file if needed, so you can use the following code snippet to create the `.pt` file:
+
+```
+from stanza.models.common.pretrain import Pretrain
+pt = Pretrain("foo.pt", "new_vectors.txt")
+pt.load()
+```
+
 
 ## Evaluation
 
