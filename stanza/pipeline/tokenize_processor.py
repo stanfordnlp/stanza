@@ -69,6 +69,8 @@ class TokenizeProcessor(UDProcessor):
             "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object."
 
         if isinstance(document, doc.Document):
+            if self.config.get('pretokenized'):
+                return document
             document = document.text
 
         if self.config.get('pretokenized'):
