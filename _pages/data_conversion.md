@@ -78,3 +78,14 @@ doc = CoNLL.conll2doc("extern_data/ud2/ud-treebanks-v2.7/UD_Italian-ISDT/it_isdt
 nlp = stanza.Pipeline(lang='it', processors='tokenize,pos', tokenize_pretokenized=True)
 doc = nlp(doc)
 ```
+
+## Document to CoNLL
+
+Coming Soon in v1.3
+{: .label .label-green }
+
+There is a corresponding mechanism for writing back the document:
+
+```python
+CoNLL.write_doc2conll(doc2, "output.conllu")
+```
