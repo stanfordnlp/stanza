@@ -114,6 +114,7 @@ lcode2lang = {
     "vi": "Vietnamese",
     "wbp": "Warlpiri",
     "cy": "Welsh",
+    "hyw": "Western_Armenian",
     "wo": "Wolof",
     "yo": "Yoruba",
 }

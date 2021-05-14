@@ -68,6 +68,7 @@ default_treebanks = {
   "ug": "udt",
   "vi": "vtb",
   "lt": "alksnis",
+  "hyw": "armtdp",
   "wo": "wtb",
   "nb": "bokmaal",
   "mt": "mudt",
@@ -239,6 +240,7 @@ lcode2lang = {
     "ug": "Uyghur",
     "vi": "Vietnamese",
     "cy": "Welsh",
+    "hyw": "Western_Armenian",
     "wo": "Wolof"
 }
 
