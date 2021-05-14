@@ -58,3 +58,23 @@ from stanza.utils.conll import CoNLL
 dicts = [[{'id': '1', 'text': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing', 'misc': 'start_char=0|end_char=4'}, {'id': '2', 'text': 'sentence', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Number=Sing', 'misc': 'start_char=5|end_char=13'}, {'id': '3', 'text': '.', 'upos': 'PUNCT', 'xpos': '.', 'misc': 'start_char=13|end_char=14'}]] # dicts is List[List[Dict]], representing each token / word in each sentence in the document
 conll = CoNLL.convert_dict(dicts) # conll is List[List[List]], representing each token / word in each sentence in the document
 ```
+
+## CoNLL to Document
+
+Coming Soon in v1.3
+{: .label .label-green }
+
+There is a mechanism for converting CoNLL files directly to a Stanza Document:
+
+```python
+from stanza.utils.conll import CoNLL
+doc = CoNLL.conll2doc("extern_data/ud2/ud-treebanks-v2.7/UD_Italian-ISDT/it_isdt-ud-train.conllu")
+```
+
+This can be used with a [pipeline on pretokenized text](tokenize.md#start-with-pretokenized-text) to reprocess parts of the document.  For example, this will reprocess the tags in the ISDT dataset.  Note that `nlp(doc)` alters the `doc` object in place in this example.
+
+```python
+doc = CoNLL.conll2doc("extern_data/ud2/ud-treebanks-v2.7/UD_Italian-ISDT/it_isdt-ud-train.conllu")
+nlp = stanza.Pipeline(lang='it', processors='tokenize,pos', tokenize_pretokenized=True)
+doc = nlp(doc)
+```
