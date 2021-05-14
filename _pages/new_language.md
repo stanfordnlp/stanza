@@ -49,6 +49,13 @@ of those are available for the language you want to work on, you might
 try to use [GloVe](https://github.com/stanfordnlp/GloVe) to train your
 own word vectors.
 
+In general we convert the embeddings into a torch module for faster
+loading and smaller disk sizes.  A script is provided which does that:
+
+```python
+  python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_fasttext.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
+```
+
 
 ## Character LM
 
