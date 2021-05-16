@@ -156,6 +156,9 @@ MWT_RE = re.compile("^[0-9]+[-][0-9]+")
 # RE to see if the index of a conllu line represents an MWT or copy node
 MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
 
+# more restrictive than an actual int as we expect certain formats in the conllu files
+INT_RE = re.compile("^[0-9]+$")
+
 def strip_mwt_from_sentences(sents):
     """
     Removes all mwt lines from the given list of sentences
@@ -591,6 +594,90 @@ def augment_quotes(sents):
     print("Augmented {} quotes: {}".format(sum(counts.values()), counts))
     return new_sents
 
+def find_text_idx(sentence):
+    """
+    Return the index of the # text line or -1
+    """
+    for idx, line in enumerate(sentence):
+        if line.startswith("# text"):
+            return idx
+    return -1
+
+def change_indices(line, delta):
+    """
+    Adjust all indices in the given sentence by delta.  Useful when removing a word, for example
+    """
+    if line.startswith("#"):
+        return line
+
+    pieces = line.split("\t")
+    if MWT_RE.match(pieces[0]):
+        indices = pieces[0].split("-")
+        pieces[0] = "%d-%d" % (int(indices[0]) + delta, int(indices[1]) + delta)
+        line = "\t".join(pieces)
+        return line
+
+    if MWT_OR_COPY_RE.match(pieces[0]):
+        raise NotImplementedError("Need to implement change_indices for copy nodes")
+
+    if not INT_RE.match(pieces[0]):
+        raise NotImplementedError("Unknown index type: %s" % pieces[0])
+
+    pieces[0] = str(int(pieces[0]) + delta)
+    dep = int(pieces[6])
+    if dep != 0:
+        pieces[6] = str(int(dep) + delta)
+    if pieces[8] != '_':
+        raise NotImplementedError("Need to handle the additional deps field in change_indices")
+    line = "\t".join(pieces)
+    return line
+
+def augment_initial_punct(sents, ratio=0.20):
+    """
+    If a sentence starts with certain punct marks, occasionally use the same sentence without the initial punct.
+
+    Currently this just handles ¿
+    This helps languages such as CA and ES where the models go awry when the initial ¿ is missing.
+    """
+    new_sents = []
+    for sent in sents:
+        if random.random() > ratio:
+            continue
+
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("¿") != 1:
+            # only handle sentences with exactly one ¿
+            continue
+
+        # find the first line with actual text
+        for idx, line in enumerate(sent):
+            if line.startswith("#"):
+                continue
+            break
+        if idx >= len(sent) - 1:
+            raise ValueError("Unexpectedly an entire sentence is comments")
+        pieces = line.split("\t")
+        if pieces[1] != '¿':
+            continue
+        if pieces[-1].find("SpaceAfter=No") >= 0:
+            replace_text = "¿"
+        else:
+            replace_text = "¿ "
+
+        new_sent = sent[:idx] + sent[idx+1:]
+        new_sent[text_idx] = text_line.replace(replace_text, "")
+
+        # now need to update all indices
+        new_sent = [change_indices(x, -1) for x in new_sent]
+        new_sents.append(new_sent)
+
+    if len(new_sents) > 0:
+        print("Added %d sentences with the leading ¿ removed" % len(new_sents))
+
+    return sents + new_sents
+
+
 def augment_punct(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
@@ -602,6 +689,7 @@ def augment_punct(sents):
     new_sents = augment_quotes(new_sents)
     new_sents = augment_move_comma(new_sents)
     new_sents = augment_comma_separations(new_sents)
+    new_sents = augment_initial_punct(new_sents)
     new_sents = augment_ellipses(new_sents)
 
     return new_sents
