@@ -722,9 +722,8 @@ def check_gum_ready(udbase_dir):
 
 def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
     """
-    en_combined is currently EWT, GUM, and a fork of Pronouns
+    en_combined is currently EWT, GUM, PUD, and Pronouns
 
-    TODO: when 2.8 is released, check that EWT, Pronouns, and PUD all have the recent updates correctly applied
     TODO: use more of the handparsed data
     """
     check_gum_ready(udbase_dir)
