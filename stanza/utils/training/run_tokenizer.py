@@ -76,7 +76,7 @@ def run_treebank(mode, paths, treebank, short_name,
         # TODO: log these results?  The original script logged them to
         # echo $results $args >> ${TOKENIZE_DATA_DIR}/${short}.results
 
-        results = common.run_eval_script(dev_gold, dev_pred, 2, 5)
+        results = common.run_eval_script_tokens(dev_gold, dev_pred)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -86,7 +86,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
-        results = common.run_eval_script(test_gold, test_pred, 2, 5)
+        results = common.run_eval_script_tokens(test_gold, test_pred)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():

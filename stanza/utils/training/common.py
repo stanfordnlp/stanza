@@ -12,6 +12,7 @@ from enum import Enum
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
+from stanza.utils import conll18_ud_eval as ud_eval
 
 logger = logging.getLogger('stanza')
 
@@ -88,21 +89,26 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
             run_treebank(mode, paths, treebank, short_name,
                          None, command_args, extra_args)
 
-def run_eval_script(eval_gold, eval_pred, start_row=None, end_row=None):
-    # TODO: this is a silly way of doing this
-    # would prefer to call it as a module
-    # but the eval script expects sys args and prints the results to stdout
-    if end_row is None and start_row is not None:
-        end_row = start_row + 1
+def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
+    """ Wrapper for lemma scorer. """
+    gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
+    system_ud = ud_eval.load_conllu_file(system_conllu_file)
+    evaluation = ud_eval.evaluate(gold_ud, system_ud)
 
-    path = pathlib.Path(os.path.join(os.path.split(__file__)[0], ".."))
-    path = path.resolve()
-
-    eval_script = os.path.join(path, "conll18_ud_eval.py")
-    results = subprocess.check_output([eval_script, "-v", eval_gold, eval_pred])
-    results = results.decode(encoding="utf-8")
-    if start_row is None:
-        return results
+    if evals is None:
+        return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False)
     else:
-        results = [x.split("|")[3].strip() for x in results.split("\n")[start_row:end_row]]
-        return " ".join(results)
+        results = [evaluation[key].f1 for key in evals]
+        return " ".join("{:.2f}".format(100 * x) for x in results)
+
+def run_eval_script_tokens(eval_gold, eval_pred):
+    return run_eval_script(eval_gold, eval_pred, evals=["Tokens", "Sentences", "Words"])
+
+def run_eval_script_mwt(eval_gold, eval_pred):
+    return run_eval_script(eval_gold, eval_pred, evals=["Words"])
+
+def run_eval_script_pos(eval_gold, eval_pred):
+    return run_eval_script(eval_gold, eval_pred, evals=["UPOS", "XPOS", "UFeats", "AllTags"])
+
+def run_eval_script_depparse(eval_gold, eval_pred):
+    return run_eval_script(eval_gold, eval_pred, evals=["UAS", "LAS", "CLAS", "MLAS", "BLEX"])
