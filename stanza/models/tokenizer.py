@@ -92,8 +92,8 @@ def main(args=None):
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
     args['feat_dim'] = len(args['feat_funcs'])
-    args['save_name'] = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
-            else '{}/{}_tokenizer.pt'.format(args['save_dir'], args['shorthand'])
+    save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
+    args['save_name'] = os.path.join(args['save_dir'], save_name)
     utils.ensure_dir(args['save_dir'])
 
     if args['mode'] == 'train':
@@ -125,7 +125,7 @@ def train(args):
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
-        load_name = "{}/{}".format(args['save_dir'], args['load_name'])
+        load_name = os.path.join(args['save_dir'], args['load_name'])
         trainer.load(load_name)
     trainer.change_lr(args['lr0'])
 

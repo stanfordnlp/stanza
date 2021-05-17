@@ -70,7 +70,7 @@ def parse_args(args=None):
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
-    parser.add_argument('--model_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
+    parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
 
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -109,8 +109,8 @@ def train(args):
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
-    utils.ensure_dir(args['model_dir'])
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    utils.ensure_dir(args['save_dir'])
+    model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -208,7 +208,7 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = '{}/{}_lemmatizer.pt'.format(args['model_dir'], args['lang'])
+    model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
 
     # load model
     use_cuda = args['cuda'] and not args['cpu']

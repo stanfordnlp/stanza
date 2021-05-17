@@ -120,7 +120,7 @@ def load_pretrain(args):
         if args['wordvec_pretrain_file']:
             pretrain_file = args['wordvec_pretrain_file']
         else:
-            pretrain_file = '{}/{}.pretrain.pt'.format(args['save_dir'], args['shorthand'])
+            pretrain_file = os.path.join(args['save_dir'], '{}.pretrain.pt'.format(args['shorthand']))
         if os.path.exists(pretrain_file):
             vec_file = None
         else:

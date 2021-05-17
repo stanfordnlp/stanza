@@ -107,8 +107,8 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
+    save_name = args['save_name'] if args['save_name'] else '{}_mwt_expander.pt'.format(args['shorthand'])
+    model_file = os.path.join(args['save_dir'], save_name)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -208,8 +208,8 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-            else '{}/{}_mwt_expander.pt'.format(args['save_dir'], args['shorthand'])
+    save_name = args['save_name'] if args['save_name'] else '{}_mwt_expander.pt'.format(args['shorthand'])
+    model_file = os.path.join(args['save_dir'], save_name)
 
     # load model
     use_cuda = args['cuda'] and not args['cpu']
