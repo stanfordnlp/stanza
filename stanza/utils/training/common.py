@@ -46,7 +46,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
     if '--extra_args' in sys.argv:
         idx = sys.argv.index('--extra_args')
         extra_args = sys.argv[idx+1:]
-        command_args = parser.parse_args(sys.argv[:idx])
+        command_args = parser.parse_args(sys.argv[1:idx])
     else:
         command_args, extra_args = parser.parse_known_args()
 
