@@ -147,7 +147,7 @@ def treebank_to_short_name(treebank):
     if treebank.startswith('UD_'):
         treebank = treebank[3:]
     splits = treebank.split('-')
-    assert len(splits) == 2
+    assert len(splits) == 2, "Unable to process %s" % treebank
     lang, corpus = splits
 
     if lang in lang2lcode:
