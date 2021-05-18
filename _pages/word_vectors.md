@@ -46,7 +46,7 @@ pipe = stanza.Pipeline(lang="en", processors="tokenize,pos", pos_pretrain_path="
 
 Currently the NER model includes the word vectors in the finished model, so no such argument is necessary, although that may change in the future.
 
-The pretrain embedding file expected by the pipeline is the `.pt` format Torch uses to save models.  The module which loads embeddings will convert a text file to a `.pt` file if needed, so you can use the following code snippet to create the `.pt` file:
+The pretrain embedding file expected by the pipeline is the `.pt` format PyTorch uses to save models.  The module which loads embeddings will convert a text file to a `.pt` file if needed, so you can use the following code snippet to create the `.pt` file:
 
 ```
 from stanza.models.common.pretrain import Pretrain
@@ -55,9 +55,9 @@ pt.load()
 ```
 
 
-## Included utilities
+## Utility Scripts
 
-In general we convert the embeddings into a torch module for faster
+In general we convert the embeddings into a PyTorch module for faster
 loading and smaller disk sizes.  A script is provided which does that:
 
 ```
