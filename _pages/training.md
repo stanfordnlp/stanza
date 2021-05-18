@@ -30,21 +30,7 @@ Note that Windows users will not be able to run this `.sh` script, but they can 
 
 ## Preparing Word Vector Data
 
-To train modules that make use of word representations, such as the POS/morphological features tagger and the dependency parser, it is highly recommended that you use pretrained embedding vectors. To replicate the system performance on the CoNLL 2018 shared task, we have prepared a script for you to download all word vector files. Simply run from the source directory:
-```bash
-bash scripts/download_vectors.sh ${wordvec_dir}
-```
-where `${wordvec_dir}` is the target directory to store the word vector files, and should be the same as where the environment variable `WORDVEC_DIR` is pointed to.
-
-The above script will first download the pretrained word2vec embeddings released from the CoNLL 2017 Shared Task, which can be found [here](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y). For languages not in this list, it will download the [FastText embeddings](https://fasttext.cc/docs/en/crawl-vectors.html) from Facebook. Note that the total size of all downloaded vector files will be ~30G, therefore please use this script with caution.
-
-After running the script, your embedding vector files will be organized in the following way:
-`${WORDVEC_DIR}/{language}/{language_code}.vectors.xz`. For example, the word2vec file for English should be put into `$WORDVEC_DIR/English/en.vectors.xz`. If you use your own vector files, please make sure you arrange them in a similar fashion as described above.
-
-{% include alerts.html %}
-{{ note }}
-{{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/ewt.pt` by default" | markdownify }}
-{{ end }}
+To train modules that make use of word representations, such as the POS/morphological features tagger and the dependency parser, it is highly recommended that you use pretrained embedding vectors. The simplest method is to use the `.pt` file in the `$STANZA_RESOURCES/lang/pretrain` directory after downloading the existing models using `stanza.download(lang)`. For more information and other options, [see here](word_vectors.md).
 
 ## Converting UD data
 
@@ -82,29 +68,6 @@ python stanza/utils/training/run_tokenize.py UD_English-EWT --batch_size 32 --dr
 ```
 
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
-
-## Using alternate word vectors
-
-The simplest way to retrain models with new data is to use the existing word vectors.  Generally we redistribute word vectors built with word2vec or fasttext.
-
-If you retrain the models with new word vectors, you will need to provide the path for those word vectors when creating a pipeline.  Otherwise, the pipeline will try to use the default word vectors for that language and/or package.  To specify a different set of word vectors, you can supply the following arguments as relevant:
-
-```
-pos_pretrain_path
-depparse_pretrain_path
-sentiment_pretrain_path
-```
-
-Currently the NER model includes the word vectors in the finished model, so no such argument is necessary, although that may change in the future.
-
-The pretrain embedding file expected by the pipeline is the `.pt` format Torch uses to save models.  The module which loads embeddings will convert a text file to a `.pt` file if needed, so you can use the following code snippet to create the `.pt` file:
-
-```
-from stanza.models.common.pretrain import Pretrain
-pt = Pretrain("foo.pt", "new_vectors.txt")
-pt.load()
-```
-
 
 ## Evaluation
 

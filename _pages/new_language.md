@@ -49,23 +49,7 @@ of those are available for the language you want to work on, you might
 try to use [GloVe](https://github.com/stanfordnlp/GloVe) to train your
 own word vectors.
 
-In general we convert the embeddings into a torch module for faster
-loading and smaller disk sizes.  A script is provided which does that:
-
-```
-python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_fasttext.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
-```
-
-The third argument sets the limit on how many vectors to keep.
-
-Coming Soon in v1.3
-{: .label .label-green }
-
-There is also a script for counting how many times words in a UD training set appear in an embedding:
-
-```
-stanza/models/common/count_pretrain_coverage.py
-```
+More information on using word vectors [here](word_vectors.md).
 
 ## Character LM
 
