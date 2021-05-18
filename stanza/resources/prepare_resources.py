@@ -214,7 +214,7 @@ lcode2lang = {
     "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
-    "orv": "Old_Russian",
+    "orv": "Old_East_Slavic",
     "fa": "Persian",
     "pl": "Polish",
     "pt": "Portuguese",

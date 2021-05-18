@@ -80,7 +80,7 @@ lcode2lang = {
     "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
-    "orv": "Old_Russian",
+    "orv": "Old_East_Slavic",
     "otk": "Old_Turkish",
     "fa": "Persian",
     "pl": "Polish",
@@ -128,6 +128,9 @@ lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['zh'] = 'Simplified_Chinese'
 
 lang2lcode['Chinese'] = 'zh'
+
+# treebank names changed from Old Russian to Old East Slavic in 2.8
+lang2lcode['Old_Russian'] = 'orv'
 
 treebank_special_cases = {
     "UD_Chinese-GSDSimp": "zh_gsdsimp",
