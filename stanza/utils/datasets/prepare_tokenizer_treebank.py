@@ -172,6 +172,15 @@ def strip_mwt_from_sentences(sents):
     return new_sents
 
 
+def has_space_after_no(piece):
+    if not piece or piece == "_":
+        return False
+    if piece == "SpaceAfter=No":
+        return True
+    tags = piece.split("|")
+    return any(t == "SpaceAfter=No" for t in tags)
+
+
 def remove_space_after_no(piece, fail_if_missing=True):
     """
     Removes a SpaceAfter=No annotation from a single piece of a single word.
@@ -193,18 +202,18 @@ def add_space_after_no(piece, fail_if_found=True):
         return "SpaceAfter=No"
     else:
         if fail_if_found:
-            if piece.find("SpaceAfter=No") >= 0:
+            if has_space_after_no(piece):
                 raise ValueError("Given notes field already contained SpaceAfter=No")
         return piece + "|SpaceAfter=No"
 
 
-def augment_arabic_padt(sents):
+def augment_arabic_padt(sents, ratio=0.05):
     """
     Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
 
     Reason seems to be that there are almost no examples of "text ." in the dataset.
     This function augments the Arabic-PADT dataset with a few such examples.
-    Note: it may very well be that a lot of tokeners have this problem.
+    TODO: it may very well be that a lot of tokeners have this problem.
 
     Also, there are a few examples in UD2.7 which are apparently
     headlines where there is a ' . ' in the middle of the text.
@@ -228,11 +237,13 @@ def augment_arabic_padt(sents):
             raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
 
         # for some reason performance starts dropping quickly at higher numbers
+        if random.random() > ratio:
+            continue
+
         if (sentence[text_line][-1] in ('.', '؟', '?', '!') and
             sentence[text_line][-2] not in ('.', '؟', '?', '!', ' ') and
-            sentence[-2].split()[-1].find("SpaceAfter=No") >= 0 and
-            len(sentence[-1].split()[1]) == 1 and
-            random.random() < 0.05):
+            has_space_after_no(sentence[-2].split()[-1]) and
+            len(sentence[-1].split()[1]) == 1):
             new_sent = list(sentence)
             new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
             pieces = sentence[-2].split("\t")
@@ -360,7 +371,7 @@ def augment_comma_separations(sents):
             
     return sents + new_sents
 
-def augment_move_comma(sents):
+def augment_move_comma(sents, ratio=0.02):
     """
     Move the comma from after a word to before the next word some fraction of the time
 
@@ -377,7 +388,7 @@ def augment_move_comma(sents):
     new_sents = []
     num_operations = 0
     for sentence in sents:
-        if random.random() > 0.02:
+        if random.random() > ratio:
             new_sents.append(sentence)
             continue
 
@@ -388,10 +399,10 @@ def augment_move_comma(sents):
             if word_idx == 0 or word_idx >= len(sentence) - 2:
                 continue
             pieces = word.split("\t")
-            if pieces[1] == ',' and pieces[-1].find("SpaceAfter=No") < 0:
+            if pieces[1] == ',' and not has_space_after_no(pieces[-1]):
                 # found a comma with a space after it
                 prev_word = sentence[word_idx-1]
-                if prev_word.split("\t")[-1].find("SpaceAfter=No") < 0:
+                if not has_space_after_no(prev_word.split("\t")[-1]):
                     # unfortunately, the previous word also had a
                     # space after it.  does not fit what we are
                     # looking for
@@ -660,7 +671,7 @@ def augment_initial_punct(sents, ratio=0.20):
         pieces = line.split("\t")
         if pieces[1] != '¿':
             continue
-        if pieces[-1].find("SpaceAfter=No") >= 0:
+        if has_space_after_no(pieces[-1]):
             replace_text = "¿"
         else:
             replace_text = "¿ "
