@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This is copied from an external git repo:
+# https://github.com/ufal/conll2018/tree/master/evaluation_script
+
 # Compatible with Python 2.7 and 3.2+, can be used either as a module
 # or a standalone executable.
 #
