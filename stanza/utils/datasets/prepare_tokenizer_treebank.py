@@ -816,7 +816,7 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
 
 def check_gum_ready(udbase_dir):
     gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
-    if common.all_underscores(gum_conllu):
+    if common.mostly_underscores(gum_conllu):
         raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
 def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):

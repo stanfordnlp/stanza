@@ -49,7 +49,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     else:
         raise RuntimeError(f"Unexpected number of files matched '{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}'")
 
-def all_underscores(filename):
+def mostly_underscores(filename):
     """
     Certain treebanks have proprietary data, so the text is hidden
 
@@ -60,16 +60,19 @@ def all_underscores(filename):
       UD_Hindi_English-HIENCS
       UD_Japanese-BCCWJ
     """
+    underscore_count = 0
+    total_count = 0
     for line in open(filename).readlines():
         line = line.strip()
         if not line:
             continue
-        line = line.replace("_", "")
-        line = line.replace("-", "")
-        line = line.replace(" ", "")
-        if line:
-            return False
-    return True
+        if line.startswith("#"):
+            continue
+        total_count = total_count + 1
+        pieces = line.split("\t")
+        if pieces[1] in ("_", "-"):
+            underscore_count = underscore_count + 1
+    return underscore_count / total_count > 0.5
 
 def num_words_in_file(conllu_file):
     """
@@ -101,7 +104,7 @@ def get_ud_treebanks(udbase_dir, filtered=True):
                          #find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") and
                          find_treebank_dataset_file(t, udbase_dir, "test", "conllu"))]
         treebanks = [t for t in treebanks
-                     if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
+                     if not mostly_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
         # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
