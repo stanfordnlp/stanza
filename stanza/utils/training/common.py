@@ -31,6 +31,9 @@ def build_argparse():
     parser.add_argument('--score_dev', dest='mode', action='store_const', const=Mode.SCORE_DEV, help='Score the dev set')
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
 
+    # This argument needs to be here so we can identify if the model already exists in the user-specified home
+    parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
+
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
@@ -51,6 +54,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
     else:
         command_args, extra_args = parser.parse_known_args()
 
+    # Pass this through to the underlying model as well as use it here
+    if command_args.save_dir:
+        extra_args.extend(["--save_dir", command_args.save_dir])
+
     mode = command_args.mode
     treebanks = []
 
@@ -66,7 +73,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         else:
             treebanks.append(treebank)
 
-    for treebank in treebanks:
+    for treebank_idx, treebank in enumerate(treebanks):
+        if treebank_idx > 0:
+            logger.info("=========================================")
+
         if SHORTNAME_RE.match(treebank):
             short_name = treebank
         else:
@@ -74,7 +84,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         logger.debug("%s: %s" % (treebank, short_name))
 
         if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
-            model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
+            if command_args.save_dir:
+                model_path = "%s/%s_%s.pt" % (command_args.save_dir, short_name, model_name)
+            else:
+                model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
             if os.path.exists(model_path):
                 logger.info("%s: %s exists, skipping!" % (treebank, model_path))
                 continue
