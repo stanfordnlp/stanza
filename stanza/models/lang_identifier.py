@@ -16,7 +16,9 @@ from tqdm import tqdm
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("--batch-mode", help="custom settings when running in batch mode", action="store_true")
     parser.add_argument("--batch-size", help="batch size for training", type=int, default=64)
+    parser.add_argument("--eval-length", help="length of strings to eval on", type=int, default=None)
     parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
     parser.add_argument("--load-model", help="path to load model from", default=None)
     parser.add_argument("--mode", help="train or eval", default="train")
@@ -73,7 +75,8 @@ def train_model(args):
     # load dev data
     dev_data = DataLoader()
     dev_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "dev" in x]
-    dev_data.load_data(args.batch_size, dev_files, char_to_idx, tag_to_idx, randomize=False)
+    dev_data.load_data(args.batch_size, dev_files, char_to_idx, tag_to_idx, randomize=False, 
+                       max_length=args.eval_length)
     # set up trainer
     trainer_config = {
         "model_path": args.save_name,
@@ -92,12 +95,12 @@ def train_model(args):
     for epoch in range(1, args.num_epochs+1):
         print(f"{datetime.now()}\tEpoch {epoch}")
         print(f"{datetime.now()}\tNum training batches: {len(train_data.batches)}")
-        for train_batch in tqdm(train_data.batches):
+        for train_batch in tqdm(train_data.batches, disable=args.batch_mode):
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
         print(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
         curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
-            eval_trainer(trainer, dev_data)
+            eval_trainer(trainer, dev_data, batch_mode=args.batch_mode)
         print(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
         if curr_dev_accuracy > best_accuracy:
             print(f"{datetime.now()}\tNew best score. Saving model.")
@@ -133,9 +136,9 @@ def eval_model(args):
     test_data = DataLoader()
     test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "test" in x]
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
-                        randomize=False)
+                        randomize=False, max_length=args.eval_length)
     curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
-        eval_trainer(trainer, test_data)
+        eval_trainer(trainer, test_data, batch_mode=args.batch_mode)
     print(f"{datetime.now()}\tDev accuracy: {curr_dev_accuracy}")
     if not os.path.exists(score_log_path(args.load_model)):
         with open(score_log_path(args.load_model), "w") as score_log_file:
@@ -145,7 +148,7 @@ def eval_model(args):
         
 
 
-def eval_trainer(trainer, dev_data):
+def eval_trainer(trainer, dev_data, batch_mode=False):
     """
     Produce dev accuracy and confusion matrix for a trainer
     """
@@ -160,7 +163,7 @@ def eval_trainer(trainer, dev_data):
             confusion_matrix[row_label][col_label] = 0
 
     # process dev batches
-    for dev_batch in tqdm(dev_data.batches):
+    for dev_batch in tqdm(dev_data.batches, batch_mode=batch_mode):
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
         for target_idx, prediction in zip(dev_batch["targets"], predictions):
