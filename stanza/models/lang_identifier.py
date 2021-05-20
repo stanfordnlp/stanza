@@ -163,7 +163,7 @@ def eval_trainer(trainer, dev_data, batch_mode=False):
             confusion_matrix[row_label][col_label] = 0
 
     # process dev batches
-    for dev_batch in tqdm(dev_data.batches, batch_mode=batch_mode):
+    for dev_batch in tqdm(dev_data.batches, disable=batch_mode):
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
         for target_idx, prediction in zip(dev_batch["targets"], predictions):
