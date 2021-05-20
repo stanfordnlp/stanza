@@ -105,7 +105,7 @@ class CoNLL:
         if input_str:
             infile = io.StringIO(input_str)
         else:
-            infile = open(input_file)
+            infile = open(input_file, encoding='utf-8')
         doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
         doc_dict = CoNLL.convert_conll(doc_conll)
         return doc_dict, doc_comments
@@ -207,5 +207,5 @@ class CoNLL:
     def write_doc2conll(doc, filename):
         """ Writes the doc as a conll file to the given filename
         """
-        with open(filename, 'w') as outfile:
+        with open(filename, 'w', encoding='utf-8') as outfile:
             outfile.write(CoNLL.doc2conll_text(doc))
