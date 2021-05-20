@@ -96,7 +96,8 @@ def get_ud_treebanks(udbase_dir, filtered=True):
     """
     treebanks = sorted(glob.glob(udbase_dir + "/UD_*"))
     # skip UD_English-GUMReddit as it is usually incorporated into UD_English-GUM
-    treebanks = [os.path.split(t)[1] for t in treebanks if t != "UD_English-GUMReddit"]
+    treebanks = [os.path.split(t)[1] for t in treebanks]
+    treebanks = [t for t in treebanks if t != "UD_English-GUMReddit"]
     if filtered:
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "train", "conllu") and
