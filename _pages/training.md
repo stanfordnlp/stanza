@@ -34,17 +34,21 @@ To train modules that make use of word representations, such as the POS/morpholo
 
 ## Converting UD data
 
-A large repository of data is available at [www.universaldependencies.org](www.universaldependencies.org).  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
+A large repository of data is available at [www.universaldependencies.org](http://www.universaldependencies.org).  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
 ```bash
 python stanza/utils/datasets/prepare_${module}_treebank.py ${corpus} ${other_args}
 ```
 where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
+
+### Dependency Parser Data
 
 Note that for the dependency parser, you also need to specify `gold|predicted` for the used POS tag type in the training/dev data.
 ```bash
 python stanza/utils/datasets/prepare_depparse_treebank.py UD_English-EWT --gold
 ```
 If `predicted` is used, the trained tagger model will first be run on the training/dev data to generate the predicted tags.  `predicted` is the default.
+
+The reasoning is that since the models will be using predicted tags when used in a pipeline, it is better to train the models with the predicted tags in the first place.  In order to get the best results when retraining the dependency parser for use in a pipeline, you should first retrain the tagger if relevant and then use the new tagger model to produce the predicted tags.
 
 
 ## Training with Scripts
