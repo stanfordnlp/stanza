@@ -22,7 +22,8 @@ class DataLoader:
         else:
             self.device = None
 
-    def load_data(self, batch_size, data_files, char_index, tag_index, randomize=False, randomize_range=(5,20)):
+    def load_data(self, batch_size, data_files, char_index, tag_index, randomize=False, randomize_range=(5,20),
+                  max_length=None):
         """
         Load sequence data and labels, calculate weights for weighted cross entropy loss.
         Data is stored in a file, 1 example per line
@@ -38,6 +39,10 @@ class DataLoader:
             examples += [x for x in open(data_file).read().split("\n") if x.strip()]
         random.shuffle(examples)
         examples = [json.loads(x) for x in examples]
+
+        # optionally limit text to max length
+        if max_length is not None:
+            examples = [{"text": x["text"][:max_length], "label": x["label"]} for x in examples]
 
         # randomize data
         if randomize:
