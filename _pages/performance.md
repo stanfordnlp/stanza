@@ -134,6 +134,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Dutch | WikiNER | 4 | 94.8 |
 | English | CoNLL03 | 4 | 92.1 |
 | English | OntoNotes | 18 | 88.8 |
+| Finnish *Coming Soon!* | Turku | 6 | 87.04 |
 | French | WikiNER | 4 | 92.9 |
 | German | CoNLL03 | 4 | 81.9 |
 | German | GermEval2014 | 4 | 85.2 |
