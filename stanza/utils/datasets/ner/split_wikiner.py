@@ -9,7 +9,7 @@ import random
 from collections import Counter
 random.seed(1234)
 
-def read_sentences(filename, encoding="utf-8"):
+def read_sentences(filename, encoding):
     sents = []
     cache = []
     skipped = 0
@@ -50,9 +50,12 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-def split_wikiner(directory, in_filename):
-    sents = read_sentences(in_filename)
-    print(f"{len(sents)} sentences read from {in_filename}.")
+def split_wikiner(directory, *in_filenames, encoding="utf-8"):
+    sents = []
+    for filename in in_filenames:
+        new_sents = read_sentences(filename, encoding)
+        print(f"{len(new_sents)} sentences read from {filename}.")
+        sents.extend(new_sents)
 
     # split
     num = len(sents)
