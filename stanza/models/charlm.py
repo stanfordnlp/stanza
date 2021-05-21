@@ -13,6 +13,7 @@ import math
 import logging
 import time
 import os
+import lzma
 
 from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.vocab import CharVocab
@@ -44,6 +45,15 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
+def readlines(path):
+    if path.endswith(".xz"):
+        with lzma.open(path, mode='rt') as fin:
+            lines = fin.readlines()
+    else:
+        with open(path) as fin:
+            lines = fin.readlines()  # preserve '\n'
+    return lines
+
 def build_vocab(path, cutoff=0):
     # Requires a large amount of memory, but only need to build once
     if os.path.isdir(path):
@@ -53,7 +63,7 @@ def build_vocab(path, cutoff=0):
         counter = Counter()
         filenames = sorted(os.listdir(path))
         for filename in filenames:
-            lines = open(path + '/' + filename).readlines()
+            lines = readlines(path + '/' + filename)
             for line in lines:
                 counter.update(list(line))
         # remove infrequent characters from vocab
@@ -64,13 +74,13 @@ def build_vocab(path, cutoff=0):
         data = [sorted([x[0] for x in counter.most_common()])]
         vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     else:
-        lines = open(path).readlines() # reserve '\n'
+        lines = readlines(path)
         data = [list(line) for line in lines]
         vocab = CharVocab(data, cutoff=cutoff)
     return vocab
 
 def load_file(path, vocab, direction):
-    lines = open(path).readlines() # reserve '\n'
+    lines = readlines(path)
     data = list(''.join(lines))
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]
