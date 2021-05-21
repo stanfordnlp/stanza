@@ -146,7 +146,7 @@ def process_wikiner(paths, dataset):
 
     # this should create train.bio, dev.bio, and test.bio
     print("Splitting %s to %s" % (csv_file, base_input_path))
-    split_wikiner(csv_file, base_input_path)
+    split_wikiner(base_input_path, csv_file)
 
     for shard in ('train', 'dev', 'test'):
         input_filename = os.path.join(base_input_path, '%s.bio' % shard)

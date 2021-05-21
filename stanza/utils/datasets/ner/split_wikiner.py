@@ -9,12 +9,12 @@ import random
 from collections import Counter
 random.seed(1234)
 
-def read_sentences(filename):
+def read_sentences(filename, encoding="utf-8"):
     sents = []
     cache = []
     skipped = 0
     skip = False
-    with open(filename) as infile:
+    with open(filename, encoding=encoding) as infile:
         for i, line in enumerate(infile):
             line = line.rstrip()
             if len(line) == 0:
@@ -50,9 +50,9 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-def split_wikiner(in_filename, directory):
+def split_wikiner(directory, in_filename):
     sents = read_sentences(in_filename)
-    print(f"{len(sents)} sentences read from file.")
+    print(f"{len(sents)} sentences read from {in_filename}.")
 
     # split
     num = len(sents)
@@ -71,4 +71,4 @@ def split_wikiner(in_filename, directory):
 if __name__ == "__main__":
     in_filename = 'raw/wp2.txt'
     directory = "."
-    split_wikiner(in_filename, directory)
+    split_wikiner(directory, in_filename)
