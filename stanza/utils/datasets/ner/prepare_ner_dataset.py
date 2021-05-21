@@ -27,6 +27,12 @@ Ukranian NER is provided by lang-uk, available here:
   git clone the repo to $NERBASE/lang-uk
   There should be a subdirectory $NERBASE/lang-uk/ner-uk/data at that point
   Conversion script graciously provided by Andrii Garkavyi @gawy
+
+There are two Hungarian datasets are available here:
+  https://rgai.inf.u-szeged.hu/node/130
+  http://www.lrec-conf.org/proceedings/lrec2006/pdf/365_pdf.pdf
+  We combined them and give them the label hu_rgai
+  You can also build individual pieces with hu_rgai_szeged or hu_rgai_criminal
 """
 
 import glob
@@ -156,6 +162,38 @@ def process_wikiner(paths, dataset):
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
+def process_rgai(paths, short_name):
+    base_output_path = paths["NER_DATA_DIR"]
+    base_input_path = os.path.join(paths["NERBASE"], "hu_rgai")
+
+    business_file = os.path.join(base_input_path, "hun_ner_corpus.txt")
+    # There are two different annotation schemes, Context and
+    # NoContext.  NoContext seems to fit better with the
+    # business_file's annotation scheme, since the scores are much
+    # higher when NoContext and hun_ner are combined
+    criminal_file = os.path.join(base_input_path, "HVGJavNENoContext")
+
+    if short_name == 'hu_rgai':
+        csv_files = [business_file, criminal_file]
+    elif short_name == 'hu_rgai_szeged':
+        csv_files = [business_file]
+    elif short_name == 'hu_rgai_criminal':
+        csv_files = [criminal_file]
+    else:
+        raise ValueError("Unknown subset of hu_rgai data: %s" % short_name)
+
+    split_wikiner(base_output_path, *csv_files, encoding="latin-1", prefix=short_name)
+
+    # TODO: refactor all these similar blocks
+    for shard in ('train', 'dev', 'test'):
+        input_filename = os.path.join(base_output_path, '%s.%s.bio' % (short_name, shard))
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        print("Converting %s to %s" % (input_filename, output_filename))
+        prepare_ner_file.process_dataset(input_filename, output_filename)
+
+
 
 def main():
     paths = default_paths.get_default_paths()
@@ -172,6 +210,8 @@ def main():
         process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
         process_wikiner(paths, dataset_name)
+    elif dataset_name.startswith('hu_rgai'):
+        process_rgai(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
