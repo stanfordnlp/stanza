@@ -50,7 +50,7 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-def split_wikiner(directory, *in_filenames, encoding="utf-8"):
+def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix=""):
     sents = []
     for filename in in_filenames:
         new_sents = read_sentences(filename, encoding)
@@ -67,9 +67,12 @@ def split_wikiner(directory, *in_filenames, encoding="utf-8"):
     dev_sents = sents[train_num:train_num+dev_num]
     test_sents = sents[train_num+dev_num:]
 
-    write_sentences_to_file(train_sents, os.path.join(directory, 'train.bio'))
-    write_sentences_to_file(dev_sents, os.path.join(directory, 'dev.bio'))
-    write_sentences_to_file(test_sents, os.path.join(directory, 'test.bio'))
+    batches = [train_sents, dev_sents, test_sents]
+    filenames = ['train.bio', 'dev.bio', 'test.bio']
+    if prefix:
+        filenames = ['%s.%s' % (prefix, f) for f in filenames]
+    for batch, filename in zip(batches, filenames):
+        write_sentences_to_file(batch, os.path.join(directory, filename))
 
 if __name__ == "__main__":
     in_filename = 'raw/wp2.txt'
