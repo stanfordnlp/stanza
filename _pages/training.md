@@ -30,7 +30,11 @@ Note that Windows users will not be able to run this `.sh` script, but they can 
 
 ## Preparing Word Vector Data
 
-To train modules that make use of word representations, such as the POS/morphological features tagger and the dependency parser, it is highly recommended that you use pretrained embedding vectors. The simplest method is to use the `.pt` file in the `$STANZA_RESOURCES/lang/pretrain` directory after downloading the existing models using `stanza.download(lang)`. For more information and other options, [see here](word_vectors.md).
+To train modules that make use of word representations, such as the POS/morphological features tagger and the dependency parser, it is highly recommended that you use pretrained embedding vectors. The simplest method is to use the `.pt` file in the `$STANZA_RESOURCES/lang/pretrain` directory after downloading the existing models using `stanza.download(lang)`.
+
+Once this is downloaded, the models each have a flag which tells the model where to find the `.pt` file.  Each of pos, depparse, ner, and sentiment support the `--wordvec_pretrain_file` flag for specifying the exact path.  If you don't supply this flag, it will attempt to guess the location.  In general, it will look in `saved_models/{model}/{dataset}.pretrain.pt`.
+
+For more information and other options, [see here](word_vectors.md).
 
 ## Converting UD data
 
