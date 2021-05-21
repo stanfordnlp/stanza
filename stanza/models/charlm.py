@@ -90,7 +90,7 @@ def load_data(path, vocab, direction):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
-    parser.add_argument('--train_dir', type=str, help="If non-emtpy, load from directory with multiple training files")
+    parser.add_argument('--train_dir', type=str, help="If non-empty, load from directory with multiple training files")
     parser.add_argument('--eval_file', type=str, help="Input plaintext file for the dev/test set")
     parser.add_argument('--lang', type=str, help="Language")
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
