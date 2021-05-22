@@ -11,6 +11,8 @@ import torch
 
 from .vocab import BaseVocab, VOCAB_PREFIX
 
+from stanza.resources.common import DEFAULT_MODEL_DIR
+
 logger = logging.getLogger('stanza')
 
 class PretrainedWordVocab(BaseVocab):
@@ -53,7 +55,7 @@ class Pretrain:
                 vocab, emb = self.read_pretrain()
         else:
             if self.filename is not None:
-                logger.info("Pretrained filename specified, but file does not exist.  Attempting to load from text file")
+                logger.info("Pretrained filename %s specified, but file does not exist.  Attempting to load from text file" % self.filename)
             vocab, emb = self.read_pretrain()
 
         self._vocab = vocab
@@ -144,6 +146,47 @@ class Pretrain:
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
                 words.append(' '.join(line[:-cols]))
         return words, emb, failed
+
+
+def find_pretrain_file(wordvec_pretrain_file, save_dir, shorthand, lang):
+    """
+    When training a model, look in a few different places for a .pt file
+
+    If a specific argument was passsed in, prefer that location
+    Otherwise, check in a few places:
+      saved_models/{model}/{shorthand}.pretrain.pt
+      saved_models/{model}/{shorthand}_pretrain.pt
+      ~/stanza_resources/{language}/pretrain/{shorthand}_pretrain.pt
+    """
+    if wordvec_pretrain_file:
+        return wordvec_pretrain_file
+
+    default_pretrain_file = os.path.join(save_dir, '{}.pretrain.pt'.format(shorthand))
+    if os.path.exists(default_pretrain_file):
+        logger.debug("Found existing .pt file in %s" % default_pretrain_file)
+        return default_pretrain_file
+    else:
+        logger.debug("Cannot find pretrained vectors in %s" % default_pretrain_file)
+
+    pretrain_file = os.path.join(save_dir, '{}_pretrain.pt'.format(shorthand))
+    if os.path.exists(pretrain_file):
+        logger.debug("Found existing .pt file in %s" % pretrain_file)
+        return pretrain_file
+    else:
+        logger.debug("Cannot find pretrained vectors in %s" % pretrain_file)
+
+    if shorthand.find("_") >= 0:
+        # try to assemble /home/user/stanza_resources/vi/pretrain/vtb.pt for example
+        pretrain_file = os.path.join(DEFAULT_MODEL_DIR, lang, 'pretrain', '{}.pt'.format(shorthand.split('_', 1)[1]))
+        if os.path.exists(pretrain_file):
+            logger.debug("Found existing .pt file in %s" % pretrain_file)
+            return pretrain_file
+        else:
+            logger.debug("Cannot find pretrained vectors in %s" % pretrain_file)
+
+    # if we can't find it anywhere, just return the first location searched...
+    # maybe we'll get lucky and the original .txt file can be found
+    return default_pretrain_file
 
 
 if __name__ == '__main__':

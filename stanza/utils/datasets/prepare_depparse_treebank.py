@@ -28,6 +28,8 @@ def add_specific_args(parser):
                         help='Use gold tags for building the depparse data')
     parser.add_argument("--predicted", dest='tag_method', action='store_const', const=Tags.PREDICTED,
                         help='Use predicted tags for building the depparse data')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
+
 
 def process_treebank(treebank, paths, args):
     if args.tag_method is Tags.GOLD:
@@ -49,6 +51,8 @@ def process_treebank(treebank, paths, args):
             tagger_args = ["--eval_file", original,
                            "--gold_file", original,
                            "--output_file", retagged]
+            if args.wordvec_pretrain_file:
+                tagger_args.extend(["--wordvec_pretrain_file", args.wordvec_pretrain_file])
             tagger_args = base_args + tagger_args
             logger.info("Running tagger to retag {} to {}\n  Args: {}".format(original, retagged, tagger_args))
             tagger.main(tagger_args)
