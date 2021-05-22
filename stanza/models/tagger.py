@@ -23,7 +23,7 @@ from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
-from stanza.models.common.pretrain import Pretrain
+from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
@@ -115,18 +115,15 @@ def model_file_name(args):
     return os.path.join(args['save_dir'], save_name)
 
 def load_pretrain(args):
-    pretrain = None
+    pt = None
     if args['pretrain']:
-        if args['wordvec_pretrain_file']:
-            pretrain_file = args['wordvec_pretrain_file']
-        else:
-            pretrain_file = os.path.join(args['save_dir'], '{}.pretrain.pt'.format(args['shorthand']))
+        pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
         if os.path.exists(pretrain_file):
             vec_file = None
         else:
             vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        pretrain = Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
-    return pretrain
+        pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    return pt
 
 def train(args):
     model_file = model_file_name(args)
