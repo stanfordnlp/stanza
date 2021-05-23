@@ -42,7 +42,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
 
     shutil.copyfile(original, copied)
 
-def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
+def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -59,7 +59,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
 
         # first we process the tokenization data
         args = argparse.Namespace()
-        args.augment = False
+        args.augment = augment
         args.prepare_labels = False
         process_treebank(treebank, paths, args)
 
@@ -962,14 +962,10 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
-    elif dataset == 'train':
-        # we treat the additional punct as something that always needs to be there
-        # this will teach the tagger & depparse about unicode apos, for example
+    elif dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_punct)
     else:
         shutil.copyfile(input_conllu, output_conllu)
-
-    # TODO: refactor this call everywhere
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
