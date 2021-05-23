@@ -34,7 +34,6 @@ from collections import Counter
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
-import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
@@ -957,9 +956,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
-    if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_conllu, output_conllu)
-    elif short_name == "te_mtg" and dataset == 'train' and augment:
+    if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
