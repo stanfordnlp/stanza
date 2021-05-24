@@ -536,12 +536,12 @@ def augment_ellipses(sents):
 
 # https://en.wikipedia.org/wiki/Quotation_mark
 QUOTES = ['"', '“', '”', '«', '»', '「', '」', '《', '》', '„', '″']
-QUOTES_RE = re.compile("(.+)[" + "".join(QUOTES) + "](.+)[" + "".join(QUOTES) + "](.+)")
+QUOTES_RE = re.compile("(.?)[" + "".join(QUOTES) + "](.+)[" + "".join(QUOTES) + "](.?)")
 # Danish does '«' the other way around from most European languages
 START_QUOTES = ['"', '“', '”', '«', '»', '「', '《', '„', '„', '″']
 END_QUOTES   = ['"', '“', '”', '»', '«', '」', '》', '”', '“', '″']
 
-def augment_quotes(sents):
+def augment_quotes(sents, ratio=0.15):
     """
     Go through the sentences and replace a fraction of sentences with alternate quotes
 
@@ -553,7 +553,7 @@ def augment_quotes(sents):
     counts = Counter()
     new_sents = []
     for sent in sents:
-        if random.random() > 0.15:
+        if random.random() > ratio:
             new_sents.append(sent)
             continue
 
