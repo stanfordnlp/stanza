@@ -11,7 +11,7 @@ This is an extension of the original script:
 To build a new charlm for a new language from a conll17 dataset:
 - look for conll17 shared task data, possibly here:
   https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-1989
-- python3 stanza/utils/charlm/conll17_to_text.py ~/extern_data/conll17/Bulgarian
+- python3 stanza/utils/charlm/conll17_to_text.py ~/extern_data/conll17/Bulgarian --output_directory extern_data/charlm_raw/bg/conll17
 - python3 stanza/utils/charlm/make_lm_data.py --langs bg extern_data/charlm_raw extern_data/charlm/
 """
 
