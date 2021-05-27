@@ -72,6 +72,23 @@ python stanza/utils/datasets/prepare_depparse_treebank.py UD_English-EWT --gold
 The reasoning is that since the models will be using predicted tags when used in a pipeline, it is better to train the models with the predicted tags in the first place.  In order to get the best results when retraining the dependency parser for use in a pipeline, you should first retrain the tagger if relevant and then use the new tagger model to produce the predicted tags.
 
 
+### NER Data
+
+NER models have a different data format from other models.  There is an existing script which covers a few different publicly available datasets:
+
+```bash
+stanza/utils/datasets/ner/prepare_ner_dataset.py
+```
+
+Note that for the various scripts supported, you need to first download the data (possibly after agreeing to a license) from the sources listed in the file.
+
+For a new dataset not already supported, there is a specific `.json` format expected by our models.  There is a conversion script called several times in `prepare_ner_dataset.py` which converts [IOB](https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_\(tagging\)) format to our internal NER format:
+
+```python
+prepare_ner_file.process_dataset(input_filename, output_filename)
+```
+
+
 ## Training with Scripts
 
 We provide various scripts to ease the training process in the `scripts` and `stanza/utils/training` directories. To train a model, you can run the following command from the code root directory:
@@ -91,6 +108,14 @@ For example, you can use the following command to train a tokenizer with batch s
 ```bash
 python stanza/utils/training/run_tokenize.py UD_English-EWT --batch_size 32 --dropout 0.33
 ```
+
+You can also run `ner_tagger.py` directly:
+
+```bash
+python3 -m stanza.models.ner_tagger --wordvec_pretrain_file saved_models/pos/fi_ftb.pretrain.pt --train_file data/ner/fi_turku.train.json --eval_file data/ner/fi_turku.dev.json  --charlm --charlm_shorthand fi_conll17 --char_hidden_dim 1024  --lang fi --shorthand fi_turku --mode train
+```
+
+To get the prediction scores of an existing NER model, use `--mode eval` instead.
 
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
 
