@@ -144,7 +144,9 @@ class Pretrain:
 
                 line = tab_space_pattern.split((line.rstrip()))
                 emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
-                words.append(' '.join(line[:-cols]))
+                # if there were word pieces separated with spaces, rejoin them with nbsp instead
+                # this way, the normalize_unit method in vocab.py can find the word at test time
+                words.append('\xa0'.join(line[:-cols]))
         return words, emb, failed
 
 

@@ -60,3 +60,30 @@ def test_resave_pretrain():
         check_embedding(pt3['emb'])
     finally:
         os.unlink(test_pt_file.name)
+
+SPACE_PRETRAIN="""
+3 4
+unban mox 1 2 3 4
+opal 5 6 7 8
+foo 9 10 11 12
+""".strip()
+
+def test_whitespace():
+    """
+    Test reading a pretrain with an ascii space in it
+
+    The vocab word with a space in it should have the correct number
+    of dimensions read, with the space converted to nbsp
+    """
+    test_txt_file = tempfile.NamedTemporaryFile(dir=f'{TEST_WORKING_DIR}/out', suffix=".txt", delete=False)
+    try:
+        test_txt_file.write(SPACE_PRETRAIN.encode())
+        test_txt_file.close()
+
+        pt = pretrain.Pretrain(vec_filename=test_txt_file.name, save_to_file=False)
+        check_embedding(pt.emb)
+        assert "unban\xa0mox" in pt.vocab
+        # this one also works because of the normalize_text in vocab.py
+        assert "unban mox" in pt.vocab
+    finally:
+        os.unlink(test_txt_file.name)
