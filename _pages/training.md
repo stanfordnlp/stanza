@@ -117,6 +117,8 @@ python3 -m stanza.models.ner_tagger --wordvec_pretrain_file saved_models/pos/fi_
 
 To get the prediction scores of an existing NER model, use `--mode eval` instead.
 
+If you are training NER for a new language, you may want to use a [charlm](new_language.md#character-lm).  You can also leave out the charlm arguments in the above command line and train without the charlm.
+
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
 
 ## Evaluation
