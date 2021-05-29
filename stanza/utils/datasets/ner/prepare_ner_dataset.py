@@ -37,6 +37,7 @@ There are two Hungarian datasets are available here:
 
 import glob
 import os
+import random
 import sys
 
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang
@@ -199,6 +200,7 @@ def main():
     paths = default_paths.get_default_paths()
 
     dataset_name = sys.argv[1]
+    random.seed(1234)
 
     if dataset_name == 'fi_turku':
         process_turku(paths)
