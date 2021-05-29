@@ -201,6 +201,41 @@ def process_rgai(paths, short_name):
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
+def process_nytk(paths, short_name):
+    """
+    Process the NYTK dataset
+    TODO: include the rgai dataset as training data, at least as an experiment
+    """
+    base_output_path = paths["NER_DATA_DIR"]
+    base_input_path = os.path.join(paths["NERBASE"], "NYTK-NerKor")
+
+    for shard in ('train', 'dev', 'test'):
+        if shard == 'dev':
+            base_input_subdir = os.path.join(base_input_path, "data/train-devel-test/devel")
+        else:
+            base_input_subdir = os.path.join(base_input_path, "data/train-devel-test", shard)
+
+        shard_lines = []
+        subpaths = glob.glob(base_input_subdir + "/*/no-morph/*")
+        for input_filename in subpaths:
+            if len(shard_lines) > 0:
+                shard_lines.append("")
+            with open(input_filename) as fin:
+                lines = fin.readlines()
+                if lines[0].strip() != '# global.columns = FORM LEMMA UPOS XPOS FEATS CONLL:NER':
+                    raise ValueError("Unexpected format in %s" % input_filename)
+                lines = [x.strip().split("\t") for x in lines[1:]]
+                lines = ["%s\t%s" % (x[0], x[5]) if len(x) > 1 else "" for x in lines]
+                shard_lines.extend(lines)
+
+        bio_filename = os.path.join(base_output_path, '%s.%s.bio' % (short_name, shard))
+        with open(bio_filename, "w") as fout:
+            for line in shard_lines:
+                fout.write(line)
+                fout.write("\n")
+
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(bio_filename, output_filename)
 
 
 def main():
@@ -221,6 +256,8 @@ def main():
         process_wikiner(paths, dataset_name)
     elif dataset_name.startswith('hu_rgai'):
         process_rgai(paths, dataset_name)
+    elif dataset_name.startswith('hu_nytk'):
+        process_nytk(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
