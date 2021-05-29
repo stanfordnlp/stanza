@@ -33,6 +33,13 @@ There are two Hungarian datasets are available here:
   http://www.lrec-conf.org/proceedings/lrec2006/pdf/365_pdf.pdf
   We combined them and give them the label hu_rgai
   You can also build individual pieces with hu_rgai_szeged or hu_rgai_criminal
+  Create a subdirectory of $NERBASE, $NERBASE/hu_rgai, and download both of
+    the pieces and unzip them in that directory.
+  # TODO: business uses 0 as out-of-class!
+
+Another Hungarian dataset is here:
+  https://github.com/nytud/NYTK-NerKor
+  git clone the entire thing in your $NERBASE directory to operate on it
 """
 
 import glob
