@@ -32,10 +32,9 @@ There are two Hungarian datasets are available here:
   https://rgai.inf.u-szeged.hu/node/130
   http://www.lrec-conf.org/proceedings/lrec2006/pdf/365_pdf.pdf
   We combined them and give them the label hu_rgai
-  You can also build individual pieces with hu_rgai_szeged or hu_rgai_criminal
+  You can also build individual pieces with hu_rgai_business or hu_rgai_criminal
   Create a subdirectory of $NERBASE, $NERBASE/hu_rgai, and download both of
     the pieces and unzip them in that directory.
-  # TODO: business uses 0 as out-of-class!
 
 Another Hungarian dataset is here:
   https://github.com/nytud/NYTK-NerKor
@@ -55,6 +54,7 @@ from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 def process_turku(paths):
@@ -174,23 +174,19 @@ def process_rgai(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     base_input_path = os.path.join(paths["NERBASE"], "hu_rgai")
 
-    business_file = os.path.join(base_input_path, "hun_ner_corpus.txt")
-    # There are two different annotation schemes, Context and
-    # NoContext.  NoContext seems to fit better with the
-    # business_file's annotation scheme, since the scores are much
-    # higher when NoContext and hun_ner are combined
-    criminal_file = os.path.join(base_input_path, "HVGJavNENoContext")
-
     if short_name == 'hu_rgai':
-        csv_files = [business_file, criminal_file]
-    elif short_name == 'hu_rgai_szeged':
-        csv_files = [business_file]
+        use_business = True
+        use_criminal = True
+    elif short_name == 'hu_rgai_business':
+        use_business = True
+        use_criminal = False
     elif short_name == 'hu_rgai_criminal':
-        csv_files = [criminal_file]
+        use_business = False
+        use_criminal = True
     else:
         raise ValueError("Unknown subset of hu_rgai data: %s" % short_name)
 
-    split_wikiner(base_output_path, *csv_files, encoding="latin-1", prefix=short_name)
+    convert_rgai.convert_rgai(base_input_path, base_output_path, short_name, use_business, use_criminal)
 
     # TODO: refactor all these similar blocks
     for shard in ('train', 'dev', 'test'):
