@@ -57,6 +57,22 @@ import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
+def convert_bio_to_json(base_input_path, base_output_path, short_name):
+    """
+    Convert BIO files to json
+
+    It can often be convenient to put the intermediate BIO files in
+    the same directory as the output files, in which case you can pass
+    in same path for both base_input_path and base_output_path.
+    """
+    for shard in ('train', 'dev', 'test'):
+        input_filename = os.path.join(base_input_path, '%s.%s.bio' % (short_name, shard))
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        print("Converting %s to %s" % (input_filename, output_filename))
+        prepare_ner_file.process_dataset(input_filename, output_filename)
+
 def process_turku(paths):
     short_name = 'fi_turku'
     base_input_path = os.path.join(paths["NERBASE"], short_name)
@@ -187,15 +203,7 @@ def process_rgai(paths, short_name):
         raise ValueError("Unknown subset of hu_rgai data: %s" % short_name)
 
     convert_rgai.convert_rgai(base_input_path, base_output_path, short_name, use_business, use_criminal)
-
-    # TODO: refactor all these similar blocks
-    for shard in ('train', 'dev', 'test'):
-        input_filename = os.path.join(base_output_path, '%s.%s.bio' % (short_name, shard))
-        if not os.path.exists(input_filename):
-            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        print("Converting %s to %s" % (input_filename, output_filename))
-        prepare_ner_file.process_dataset(input_filename, output_filename)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def process_nytk(paths, short_name):
     """
@@ -230,8 +238,7 @@ def process_nytk(paths, short_name):
                 fout.write(line)
                 fout.write("\n")
 
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        prepare_ner_file.process_dataset(bio_filename, output_filename)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 
 def main():
