@@ -60,3 +60,43 @@ def test_dict_to_doc_and_doc_to_dict():
         dicts_tupleid.append(items)
     conll = CoNLL.convert_dict(DICT)
     assert conll == CONLL
+
+RUSSIAN_SAMPLE="""
+# sent_id = yandex.reviews-f-8xh5zqnmwak3t6p68y4rhwd4e0-1969-9253
+# genre = review
+# text = Как- то слишком мало цветов получают актёры после спектакля.
+1	Как	как-то	ADV	_	Degree=Pos|PronType=Ind	7	advmod	_	SpaceAfter=No
+2	-	-	PUNCT	_	_	3	punct	_	_
+3	то	то	PART	_	_	1	list	_	deprel=list:goeswith
+4	слишком	слишком	ADV	_	Degree=Pos	5	advmod	_	_
+5	мало	мало	ADV	_	Degree=Pos	6	advmod	_	_
+6	цветов	цветок	NOUN	_	Animacy=Inan|Case=Gen|Gender=Masc|Number=Plur	7	obj	_	_
+7	получают	получать	VERB	_	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+8	актёры	актер	NOUN	_	Animacy=Anim|Case=Nom|Gender=Masc|Number=Plur	7	nsubj	_	_
+9	после	после	ADP	_	_	10	case	_	_
+10	спектакля	спектакль	NOUN	_	Animacy=Inan|Case=Gen|Gender=Masc|Number=Sing	7	obl	_	SpaceAfter=No
+11	.	.	PUNCT	_	_	7	punct	_	_
+""".strip()
+
+
+def test_doc_with_comments():
+    """
+    Test that a doc with comments gets converted back with comments
+    """
+    lines = RUSSIAN_SAMPLE.split("\n")
+
+    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].comments) == 3
+    assert lines[0] == doc.sentences[0].comments[0]
+    assert lines[1] == doc.sentences[0].comments[1]
+    assert lines[2] == doc.sentences[0].comments[2]
+
+    sentences = CoNLL.doc2conll(doc)
+    assert len(sentences) == 1
+
+    sentence = sentences[0]
+    assert len(sentence) == 14
+    assert lines[0] == sentence[0]
+    assert lines[1] == sentence[1]
+    assert lines[2] == sentence[2]
