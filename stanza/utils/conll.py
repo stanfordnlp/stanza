@@ -37,7 +37,7 @@ class CoNLL:
         # f is open() or io.StringIO()
         doc, sent = [], []
         doc_comments, sent_comments = [], []
-        for line in f:
+        for line_idx, line in enumerate(f):
             line = line.strip()
             if len(line) == 0:
                 if len(sent) > 0:
@@ -53,7 +53,7 @@ class CoNLL:
                 if ignore_gapping and '.' in array[0]:
                     continue
                 assert len(array) == FIELD_NUM, \
-                        f"Cannot parse CoNLL line: expecting {FIELD_NUM} fields, {len(array)} found."
+                        f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found.\n  {array}"
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
@@ -144,7 +144,10 @@ class CoNLL:
             if key == START_CHAR or key == END_CHAR:
                 misc.append("{}={}".format(key, token_dict[key]))
             elif key == MISC:
-                misc.append(token_dict[key])
+                # avoid appending a blank misc entry.
+                # otherwise the resulting misc field in the conll doc will wind up being blank text
+                if token_dict[key]:
+                    misc.append(token_dict[key])
             elif key == ID:
                 token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
             elif key in FIELD_TO_IDX:
