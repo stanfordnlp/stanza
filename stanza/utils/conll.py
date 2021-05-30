@@ -37,7 +37,7 @@ class CoNLL:
         # f is open() or io.StringIO()
         doc, sent = [], []
         doc_comments, sent_comments = [], []
-        for line in f:
+        for line_idx, line in enumerate(f):
             line = line.strip()
             if len(line) == 0:
                 if len(sent) > 0:
@@ -53,7 +53,7 @@ class CoNLL:
                 if ignore_gapping and '.' in array[0]:
                     continue
                 assert len(array) == FIELD_NUM, \
-                        f"Cannot parse CoNLL line: expecting {FIELD_NUM} fields, {len(array)} found."
+                        f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found.\n  {array}"
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
