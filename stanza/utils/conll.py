@@ -144,7 +144,10 @@ class CoNLL:
             if key == START_CHAR or key == END_CHAR:
                 misc.append("{}={}".format(key, token_dict[key]))
             elif key == MISC:
-                misc.append(token_dict[key])
+                # avoid appending a blank misc entry.
+                # otherwise the resulting misc field in the conll doc will wind up being blank text
+                if token_dict[key]:
+                    misc.append(token_dict[key])
             elif key == ID:
                 token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
             elif key in FIELD_TO_IDX:

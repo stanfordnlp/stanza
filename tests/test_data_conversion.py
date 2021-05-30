@@ -100,3 +100,19 @@ def test_doc_with_comments():
     assert lines[0] == sentence[0]
     assert lines[1] == sentence[1]
     assert lines[2] == sentence[2]
+
+def test_unusual_misc():
+    """
+    The above RUSSIAN_SAMPLE resulted in a blank misc field in one particular implementation of the conll code
+    (the below test would fail)
+    """
+    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
+    sentences = CoNLL.doc2conll(doc)
+    assert len(sentences) == 1
+    assert len(sentences[0]) == 14
+
+    for word in sentences[0]:
+        pieces = word.split("\t")
+        assert len(pieces) == 1 or len(pieces) == 10
+        if len(pieces) == 10:
+            assert all(piece for piece in pieces)
