@@ -45,6 +45,7 @@ import glob
 import os
 import random
 import sys
+import tempfile
 
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang
 import stanza.utils.default_paths as default_paths
@@ -55,7 +56,10 @@ from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
+import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
+
+SHARDS = ('train', 'dev', 'test')
 
 def convert_bio_to_json(base_input_path, base_output_path, short_name):
     """
@@ -65,7 +69,7 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name):
     the same directory as the output files, in which case you can pass
     in same path for both base_input_path and base_output_path.
     """
-    for shard in ('train', 'dev', 'test'):
+    for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.%s.bio' % (short_name, shard))
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
@@ -77,7 +81,7 @@ def process_turku(paths):
     short_name = 'fi_turku'
     base_input_path = os.path.join(paths["NERBASE"], short_name)
     base_output_path = paths["NER_DATA_DIR"]
-    for shard in ('train', 'dev', 'test'):
+    for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.tsv' % shard)
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
@@ -89,7 +93,7 @@ def process_languk(paths):
     base_input_path = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'data')
     base_output_path = paths["NER_DATA_DIR"]
     convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path)
-    for shard in ('train', 'dev', 'test'):
+    for shard in SHARDS:
         input_filename = os.path.join(base_output_path, convert_bsf_to_beios.CORPUS_NAME, "%s.bio" % shard)
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
@@ -123,7 +127,7 @@ def process_ijc(paths, short_name):
     print("Converting training input from %s to space separated files in %s and %s" % (train_input_path, train_csv_file, dev_csv_file))
     convert_ijc.convert_split_ijc(train_files, train_csv_file, dev_csv_file)
 
-    for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), ("train", "dev", "test")):
+    for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), SHARDS):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
@@ -152,7 +156,7 @@ def process_fire_2013(paths, dataset):
 
     convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
 
-    for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), ("train", "dev", "test")):
+    for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), SHARDS):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
@@ -178,7 +182,7 @@ def process_wikiner(paths, dataset):
     print("Splitting %s to %s" % (csv_file, base_input_path))
     split_wikiner(base_input_path, csv_file)
 
-    for shard in ('train', 'dev', 'test'):
+    for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.bio' % shard)
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
@@ -205,41 +209,47 @@ def process_rgai(paths, short_name):
     convert_rgai.convert_rgai(base_input_path, base_output_path, short_name, use_business, use_criminal)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
-def process_nytk(paths, short_name):
+def process_nytk(paths):
     """
     Process the NYTK dataset
     TODO: include the rgai dataset as training data, at least as an experiment
     """
     base_output_path = paths["NER_DATA_DIR"]
     base_input_path = os.path.join(paths["NERBASE"], "NYTK-NerKor")
+    short_name = "hu_nytk"
 
-    for shard in ('train', 'dev', 'test'):
-        if shard == 'dev':
-            base_input_subdir = os.path.join(base_input_path, "data/train-devel-test/devel")
-        else:
-            base_input_subdir = os.path.join(base_input_path, "data/train-devel-test", shard)
-
-        shard_lines = []
-        subpaths = glob.glob(base_input_subdir + "/*/no-morph/*")
-        for input_filename in subpaths:
-            if len(shard_lines) > 0:
-                shard_lines.append("")
-            with open(input_filename) as fin:
-                lines = fin.readlines()
-                if lines[0].strip() != '# global.columns = FORM LEMMA UPOS XPOS FEATS CONLL:NER':
-                    raise ValueError("Unexpected format in %s" % input_filename)
-                lines = [x.strip().split("\t") for x in lines[1:]]
-                lines = ["%s\t%s" % (x[0], x[5]) if len(x) > 1 else "" for x in lines]
-                shard_lines.extend(lines)
-
-        bio_filename = os.path.join(base_output_path, '%s.%s.bio' % (short_name, shard))
-        with open(bio_filename, "w") as fout:
-            for line in shard_lines:
-                fout.write(line)
-                fout.write("\n")
-
+    convert_nytk.convert_nytk(base_input_path, base_output_path, short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def concat_files(output_file, *input_files):
+    lines = []
+    for input_file in input_files:
+        with open(input_file) as fin:
+            lines.extend(fin.readlines())
+            lines.append("\n")
+    with open(output_file, "w") as fout:
+        for line in lines:
+            fout.write(line)
+
+
+def process_hu_combined(paths):
+    base_output_path = paths["NER_DATA_DIR"]
+    # todo: refactor
+    rgai_input_path = os.path.join(paths["NERBASE"], "hu_rgai")
+    nytk_input_path = os.path.join(paths["NERBASE"], "NYTK-NerKor")
+    short_name = "hu_combined"
+
+    with tempfile.TemporaryDirectory() as tmp_output_path:
+        convert_rgai.convert_rgai(rgai_input_path, tmp_output_path, "hu_rgai", True, True)
+        convert_nytk.convert_nytk(nytk_input_path, tmp_output_path, "hu_nytk")
+
+        for shard in SHARDS:
+            rgai_input = os.path.join(tmp_output_path, "hu_rgai.%s.bio" % shard)
+            nytk_input = os.path.join(tmp_output_path, "hu_nytk.%s.bio" % shard)
+            output_file = os.path.join(base_output_path, "hu_combined.%s.bio" % shard)
+            concat_files(output_file, rgai_input, nytk_input)
+
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def main():
     paths = default_paths.get_default_paths()
@@ -259,8 +269,10 @@ def main():
         process_wikiner(paths, dataset_name)
     elif dataset_name.startswith('hu_rgai'):
         process_rgai(paths, dataset_name)
-    elif dataset_name.startswith('hu_nytk'):
-        process_nytk(paths, dataset_name)
+    elif dataset_name == 'hu_nytk':
+        process_nytk(paths)
+    elif dataset_name == 'hu_combined':
+        process_hu_combined(paths)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
