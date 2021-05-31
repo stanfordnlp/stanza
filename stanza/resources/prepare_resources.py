@@ -90,11 +90,13 @@ default_treebanks = {
 # default ner for languages
 default_ners = {
   "ar": "aqmar",
+  "bg": "bsnlp19",
   "de": "conll03",
   "en": "ontonotes",
   "es": "conll02",
   "fi": "turku",
   "fr": "wikiner",
+  "hu": "combined",
   "nl": "conll02",
   "ru": "wikiner",
   "uk": "languk",
@@ -105,6 +107,7 @@ default_ners = {
 # default charlms for languages
 default_charlms = {
   "ar": "ccwiki",
+  "bg": "conll17",
   "de": "newswiki",
   "en": "1billion",
   "es": "newswiki",
@@ -132,7 +135,10 @@ ner_charlms = {
   },
   "uk": {
     "languk": None,
-  }
+  },
+  "hu": {
+    "combined": None,
+  },
 }
 
 # a few languages have sentiment classifier models
