@@ -1,12 +1,16 @@
 """Converts raw data files into json files usable by the training script.
 
 Currently it supports converting wikiner datasets, available here:
-
-https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
+  https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
+  - download the language of interest to {Language}-WikiNER
+  - then run
+    prepare_ner_dataset.py French-WikiNER
 
 Also, Finnish Turku dataset, available here:
-
-https://turkunlp.org/fin-ner.html
+  - https://turkunlp.org/fin-ner.html
+  - Download and unzip the corpus, putting the .tsv files into
+    $NERBASE/fi_turku
+  - prepare_ner_dataset.py hu_nytk fi_turku
 
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
@@ -26,6 +30,7 @@ Ukranian NER is provided by lang-uk, available here:
   git clone the repo to $NERBASE/lang-uk
   There should be a subdirectory $NERBASE/lang-uk/ner-uk/data at that point
   Conversion script graciously provided by Andrii Garkavyi @gawy
+  - prepare_ner_dataset.py uk_languk
 
 There are two Hungarian datasets are available here:
   https://rgai.inf.u-szeged.hu/node/130
@@ -36,8 +41,12 @@ There are two Hungarian datasets are available here:
     the pieces and unzip them in that directory.
 
 Another Hungarian dataset is here:
-  https://github.com/nytud/NYTK-NerKor
-  git clone the entire thing in your $NERBASE directory to operate on it
+  - https://github.com/nytud/NYTK-NerKor
+  - git clone the entire thing in your $NERBASE directory to operate on it
+  - prepare_ner_dataset.py hu_nytk
+
+The two Hungarian datasets can be combined with hu_combined
+  TODO: verify that there is no overlap in text
 
 BSNLP publishes NER datasets for Eastern European languages.
   - In 2019 they published BG, CS, PL, RU.
