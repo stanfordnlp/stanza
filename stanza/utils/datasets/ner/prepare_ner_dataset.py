@@ -1,13 +1,16 @@
-"""
-Converts raw data files into json files usable by the training script.
+"""Converts raw data files into json files usable by the training script.
 
 Currently it supports converting wikiner datasets, available here:
-
-https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
+  https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
+  - download the language of interest to {Language}-WikiNER
+  - then run
+    prepare_ner_dataset.py French-WikiNER
 
 Also, Finnish Turku dataset, available here:
-
-https://turkunlp.org/fin-ner.html
+  - https://turkunlp.org/fin-ner.html
+  - Download and unzip the corpus, putting the .tsv files into
+    $NERBASE/fi_turku
+  - prepare_ner_dataset.py hu_nytk fi_turku
 
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
@@ -27,6 +30,7 @@ Ukranian NER is provided by lang-uk, available here:
   git clone the repo to $NERBASE/lang-uk
   There should be a subdirectory $NERBASE/lang-uk/ner-uk/data at that point
   Conversion script graciously provided by Andrii Garkavyi @gawy
+  - prepare_ner_dataset.py uk_languk
 
 There are two Hungarian datasets are available here:
   https://rgai.inf.u-szeged.hu/node/130
@@ -37,8 +41,30 @@ There are two Hungarian datasets are available here:
     the pieces and unzip them in that directory.
 
 Another Hungarian dataset is here:
-  https://github.com/nytud/NYTK-NerKor
-  git clone the entire thing in your $NERBASE directory to operate on it
+  - https://github.com/nytud/NYTK-NerKor
+  - git clone the entire thing in your $NERBASE directory to operate on it
+  - prepare_ner_dataset.py hu_nytk
+
+The two Hungarian datasets can be combined with hu_combined
+  TODO: verify that there is no overlap in text
+
+BSNLP publishes NER datasets for Eastern European languages.
+  - In 2019 they published BG, CS, PL, RU.
+  - In 2021 they added some more data, but the test sets
+    were not publicly available as of April 2021.
+    Therefore, currently the model is made from 2019.
+  - http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
+  - The below method processes the 2019 version of the corpus.
+    It has specific adjustments for the BG section, which has
+    quite a few typos or mis-annotations in it.  Other languages
+    probably need similar work in order to function optimally.
+  - make a directory $NERBASE/bsnlp2019
+  - download the "training data are available HERE" and
+    "test data are available HERE" to this subdirectory
+  - unzip those files in that directory
+  - we use the code name "bg_bsnlp19".  Other languages from
+    bsnlp 2019 can be supported by adding the appropriate
+    functionality in convert_bsnlp.py.
 """
 
 import glob
@@ -54,6 +80,7 @@ from stanza.utils.datasets.ner.convert_fire_2013 import convert_fire_2013
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
+import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
@@ -251,6 +278,34 @@ def process_hu_combined(paths):
 
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_bsnlp(paths, short_name):
+    """
+    Process files downloaded from http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
+
+    If you download the training and test data zip files and unzip
+    them without rearranging in any way, the layout is somewhat weird.
+    Training data goes into a specific subdirectory, but the test data
+    goes into the top level directory.
+    """
+    base_input_path = os.path.join(paths["NERBASE"], "bsnlp2019")
+    base_train_path = os.path.join(base_input_path, "training_pl_cs_ru_bg_rc1")
+    base_test_path = base_input_path
+
+    base_output_path = paths["NER_DATA_DIR"]
+
+    output_train_filename = os.path.join(base_output_path, "%s.train.csv" % short_name)
+    output_dev_filename   = os.path.join(base_output_path, "%s.dev.csv" % short_name)
+    output_test_filename  = os.path.join(base_output_path, "%s.test.csv" % short_name)
+
+    language = short_name.split("_")[0]
+
+    convert_bsnlp.convert_bsnlp(language, base_test_path, output_test_filename)
+    convert_bsnlp.convert_bsnlp(language, base_train_path, output_train_filename, output_dev_filename)
+
+    for shard, csv_file in zip(('train', 'dev', 'test'), (output_train_filename, output_dev_filename, output_test_filename)):
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(csv_file, output_filename)
+
 def main():
     paths = default_paths.get_default_paths()
 
@@ -273,6 +328,8 @@ def main():
         process_nytk(paths)
     elif dataset_name == 'hu_combined':
         process_hu_combined(paths)
+    elif dataset_name.endswith("_bsnlp19"):
+        process_bsnlp(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
