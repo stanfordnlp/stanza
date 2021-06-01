@@ -12,7 +12,7 @@ homepage: true
 {: .no_toc }
 <img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza.svg?colorB=bc4545&style=flat-square" /> <img alt="Conda Versions" src="https://img.shields.io/conda/vn/stanfordnlp/stanza?color=bc4545&label=conda&style=flat-square" /> <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/stanza.svg?colorB=bc4545&style=flat-square" />
 
-Stanza is a collection of accurate and efficient tools for many human languages in one place. Starting from raw text to syntactic analysis and entity recognition, Stanza brings state-of-the-art NLP models to languages of your choosing.
+Stanza is a collection of accurate and efficient tools for the linguistic analysis of many human languages. Starting from raw text to syntactic analysis and entity recognition, Stanza brings state-of-the-art NLP models to languages of your choosing.
 {: .fs-5 .fw-300 }
 
 ## Table of contents
@@ -28,9 +28,9 @@ Stanza is a collection of accurate and efficient tools for many human languages 
 
 Stanza is a Python natural language analysis package. It contains tools, which can be used in a pipeline, to convert a string containing human language text into lists of sentences and words, to generate base forms of those words, their parts of speech and morphological features, to give a syntactic structure dependency parse, and to recognize named entities. The toolkit is designed to be parallel among more than 70 languages, using the [Universal Dependencies formalism](https://universaldependencies.org).
 
-Stanza is built with highly accurate neural network components that also enable efficient training and evaluation with your own annotated data. The modules are built on top of the [PyTorch](https://pytorch.org/) library. You will get much faster performance if you run this system on a GPU-enabled machine.
+Stanza is built with highly accurate neural network components that also enable efficient training and evaluation with your own annotated data. The modules are built on top of the [PyTorch](https://pytorch.org/) library. You will get much faster performance if you run the software on a GPU-enabled machine.
 
-In addition, Stanza includes a Python interface to the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additonal functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
+In addition, Stanza includes a Python interface to the [CoreNLP Java package](https://stanfordnlp.github.io/CoreNLP) and inherits additional functionality from there, such as constituency parsing, coreference resolution, and linguistic pattern matching.
 
 To summarize, Stanza features:
 
@@ -75,12 +75,12 @@ Aside from the neural pipeline, Stanza also provides the official Python wrapper
 
 {% include alerts.html %}
 {{ note }}
-{{ "If you run into issues during installation or when you run the example scripts, please check out [this FAQ page](faq.md). If you cannot find your issue there, please report it to us via [GitHub Issues](https://github.com/stanfordnlp/stanza/issues)." | markdownify }}
+{{ "If you run into issues or bugs during installation or when you run the example scripts, please check out [the FAQ page](faq.md). If you cannot find your issue there, please report it to us via [GitHub Issues](https://github.com/stanfordnlp/stanza/issues). For questions about how to do this, please ask on [Stack Overflow with the \[stanford-nlp\] tag](https://stackoverflow.com/questions/tagged/stanford-nlp)." | markdownify }}
 {{ end }}
 
 ## License
 
-Stanza is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) (the "License"), you may not use the software package except in compliance with the License.
+Stanza is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) (the "License"); you may not use the software package except in compliance with the License.
 You may obtain a copy of the License at
 
 [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
