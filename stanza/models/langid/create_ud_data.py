@@ -13,12 +13,11 @@ from random import randint, random, shuffle
 from string import digits
 from tqdm import tqdm
 
-DEFAULT_LANGUAGES = ["da", "en", "sv", "no", "de", "cs", "es", "fr", "pt", "it", "tr", "nl", "fi", "pl", "ro", "hu", "lt",
-                     "ca", "hr", "et"]
-
+DEFAULT_LANGUAGES = "af,ar,be,bg,bxr,ca,cop,cs,cu,da,de,el,en,es,et,eu,fa,fi,fr,fro,ga,gd,gl,got,grc,he,hi,hr,hsb,hu,hy,id,it,ja,kk,kmr,ko,la,lt,lv,lzh,mr,mt,nl,nn,no,olo,orv,pl,pt,ro,ru,sk,sl,sme,sr,sv,swl,ta,te,tr,ug,uk,ur,vi,wo,zh".split(",")
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("--data-format", help="input data format", choices=["ud", "one-per-line"], default="ud")
     parser.add_argument("--eval-length", help="length of eval strings", type=int, default=10)
     parser.add_argument("--languages", help="list of languages to use, or \"all\"", default=DEFAULT_LANGUAGES)
     parser.add_argument("--min-window", help="minimal training example length", type=int, default=10)
@@ -40,12 +39,12 @@ def main(args=None):
     if isinstance(args.languages, str):
         args.languages = args.languages.split(",")
     data_paths = [f"{args.save_path}/{data_split}.jsonl" for data_split in ["train", "dev", "test"]]
-    lang_to_files = collect_files(args.ud_path, args.languages)
+    lang_to_files = collect_files(args.ud_path, args.languages, data_format=args.data_format)
     print(f"Building UD data for languages: {','.join(args.languages)}")
     for lang_id in tqdm(lang_to_files):
         lang_examples = generate_examples(lang_id, lang_to_files[lang_id], splits=args.splits, 
                                           min_window=args.min_window, max_window=args.max_window, 
-                                          eval_length=args.eval_length)
+                                          eval_length=args.eval_length, data_format=args.data_format)
         for (data_set, save_path) in zip(lang_examples, data_paths):
             with open(save_path, "a") as json_file:
                 for json_entry in data_set:
@@ -53,11 +52,15 @@ def main(args=None):
                     json_file.write("\n")
 
 
-def collect_files(ud_path, languages):
+def collect_files(ud_path, languages, data_format="ud"):
     """ 
-    Given path to UD, collect files 
+    Given path to UD, collect files
+    If data_format = "ud", expects files to be of form *.conllu
+    If data_format = "one-per-line", expects files to be of form "*.sentences.txt"
+    In all cases, the UD path should be a directory with subdirectories for each language
     """
-    ud_files = Path(ud_path).glob("*/*.conllu")
+    data_format_to_search_path = {"ud": "*/*.conllu", "one-per-line": "*/*sentences.txt"}
+    ud_files = Path(ud_path).glob(data_format_to_search_path[data_format])
     lang_to_files = {}
     for ud_file in ud_files:
         lang_id = ud_file.name[:2]
@@ -70,13 +73,13 @@ def collect_files(ud_path, languages):
 
 
 def generate_examples(lang_id, list_of_files, splits=(0.8,0.1,0.1), min_window=10, max_window=50, 
-                      eval_length=10):
+                      eval_length=10, data_format="ud"):
     """
     Generate train/dev/test examples for a given language
     """
     examples = []
     for ud_file in list_of_files:
-        sentences = sentences_from_file(ud_file)
+        sentences = sentences_from_file(ud_file, data_format=data_format)
         for sentence in sentences:
             sentence = clean_sentence(sentence)
             if validate_sentence(sentence, min_window):
@@ -90,14 +93,19 @@ def generate_examples(lang_id, list_of_files, splits=(0.8,0.1,0.1), min_window=1
     return train_set, dev_set, test_set
 
 
-def sentences_from_file(ud_file_path):
+def sentences_from_file(ud_file_path, data_format="ud"):
     """
     Retrieve all sentences from a UD file
     """
     all_sentences = []
-    with open(ud_file_path) as ud_file:
-        sentences = [x[9:] for x in ud_file.read().split("\n") if x.startswith("# text = ")]
-        all_sentences += sentences
+    if data_format == "ud":
+        with open(ud_file_path) as ud_file:
+            sentences = [x[9:] for x in ud_file.read().split("\n") if x.startswith("# text = ")]
+            all_sentences += sentences
+    elif data_format == "one-per-line":
+        with open(ud_file_path) as ud_file:
+            sentences = [x for x in ud_file.read().split("\n") if x]
+            all_sentences += sentences
     return all_sentences
 
 
