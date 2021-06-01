@@ -20,9 +20,17 @@ FASTTEXT_BASE_URL="https://dl.fbaipublicfiles.com/fasttext/vectors-wiki"
 # Welsh, Icelandic, Thai, Sanskrit
 # https://fasttext.cc/docs/en/crawl-vectors.html
 
-declare -a FASTTEXT_LANG=("Afrikaans" "Armenian" "Breton" "Buryat" "Chinese" "Faroese" "Gothic" "Kurmanji" "North_Sami" "Serbian" "Upper_Sorbian")
-declare -a FASTTEXT_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
-declare -a LOCAL_CODE=("af" "hy" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")
+# We get the Armenian word vectors from here:
+# https://github.com/ispras-texterra/word-embeddings-eval-hy
+# https://arxiv.org/ftp/arxiv/papers/1906/1906.03134.pdf
+# In particular, the glove model (dogfooding):
+# https://at.ispras.ru/owncloud/index.php/s/pUUiS1l1jGKNax3/download
+# These vectors improved F1 by about 1 on various tasks for Armenian
+# and had much better coverage of Western Armenian
+
+declare -a FASTTEXT_LANG=("Afrikaans" "Breton" "Buryat" "Chinese" "Faroese" "Gothic" "Kurmanji" "North_Sami" "Serbian" "Upper_Sorbian")
+declare -a FASTTEXT_CODE=("af" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
+declare -a LOCAL_CODE=("af" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")
 
 color_green='\033[32;1m'
 color_clear='\033[0m' # No Color
