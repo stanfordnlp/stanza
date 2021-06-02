@@ -57,11 +57,11 @@ class DataLoader:
         for d in data:
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
-            src = vocab.map(src)
             if self.eval:
                 tgt = src # as a placeholder
             else:
                 tgt = list(d[1])
+            src = vocab.map(src)
             tgt_in = vocab.map([constant.SOS] + tgt)
             tgt_out = vocab.map(tgt + [constant.EOS])
             processed += [[src, tgt_in, tgt_out]]

@@ -47,6 +47,8 @@ class BaseVocab:
         return new
 
     def normalize_unit(self, unit):
+        if unit is None:
+            return unit
         unit = unit.replace(" ","\xa0")
         if self.lower:
             return unit.lower()
