@@ -140,8 +140,9 @@ def eval_model(args):
     curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
         eval_trainer(trainer, test_data, batch_mode=args.batch_mode)
     print(f"{datetime.now()}\tDev accuracy: {curr_dev_accuracy}")
-    if not os.path.exists(score_log_path(args.load_model)):
-        with open(score_log_path(args.load_model), "w") as score_log_file:
+    eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
+    if not os.path.exists(eval_save_path):
+        with open(eval_save_path, "w") as score_log_file:
             for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
                               curr_recalls, curr_f1s]:
                 score_log_file.write(json.dumps(score_log) + "\n")
@@ -180,13 +181,22 @@ def eval_trainer(trainer, dev_data, batch_mode=False):
     f1_scores = {"type": "f1"}
     for prediction_label in tag_to_idx:
         total = sum([confusion_matrix[k][prediction_label] for k in tag_to_idx])
-        precision_scores[prediction_label] = float(confusion_matrix[prediction_label][prediction_label])/float(total)
+        if total != 0.0:
+            precision_scores[prediction_label] = float(confusion_matrix[prediction_label][prediction_label])/float(total)
+        else:
+            precision_scores[prediction_label] = 0.0
     for target_label in tag_to_idx:
         total = sum([confusion_matrix[target_label][k] for k in tag_to_idx])
-        recall_scores[target_label] = float(confusion_matrix[target_label][target_label])/float(total)
+        if total != 0:
+            recall_scores[target_label] = float(confusion_matrix[target_label][target_label])/float(total)
+        else:
+            recall_scores[target_label] = 0.0
     for label in tag_to_idx:
-        f1_scores[label] = \
-            2.0 * (precision_scores[label] * recall_scores[label]) / (precision_scores[label] + recall_scores[label])
+        if precision_scores[label] == 0.0 and recall_scores[label] == 0.0:
+            f1_scores[label] = 0.0
+        else:
+            f1_scores[label] = \
+                2.0 * (precision_scores[label] * recall_scores[label]) / (precision_scores[label] + recall_scores[label])
 
     return dev_accuracy, confusion_matrix, precision_scores, recall_scores, f1_scores
 
