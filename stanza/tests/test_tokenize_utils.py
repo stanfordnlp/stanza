@@ -7,7 +7,7 @@ TODO: could add a bunch more simple tests for the tokenization utils
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 from stanza.models.tokenization import utils
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup basic prerequisites for running the tests.
-# This script sets environment variables, so it needs to be sourced from the root directory, i.e., `source tests/setup_test.sh`.
+# This script sets environment variables, so it needs to be sourced from the root directory, i.e., `source stanza/tests/setup_test.sh`.
 
 if hash python3 2>/dev/null; then
     PYTHON=python3
@@ -14,9 +14,9 @@ mkdir -p $test_dir
 mkdir -p $test_dir/in
 mkdir -p $test_dir/out
 mkdir -p $test_dir/scripts
-cp tests/data/external_server.properties $test_dir/scripts
-cp tests/data/example_french.json $test_dir/out
-cp tests/data/tiny_emb.* $test_dir/in
+cp stanza/tests/data/external_server.properties $test_dir/scripts
+cp stanza/tests/data/example_french.json $test_dir/out
+cp stanza/tests/data/tiny_emb.* $test_dir/in
 
 models_dir=$test_dir/models
 mkdir -p $models_dir

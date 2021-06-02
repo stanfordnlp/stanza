@@ -1,7 +1,7 @@
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 from stanza.models.common.data import get_augment_ratio, augment_punct
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]

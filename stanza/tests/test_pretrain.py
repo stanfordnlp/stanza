@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from stanza.models.common import pretrain
-from tests import *
+from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 

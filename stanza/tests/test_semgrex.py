@@ -8,7 +8,7 @@ import stanza.server.semgrex as semgrex
 from stanza.protobuf import SemgrexRequest
 from stanza.models.common.doc import Document
 
-from tests import *
+from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 

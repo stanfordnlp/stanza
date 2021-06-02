@@ -6,7 +6,7 @@ import pytest
 import stanza
 from stanza.pipeline.core import PipelineRequirementsException
 from stanza.utils.conll import CoNLL
-from tests import *
+from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
 

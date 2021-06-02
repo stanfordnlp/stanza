@@ -1,6 +1,6 @@
 import pytest
 
-from tests import *
+from stanza.tests import *
 
 from stanza.models.ner import trainer
 

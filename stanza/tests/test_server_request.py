@@ -7,7 +7,7 @@ import pytest
 import stanza.server as corenlp
 
 from stanza.protobuf import Document
-from tests import TEST_WORKING_DIR, compare_ignoring_whitespace
+from stanza.tests import TEST_WORKING_DIR, compare_ignoring_whitespace
 
 pytestmark = pytest.mark.client
 

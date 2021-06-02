@@ -5,7 +5,7 @@ Misc tests for the server
 import pytest
 import re
 import stanza.server as corenlp
-from tests import compare_ignoring_whitespace
+from stanza.tests import compare_ignoring_whitespace
 
 pytestmark = pytest.mark.client
 

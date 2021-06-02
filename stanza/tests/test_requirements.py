@@ -7,7 +7,7 @@ import stanza
 
 from stanza.pipeline.core import PipelineRequirementsException
 from stanza.pipeline.processor import ProcessorRequirementsException
-from tests import *
+from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
 

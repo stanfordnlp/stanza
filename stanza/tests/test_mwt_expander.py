@@ -5,7 +5,7 @@ Basic testing of multi-word-token expansion
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
 
