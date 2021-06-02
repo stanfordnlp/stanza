@@ -187,7 +187,6 @@ def process_fire_2013(paths, dataset):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
-    
 def process_wikiner(paths, dataset):
     short_name = treebank_to_short_name(dataset)
 
@@ -217,9 +216,12 @@ def process_wikiner(paths, dataset):
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
+def get_rgai_input_path(paths):
+    return os.path.join(paths["NERBASE"], "hu_rgai")
+
 def process_rgai(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
-    base_input_path = os.path.join(paths["NERBASE"], "hu_rgai")
+    base_input_path = get_rgai_input_path(paths)
 
     if short_name == 'hu_rgai':
         use_business = True
@@ -236,34 +238,42 @@ def process_rgai(paths, short_name):
     convert_rgai.convert_rgai(base_input_path, base_output_path, short_name, use_business, use_criminal)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def get_nytk_input_path(paths):
+    return os.path.join(paths["NERBASE"], "NYTK-NerKor")
+
 def process_nytk(paths):
     """
     Process the NYTK dataset
-    TODO: include the rgai dataset as training data, at least as an experiment
     """
     base_output_path = paths["NER_DATA_DIR"]
-    base_input_path = os.path.join(paths["NERBASE"], "NYTK-NerKor")
+    base_input_path = get_nytk_input_path(paths)
     short_name = "hu_nytk"
 
     convert_nytk.convert_nytk(base_input_path, base_output_path, short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def concat_files(output_file, *input_files):
-    lines = []
+    input_lines = []
     for input_file in input_files:
         with open(input_file) as fin:
-            lines.extend(fin.readlines())
+            lines = fin.readlines()
+        if not len(lines):
+            raise ValueError("Empty input file: %s" % input_file)
+        if not lines[-1]:
+            lines[-1] = "\n"
+        elif lines[-1].strip():
             lines.append("\n")
+        input_lines.append(lines)
     with open(output_file, "w") as fout:
-        for line in lines:
-            fout.write(line)
+        for lines in input_lines:
+            for line in lines:
+                fout.write(line)
 
 
 def process_hu_combined(paths):
     base_output_path = paths["NER_DATA_DIR"]
-    # todo: refactor
-    rgai_input_path = os.path.join(paths["NERBASE"], "hu_rgai")
-    nytk_input_path = os.path.join(paths["NERBASE"], "NYTK-NerKor")
+    rgai_input_path = get_rgai_input_path(paths)
+    nytk_input_path = get_nytk_input_path(paths)
     short_name = "hu_combined"
 
     with tempfile.TemporaryDirectory() as tmp_output_path:
