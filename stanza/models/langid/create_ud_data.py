@@ -63,7 +63,9 @@ def collect_files(ud_path, languages, data_format="ud"):
     ud_files = Path(ud_path).glob(data_format_to_search_path[data_format])
     lang_to_files = {}
     for ud_file in ud_files:
-        lang_id = ud_file.name[:2]
+        lang_id = ud_file.name.split("_")[0]
+        if ud_file.name.startswith("no_nynorsk") and data_format == "ud":
+            lang_id = "nn"
         if lang_id not in languages and "all" not in languages:
             continue
         if not lang_id in lang_to_files:
@@ -136,8 +138,6 @@ def validate_sentence(current_window, min_window):
     GitHub: https://github.com/AU-DIS/LSTM_langid/blob/main/src/dataset_creator.py
     """
     if len(current_window) < min_window:
-        return False
-    if not re.search('[a-zA-Z]', current_window):
         return False
     return True
 
