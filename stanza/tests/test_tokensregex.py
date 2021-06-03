@@ -1,12 +1,12 @@
 import pytest
-from tests import *
+from stanza.tests import *
 
 from stanza.models.common.doc import Document
 import stanza.server.tokensregex as tokensregex
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
-from tests.test_semgrex import ONE_SENTENCE_DOC, TWO_SENTENCE_DOC
+from stanza.tests.test_semgrex import ONE_SENTENCE_DOC, TWO_SENTENCE_DOC
 
 def test_single_sentence():
     #expected:

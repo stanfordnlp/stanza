@@ -9,7 +9,7 @@ import pytest
 import stanza
 from stanza.models.common.doc import Document
 
-from tests import *
+from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
 

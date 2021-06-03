@@ -7,7 +7,7 @@ import stanza.server as corenlp
 from stanza.server.client import AnnotationException
 import time
 
-from tests import *
+from stanza.tests import *
 
 pytestmark = pytest.mark.client
 

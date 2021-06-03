@@ -9,7 +9,7 @@ import shlex
 import subprocess
 import time
 
-from tests import *
+from stanza.tests import *
 
 # set the marker for this module
 pytestmark = [pytest.mark.travis, pytest.mark.client]

@@ -1,7 +1,7 @@
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 
 from stanza.pipeline import core
 

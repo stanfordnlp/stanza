@@ -4,7 +4,7 @@ import pytest
 
 import stanza
 import stanza.models.common.utils as utils
-from tests import *
+from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 

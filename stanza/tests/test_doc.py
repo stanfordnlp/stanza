@@ -1,7 +1,7 @@
 import pytest
 
 import stanza
-from tests import *
+from stanza.tests import *
 from stanza.models.common.doc import Document, ID, TEXT, NER
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]

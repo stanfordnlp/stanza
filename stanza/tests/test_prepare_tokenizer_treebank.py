@@ -1,6 +1,6 @@
 import pytest
 import stanza
-from tests import *
+from stanza.tests import *
 
 from stanza.utils.datasets import prepare_tokenizer_treebank
 

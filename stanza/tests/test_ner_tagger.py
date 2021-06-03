@@ -5,7 +5,7 @@ Basic testing of the NER tagger.
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 from stanza.models.ner.scorer import score_by_token, score_by_entity
 
 pytestmark = pytest.mark.pipeline

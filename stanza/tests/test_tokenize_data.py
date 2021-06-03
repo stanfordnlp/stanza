@@ -8,7 +8,7 @@ the data from a temp file, for example
 import pytest
 import stanza
 
-from tests import *
+from stanza.tests import *
 from stanza.models.tokenization.data import DataLoader
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]

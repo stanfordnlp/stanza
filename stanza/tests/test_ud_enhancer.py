@@ -1,6 +1,6 @@
 import pytest
 import stanza
-from tests import *
+from stanza.tests import *
 
 from stanza.models.common.doc import Document
 import stanza.server.ud_enhancer as ud_enhancer

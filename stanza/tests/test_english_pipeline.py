@@ -7,7 +7,7 @@ import stanza
 from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import Document
 
-from tests import *
+from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
