@@ -56,27 +56,26 @@ def readlines(path):
 
 def build_vocab(path, cutoff=0):
     # Requires a large amount of memory, but only need to build once
+
+    # here we need some trick to deal with excessively large files
+    # for each file we accumulate the counter of characters, and
+    # at the end we simply pass a list of chars to the vocab builder
+    counter = Counter()
     if os.path.isdir(path):
-        # here we need some trick to deal with excessively large files
-        # for each file we accumulate the counter of characters, and 
-        # at the end we simply pass a list of chars to the vocab builder
-        counter = Counter()
         filenames = sorted(os.listdir(path))
-        for filename in filenames:
-            lines = readlines(path + '/' + filename)
-            for line in lines:
-                counter.update(list(line))
-        # remove infrequent characters from vocab
-        for k in list(counter.keys()):
-            if counter[k] < cutoff:
-                del counter[k]
-        # a singleton list of all characters
-        data = [sorted([x[0] for x in counter.most_common()])]
-        vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     else:
-        lines = readlines(path)
-        data = [list(line) for line in lines]
-        vocab = CharVocab(data, cutoff=cutoff)
+        filenames = [path]
+    for filename in filenames:
+        lines = readlines(path + '/' + filename)
+        for line in lines:
+            counter.update(list(line))
+    # remove infrequent characters from vocab
+    for k in list(counter.keys()):
+        if counter[k] < cutoff:
+            del counter[k]
+    # a singleton list of all characters
+    data = [sorted([x[0] for x in counter.most_common()])]
+    vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     return vocab
 
 def load_file(path, vocab, direction):
