@@ -22,7 +22,7 @@ After running the script, your embedding vector files will be organized in the f
 
 {% include alerts.html %}
 {{ note }}
-{{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/ewt.pt` by default" | markdownify }}
+{{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/combined.pt` by default" | markdownify }}
 {{ end }}
 
 
