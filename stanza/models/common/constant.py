@@ -20,6 +20,7 @@ lcode2lang = {
     "aii": "Assyrian",
     "bm": "Bambara",
     "eu": "Basque",
+    "bej": "Beja",
     "be": "Belarusian",
     "bn": "Bengali",
     "bho": "Bhojpuri",
@@ -42,10 +43,12 @@ lcode2lang = {
     "fo": "Faroese",
     "fi": "Finnish",
     "fr": "French",
+    "qfn": "Frisian_Dutch",
     "gl": "Galician",
     "de": "German",
     "got": "Gothic",
     "el": "Greek",
+    "gub": "Guajajara",
     "he": "Hebrew",
     "hi": "Hindi",
     "qhe": "Hindi_English",
@@ -55,9 +58,12 @@ lcode2lang = {
     "ga": "Irish",
     "it": "Italian",
     "ja": "Japanese",
+    "urb": "Kaapor",
+    "xnr": "Kangri",
     "krl": "Karelian",
     "kk": "Kazakh",
     "kfm": "Khunsari",
+    "quc": "Kiche",
     "koi": "Komi_Permyak",
     "kpv": "Komi_Zyrian",
     "ko": "Korean",
@@ -66,6 +72,8 @@ lcode2lang = {
     "olo": "Livvi",
     "la": "Latin",
     "lv": "Latvian",
+    "nds": "Low_Saxon",
+    "mpu": "Makurap",
     "mal": "Malayalam",
     "mt": "Maltese",
     "gv": "Manx",
@@ -80,7 +88,7 @@ lcode2lang = {
     "nn": "Norwegian_Nynorsk",
     "cu": "Old_Church_Slavonic",
     "fro": "Old_French",
-    "orv": "Old_Russian",
+    "orv": "Old_East_Slavic",
     "otk": "Old_Turkish",
     "fa": "Persian",
     "pl": "Polish",
@@ -114,7 +122,9 @@ lcode2lang = {
     "vi": "Vietnamese",
     "wbp": "Warlpiri",
     "cy": "Welsh",
+    "hyw": "Western_Armenian",
     "wo": "Wolof",
+    "ess": "Yupik",
     "yo": "Yoruba",
 }
 
@@ -127,6 +137,9 @@ lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['zh'] = 'Simplified_Chinese'
 
 lang2lcode['Chinese'] = 'zh'
+
+# treebank names changed from Old Russian to Old East Slavic in 2.8
+lang2lcode['Old_Russian'] = 'orv'
 
 treebank_special_cases = {
     "UD_Chinese-GSDSimp": "zh_gsdsimp",

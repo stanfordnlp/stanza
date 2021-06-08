@@ -103,7 +103,7 @@ def file_exists(path, md5):
     """
     return os.path.exists(path) and get_md5(path) == md5
 
-def download_file(url, path, proxies):
+def download_file(url, path, proxies, raise_for_status=False):
     """
     Download a URL into a file as specified by `path`.
     """
@@ -120,8 +120,11 @@ def download_file(url, path, proxies):
                     f.write(chunk)
                     f.flush()
                     pbar.update(len(chunk))
+    if raise_for_status:
+        r.raise_for_status()
+    return r.status_code
 
-def request_file(url, path, proxies=None, md5=None):
+def request_file(url, path, proxies=None, md5=None, raise_for_status=False):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
@@ -130,7 +133,7 @@ def request_file(url, path, proxies=None, md5=None):
     if file_exists(path, md5):
         logger.info(f'File exists: {path}.')
         return
-    download_file(url, path, proxies)
+    download_file(url, path, proxies, raise_for_status)
     assert(not md5 or file_exists(path, md5))
 
 def sort_processors(processor_list):
@@ -332,7 +335,8 @@ def download_resources_json(model_dir, resources_url, resources_branch,
     request_file(
         f'{resources_url}/resources_{resources_version}.json',
         os.path.join(model_dir, 'resources.json'),
-        proxies
+        proxies,
+        raise_for_status=True
     )
 
 

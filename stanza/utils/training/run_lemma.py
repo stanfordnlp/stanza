@@ -24,33 +24,9 @@ from stanza.models import lemmatizer
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode
 
+from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas
+
 logger = logging.getLogger('stanza')
-
-def check_lemmas(train_file):
-    """
-    Check if a treebank has any lemmas in it
-
-    For example, in Vietnamese-VTB, all the words and lemmas are exactly the same
-    in Telugu-MTG, all the lemmas are blank
-    """
-    # could eliminate a few languages immediately based on UD 2.7
-    # but what if a later dataset includes lemmas?
-    #if short_language in ('vi', 'fro', 'th'):
-    #    return False
-    with open(train_file) as fin:
-        for line in fin:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            pieces = line.split("\t")
-            word = pieces[1].lower().strip()
-            lemma = pieces[2].lower().strip()
-            if not lemma or lemma == '_' or lemma == '-':
-                continue
-            if word == lemma:
-                continue
-            return True
-    return False
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):

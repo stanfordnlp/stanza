@@ -34,7 +34,6 @@ from collections import Counter
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
-import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
 
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
@@ -43,7 +42,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
 
     shutil.copyfile(original, copied)
 
-def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
+def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -60,7 +59,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
 
         # first we process the tokenization data
         args = argparse.Namespace()
-        args.augment = False
+        args.augment = augment
         args.prepare_labels = False
         process_treebank(treebank, paths, args)
 
@@ -783,8 +782,6 @@ def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
         build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
 
 def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
         # (no DE or I)
@@ -806,13 +803,11 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
                 raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
             sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
         sents = sents + extra_sents
-
-        sents = augment_punct(sents)
     else:
         istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(istd_conllu)
 
-    write_sentences_to_conllu(output_conllu, sents)
+    return sents
 
 def check_gum_ready(udbase_dir):
     gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
@@ -826,8 +821,6 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     TODO: use more of the handparsed data
     """
     check_gum_ready(udbase_dir)
-
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if dataset == 'train':
         # TODO: include more UD treebanks, possibly with xpos removed
@@ -843,15 +836,13 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         for treebank in test_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
-
-        # TODO: refactor things like the augment_punct call
-        sents = augment_punct(sents)
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
 
     sents = strip_mwt_from_sentences(sents)
-    write_sentences_to_conllu(output_conllu, sents)
+    return sents
+
 
 def replace_semicolons(sentences):
     """
@@ -888,8 +879,6 @@ def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     TODO: remove features which aren't shared between datasets
     TODO: consider mixing in PUD?
     """
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-
     if dataset == 'train':
         treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
         sents = []
@@ -905,15 +894,11 @@ def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
             raise FileNotFoundError("Cannot find the extra dataset 'spanish.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
         extra_sents = read_sentences_from_conllu(extra_spanish)
         sents.extend(extra_sents)
-
-        # TODO: refactor things like the augment_punct call
-        sents = augment_punct(sents)
     else:
         conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
         sents = read_sentences_from_conllu(conllu_file)
 
-    write_sentences_to_conllu(output_conllu, sents)
-
+    return sents
 
 
 COMBINED_FNS = {
@@ -922,19 +907,24 @@ COMBINED_FNS = {
     "it_combined": build_combined_italian_dataset,
 }
 
-def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name):
+def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
     random.seed(1234)
     build_fn = COMBINED_FNS[short_name]
     for dataset in ("train", "dev", "test"):
-        build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        sents = build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+        if dataset == 'train' and augment:
+            sents = augment_punct(sents)
+        write_sentences_to_conllu(output_conllu, sents)
 
-def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset):
+def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment):
     """
     Build the GUM dataset by combining GUMReddit
 
     It checks to make sure GUMReddit is filled out using the included script
     """
     check_gum_ready(udbase_dir)
+    random.seed(1234)
 
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
@@ -944,35 +934,29 @@ def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, da
         conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
         sents.extend(read_sentences_from_conllu(conllu_file))
 
-    if dataset == 'train':
+    if dataset == 'train' and augment:
         sents = augment_punct(sents)
 
     write_sentences_to_conllu(output_conllu, sents)
 
-def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name):
+def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
     for dataset in ("train", "dev", "test"):
-        build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset)
+        build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment)
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
     input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
-    if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_conllu, output_conllu)
-    elif short_name == "te_mtg" and dataset == 'train' and augment:
+    if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
-    elif dataset == 'train':
-        # we treat the additional punct as something that always needs to be there
-        # this will teach the tagger & depparse about unicode apos, for example
+    elif dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_punct)
     else:
         shutil.copyfile(input_conllu, output_conllu)
-
-    # TODO: refactor this call everywhere
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
@@ -1049,11 +1033,11 @@ def process_treebank(treebank, paths, args):
     if short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in ("it_combined", "en_combined", "es_combined"):
-        build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name)
+        build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
-        build_combined_english_gum(udbase_dir, tokenizer_dir, short_name)
+        build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.augment)
     else:
         # check that we can find the train file where we expect it
         train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
