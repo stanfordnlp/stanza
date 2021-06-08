@@ -105,6 +105,17 @@ To run your first Stanza pipeline, simply following these steps in your Python i
 >>> doc.sentences[0].print_dependencies()
 ```
 
+If you encounter `requests.exceptions.ConnectionError`, please try to use a proxy:
+
+```python
+>>> import stanza
+>>> proxies = {'http': 'http://ip:port', 'https': 'http://ip:port'}
+>>> stanza.download('en', proxies=proxies)  # This downloads the English models for the neural pipeline
+>>> nlp = stanza.Pipeline('en')             # This sets up a default neural pipeline in English
+>>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+>>> doc.sentences[0].print_dependencies()
+```
+
 The last command will print out the words in the first sentence in the input string (or [`Document`](https://stanfordnlp.github.io/stanza/data_objects.html#document), as it is represented in Stanza), as well as the indices for the word that governs it in the Universal Dependencies parse of that sentence (its "head"), along with the dependency relation between the words. The output should look like:
 
 ```

@@ -45,11 +45,15 @@ class SpacyTokenizer(ProcessorVariant):
             self.nlp.add_pipe("sentencizer")
         self.no_ssplit = config.get('no_ssplit', False)
 
-    def process(self, text):
+    def process(self, document):
         """ Tokenize a document with the spaCy tokenizer and wrap the results into a Doc object.
         """
+        if isinstance(document, doc.Document):
+            text = document.text
+        else:
+            text = document
         if not isinstance(text, str):
-            raise Exception("Must supply a string to the spaCy tokenizer.")
+            raise Exception("Must supply a string or Stanza Document object to the spaCy tokenizer.")
         spacy_doc = self.nlp(text)
 
         sentences = []

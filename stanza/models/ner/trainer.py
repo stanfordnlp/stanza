@@ -30,6 +30,18 @@ def unpack_batch(batch, use_cuda):
     charoffsets = batch[12]
     return inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
+def fix_singleton_tags(tags):
+    """
+    If there are any singleton B- tags, convert them to S-
+    """
+    new_tags = list(tags)
+    for idx, tag in enumerate(new_tags):
+        if (tag.startswith("B-") and
+            (idx == len(new_tags) - 1 or
+             (new_tags[idx+1] != "I-" + tag[2:] and new_tags[idx+1] != "E-" + tag[2:]))):
+            new_tags[idx] = "S-" + tag[2:]
+    return new_tags
+
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
@@ -93,6 +105,7 @@ class Trainer(BaseTrainer):
         for i in range(bs):
             tags, _ = viterbi_decode(scores[i, :sentlens[i]], trans)
             tags = self.vocab['tag'].unmap(tags)
+            tags = fix_singleton_tags(tags)
             tag_seqs += [tags]
 
         if unsort:

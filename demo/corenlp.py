@@ -82,7 +82,7 @@ with CoreNLPClient(annotators=['tokenize','ssplit','pos','lemma','ner','parse','
     matches["sentences"][1]["0"]["1"]["text"] == "Chris"
 
     # Use semgrex patterns to directly find who wrote what.
-    pattern = '{word:wrote} >nsubj {}=subject >dobj {}=object'
+    pattern = '{word:wrote} >nsubj {}=subject >obj {}=object'
     matches = client.semgrex(text, pattern)
     # sentences contains a list with matches for each sentence.
     assert len(matches["sentences"]) == 3

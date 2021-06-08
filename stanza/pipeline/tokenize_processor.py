@@ -5,14 +5,15 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.data import DataLoader, NEWLINE_WHITESPACE_RE
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
-from stanza.utils.datasets.postprocess_vietnamese_tokenizer_data import paras_to_chunks
 from stanza.models.common import doc
+
+# these imports trigger the "register_variant" decorations
 from stanza.pipeline.external.jieba import JiebaTokenizer
 from stanza.pipeline.external.spacy import SpacyTokenizer
 from stanza.pipeline.external.sudachipy import SudachiPyTokenizer
@@ -68,26 +69,72 @@ class TokenizeProcessor(UDProcessor):
             "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object."
 
         if isinstance(document, doc.Document):
+            if self.config.get('pretokenized'):
+                return document
             document = document.text
 
         if self.config.get('pretokenized'):
             raw_text, document = self.process_pre_tokenized_text(document)
-        elif hasattr(self, '_variant'):
+            return doc.Document(document, raw_text)
+
+        if hasattr(self, '_variant'):
             return self._variant.process(document)
-        else:
-            raw_text = '\n\n'.join(document) if isinstance(document, list) else document
-            # set up batches
-            if self.config.get('lang') == 'vi':
-                # special processing is due for Vietnamese
-                text = '\n\n'.join([x for x in raw_text.split('\n\n')]).rstrip()
-                dummy_labels = '\n\n'.join(['0' * len(x) for x in text.split('\n\n')])
-                data = paras_to_chunks(text, dummy_labels)
-                batches = DataLoader(self.config, input_data=data, vocab=self.vocab, evaluation=True)
-            else:
-                batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
-            # get dict data
-            _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
-                                   self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
-                                   orig_text=raw_text,
-                                   no_ssplit=self.config.get('no_ssplit', False))
+
+        raw_text = '\n\n'.join(document) if isinstance(document, list) else document
+        # set up batches
+        batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
+        # get dict data
+        _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
+                                               self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
+                                               orig_text=raw_text,
+                                               no_ssplit=self.config.get('no_ssplit', False))
         return doc.Document(document, raw_text)
+
+    def bulk_process(self, docs):
+        """
+        The tokenizer cannot use UDProcessor's sentence-level cross-document batching interface, and requires special handling.
+        Essentially, this method concatenates the text of multiple documents with "\n\n", tokenizes it with the neural tokenizer,
+        then splits the result into the original Documents and recovers the original character offsets.
+        """
+        if hasattr(self, '_variant'):
+            return self._variant.bulk_process(docs)
+
+        if self.config.get('pretokenized'):
+            res = []
+            for document in docs:
+                raw_text, document = self.process_pre_tokenized_text(document.text)
+                res.append(doc.Document(document, raw_text))
+            return res
+
+        combined_text = '\n\n'.join([thisdoc.text for thisdoc in docs])
+        processed_combined = self.process(doc.Document([], text=combined_text))
+
+        # postprocess sentences and tokens to reset back pointers and char offsets
+        charoffset = 0
+        sentst = senten = 0
+        for thisdoc in docs:
+            while senten < len(processed_combined.sentences) and processed_combined.sentences[senten].tokens[-1].end_char - charoffset <= len(thisdoc.text):
+                senten += 1
+
+            sentences = processed_combined.sentences[sentst:senten]
+            thisdoc.sentences = sentences
+            for sent in sentences:
+                # fix doc back pointers for sentences
+                sent._doc = thisdoc
+
+                # fix char offsets for tokens and words
+                for token in sent.tokens:
+                    token._start_char -= charoffset
+                    token._end_char -= charoffset
+                    if token.words:  # not-yet-processed MWT can leave empty tokens
+                        for word in token.words:
+                            word._start_char -= charoffset
+                            word._end_char -= charoffset
+
+            thisdoc.num_tokens = sum(len(sent.tokens) for sent in sentences)
+            thisdoc.num_words = sum(len(sent.words) for sent in sentences)
+            sentst = senten
+
+            charoffset += len(thisdoc.text) + 2
+
+        return docs

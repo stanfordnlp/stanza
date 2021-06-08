@@ -63,12 +63,13 @@ class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
-    def __init__(self, sentences, text=None):
+    def __init__(self, sentences, text=None, comments=None):
         """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
 
         Args:
             sentences: a list of sentences, which being a list of token entry, in the form of a CoNLL-U dict.
             text: the raw text of the document.
+            comments: A list of list of strings to use as comments on the sentences, either None or the same length as sentences
         """
         self._sentences = []
         self._text = None
@@ -76,7 +77,7 @@ class Document(StanzaObject):
         self._num_words = 0
 
         self.text = text
-        self._process_sentences(sentences)
+        self._process_sentences(sentences, comments)
         self._ents = []
 
     @property
@@ -139,13 +140,26 @@ class Document(StanzaObject):
         """ Set the list of entities in this document. """
         self._ents = value
 
-    def _process_sentences(self, sentences):
+    def _process_sentences(self, sentences, comments=None):
         self.sentences = []
-        for tokens in sentences:
-            self.sentences.append(Sentence(tokens, doc=self))
-            begin_idx, end_idx = self.sentences[-1].tokens[0].start_char, self.sentences[-1].tokens[-1].end_char
-            if all([self.text is not None, begin_idx is not None, end_idx is not None]): self.sentences[-1].text = self.text[begin_idx: end_idx]
+        for sent_idx, tokens in enumerate(sentences):
+            sentence = Sentence(tokens, doc=self)
+            self.sentences.append(sentence)
+            begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
+            if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
+            sentence.id = sent_idx
 
+        self._count_words()
+
+        if comments:
+            for sentence, sentence_comments in zip(self.sentences, comments):
+                for comment in sentence_comments:
+                    sentence.add_comment(comment)
+
+    def _count_words(self):
+        """
+        Count the number of tokens and words
+        """
         self.num_tokens = sum([len(sentence.tokens) for sentence in self.sentences])
         self.num_words = sum([len(sentence.words) for sentence in self.sentences])
 
@@ -249,20 +263,33 @@ class Document(StanzaObject):
                 n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
                 if not m and not n:
                     for word in token.words:
+                        token.id = (idx_w, )
                         word.id = idx_w
                         word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
-                    token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
+                    if token.misc:  # None can happen when using a prebuilt doc
+                        token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
                     token.id = (idx_w, idx_w_end)
                     token.words = []
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
-            sentence._process_tokens(sentence.to_dict()) # reprocess to update sentence.words and sentence.dependencies
-        self._process_sentences(self.to_dict()) # reprocess to update number of words
+
+            # reprocess the words using the new tokens
+            sentence.words = []
+            for token in sentence.tokens:
+                token.sent = sentence
+                for word in token.words:
+                    word.sent = sentence
+                    word.parent = token
+                    sentence.words.append(word)
+
+            sentence.rebuild_dependencies()
+
+        self._count_words() # update number of words & tokens
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
         return
 
@@ -340,6 +367,9 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
+        # comments are a list of comment lines occurring before the
+        # sentence in a CoNLL-U file.  Can be empty
+        self._comments = []
 
         self._process_tokens(tokens)
 
@@ -372,10 +402,17 @@ class Sentence(StanzaObject):
         for t in self.tokens:
             t.sent = self
 
-        # check if there is dependency info
-        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
-        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
-        if is_complete_dependencies and is_complete_words: self.build_dependencies()
+        self.rebuild_dependencies()
+
+    @property
+    def id(self):
+        """ Access the index of this sentence.  Indexed from 1 to match tokens """
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        """ Set the sentence's id value. """
+        self._id = value
 
     @property
     def doc(self):
@@ -471,6 +508,26 @@ class Sentence(StanzaObject):
         """ Set the sentiment value """
         self._sentiment = value
 
+    @property
+    def comments(self):
+        """ Returns CoNLL-style comments for this sentence """
+        return self._comments
+
+    def add_comment(self, comment):
+        """ Adds a single comment to this sentence.
+
+        If the comment does not already have # at the start, it will be added.
+        """
+        if not comment.startswith("#"):
+            comment = "#" + comment
+        self._comments.append(comment)
+
+    def rebuild_dependencies(self):
+        # rebuild dependencies if there is dependency info
+        is_complete_dependencies = all(word.head is not None and word.deprel is not None for word in self.words)
+        is_complete_words = (len(self.words) >= len(self.tokens)) and (len(self.words) == self.words[-1].id)
+        if is_complete_dependencies and is_complete_words: self.build_dependencies()
+
     def build_dependencies(self):
         """ Build the dependency graph for this sentence. Each dependency graph entry is
         a list of (head, deprel, word).
@@ -531,6 +588,29 @@ class Sentence(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+def init_from_misc(unit):
+    """Create attributes by parsing from the `misc` field.
+
+    Also, remove start_char, end_char, and any other values we can set
+    from the misc field if applicable, so that we don't repeat ourselves
+    """
+    remaining_values = []
+    for item in unit._misc.split('|'):
+        key_value = item.split('=', 1)
+        if len(key_value) == 2:
+            # some key_value can not be split
+            key, value = key_value
+            # start & end char are kept as ints
+            if key in (START_CHAR, END_CHAR):
+                value = int(value)
+            # set attribute
+            attr = f'_{key}'
+            if hasattr(unit, attr):
+                setattr(unit, attr, value)
+                continue
+        remaining_values.append(item)
+    unit._misc = "|".join(remaining_values)
+
 
 class Token(StanzaObject):
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
@@ -547,26 +627,12 @@ class Token(StanzaObject):
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._words = words if words is not None else []
-        self._start_char = None
-        self._end_char = None
+        self._start_char = token_entry.get(START_CHAR, None)
+        self._end_char = token_entry.get(END_CHAR, None)
         self._sent = None
 
         if self._misc is not None:
-            self.init_from_misc()
-
-    def init_from_misc(self):
-        """ Create attributes by parsing from the `misc` field.
-        """
-        for item in self._misc.split('|'):
-            key_value = item.split('=', 1)
-            if len(key_value) == 1: continue # some key_value can not be splited
-            key, value = key_value
-            if key in (START_CHAR, END_CHAR):
-                value = int(value)
-            # set attribute
-            attr = f'_{key}'
-            if hasattr(self, attr):
-                setattr(self, attr, value)
+            init_from_misc(self)
 
     @property
     def id(self):
@@ -643,7 +709,7 @@ class Token(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
-    def to_dict(self, fields=[ID, TEXT, NER, MISC]):
+    def to_dict(self, fields=[ID, TEXT, NER, MISC, START_CHAR, END_CHAR]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -691,23 +757,13 @@ class Word(StanzaObject):
         self._deprel = word_entry.get(DEPREL, None)
         self._deps = word_entry.get(DEPS, None)
         self._misc = word_entry.get(MISC, None)
+        self._start_char = word_entry.get(START_CHAR, None)
+        self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
         self._sent = None
 
         if self._misc is not None:
-            self.init_from_misc()
-
-    def init_from_misc(self):
-        """ Create attributes by parsing from the `misc` field.
-        """
-        for item in self._misc.split('|'):
-            key_value = item.split('=', 1)
-            if len(key_value) == 1: continue # some key_value can not be splited
-            key, value = key_value
-            # set attribute
-            attr = f'_{key}'
-            if hasattr(self, attr):
-                setattr(self, attr, value)
+            init_from_misc(self)
 
     @property
     def id(self):
@@ -810,6 +866,16 @@ class Word(StanzaObject):
         self._misc = value if self._is_null(value) == False else None
 
     @property
+    def start_char(self):
+        """ Access the start character index for this token in the raw text. """
+        return self._start_char
+
+    @property
+    def end_char(self):
+        """ Access the end character index for this token in the raw text. """
+        return self._end_char
+
+    @property
     def parent(self):
         """ Access the parent token of this word. In the case of a multi-word token, a token can be the parent of
         multiple words. Note that this should return a reference to the parent token object.
@@ -846,7 +912,7 @@ class Word(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}

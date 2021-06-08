@@ -4,6 +4,7 @@ An identity lemmatizer that mimics the behavior of a normal lemmatizer but direc
 
 import os
 import argparse
+import logging
 import random
 
 from stanza.models.lemma.data import DataLoader
@@ -12,6 +13,8 @@ from stanza.models.common import utils
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
+
+logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -37,12 +40,12 @@ def main(args=None):
 
     args = vars(args)
 
-    print("[Launching identity lemmatizer...]")
+    logger.info("[Launching identity lemmatizer...]")
 
     if args['mode'] == 'train':
-        print("[No training is required; will only generate evaluation output...]")
+        logger.info("[No training is required; will only generate evaluation output...]")
     
-    document = Document(CoNLL.conll2dict(input_file=args['eval_file']))
+    document = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(document, args['batch_size'], args, evaluation=True, conll_only=True)
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
@@ -52,12 +55,12 @@ def main(args=None):
 
     # write to file and score
     batch.doc.set([LEMMA], preds)
-    CoNLL.dict2conll(batch.doc.to_dict(), system_pred_file)
+    CoNLL.write_doc2conll(batch.doc, system_pred_file)
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        print("Lemma score:")
-        print("{} {:.2f}".format(args['lang'], score*100))
+        logger.info("Lemma score:")
+        logger.info("{} {:.2f}".format(args['lang'], score*100))
 
 if __name__ == '__main__':
     main()

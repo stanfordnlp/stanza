@@ -78,7 +78,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
 
-        results = common.run_eval_script(dev_gold_file, dev_pred_file, 5, 9)
+        results = common.run_eval_script_pos(dev_gold_file, dev_pred_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -94,7 +94,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
 
-        results = common.run_eval_script(test_gold_file, test_pred_file, 5, 9)
+        results = common.run_eval_script_pos(test_gold_file, test_pred_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 

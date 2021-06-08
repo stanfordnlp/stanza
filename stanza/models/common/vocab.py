@@ -47,6 +47,9 @@ class BaseVocab:
         return new
 
     def normalize_unit(self, unit):
+        if unit is None:
+            return unit
+        unit = unit.replace(" ","\xa0")
         if self.lower:
             return unit.lower()
         return unit
@@ -79,7 +82,7 @@ class BaseVocab:
             raise TypeError("Vocab key must be one of str, list, or int")
 
     def __contains__(self, key):
-        return key in self._unit2id
+        return self.normalize_unit(key) in self._unit2id
 
     @property
     def size(self):

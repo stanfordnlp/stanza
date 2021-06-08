@@ -66,7 +66,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running dev depparse for {} with args {}".format(treebank, dev_args))
         parser.main(dev_args)
 
-        results = common.run_eval_script(dev_gold_file, dev_pred_file, 10, 15)
+        results = common.run_eval_script_depparse(dev_gold_file, dev_pred_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -82,7 +82,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
         parser.main(test_args)
 
-        results = common.run_eval_script(test_gold_file, test_pred_file, 10, 15)
+        results = common.run_eval_script_depparse(test_gold_file, test_pred_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 

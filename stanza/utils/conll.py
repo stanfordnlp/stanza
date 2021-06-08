@@ -6,6 +6,7 @@ import io
 
 FIELD_NUM = 10
 
+# TODO: unify this list with the list in common/doc.py
 ID = 'id'
 TEXT = 'text'
 LEMMA = 'lemma'
@@ -16,7 +17,12 @@ HEAD = 'head'
 DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
+NER = 'ner'
+START_CHAR = 'start_char'
+END_CHAR = 'end_char'
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
+
+from stanza.models.common.doc import Document
 
 class CoNLL:
 
@@ -24,29 +30,35 @@ class CoNLL:
     def load_conll(f, ignore_gapping=True):
         """ Load the file or string into the CoNLL-U format data.
         Input: file or string reader, where the data is in CoNLL-U format.
-        Output: a list of list of list for each token in each sentence in the data, where the innermost list represents
-        all fields of a token.
+        Output: a tuple whose first element is a list of list of list for each token in each sentence in the data,
+        where the innermost list represents all fields of a token; and whose second element is a list of lists for each
+        comment in each sentence in the data.
         """
         # f is open() or io.StringIO()
         doc, sent = [], []
-        for line in f:
+        doc_comments, sent_comments = [], []
+        for line_idx, line in enumerate(f):
             line = line.strip()
             if len(line) == 0:
                 if len(sent) > 0:
                     doc.append(sent)
                     sent = []
+                    doc_comments.append(sent_comments)
+                    sent_comments = []
             else:
-                if line.startswith('#'): # skip comment line
+                if line.startswith('#'): # read comment line
+                    sent_comments.append(line)
                     continue
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
                     continue
                 assert len(array) == FIELD_NUM, \
-                        f"Cannot parse CoNLL line: expecting {FIELD_NUM} fields, {len(array)} found."
+                        f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found.\n  {array}"
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
-        return doc
+            doc_comments.append(sent_comments)
+        return doc, doc_comments
 
     @staticmethod
     def convert_conll(doc_conll):
@@ -93,11 +105,16 @@ class CoNLL:
         if input_str:
             infile = io.StringIO(input_str)
         else:
-            infile = open(input_file)
-        doc_conll = CoNLL.load_conll(infile, ignore_gapping)
+            infile = open(input_file, encoding='utf-8')
+        doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
         doc_dict = CoNLL.convert_conll(doc_conll)
-        return doc_dict
+        return doc_dict, doc_comments
 
+    @staticmethod
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True):
+        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping)
+        return Document(doc_dict, text=None, comments=doc_comments)
+    
     @staticmethod
     def convert_dict(doc_dict):
         """ Convert the dictionary format input data to the CoNLL-U format output data. This is the reverse function of
@@ -122,11 +139,23 @@ class CoNLL:
         Output: CoNLL-U format token, which is a list for the token.
         """
         token_conll = ['_' for i in range(FIELD_NUM)]
+        misc = []
         for key in token_dict:
-            if key == ID:
+            if key == START_CHAR or key == END_CHAR:
+                misc.append("{}={}".format(key, token_dict[key]))
+            elif key == MISC:
+                # avoid appending a blank misc entry.
+                # otherwise the resulting misc field in the conll doc will wind up being blank text
+                if token_dict[key]:
+                    misc.append(token_dict[key])
+            elif key == ID:
                 token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
             elif key in FIELD_TO_IDX:
                 token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+        if misc:
+            token_conll[FIELD_TO_IDX[MISC]] = "|".join(misc)
+        else:
+            token_conll[FIELD_TO_IDX[MISC]] = '_'
         # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
         if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
             token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
@@ -148,6 +177,38 @@ class CoNLL:
         """
         doc_conll = CoNLL.convert_dict(doc_dict)
         conll_string = CoNLL.conll_as_string(doc_conll)
-        with open(filename, 'w') as outfile:
+        with open(filename, 'w', encoding='utf-8') as outfile:
             outfile.write(conll_string)
         return
+
+
+    @staticmethod
+    def doc2conll(doc):
+        """ Convert a Document object to a list of list of strings
+
+        Each sentence is represented by a list of strings: first the comments, then the converted tokens
+        """
+        doc_conll = []
+        for sentence in doc.sentences:
+            sent_conll = list(sentence.comments)
+            for token_dict in sentence.to_dict():
+                token_conll = CoNLL.convert_token_dict(token_dict)
+                sent_conll.append("\t".join(token_conll))
+            doc_conll.append(sent_conll)
+
+        return doc_conll
+
+    @staticmethod
+    def doc2conll_text(doc):
+        """ Convert a Document to a big block of text.
+        """
+        doc_conll = CoNLL.doc2conll(doc)
+        return "\n\n".join("\n".join(line for line in sentence)
+                           for sentence in doc_conll) + "\n\n"
+
+    @staticmethod
+    def write_doc2conll(doc, filename):
+        """ Writes the doc as a conll file to the given filename
+        """
+        with open(filename, 'w', encoding='utf-8') as outfile:
+            outfile.write(CoNLL.doc2conll_text(doc))

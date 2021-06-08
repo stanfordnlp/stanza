@@ -24,12 +24,7 @@ class Vocab(BaseVocab):
 
     def normalize_unit(self, unit):
         # Normalize minimal units used by the tokenizer
-        # For Vietnamese this means a syllable, for other languages this means a character
-        normalized = unit
-        if self.lang.startswith('vi'):
-            normalized = normalized.lstrip()
-
-        return normalized
+        return unit
 
     def normalize_token(self, token):
         token = SPACE_RE.sub(' ', token.lstrip())

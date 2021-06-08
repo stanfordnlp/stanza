@@ -71,17 +71,19 @@ class PipelineRequirementsException(Exception):
 
 class Pipeline:
 
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, **kwargs):
+    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, model_dir=None, **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
+        if model_dir is not None and dir == DEFAULT_MODEL_DIR:
+            self.dir = model_dir
 
         # set global logging level
         set_logging_level(logging_level, verbose)
         # process different pipeline parameters
-        lang, dir, package, processors = process_pipeline_parameters(lang, dir, package, processors)
+        lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
 
         # Load resources.json to obtain latest packages.
         logger.debug('Loading resource file...')
-        resources_filepath = os.path.join(dir, 'resources.json')
+        resources_filepath = os.path.join(self.dir, 'resources.json')
         if not os.path.exists(resources_filepath):
             raise ResourcesFileNotFoundError(resources_filepath)
         with open(resources_filepath) as infile:
@@ -95,6 +97,7 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
+        processors = self.maybe_add_mwt(kwargs, resources, lang, processors)
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
@@ -103,7 +106,7 @@ class Pipeline:
         load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
-        self.config = build_default_config(resources, lang, dir, self.load_list)
+        self.config = build_default_config(resources, lang, self.dir, self.load_list)
         self.config.update(kwargs)
 
         # Load processors
@@ -121,6 +124,11 @@ class Pipeline:
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
+            # TODO: this is obviously a hack
+            # a better solution overall would be to make a pretagged version of the pos annotator
+            # and then subsequent modules can use those tags without knowing where those tags came from
+            if "pretagged" in self.config and "pretagged" not in curr_processor_config:
+                curr_processor_config["pretagged"] = self.config["pretagged"]
             logger.debug('With settings: ')
             logger.debug(curr_processor_config)
             try:
@@ -165,10 +173,41 @@ class Pipeline:
 
         logger.info("Done loading processors!")
 
-    def update_kwargs(self, kwargs, processor_list):
+    @staticmethod
+    def maybe_add_mwt(kwargs, resources, lang, processors):
+        """
+        A hack to add MWT to languages which need it
+
+        If tokenize is in the list, but mwt is not, and there is a corresponding
+        tokenize & mwt pair in the resources file, we add mwt
+        otherwise we'll get another 10 bugs regarding missing mwt errors
+        """
+        # first check to see if tokenize_pretokenized is True.
+        # if so, then we assume MWT is already present
+        if kwargs.get("tokenize_pretokenized", None):
+            return processors
+
+        if TOKENIZE in processors and MWT not in processors:
+            value = processors[TOKENIZE]
+            if value == 'default' and MWT in resources[lang]['default_processors']:
+                logger.warning("Language %s package default expects mwt, which has been added" % lang)
+                processors[MWT] = 'default'
+            elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and
+                  value in resources[lang][MWT]):
+                logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
+                processors[MWT] = value
+
+        return processors
+
+
+    @staticmethod
+    def update_kwargs(kwargs, processor_list):
         processor_dict = {processor: {'package': package, 'dependencies': dependencies} for (processor, package, dependencies) in processor_list}
         for key, value in kwargs.items():
-            k, v = key.split('_', 1)
+            pieces = key.split('_', 1)
+            if len(pieces) == 1:
+                continue
+            k, v = pieces
             if v == 'model_path':
                 package = value if len(value) < 25 else value[:10]+ '...' + value[-10:]
                 dependencies = processor_dict.get(k, {}).get('dependencies')
@@ -177,10 +216,14 @@ class Pipeline:
         processor_list = sort_processors(processor_list)
         return processor_list
 
-    def filter_config(self, prefix, config_dict):
+    @staticmethod
+    def filter_config(prefix, config_dict):
         filtered_dict = {}
         for key in config_dict.keys():
-            k, v = key.split('_', 1) # split tokenize_pretokenize to tokenize+pretokenize
+            pieces = key.split('_', 1)  # split tokenize_pretokenize to tokenize+pretokenize
+            if len(pieces) == 1:
+                continue
+            k, v = pieces
             if k == prefix:
                 filtered_dict[v] = config_dict[key]
         return filtered_dict

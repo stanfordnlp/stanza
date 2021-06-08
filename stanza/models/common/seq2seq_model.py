@@ -46,6 +46,7 @@ class Seq2SeqModel(nn.Module):
         self.pos_dropout = args.get('pos_dropout', 0)
         self.edit = args.get('edit', False)
         self.num_edit = args.get('num_edit', 0)
+        self.copy = args.get('copy', False)
 
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
@@ -65,6 +66,9 @@ class Seq2SeqModel(nn.Module):
                     nn.Linear(self.hidden_dim, edit_hidden),
                     nn.ReLU(),
                     nn.Linear(edit_hidden, self.num_edit))
+
+        if self.copy:
+            self.copy_gate = nn.Linear(self.dec_hidden_dim, 1)
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
         self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
@@ -122,15 +126,46 @@ class Seq2SeqModel(nn.Module):
         cn = torch.cat((cn[-1], cn[-2]), 1)
         return h_in, (hn, cn)
 
-    def decode(self, dec_inputs, hn, cn, ctx, ctx_mask=None):
+    def decode(self, dec_inputs, hn, cn, ctx, ctx_mask=None, src=None):
         """ Decode a step, based on context encoding and source context states."""
         dec_hidden = (hn, cn)
-        h_out, dec_hidden = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask)
+        decoder_output = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask, return_logattn=self.copy)
+        if self.copy:
+            h_out, dec_hidden, log_attn = decoder_output
+        else:
+            h_out, dec_hidden = decoder_output
 
         h_out_reshape = h_out.contiguous().view(h_out.size(0) * h_out.size(1), -1)
         decoder_logits = self.dec2vocab(h_out_reshape)
         decoder_logits = decoder_logits.view(h_out.size(0), h_out.size(1), -1)
         log_probs = self.get_log_prob(decoder_logits)
+
+        if self.copy:
+            copy_logit = self.copy_gate(h_out)
+            if self.use_pos:
+                # can't copy the UPOS
+                log_attn = log_attn[:, :, 1:]
+
+            # renormalize
+            log_attn = torch.log_softmax(log_attn, -1)
+            # calculate copy probability for each word in the vocab
+            log_copy_prob = torch.nn.functional.logsigmoid(copy_logit) + log_attn
+            # scatter logsumexp
+            mx = log_copy_prob.max(-1, keepdim=True)[0]
+            log_copy_prob = log_copy_prob - mx
+            copy_prob = torch.exp(log_copy_prob)
+            copied_vocab_prob = log_probs.new_zeros(log_probs.size()).scatter_add(-1,
+                src.unsqueeze(1).expand(src.size(0), copy_prob.size(1), src.size(1)),
+                copy_prob)
+            zero_mask = (copied_vocab_prob == 0)
+            log_copied_vocab_prob = torch.log(copied_vocab_prob.masked_fill(zero_mask, 1e-12)) + mx
+            log_copied_vocab_prob = log_copied_vocab_prob.masked_fill(zero_mask, -1e12)
+
+            # combine with normal vocab probability
+            log_nocopy_prob = -torch.log(1 + torch.exp(copy_logit))
+            log_probs = log_probs + log_nocopy_prob
+            log_probs = torch.logsumexp(torch.stack([log_copied_vocab_prob, log_probs]), 0)
+
         return log_probs, dec_hidden
 
     def forward(self, src, src_mask, tgt_in, pos=None):
@@ -153,7 +188,7 @@ class Seq2SeqModel(nn.Module):
         else:
             edit_logits = None
 
-        log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask)
+        log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
         return log_probs, edit_logits
 
     def get_log_prob(self, logits):
@@ -193,7 +228,7 @@ class Seq2SeqModel(nn.Module):
         output_seqs = [[] for _ in range(batch_size)]
 
         while total_done < batch_size and max_len < self.max_dec_len:
-            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask)
+            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
             assert log_probs.size(1) == 1, "Output must have 1-step of output."
             _, preds = log_probs.squeeze(1).max(1, keepdim=True)
             dec_inputs = self.embedding(preds) # update decoder inputs
@@ -251,7 +286,7 @@ class Seq2SeqModel(nn.Module):
         for i in range(self.max_dec_len):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
             dec_inputs = self.embedding(dec_inputs)
-            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask)
+            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
             log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
                     .contiguous() # [batch, beam, V]
 

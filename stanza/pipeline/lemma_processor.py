@@ -22,6 +22,7 @@ class LemmaProcessor(UDProcessor):
     def __init__(self, config, pipeline, use_gpu):
         # run lemmatizer in identity mode
         self._use_identity = None
+        self._pretagged = None
         super().__init__(config, pipeline, use_gpu)
 
     @property
@@ -38,7 +39,10 @@ class LemmaProcessor(UDProcessor):
             self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
     def _set_up_requires(self):
-        if self.config.get('pos') and not self.use_identity:
+        self._pretagged = self._config.get('pretagged', None)
+        if self._pretagged:
+            self._requires = set()
+        elif self.config.get('pos') and not self.use_identity:
             self._requires = LemmaProcessor.REQUIRES_DEFAULT.union(set([POS]))
         else:
             self._requires = LemmaProcessor.REQUIRES_DEFAULT

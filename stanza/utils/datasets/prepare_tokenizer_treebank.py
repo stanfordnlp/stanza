@@ -30,12 +30,10 @@ import shutil
 import subprocess
 import tempfile
 
-import stanza.utils.datasets.common as common
-import stanza.utils.datasets.postprocess_vietnamese_tokenizer_data as postprocess_vietnamese_tokenizer_data
-import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
-import stanza.utils.datasets.preprocess_ssj_data as preprocess_ssj_data
+from collections import Counter
 
-CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+import stanza.utils.datasets.common as common
+import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
@@ -44,7 +42,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
 
     shutil.copyfile(original, copied)
 
-def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
+def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -61,7 +59,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None):
 
         # first we process the tokenization data
         args = argparse.Namespace()
-        args.augment = False
+        args.augment = augment
         args.prepare_labels = False
         process_treebank(treebank, paths, args)
 
@@ -100,13 +98,8 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
-def convert_conllu_to_txt(conllu, txt):
-    # use an external script to produce the txt files
-    subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {conllu} > {txt}", shell=True)
-
 def split_train_file(treebank, train_input_conllu,
-                     train_output_conllu, train_output_txt,
-                     dev_output_conllu, dev_output_txt):
+                     train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -128,26 +121,42 @@ def split_train_file(treebank, train_input_conllu,
     write_sentences_to_conllu(train_output_conllu, train_sents)
     write_sentences_to_conllu(dev_output_conllu, dev_sents)
 
-    convert_conllu_to_txt(train_output_conllu, train_output_txt)
-    convert_conllu_to_txt(dev_output_conllu, dev_output_txt)
-
     return True
 
 def mwt_name(base_dir, short_name, dataset):
     return f"{base_dir}/{short_name}-ud-{dataset}-mwt.json"
 
-def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, short_language, dataset):
+def prepare_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, dataset):
     prepare_tokenizer_data.main([input_txt,
                                  input_conllu,
                                  "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
                                  "-m", mwt_name(tokenizer_dir, short_name, dataset)])
 
-    if short_language == "vi":
-        postprocess_vietnamese_tokenizer_data.main([input_txt,
-                                                    "--char_level_pred", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
-                                                    "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.json"])
+def prepare_treebank_labels(tokenizer_dir, short_name):
+    for dataset in ("train", "dev", "test"):
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
 
+CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+
+def convert_conllu_to_txt(tokenizer_dir, short_name):
+    for dataset in ("train", "dev", "test"):
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+
+        # use an external script to produce the txt files
+        subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
+
+
+# RE to see if the index of a conllu line represents an MWT
 MWT_RE = re.compile("^[0-9]+[-][0-9]+")
+
+# RE to see if the index of a conllu line represents an MWT or copy node
+MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
+
+# more restrictive than an actual int as we expect certain formats in the conllu files
+INT_RE = re.compile("^[0-9]+$")
 
 def strip_mwt_from_sentences(sents):
     """
@@ -162,13 +171,48 @@ def strip_mwt_from_sentences(sents):
     return new_sents
 
 
-def augment_arabic_padt(sents):
+def has_space_after_no(piece):
+    if not piece or piece == "_":
+        return False
+    if piece == "SpaceAfter=No":
+        return True
+    tags = piece.split("|")
+    return any(t == "SpaceAfter=No" for t in tags)
+
+
+def remove_space_after_no(piece, fail_if_missing=True):
+    """
+    Removes a SpaceAfter=No annotation from a single piece of a single word.
+    In other words, given a list of conll lines, first call split("\t"), then call this on the -1 column
+    """
+    # |SpaceAfter is in UD_Romanian-Nonstandard... seems fitting
+    if piece == "SpaceAfter=No" or piece == "|SpaceAfter=No":
+        piece = "_"
+    elif piece.startswith("SpaceAfter=No|"):
+        piece = piece.replace("SpaceAfter=No|", "")
+    elif piece.find("|SpaceAfter=No") > 0:
+        piece = piece.replace("|SpaceAfter=No", "")
+    elif fail_if_missing:
+        raise ValueError("Could not find SpaceAfter=No in the given notes field")
+    return piece
+
+def add_space_after_no(piece, fail_if_found=True):
+    if piece == '_':
+        return "SpaceAfter=No"
+    else:
+        if fail_if_found:
+            if has_space_after_no(piece):
+                raise ValueError("Given notes field already contained SpaceAfter=No")
+        return piece + "|SpaceAfter=No"
+
+
+def augment_arabic_padt(sents, ratio=0.05):
     """
     Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
 
     Reason seems to be that there are almost no examples of "text ." in the dataset.
     This function augments the Arabic-PADT dataset with a few such examples.
-    Note: it may very well be that a lot of tokeners have this problem.
+    TODO: it may very well be that a lot of tokeners have this problem.
 
     Also, there are a few examples in UD2.7 which are apparently
     headlines where there is a ' . ' in the middle of the text.
@@ -192,26 +236,21 @@ def augment_arabic_padt(sents):
             raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
 
         # for some reason performance starts dropping quickly at higher numbers
+        if random.random() > ratio:
+            continue
+
         if (sentence[text_line][-1] in ('.', '؟', '?', '!') and
             sentence[text_line][-2] not in ('.', '؟', '?', '!', ' ') and
-            sentence[-2].split()[-1].find("SpaceAfter=No") >= 0 and
-            len(sentence[-1].split()[1]) == 1 and
-            random.random() < 0.05):
+            has_space_after_no(sentence[-2].split()[-1]) and
+            len(sentence[-1].split()[1]) == 1):
             new_sent = list(sentence)
             new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
             pieces = sentence[-2].split("\t")
-            if pieces[-1] == "SpaceAfter=No":
-                pieces[-1] = "_"
-            elif pieces[-1].startswith("SpaceAfter=No|"):
-                pieces[-1] = pieces[-1].replace("SpaceAfter=No|", "")
-            elif pieces[-1].find("|SpaceAfter=No") > 0:
-                pieces[-1] = piecse[-1].replace("|SpaceAfter=No", "")
-            else:
-                raise ValueError("WTF")
+            pieces[-1] = remove_space_after_no(pieces[-1])
             new_sent[-2] = "\t".join(pieces)
             assert new_sent != sentence
             new_sents.append(new_sent)
-    return new_sents
+    return sents + new_sents
 
 
 def augment_telugu(sents):
@@ -257,25 +296,45 @@ def augment_telugu(sents):
                     new_sentence[idx-1] = new_sentence[idx-1] + "|SpaceAfter=No"
                     break
             new_sents.append(new_sentence)
-    return new_sents
+    return sents + new_sents
 
 COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
-def augment_ancora(sents):
-    """
-    Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
+def augment_comma_separations(sents):
+    """Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
 
     This leaves the tokens and all of the other data the same.  The
     only change made is to change SpaceAfter=No for the "," token and
     adjust the #text line, with the assumption that the conllu->txt
     conversion will correctly handle this change.
+
+    This was particularly an issue for Spanish-AnCora, but it's
+    reasonable to think it could happen to any dataset.  Currently
+    this just operates on commas and ascii letters to avoid
+    accidentally squishing anything that shouldn't be squished.
+
+    UD_Spanish-AnCora 2.7 had a problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there was a comma smashed next to a token.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
+
+    This exact example was later fixed in UD 2.8, but it should still
+    potentially be useful for compensating for typos.
     """
     new_sents = []
-    for sentences in sents:
-        if not sentences[1].startswith("# text"):
-            raise ValueError("UD_Spanish-AnCora not in the expected format")
-
     for sentence in sents:
-        match = COMMA_SEPARATED_RE.search(sentence[1])
+        for text_idx, text_line in enumerate(sentence):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                break
+        else:
+            continue
+
+        match = COMMA_SEPARATED_RE.search(sentence[text_idx])
         if match and random.random() < 0.03:
             for idx, word in enumerate(sentence):
                 if word.startswith("#"):
@@ -296,79 +355,358 @@ def augment_ancora(sents):
             comma = sentence[idx+1]
             pieces = comma.split("\t")
             assert pieces[1] == ','
-            if pieces[-1] == '_':
-                pieces[-1] = "SpaceAfter=No"
-            else:
-                pieces[-1] = pieces[-1] + "|SpaceAfter=No"
+            pieces[-1] = add_space_after_no(pieces[-1])
             comma = "\t".join(pieces)
             new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
 
-            text_offset = sentence[1].find(match.group(1) + ", " + match.group(2))
+            text_offset = sentence[text_idx].find(match.group(1) + ", " + match.group(2))
             text_len = len(match.group(1) + ", " + match.group(2))
-            new_text = sentence[1][:text_offset] + match.group(1) + "," + match.group(2) + sentence[1][text_offset+text_len:]
-            new_sent[1] = new_text
+            new_text = sentence[text_idx][:text_offset] + match.group(1) + "," + match.group(2) + sentence[text_idx][text_offset+text_len:]
+            new_sent[text_idx] = new_text
 
             new_sents.append(new_sent)
 
+    print("Added %d new sentences with asdf, zzzz -> asdf,zzzz" % len(new_sents))
+            
+    return sents + new_sents
+
+def augment_move_comma(sents, ratio=0.02):
+    """
+    Move the comma from after a word to before the next word some fraction of the time
+
+    We looks for this exact pattern:
+      w1, w2
+    and replace it with
+      w1 ,w2
+
+    The idea is that this is a relatively common typo, but the tool
+    won't learn how to tokenize it without some help.
+
+    Note that this modification replaces the original text.
+    """
+    new_sents = []
+    num_operations = 0
+    for sentence in sents:
+        if random.random() > ratio:
+            new_sents.append(sentence)
+            continue
+
+        found = False
+        for word_idx, word in enumerate(sentence):
+            if word.startswith("#"):
+                continue
+            if word_idx == 0 or word_idx >= len(sentence) - 2:
+                continue
+            pieces = word.split("\t")
+            if pieces[1] == ',' and not has_space_after_no(pieces[-1]):
+                # found a comma with a space after it
+                prev_word = sentence[word_idx-1]
+                if not has_space_after_no(prev_word.split("\t")[-1]):
+                    # unfortunately, the previous word also had a
+                    # space after it.  does not fit what we are
+                    # looking for
+                    continue
+                # also, want to skip instances near MWT or copy nodes,
+                # since those are harder to rearrange
+                next_word = sentence[word_idx+1]
+                if MWT_OR_COPY_RE.match(next_word.split("\t")[0]):
+                    continue
+                if MWT_OR_COPY_RE.match(prev_word.split("\t")[0]):
+                    continue
+                # at this point, the previous word has no space and the comma does
+                found = True
+                break
+
+        if not found:
+            new_sents.append(sentence)
+            continue
+
+        new_sentence = list(sentence)
+
+        pieces = new_sentence[word_idx].split("\t")
+        pieces[-1] = add_space_after_no(pieces[-1])
+        new_sentence[word_idx] = "\t".join(pieces)
+
+        pieces = new_sentence[word_idx-1].split("\t")
+        prev_word = pieces[1]
+        pieces[-1] = remove_space_after_no(pieces[-1])
+        new_sentence[word_idx-1] = "\t".join(pieces)
+
+        next_word = new_sentence[word_idx+1].split("\t")[1]
+
+        for text_idx, text_line in enumerate(sentence):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                old_chunk = prev_word + ", " + next_word
+                new_chunk = prev_word + " ," + next_word
+                word_idx = text_line.find(old_chunk)
+                if word_idx < 0:
+                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified.  Looking for\n" + old_chunk + "\n" + text_line)
+                new_text_line = text_line[:word_idx] + new_chunk + text_line[word_idx+len(old_chunk):]
+                new_sentence[text_idx] = new_text_line
+                break
+
+        new_sents.append(new_sentence)
+        num_operations = num_operations + 1
+
+    print("Swapped 'w1, w2' for 'w1 ,w2' %d times" % num_operations)
     return new_sents
 
-def fix_spanish_ancora(input_conllu, output_conllu, output_txt, augment):
+def augment_apos(sents):
+
     """
-    The basic Spanish tokenizer has an issue where "asdf,zzzz" does not get tokenized.
-
-    One possible problem is with this sentence:
-    # orig_file_sentence 143#5
-    In this sentence, there is a comma smashed next to a token.  Seems incorrect.
-
-    Fixing just this one sentence is not sufficient to tokenize
-    "asdf,zzzz" as desired, so we also augment by some fraction where
-    we have squished "asdf, zzzz" into "asdf,zzzz".
+    If there are no instances of ’ in the dataset, but there are instances of ',
+    we replace some fraction of ' with ’ so that the tokenizer will recognize it.
     """
-    random.seed(1234)
-    sents = read_sentences_from_conllu(input_conllu)
-
-    ORIGINAL_BAD = "29	,Comerç	,Comerç	PROPN	PROPN	_	28	flat	_	_"
-    NEW_FIXED = ["29	,	,	PUNCT	PUNCT	PunctType=Comm	32	punct	_	SpaceAfter=No",   # TODO dunno about the head
-                 "30	Comerç	Comerç	PROPN	PROPN	_	26	flat	_	_"]
-    new_sentences = []
-    found = False
-    for sentence in sents:
-        if sentence[0].strip() != '# sent_id = train-s14205':
-            new_sentences.append(sentence)
-            continue
-        assert not found, "WTF"
-        found = True
-
-        for idx, word in enumerate(sentence):
-            if word.strip() == ORIGINAL_BAD:
+    has_unicode_apos = False
+    has_ascii_apos = False
+    for sent in sents:
+        for line in sent:
+            if line.startswith("# text"):
+                if line.find("'") >= 0:
+                    has_ascii_apos = True
+                if line.find("’") >= 0:
+                    has_unicode_apos = True
                 break
-        assert idx == 31, "Could not find ,Comerç at the expected line number.  Perhaps the treebank has been fixed?"
-        for word in sentence[3:idx]:
-            assert int(sentence[idx].strip().split("\t")[6]) < idx
-        new_sentence = sentence[:idx] + NEW_FIXED
-        # increase the token idx and the dep of each word as appropriate
-        for word in sentence[idx+1:]:
-            pieces = word.strip().split("\t")
-            pieces[0] = str(int(pieces[0]) + 1)
-            dep = int(pieces[6])
-            if dep > 29:
-                pieces[6] = str(dep + 1)
-            new_sentence.append("\t".join(pieces))
+        else:
+            raise ValueError("Cannot find '# text'")
 
-        new_sentences.append(new_sentence)
+    if has_unicode_apos or not has_ascii_apos:
+        return sents
 
-    assert found, "Could not find sentence train-s14205 in Spanish Ancora"
+    new_sents = []
+    for sent in sents:
+        if random.random() > 0.05:
+            new_sents.append(sent)
+            continue
+        new_sent = []
+        for line in sent:
+            if line.startswith("# text"):
+                new_sent.append(line.replace("'", "’"))
+            elif line.startswith("#"):
+                new_sent.append(line)
+            else:
+                pieces = line.split("\t")
+                pieces[1] = pieces[1].replace("'", "’")
+                new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
 
-    if augment:
-        extra_sentences = augment_ancora(new_sentences)
-    else:
-        extra_sentences = []
+    return new_sents
 
-    write_sentences_to_conllu(output_conllu, new_sentences + extra_sentences)
-    convert_conllu_to_txt(output_conllu, output_txt)
+def augment_ellipses(sents):
+    """
+    Replaces a fraction of '...' with '…'
+    """
+    has_ellipses = False
+    has_unicode_ellipses = False
+    for sent in sents:
+        for line in sent:
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if pieces[1] == '...':
+                has_ellipses = True
+            elif pieces[1] == '…':
+                has_unicode_ellipses = True
+
+    if has_unicode_ellipses or not has_ellipses:
+        return sents
+
+    new_sents = []
+
+    for sent in sents:
+        if random.random() > 0.05:
+            new_sents.append(sent)
+            continue
+        new_sent = []
+        for line in sent:
+            if line.startswith("#"):
+                new_sent.append(line)
+            else:
+                pieces = line.split("\t")
+                if pieces[1] == '...':
+                    pieces[1] = '…'
+                new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+
+    return new_sents
+
+# https://en.wikipedia.org/wiki/Quotation_mark
+QUOTES = ['"', '“', '”', '«', '»', '「', '」', '《', '》', '„', '″']
+QUOTES_RE = re.compile("(.?)[" + "".join(QUOTES) + "](.+)[" + "".join(QUOTES) + "](.?)")
+# Danish does '«' the other way around from most European languages
+START_QUOTES = ['"', '“', '”', '«', '»', '「', '《', '„', '„', '″']
+END_QUOTES   = ['"', '“', '”', '»', '«', '」', '》', '”', '“', '″']
+
+def augment_quotes(sents, ratio=0.15):
+    """
+    Go through the sentences and replace a fraction of sentences with alternate quotes
+
+    TODO: for certain languages we may want to make some language-specific changes
+      eg Danish, don't add «...»
+    """
+    assert len(START_QUOTES) == len(END_QUOTES)
+
+    counts = Counter()
+    new_sents = []
+    for sent in sents:
+        if random.random() > ratio:
+            new_sents.append(sent)
+            continue
+
+        # count if there are exactly 2 quotes in this sentence
+        # this is for convenience - otherwise we need to figure out which pairs go together
+        count_quotes = sum(1 for x in sent
+                           if (not x.startswith("#") and
+                               x.split("\t")[1] in QUOTES))
+        if count_quotes != 2:
+            new_sents.append(sent)
+            continue
+
+        # choose a pair of quotes from the candidates
+        quote_idx = random.choice(range(len(START_QUOTES)))
+        start_quote = START_QUOTES[quote_idx]
+        end_quote = END_QUOTES[quote_idx]
+        counts[start_quote + end_quote] = counts[start_quote + end_quote] + 1
+
+        new_sent = []
+        saw_start = False
+        for line in sent:
+            if line.startswith("#"):
+                new_sent.append(line)
+                continue
+            pieces = line.split("\t")
+            if pieces[1] in QUOTES:
+                if saw_start:
+                    # Note that we don't change the lemma.  Presumably it's
+                    # set to the correct lemma for a quote for this treebank
+                    pieces[1] = end_quote
+                else:
+                    pieces[1] = start_quote
+                    saw_start = True
+                new_sent.append("\t".join(pieces))
+            else:
+                new_sent.append(line)
+
+        for text_idx, text_line in enumerate(new_sent):
+            # look for the line that starts with "# text".
+            # keep going until we find it, or silently ignore it
+            # if the dataset isn't in that format
+            if text_line.startswith("# text"):
+                replacement = "\\1%s\\2%s\\3" % (start_quote, end_quote)
+                new_text_line = QUOTES_RE.sub(replacement, text_line)
+                new_sent[text_idx] = new_text_line
+
+        new_sents.append(new_sent)
+
+    print("Augmented {} quotes: {}".format(sum(counts.values()), counts))
+    return new_sents
+
+def find_text_idx(sentence):
+    """
+    Return the index of the # text line or -1
+    """
+    for idx, line in enumerate(sentence):
+        if line.startswith("# text"):
+            return idx
+    return -1
+
+def change_indices(line, delta):
+    """
+    Adjust all indices in the given sentence by delta.  Useful when removing a word, for example
+    """
+    if line.startswith("#"):
+        return line
+
+    pieces = line.split("\t")
+    if MWT_RE.match(pieces[0]):
+        indices = pieces[0].split("-")
+        pieces[0] = "%d-%d" % (int(indices[0]) + delta, int(indices[1]) + delta)
+        line = "\t".join(pieces)
+        return line
+
+    if MWT_OR_COPY_RE.match(pieces[0]):
+        raise NotImplementedError("Need to implement change_indices for copy nodes")
+
+    if not INT_RE.match(pieces[0]):
+        raise NotImplementedError("Unknown index type: %s" % pieces[0])
+
+    pieces[0] = str(int(pieces[0]) + delta)
+    dep = int(pieces[6])
+    if dep != 0:
+        pieces[6] = str(int(dep) + delta)
+    if pieces[8] != '_':
+        raise NotImplementedError("Need to handle the additional deps field in change_indices")
+    line = "\t".join(pieces)
+    return line
+
+def augment_initial_punct(sents, ratio=0.20):
+    """
+    If a sentence starts with certain punct marks, occasionally use the same sentence without the initial punct.
+
+    Currently this just handles ¿
+    This helps languages such as CA and ES where the models go awry when the initial ¿ is missing.
+    """
+    new_sents = []
+    for sent in sents:
+        if random.random() > ratio:
+            continue
+
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("¿") != 1:
+            # only handle sentences with exactly one ¿
+            continue
+
+        # find the first line with actual text
+        for idx, line in enumerate(sent):
+            if line.startswith("#"):
+                continue
+            break
+        if idx >= len(sent) - 1:
+            raise ValueError("Unexpectedly an entire sentence is comments")
+        pieces = line.split("\t")
+        if pieces[1] != '¿':
+            continue
+        if has_space_after_no(pieces[-1]):
+            replace_text = "¿"
+        else:
+            replace_text = "¿ "
+
+        new_sent = sent[:idx] + sent[idx+1:]
+        new_sent[text_idx] = text_line.replace(replace_text, "")
+
+        # now need to update all indices
+        new_sent = [change_indices(x, -1) for x in new_sent]
+        new_sents.append(new_sent)
+
+    if len(new_sents) > 0:
+        print("Added %d sentences with the leading ¿ removed" % len(new_sents))
+
+    return sents + new_sents
 
 
-def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_function):
+def augment_punct(sents):
+    """
+    If there are no instances of ’ in the dataset, but there are instances of ',
+    we replace some fraction of ' with ’ so that the tokenizer will recognize it.
+
+    Also augments with ... / …
+    """
+    new_sents = augment_apos(sents)
+    new_sents = augment_quotes(new_sents)
+    new_sents = augment_move_comma(new_sents)
+    new_sents = augment_comma_separations(new_sents)
+    new_sents = augment_initial_punct(new_sents)
+    new_sents = augment_ellipses(new_sents)
+
+    return new_sents
+
+
+
+def write_augmented_dataset(input_conllu, output_conllu, augment_function):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -379,8 +717,7 @@ def write_augmented_dataset(input_conllu, output_conllu, output_txt, augment_fun
     # the actual meat of the function - produce new sentences
     new_sents = augment_function(sents)
 
-    write_sentences_to_conllu(output_conllu, sents + new_sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    write_sentences_to_conllu(output_conllu, new_sents)
 
 def remove_spaces_from_sentences(sents):
     """
@@ -407,7 +744,7 @@ def remove_spaces_from_sentences(sents):
         new_sents.append(new_sentence)
     return new_sents
 
-def remove_spaces(input_conllu, output_conllu, output_txt):
+def remove_spaces(input_conllu, output_conllu):
     """
     Turns a dataset into something appropriate for building a segmenter.
 
@@ -418,10 +755,9 @@ def remove_spaces(input_conllu, output_conllu, output_txt):
     new_sents = remove_spaces_from_sentences(sents)
 
     write_sentences_to_conllu(output_conllu, new_sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
 
 
-def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels=True):
+def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu):
     """
     Builds a combined dataset out of multiple Korean datasets.
 
@@ -439,21 +775,13 @@ def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset
         sents = remove_spaces_from_sentences(sents)
 
     write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
 
-    if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "ko", dataset)
-
-def build_combined_korean(udbase_dir, tokenizer_dir, short_name, prepare_labels=True):
+def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
     for dataset in ("train", "dev", "test"):
-        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_txt, output_conllu, prepare_labels)
+        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
 
-def build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels):
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-
+def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
         # (no DE or I)
@@ -466,8 +794,7 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
-        # TODO: some better way other than hard coding this path?
-        extra_italian = os.path.join(extern_dir, "italian", "italian.mwt")
+        extra_italian = os.path.join(handparsed_dir, "italian-mwt", "italian.mwt")
         if not os.path.exists(extra_italian):
             raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
         extra_sents = read_sentences_from_conllu(extra_italian)
@@ -480,89 +807,171 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_
         istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(istd_conllu)
 
-    write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
+    return sents
 
-    if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+def check_gum_ready(udbase_dir):
+    gum_conllu = common.find_treebank_dataset_file("UD_English-GUMReddit", udbase_dir, "train", "conllu")
+    if common.mostly_underscores(gum_conllu):
+        raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
+def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    en_combined is currently EWT, GUM, PUD, and Pronouns
 
-def build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, prepare_labels=True):
-    for dataset in ("train", "dev", "test"):
-        build_combined_italian_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels)
-
-def build_combined_english_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels):
-    output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+    TODO: use more of the handparsed data
+    """
+    check_gum_ready(udbase_dir)
 
     if dataset == 'train':
         # TODO: include more UD treebanks, possibly with xpos removed
-        #  UD_English-ParTUT, UD_English-Pronouns, UD_English-Pronouns - xpos are different
+        #  UD_English-ParTUT - xpos are different
         # also include "external" treebanks such as PTB
-        treebanks = ["UD_English-EWT", "UD_English-GUM"]
+        # NOTE: in order to get the best results, make sure each of these treebanks have the latest edits applied
+        train_treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
+        test_treebanks = ["UD_English-PUD", "UD_English-Pronouns"]
         sents = []
-        for treebank in treebanks:
-            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
+            sents.extend(read_sentences_from_conllu(conllu_file))
+        for treebank in test_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
 
     sents = strip_mwt_from_sentences(sents)
-    write_sentences_to_conllu(output_conllu, sents)
-    convert_conllu_to_txt(output_conllu, output_txt)
-
-    if prepare_labels:
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, "it", dataset)
+    return sents
 
 
-def build_combined_english(udbase_dir, tokenizer_dir, extern_dir, short_name, prepare_labels=True):
-    for dataset in ("train", "dev", "test"):
-        build_combined_english_dataset(udbase_dir, tokenizer_dir, extern_dir, short_name, dataset, prepare_labels)
+def replace_semicolons(sentences):
+    """
+    Spanish GSD and AnCora have different standards for semicolons.
 
+    GSD has semicolons at the end of sentences, AnCora has them in the middle as clause separators.
+    Consecutive sentences in GSD do not seem to be related, so there is no combining that can be done.
+    The easiest solution is to replace sentence final semicolons with "." in GSD
+    """
+    new_sents = []
+    count = 0
+    for sentence in sentences:
+        for text_idx, text_line in enumerate(sentence):
+            if text_line.startswith("# text"):
+                break
+        else:
+            raise ValueError("Expected every sentence in GSD to have a # text field")
+        if not text_line.endswith(";"):
+            new_sents.append(sentence)
+            continue
+        count = count + 1
+        new_sent = list(sentence)
+        new_sent[text_idx] = text_line[:-1] + "."
+        new_sent[-1] = new_sent[-1].replace(";", ".")
+        count = count + 1
+        new_sents.append(new_sent)
+    print("Updated %d sentences to replace sentence-final ; with ." % count)
+    return new_sents
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, prepare_labels=True):
-    # TODO: do this higher up
-    os.makedirs(tokenizer_dir, exist_ok=True)
+def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    es_combined is AnCora and GSD put together
 
-    input_txt = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "txt")
-    input_txt_copy = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+    TODO: remove features which aren't shared between datasets
+    TODO: consider mixing in PUD?
+    """
+    if dataset == 'train':
+        treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            if treebank.endswith("GSD"):
+                new_sents = replace_semicolons(new_sents)
+            sents.extend(new_sents)
 
-    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
-    input_conllu_copy = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-
-    if short_name == "sl_ssj":
-        preprocess_ssj_data.process(input_txt, input_conllu, input_txt_copy, input_conllu_copy)
-    elif short_name == "te_mtg" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_telugu)
-    elif short_name == "ar_padt" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, input_conllu_copy, input_txt_copy, augment_arabic_padt)
-    elif short_name.startswith("es_ancora") and dataset == 'train':
-        # note that we always do this for AnCora, since this token is bizarre and confusing
-        fix_spanish_ancora(input_conllu, input_conllu_copy, input_txt_copy, augment=augment)
-    elif short_name.startswith("ko_") and short_name.endswith("_seg"):
-        remove_spaces(input_conllu, input_conllu_copy, input_txt_copy)
+        extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "spanish.mwt")
+        if not os.path.exists(extra_spanish):
+            raise FileNotFoundError("Cannot find the extra dataset 'spanish.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_spanish)
+        sents.extend(extra_sents)
     else:
-        shutil.copyfile(input_txt, input_txt_copy)
-        shutil.copyfile(input_conllu, input_conllu_copy)
+        conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
+        sents = read_sentences_from_conllu(conllu_file)
 
-    if prepare_labels:
-        prepare_dataset_labels(input_txt_copy, input_conllu_copy, tokenizer_dir, short_name, short_language, dataset)
+    return sents
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True, prepare_labels=True):
+
+COMBINED_FNS = {
+    "en_combined": build_combined_english_dataset,
+    "es_combined": build_combined_spanish_dataset,
+    "it_combined": build_combined_italian_dataset,
+}
+
+def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
+    random.seed(1234)
+    build_fn = COMBINED_FNS[short_name]
+    for dataset in ("train", "dev", "test"):
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        sents = build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+        if dataset == 'train' and augment:
+            sents = augment_punct(sents)
+        write_sentences_to_conllu(output_conllu, sents)
+
+def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment):
+    """
+    Build the GUM dataset by combining GUMReddit
+
+    It checks to make sure GUMReddit is filled out using the included script
+    """
+    check_gum_ready(udbase_dir)
+    random.seed(1234)
+
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    treebanks = ["UD_English-GUM", "UD_English-GUMReddit"]
+    sents = []
+    for treebank in treebanks:
+        conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+        sents.extend(read_sentences_from_conllu(conllu_file))
+
+    if dataset == 'train' and augment:
+        sents = augment_punct(sents)
+
+    write_sentences_to_conllu(output_conllu, sents)
+
+def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
+    for dataset in ("train", "dev", "test"):
+        build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment)
+
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
+    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
+    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+
+    if short_name == "te_mtg" and dataset == 'train' and augment:
+        write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
+    elif short_name == "ar_padt" and dataset == 'train' and augment:
+        write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
+    elif short_name.startswith("ko_") and short_name.endswith("_seg"):
+        remove_spaces(input_conllu, output_conllu)
+    elif dataset == 'train' and augment:
+        write_augmented_dataset(input_conllu, output_conllu, augment_punct)
+    else:
+        shutil.copyfile(input_conllu, output_conllu)
+
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
     Process a normal UD treebank with train/dev/test splits
 
-    SL-SSJ and Vietnamese both use this code path as well.
+    SL-SSJ and other datasets with inline modifications all use this code path as well.
     """
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment, prepare_labels)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment, prepare_labels)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment, prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
 
 
 XV_RATIO = 0.2
 
-def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, prepare_labels=True):
+def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
     """
     Process a UD treebank with only train/test splits
 
@@ -583,25 +992,17 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     train_output_conllu = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
-    train_output_txt = f"{tokenizer_dir}/{short_name}.train.txt"
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
-    dev_output_txt = f"{tokenizer_dir}/{short_name}.dev.txt"
 
     if not split_train_file(treebank=treebank,
                             train_input_conllu=train_input_conllu,
                             train_output_conllu=train_output_conllu,
-                            train_output_txt=train_output_txt,
-                            dev_output_conllu=dev_output_conllu,
-                            dev_output_txt=dev_output_txt):
+                            dev_output_conllu=dev_output_conllu):
         return
-
-    if prepare_labels:
-        prepare_dataset_labels(train_output_txt, train_output_conllu, tokenizer_dir, short_name, short_language, "train")
-        prepare_dataset_labels(dev_output_txt, dev_output_conllu, tokenizer_dir, short_name, short_language, "dev")
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, prepare_labels=prepare_labels)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
 
 def add_specific_args(parser):
     parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
@@ -622,28 +1023,36 @@ def process_treebank(treebank, paths, args):
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
-    extern_dir = paths["EXTERN_DIR"]
+    handparsed_dir = paths["HANDPARSED_DIR"]
 
     short_name = common.project_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
+    os.makedirs(tokenizer_dir, exist_ok=True)
+
     if short_name.startswith("ko_combined"):
-        build_combined_korean(udbase_dir, tokenizer_dir, short_name, args.prepare_labels)
-    elif short_name.startswith("it_combined"):
-        build_combined_italian(udbase_dir, tokenizer_dir, extern_dir, short_name, args.prepare_labels)
-    elif short_name.startswith("en_combined"):
-        build_combined_english(udbase_dir, tokenizer_dir, extern_dir, short_name, args.prepare_labels)
+        build_combined_korean(udbase_dir, tokenizer_dir, short_name)
+    elif short_name in ("it_combined", "en_combined", "es_combined"):
+        build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
+    elif short_name.startswith("en_gum"):
+        # we special case GUM because it should include a filled-out GUMReddit
+        print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
+        build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.augment)
     else:
-        train_txt_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "txt")
-        if not train_txt_file:
-            raise ValueError("Cannot find train file for treebank %s" % treebank)
+        # check that we can find the train file where we expect it
+        train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
 
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "txt"):
-            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.prepare_labels)
+        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
+            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
         else:
-            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment, args.prepare_labels)
+            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
+
+    convert_conllu_to_txt(tokenizer_dir, short_name)
+
+    if args.prepare_labels:
+        prepare_treebank_labels(tokenizer_dir, short_name)
 
 
 def main():

@@ -66,12 +66,8 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     # TOKENIZE step
     # the raw data to process starts in tokenize_dir
     # retokenize it using the saved model
-    if short_language == 'vi':
-        tokenizer_type = "--json_file"
-        tokenizer_file = f"{tokenize_dir}/{test_short_name}-ud-{dataset}.json"
-    else:
-        tokenizer_type = "--txt_file"
-        tokenizer_file = f"{tokenize_dir}/{test_short_name}.{dataset}.txt"
+    tokenizer_type = "--txt_file"
+    tokenizer_file = f"{tokenize_dir}/{test_short_name}.{dataset}.txt"
 
     tokenizer_output = f"{ete_dir}/{short_name}.{dataset}.tokenizer.conllu"
 

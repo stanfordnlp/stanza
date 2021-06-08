@@ -40,3 +40,12 @@ class MWTProcessor(UDProcessor):
 
         batch.doc.set_mwt_expansions(preds)
         return batch.doc
+
+    def bulk_process(self, docs):
+        """
+        MWT processor counts some statistics on the individual docs, so we need to separately redo those stats
+        """
+        docs = super().bulk_process(docs)
+        for doc in docs:
+            doc._count_words()
+        return docs

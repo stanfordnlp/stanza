@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This is copied from an external git repo:
+# https://github.com/ufal/conll2018/tree/master/evaluation_script
+
 # Compatible with Python 2.7 and 3.2+, can be used either as a module
 # or a standalone executable.
 #
@@ -214,7 +217,7 @@ def load_conllu(file):
                     word.parent.functional_children.append(word)
 
             # Check there is a single root node
-            if sentence_start < len(ud.words) and len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
+            if len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
                 raise UDError("There are multiple roots in a sentence")
 
             # End the sentence
@@ -483,6 +486,40 @@ def evaluate_wrapper(args):
     system_ud = load_conllu_file(args.system_file)
     return evaluate(gold_ud, system_ud)
 
+def build_evaluation_table(evaluation, verbose, counts):
+    text = []
+    
+    # Print the evaluation
+    if not verbose and not counts:
+        text.append("LAS F1 Score: {:.2f}".format(100 * evaluation["LAS"].f1))
+        text.append("MLAS Score: {:.2f}".format(100 * evaluation["MLAS"].f1))
+        text.append("BLEX Score: {:.2f}".format(100 * evaluation["BLEX"].f1))
+    else:
+        if counts:
+            text.append("Metric     | Correct   |      Gold | Predicted | Aligned")
+        else:
+            text.append("Metric     | Precision |    Recall |  F1 Score | AligndAcc")
+        text.append("-----------+-----------+-----------+-----------+-----------")
+        for metric in["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]:
+            if counts:
+                text.append("{:11}|{:10} |{:10} |{:10} |{:10}".format(
+                    metric,
+                    evaluation[metric].correct,
+                    evaluation[metric].gold_total,
+                    evaluation[metric].system_total,
+                    evaluation[metric].aligned_total or (evaluation[metric].correct if metric == "Words" else "")
+                ))
+            else:
+                text.append("{:11}|{:10.2f} |{:10.2f} |{:10.2f} |{}".format(
+                    metric,
+                    100 * evaluation[metric].precision,
+                    100 * evaluation[metric].recall,
+                    100 * evaluation[metric].f1,
+                    "{:10.2f}".format(100 * evaluation[metric].aligned_accuracy) if evaluation[metric].aligned_accuracy is not None else ""
+                ))
+
+    return "\n".join(text)
+
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
@@ -498,35 +535,8 @@ def main():
 
     # Evaluate
     evaluation = evaluate_wrapper(args)
-
-    # Print the evaluation
-    if not args.verbose and not args.counts:
-        print("LAS F1 Score: {:.2f}".format(100 * evaluation["LAS"].f1))
-        print("MLAS Score: {:.2f}".format(100 * evaluation["MLAS"].f1))
-        print("BLEX Score: {:.2f}".format(100 * evaluation["BLEX"].f1))
-    else:
-        if args.counts:
-            print("Metric     | Correct   |      Gold | Predicted | Aligned")
-        else:
-            print("Metric     | Precision |    Recall |  F1 Score | AligndAcc")
-        print("-----------+-----------+-----------+-----------+-----------")
-        for metric in["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]:
-            if args.counts:
-                print("{:11}|{:10} |{:10} |{:10} |{:10}".format(
-                    metric,
-                    evaluation[metric].correct,
-                    evaluation[metric].gold_total,
-                    evaluation[metric].system_total,
-                    evaluation[metric].aligned_total or (evaluation[metric].correct if metric == "Words" else "")
-                ))
-            else:
-                print("{:11}|{:10.2f} |{:10.2f} |{:10.2f} |{}".format(
-                    metric,
-                    100 * evaluation[metric].precision,
-                    100 * evaluation[metric].recall,
-                    100 * evaluation[metric].f1,
-                    "{:10.2f}".format(100 * evaluation[metric].aligned_accuracy) if evaluation[metric].aligned_accuracy is not None else ""
-                ))
+    results = build_evaluation_table(evaluation, args.verbose, args.counts)
+    print(results)
 
 if __name__ == "__main__":
     main()

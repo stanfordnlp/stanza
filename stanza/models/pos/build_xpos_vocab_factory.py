@@ -31,7 +31,7 @@ def get_factory(sh, fn):
         key = 'WordVocab(data, shorthand, idx=2)'
         return key
 
-    doc = Document(CoNLL.conll2dict(input_file=train_file))
+    doc = CoNLL.conll2doc(input_file=train_file)
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
     print(f'Original length = {len(data)}')
     data = filter_data(data, idx=2)
@@ -81,10 +81,10 @@ def main():
     # actual factory class as seen in models.pos.xpos_vocab_factory.
     first = True
     with open(output_file, 'w') as f:
-        print('''# This is the XPOS factory method generated automatically from models.pos.build_xpos_vocab_factory.
+        print('''# This is the XPOS factory method generated automatically from stanza.models.pos.build_xpos_vocab_factory.
 # Please don't edit it!
 
-from models.pos.vocab import WordVocab, XPOSVocab
+from stanza.models.pos.vocab import WordVocab, XPOSVocab
 
 def xpos_vocab_factory(data, shorthand):''', file=f)
 

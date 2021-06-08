@@ -4,6 +4,7 @@ import glob
 import logging
 import os
 import re
+import subprocess
 import sys
 
 import stanza.utils.default_paths as default_paths
@@ -36,7 +37,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     """
     if treebank.startswith("UD_Korean") and treebank.endswith("_seg"):
         treebank = treebank[:-4]
-    filename = f"{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}"
+    filename = os.path.join(udbase_dir, treebank, f"*-ud-{dataset}.{extension}")
     files = glob.glob(filename)
     if len(files) == 0:
         if fail:
@@ -48,7 +49,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     else:
         raise RuntimeError(f"Unexpected number of files matched '{udbase_dir}/{treebank}/*-ud-{dataset}.{extension}'")
 
-def all_underscores(filename):
+def mostly_underscores(filename):
     """
     Certain treebanks have proprietary data, so the text is hidden
 
@@ -59,16 +60,19 @@ def all_underscores(filename):
       UD_Hindi_English-HIENCS
       UD_Japanese-BCCWJ
     """
+    underscore_count = 0
+    total_count = 0
     for line in open(filename).readlines():
         line = line.strip()
         if not line:
             continue
-        line = line.replace("_", "")
-        line = line.replace("-", "")
-        line = line.replace(" ", "")
-        if line:
-            return False
-    return True
+        if line.startswith("#"):
+            continue
+        total_count = total_count + 1
+        pieces = line.split("\t")
+        if pieces[1] in ("_", "-"):
+            underscore_count = underscore_count + 1
+    return underscore_count / total_count > 0.5
 
 def num_words_in_file(conllu_file):
     """
@@ -91,15 +95,17 @@ def get_ud_treebanks(udbase_dir, filtered=True):
     Looks in udbase_dir for all the treebanks which have both train, dev, and test
     """
     treebanks = sorted(glob.glob(udbase_dir + "/UD_*"))
+    # skip UD_English-GUMReddit as it is usually incorporated into UD_English-GUM
     treebanks = [os.path.split(t)[1] for t in treebanks]
+    treebanks = [t for t in treebanks if t != "UD_English-GUMReddit"]
     if filtered:
         treebanks = [t for t in treebanks
-                     if (find_treebank_dataset_file(t, udbase_dir, "train", "txt") and
+                     if (find_treebank_dataset_file(t, udbase_dir, "train", "conllu") and
                          # this will be fixed using XV
-                         #find_treebank_dataset_file(t, udbase_dir, "dev", "txt") and
-                         find_treebank_dataset_file(t, udbase_dir, "test", "txt"))]
+                         #find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") and
+                         find_treebank_dataset_file(t, udbase_dir, "test", "conllu"))]
         treebanks = [t for t in treebanks
-                     if not all_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "txt"))]
+                     if not mostly_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
         # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
@@ -132,4 +138,3 @@ def main(process_treebank, add_specific_args=None):
 
     for treebank in treebanks:
         process_treebank(treebank, paths, args)
-

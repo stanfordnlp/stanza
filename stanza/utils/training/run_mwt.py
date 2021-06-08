@@ -33,7 +33,7 @@ def check_mwt(filename):
     """
     Checks whether or not there are MWTs in the given conll file
     """
-    doc = Document(CoNLL.conll2dict(filename))
+    doc = CoNLL.conll2doc(filename)
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
 
@@ -89,7 +89,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running dev step with args: {}".format(dev_args))
         mwt_expander.main(dev_args)
 
-        results = common.run_eval_script(dev_gold_file, dev_output_file, 4)
+        results = common.run_eval_script_mwt(dev_gold_file, dev_output_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -103,7 +103,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         mwt_expander.main(test_args)
 
-        results = common.run_eval_script(test_gold_file, test_output_file, 4)
+        results = common.run_eval_script_mwt(test_gold_file, test_output_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():

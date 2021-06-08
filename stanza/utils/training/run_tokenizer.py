@@ -13,6 +13,9 @@ all UD treebanks.
 Extra arguments are passed to tokenizer.  In case the run script
 itself is shadowing arguments, you can specify --extra_args as a
 parameter to mark where the tokenizer arguments start.
+
+Default behavior is to discard the output and just print the results.
+To keep the results instead, use --save_output
 """
 
 import logging
@@ -31,28 +34,17 @@ def run_treebank(mode, paths, treebank, short_name,
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
 
     short_language = short_name.split("_")[0]
-    if short_language == 'vi':
-        label_type = "--json_file"
-        label_file = f"{tokenize_dir}/{short_name}-ud-train.json"
-        dev_type = "--json_file"
-        dev_file = f"{tokenize_dir}/{short_name}-ud-dev.json"
-        test_type = "--json_file"
-        test_file = f"{tokenize_dir}/{short_name}-ud-test.json"
-        train_type = "--txt_file"
-        train_file = f"{tokenize_dir}/{short_name}.train.txt"
-        train_dev_args = ["--dev_json_file", dev_file]
-    else:
-        label_type = "--label_file"
-        label_file = f"{tokenize_dir}/{short_name}-ud-train.toklabels"
-        dev_type = "--txt_file"
-        dev_file = f"{tokenize_dir}/{short_name}.dev.txt"
-        test_type = "--txt_file"
-        test_file = f"{tokenize_dir}/{short_name}.test.txt"
-        train_type = "--txt_file"
-        train_file = f"{tokenize_dir}/{short_name}.train.txt"
-        train_dev_args = ["--dev_txt_file", dev_file, "--dev_label_file", f"{tokenize_dir}/{short_name}-ud-dev.toklabels"]
+    label_type = "--label_file"
+    label_file = f"{tokenize_dir}/{short_name}-ud-train.toklabels"
+    dev_type = "--txt_file"
+    dev_file = f"{tokenize_dir}/{short_name}.dev.txt"
+    test_type = "--txt_file"
+    test_file = f"{tokenize_dir}/{short_name}.test.txt"
+    train_type = "--txt_file"
+    train_file = f"{tokenize_dir}/{short_name}.train.txt"
+    train_dev_args = ["--dev_txt_file", dev_file, "--dev_label_file", f"{tokenize_dir}/{short_name}-ud-dev.toklabels"]
     
-    if short_language == "zh":
+    if short_language == "zh" or short_language.startswith("zh-"):
         extra_args = ["--skip_newline"] + extra_args
 
     dev_gold = f"{tokenize_dir}/{short_name}.dev.gold.conllu"
@@ -84,7 +76,7 @@ def run_treebank(mode, paths, treebank, short_name,
         # TODO: log these results?  The original script logged them to
         # echo $results $args >> ${TOKENIZE_DATA_DIR}/${short}.results
 
-        results = common.run_eval_script(dev_gold, dev_pred, 2, 5)
+        results = common.run_eval_script_tokens(dev_gold, dev_pred)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
@@ -94,7 +86,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
-        results = common.run_eval_script(test_gold, test_pred, 2, 5)
+        results = common.run_eval_script_tokens(test_gold, test_pred)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
