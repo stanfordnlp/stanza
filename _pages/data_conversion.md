@@ -61,7 +61,7 @@ conll = CoNLL.convert_dict(dicts) # conll is List[List[List]], representing each
 
 ## CoNLL to Document
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 There is a mechanism for converting CoNLL files directly to a Stanza Document:
@@ -81,7 +81,7 @@ doc = nlp(doc)
 
 ## Document to CoNLL
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 There is a corresponding mechanism for writing back the document:

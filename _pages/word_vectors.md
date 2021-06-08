@@ -66,7 +66,7 @@ python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_fa
 
 The third argument sets the limit on how many vectors to keep.
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 There is also a script for counting how many times words in a UD training set appear in an embedding:

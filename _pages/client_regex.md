@@ -154,7 +154,7 @@ result {
 
 ### Semgrex as a context
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 In the next release, it will be possible to use semgrex as a Python
@@ -168,7 +168,7 @@ with Semgrex(classpath=???) as sem:
 
 ## TokensRegex
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 Similar to the semgrex interface, there is a tokensregex interface which allows use of tokensregex on documents processed with stanza.  For example:
@@ -208,7 +208,7 @@ match {
 
 ## Universal Enhancements
 
-Coming Soon in v1.3
+New in v1.2.1
 {: .label .label-green }
 
 Currently, the `depparse` annotator only processes basic dependencies.
