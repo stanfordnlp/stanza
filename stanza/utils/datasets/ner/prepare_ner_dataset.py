@@ -76,11 +76,11 @@ import tempfile
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang
 import stanza.utils.default_paths as default_paths
 
-from stanza.utils.datasets.ner.convert_fire_2013 import convert_fire_2013
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
+import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
@@ -181,7 +181,7 @@ def process_fire_2013(paths, dataset):
     dev_csv_file   = os.path.join(base_output_path, "%s.dev.csv" % short_name)
     test_csv_file  = os.path.join(base_output_path, "%s.test.csv" % short_name)
 
-    convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
+    convert_fire_2013.convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
 
     for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), SHARDS):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
@@ -327,7 +327,7 @@ def main(dataset_name):
         process_languk(paths)
     elif dataset_name == 'hi_ijc':
         process_ijc(paths, dataset_name)
-    elif dataset_name.endswith("FIRE2013"):
+    elif dataset_name.endswith("FIRE2013") or dataset_name.endswith("fire2013"):
         process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
         process_wikiner(paths, dataset_name)
