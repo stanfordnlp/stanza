@@ -68,8 +68,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_path', type=str, default="/home/john/extern_data/ner/FIRE2013/hindi_train",  help="Directory with raw files to read")
     parser.add_argument('--train_file', type=str, default="/home/john/stanza/data/ner/hi_fire2013.train.csv", help="Where to put the train file")
-    parser.add_argument('--dev_file',   type=str, default="/home/john/stanza/data/ner/hi_fire2013.dev.csv",   help="Where to put the train file")
-    parser.add_argument('--test_file',  type=str, default="/home/john/stanza/data/ner/hi_fire2013.test.csv",  help="Where to put the train file")
+    parser.add_argument('--dev_file',   type=str, default="/home/john/stanza/data/ner/hi_fire2013.dev.csv",   help="Where to put the dev file")
+    parser.add_argument('--test_file',  type=str, default="/home/john/stanza/data/ner/hi_fire2013.test.csv",  help="Where to put the test file")
     args = parser.parse_args()
 
     convert_fire_2013(args.input_path, args.train_file, args.dev_file, args.test_file)
