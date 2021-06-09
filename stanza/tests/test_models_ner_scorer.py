@@ -16,7 +16,7 @@ def test_ner_scorer():
     gold_sequences = [['O', 'B-LOC', 'E-LOC', 'O', 'B-PER', 'E-PER'],
                     ['O', 'S-MISC', 'B-ORG', 'E-ORG', 'O', 'B-PER', 'E-PER', 'S-LOC']]
     
-    token_p, token_r, token_f = score_by_token(pred_sequences, gold_sequences)
+    token_p, token_r, token_f, confusion = score_by_token(pred_sequences, gold_sequences)
     assert pytest.approx(token_p, abs=0.00001) == 0.625
     assert pytest.approx(token_r, abs=0.00001) == 0.5
     assert pytest.approx(token_f, abs=0.00001) == 0.55555
