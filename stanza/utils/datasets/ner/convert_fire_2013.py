@@ -41,6 +41,10 @@ def convert_fileset(output_csv_file, filenames):
         for sentence in sentences:
             for line in sentence:
                 pieces = line.split("\t")
+                if len(pieces) != 6:
+                    raise ValueError("Found %d pieces instead of the expected 6" % len(pieces))
+                if pieces[3] == 'o' and (pieces[4] != 'o' or pieces[5] != 'o'):
+                    raise ValueError("Inner NER labeled but the top layer was O")
                 fout.write("%s\t%s\n" % (pieces[0], normalize(pieces[3])))
             fout.write("\n")
 
