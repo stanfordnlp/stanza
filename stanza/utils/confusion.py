@@ -1,3 +1,27 @@
+
+from collections import defaultdict
+
+def condense_ner_labels(confusion, labels):
+    new_confusion = defaultdict(lambda: defaultdict(int))
+    new_labels = []
+    for l1 in labels:
+        if l1.find("-") >= 0:
+            new_l1 = l1.split("-", 1)[1]
+        else:
+            new_l1 = l1
+        if new_l1 not in new_labels:
+            new_labels.append(new_l1)
+        for l2 in labels:
+            if l2.find("-") >= 0:
+                new_l2 = l2.split("-", 1)[1]
+            else:
+                new_l2 = l2
+
+            old_value = confusion.get(l1, {}).get(l2, 0)
+            new_confusion[new_l1][new_l2] = new_confusion[new_l1][new_l2] + old_value
+    return new_confusion, new_labels
+
+
 def format_confusion(confusion, labels=None, hide_zeroes=False):
     """
     pretty print for confusion matrixes
@@ -18,13 +42,6 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
 
     columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
     empty_cell = " " * columnwidth
-
-    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
-
-    if len(fst_empty_cell) < len(empty_cell):
-        fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
-    # Print header
-    header = "    " + fst_empty_cell + " "
 
     # If the numbers are all ints, no need to include the .0 at the end of each entry
     all_ints = True
@@ -47,6 +64,16 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
             cell = confusion.get(label1, {}).get(label2, 0)
             columnwidth = max(columnwidth, len(format_cell(cell)))
 
+    # if this is an NER confusion matrix (well, if it has - in the labels)
+    # try to drop a bunch of labels to make the matrix easier to display
+    if columnwidth * len(labels) > 150:
+        confusion, labels = condense_ner_labels(confusion, labels)
+
+    # Print header
+    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
+    if len(fst_empty_cell) < len(empty_cell):
+        fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
+    header = "    " + fst_empty_cell + " "
     for label in labels:
         header = header + "%{0}s ".format(columnwidth) % label
     text = [header]
