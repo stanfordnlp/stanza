@@ -13,6 +13,7 @@ This script keeps just the word and the ner1.  It is quite possible that using t
 import argparse
 import glob
 import os
+import random
 
 def normalize(entity):
     if entity == 'o':
@@ -53,6 +54,7 @@ def convert_fire_2013(input_path, train_csv_file, dev_csv_file, test_csv_file):
 
     # won't be numerically sorted... shouldn't matter
     filenames = sorted(filenames)
+    random.shuffle(filenames)
     train_cutoff = int(0.8 * len(filenames))
     dev_cutoff = int(0.9 * len(filenames))
 
@@ -69,6 +71,8 @@ def convert_fire_2013(input_path, train_csv_file, dev_csv_file, test_csv_file):
     convert_fileset(test_csv_file,  test_files)
     
 if __name__ == '__main__':
+    random.seed(1234)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_path', type=str, default="/home/john/extern_data/ner/FIRE2013/hindi_train",  help="Directory with raw files to read")
     parser.add_argument('--train_file', type=str, default="/home/john/stanza/data/ner/hi_fire2013.train.csv", help="Where to put the train file")
