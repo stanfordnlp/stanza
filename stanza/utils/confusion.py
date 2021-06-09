@@ -26,11 +26,7 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
     # Print header
     header = "    " + fst_empty_cell + " "
 
-    for label in labels:
-        header = header + "%{0}s ".format(columnwidth) % label
-    text = [header]
-
-    # Print rows
+    # If the numbers are all ints, no need to include the .0 at the end of each entry
     all_ints = True
     for i, label1 in enumerate(labels):
         for j, label2 in enumerate(labels):
@@ -39,16 +35,28 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
                 break
         if not all_ints:
             break
-    
+
+    if all_ints:
+        format_cell = lambda confusion_cell: "%{0}d".format(columnwidth) % confusion_cell
+    else:
+        format_cell = lambda confusion_cell: "%{0}.1f".format(columnwidth) % confusion_cell
+
+    # make sure the columnwidth can handle long numbers
+    for i, label1 in enumerate(labels):
+        for j, label2 in enumerate(labels):
+            cell = confusion.get(label1, {}).get(label2, 0)
+            columnwidth = max(columnwidth, len(format_cell(cell)))
+
+    for label in labels:
+        header = header + "%{0}s ".format(columnwidth) % label
+    text = [header]
+
     # Print rows
     for i, label1 in enumerate(labels):
         row = "    %{0}s ".format(columnwidth) % label1
         for j, label2 in enumerate(labels):
             confusion_cell = confusion.get(label1, {}).get(label2, 0)
-            if all_ints:
-                cell = "%{0}d".format(columnwidth) % confusion_cell
-            else:
-                cell = "%{0}.1f".format(columnwidth) % confusion_cell
+            cell = format_cell(confusion_cell)
             if hide_zeroes:
                 cell = cell if confusion_cell else empty_cell
             row = row + cell + " "
