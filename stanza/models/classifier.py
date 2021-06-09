@@ -22,6 +22,8 @@ import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 
+from stanza.utils.confusion impmort format_confusion
+
 
 class Loss(Enum):
     CROSS = 1
@@ -310,38 +312,6 @@ def confusion_to_macro_f1(confusion):
         sum_f1 = sum_f1 + f1
 
     return sum_f1 / len(keys)
-
-
-def format_confusion(confusion, labels, hide_zeroes=False):
-    """
-    pretty print for confusion matrixes
-    adapted from https://gist.github.com/zachguo/10296432
-    """
-    columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
-    empty_cell = " " * columnwidth
-
-    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
-
-    if len(fst_empty_cell) < len(empty_cell):
-        fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
-    # Print header
-    header = "    " + fst_empty_cell + " "
-
-    for label in labels:
-        header = header + "%{0}s ".format(columnwidth) % label
-    text = [header]
-
-    # Print rows
-    for i, label1 in enumerate(labels):
-        row = "    %{0}s ".format(columnwidth) % label1
-        for j, label2 in enumerate(labels):
-            confusion_cell = confusion.get(label1, {}).get(label2, 0)
-            cell = "%{0}.1f".format(columnwidth) % confusion_cell
-            if hide_zeroes:
-                cell = cell if confusion_cell else empty_cell
-            row = row + cell + " "
-        text.append(row)
-    return "\n".join(text)
 
 
 def score_dataset(model, dataset, label_map=None, device=None,

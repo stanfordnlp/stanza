@@ -4,7 +4,7 @@ An NER scorer that calculates F1 score given gold and predicted tags.
 import sys
 import os
 import logging
-from collections import Counter
+from collections import Counter, defaultdict
 
 from stanza.models.ner.utils import decode_from_bioes
 
@@ -82,11 +82,13 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
     correct_by_tag = Counter()
     guessed_by_tag = Counter()
     gold_by_tag = Counter()
+    confusion = defaultdict(lambda: defaultdict(int))
 
     for gold_tags, pred_tags in zip(gold_tag_sequences, pred_tag_sequences):
         assert(len(gold_tags) == len(pred_tags)), \
             "Number of predicted tags does not match gold."
         for g, p in zip(gold_tags, pred_tags):
+            confusion[g][p] = confusion[g][p] + 1
             if g == 'O' and p == 'O':
                 continue
             elif g == 'O' and p != 'O':
@@ -113,7 +115,7 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
         logger.info("Prec.\tRec.\tF1")
         logger.info("{:.2f}\t{:.2f}\t{:.2f}".format( \
             prec_micro*100, rec_micro*100, f_micro*100))
-    return prec_micro, rec_micro, f_micro
+    return prec_micro, rec_micro, f_micro, confusion
 
 def test():
     pred_sequences = [['O', 'S-LOC', 'O', 'O', 'B-PER', 'E-PER'],
