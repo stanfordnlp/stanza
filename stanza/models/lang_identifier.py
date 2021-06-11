@@ -155,7 +155,7 @@ def eval_model(args):
     eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
     if not os.path.exists(eval_save_path) or args.save_name:
         with open(eval_save_path, "w") as score_log_file:
-            for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
+            for score_log in [{"dev_accuracy": curr_accuracy}, curr_confusion_matrix, curr_precisions,
                               curr_recalls, curr_f1s]:
                 score_log_file.write(json.dumps(score_log) + "\n")
         
