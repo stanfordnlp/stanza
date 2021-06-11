@@ -4,6 +4,7 @@ Script for producing training/dev/test data from UD data
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -12,6 +13,8 @@ from pathlib import Path
 from random import randint, random, shuffle
 from string import digits
 from tqdm import tqdm
+
+logger = logging.getLogger('stanza')
 
 DEFAULT_LANGUAGES = "af,ar,be,bg,bxr,ca,cop,cs,cu,da,de,el,en,es,et,eu,fa,fi,fr,fro,ga,gd,gl,got,grc,he,hi,hr,hsb,hu,hy,id,it,ja,kk,kmr,ko,la,lt,lv,lzh,mr,mt,nl,nn,no,olo,orv,pl,pt,ro,ru,sk,sl,sme,sr,sv,swl,ta,te,tr,ug,uk,ur,vi,wo,zh-hans,zh-hant".split(",")
 
@@ -40,7 +43,7 @@ def main(args=None):
         args.languages = args.languages.split(",")
     data_paths = [f"{args.save_path}/{data_split}.jsonl" for data_split in ["train", "dev", "test"]]
     lang_to_files = collect_files(args.ud_path, args.languages, data_format=args.data_format)
-    print(f"Building UD data for languages: {','.join(args.languages)}")
+    logger.info(f"Building UD data for languages: {','.join(args.languages)}")
     for lang_id in tqdm(lang_to_files):
         lang_examples = generate_examples(lang_id, lang_to_files[lang_id], splits=args.splits, 
                                           min_window=args.min_window, max_window=args.max_window, 
