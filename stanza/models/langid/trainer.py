@@ -40,7 +40,10 @@ class Trainer:
         sentences, targets = inputs
         return torch.argmax(self.model(sentences), dim=1)
 
-    def save(self):
+    def save(self, label=None):
+        # save a copy of model with label
+        if label:
+            self.model.save(f"{self.model_path[:-3]}-{label}.pt")
         self.model.save(self.model_path)
 
     def load(self, model_path=None):
