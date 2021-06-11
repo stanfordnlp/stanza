@@ -19,6 +19,7 @@ def parse_args(args=None):
     parser.add_argument("--batch-mode", help="custom settings when running in batch mode", action="store_true")
     parser.add_argument("--batch-size", help="batch size for training", type=int, default=64)
     parser.add_argument("--eval-length", help="length of strings to eval on", type=int, default=None)
+    parser.add_argument("--eval-set", help="eval on dev or test", default="test")
     parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
     parser.add_argument("--load-model", help="path to load model from", default=None)
     parser.add_argument("--mode", help="train or eval", default="train")
@@ -26,9 +27,19 @@ def parse_args(args=None):
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
     parser.add_argument("--randomize-range", help="range of lengths to use when random sampling text", 
                         type=randomize_range, default="5,20")
+    parser.add_argument("--remove-fine-grained", 
+                        help="remove fine-grained language labels for eval (e.g. zh-hans vs. zh)", action="store_true")
+    parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
     parser.add_argument("--save-name", help="where to save model", default=None)
-    parser.add_argument("--use-gpu", help="whether to use gpu", type=bool, default=True)
+    parser.add_argument("--use-cpu", help="use cpu", action="store_true") 
     args = parser.parse_args(args=args)
+    if args.use_cpu:
+        args.use_gpu = False
+    else:
+        if torch.cuda.is_available():
+            args.use_gpu = True
+        else:
+            args.use_gpu = False
     return args
 
 
@@ -104,7 +115,8 @@ def train_model(args):
         print(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
         if curr_dev_accuracy > best_accuracy:
             print(f"{datetime.now()}\tNew best score. Saving model.")
-            trainer.save()
+            model_label = f"epoch{epoch}" if args.save_best_epochs else None
+            trainer.save(label=model_label)
             with open(score_log_path(args.save_name), "w") as score_log_file:
                 for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
                                   curr_recalls, curr_f1s]:
@@ -134,14 +146,14 @@ def eval_model(args):
     trainer = Trainer(trainer_config, load_model=True, use_gpu=args.use_gpu)
     # load test data
     test_data = DataLoader()
-    test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "test" in x]
+    test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if args.eval_set in x]
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
                         randomize=False, max_length=args.eval_length)
-    curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
-        eval_trainer(trainer, test_data, batch_mode=args.batch_mode)
-    print(f"{datetime.now()}\tDev accuracy: {curr_dev_accuracy}")
+    curr_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
+        eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.remove_fine_grained)
+    print(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
     eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
-    if not os.path.exists(eval_save_path):
+    if not os.path.exists(eval_save_path) or args.save_name:
         with open(eval_save_path, "w") as score_log_file:
             for score_log in [{"dev_accuracy": curr_dev_accuracy}, curr_confusion_matrix, curr_precisions,
                               curr_recalls, curr_f1s]:
@@ -149,14 +161,14 @@ def eval_model(args):
         
 
 
-def eval_trainer(trainer, dev_data, batch_mode=False):
+def eval_trainer(trainer, dev_data, batch_mode=False, fine_grained=True):
     """
     Produce dev accuracy and confusion matrix for a trainer
     """
 
     # set up confusion matrix
-    tag_to_idx = trainer.model.tag_to_idx
-    idx_to_tag = trainer.model.idx_to_tag
+    tag_to_idx = dev_data.tag_to_idx
+    idx_to_tag = dev_data.idx_to_tag
     confusion_matrix = {}
     for row_label in tag_to_idx:
         confusion_matrix[row_label] = {}
@@ -168,7 +180,8 @@ def eval_trainer(trainer, dev_data, batch_mode=False):
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
         for target_idx, prediction in zip(dev_batch["targets"], predictions):
-            confusion_matrix[idx_to_tag[target_idx]][idx_to_tag[prediction]] += 1
+            prediction_label = idx_to_tag[prediction] if fine_grained else idx_to_tag[prediction].split("-")[0]
+            confusion_matrix[idx_to_tag[target_idx]][prediction_label] += 1
 
     # calculate dev accuracy
     total_examples = sum([sum([confusion_matrix[i][j] for j in confusion_matrix[i]]) for i in confusion_matrix])
