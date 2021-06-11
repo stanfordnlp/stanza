@@ -74,7 +74,7 @@ class NERTagger(nn.Module):
         vocab_size = len(self.vocab['word'])
         dim = self.args['word_emb_dim']
         assert emb_matrix.size() == (vocab_size, dim), \
-            "Input embedding matrix must match size: {} x {}".format(vocab_size, dim)
+            "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
