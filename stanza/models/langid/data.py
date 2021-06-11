@@ -11,6 +11,8 @@ class DataLoader:
     def __init__(self, use_gpu=None):
         self.batches = None
         self.batches_iter = None
+        self.tag_to_idx = None
+        self.idx_to_tag = None
         self.lang_weights = None
         # set self.use_gpu and self.device
         if use_gpu is None:
@@ -30,15 +32,23 @@ class DataLoader:
         Example: {"text": "Hello world.", "label": "en"}
         """
 
-        # set up lang counts used for weights for cross entropy loss
-        lang_counts = [0 for _ in tag_index]
-
         # set up examples from data files
         examples = []
         for data_file in data_files:
             examples += [x for x in open(data_file).read().split("\n") if x.strip()]
         random.shuffle(examples)
         examples = [json.loads(x) for x in examples]
+
+        # add additional labels in this data set to tag index
+        tag_index = dict(tag_index)
+        new_labels = set([x["label"] for x in examples]) - set(tag_index.keys())
+        for new_label in new_labels:
+            tag_index[new_label] = len(tag_index)
+        self.tag_to_idx = tag_index
+        self.idx_to_tag = [i[1] for i in sorted([(v,k) for k,v in self.tag_to_idx.items()])]
+        
+        # set up lang counts used for weights for cross entropy loss
+        lang_counts = [0 for _ in tag_index]
 
         # optionally limit text to max length
         if max_length is not None:
