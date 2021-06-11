@@ -4,6 +4,7 @@ Entry point for training and evaluating a Bi-LSTM language identifier
 
 import argparse
 import json
+import logging
 import os
 import random
 import torch
@@ -13,6 +14,7 @@ from stanza.models.langid.data import DataLoader
 from stanza.models.langid.trainer import Trainer
 from tqdm import tqdm
 
+logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -25,8 +27,8 @@ def parse_args(args=None):
     parser.add_argument("--mode", help="train or eval", default="train")
     parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
-    parser.add_argument("--randomize-range", help="range of lengths to use when random sampling text", 
-                        type=randomize_range, default="5,20")
+    parser.add_argument("--randomize-lengths-range", help="range of lengths to use when random sampling text", 
+                        type=randomize_lengths_range, default="5,20")
     parser.add_argument("--remove-fine-grained", 
                         help="remove fine-grained language labels for eval (e.g. zh-hans vs. zh)", action="store_true")
     parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
@@ -43,12 +45,18 @@ def parse_args(args=None):
     return args
 
 
-def randomize_range(range_list):
-    return [int(x) for x in range_list.split(",")]
+def randomize_lengths_range(range_list):
+    """
+    Range of lengths for random samples
+    """
+    range_boundaries = [int(x) for x in range_list.split(",")]
+    assert range_boundaries[0] < range_boundaries[1], f"Invalid range: ({range_boundaries[0]}, {range_boundaries[1]})"
+    return range_boundaries
 
 
 def main(args=None):
     args = parse_args(args=args)
+    torch.manual_seed(0)
     if args.mode == "train":
         train_model(args)
     else:
@@ -60,7 +68,8 @@ def build_indexes(args):
     char_to_idx = {}
     train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
     for train_file in train_files:
-        lines = open(train_file).read().split("\n")
+        with open(train_file) as curr_file:
+            lines = curr_file.read().strip().split("\n")
         examples = [json.loads(line) for line in lines if line.strip()]
         for example in examples:
             label = example["label"]
@@ -96,25 +105,24 @@ def train_model(args):
         "batch_size": args.batch_size,
         "lang_weights": train_data.lang_weights
     }
-    load_model = bool(args.load_model)
-    if load_model:
+    if args.load_model:
         trainer_config["load_model"] = args.load_model
-        print(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, load_model=load_model, use_gpu=args.use_gpu)
+        logger.info(f"{datetime.now()}\tLoading model from: {args.load_model}")
+    trainer = Trainer(trainer_config, load_model=args.load_model, use_gpu=args.use_gpu)
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
-        print(f"{datetime.now()}\tEpoch {epoch}")
-        print(f"{datetime.now()}\tNum training batches: {len(train_data.batches)}")
+        logger.info(f"{datetime.now()}\tEpoch {epoch}")
+        logger.info(f"{datetime.now()}\tNum training batches: {len(train_data.batches)}")
         for train_batch in tqdm(train_data.batches, disable=args.batch_mode):
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
-        print(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
+        logger.info(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
         curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
             eval_trainer(trainer, dev_data, batch_mode=args.batch_mode)
-        print(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
+        logger.info(f"{datetime.now()}\tCurrent dev accuracy: {curr_dev_accuracy}")
         if curr_dev_accuracy > best_accuracy:
-            print(f"{datetime.now()}\tNew best score. Saving model.")
+            logger.info(f"{datetime.now()}\tNew best score. Saving model.")
             model_label = f"epoch{epoch}" if args.save_best_epochs else None
             trainer.save(label=model_label)
             with open(score_log_path(args.save_name), "w") as score_log_file:
@@ -124,7 +132,7 @@ def train_model(args):
             best_accuracy = curr_dev_accuracy
 
         # reload training data
-        print(f"{datetime.now()}\tResampling training data.")
+        logger.info(f"{datetime.now()}\tResampling training data.")
         train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
 
 
@@ -151,7 +159,7 @@ def eval_model(args):
                         randomize=False, max_length=args.eval_length)
     curr_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
         eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.remove_fine_grained)
-    print(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
+    logger.info(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
     eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
     if not os.path.exists(eval_save_path) or args.save_name:
         with open(eval_save_path, "w") as score_log_file:
