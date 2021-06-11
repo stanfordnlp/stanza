@@ -13,7 +13,7 @@ from random import randint, random, shuffle
 from string import digits
 from tqdm import tqdm
 
-DEFAULT_LANGUAGES = "af,ar,be,bg,bxr,ca,cop,cs,cu,da,de,el,en,es,et,eu,fa,fi,fr,fro,ga,gd,gl,got,grc,he,hi,hr,hsb,hu,hy,id,it,ja,kk,kmr,ko,la,lt,lv,lzh,mr,mt,nl,nn,no,olo,orv,pl,pt,ro,ru,sk,sl,sme,sr,sv,swl,ta,te,tr,ug,uk,ur,vi,wo,zh".split(",")
+DEFAULT_LANGUAGES = "af,ar,be,bg,bxr,ca,cop,cs,cu,da,de,el,en,es,et,eu,fa,fi,fr,fro,ga,gd,gl,got,grc,he,hi,hr,hsb,hu,hy,id,it,ja,kk,kmr,ko,la,lt,lv,lzh,mr,mt,nl,nn,no,olo,orv,pl,pt,ro,ru,sk,sl,sme,sr,sv,swl,ta,te,tr,ug,uk,ur,vi,wo,zh-hans,zh-hant".split(",")
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -64,8 +64,14 @@ def collect_files(ud_path, languages, data_format="ud"):
     lang_to_files = {}
     for ud_file in ud_files:
         lang_id = ud_file.name.split("_")[0]
-        if ud_file.name.startswith("no_nynorsk") and data_format == "ud":
-            lang_id = "nn"
+        if data_format == "ud":
+            if ud_file.name.startswith("no_nynorsk"):
+                lang_id = "nn"
+            if ud_file.name.startswith("zh"):
+                if ud_file.name.startswith("zh_gsdsimp") or ud_file.name.startswith("zh_cfl"):
+                    lang_id = "zh-hans"
+                else:
+                    lang_id = "zh-hant"
         if lang_id not in languages and "all" not in languages:
             continue
         if not lang_id in lang_to_files:
