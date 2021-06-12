@@ -50,12 +50,24 @@ def write_sentences_to_file(sents, filename):
                 print(f"{pair[0]}\t{pair[1]}", file=outfile)
             print("", file=outfile)
 
-def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix=""):
+def remap_labels(sents, remap):
+    new_sentences = []
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            new_sent.append([word[0], remap.get(word[1], word[1])])
+        new_sentences.append(new_sent)
+    return new_sentences
+
+def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix="", remap=None):
     sents = []
     for filename in in_filenames:
         new_sents = read_sentences(filename, encoding)
         print(f"{len(new_sents)} sentences read from {filename}.")
         sents.extend(new_sents)
+
+    if remap:
+        sents = remap_labels(sents, remap)
 
     # split
     num = len(sents)
