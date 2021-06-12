@@ -68,6 +68,23 @@ BSNLP publishes NER datasets for Eastern European languages.
     bsnlp 2019 can be supported by adding the appropriate
     functionality in convert_bsnlp.py.
   - prepare_ner_dataset.py bg_bsnlp19
+
+NCHLT produced NER datasets for many African languages.
+  Unfortunately, it is difficult to make use of many of these,
+  as there is no corresponding UD data from which to build a
+  tokenizer or other tools.
+  - Afrikaans:  https://repo.sadilar.org/handle/20.500.12185/299
+  - isiNdebele: https://repo.sadilar.org/handle/20.500.12185/306
+  - isiXhosa:   https://repo.sadilar.org/handle/20.500.12185/312
+  - isiZulu:    https://repo.sadilar.org/handle/20.500.12185/319
+  - Sepedi:     https://repo.sadilar.org/handle/20.500.12185/328
+  - Sesotho:    https://repo.sadilar.org/handle/20.500.12185/334
+  - Setswana:   https://repo.sadilar.org/handle/20.500.12185/341
+  - Siswati:    https://repo.sadilar.org/handle/20.500.12185/346
+  - Tsivenda:   https://repo.sadilar.org/handle/20.500.12185/355
+  - Xitsonga:   https://repo.sadilar.org/handle/20.500.12185/362
+  Agree to the license, download the zip, and unzip it in
+  $NERBASE/NCHLT
 """
 
 import glob
@@ -319,6 +336,40 @@ def process_bsnlp(paths, short_name):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
+NCHLT_LANGUAGE_MAP = {
+    "af":  "NCHLT Afrikaans Named Entity Annotated Corpus",
+    # none of the following have UD datasets as of 2.8.  Until they
+    # exist, we assume the language codes NCHTL are sufficient
+    "nr":  "NCHLT isiNdebele Named Entity Annotated Corpus",
+    "nso": "NCHLT Sepedi Named Entity Annotated Corpus",
+    "ss":  "NCHLT Siswati Named Entity Annotated Corpus",
+    "st":  "NCHLT Sesotho Named Entity Annotated Corpus",
+    "tn":  "NCHLT Setswana Named Entity Annotated Corpus",
+    "ts":  "NCHLT Xitsonga Named Entity Annotated Corpus",
+    "ve":  "NCHLT Tshivenda Named Entity Annotated Corpus",
+    "xh":  "NCHLT isiXhosa Named Entity Annotated Corpus",
+    "zu":  "NCHLT isiZulu Named Entity Annotated Corpus",
+}
+
+def process_nchlt(paths, short_name):
+    language = short_name.split("_")[0]
+    if not language in NCHLT_LANGUAGE_MAP:
+        raise ValueError("Language %s not part of NCHLT" % language)
+    short_name = "%s_nchlt" % language
+
+    base_input_path = os.path.join(paths["NERBASE"], "NCHLT", NCHLT_LANGUAGE_MAP[language], "*Full.txt")
+    input_files = glob.glob(base_input_path)
+    if len(input_files) == 0:
+        raise FileNotFoundError("Cannot find NCHLT dataset in '%s'  Did you remember to download the file?" % base_input_path)
+
+    if len(input_files) > 1:
+        raise ValueError("Unexpected number of files matched '%s'  There should only be one" % base_input_path)
+
+    base_output_path = paths["NER_DATA_DIR"]
+    split_wikiner(base_output_path, input_files[0], prefix=short_name, remap={"OUT": "O"})
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -342,6 +393,8 @@ def main(dataset_name):
         process_hu_combined(paths)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
+    elif dataset_name.endswith("_nchlt"):
+        process_nchlt(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
