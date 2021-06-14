@@ -38,3 +38,12 @@ class NERProcessor(UDProcessor):
         total = len(batch.doc.build_ents())
         logger.debug(f'{total} entities found in document.')
         return batch.doc
+
+    def bulk_process(self, docs):
+        """
+        NER processor has a collation step after running inference
+        """
+        docs = super().bulk_process(docs)
+        for doc in docs:
+            doc.build_ents()
+        return docs
