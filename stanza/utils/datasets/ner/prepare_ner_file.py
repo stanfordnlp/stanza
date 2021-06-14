@@ -64,7 +64,11 @@ def process_cache(cached_lines):
     tokens = []
     ner_tags = []
     for line in cached_lines:
-        array = line.split()
+        array = line.split("\t")
+        if len(array) == 1:
+            array = line.split()
+        if(len(array) > MAX_NUM_FIELD):
+            print(line)
         assert len(array) >= MIN_NUM_FIELD and len(array) <= MAX_NUM_FIELD
         tokens.append(array[0])
         ner_tags.append(array[-1])

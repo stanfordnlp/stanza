@@ -26,3 +26,4 @@ export SENTIMENT_DATA_DIR=$DATA_ROOT/sentiment
 
 # Set directories to store external word vector data
 export WORDVEC_DIR=./extern_data/wordvec
+export WORDVEC_DIR=/sailhome/vythai/stanza_resources/vi/pretrain/vtb.pt

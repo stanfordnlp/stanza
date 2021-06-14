@@ -104,6 +104,17 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name):
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
+def process_vlsp_2018(paths):
+    short_name = 'vi_vlsp'
+    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    base_output_path = paths["NER_DATA_DIR"]
+    for shard in SHARDS:
+        input_filename = os.path.join(base_input_path, '%s.tsv' % shard)
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(input_filename, output_filename)
+
 def process_turku(paths):
     short_name = 'fi_turku'
     base_input_path = os.path.join(paths["NERBASE"], short_name)
@@ -340,6 +351,9 @@ def main():
         process_hu_combined(paths)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
+    elif dataset_name == "vlsp2018":
+        process_vlsp_2018(paths)
+        
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
