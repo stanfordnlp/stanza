@@ -135,11 +135,13 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 
 @pytest.fixture(scope="module")
-def processed_doc():
-    """ Document created by running full English pipeline on a few sentences """
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR)
-    return nlp(EN_DOC)
+def pipeline():
+    return stanza.Pipeline(dir=TEST_MODELS_DIR)
 
+@pytest.fixture(scope="module")
+def processed_doc(pipeline):
+    """ Document created by running full English pipeline on a few sentences """
+    return pipeline(EN_DOC)
 
 def test_text(processed_doc):
     assert processed_doc.text == EN_DOC
@@ -163,11 +165,10 @@ def test_dependency_parse(processed_doc):
 
 
 @pytest.fixture(scope="module")
-def processed_multidoc():
+def processed_multidoc(pipeline):
     """ Document created by running full English pipeline on a few sentences """
     docs = [Document([], text=t) for t in EN_DOCS]
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR)
-    return nlp(docs)
+    return pipeline(docs)
 
 
 def test_conllu_multidoc(processed_multidoc):
