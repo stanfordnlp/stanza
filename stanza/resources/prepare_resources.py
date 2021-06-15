@@ -100,6 +100,7 @@ default_ners = {
   "nl": "conll02",
   "ru": "wikiner",
   "uk": "languk",
+  "vi": "vlsp",
   "zh-hans": "ontonotes",
 }
 
@@ -115,6 +116,7 @@ default_charlms = {
   "fr": "newswiki",
   "nl": "ccwiki",
   "ru": "newswiki",
+  "vi": "conll17",
   "zh-hans": "gigaword"
 }
 
