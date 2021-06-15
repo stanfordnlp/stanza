@@ -145,6 +145,9 @@ def convert_conllu_to_txt(tokenizer_dir, short_name):
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
+        if not os.path.exists(output_conllu):
+            # the perl script doesn't raise an error code for file not found!
+            raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
         # use an external script to produce the txt files
         subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
 
