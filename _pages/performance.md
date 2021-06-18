@@ -144,7 +144,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
 | Ukrainian | languk | 4 | 86.05 |
-| Vietnamese *New in 1.2.1* | VLSP | 4 | - |
+| Vietnamese *New in 1.2.1* | VLSP | 4 | 82.44 |
 
 Bulgarian BSNLP 2019 data is available [from the shared task page](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html).
 
