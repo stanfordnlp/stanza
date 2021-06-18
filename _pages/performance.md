@@ -129,16 +129,34 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |
 | Arabic | AQMAR | 4 | 74.3 |
+| Bulgarian *New in 1.2.1* | BSNLP 2019 | 5 | - |
 | Chinese | OntoNotes | 18 | 79.2 |
 | Dutch | CoNLL02 | 4 | 89.2 |
 | Dutch | WikiNER | 4 | 94.8 |
 | English | CoNLL03 | 4 | 92.1 |
 | English | OntoNotes | 18 | 88.8 |
-| Finnish *Coming Soon!* | Turku | 6 | 87.04 |
+| Finnish *New in 1.2.1* | Turku | 6 | 87.04 |
 | French | WikiNER | 4 | 92.9 |
 | German | CoNLL03 | 4 | 81.9 |
 | German | GermEval2014 | 4 | 85.2 |
+| Hungarian *New in 1.2.1* | Combined | 4 | - |
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
 | Ukrainian | languk | 4 | 86.05 |
+| Vietnamese *New in 1.2.1* | VLSP | 4 | - |
+
+Bulgarian BSNLP 2019 data is available [from the shared task page](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html).
+
+[Piskorski, J, et al.  The Second Cross-Lingual Challenge on Recognition, Normalization, Classification, and Linking of Named Entities across Slavic Languages.](https://www.aclweb.org/anthology/W19-3709/)
+
+[The Finnish dataset is available from U. Turku](https://turkunlp.org/fin-ner.html).
+
+[Luoma, J et al.  A Broad-coverage Corpus for Finnish Named Entity Recognition](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf)
+
+The Hungarian dataset is a combination of 3 separate datasets.  [Two are available from Szeged](https://rgai.inf.u-szeged.hu/node/130), and the third is a [github repo](https://github.com/nytud/NYTK-NerKor)
+
+[György Szarvas, Richárd Farkas, László Felföldi, András Kocsor, János Csirik: Highly accurate Named Entity corpus for Hungarian. International Conference on Language Resources and Evaluation 2006, Genova (Italy)](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf)
+
+[The Vietnamese VLSP dataset is available by request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
+

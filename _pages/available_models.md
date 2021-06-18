@@ -149,23 +149,27 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 **Table Notes**
 
 1. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language.
-2. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous); for package with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
+2. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous); for package with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).  The BSNLP dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION, `PERSON`, `PRODUCT`.
 
 | Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS DOC | NOTES |
 | :------- | :----- | :-------- | :---- | :---- | :---- |
 | Arabic | ar | AQMAR | 4 | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Bulgarian | bg | BSNLP | 5 | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Chinese | zh | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Dutch | nl | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Dutch | nl | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | |
 | English | en | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | |
 | English | en | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Finnish | fi | Turku | 4 | [<i class="fas fa-file-alt"></i>](https://turkunlp.org/fin-ner.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | French | fr | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | German | de | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | German | de | GermEval2014 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
+| Hungarian | hu | Business, Criminal, NYTK | 4 | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
-| Ukrainian | uk | languk | 4 | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  | |
+| Ukrainian | uk | languk | 4 | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Vietnamese | vi | VLSP | 4 | [<i class="fas fa-file-alt"></i>](https://vlsp.org.vn/vlsp2018/eval/ner) | <i class="fas fa-check" style="color:#33a02c"></i> |
 
 ## Available Sentiment Models
 
