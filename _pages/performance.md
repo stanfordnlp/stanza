@@ -146,17 +146,15 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Ukrainian | languk | 4 | 86.05 |
 | Vietnamese *New in 1.2.1* | VLSP | 4 | 82.44 |
 
-Bulgarian BSNLP 2019 data is available [from the shared task page](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html).
+### Notes on NER Corpora
 
-[Piskorski, J, et al.  The Second Cross-Lingual Challenge on Recognition, Normalization, Classification, and Linking of Named Entities across Slavic Languages.](https://www.aclweb.org/anthology/W19-3709/)
+We have provided links to all NER datasets used to train the released models on our [available NER models page](available_models.md#available-ner-models). Here we provide notes on how to find several of these corpora:
 
-[The Finnish dataset is available from U. Turku](https://turkunlp.org/fin-ner.html).
+- **Bulgarian**: The Bulgarian BSNLP 2019 data is available from [the shared task page](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html). You can also find their [dataset description paper](https://www.aclweb.org/anthology/W19-3709/).
 
-[Luoma, J et al.  A Broad-coverage Corpus for Finnish Named Entity Recognition](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf)
+- **Finnish**: The Turku dataset used for Finnish NER training can be found on [the Turku NLP website](https://turkunlp.org/fin-ner.html), and they also provide [a Turku NER dataset description paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf).
 
-The Hungarian dataset is a combination of 3 separate datasets.  [Two are available from Szeged](https://rgai.inf.u-szeged.hu/node/130), and the third is a [github repo](https://github.com/nytud/NYTK-NerKor)
+- **Hungarian**: The dataset used for training our Hungarian NER system is a combination of 3 separate datasets. Two of these datasets can be found from [this Szeged page](https://rgai.inf.u-szeged.hu/node/130), and the third can be found in [this NYTK-NerKor github repo](https://github.com/nytud/NYTK-NerKor). A dataset description paper can also be found [here](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf).
 
-[György Szarvas, Richárd Farkas, László Felföldi, András Kocsor, János Csirik: Highly accurate Named Entity corpus for Hungarian. International Conference on Language Resources and Evaluation 2006, Genova (Italy)](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf)
-
-[The Vietnamese VLSP dataset is available by request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
+- **Vietnamese**: The Vietnamese VLSP dataset is available by [request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
 
