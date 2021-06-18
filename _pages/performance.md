@@ -129,7 +129,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |
 | Arabic | AQMAR | 4 | 74.3 |
-| Bulgarian *New in 1.2.1* | BSNLP 2019 | 5 | - |
+| Bulgarian *New in 1.2.1* | BSNLP 2019 | 5 | 83.21 |
 | Chinese | OntoNotes | 18 | 79.2 |
 | Dutch | CoNLL02 | 4 | 89.2 |
 | Dutch | WikiNER | 4 | 94.8 |
