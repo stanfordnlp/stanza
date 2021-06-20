@@ -90,12 +90,8 @@ class DataLoader:
 
         # set up lang weights
         most_frequent = max(lang_counts)
-        for idx in range(len(lang_counts)):
-            if lang_counts[idx] != 0:
-                lang_counts[idx] = float(most_frequent) / float(lang_counts[idx])
-            else:
-                lang_counts[idx] = 0.0
-
+        # set to 0.0 if lang_count is 0 or most_frequent/lang_count otherwise
+        lang_counts = [(most_frequent * x)/(max(1, x) ** 2) for x in lang_counts]
         self.lang_weights = torch.tensor(lang_counts, device=self.device, dtype=torch.float)
 
         # shuffle batches to mix up lengths
