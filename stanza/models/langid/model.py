@@ -11,7 +11,8 @@ class LangIDBiLSTM(nn.Module):
     GitHub: https://github.com/AU-DIS/LSTM_langid
     """
 
-    def __init__(self, char_to_idx, tag_to_idx, num_layers, embedding_dim, hidden_dim, batch_size=64, weights=None):
+    def __init__(self, char_to_idx, tag_to_idx, num_layers, embedding_dim, hidden_dim, batch_size=64, weights=None, 
+                 dropout=0.0, lang_subset=None):
         super(LangIDBiLSTM, self).__init__()
         self.num_layers = num_layers
         self.embedding_dim = embedding_dim
@@ -20,10 +21,12 @@ class LangIDBiLSTM(nn.Module):
         self.vocab_size = len(char_to_idx)
         self.tag_to_idx = tag_to_idx
         self.idx_to_tag = [i[1] for i in sorted([(v,k) for k,v in self.tag_to_idx.items()])]
+        self.lang_subset = lang_subset
         self.padding_idx = char_to_idx["<PAD>"]
         self.tagset_size = len(tag_to_idx)
         self.batch_size = batch_size
         self.loss_train = nn.CrossEntropyLoss(weight=weights)
+        self.dropout_prob = dropout
         
         # embeddings for chars
         self.char_embeds = nn.Embedding(
@@ -47,6 +50,15 @@ class LangIDBiLSTM(nn.Module):
                 self.tagset_size
         )
 
+        # dropout layer
+        self.dropout = nn.Dropout(p=self.dropout_prob)
+
+        # build mask if a lang subset is provided (e.g. {"en", "es"})
+        lang_mask_list = [int(lang in self.lang_subset) for lang in self.idx_to_tag] if self.lang_subset else \
+                         [1 for lang in self.idx_to_tag]
+        self.lang_mask = torch.tensor(lang_mask_list, device="cuda:0", dtype=torch.float)
+
+
     def loss(self, Y_hat, Y):
         return self.loss_train(Y_hat, Y)
 
@@ -65,9 +77,13 @@ class LangIDBiLSTM(nn.Module):
 
         return x
 
-    def predict(self, x):
-        label_idx = torch.argmax(self(x), dim=1).item()
-        return self.idx_to_tag[label_idx]
+    def prediction_scores(self, x):
+        prediction_probs = self(x)
+        if self.lang_subset:
+            prediction_batch_size = prediction_probs.size()[0]
+            batch_mask = torch.stack([self.lang_mask for _ in range(prediction_batch_size)])
+            prediction_probs = prediction_probs * batch_mask
+        return torch.argmax(prediction_probs, dim=1)
 
     def save(self, path):
         """ Save a model at path """
@@ -82,12 +98,13 @@ class LangIDBiLSTM(nn.Module):
         torch.save(checkpoint, path)
     
     @classmethod
-    def load(cls, path, use_cuda=False, batch_size=64):
+    def load(cls, path, use_cuda=False, batch_size=64, lang_subset=None):
         """ Load a serialized model located at path """
         checkpoint = torch.load(path)
         weights = checkpoint["model_state_dict"]["loss_train.weight"]
         model = cls(checkpoint["char_to_idx"], checkpoint["tag_to_idx"], checkpoint["num_layers"],
-                    checkpoint["embedding_dim"], checkpoint["hidden_dim"], batch_size=batch_size, weights=weights)
+                    checkpoint["embedding_dim"], checkpoint["hidden_dim"], batch_size=batch_size, weights=weights,
+                    lang_subset=lang_subset)
         model.load_state_dict(checkpoint["model_state_dict"])
         if use_cuda:
             model.to(torch.device("cuda"))
