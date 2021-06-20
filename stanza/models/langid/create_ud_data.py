@@ -1,5 +1,10 @@
 """
-Script for producing training/dev/test data from UD data
+Script for producing training/dev/test data from UD data or sentences
+
+Example output data format (one example per line):
+
+{"text": "Hello world.", "label": "en"}
+
 """
 
 import argparse
@@ -13,6 +18,8 @@ from pathlib import Path
 from random import randint, random, shuffle
 from string import digits
 from tqdm import tqdm
+
+from stanza.models.common.constant import treebank_to_langid
 
 logger = logging.getLogger('stanza')
 
@@ -66,15 +73,10 @@ def collect_files(ud_path, languages, data_format="ud"):
     ud_files = Path(ud_path).glob(data_format_to_search_path[data_format])
     lang_to_files = {}
     for ud_file in ud_files:
-        lang_id = ud_file.name.split("_")[0]
         if data_format == "ud":
-            if ud_file.name.startswith("no_nynorsk"):
-                lang_id = "nn"
-            if ud_file.name.startswith("zh"):
-                if ud_file.name.startswith("zh_gsdsimp") or ud_file.name.startswith("zh_cfl"):
-                    lang_id = "zh-hans"
-                else:
-                    lang_id = "zh-hant"
+            lang_id = treebank_to_langid(ud_file.parent.name)
+        else:
+            lang_id = ud_file.name.split("_")[0]
         if lang_id not in languages and "all" not in languages:
             continue
         if not lang_id in lang_to_files:
@@ -108,16 +110,16 @@ def sentences_from_file(ud_file_path, data_format="ud"):
     """
     Retrieve all sentences from a UD file
     """
-    all_sentences = []
     if data_format == "ud":
         with open(ud_file_path) as ud_file:
-            sentences = [x[9:] for x in ud_file.read().split("\n") if x.startswith("# text = ")]
-            all_sentences += sentences
+            ud_file_contents = ud_file.read().strip()
+            assert "# text = " in ud_file_contents, \
+                   f"{ud_file_path} does not have expected format, \"# text =\" does not appear"
+            sentences = [x[9:] for x in ud_file_contents.split("\n") if x.startswith("# text = ")]
     elif data_format == "one-per-line":
         with open(ud_file_path) as ud_file:
-            sentences = [x for x in ud_file.read().split("\n") if x]
-            all_sentences += sentences
-    return all_sentences
+            sentences = [x for x in ud_file.read().strip().split("\n") if x]
+    return sentences
 
 
 def sentence_to_windows(sentence, min_window, max_window):
