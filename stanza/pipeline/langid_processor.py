@@ -1,7 +1,9 @@
 """
-Processor for determing language of text.
+Processor for determining language of text.
 """
 
+import emoji
+import re
 import stanza
 import torch
 
@@ -19,28 +21,29 @@ class LangIDProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([LANGID])
+    
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([])
+    
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
     def _set_up_model(self, config, use_gpu):
-        batch_size = config.get("langid_batch_size", 64)
+        batch_size = config.get("batch_size", 64)
         self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu,
-                                        batch_size=batch_size)
+                                        batch_size=batch_size, lang_subset=config.get("lang_subset"))
         self._device = torch.device("cuda") if use_gpu else None
         self._char_index = self._model.char_to_idx
+        self._clean_text = config.get("clean_text")
 
     def _text_to_tensor(self, docs):
         """
-        Map list of strings to batch tensor
+        Map list of strings to batch tensor. Assumed all docs are same length.
         """
 
         all_docs = []
-        max_len_sequence = max([len(x) for x in docs])
         for doc in docs:
             doc_chars = [self._char_index.get(c, self._char_index["UNK"]) for c in list(doc)]
-            doc_chars = doc_chars + [self._char_index["<PAD>"]]*(max_len_sequence-len(doc_chars))
             all_docs.append(doc_chars)
         return torch.tensor(all_docs, device=self._device, dtype=torch.long)
 
@@ -48,29 +51,34 @@ class LangIDProcessor(UDProcessor):
         """
         Identify languages for each sequence in a batch tensor
         """
-
-        scores = self._model(batch_tensor)
-        predictions = torch.argmax(scores, dim=1)
+        predictions = self._model.prediction_scores(batch_tensor)
         prediction_labels = [self._model.idx_to_tag[prediction] for prediction in predictions]
 
         return prediction_labels
 
-    def process(self, doc):
+    # regexes for cleaning text
+    http_regex = re.compile("https?:\/\/t\.co/[a-zA-Z0-9]+")
+    handle_regex = re.compile("@[a-zA-Z0-9_]+")
+    hashtag_regex = re.compile("#[a-zA-Z]+")
+    punctuation_regex = re.compile("[!.]+")
+    all_regexes = [http_regex, handle_regex, hashtag_regex, punctuation_regex]
+    
+    @staticmethod
+    def clean_text(text):
         """
-        Identify language of string or Document.
+        Process text to improve language id performance. Main emphasis is on tweets, this method removes shortened
+        urls, hashtags, handles, and punctuation and emoji.
         """
 
-        # handle str vs. Document
-        inputs = [doc.text if isinstance(doc, Document) else doc]
+        for regex in LangIDProcessor.all_regexes:
+            text = regex.sub(" ", text)
 
-        # get prediction
-        prediction = self._id_langs(self._text_to_tensor(inputs))[0]
+        text = emoji.get_emoji_regexp().sub(" ", text)
 
-        if isinstance(doc, str):
-            doc = Document([], text=doc)
-        doc.lang = prediction
+        if text.strip():
+            text = text.strip()
 
-        return doc
+        return text
 
     def _process_list(self, docs):
         """
@@ -82,17 +90,22 @@ class LangIDProcessor(UDProcessor):
             # TO DO: more handling of bad input
             return
 
-        # handle list of str vs. Document
-        inputs = [(doc.text if isinstance(doc, Document) else doc) for doc in docs]
-
-        # get predictions
-        predictions = self._id_langs(self._text_to_tensor(inputs))
-
         if isinstance(docs[0], str):
-            docs = [Document([], doc) for doc in docs]
+            docs = [Document([], text) for text in docs]
 
-        for doc, lang in zip(docs, predictions):
-            doc.lang = lang
+        docs_by_length = {}
+        for doc in docs:
+            text = LangIDProcessor.clean_text(doc.text) if self._clean_text else doc.text
+            doc_length = len(text)
+            if doc_length not in docs_by_length:
+                docs_by_length[doc_length] = []
+            docs_by_length[doc_length].append((doc, text))
+
+        for doc_length in docs_by_length:
+            inputs = [doc[1] for doc in docs_by_length[doc_length]]
+            predictions = self._id_langs(self._text_to_tensor(inputs))
+            for doc, lang in zip(docs_by_length[doc_length], predictions):
+                doc[0].lang = lang
 
         return docs
 
