@@ -19,10 +19,10 @@ lang=`echo $treebank | sed -e 's#-.*$##g' -e 's#^[^_]*_##g'`
 lcode=${lang2lcode[$lang]}
 if [ -z "$lcode" ]; then
     if [ $lang == "Chinese" ]; then
-        if [ $tbname == "gsdsimp" ]; then
+        if [ $tbname == "gsdsimp" -o $tbname == "cfl" ]; then
             # TODO why not zh-hans?
             lcode=zh
-        elif [ $tbname == "gsd" -o $tbname == "hk" -o $tbname == "cfl" -o $tbname == "pud" ]; then
+        elif [ $tbname == "gsd" -o $tbname == "hk" -o $tbname == "pud" ]; then
             lcode=zh-hant
         fi
     elif [ $lang == "Norwegian" ]; then
