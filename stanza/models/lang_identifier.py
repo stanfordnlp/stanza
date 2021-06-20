@@ -29,8 +29,9 @@ def parse_args(args=None):
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
     parser.add_argument("--randomize-lengths-range", help="range of lengths to use when random sampling text", 
                         type=randomize_lengths_range, default="5,20")
-    parser.add_argument("--remove-fine-grained", 
-                        help="remove fine-grained language labels for eval (e.g. zh-hans vs. zh)", action="store_true")
+    parser.add_argument("--merge-labels-for-eval", 
+                        help="merge some language labels for eval (e.g. \"zh-hans\" and \"zh-hant\" to \"zh\")", 
+                        action="store_true")
     parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
     parser.add_argument("--save-name", help="where to save model", default=None)
     parser.add_argument("--use-cpu", help="use cpu", action="store_true") 
@@ -140,8 +141,12 @@ def score_log_path(file_path):
     """
     Helper that will determine corresponding log file (e.g. /path/to/demo.pt to /path/to/demo.json
     """
-    model_suffix = file_path.split(".")[-1]
-    return f"{file_path[:-1 * len(model_suffix)]}json"
+    model_suffix = os.path.splitext(file_path)
+    if model_suffix:
+        score_log_path = f"{file_path[:-len(model_suffix)]}.json"
+    else:
+        score_log_path = f"{file_path}.json"
+    return score_log_path
 
 
 def eval_model(args):
@@ -158,7 +163,7 @@ def eval_model(args):
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
                         randomize=False, max_length=args.eval_length)
     curr_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
-        eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.remove_fine_grained)
+        eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.merge_labels_for_eval)
     logger.info(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
     eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
     if not os.path.exists(eval_save_path) or args.save_name:
