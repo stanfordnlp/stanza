@@ -36,13 +36,7 @@ def parse_args(args=None):
     parser.add_argument("--save-name", help="where to save model", default=None)
     parser.add_argument("--use-cpu", help="use cpu", action="store_true") 
     args = parser.parse_args(args=args)
-    if args.use_cpu:
-        args.use_gpu = False
-    else:
-        if torch.cuda.is_available():
-            args.use_gpu = True
-        else:
-            args.use_gpu = False
+    args.use_gpu = True if torch.cuda.is_available() and not args.use_cpu else False
     return args
 
 
