@@ -2,6 +2,7 @@ import pytest
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.base_model import SimpleModel
 
 from stanza.tests import *
 
@@ -11,12 +12,13 @@ def test_top_down():
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     tree = tree_reader.read_trees(text)[0]
 
+    model = SimpleModel()
     transitions = transition_sequence.build_top_down_sequence(tree)
-    state = parse_transitions.initial_state_from_gold_tree(tree)
+    state = parse_transitions.initial_state_from_gold_tree(tree, model)
 
     for t in transitions:
-        assert t.is_legal(state)
-        state = t.apply(state)
+        assert t.is_legal(state, model)
+        state = t.apply(state, model)
 
     # one item for the final tree
     # one item for the sentinel at the end
