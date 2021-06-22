@@ -53,15 +53,15 @@ class State:
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
-def intiial_state_from_tagged_words(words, tags):
+def initial_state_from_tagged_words(words, tags, model):
     word_queue = TreeStack(value=None)
     for word, tag in zip(reversed(words), reversed(tags)):
         word_node = Tree(label=word)
         tag_node = Tree(label=tag, children=[word_node])
-        word_queue = word_queue.push(tag_node)
+        word_queue = model.push_word(word_queue, tag_node)
     return State(sentence_length=len(words), num_opens=0, word_queue=word_queue)
 
-def initial_state_from_gold_tree(tree):
+def initial_state_from_gold_tree(tree, model):
     word_queue = TreeStack(value=None)
     preterminals = [x for x in tree.yield_preterminals()]
     # put the words on the stack backwards
@@ -69,19 +69,23 @@ def initial_state_from_gold_tree(tree):
     for pt in preterminals:
         word_node = Tree(label=pt.children[0].label)
         tag_node = Tree(label=pt.label, children=[word_node])
-        word_queue = word_queue.push(tag_node)
+        word_queue = model.push_word(word_queue, tag_node)
     return State(sentence_length=len(preterminals), num_opens=0, word_queue=word_queue)
 
 class Transition(ABC):
+    """
+    model is passed in as a dependency injection
+    for example, an LSTM model can update hidden & output vectors when transitioning
+    """
     @abstractmethod
-    def apply(self, state):
+    def apply(self, state, model):
         """
         return a new State transformed via this transition
         """
         pass
 
     @abstractmethod
-    def is_legal(self, state):
+    def is_legal(self, state, model):
         """
         assess whether or not this transition is legal in this state
 
@@ -90,21 +94,24 @@ class Transition(ABC):
         pass
 
 class Shift(Transition):
-    def apply(self, state):
-        # move the top word from the word queue to the constituency stack
-        transitions = state.transitions.push(self)
+    def apply(self, state, model):
+        """
+        This will handle all aspects of a shift transition
 
-        word = state.word_queue.value
+        - push the transition onto the transition stack
+        - push the top element of the word queue onto constituents
+        - pop the top element of the word queue
+        """
+        transitions = model.push_transition(state.transitions, self)
+        constituents = model.push_constituent(state.constituents, model.transform_word_to_constituent(state))
         word_queue = state.word_queue.pop()
-
-        constituents = state.constituents.push(word)
 
         return State(original_state=state,
                      word_queue=word_queue,
                      transitions=transitions,
                      constituents=constituents)
 
-    def is_legal(self, state):
+    def is_legal(self, state, model):
         """
         Disallow shifting when the word queue is empty
         """
@@ -120,29 +127,27 @@ class CompoundUnary(Transition):
         # so CompoundUnary that results in root will have root as labels[0], for example
         self.labels = labels
 
-    def apply(self, state):
+    def apply(self, state, model):
         # remove the top constituent
         # apply the labels
         # put the constituent back on the state
-        transitions = state.transitions.push(self)
+        transitions = model.push_transition(state.transitions, self)
 
         constituents = state.constituents
-        last_constituent = constituents.value
+        new_constituent = model.unary_transform(state.constituents, self.labels)
         constituents = constituents.pop()
-        for label in reversed(self.labels):
-            last_constituent = Tree(label=label, children=[last_constituent])
-        constituents = constituents.push(last_constituent)
+        constituents = model.push_constituent(constituents, new_constituent)
 
         return State(original_state=state,
                      word_queue=state.word_queue,
                      transitions=transitions,
                      constituents=constituents)
 
-    def is_legal(self, state):
+    def is_legal(self, state, model):
         """
         Disallow consecutive CompoundUnary transitions
         """
-        return not isinstance(state.transitions.value, CompoundUnary)
+        return not isinstance(model.get_top_transition(state.transitions), CompoundUnary)
 
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)
@@ -158,16 +163,17 @@ class OpenConstituent(Transition):
     def __init__(self, label):
         self.label = label
 
-    def apply(self, state):
+    def apply(self, state, model):
         # open a new constituent which can later be closed
         # puts a DUMMY constituent on the stack to mark where the constituents end
         return State(original_state=state,
                      num_opens=state.num_opens+1,
                      word_queue=state.word_queue,
-                     transitions=state.transitions.push(self),
-                     constituents=state.constituents.push(Dummy(self.label)))
+                     transitions=model.push_transition(state.transitions, self),
+                     constituents=model.push_constituent(state.constituents,
+                                                         model.dummy_constituent(Dummy(self.label))))
 
-    def is_legal(self, state):
+    def is_legal(self, state, model):
         """
         disallow based on the length of the sentence
         """
@@ -182,34 +188,36 @@ class OpenConstituent(Transition):
         return "OpenConstituent(%s)" % self.label
 
 class CloseConstituent(Transition):
-    def apply(self, state):
+    def apply(self, state, model):
         # pop constituents until we are done
         children = []
         constituents = state.constituents
-        while not isinstance(constituents.value, Dummy):
+        while not isinstance(model.get_top_constituent(constituents), Dummy):
+            # keep the entire value from the stack - the model may need
+            # the whole thing to transform the children into a new node
             children.append(constituents.value)
             constituents = constituents.pop()
         # the Dummy has the label on it
-        label = constituents.value.label
+        label = model.get_top_constituent(constituents).label
         # pop past the Dummy as well
         constituents = constituents.pop()
         # the children are in the opposite order of what we expect
         children.reverse()
-        new_constituent = Tree(label=label, children=children)
-        constituents = constituents.push(new_constituent)
+        new_constituent = model.build_constituent(label=label, children=children)
+        constituents = model.push_constituent(constituents, new_constituent)
 
         return State(original_state=state,
                      num_opens=state.num_opens-1,
                      word_queue=state.word_queue,
-                     transitions=state.transitions.push(self),
+                     transitions=model.push_transition(state.transitions, self),
                      constituents=constituents)
 
-    def is_legal(self, state):
+    def is_legal(self, state, model):
         """
         Disallow if the previous transition was the Open (nothing built yet)
         or if there is no Open on the stack yet
         """
-        if isinstance(state.transitions.value, OpenConstituent):
+        if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
             return False
         if state.num_opens <= 0:
             return False
