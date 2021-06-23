@@ -79,3 +79,64 @@ class Tree(StanzaObject):
         if not self.children:
             return 0
         return 1 + max(x.depth() for x in self.children)
+
+    def visit_preorder(self, internal=None, preterminal=None, leaf=None):
+        """
+        Visit the tree in a preorder order
+
+        Applies the given functions to each node
+        """
+        if self.is_leaf():
+            if leaf:
+                leaf(self)
+        elif self.is_preterminal():
+            if preterminal:
+                preterminal(self)
+        else:
+            if internal:
+                internal(self)
+        for child in self.children:
+            child.visit_preorder(internal, preterminal, leaf)
+
+    @staticmethod
+    def get_unique_constituent_labels(trees):
+        """
+        Walks over all of the trees and gets all of the unique constituent names from the trees
+        """
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        constituents = set()
+        for tree in trees:
+            tree.visit_preorder(internal = lambda x: constituents.add(x.label))
+        return sorted(constituents)
+
+    @staticmethod
+    def get_unique_tags(trees):
+        """
+        Walks over all of the trees and gets all of the unique constituent names from the trees
+        """
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        tags = set()
+        for tree in trees:
+            tree.visit_preorder(preterminal = lambda x: tags.add(x.label))
+        return sorted(tags)
+
+    @staticmethod
+    def get_unique_words(trees):
+        """
+        Walks over all of the trees and gets all of the unique constituent names from the trees
+        """
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        words = set()
+        for tree in trees:
+            tree.visit_preorder(leaf = lambda x: words.add(x.label))
+        return sorted(words)
+
+    @staticmethod
+    def get_root_labels(trees):
+        return sorted(set(x.label for x in trees))
