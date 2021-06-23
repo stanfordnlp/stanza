@@ -146,3 +146,54 @@ def test_close(model=None):
     assert tree.children[1].children[0].label == 'Opal'
 
     assert len(state.constituents) == 3
+
+def test_hashes():
+    transitions = set()
+
+    shift = parse_transitions.Shift()
+    assert shift not in transitions
+    transitions.add(shift)
+    assert shift in transitions
+    shift = parse_transitions.Shift()
+    assert shift in transitions
+
+    for i in range(5):
+        transitions.add(shift)
+    assert len(transitions) == 1
+
+    unary = parse_transitions.CompoundUnary("asdf")
+    assert unary not in transitions
+    transitions.add(unary)
+    assert unary in transitions
+
+    unary = parse_transitions.CompoundUnary(["asdf", "zzzz"])
+    assert unary not in transitions
+    transitions.add(unary)
+    transitions.add(unary)
+    transitions.add(unary)
+    unary = parse_transitions.CompoundUnary(["asdf", "zzzz"])
+    assert unary in transitions
+
+    # check that the str and the list constructors result in the same item
+    assert len(transitions) == 3
+    unary = parse_transitions.CompoundUnary(["asdf"])
+    assert unary in transitions
+
+    oc = parse_transitions.OpenConstituent("asdf")
+    assert oc not in transitions
+    transitions.add(oc)
+    assert oc in transitions
+    transitions.add(oc)
+    transitions.add(oc)
+    assert len(transitions) == 4
+    assert parse_transitions.OpenConstituent("asdf") in transitions
+
+    cc = parse_transitions.CloseConstituent()
+    assert cc not in transitions
+    transitions.add(cc)
+    transitions.add(cc)
+    transitions.add(cc)
+    assert cc in transitions
+    cc = parse_transitions.CloseConstituent()
+    assert cc in transitions
+    assert len(transitions) == 5
