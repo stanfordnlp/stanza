@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import functools
 
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
@@ -72,6 +73,7 @@ def initial_state_from_gold_tree(tree, model):
         word_queue = model.push_word(word_queue, tag_node)
     return State(sentence_length=len(preterminals), num_opens=0, word_queue=word_queue)
 
+@functools.total_ordering
 class Transition(ABC):
     """
     model is passed in as a dependency injection
@@ -92,6 +94,16 @@ class Transition(ABC):
         at parse time, the parser might choose a transition which cannot be made
         """
         pass
+
+    def __lt__(self, other):
+        # put the Shift at the front of a list, and otherwise sort alphabetically
+        if self == other:
+            return False
+        if isinstance(self, Shift):
+            return True
+        if isinstance(other, Shift):
+            return False
+        return str(self) < str(other)
 
 class Shift(Transition):
     def apply(self, state, model):
