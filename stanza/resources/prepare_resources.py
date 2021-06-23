@@ -87,7 +87,6 @@ default_treebanks = {
   "multilingual": "ud"
 }
 
-
 # default ner for languages
 default_ners = {
   "ar": "aqmar",
@@ -104,7 +103,6 @@ default_ners = {
   "vi": "vlsp",
   "zh-hans": "ontonotes",
 }
-
 
 # default charlms for languages
 default_charlms = {
