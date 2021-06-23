@@ -3,6 +3,7 @@ from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.parse_transitions import *
 
 from stanza.tests import *
 
@@ -31,3 +32,12 @@ def test_top_down():
 
     result_tree = state.constituents.value
     assert result_tree == tree
+
+def test_all_transitions():
+    text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
+    trees = tree_reader.read_trees(text)
+    model = SimpleModel()
+    transitions = transition_sequence.build_top_down_treebank(trees)
+
+    expected = [Shift(), CloseConstituent(), CompoundUnary("ROOT"), CompoundUnary("SQ"), CompoundUnary("WHNP"), OpenConstituent("NP"), OpenConstituent("PP"), OpenConstituent("SBARQ"), OpenConstituent("VP")]
+    assert transition_sequence.all_transitions(transitions) == expected

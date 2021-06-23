@@ -30,6 +30,19 @@ def yield_top_down_sequence(tree):
 def build_top_down_sequence(tree):
     return [t for t in yield_top_down_sequence(tree)]
 
+def build_top_down_treebank(trees):
+    return [build_top_down_sequence(tree) for tree in trees]
+
+def all_transitions(transition_lists):
+    """
+    Given a list of transition lists, combine them all into a set of unique transitions.
+    """
+    transitions = set()
+    for tl in transition_lists:
+        for t in tl:
+            transitions.add(t)
+    return sorted(transitions)
+
 if __name__ == '__main__':
     text="( (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     #text = "(WP Who)"
