@@ -120,12 +120,25 @@ class Shift(Transition):
     def __repr__(self):
         return "Shift"
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if isinstance(other, Shift):
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(37)
+
 class CompoundUnary(Transition):
     # TODO: run experiments to see if this is actually useful
     def __init__(self, labels):
         # the FIRST label will be the top of the tree
         # so CompoundUnary that results in root will have root as labels[0], for example
-        self.labels = labels
+        if isinstance(labels, str):
+            self.labels = (labels,)
+        else:
+            self.labels = tuple(labels)
 
     def apply(self, state, model):
         # remove the top constituent
@@ -152,12 +165,36 @@ class CompoundUnary(Transition):
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, CompoundUnary):
+            return False
+        if self.labels == other.labels:
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(self.labels)
+
 class Dummy():
     def __init__(self, label):
         self.label = label
 
     def __str__(self):
         return "Dummy(%s)" % self.label
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Dummy):
+            return False
+        if self.label == other.label:
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(self.label)
 
 class OpenConstituent(Transition):
     def __init__(self, label):
@@ -186,6 +223,18 @@ class OpenConstituent(Transition):
 
     def __repr__(self):
         return "OpenConstituent(%s)" % self.label
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, OpenConstituent):
+            return False
+        if self.label == other.label:
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(self.label)
 
 class CloseConstituent(Transition):
     def apply(self, state, model):
@@ -225,3 +274,13 @@ class CloseConstituent(Transition):
 
     def __repr__(self):
         return "CloseConstituent"
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if isinstance(other, CloseConstituent):
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(93)
