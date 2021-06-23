@@ -197,3 +197,19 @@ def test_hashes():
     cc = parse_transitions.CloseConstituent()
     assert cc in transitions
     assert len(transitions) == 5
+
+
+def test_sort():
+    expected = []
+
+    expected.append(parse_transitions.Shift())
+    expected.append(parse_transitions.CloseConstituent())
+    expected.append(parse_transitions.CompoundUnary(["NP"]))
+    expected.append(parse_transitions.CompoundUnary(["NP", "VP"]))
+    expected.append(parse_transitions.OpenConstituent("mox"))
+    expected.append(parse_transitions.OpenConstituent("opal"))
+    expected.append(parse_transitions.OpenConstituent("unban"))
+
+    transitions = set(expected)
+    transitions = sorted(transitions)
+    assert transitions == expected
