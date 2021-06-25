@@ -20,6 +20,12 @@ class PretrainedWordVocab(BaseVocab):
         self._id2unit = VOCAB_PREFIX + self.data
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
+    def normalize_unit(self, unit):
+        unit = super().normalize_unit(unit)
+        if unit:
+            unit = unit.replace(" ","\xa0")
+        return unit
+
 class Pretrain:
     """ A loader and saver for pretrained embeddings. """
 
