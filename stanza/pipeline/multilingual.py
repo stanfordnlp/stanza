@@ -24,6 +24,7 @@ class MultilingualPipeline:
         use_gpu: bool = None
     ):
         # set up configs and cache for various language pipelines
+        self.lang_id_config = {} if lang_id_config is None else lang_id_config
         self.lang_configs = {} if lang_configs is None else lang_configs
         self.max_cache_size = max_cache_size
         self.pipeline_cache = {}
@@ -36,7 +37,8 @@ class MultilingualPipeline:
             self.use_gpu = use_gpu
         
         # build language id pipeline
-        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=self.use_gpu)
+        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=self.use_gpu, 
+                                         **self.lang_id_config)
 
     def _update_pipeline_cache(self, lang):
         """
