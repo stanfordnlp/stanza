@@ -57,7 +57,7 @@ nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en
 
 ## Basic Multilingual Pipeline Example
 
-A MultilingualPipeline will detect the language of text, and run the appropriate language specific Stanza pipeline on the text. The MultilingualPipeline will maintain a cache of pipelines for each language. This example demonstrates handling some English and French text. Each example is classified as English or French, and then an appropriate English or French pipeline is run on the text.
+A `MultilingualPipeline` will detect the language of text, and run the appropriate language specific Stanza pipeline on the text. The `MultilingualPipeline` will maintain a cache of pipelines for each language. This example demonstrates handling some English and French text. Each example is classified as English or French, and then an appropriate English or French pipeline is run on the text.
 
 ```python
 from stanza.pipeline.multilingual import MultilingualPipeline
@@ -74,7 +74,9 @@ for doc in docs:
 
 ## Configure Multilingual Pipeline
 
-You can configure the language identification system and each language specific pipeline in the MultilingualPipeline. This example demonstrates activating the text cleaning for the language identification module and setting the cached English pipeline’s NER model.
+You can configure the language identification system and each language specific pipeline in the `MultilingualPipeline`. When the `MultilingualPipeline` is constructed, it can be fed a dictionary with one entry per language, where each entry is a dictionary with that language's settings. The `langid` processor itself can be configured as well with a separate dictionary with `langid` settings.
+
+This example demonstrates activating the text cleaning for the language identification module and setting the cached English pipeline’s NER model. 
 
 ```python
 from stanza.pipeline.multilingual import MultilingualPipeline
@@ -93,7 +95,7 @@ for doc in docs:
 
 ## Set Multilingual Pipeline Cache Size
 
-A MultilingualPipeline keeps a cache of pipelines for each language. The maximum size of the cache can be configured at pipeline construction.
+A `MultilingualPipeline` keeps a cache of pipelines for each language. The maximum size of the cache can be configured at pipeline construction.
 
 ```python
 nlp = MultilingualPipeline(max_cache_size=2)
@@ -109,7 +111,7 @@ The data should be stored in a directory, with 3 files: `train.jsonl`, `dev.json
 {"text": "Hello world.", "label": "en"}
 ```
 
-Training can be launched with the following command (assume the *.jsonl files are in a directory called data)
+Training can be launched with the following command (assume the `*.jsonl` files are in a directory called `data`)
 
 ```bash
 python -m stanza.models.lang_identifier --data-dir data  --eval-length 10 --randomize --save-name model.pt --num-epochs 100
@@ -119,7 +121,7 @@ This command will run training with the data in `train.jsonl` and evaluate with 
 
 When the `--randomize` option is used, snippets of between 5 and 20 characters are sampled from each training example and used as the final training examples for each epoch. So in one epoch the training example "This is an English sentence." might yield "This is" "an English", and "sentence.", and in another it might yield "This is an", "English sentence."
 
-The length of the snippets can be set with `-randomize-lengths-range`.
+The length of the snippets can be set with `--randomize-lengths-range`.
 
 To get the best performance on short strings (character length=10), it is crucial to train on relatively short examples.
 
@@ -133,4 +135,6 @@ A trained model can be evaluated on any data set with the following command
 python -m stanza.models.lang_identifier --data-dir data --load-model model.pt --mode eval --eval-length 50 --save-name model-results.jsonl
 ```
 
-The overall accuracy will be displayed, and a .jsonl file with various evaluation info including the accuracy, the confusion matrix, and per-language F1, precision, and recall will be produced.
+This command will look for the file `test.jsonl` in `data` and produce evaluation numbers for the data in that file.
+
+The overall accuracy will be displayed, and a `.jsonl` file with various evaluation info including the accuracy, the confusion matrix, and per-language F1, precision, and recall will be produced.
