@@ -36,7 +36,7 @@ class MultilingualPipeline:
             self.use_gpu = use_gpu
         
         # build language id pipeline
-        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=use_gpu)
+        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=self.use_gpu)
 
     def _update_pipeline_cache(self, lang):
         """
