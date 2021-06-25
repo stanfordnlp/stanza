@@ -399,7 +399,7 @@ def process_defaults(args):
 
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
-                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment']:
+                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'langid']:
                         default_processors[processor] = package
                     zipf.write(processor)
                     zipf.write(os.path.join(processor, package + '.pt'))
