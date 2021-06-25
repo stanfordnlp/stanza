@@ -547,6 +547,7 @@ def test_text_cleaning():
     assert [doc.lang for doc in docs] == ["it", "it"]
     
     nlp = Pipeline(lang="multilingual", processors="langid", langid_clean_text=True)
+    assert nlp.processors["langid"]._clean_text
     nlp(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
 
@@ -563,10 +564,12 @@ def test_lang_subset():
     assert [doc.lang for doc in docs] == ["it", "it"]
     
     nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en","fr"])
+    assert nlp.processors["langid"]._model.lang_subset == ["en", "fr"]
     nlp(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
     
     nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en"])
+    assert nlp.processors["langid"]._model.lang_subset == ["en"]
     nlp(docs)
     assert [doc.lang for doc in docs] == ["en", "en"]
 
