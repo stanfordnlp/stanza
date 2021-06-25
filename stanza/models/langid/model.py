@@ -103,7 +103,11 @@ class LangIDBiLSTM(nn.Module):
     @classmethod
     def load(cls, path, use_cuda=False, batch_size=64, lang_subset=None):
         """ Load a serialized model located at path """
-        checkpoint = torch.load(path)
+        if use_cuda:
+            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        else:
+            device = torch.device("cpu")
+        checkpoint = torch.load(path, map_location=torch.device("cpu"))
         weights = checkpoint["model_state_dict"]["loss_train.weight"]
         model = cls(checkpoint["char_to_idx"], checkpoint["tag_to_idx"], checkpoint["num_layers"],
                     checkpoint["embedding_dim"], checkpoint["hidden_dim"], batch_size=batch_size, weights=weights,
