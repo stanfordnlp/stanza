@@ -6,6 +6,16 @@ import hashlib
 import shutil
 import zipfile
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/current-models", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
+    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/built-models", help='Output dir for various models.')
+    args = parser.parse_args()
+    args.input_dir = os.path.abspath(args.input_dir)
+    args.output_dir = os.path.abspath(args.output_dir)
+    return args
+
+
 # default treebank for languages
 default_treebanks = {
   "af": "afribooms",
@@ -265,16 +275,6 @@ def copy_file(src, dst):
 def get_md5(path):
     data = open(path, 'rb').read()
     return hashlib.md5(data).hexdigest()
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input-dir', type=str, help='Input dir for various models.')
-    parser.add_argument('--output-dir', type=str, help='Output dir for various models.')
-    args = parser.parse_args()
-    args.input_dir = os.path.abspath(args.input_dir)
-    args.output_dir = os.path.abspath(args.output_dir)
-    return args
 
 
 def split_model_name(model):
