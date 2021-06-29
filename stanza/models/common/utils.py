@@ -207,6 +207,53 @@ def unsort(sorted_list, oidx):
     _, unsorted = [list(t) for t in zip(*sorted(zip(oidx, sorted_list)))]
     return unsorted
 
+def sort_with_indices(data, key=None, reverse=False):
+    """
+    Sort data and return both the data and the original indices.
+
+    One useful application is to sort by length, which can be done with key=len
+    Returns the data as a sorted list, then the indices of the original list.
+    """
+    if key:
+        ordered = sorted(enumerate(data), key=lambda x: key(x[1]), reverse=reverse)
+    else:
+        ordered = sorted(enumerate(data), key=lambda x: x[1], reverse=reverse)
+
+    result = tuple(zip(*ordered))
+    return result[1], result[0]
+
+def split_into_batches(data, batch_size):
+    """
+    Returns a list of intervals so that each interval is either <= batch_size or one element long.
+
+    Long elements are not dropped from the intervals.
+    data is a list of lists
+    batch_size is how long to make each batch
+    return value is a list of pairs, start_idx end_idx
+    """
+    intervals = []
+    interval_start = 0
+    interval_size = 0
+    for idx, line in enumerate(data):
+        if len(line) > batch_size:
+            # guess we'll just hope the model can handle a batch of this size after all
+            if interval_size > 0:
+                intervals.append((interval_start, idx))
+            intervals.append((idx, idx+1))
+            interval_start = idx+1
+            interval_size = 0
+        elif len(line) + interval_size > batch_size:
+            # this line puts us over batch_size
+            intervals.append((interval_start, idx))
+            interval_start = idx
+            interval_size = len(line)
+        else:
+            interval_size = interval_size + len(line)
+    if interval_size > 0:
+        # there's some leftover
+        intervals.append((interval_start, len(data)))
+    return intervals
+
 def tensor_unsort(sorted_tensor, oidx):
     """
     Unsort a sorted tensor on its 0-th dimension, based on the original idx.
