@@ -24,6 +24,9 @@ class SentimentProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
+    # default batch size, measured in words per batch
+    DEFAULT_BATCH_SIZE = 5000
+
     def _set_up_model(self, config, use_gpu):
         # get pretrained word vectors
         pretrain_path = config.get('pretrain_path', None)
@@ -37,7 +40,8 @@ class SentimentProcessor(UDProcessor):
                                           pretrain=self._pretrain,
                                           charmodel_forward=charmodel_forward,
                                           charmodel_backward=charmodel_backward)
-        self._batch_size = config.get('batch_size', None)
+        # batch size counted as words
+        self._batch_size = config.get('batch_size', SentimentProcessor.DEFAULT_BATCH_SIZE)
 
         # TODO: move this call to load()
         if use_gpu:
