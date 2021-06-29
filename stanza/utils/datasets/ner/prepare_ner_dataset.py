@@ -316,10 +316,9 @@ def process_bsnlp(paths, short_name):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
-def main():
+def main(dataset_name):
     paths = default_paths.get_default_paths()
 
-    dataset_name = sys.argv[1]
     random.seed(1234)
 
     if dataset_name == 'fi_turku':
@@ -344,4 +343,4 @@ def main():
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1])
