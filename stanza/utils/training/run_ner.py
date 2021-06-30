@@ -9,7 +9,7 @@ Example command line:
   python3 -m stanza.utils.training.run_ner.py hu_combined
 
 This script expects the prepared data to be in
-  data/ner/dataset.train.json, dev.json, test.json
+  data/ner/{lang}_{dataset}.train.json, {lang}_{dataset}.dev.json, {lang}_{dataset}.test.json
 
 If those files don't exist, it will make an attempt to rebuild them
 using the prepare_ner_dataset script.  However, this will fail if the
@@ -70,6 +70,11 @@ def find_wordvec_pretrain(language):
     logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pretrain
 
+# Technically NER datasets are not necessarily treebanks
+# (usually not, in fact)
+# However, to keep the naming consistent, we leave the
+# method which does the training as run_treebank
+# TODO: rename treebank -> dataset everywhere
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     ner_dir = paths["NER_DATA_DIR"]
