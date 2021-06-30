@@ -47,15 +47,15 @@ def add_ner_args(parser):
 def find_charlm(direction, language, charlm):
     saved_path = 'saved_models/charlm/{}_{}_{}_charlm.pt'.format(language, charlm, direction)
     if os.path.exists(saved_path):
-        logger.info('Using model %s for %s charlm' % (saved_path, direction))
+        logger.info(f'Using model {saved_path} for {direction} charlm')
         return saved_path
 
     resource_path = '{}/{}/{}_charlm/{}.pt'.format(DEFAULT_MODEL_DIR, language, direction, charlm)
     if os.path.exists(resource_path):
-        logger.info('Using model %s for %s charlm' % (resource_path, direction))
+        logger.info(f'Using model {resource_path} for {direction} charlm')
         return resource_path
 
-    raise FileNotFoundError("Cannot find %s charlm in either %s or %s" % (direction, saved_path, resource_path))
+    raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}")
 
 def find_wordvec_pretrain(language):
     # TODO: try to extract/remember the specific pretrain for the given model
@@ -63,27 +63,28 @@ def find_wordvec_pretrain(language):
     pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
     pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
-        raise FileNotFoundError("Cannot find any pretrains in %s  Try 'stanza.download(\"%s\")' to get a default pretrain or use --wordvec_pretrain_path to specify a .pt file to use" % (pretrain_path, language))
+        raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_path to specify a .pt file to use")
     if len(pretrains) > 1:
-        raise FileNotFoundError("Too many pretrains to choose from in %s  Must specify an exact path to a --wordvec_pretrain_file" % pretrain_path)
-    logger.info("Using pretrain found in %s  To use a different pretrain, specify --wordvec_pretrain_file" % pretrains[0])
-    return pretrains[0]
+        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Must specify an exact path to a --wordvec_pretrain_file")
+    pretrain = pretrains[0]
+    logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
+    return pretrain
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     ner_dir = paths["NER_DATA_DIR"]
     language, dataset = short_name.split("_")
 
-    train_file = os.path.join(ner_dir, "%s.train.json" % short_name)
-    dev_file   = os.path.join(ner_dir, "%s.dev.json" % short_name)
-    test_file  = os.path.join(ner_dir, "%s.test.json" % short_name)
+    train_file = os.path.join(ner_dir, f"{short_name}.train.json")
+    dev_file   = os.path.join(ner_dir, f"{short_name}.dev.json")
+    test_file  = os.path.join(ner_dir, f"{short_name}.test.json")
 
     if not os.path.exists(train_file) or not os.path.exists(dev_file) or not os.path.exists(test_file):
-        logger.warning("The data for %s is missing or incomplete.  Attempting to rebuild..." % short_name)
+        logger.warning(f"The data for {short_name} is missing or incomplete.  Attempting to rebuild...")
         try:
             prepare_ner_dataset.main(short_name)
         except:
-            logger.error("Unable to build the data.  Please correctly build the files in %s, %s, %s and then try again." % (train_file, dev_file, test_file))
+            logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 
     default_charlm = default_charlms.get(language, None)
@@ -103,7 +104,7 @@ def run_treebank(mode, paths, treebank, short_name,
         forward = find_charlm('forward', language, charlm)
         backward = find_charlm('backward', language, charlm)
         charlm_args = ['--charlm',
-                       '--charlm_shorthand', '%s_%s' % (language, charlm),
+                       '--charlm_shorthand', f'{language}_{charlm}',
                        '--charlm_forward_file', forward,
                        '--charlm_backward_file', backward]
     else:
