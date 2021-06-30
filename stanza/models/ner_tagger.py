@@ -116,6 +116,7 @@ def train(args):
     pretrain = None
     vocab = None
     trainer = None
+
     if args['finetune'] and os.path.exists(model_file):
         logger.warning('Finetune is ON. Using model from "{}"'.format(model_file))
         _, trainer, vocab = load_model(args, model_file)
@@ -262,7 +263,12 @@ def evaluate(args):
 def load_model(args, model_file):
     # load model
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    charlm_args = {}
+    if 'charlm_forward_file' in args:
+        charlm_args['charlm_forward_file'] = args['charlm_forward_file']
+    if 'charlm_backward_file' in args:
+        charlm_args['charlm_backward_file'] = args['charlm_backward_file']
+    trainer = Trainer(args=charlm_args, model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
