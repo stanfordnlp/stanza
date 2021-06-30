@@ -100,12 +100,10 @@ def run_treebank(mode, paths, treebank, short_name,
         charlm = None
 
     if charlm:
-        # TODO: the --char_hidden_dim arg should be extractable from the charlm file
         forward = find_charlm('forward', language, charlm)
         backward = find_charlm('backward', language, charlm)
         charlm_args = ['--charlm',
                        '--charlm_shorthand', '%s_%s' % (language, charlm),
-                       '--char_hidden_dim', '1024',
                        '--charlm_forward_file', forward,
                        '--charlm_backward_file', backward]
     else:
@@ -119,7 +117,7 @@ def run_treebank(mode, paths, treebank, short_name,
         #   --lang vi
         #   --shorthand vi_vlsp
         #   --mode train
-        #   --charlm --charlm_shorthand vi_conll17 --char_hidden_dim 1024
+        #   --charlm --charlm_shorthand vi_conll17
         #   --dropout 0.6 --word_dropout 0.1 --locked_dropout 0.1 --char_dropout 0.1
         dataset_args = DATASET_EXTRA_ARGS.get(short_name, [])
 

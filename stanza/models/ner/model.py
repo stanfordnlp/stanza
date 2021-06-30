@@ -37,10 +37,11 @@ class NERTagger(nn.Module):
             if self.args['charlm']:
                 add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
                 add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
-            input_size += self.args['char_hidden_dim'] * 2
-        
+                input_size += self.args['char_hidden_dim'] * 2
+
         # optionally add a input transformation layer
         if self.args.get('input_transform', False):
             self.input_transform = nn.Linear(input_size, input_size)
