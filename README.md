@@ -37,11 +37,13 @@ If you use this library in your research, please kindly cite our [ACL2020 Stanza
 If you use our biomedical and clinical models, please also cite our [Stanza Biomedical Models description paper](https://arxiv.org/abs/2007.14640):
 
 ```bibtex
-@article{zhang2020biomedical,
-  title={Biomedical and Clinical English Model Packages in the Stanza Python NLP Library},
-  author={Zhang, Yuhao and Zhang, Yuhui and Qi, Peng and Manning, Christopher D. and Langlotz, Curtis P.},
-  journal={arXiv preprint arXiv:2007.14640},
-  year={2020}
+@article{zhang2021biomedical,
+    author = {Zhang, Yuhao and Zhang, Yuhui and Qi, Peng and Manning, Christopher D and Langlotz, Curtis P},
+    title = "{Biomedical and clinical English model packages for the Stanza Python NLP library}",
+    journal = {Journal of the American Medical Informatics Association},
+    year = {2021},
+    month = {06},
+    issn = {1527-974X}
 }
 ```
 
