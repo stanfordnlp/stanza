@@ -39,7 +39,7 @@ If you use our biomedical and clinical models, please also cite our [Stanza Biom
 ```bibtex
 @article{zhang2021biomedical,
     author = {Zhang, Yuhao and Zhang, Yuhui and Qi, Peng and Manning, Christopher D and Langlotz, Curtis P},
-    title = "{Biomedical and clinical English model packages for the Stanza Python NLP library}",
+    title = {Biomedical and clinical {E}nglish model packages for the {S}tanza {P}ython {NLP} library},
     journal = {Journal of the American Medical Informatics Association},
     year = {2021},
     month = {06},
