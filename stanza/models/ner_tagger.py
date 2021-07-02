@@ -31,7 +31,7 @@ logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
+    parser.add_argument('--data_dir', type=str, default='data/ner', help='Directory of NER data.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
