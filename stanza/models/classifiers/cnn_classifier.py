@@ -367,6 +367,8 @@ class CNNClassifier(nn.Module):
         for fc in self.fc_layers[:-1]:
             previous_layer = self.dropout(F.relu(fc(previous_layer)))
         out = self.fc_layers[-1](previous_layer)
+        # note that we return the raw logits rather than use a softmax
+        # https://discuss.pytorch.org/t/multi-class-cross-entropy-loss-and-softmax-in-pytorch/24920/4
         return out
 
 
