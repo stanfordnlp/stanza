@@ -73,11 +73,7 @@ class CNNClassifier(nn.Module):
                                       charlm_projection = args.charlm_projection,
                                       model_type = 'CNNClassifier')
 
-        if args.char_lowercase:
-            self.char_case = lambda x: x.lower()
-        else:
-            self.char_case = lambda x: x
-
+        self.char_lowercase = args.char_lowercase
         self.unsaved_modules = []
 
         emb_matrix = pretrain.emb
@@ -169,7 +165,6 @@ class CNNClassifier(nn.Module):
 
         self.dropout = nn.Dropout(self.config.dropout)
 
-
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
@@ -200,6 +195,8 @@ class CNNClassifier(nn.Module):
 
         return char_reps
 
+    def char_case(self, x: str) -> str:
+        return x.lower() if self.char_lowercase else x
 
     def forward(self, inputs, device=None):
         if not device:
