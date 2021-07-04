@@ -140,3 +140,32 @@ class Tree(StanzaObject):
     @staticmethod
     def get_root_labels(trees):
         return sorted(set(x.label for x in trees))
+
+    def simplify_labels(self):
+        """
+        Return a copy of the tree with the -=# removed
+        """
+        new_label = self.label
+        if new_label:
+            new_label = new_label.split("-")[0].split("=")[0].split("#")[0]
+        new_children = [child.simplify_labels() for child in self.children]
+        return Tree(new_label, new_children)
+
+    def prune_none(self):
+        """
+        Return a copy of the tree, eliminating all nodes which are in one of two categories:
+            they are a preterminal -NONE-, such as appears in PTB
+            they have been pruned to 0 children by the recursive call
+        """
+        if self.is_leaf():
+            return Tree(self.label)
+        if self.is_preterminal():
+            if self.label == '-NONE-':
+                return None
+            return Tree(self.label, Tree(self.children[0].label))
+        # must be internal node
+        new_children = [child.prune_none() for child in self.children]
+        new_children = [child for child in new_children if child is not None]
+        if len(new_children) == 0:
+            return None
+        return Tree(self.label, new_children)
