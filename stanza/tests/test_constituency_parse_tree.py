@@ -86,3 +86,25 @@ def test_root_labels():
     text="(FOO) (BAR)"
     trees = tree_reader.read_trees(text)
     assert ["BAR", "FOO"] == Tree.get_root_labels(trees)
+
+def test_prune_none():
+    text=["((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (-NONE- in) (NP (DT this) (NN seat))))) (. ?)))", # test one dead node
+          "((SBARQ (WHNP (-NONE- Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))", # test recursive dead nodes
+          "((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (-NONE- this) (-NONE- seat))))) (. ?)))"] # test all children dead
+    expected=["(ROOT (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (NP (DT this) (NN seat))))) (. ?)))",
+              "(ROOT (SBARQ (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))",
+              "(ROOT (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in)))) (. ?)))"]
+
+    for t, e in zip(text, expected):
+        trees = tree_reader.read_trees(t)
+        assert len(trees) == 1
+        tree = trees[0].prune_none()
+        assert e == str(tree)
+
+def test_simplify_labels():
+    text="( (SBARQ-FOO (WHNP-BAR (WP Who)) (SQ#ASDF (VP=1 (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
+    expected = "(ROOT (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
+    trees = tree_reader.read_trees(text)
+    trees = [t.simplify_labels() for t in trees]
+    assert len(trees) == 1
+    assert expected == str(trees[0])
