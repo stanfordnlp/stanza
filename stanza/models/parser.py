@@ -115,6 +115,7 @@ def model_file_name(args):
 
     return os.path.join(args['save_dir'], save_name)
 
+# TODO: refactor with everywhere
 def load_pretrain(args):
     pt = None
     if args['pretrain']:
