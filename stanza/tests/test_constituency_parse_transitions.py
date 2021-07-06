@@ -83,6 +83,40 @@ def test_unary(model=None):
     assert tree.label == 'VB'
     assert tree.is_preterminal()
 
+def test_unary_requires_root(model=None):
+    if model is None:
+        model = SimpleModel()
+    state = build_initial_state(model)
+
+    open_transition = parse_transitions.OpenConstituent("S")
+    assert open_transition.is_legal(state, model)
+    state = open_transition.apply(state, model)
+
+    shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert not shift.is_legal(state, model)
+
+    close_transition = parse_transitions.CloseConstituent()
+    assert close_transition.is_legal(state, model)
+    state = close_transition.apply(state, model)
+    assert not open_transition.is_legal(state, model)
+    assert not close_transition.is_legal(state, model)
+
+    np_unary = parse_transitions.CompoundUnary("NP")
+    assert not np_unary.is_legal(state, model)
+    root_unary = parse_transitions.CompoundUnary("ROOT")
+    assert root_unary.is_legal(state, model)
+    assert not state.finished(model)
+    state = root_unary.apply(state, model)
+    assert not root_unary.is_legal(state, model)
+
+    assert state.finished(model)
+
 def test_open(model=None):
     if model is None:
         model = SimpleModel()
