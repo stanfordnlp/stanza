@@ -59,6 +59,36 @@ class State:
     def finished(self, model):
         return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
 
+    def all_transitions(self, model):
+        # TODO: rewrite this to be nicer / faster?  or just refactor?
+        all_transitions = []
+        transitions = self.transitions
+        while transitions.parent is not None:
+            all_transitions.append(model.get_top_transition(transitions))
+            transitions = transitions.parent
+        return list(reversed(all_transitions))
+
+    def all_constituents(self, model):
+        # TODO: rewrite this to be nicer / faster?
+        all_constituents = []
+        constituents = self.constituents
+        while constituents.parent is not None:
+            all_constituents.append(model.get_top_constituent(constituents))
+            constituents = constituents.parent
+        return list(reversed(all_constituents))
+
+    def all_words(self, model):
+        # TODO: rewrite this to be nicer / faster?
+        all_words = []
+        words = self.word_queue
+        while words.parent is not None:
+            all_words.append(model.get_top_word(words))
+            words = words.parent
+        return list(reversed(all_words))
+
+    def to_string(self, model):
+        return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.all_words(model)), str(self.all_transitions(model)), str(self.all_constituents(model)))
+
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 

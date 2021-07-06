@@ -181,6 +181,8 @@ def test_close(model=None):
 
     assert len(state.constituents) == 3
 
+    assert state.all_transitions(model) == [shift, open_transition, shift, shift, close_transition]
+
 def test_hashes():
     transitions = set()
 
