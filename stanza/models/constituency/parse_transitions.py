@@ -51,6 +51,14 @@ class State:
         # and no parent
         return self.word_queue.parent is None
 
+    def has_one_constituent(self):
+        if self.constituents.parent is None:
+            return False
+        return self.constituents.parent.parent is None
+
+    def finished(self, model):
+        return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
+
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
@@ -170,9 +178,16 @@ class CompoundUnary(Transition):
 
     def is_legal(self, state, model):
         """
-        Disallow consecutive CompoundUnary transitions
+        Disallow consecutive CompoundUnary transitions, force final transition to go to ROOT
+        TODO: disallow ROOT transitions in non-ROOT positions
         """
-        return not isinstance(model.get_top_transition(state.transitions), CompoundUnary)
+        if isinstance(model.get_top_transition(state.transitions), CompoundUnary):
+            return False
+        if not state.empty_word_queue():
+            return True
+        if not state.has_one_constituent():
+            return True
+        return self.labels[0] in model.get_root_labels()
 
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)

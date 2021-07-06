@@ -103,6 +103,8 @@ class LSTMModel(BaseModel, nn.Module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
+    def get_root_labels(self):
+        return self.root_labels
 
     def push_word(self, word_queue, word):
         """
