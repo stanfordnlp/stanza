@@ -75,6 +75,9 @@ def test_shift(model):
 def test_unary(model):
     test_constituency_parse_transitions.test_unary(model)
 
+def test_unary_requires_root(model):
+    test_constituency_parse_transitions.test_unary_requires_root(model)
+
 def test_open(model):
     test_constituency_parse_transitions.test_open(model)
 

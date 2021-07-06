@@ -77,6 +77,9 @@ class BaseModel(ABC):
     def get_top_transition(self, transitions):
         pass
 
+    def get_root_labels(self):
+        return ("ROOT",)
+
 class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
