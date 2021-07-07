@@ -207,8 +207,8 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                 state = gold_transition.apply(state, model)
 
         # print statistics
-        logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n".format(epoch+1, correct, incorrect, epoch_loss))
         run_dev_set(model, dev_trees)
+        logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n".format(epoch+1, correct, incorrect, epoch_loss))
 
 def run_dev_set(model, dev_trees):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
