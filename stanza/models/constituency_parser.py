@@ -152,9 +152,9 @@ def train(args):
     if args['cuda']:
         model.cuda()
 
-    iterate_training(model, train_trees, train_sequences, train_transitions, args)
+    iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args)
 
-def iterate_training(model, train_trees, train_sequences, transitions, args):
+def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args):
     # TODO: try different loss functions and optimizers
     optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     loss_function = nn.CrossEntropyLoss()
@@ -170,6 +170,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, args):
     train_data = list(zip(train_trees, train_sequences))
     leftover_training_data = []
     for epoch in range(args['epochs']):
+        logger.info("Starting epoch {}".format(epoch+1))
         epoch_data = leftover_training_data
         while len(epoch_data) < args['eval_interval']:
             random.shuffle(train_data)
@@ -207,6 +208,23 @@ def iterate_training(model, train_trees, train_sequences, transitions, args):
 
         # print statistics
         logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n".format(epoch+1, correct, incorrect, epoch_loss))
+        run_dev_set(model, dev_trees)
+
+def run_dev_set(model, dev_trees):
+    logger.info("Processing {} dev trees".format(len(dev_trees)))
+    for tree in tqdm(dev_trees):
+        state = parse_transitions.initial_state_from_gold_tree(tree, model)
+        transition_count = 0
+        while not state.finished(model) and transition_count < 1000:
+            transition_count = transition_count + 1
+            _, transition = model.predict(state, is_legal=True)
+            if not transition:
+                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree, state.to_string(model)))
+                break
+            state = transition.apply(state, model)
+
+        if transition_count >= 1000:
+            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree, state.to_string(model)))
 
 if __name__ == '__main__':
     main()
