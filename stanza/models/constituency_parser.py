@@ -42,6 +42,7 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
+    parser.add_argument('--train_batch_size', type=int, default=50, help='How many trees to train before taking an optimizer step')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
@@ -182,6 +183,12 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
         correct = 0
         incorrect = 0
         for step, (tree, sequence) in enumerate(tqdm(epoch_data)):
+            # Currently we do fake batching
+            # TODO: do a real batch over the trees to speed things up
+            if step % args['train_batch_size'] == 0 and step > 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
             state = parse_transitions.initial_state_from_gold_tree(tree, model)
             for gold_transition in sequence:
                 trans_tensor = transition_tensors[gold_transition]
@@ -198,13 +205,15 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                     tree_loss = loss_function(outputs, trans_tensor)
                     tree_loss.backward()
                     epoch_loss += tree_loss.item()
-                    optimizer.step()
-                    optimizer.zero_grad()
                     break
                 else:
                     correct = correct + 1
 
                 state = gold_transition.apply(state, model)
+
+        # there will always be leftover, so call step() one more time
+        optimizer.step()
+        optimizer.zero_grad()
 
         # print statistics
         run_dev_set(model, dev_trees)
