@@ -76,7 +76,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['emoji', 'numpy', 'protobuf', 'requests', 'torch>=1.3.0', 'tqdm'],
+    install_requires=['emoji', 'numpy', 'protobuf', 'requests', 'sly', 'torch>=1.3.0', 'tqdm'],
 
     # List required Python versions
     python_requires='>=3.6',
