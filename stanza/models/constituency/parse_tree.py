@@ -149,7 +149,7 @@ class Tree(StanzaObject):
         """
         new_label = self.label
         # check len(new_label) just in case it's a tag of - or =
-        if new_label and not self.is_leaf() and len(new_label) > 1:
+        if new_label and not self.is_leaf() and len(new_label) > 1 and new_label not in ('-LRB-', '-RRB-'):
             new_label = new_label.split("-")[0].split("=")[0].split("#")[0]
         new_children = [child.simplify_labels() for child in self.children]
         return Tree(new_label, new_children)
