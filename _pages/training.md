@@ -51,7 +51,7 @@ For more information and other options, [see here](word_vectors.md).
 
 A large repository of data is available at [www.universaldependencies.org](http://www.universaldependencies.org).  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
 ```bash
-python stanza/utils/datasets/prepare_${module}_treebank.py ${corpus} ${other_args}
+python -m stanza.utils.datasets.prepare_${module}_treebank ${corpus} ${other_args}
 ```
 where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
 
@@ -62,12 +62,12 @@ By default, the `prepare_depparse_treebank.py` script uses the POS tagger to ret
 ```bash
 # This will attempt to load the tagger and retag the data
 # You will need to train the tagger or use the existing tagger for that to work
-python stanza/utils/datasets/prepare_depparse_treebank.py UD_English-EWT
+python -m stanza.utils.datasets.prepare_depparse_treebank UD_English-EWT
 ```
 
 ```bash
 # You can use the original gold tags as follows
-python stanza/utils/datasets/prepare_depparse_treebank.py UD_English-EWT --gold
+python -m stanza.utils.datasets.prepare_depparse_treebank UD_English-EWT --gold
 ```
 
 The reasoning is that since the models will be using predicted tags when used in a pipeline, it is better to train the models with the predicted tags in the first place.  In order to get the best results when retraining the dependency parser for use in a pipeline, you should first retrain the tagger if relevant and then use the new tagger model to produce the predicted tags.
@@ -94,7 +94,7 @@ prepare_ner_file.process_dataset(input_filename, output_filename)
 
 We provide various scripts to ease the training process in the `scripts` and `stanza/utils/training` directories. To train a model, you can run the following command from the code root directory:
 ```bash
-python stanza/utils/training/run_${module}.py ${corpus} ${other_args}
+python -m stanza.utils.training.run_${module} ${corpus} ${other_args}
 ```
 where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
 
@@ -107,7 +107,7 @@ bash scripts/run_ner.sh ${corpus} ${other_args}
 For example, you can use the following command to train a tokenizer with batch size 32 and a dropout rate of 0.33 on the `UD_English-EWT` corpus:
 
 ```bash
-python stanza/utils/training/run_tokenize.py UD_English-EWT --batch_size 32 --dropout 0.33
+python -m stanza.utils.training.run_tokenize UD_English-EWT --batch_size 32 --dropout 0.33
 ```
 
 You can also run `ner_tagger.py` directly:
@@ -130,7 +130,7 @@ You can also run a single model's dev or test set by using the `run_${module}.py
 
 Additionally, after you finish training all modules, you can evaluate the full universal dependency parsing pipeline with this command:
 ```bash
-python stanza/utils/training/run_ete.py ${corpus} --score_${split}
+python -m stanza.utils.training.run_ete ${corpus} --score_${split}
 ```
 where `${split}` is one of `dev` or `test`.  Running with no `--score_` flag will give scores for the train data.
 
