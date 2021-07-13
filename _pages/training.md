@@ -81,6 +81,12 @@ NER models have a different data format from other models.  There is an existing
 stanza/utils/datasets/ner/prepare_ner_dataset.py
 ```
 
+For example:
+
+```bash
+python -m stanza.utils.datasets.ner.prepare_ner_dataset fi_turku
+```
+
 Note that for the various scripts supported, you need to first download the data (possibly after agreeing to a license) from the sources listed in the file.
 
 For a new dataset not already supported, there is a specific `.json` format expected by our models.  There is a conversion script called several times in `prepare_ner_dataset.py` which converts [IOB](https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_\(tagging\)) format to our internal NER format:
@@ -96,18 +102,20 @@ We provide various scripts to ease the training process in the `scripts` and `st
 ```bash
 python -m stanza.utils.training.run_${module} ${corpus} ${other_args}
 ```
-where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
-
-NER is trained differently:
-
-```bash
-bash scripts/run_ner.sh ${corpus} ${other_args}
-```
+where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, `depparse`, or `ner`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
 
 For example, you can use the following command to train a tokenizer with batch size 32 and a dropout rate of 0.33 on the `UD_English-EWT` corpus:
 
 ```bash
 python -m stanza.utils.training.run_tokenize UD_English-EWT --batch_size 32 --dropout 0.33
+```
+
+NER is not trained from the UD datasets, but from other external datasets specific to each language.  Nevertheless, there is a `run_ner.py` script:
+
+```bash
+python -m stanza.utils.training.run_ner ${corpus} ${other_args}
+
+python -m stanza.utils.training.run_ner fi_turku
 ```
 
 You can also run `ner_tagger.py` directly:
@@ -116,7 +124,7 @@ You can also run `ner_tagger.py` directly:
 python3 -m stanza.models.ner_tagger --wordvec_pretrain_file saved_models/pos/fi_ftb.pretrain.pt --train_file data/ner/fi_turku.train.json --eval_file data/ner/fi_turku.dev.json  --charlm --charlm_shorthand fi_conll17 --char_hidden_dim 1024  --lang fi --shorthand fi_turku --mode train
 ```
 
-To get the prediction scores of an existing NER model, use `--mode eval` instead.
+To get the prediction scores of an existing NER model when running `ner_tagger.py`, use `--mode eval` instead of `--mode train`.
 
 If you are training NER for a new language, you may want to use a [charlm](new_language.md#character-lm).  You can also leave out the charlm arguments in the above command line and train without the charlm.
 
