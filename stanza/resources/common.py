@@ -103,6 +103,12 @@ def file_exists(path, md5):
     """
     return os.path.exists(path) and get_md5(path) == md5
 
+def assert_file_exists(path, md5=None):
+    assert os.path.exists(path), "Could not find file at %s" % path
+    if md5:
+        file_md5 = get_md5(path)
+        assert file_md5 == md5, "md5 for %s is %s, expected %s" % (path, file_md5, md5)
+
 def download_file(url, path, proxies, raise_for_status=False):
     """
     Download a URL into a file as specified by `path`.
@@ -134,7 +140,7 @@ def request_file(url, path, proxies=None, md5=None, raise_for_status=False):
         logger.info(f'File exists: {path}.')
         return
     download_file(url, path, proxies, raise_for_status)
-    assert(not md5 or file_exists(path, md5))
+    assert_file_exists(path, md5)
 
 def sort_processors(processor_list):
     sorted_list = []

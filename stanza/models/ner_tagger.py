@@ -31,7 +31,7 @@ logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='data/ner', help='Root dir for saving models.')
+    parser.add_argument('--data_dir', type=str, default='data/ner', help='Directory of NER data.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
     parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
@@ -62,6 +62,8 @@ def parse_args(args=None):
     parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
     parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
     parser.add_argument('--no_lowercase', dest='lowercase', action='store_false', help="Use cased word vectors.")
     parser.add_argument('--no_emb_finetune', dest='emb_finetune', action='store_false', help="Turn off finetuning of the embedding matrix.")
@@ -114,6 +116,7 @@ def train(args):
     pretrain = None
     vocab = None
     trainer = None
+
     if args['finetune'] and os.path.exists(model_file):
         logger.warning('Finetune is ON. Using model from "{}"'.format(model_file))
         _, trainer, vocab = load_model(args, model_file)
@@ -137,8 +140,10 @@ def train(args):
             if args['charlm_shorthand'] is None:
                 raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
             logger.info('Using pretrained contextualized char embedding')
-            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+            if not args['charlm_forward_file']:
+                args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+            if not args['charlm_backward_file']:
+                args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
@@ -258,7 +263,12 @@ def evaluate(args):
 def load_model(args, model_file):
     # load model
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    charlm_args = {}
+    if 'charlm_forward_file' in args:
+        charlm_args['charlm_forward_file'] = args['charlm_forward_file']
+    if 'charlm_backward_file' in args:
+        charlm_args['charlm_backward_file'] = args['charlm_backward_file']
+    trainer = Trainer(args=charlm_args, model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

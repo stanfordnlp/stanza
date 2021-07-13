@@ -37,10 +37,11 @@ class NERTagger(nn.Module):
             if self.args['charlm']:
                 add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
                 add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
-            input_size += self.args['char_hidden_dim'] * 2
-        
+                input_size += self.args['char_hidden_dim'] * 2
+
         # optionally add a input transformation layer
         if self.args.get('input_transform', False):
             self.input_transform = nn.Linear(input_size, input_size)
@@ -73,7 +74,7 @@ class NERTagger(nn.Module):
         vocab_size = len(self.vocab['word'])
         dim = self.args['word_emb_dim']
         assert emb_matrix.size() == (vocab_size, dim), \
-            "Input embedding matrix must match size: {} x {}".format(vocab_size, dim)
+            "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):

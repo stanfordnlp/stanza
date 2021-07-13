@@ -47,9 +47,10 @@ class BaseVocab:
         return new
 
     def normalize_unit(self, unit):
+        # be sure to look in subclasses for other normalization being done
+        # especially PretrainWordVocab
         if unit is None:
             return unit
-        unit = unit.replace(" ","\xa0")
         if self.lower:
             return unit.lower()
         return unit

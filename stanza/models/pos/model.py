@@ -39,7 +39,7 @@ class Tagger(nn.Module):
             self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
 
-        if self.args['pretrain']:    
+        if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
             add_unsaved_module('pretrained_emb', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
             self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
