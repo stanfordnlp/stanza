@@ -5,7 +5,7 @@ https://github.com/korakot/thainlp/blob/master/xmlchid.xml
 For example, if you put the data file in the above link in
 extern_data/thai/orchid/xmlchid.xml
 you would then run
-python3 -m stanza.utils.datasets.tokenization.process_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
+python3 -m stanza.utils.datasets.tokenization.convert_th_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
 
 Because there is no definitive train/dev/test split that we have found
 so far, we randomly shuffle the data on a paragraph level and split it
@@ -27,6 +27,7 @@ test set scores:
 Apparently the random split produced a test set easier than the dev set.
 """
 
+import os
 import random
 import sys
 import xml.etree.ElementTree as ET
@@ -91,6 +92,7 @@ allowed_sequences = {
 }
 
 def read_data(input_filename):
+    print("Reading {}".format(input_filename))
     tree = ET.parse(input_filename)
 
     # we will put each paragraph in a separate block in the output file
@@ -141,10 +143,14 @@ def read_data(input_filename):
     return documents
 
 
-def main():
+def main(*args):
     random.seed(1007)
-    input_filename = sys.argv[1]
-    output_dir = sys.argv[2]
+    if not args:
+        args = sys.argv[1:]
+    input_filename = args[0]
+    if os.path.isdir(input_filename):
+        input_filename = os.path.join(input_filename, "thai", "orchid", "xmlchid.xml")
+    output_dir = args[1]
     documents = read_data(input_filename)
     write_dataset(documents, output_dir, "orchid")
 
