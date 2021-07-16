@@ -10,6 +10,14 @@ def find_spaces(sentence):
     spaces = []
     for word_idx, word in enumerate(sentence):
         space = True
+        # Quote period at the end of a sentence needs to be attached
+        # to the rest of the text.  Some sentences have `"... text`
+        # in the middle, though, so look for that
+        if word_idx < len(sentence) - 2 and sentence[word_idx+1] == '"':
+            if sentence[word_idx+2] == '.':
+                space = False
+            elif word_idx == len(sentence) - 3 and sentence[word_idx+2] == '...':
+                space = False
         if word_idx < len(sentence) - 1:
             if sentence[word_idx+1] in (',', '.', '!', '?', ')', ':', ';', '”', '…', '...'):
                 space = False
