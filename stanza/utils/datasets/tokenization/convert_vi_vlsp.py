@@ -31,16 +31,16 @@ def find_spaces(sentence):
 
 def write_file(vlsp_include_spaces, output_filename, sentences, shard):
     with open(output_filename, "w") as fout:
-        test = False
+        check_headlines = False
         for sent_idx, sentence in enumerate(sentences):
-
             fout.write("# sent_id = %s.%d\n" % (shard, sent_idx))
             orig_text = " ".join(sentence)
-            if test:
+            #check if the previous line is a headline (no ending mark at the end) then make this sentence a new par
+            if check_headlines:
                 fout.write("# newpar id =%s.%d.1\n" % (shard, sent_idx))
-                test = False
+                check_headlines = False
             if sentence[len(sentence) - 1] not in punctuation_set:
-                test = True
+                check_headlines = True
 
             if vlsp_include_spaces:
                 fout.write("# text = %s\n" % orig_text)
@@ -73,12 +73,14 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
 
     sentences = []
     for line in lines:
-        words = line.split()
-#        if words[len(words)-1] not in punctuation_set:
-#            words.append(".")
-        words = [w.replace("_", " ") for w in words]
-        sentences.append(words)
-        
+        if len(line.replace("_", " ").split())>1:
+            words = line.split()
+            #one syllable lines are eliminated
+            if len(words) == 1 and len(words[0].split("_")) == 1:
+                continue
+            else:
+                words = [w.replace("_", " ") for w in words]
+                sentences.append(words)
         
     if split_filename is not None:
         # even this is a larger dev set than the train set

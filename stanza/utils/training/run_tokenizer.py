@@ -26,7 +26,7 @@ from stanza.models import tokenizer
 from stanza.utils.avg_sent_len import avg_sent_len
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode
-from stanza.models.tokenization.trie import Trie, main
+from stanza.models.tokenization.trie import Trie, create_dictionary
 
 logger = logging.getLogger('stanza')
 

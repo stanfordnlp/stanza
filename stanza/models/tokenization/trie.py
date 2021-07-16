@@ -1,6 +1,7 @@
 from collections import defaultdict
 import pickle
 from conllu import parse_incr
+
 class Trie:
     """
     A simple Trie with add, search, and startsWith functions.
@@ -32,24 +33,24 @@ class Trie:
             current = current[letter]
         return True
 
-def main(lang, train_path, external_path, dict_path):
+def create_dictionary(lang, train_path, external_path, dict_path):
     tree = Trie()
     word_list = set()
+    #check if training file exists
     if train_path!=None:
         train_file = open(train_path, "r", encoding="utf-8")
         for tokenlist in parse_incr(train_file):
             for token in tokenlist:
-                word = token['form']
-                word = word.lower()
+                word = token['form'].lower()
                 #check multiple_syllable word for vi
                 if lang == "vi_vlsp":
-                    if len(word.split(" ")) > 1:
-                        #do not include the words that includes numbers.
+                    if len(word.split(" "))>1 and any(map(str.isalpha, word)):
+                        #do not include the words that contain numbers.
                         if not any(map(str.isdigit, word)):
                             tree.add(word)
                             word_list.add(word)
                 else:
-                    if len(word)>1:
+                    if len(word)>1 and any(map(str.isalpha, word)):
                         if not any(map(str.isdigit, word)):
                             tree.add(word)
                             word_list.add(word)
@@ -62,12 +63,12 @@ def main(lang, train_path, external_path, dict_path):
             word = word.replace("\n","")
             # check multiple_syllable word for vi
             if lang == "vi_vlsp":
-                if len(word.split(" ")) > 1:
+                if len(word.split(" "))>1 and any(map(str.isalpha, word)):
                     if not any(map(str.isdigit, word)):
                         tree.add(word)
                         word_list.add(word)
             else:
-                if len(word)>1:
+                if len(word)>1 and any(map(str.isalpha, word)):
                     if not any(map(str.isdigit, word)):
                         tree.add(word)
                         word_list.add(word)
@@ -79,4 +80,4 @@ def main(lang, train_path, external_path, dict_path):
         print("Succesfully generated dict file with total of ", len(word_list), " words.")
 
 if __name__=='__main__':
-    main()
+    create_dictionary()
