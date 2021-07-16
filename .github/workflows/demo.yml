@@ -14,5 +14,5 @@ jobs:
       - name: Run demo
         run: |
           # set up test environment
-          echo "hello world"
+          echo "hello world - from J38Test!!"
       - run: echo "🍏 This job's status is ${{ job.status }}."
