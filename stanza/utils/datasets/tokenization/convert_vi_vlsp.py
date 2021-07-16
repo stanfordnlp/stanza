@@ -45,7 +45,7 @@ def write_file(vlsp_include_spaces, output_filename, sentences, shard):
             orig_text = " ".join(sentence)
             #check if the previous line is a headline (no ending mark at the end) then make this sentence a new par
             if check_headlines:
-                fout.write("# newpar id =%s.%d.1\n" % (shard, sent_idx))
+                fout.write("# newpar_id = %s.%d.1\n" % (shard, sent_idx))
                 check_headlines = False
             if sentence[len(sentence) - 1] not in punctuation_set:
                 check_headlines = True
