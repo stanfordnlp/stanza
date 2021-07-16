@@ -12,7 +12,7 @@ This outputs the tokenization results in a conll format similar to
 that of the UD treebanks, so we pretend to be a UD treebank for ease
 of compatibility with the stanza tools.
 
-python3 -m stanza.utils.datasets.process_best extern_data/thai/best data/tokenize
+python3 -m stanza.utils.datasets.tokenization.process_best extern_data/thai/best data/tokenize
 ./scripts/run_tokenize.sh UD_Thai-best --dropout 0.05 --unit_dropout 0.05 --steps 50000
 """
 
@@ -24,7 +24,7 @@ import sys
 
 from pythainlp import sent_tokenize
 
-from stanza.utils.datasets.process_thai_tokenization import write_dataset
+from stanza.utils.datasets.tokenization.process_thai_tokenization import write_dataset
 
 def clean_line(line):
     line = line.replace("html>", "html|>")

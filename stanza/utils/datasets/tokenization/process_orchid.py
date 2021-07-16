@@ -5,7 +5,7 @@ https://github.com/korakot/thainlp/blob/master/xmlchid.xml
 For example, if you put the data file in the above link in
 extern_data/thai/orchid/xmlchid.xml
 you would then run
-python3 -m stanza.utils.datasets.process_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
+python3 -m stanza.utils.datasets.tokenization.process_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
 
 Because there is no definitive train/dev/test split that we have found
 so far, we randomly shuffle the data on a paragraph level and split it
@@ -17,7 +17,7 @@ give it a fake UD name to make life easier for the downstream tools.
 Training on this dataset seems to work best with low dropout numbers.
 For example:
 
-./scripts/run_tokenize.sh UD_Thai-orchid --dropout 0.05 --unit_dropout 0.05
+python3 -m stanza.utils.training.run_tokenizer th_orchid --dropout 0.05 --unit_dropout 0.05
 
 This results in a model with dev set scores:
  th_orchid 87.98 70.94
@@ -31,7 +31,7 @@ import random
 import sys
 import xml.etree.ElementTree as ET
 
-from stanza.utils.datasets.process_thai_tokenization import write_dataset
+from stanza.utils.datasets.tokenization.process_thai_tokenization import write_dataset
 
 # line "122819" has some error in the tokenization of the musical notation
 # line "209380" is also messed up
