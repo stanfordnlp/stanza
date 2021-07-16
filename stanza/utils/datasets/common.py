@@ -115,6 +115,9 @@ def get_ud_treebanks(udbase_dir, filtered=True):
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
+
+    # TODO: not sure this is the best place for dataset-specific arguments.
+    parser.add_argument('--vlsp_include_spaces', action='store_true', default=False, help='When processing vi_vlsp tokenization, include all of the spaces.  Otherwise, we try to turn the text back into standard text')
     return parser
 
 

@@ -34,7 +34,7 @@ from collections import Counter
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
-
+import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
     original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
@@ -145,6 +145,9 @@ def convert_conllu_to_txt(tokenizer_dir, short_name):
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
+        if not os.path.exists(output_conllu):
+            # the perl script doesn't raise an error code for file not found!
+            raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
         # use an external script to produce the txt files
         subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
 
@@ -1030,7 +1033,9 @@ def process_treebank(treebank, paths, args):
 
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    if short_name.startswith("ko_combined"):
+    if short_name == "vi_vlsp":
+        convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
+    elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in ("it_combined", "en_combined", "es_combined"):
         build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)

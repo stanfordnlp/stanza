@@ -32,6 +32,9 @@ def get_default_paths():
         # there's a stanford github, stanfordnlp/handparsed-treebank,
         # with some data for different languages
         "HANDPARSED_DIR": "extern_data/handparsed-treebank",
+
+        # data root for other general input files, such as VI_VLSP
+        "EXTERN_DIR": "extern_data"
     }
 
     paths = { "DATA_ROOT" : DATA_ROOT }
