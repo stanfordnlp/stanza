@@ -12,6 +12,10 @@ This outputs the tokenization results in a conll format similar to
 that of the UD treebanks, so we pretend to be a UD treebank for ease
 of compatibility with the stanza tools.
 
+BEST can be downloaded from here:
+
+https://aiforthai.in.th/corpus.php
+
 python3 -m stanza.utils.datasets.tokenization.process_best extern_data/thai/best data/tokenize
 ./scripts/run_tokenize.sh UD_Thai-best --dropout 0.05 --unit_dropout 0.05 --steps 50000
 """
@@ -162,10 +166,18 @@ def read_data(input_dir):
 
     return documents
 
-def main():
+def main(*args):
     random.seed(1000)
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
+    if not args:
+        args = sys.argv[1:]
+
+    input_dir = args[0]
+    full_input_dir = os.path.join(input_dir, "thai", "best")
+    if os.path.exists(full_input_dir):
+        # otherwise hopefully the user gave us the full path?
+        input_dir = full_input_dir
+
+    output_dir = args[1]
     documents = read_data(input_dir)
     write_dataset(documents, output_dir, "best")
 
