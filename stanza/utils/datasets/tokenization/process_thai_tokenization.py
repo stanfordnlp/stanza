@@ -30,7 +30,7 @@ def write_section(output_dir, dataset_name, section, documents):
                         label_out.write("2")
                     else:
                         label_out.write("1")
-                    if word[1] and sentence_idx != len(paragraph) - 1:
+                    if word[1] and (sentence_idx != len(paragraph) - 1 or word_idx != len(sentence) - 1):
                         text_out.write(' ')
                         label_out.write('0')
 
