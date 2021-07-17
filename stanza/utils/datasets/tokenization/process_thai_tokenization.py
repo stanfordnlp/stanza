@@ -30,7 +30,7 @@ def write_section(output_dir, dataset_name, section, documents):
                         label_out.write("2")
                     else:
                         label_out.write("1")
-                    if word[1] and sentence_idx != len(paragraph) - 1:
+                    if word[1] and (sentence_idx != len(paragraph) - 1 or word_idx != len(sentence) - 1):
                         text_out.write(' ')
                         label_out.write('0')
 
@@ -43,10 +43,20 @@ def write_section(output_dir, dataset_name, section, documents):
     with open(os.path.join(output_dir, 'th_%s.%s.gold.conllu' % (dataset_name, section)), 'w') as fout:
         for document in documents:
             for paragraph in document:
+                new_par = True
                 for sentence in paragraph:
                     for word_idx, word in enumerate(sentence):
                         # SpaceAfter is left blank if there is space after the word
-                        space = '_' if word[1] else 'SpaceAfter=No'
+                        if word[1] and new_par:
+                            space = 'NewPar=Yes'
+                        elif word[1]:
+                            space = '_'
+                        elif new_par:
+                            space = 'SpaceAfter=No|NewPar=Yes'
+                        else:
+                            space = 'SpaceAfter=No'
+                        new_par = False
+
                         # Note the faked dependency structure: the conll reading code
                         # needs it even if it isn't being used in any way
                         fake_dep = 'root' if word_idx == 0 else 'dep'

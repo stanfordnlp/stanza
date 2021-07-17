@@ -35,6 +35,8 @@ from collections import Counter
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
+import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
+import stanza.utils.datasets.tokenization.convert_th_orchid as convert_th_orchid
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
     original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
@@ -1017,9 +1019,8 @@ def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
 
-    TODO
-    Currently assumes it is always a UD treebank.  There are Thai
-    treebanks which are not included in UD.
+    Includes processing for a few external tokenization datasets:
+      vi_vlsp, th_orchid, th_best
 
     Also, there is no specific mechanism for UD_Arabic-NYUAD or
     similar treebanks, which need integration with LDC datsets
@@ -1035,6 +1036,10 @@ def process_treebank(treebank, paths, args):
 
     if short_name == "vi_vlsp":
         convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
+    elif short_name == "th_orchid":
+        convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
+    elif short_name == "th_best":
+        convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in ("it_combined", "en_combined", "es_combined"):
