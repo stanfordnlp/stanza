@@ -5,7 +5,7 @@ The dataset is available here:
 https://aiforthai.in.th/corpus.php
 
 
-python3 -m stanza.utils.datasets.process_lst20 extern_data/thai/LST20_Corpus data/tokenize
+python3 -m stanza.utils.datasets.tokenization.convert_th_lst20 extern_data/thai/LST20_Corpus data/tokenize
 
 Unlike Orchid and BEST, LST20 has train/eval/test splits, which we relabel train/dev/test.
 
@@ -17,7 +17,7 @@ import glob
 import os
 import sys
 
-from stanza.utils.datasets.process_thai_tokenization import write_section
+from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section
 
 def read_data(input_dir, section):
     input_dir = os.path.join(input_dir, section)
