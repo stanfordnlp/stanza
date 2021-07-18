@@ -36,6 +36,8 @@ def read_data(input_dir, section):
                     sentence = []
             else:
                 pieces = line.split("\t")
+                # there are some nbsp in tokens in lst20, but the downstream tools expect spaces
+                pieces = [p.replace("\xa0", " ") for p in pieces]
                 if pieces[0] == '_':
                     sentence[-1] = (sentence[-1][0], True)
                 else:
@@ -49,13 +51,21 @@ def read_data(input_dir, section):
         documents.append([document])
     return documents
 
-def main():
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
+def main(*args):
+    if not args:
+        args = sys.argv[1:]
+    input_dir = args[0]
+    full_input_dir = os.path.join(input_dir, "thai", "LST20_Corpus")
+    if os.path.exists(full_input_dir):
+        # otherwise hopefully the user gave us the full path?
+        input_dir = full_input_dir
+    output_dir = args[1]
     for (in_section, out_section) in (("train", "train"),
                                       ("eval", "dev"),
                                       ("test", "test")):
+        print("Processing %s" % out_section)
         documents = read_data(input_dir, in_section)
+        print("  Read in %d files" % len(documents))
         write_section(output_dir, "lst20", out_section, documents)
 
 
