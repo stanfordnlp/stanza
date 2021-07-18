@@ -12,7 +12,7 @@ After CoreNLP has been [properly set up](client_setup), you can start using the 
 Below are some basic examples of starting a server, making requests, and accessing various annotations from the returned Document object.
 By default, CoreNLP Client uses `protobuf` for message passing. A full definition of our protocols (a.k.a., our supported annotations) can be found [here](https://github.com/stanfordnlp/stanza/blob/main/doc/CoreNLP.proto).
 
-Apart from the following example code, we have also prepared an [interactive Jupyter notebook tutorial](https://github.com/stanfordnlp/stanza/blob/main/demo/StanfordNLP_CoreNLP_Interface.ipynb) to get you started with the CoreNLP client functionality.
+Apart from the following example code, we have also prepared an [interactive Jupyter notebook tutorial](https://github.com/stanfordnlp/stanza/blob/main/demo/Stanza_CoreNLP_Interface.ipynb) to get you started with the CoreNLP client functionality.
 
 {% include alerts.html %}
 {{note}}
