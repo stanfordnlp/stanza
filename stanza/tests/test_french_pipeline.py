@@ -95,7 +95,7 @@ EXPECTED_RESULT = """
       "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 3,
-      "deprel": "obl:arg",
+      "deprel": "obl:mod",
       "start_char": 30,
       "end_char": 36
     },
@@ -168,7 +168,7 @@ EXPECTED_RESULT = """
       "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 11,
-      "deprel": "xcomp:pred",
+      "deprel": "xcomp",
       "start_char": 70,
       "end_char": 78
     },
