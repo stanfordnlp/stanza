@@ -10,7 +10,7 @@ Also, Finnish Turku dataset, available here:
   - https://turkunlp.org/fin-ner.html
   - Download and unzip the corpus, putting the .tsv files into
     $NERBASE/fi_turku
-  - prepare_ner_dataset.py hu_nytk fi_turku
+  - prepare_ner_dataset.py fi_turku
 
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
@@ -18,6 +18,7 @@ IJCNLP 2008 produced a few Indian language NER datasets.
   download:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=5
   The models produced from these datasets have extremely low recall, unfortunately.
+  - prepare_ner_dataset.py hi-fire2013
 
 FIRE 2013 also produced NER datasets for Indian languages.
   http://au-kbc.org/nlp/NER-FIRE2013/index.html
