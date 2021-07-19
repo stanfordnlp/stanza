@@ -36,6 +36,7 @@ import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
 import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
+import stanza.utils.datasets.tokenization.convert_th_lst20 as convert_th_lst20
 import stanza.utils.datasets.tokenization.convert_th_orchid as convert_th_orchid
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
@@ -138,12 +139,18 @@ def prepare_treebank_labels(tokenizer_dir, short_name):
     for dataset in ("train", "dev", "test"):
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
+        try:
+            prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            print("Failed to convert %s to %s" % (output_txt, output_conllu))
+            raise
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
-def convert_conllu_to_txt(tokenizer_dir, short_name):
-    for dataset in ("train", "dev", "test"):
+def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
+    for dataset in shards:
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
@@ -1038,6 +1045,8 @@ def process_treebank(treebank, paths, args):
         convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_orchid":
         convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
+    elif short_name == "th_lst20":
+        convert_th_lst20.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name == "th_best":
         convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
@@ -1059,7 +1068,8 @@ def process_treebank(treebank, paths, args):
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
-    convert_conllu_to_txt(tokenizer_dir, short_name)
+    if not short_name in ('th_orchid', 'th_lst20'):
+        convert_conllu_to_txt(tokenizer_dir, short_name)
 
     if args.prepare_labels:
         prepare_treebank_labels(tokenizer_dir, short_name)
