@@ -149,8 +149,8 @@ def prepare_treebank_labels(tokenizer_dir, short_name):
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
-def convert_conllu_to_txt(tokenizer_dir, short_name):
-    for dataset in ("train", "dev", "test"):
+def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
+    for dataset in shards:
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 

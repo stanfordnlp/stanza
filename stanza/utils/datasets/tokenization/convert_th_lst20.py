@@ -19,35 +19,40 @@ import sys
 
 from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section
 
+def read_document(lines):
+    document = []
+    sentence = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if sentence:
+                #sentence[-1] = (sentence[-1][0], True)
+                document.append(sentence)
+                sentence = []
+        else:
+            pieces = line.split("\t")
+            # there are some nbsp in tokens in lst20, but the downstream tools expect spaces
+            pieces = [p.replace("\xa0", " ") for p in pieces]
+            if pieces[0] == '_':
+                sentence[-1] = (sentence[-1][0], True)
+            else:
+                sentence.append((pieces[0], False))
+
+    if sentence:
+        #sentence[-1] = (sentence[-1][0], True)
+        document.append(sentence)
+        sentence = []
+    # TODO: is there any way to divide up a single document into paragraphs?
+    return document
+
 def read_data(input_dir, section):
     input_dir = os.path.join(input_dir, section)
     filenames = glob.glob(os.path.join(input_dir, "*.txt"))
     documents = []
     for filename in filenames:
-        document = []
-        lines = open(filename).readlines()
-        sentence = []
-        for line in lines:
-            line = line.strip()
-            if not line:
-                if sentence:
-                    #sentence[-1] = (sentence[-1][0], True)
-                    document.append(sentence)
-                    sentence = []
-            else:
-                pieces = line.split("\t")
-                # there are some nbsp in tokens in lst20, but the downstream tools expect spaces
-                pieces = [p.replace("\xa0", " ") for p in pieces]
-                if pieces[0] == '_':
-                    sentence[-1] = (sentence[-1][0], True)
-                else:
-                    sentence.append((pieces[0], False))
-
-        if sentence:
-            #sentence[-1] = (sentence[-1][0], True)
-            document.append(sentence)
-            sentence = []
-        # TODO: is there any way to divide up a single document into paragraphs?
+        with open(filename) as fin:
+            lines = fin.readlines()
+        document = read_document(lines)
         documents.append([document])
     return documents
 
