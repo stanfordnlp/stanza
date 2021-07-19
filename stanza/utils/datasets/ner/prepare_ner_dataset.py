@@ -39,6 +39,7 @@ There are two Hungarian datasets are available here:
   You can also build individual pieces with hu_rgai_business or hu_rgai_criminal
   Create a subdirectory of $NERBASE, $NERBASE/hu_rgai, and download both of
     the pieces and unzip them in that directory.
+  - prepare_ner_dataset.py hu_rgai
 
 Another Hungarian dataset is here:
   - https://github.com/nytud/NYTK-NerKor
@@ -47,6 +48,7 @@ Another Hungarian dataset is here:
 
 The two Hungarian datasets can be combined with hu_combined
   TODO: verify that there is no overlap in text
+  - prepare_ner_dataset.py hu_combined
 
 BSNLP publishes NER datasets for Eastern European languages.
   - In 2019 they published BG, CS, PL, RU.
@@ -65,6 +67,7 @@ BSNLP publishes NER datasets for Eastern European languages.
   - we use the code name "bg_bsnlp19".  Other languages from
     bsnlp 2019 can be supported by adding the appropriate
     functionality in convert_bsnlp.py.
+  - prepare_ner_dataset.py bg_bsnlp19
 """
 
 import glob
