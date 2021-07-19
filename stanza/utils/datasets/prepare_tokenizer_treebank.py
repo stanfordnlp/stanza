@@ -1068,7 +1068,8 @@ def process_treebank(treebank, paths, args):
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
-    convert_conllu_to_txt(tokenizer_dir, short_name)
+    if not short_name in ('th_orchid', 'th_lst20'):
+        convert_conllu_to_txt(tokenizer_dir, short_name)
 
     if args.prepare_labels:
         prepare_treebank_labels(tokenizer_dir, short_name)
