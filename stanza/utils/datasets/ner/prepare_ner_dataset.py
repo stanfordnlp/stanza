@@ -173,6 +173,7 @@ def process_fire_2013(paths, dataset):
     """
     short_name = treebank_to_short_name(dataset)
     langcode, _ = short_name.split("_")
+    short_name = "%s_fire2013" % langcode
     if not langcode in ("hi", "en", "ta", "bn", "mal"):
         raise ValueError("Language %s not one of the FIRE 2013 languages")
     language = lcode2lang[langcode].lower()
