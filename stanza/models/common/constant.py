@@ -160,7 +160,13 @@ def treebank_to_short_name(treebank):
 
     if treebank.startswith('UD_'):
         treebank = treebank[3:]
-    splits = treebank.split('-')
+    # special case starting with zh in case the input is an already-converted ZH treebank
+    if treebank.startswith("zh-hans") or treebank.startswith("zh-hant"):
+        splits = (treebank[:len("zh-hans")], treebank[len("zh-hans")+1:])
+    else:
+        splits = treebank.split('-')
+        if len(splits) == 1:
+            splits = treebank.split("_", 1)
     assert len(splits) == 2, "Unable to process %s" % treebank
     lang, corpus = splits
 
