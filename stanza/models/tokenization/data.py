@@ -6,10 +6,14 @@ import random
 import logging
 import re
 import torch
-
+import pickle
+import os
+import stanza.utils.default_paths as default_paths
 from .vocab import Vocab
+from stanza.models.tokenization.trie import Trie, create_dictionary
 
 logger = logging.getLogger('stanza')
+paths = default_paths.get_default_paths()
 
 def filter_consecutive_whitespaces(para):
     filtered = []
@@ -26,12 +30,41 @@ NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
 NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
+#This function is to load dictionary if dict feat is selected, or create one if not found.
+def load_dict(self):
+
+    shortname = self.args["shorthand"]
+    dict_path = "./stanza/models/tokenization/%s.dict" % (shortname)
+
+    if not os.path.exists(dict_path):
+        #creating a new dictionary file
+        tokenize_dir = paths["TOKENIZE_DATA_DIR"]
+        train_path = f"{tokenize_dir}/{shortname}.train.gold.conllu"
+        external_dict_path = f"{tokenize_dir}/{shortname}-externaldict.txt"
+        if not os.path.exists(external_dict_path):
+            logger.info("External dictionary not found!")
+            external_dict_path = None
+        if not os.path.exists(train_path):
+            logger.info("Training dataset does not exist, thus cannot create dictionary" % (shortname))
+            train_path = None
+        # TODO: Still need to figure out how to inform back to the training that dict feat
+        # is disabled and the dimension of feats needs to be reduced.
+        if train_path==None and external_dict_path==None:
+            logger.info("Cannot find or create any dictionary due to files not found! Dictionary feature is disabled.")
+            return None
+
+        create_dictionary(shortname, train_path, external_dict_path, dict_path)
+
+    with open(dict_path, 'rb') as config_dict_file_start:
+        dict_tree = pickle.load(config_dict_file_start)
+
+    return dict_tree
 
 class DataLoader:
     def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
         self.args = args
         self.eval = evaluation
-
+        self.dict_tree = None if self.args["dict_feat"] == 0 else load_dict(self)
         # get input files
         txt_file = input_files['txt']
         label_file = input_files['label']
@@ -99,6 +132,7 @@ class DataLoader:
         """ Convert a paragraph to a list of processed sentences. """
         res = []
         funcs = []
+        
         for feat_func in self.args['feat_funcs']:
             if feat_func == 'end_of_para' or feat_func == 'start_of_para':
                 # skip for position-dependent features
@@ -107,17 +141,43 @@ class DataLoader:
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
                 func = lambda x: 1 if x[0].isupper() else 0
-            elif feat_func == 'all_caps':
-                func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
-
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
+
+        length = len(para)
+        #This function is to extract dictionary features for each character
+        def extract_dict_feat(i):
+            dict_forward_feats = [0 for i in range(self.args['dict_feat'])]
+            dict_backward_feats = [0 for i in range(self.args['dict_feat'])]
+            forward_word = para[i][0]
+            backward_word = para[i][0]
+            found_prefix = True
+            for t in range(1,self.args['dict_feat']+1):
+                # check forward words formed from [i,i+1] and [i,i+2], etc found in dict
+                if (i + t) <= length-1 and found_prefix:
+                    forward_word += para[i+t][0].lower()
+                    feat = 1 if self.dict_tree.search(forward_word) else 0
+                    if feat == 1:
+                        dict_forward_feats[t-1] = 1
+                    #else check if that word is a prefix or not, if not then stop searching for forward word
+                    elif feat == 0:
+                        if not self.dict_tree.startsWith(forward_word):
+                            found_prefix = False
+
+            # check backward words formed from [i,i-1] and [i,i-2], etc found in dict
+            #for t in range(1, self.args['dict_feat']+1):
+                if (i - t) >= 0:
+                    backward_word = para[i-t][0].lower() + backward_word
+                    feat = 1 if self.dict_tree.search(backward_word) else 0
+                    if feat == 1:
+                        dict_backward_feats[t-1] = 1
+            return dict_forward_feats + dict_backward_feats
 
         def process_sentence(sent):
             return [self.vocab.unit2id(y[0]) for y in sent], [y[1] for y in sent], [y[2] for y in sent], [y[0] for y in sent]
@@ -135,13 +195,18 @@ class DataLoader:
             if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
+            #if dictionary feature is selected
+            if self.args['dict_feat'] > 0:
+                dict_feats = extract_dict_feat(i)
+                feats = feats + dict_feats
+
             current += [(unit, label, feats)]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
                     res.append(process_sentence(current))
                 current = []
-
+                
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
                 res.append(process_sentence(current))
@@ -156,7 +221,7 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
+    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None, feat_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
@@ -276,6 +341,15 @@ class DataLoader:
                 for j in range(len(raw_units[i])):
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
+
+        if self.args['dict_feat'] > 0 and feat_dropout > 0 and not self.eval:
+            #dropout features vector at training time.
+            mask_feat = np.random.random_sample(units.shape) < feat_dropout
+            mask_feat[units == padid] = 0
+            for i in range(len(raw_units)):
+                for j in range(len(raw_units[i])):
+                    if mask_feat[i,j]:
+                        features[i,j,:] = 0
 
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)

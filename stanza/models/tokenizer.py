@@ -49,6 +49,7 @@ def parse_args(args=None):
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
+    parser.add_argument('--dict_feat', type=int, default=0, help="Number of dictionary features, usually the length of longest word in a dict")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
@@ -56,6 +57,7 @@ def parse_args(args=None):
     parser.add_argument('--lr0', type=float, default=2e-3, help="Initial learning rate")
     parser.add_argument('--dropout', type=float, default=0.33, help="Dropout probability")
     parser.add_argument('--unit_dropout', type=float, default=0.33, help="Unit dropout probability")
+    parser.add_argument('--feat_dropout', type=float, default=0.33, help="Features dropout probability")
     parser.add_argument('--tok_noise', type=float, default=0.02, help="Probability to induce noise to the input of the higher RNN")
     parser.add_argument('--sent_drop_prob', type=float, default=0.2, help="Probability to drop sentences at the end of batches during training uniformly at random.  Idea is to fake paragraph endings.")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
@@ -90,8 +92,8 @@ def main(args=None):
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
-    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
-    args['feat_dim'] = len(args['feat_funcs'])
+    args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
+    args['feat_dim'] = len(args['feat_funcs']) + (args['dict_feat'])*2
     save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
     args['save_name'] = os.path.join(args['save_dir'], save_name)
     utils.ensure_dir(args['save_dir'])
@@ -110,6 +112,9 @@ def train(args):
             }
     train_batches = DataLoader(args, input_files=train_input_files)
     vocab = train_batches.vocab
+
+
+
     args['vocab_size'] = len(vocab)
 
     dev_input_files = {
@@ -138,7 +143,7 @@ def train(args):
     best_dev_step = -1
 
     for step in range(1, steps+1):
-        batch = train_batches.next(unit_dropout=args['unit_dropout'])
+        batch = train_batches.next(unit_dropout=args['unit_dropout'], feat_dropout = args['feat_dropout'])
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:
