@@ -214,6 +214,8 @@ def sort_with_indices(data, key=None, reverse=False):
     One useful application is to sort by length, which can be done with key=len
     Returns the data as a sorted list, then the indices of the original list.
     """
+    if not data:
+        return [], []
     if key:
         ordered = sorted(enumerate(data), key=lambda x: key(x[1]), reverse=reverse)
     else:
