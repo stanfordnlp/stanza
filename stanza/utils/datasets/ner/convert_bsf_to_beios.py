@@ -195,7 +195,6 @@ def read_languk_train_test_split(file_path:str, dev_split:float = 0.1) -> Tuple:
     # For Stanza training we need train, dev, test
     # We will take part of train as dev set 
     # This way anyone using test set outside of this code base can be sure that there was no data set polution            
-    log.info(len(train_files))
     shuffle(train_files)
     dev_files = train_files[ : int(len(train_files) * dev_split)]
     train_files = train_files[int(len(train_files) * dev_split) : ]
