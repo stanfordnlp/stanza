@@ -13,6 +13,7 @@ Unlike Orchid and BEST, LST20 has train/eval/test splits, which we relabel train
 """
 
 
+import argparse
 import glob
 import os
 import sys
@@ -68,34 +69,48 @@ def retokenize_document(lines):
     return paragraphs
 
 
-def read_data(input_dir, section):
+def read_data(input_dir, section, resegment):
     input_dir = os.path.join(input_dir, section)
     filenames = glob.glob(os.path.join(input_dir, "*.txt"))
     documents = []
     for filename in filenames:
         with open(filename) as fin:
             lines = fin.readlines()
-        document = retokenize_document(lines)
+        if resegment:
+            document = retokenize_document(lines)
+        else:
+            document = read_document(lines)
         documents.extend(document)
     return documents
 
-def main(*args):
-    if not args:
-        args = sys.argv[1:]
-    input_dir = args[0]
+def add_lst20_args(parser):
+    parser.add_argument('--no_lst20_resegment', action='store_false', dest="lst20_resegment", default=True, help='When processing th_lst20 tokenization, use pythainlp to resegment the text.  The other option is to keep the original sentence segmentation.  Currently our model is not good at that')
+
+def parse_lst20_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_dir', help="Directory to use when processing lst20")
+    parser.add_argument('output_dir', help="Directory to use when saving lst20")
+    add_lst20_args(parser)
+    return parser.parse_args()
+
+
+
+def convert(input_dir, output_dir, args):
     full_input_dir = os.path.join(input_dir, "thai", "LST20_Corpus")
     if os.path.exists(full_input_dir):
         # otherwise hopefully the user gave us the full path?
         input_dir = full_input_dir
-    output_dir = args[1]
     for (in_section, out_section) in (("train", "train"),
                                       ("eval", "dev"),
                                       ("test", "test")):
         print("Processing %s" % out_section)
-        documents = read_data(input_dir, in_section)
-        print("  Read in %d files" % len(documents))
+        documents = read_data(input_dir, in_section, args.lst20_resegment)
+        print("  Read in %d documents" % len(documents))
         write_section(output_dir, "lst20", out_section, documents)
 
+def main():
+    args = parse_lst20_args()
+    convert(args.input_dir, args.output_dir, args)
 
 if __name__ == '__main__':
     main()
