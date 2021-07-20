@@ -40,6 +40,7 @@ def parse_args(args=None):
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
+    parser.add_argument('--finetune_load_name', type=str, default=None, help='Model to load when finetuning')
     parser.add_argument('--train_classifier_only', action='store_true',
                         help='In case of applying Transfer-learning approach and training only the classifier layer this will freeze gradient propagation for all other layers.')
     parser.add_argument('--lang', type=str, help='Language')
@@ -117,7 +118,10 @@ def train(args):
     vocab = None
     trainer = None
 
-    if args['finetune'] and os.path.exists(model_file):
+    if args['finetune'] and args['finetune_load_name']:
+        logger.warning('Finetune is ON. Using model from "{}"'.format(args['finetune_load_name']))
+        _, trainer, vocab = load_model(args, args['finetune_load_name'])
+    elif args['finetune'] and os.path.exists(model_file):
         logger.warning('Finetune is ON. Using model from "{}"'.format(model_file))
         _, trainer, vocab = load_model(args, model_file)
     else:
