@@ -84,6 +84,15 @@ def test_sort_with_indices():
     unsorted = utils.unsort(ordered, orig_idx)
     assert data == unsorted
 
+def test_empty_sort_with_indices():
+    ordered, orig_idx = utils.sort_with_indices([])
+    assert len(ordered) == 0
+    assert len(orig_idx) == 0
+
+    unsorted = utils.unsort(ordered, orig_idx)
+    assert [] == unsorted
+
+
 def test_split_into_batches():
     data = []
     for i in range(5):
