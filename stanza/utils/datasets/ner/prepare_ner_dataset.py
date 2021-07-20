@@ -156,7 +156,8 @@ def process_languk(paths):
     short_name = 'uk_languk'
     base_input_path = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'data')
     base_output_path = paths["NER_DATA_DIR"]
-    convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path)
+    train_test_split_fname = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'doc', 'dev-test-split.txt')
+    convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path, train_test_split_file=train_test_split_fname)
     for shard in SHARDS:
         input_filename = os.path.join(base_output_path, convert_bsf_to_beios.CORPUS_NAME, "%s.bio" % shard)
         if not os.path.exists(input_filename):
