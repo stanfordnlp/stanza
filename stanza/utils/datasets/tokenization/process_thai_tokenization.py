@@ -1,7 +1,10 @@
 import os
 import random
 
-from pythainlp import sent_tokenize
+try:
+    from pythainlp import sent_tokenize
+except ImportError:
+    pass
 
 def write_section(output_dir, dataset_name, section, documents):
     """
@@ -91,7 +94,10 @@ def reprocess_lines(processed_lines):
     reprocessed_lines = []
     for line in processed_lines:
         text = "".join(line)
-        chunks = sent_tokenize(text)
+        try:
+            chunks = sent_tokenize(text)
+        except NameError as e:
+            raise NameError("Sentences cannot be reprocessed without first installing pythainlp") from e
         # Check that the total text back is the same as the text in
         if sum(len(x) for x in chunks) != len(text):
             raise ValueError("Got unexpected text length: \n{}\nvs\n{}".format(text, chunks))
