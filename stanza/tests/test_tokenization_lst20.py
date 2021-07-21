@@ -56,8 +56,27 @@ EXPECTED_CONLLU="""
 5	น.	_	_	_	_	4	dep	4:dep	SpaceAfter=No
 """.strip()
 
-EXPECTED_TXT="สุรยุทธ์ยันปฏิเสธลงนาม MOU กับอียูไม่กระทบสัมพันธ์1 กันยายน 2550 12:21 น.\n\n"
-EXPECTED_LABELS="0000000100100000100001000100010001001000010000000210000000100001000001002\n\n"
+# Note: these DO NOT line up perfectly (in an emacs window, at least)
+# because Thai characters have a length greater than 1.
+# The lengths of the words are:
+#   สุรยุทธ์    8
+#      ยัน    3
+#   ปฏิเสธ    6
+#   ลงนาม    5
+#     MOU    3
+#      กับ    3
+#      อียู    4
+#      ไม่    3
+#   กระทบ    5
+#   สัมพันธ์    8
+#       1    1
+#  กันยายน    7
+#    2550    4
+#   12:21    5
+#      น.    2
+EXPECTED_TXT    =   "สุรยุทธ์ยันปฏิเสธลงนาม MOU กับอียูไม่กระทบสัมพันธ์1 กันยายน 2550 12:21 น.\n\n"
+EXPECTED_LABELS =   "0000000100100000100001000100010001001000010000000210000000100001000001002\n\n"
+# counting spaces    1234567812312345612345_123_123123412312345123456781_1234567_1234_12345_12
 
 def test_small():
     """
