@@ -4,8 +4,9 @@ The dataset is available here:
 
 https://aiforthai.in.th/corpus.php
 
+The data should be installed under ${EXTERN_DATA}/thai/LST20_Corpus
 
-python3 -m stanza.utils.datasets.tokenization.convert_th_lst20 extern_data/thai/LST20_Corpus data/tokenize
+python3 -m stanza.utils.datasets.tokenization.convert_th_lst20 extern_data data/tokenize
 
 Unlike Orchid and BEST, LST20 has train/eval/test splits, which we relabel train/dev/test.
 
@@ -70,8 +71,11 @@ def retokenize_document(lines):
 
 
 def read_data(input_dir, section, resegment):
-    input_dir = os.path.join(input_dir, section)
-    filenames = glob.glob(os.path.join(input_dir, "*.txt"))
+    glob_path = os.path.join(input_dir, section, "*.txt")
+    filenames = glob.glob(glob_path)
+    print("  Found {} files in {}".format(len(filenames), glob_path))
+    if len(filenames) == 0:
+        raise FileNotFoundError("Could not find any files for the {} section.  Is LST20 installed in {}?".format(section, input_dir))
     documents = []
     for filename in filenames:
         with open(filename) as fin:
@@ -96,10 +100,10 @@ def parse_lst20_args():
 
 
 def convert(input_dir, output_dir, args):
-    full_input_dir = os.path.join(input_dir, "thai", "LST20_Corpus")
-    if os.path.exists(full_input_dir):
-        # otherwise hopefully the user gave us the full path?
-        input_dir = full_input_dir
+    input_dir = os.path.join(input_dir, "thai", "LST20_Corpus")
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError("Could not find LST20 corpus in {}".format(input_dir))
+
     for (in_section, out_section) in (("train", "train"),
                                       ("eval", "dev"),
                                       ("test", "test")):
