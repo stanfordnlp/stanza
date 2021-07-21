@@ -86,7 +86,7 @@ def test_small():
     Apparently this is wrong, but weirdly, doing that makes the model even worse.
     """
     lines = SMALL_LST_SAMPLE.strip().split("\n")
-    documents = read_document(lines)
+    documents = read_document(lines, spaces_after=False)
 
     with tempfile.TemporaryDirectory() as output_dir:
         write_section(output_dir, "lst20", "train", documents)

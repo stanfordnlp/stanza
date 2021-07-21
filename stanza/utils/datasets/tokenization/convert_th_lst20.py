@@ -21,14 +21,15 @@ import sys
 
 from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section, convert_processed_lines, reprocess_lines
 
-def read_document(lines):
+def read_document(lines, spaces_after):
     document = []
     sentence = []
     for line in lines:
         line = line.strip()
         if not line:
             if sentence:
-                #sentence[-1] = (sentence[-1][0], True)
+                if spaces_after:
+                    sentence[-1] = (sentence[-1][0], True)
                 document.append(sentence)
                 sentence = []
         else:
@@ -41,7 +42,8 @@ def read_document(lines):
                 sentence.append((pieces[0], False))
 
     if sentence:
-        #sentence[-1] = (sentence[-1][0], True)
+        if spaces_after:
+            sentence[-1] = (sentence[-1][0], True)
         document.append(sentence)
         sentence = []
     # TODO: is there any way to divide up a single document into paragraphs?
@@ -70,7 +72,7 @@ def retokenize_document(lines):
     return paragraphs
 
 
-def read_data(input_dir, section, resegment):
+def read_data(input_dir, section, resegment, spaces_after):
     glob_path = os.path.join(input_dir, section, "*.txt")
     filenames = glob.glob(glob_path)
     print("  Found {} files in {}".format(len(filenames), glob_path))
@@ -83,12 +85,13 @@ def read_data(input_dir, section, resegment):
         if resegment:
             document = retokenize_document(lines)
         else:
-            document = read_document(lines)
+            document = read_document(lines, spaces_after)
         documents.extend(document)
     return documents
 
 def add_lst20_args(parser):
     parser.add_argument('--no_lst20_resegment', action='store_false', dest="lst20_resegment", default=True, help='When processing th_lst20 tokenization, use pythainlp to resegment the text.  The other option is to keep the original sentence segmentation.  Currently our model is not good at that')
+    parser.add_argument('--lst20_spaces_after', action='store_true', dest="lst20_spaces_after", default=False, help='When processing th_lst20 without pythainlp, put spaces after each sentence.  This better fits the language but gets lower scores for some reason')
 
 def parse_lst20_args():
     parser = argparse.ArgumentParser()
@@ -108,7 +111,7 @@ def convert(input_dir, output_dir, args):
                                       ("eval", "dev"),
                                       ("test", "test")):
         print("Processing %s" % out_section)
-        documents = read_data(input_dir, in_section, args.lst20_resegment)
+        documents = read_data(input_dir, in_section, args.lst20_resegment, args.lst20_spaces_after)
         print("  Read in %d documents" % len(documents))
         write_section(output_dir, "lst20", out_section, documents)
 
