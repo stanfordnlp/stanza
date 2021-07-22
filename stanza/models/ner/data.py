@@ -7,7 +7,7 @@ from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
 from stanza.models.ner.vocab import TagVocab, MultiVocab
 from stanza.models.common.doc import *
-from stanza.models.ner.utils import is_bio_scheme, to_bio2, bio2_to_bioes
+from stanza.models.ner.utils import process_tags
 
 logger = logging.getLogger('stanza')
 
@@ -135,30 +135,8 @@ class DataLoader:
     def load_doc(self, doc):
         data = doc.get([TEXT, NER], as_sentences=True, from_token=True)
         if self.preprocess_tags: # preprocess tags
-            data = self.process_tags(data)
+            data = process_tags(data, self.args.get('scheme', 'bio'))
         return data
-
-    def process_tags(self, sentences):
-        res = []
-        # check if tag conversion is needed
-        convert_to_bioes = False
-        is_bio = is_bio_scheme([x[1] for sent in sentences for x in sent])
-        if is_bio and self.args.get('scheme', 'bio').lower() == 'bioes':
-            convert_to_bioes = True
-            logger.debug("BIO tagging scheme found in input; converting into BIOES scheme...")
-        # process tags
-        for sent in sentences:
-            words, tags = zip(*sent)
-            # NER field sanity checking
-            if any([x is None or x == '_' for x in tags]):
-                raise ValueError("NER tag not found for some input data.")
-            # first ensure BIO2 scheme
-            tags = to_bio2(tags)
-            # then convert to BIOES
-            if convert_to_bioes:
-                tags = bio2_to_bioes(tags)
-            res.append([[w,t] for w,t in zip(words, tags)])
-        return res
 
     def process_chars(self, sents):
         start_id, end_id = self.vocab['char'].unit2id('\n'), self.vocab['char'].unit2id(' ') # special token
