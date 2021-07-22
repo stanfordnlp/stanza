@@ -78,6 +78,12 @@ EXPECTED_TXT    =   "สุรยุทธ์ยันปฏิเสธลง�
 EXPECTED_LABELS =   "0000000100100000100001000100010001001000010000000210000000100001000001002\n\n"
 # counting spaces    1234567812312345612345_123_123123412312345123456781_1234567_1234_12345_12
 
+# note that the word splits go on the final letter of the word in the
+# UD conllu datasets, so that is what we mimic here
+# for example, from EWT:
+# Al-Zaman : American forces killed Shaikh Abdullah
+# 0110000101000000001000000100000010000001000000001
+
 def test_small():
     """
     A small test just to verify that the output is being produced as we want
