@@ -59,7 +59,7 @@ def remap_labels(sents, remap):
         new_sentences.append(new_sent)
     return new_sentences
 
-def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix="", remap=None):
+def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix="", suffix="bio", remap=None, shuffle=True, train_fraction=0.7, dev_fraction=0.15):
     sents = []
     for filename in in_filenames:
         new_sents = read_sentences(filename, encoding)
@@ -71,16 +71,19 @@ def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix="", remap=N
 
     # split
     num = len(sents)
-    train_num = int(num*0.7)
-    dev_num = int(num*0.15)
+    train_num = int(num*train_fraction)
+    dev_num = int(num*dev_fraction)
+    if train_fraction + dev_fraction > 1.0:
+        raise ValueError("Train and dev fractions added up to more than 1: {} {} {}".format(train_fraction, dev_fraction))
 
-    random.shuffle(sents)
+    if shuffle:
+        random.shuffle(sents)
     train_sents = sents[:train_num]
     dev_sents = sents[train_num:train_num+dev_num]
     test_sents = sents[train_num+dev_num:]
 
     batches = [train_sents, dev_sents, test_sents]
-    filenames = ['train.bio', 'dev.bio', 'test.bio']
+    filenames = [f'train.{suffix}', f'dev.{suffix}', f'test.{suffix}']
     if prefix:
         filenames = ['%s.%s' % (prefix, f) for f in filenames]
     for batch, filename in zip(batches, filenames):
