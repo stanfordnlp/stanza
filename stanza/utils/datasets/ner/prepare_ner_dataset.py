@@ -12,6 +12,10 @@ Also, Finnish Turku dataset, available here:
     $NERBASE/fi_turku
   - prepare_ner_dataset.py hu_nytk fi_turku
 
+FBK in Italy produced an Italian dataset.
+  The processing here is for a combined .tsv file they sent us.
+  - prepare_ner_dataset.py it_fbk
+
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=3
@@ -108,7 +112,7 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 SHARDS = ('train', 'dev', 'test')
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name):
+def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio"):
     """
     Convert BIO files to json
 
@@ -117,7 +121,7 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name):
     in same path for both base_input_path and base_output_path.
     """
     for shard in SHARDS:
-        input_filename = os.path.join(base_input_path, '%s.%s.bio' % (short_name, shard))
+        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, shard, suffix))
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
@@ -134,6 +138,17 @@ def process_turku(paths):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(input_filename, output_filename)
+
+def process_it_fbk(paths):
+    short_name = "it_fbk"
+    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    csv_file = os.path.join(base_input_path, "all-wiki-split.tsv")
+    if not os.path.exists(csv_file):
+        raise FileNotFoundError("Cannot find the FBK dataset in its expected location: {}".format(csv_file))
+    base_output_path = paths["NER_DATA_DIR"]
+    split_wikiner(base_output_path, csv_file, prefix=short_name, suffix="io", shuffle=False, train_fraction=0.8, dev_fraction=0.1)
+    convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
+
 
 def process_languk(paths):
     short_name = 'uk_languk'
@@ -377,6 +392,8 @@ def main(dataset_name):
 
     if dataset_name == 'fi_turku':
         process_turku(paths)
+    elif dataset_name == 'it_fbk':
+        process_it_fbk(paths)
     elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
         process_languk(paths)
     elif dataset_name == 'hi_ijc':
