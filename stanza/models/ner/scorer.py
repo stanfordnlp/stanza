@@ -59,8 +59,7 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
         f_micro = 2.0 * prec_micro * rec_micro / (prec_micro + rec_micro)
     
     if verbose:
-        logger.info("Prec.\tRec.\tF1")
-        logger.info("{:.2f}\t{:.2f}\t{:.2f}".format( \
+        logger.info("Score by entity:\nPrec.\tRec.\tF1\n{:.2f}\t{:.2f}\t{:.2f}".format(
             prec_micro*100, rec_micro*100, f_micro*100))
     return prec_micro, rec_micro, f_micro
 
@@ -112,8 +111,7 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
         f_micro = 2.0 * prec_micro * rec_micro / (prec_micro + rec_micro)
     
     if verbose:
-        logger.info("Prec.\tRec.\tF1")
-        logger.info("{:.2f}\t{:.2f}\t{:.2f}".format( \
+        logger.info("Score by token:\nPrec.\tRec.\tF1\n{:.2f}\t{:.2f}\t{:.2f}".format(
             prec_micro*100, rec_micro*100, f_micro*100))
     return prec_micro, rec_micro, f_micro, confusion
 
