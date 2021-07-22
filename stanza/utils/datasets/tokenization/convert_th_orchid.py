@@ -139,6 +139,7 @@ def parse_xml(tree):
                     words.append((word, False))
                 if len(words) == 0:
                     continue
+                words[-1] = (words[-1][0], True)
                 sentences.append(words)
             paragraphs.append(sentences)
         documents.append(paragraphs)

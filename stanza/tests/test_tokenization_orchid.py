@@ -58,28 +58,28 @@ EXPECTED_RESULTS="""
 3	ทาง	_	_	_	_	2	dep	2:dep	SpaceAfter=No
 4	วิชาการ	_	_	_	_	3	dep	3:dep	_
 5	ครั้ง	_	_	_	_	4	dep	4:dep	SpaceAfter=No
-6	ที่ 1	_	_	_	_	5	dep	5:dep	SpaceAfter=No
+6	ที่ 1	_	_	_	_	5	dep	5:dep	_
 
 1	โครงการวิจัยและพัฒนา	_	_	_	_	0	root	0:root	SpaceAfter=No
 2	อิเล็กทรอนิกส์	_	_	_	_	1	dep	1:dep	SpaceAfter=No
 3	และ	_	_	_	_	2	dep	2:dep	SpaceAfter=No
-4	คอมพิวเตอร์	_	_	_	_	3	dep	3:dep	SpaceAfter=No
+4	คอมพิวเตอร์	_	_	_	_	3	dep	3:dep	_
 
 1	วัน	_	_	_	_	0	root	0:root	SpaceAfter=No|NewPar=Yes
 2	ที่ 15	_	_	_	_	1	dep	1:dep	SpaceAfter=No
 3	-	_	_	_	_	2	dep	2:dep	SpaceAfter=No
 4	16	_	_	_	_	3	dep	3:dep	_
 5	สิงหาคม	_	_	_	_	4	dep	4:dep	_
-6	2532	_	_	_	_	5	dep	5:dep	SpaceAfter=No
+6	2532	_	_	_	_	5	dep	5:dep	_
 """.strip()
 
-EXPECTED_TEXT="""การประชุมทางวิชาการ ครั้งที่ 1โครงการวิจัยและพัฒนาอิเล็กทรอนิกส์และคอมพิวเตอร์
+EXPECTED_TEXT="""การประชุมทางวิชาการ ครั้งที่ 1 โครงการวิจัยและพัฒนาอิเล็กทรอนิกส์และคอมพิวเตอร์
 
 วันที่ 15-16 สิงหาคม 2532
 
 """
 
-EXPECTED_LABELS="""001000001001000000100000100002000000000000000000010000000000000100100000000002
+EXPECTED_LABELS="""0010000010010000001000001000020000000000000000000010000000000000100100000000002
 
 0010000011010000000100002
 
