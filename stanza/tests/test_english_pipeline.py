@@ -163,6 +163,9 @@ def test_dependency_parse(processed_doc):
     assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == \
            EN_DOC_DEPENDENCY_PARSES_GOLD
 
+def test_empty(pipeline):
+    # make sure that various models handle the degenerate empty case
+    pipeline("")
 
 @pytest.fixture(scope="module")
 def processed_multidoc(pipeline):
