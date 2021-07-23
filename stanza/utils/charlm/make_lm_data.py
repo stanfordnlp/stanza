@@ -86,6 +86,9 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name):
     for src_fn in glob.glob(str(src_dir) + '/*.txt.xz'):
         cmd = f"xzcat {src_fn} >> {tgt_tmp}"
         subprocess.run(cmd, shell=True)
+    for src_fn in glob.glob(str(src_dir) + '/*.txt.gz'):
+        cmd = f"zcat {src_fn} >> {tgt_tmp}"
+        subprocess.run(cmd, shell=True)
     tgt_tmp_shuffled = Path(str(tgt_tmp) + ".shuffled")
 
     print(f"--> Shuffling files into {tgt_tmp_shuffled}...")
