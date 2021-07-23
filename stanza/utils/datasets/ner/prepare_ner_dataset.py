@@ -18,13 +18,14 @@ IJCNLP 2008 produced a few Indian language NER datasets.
   download:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=5
   The models produced from these datasets have extremely low recall, unfortunately.
-  - prepare_ner_dataset.py hi-fire2013
+  - prepare_ner_dataset.py hi_ijc
 
 FIRE 2013 also produced NER datasets for Indian languages.
   http://au-kbc.org/nlp/NER-FIRE2013/index.html
   The datasets are password locked.
   For Stanford users, contact Chris Manning for license details.
   For external users, please contact the organizers for more information.
+  - prepare_ner_dataset.py hi-fire2013
 
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
