@@ -34,8 +34,8 @@ def process_dataset(input_filename, output_filename):
         document += [sent]
 
     with open(output_filename, 'w') as outfile:
-        json.dump(document, outfile)
-    print("Generated json file {}.".format(output_filename))
+        json.dump(document, outfile, indent=1)
+    print("Generated json file {}".format(output_filename))
 
 # TODO: make skip_doc_start an argument
 def load_conll03(filename, skip_doc_start=True):
