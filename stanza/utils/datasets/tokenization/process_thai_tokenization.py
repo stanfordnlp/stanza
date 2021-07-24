@@ -1,6 +1,11 @@
 import os
 import random
 
+try:
+    from pythainlp import sent_tokenize
+except ImportError:
+    pass
+
 def write_section(output_dir, dataset_name, section, documents):
     """
     Writes a list of documents for tokenization, including a file in conll format
@@ -74,3 +79,88 @@ def write_dataset(documents, output_dir, dataset_name):
     write_section(output_dir, dataset_name, 'train', documents[:num_train])
     write_section(output_dir, dataset_name, 'dev', documents[num_train:num_train+num_dev])
     write_section(output_dir, dataset_name, 'test', documents[num_train+num_dev:])
+
+
+
+def reprocess_lines(processed_lines):
+    """
+    Reprocesses lines using pythainlp to cut up sentences into shorter sentences.
+
+    Many of the lines in BEST seem to be multiple Thai sentences concatenated, according to native Thai speakers.
+
+    Input: a list of lines, where each line is a list of words.  Space characters can be included as words
+    Output: a new list of lines, resplit using pythainlp
+    """
+    reprocessed_lines = []
+    for line in processed_lines:
+        text = "".join(line)
+        try:
+            chunks = sent_tokenize(text)
+        except NameError as e:
+            raise NameError("Sentences cannot be reprocessed without first installing pythainlp") from e
+        # Check that the total text back is the same as the text in
+        if sum(len(x) for x in chunks) != len(text):
+            raise ValueError("Got unexpected text length: \n{}\nvs\n{}".format(text, chunks))
+
+        chunk_lengths = [len(x) for x in chunks]
+
+        current_length = 0
+        new_line = []
+        for word in line:
+            if len(word) + current_length < chunk_lengths[0]:
+                new_line.append(word)
+                current_length = current_length + len(word)
+            elif len(word) + current_length == chunk_lengths[0]:
+                new_line.append(word)
+                reprocessed_lines.append(new_line)
+                new_line = []
+                chunk_lengths = chunk_lengths[1:]
+                current_length = 0
+            else:
+                remaining_len = chunk_lengths[0] - current_length
+                new_line.append(word[:remaining_len])
+                reprocessed_lines.append(new_line)
+                word = word[remaining_len:]
+                chunk_lengths = chunk_lengths[1:]
+                while len(word) > chunk_lengths[0]:
+                    new_line = [word[:chunk_lengths[0]]]
+                    reprocessed_lines.append(new_line)
+                    word = word[chunk_lengths[0]:]
+                    chunk_lengths = chunk_lengths[1:]
+                new_line = [word]
+                current_length = len(word)
+        reprocessed_lines.append(new_line)
+    return reprocessed_lines
+
+def convert_processed_lines(processed_lines):
+    """
+    Convert a list of sentences into documents suitable for the output methods in this module.
+
+    Input: a list of lines, including space words
+    Output: a list of documents, each document containing a list of sentences
+            Each sentence is a list of words: (text, space_follows)
+            Space words will be eliminated.
+    """
+    paragraphs = []
+    sentences = []
+    for words in processed_lines:
+        # turn the words into a sentence
+        sentence = []
+        for word in words:
+            word = word.strip()
+            if not word:
+                if len(sentence) == 0:
+                    raise ValueError("Unexpected space at start of sentence in document {}".format(filename))
+                sentence[-1] = (sentence[-1][0], True)
+            else:
+                sentence.append((word, False))
+        # blank lines are very rare in best, but why not treat them as a paragraph break
+        if len(sentence) == 0:
+            paragraphs.append([sentences])
+            sentences = []
+            continue
+        sentence[-1] = (sentence[-1][0], True)
+        sentences.append(sentence)
+    paragraphs.append([sentences])
+    return paragraphs
+

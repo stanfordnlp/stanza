@@ -1021,6 +1021,7 @@ def add_specific_args(parser):
                         help='Augment the dataset in various ways')
     parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
+    convert_th_lst20.add_lst20_args(parser)
 
 def process_treebank(treebank, paths, args):
     """
@@ -1046,7 +1047,7 @@ def process_treebank(treebank, paths, args):
     elif short_name == "th_orchid":
         convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name == "th_lst20":
-        convert_th_lst20.main(paths["EXTERN_DIR"], tokenizer_dir)
+        convert_th_lst20.convert(paths["EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_best":
         convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):

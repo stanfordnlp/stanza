@@ -94,7 +94,12 @@ allowed_sequences = {
 def read_data(input_filename):
     print("Reading {}".format(input_filename))
     tree = ET.parse(input_filename)
+    documents = parse_xml(tree)
+    print("Number of documents: {}".format(len(documents)))
+    print("Number of paragraphs: {}".format(sum(len(document) for document in documents)))
+    return documents
 
+def parse_xml(tree):
     # we will put each paragraph in a separate block in the output file
     # we won't pay any attention to the document boundaries unless we
     # later find out it was necessary
@@ -134,12 +139,11 @@ def read_data(input_filename):
                     words.append((word, False))
                 if len(words) == 0:
                     continue
+                words[-1] = (words[-1][0], True)
                 sentences.append(words)
             paragraphs.append(sentences)
         documents.append(paragraphs)
 
-    print("Number of documents: {}".format(len(documents)))
-    print("Number of paragraphs: {}".format(sum(len(document) for document in documents)))
     return documents
 
 
