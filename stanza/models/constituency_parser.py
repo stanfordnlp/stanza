@@ -17,6 +17,7 @@ from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.server.parser_eval import EvaluateParser
 
 logger = logging.getLogger('stanza')
 
@@ -216,13 +217,14 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
         optimizer.zero_grad()
 
         # print statistics
-        run_dev_set(model, dev_trees)
-        logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n".format(epoch+1, correct, incorrect, epoch_loss))
+        f1 = run_dev_set(model, dev_trees)
+        logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n".format(epoch+1, correct, incorrect, epoch_loss, f1))
 
 def run_dev_set(model, dev_trees):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
-    for tree in tqdm(dev_trees):
-        state = parse_transitions.initial_state_from_gold_tree(tree, model)
+    treebank = []
+    for gold_tree in tqdm(dev_trees):
+        state = parse_transitions.initial_state_from_gold_tree(gold_tree, model)
         transition_count = 0
         while not state.finished(model) and transition_count < 1000:
             transition_count = transition_count + 1
@@ -234,6 +236,19 @@ def run_dev_set(model, dev_trees):
 
         if transition_count >= 1000:
             logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree, state.to_string(model)))
+            continue
+
+        if state.finished(model):
+            predicted_tree = state.get_tree(model)
+            treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+
+    if len(treebank) < len(dev_trees):
+        logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))
+
+    with EvaluateParser(classpath="$CLASSPATH") as ep:
+        response = ep.process(treebank)
+        return response.f1
+
 
 if __name__ == '__main__':
     main()
