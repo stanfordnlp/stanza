@@ -59,6 +59,9 @@ class State:
     def finished(self, model):
         return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
 
+    def get_tree(self, model):
+        return model.get_top_constituent(self.constituents)
+
     def all_transitions(self, model):
         # TODO: rewrite this to be nicer / faster?  or just refactor?
         all_transitions = []
