@@ -1022,6 +1022,7 @@ def add_specific_args(parser):
     parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
 
+    convert_vi_vlsp.add_vlsp_args(parser)
 def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
