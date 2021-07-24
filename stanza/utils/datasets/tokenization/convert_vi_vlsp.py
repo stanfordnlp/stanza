@@ -89,7 +89,7 @@ def convert_pos_dataset(file_path):
             sentences.append(sent)
             sent = []
         elif line != "\n":
-            sent.append(line.split("\t")[0].replace("_","").strip())
+            sent.append(line.split("\t")[0].replace("_"," ").strip())
     return sentences
         
 
@@ -111,7 +111,7 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
     if split_filename is not None:
         # even this is a larger dev set than the train set
         split_point = int(len(sentences) * 0.95)
-        write_file(vlsp_include_spaces, output_filename, sentences[:split_point].extend(pos_data), shard)
+        write_file(vlsp_include_spaces, output_filename, sentences[:split_point]+pos_data, shard)
         write_file(vlsp_include_spaces, split_filename, sentences[split_point:], split_shard)
     else:
         write_file(vlsp_include_spaces, output_filename, sentences, shard)
