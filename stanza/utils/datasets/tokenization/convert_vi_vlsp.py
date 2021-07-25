@@ -40,7 +40,8 @@ def find_spaces(sentence):
 def add_vlsp_args(parser):
     parser.add_argument('--include_pos_data', action='store_true', default=False, help='To include or not POS dataset for tokenization training.')
     parser.add_argument('--vlsp_include_spaces', action='store_true', default=False, help='When processing vi_vlsp tokenization, include all of the spaces.  Otherwise, we try to turn the text back into standard text')
-
+    parser.add_argument('--check_overlap', type=str, default="", help='Check overlap between two dataseet, input name of file 1')
+    #parser.add_argument('--check_overlap_2', type=str, default="", help='Check overlap between two dataseet, input name of file 1')
 def write_file(vlsp_include_spaces, output_filename, sentences, shard):
     with open(output_filename, "w") as fout:
         check_headlines = False
@@ -108,20 +109,49 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
                 words = [w.replace("_", " ") for w in words]
                 sentences.append(words)
     
+    set_sent = []
+    another_set = []
+    for sent in sentences:
+        if sent not in set_sent:
+            set_sent.append(sent)
+        elif sent in set_sent:
+            another_set.append(sent)
+    print(another_set[:5])
+    #set_sent.sort()
+    #set_sent = list(k for k,_ in itertools.groupby(set_sent))
+    
+    #split_point = int(len(sentences) * 0.95)
+    #copy = sentences.copy()
+    #set_sent = [sent for sent in sentences if sent not in ]
+    print("There are ", len(sentences)-len(set_sent), " overlapping sentences in botb training and dev sets of VLSP WS.")
     if split_filename is not None:
         # even this is a larger dev set than the train set
         split_point = int(len(sentences) * 0.95)
-        write_file(vlsp_include_spaces, output_filename, sentences[:split_point]+pos_data, shard)
+        sentences_pos = [sent for sent in pos_data if sent not in sentences]
+        print("Eliminated ", len(pos_data)-len(sentences_pos), " sentences from VLSP POS dataset that are overlapping with VLSSP WS train and dev sets.")
+        #inter_1 = [sent for sent in pos_data if sent in sentences[split_point:]]
+        #print("Dev vlsp seg dataset has ", len(inter_1),"/",len(sentences[split_point:]), " sentences in common with the file you're checking.")
+        write_file(vlsp_include_spaces, output_filename, sentences[:split_point]+sentences_pos, shard)
         write_file(vlsp_include_spaces, split_filename, sentences[split_point:], split_shard)
     else:
+        #inter_1 = [sent for sent in pos_data if sent in sentences]
+        #print("Test vlsp seg dataset has ", len(inter_1), "/",len(sentences)," sentences in common with the file you're checking.")
         write_file(vlsp_include_spaces, output_filename, sentences, shard)
 
+    #check overlap between training seg and file
+    #inter_1 = [sent for sent in pos_data if sent in sentences[:split_point]]
+    #print("Training vlsp seg dataset has ", len(inter_1), " sentences in common with the file you're checking.")
+    #inter_1 = [sent for sent in pos_data if sent in sentences[split_point:]]
+    #print("Dev vlsp seg dataset has ", len(inter_1), " sentences in common with the file you're checking.")
+    #inter_1 = [sent for sent in pos_data if sent in sentences]
+    #print("Test vlsp seg dataset has ", len(inter_1), " sentences in common with the file you're checking.")
 def convert_vi_vlsp(extern_dir, tokenizer_dir, args):
     input_path = os.path.join(extern_dir, "vietnamese", "VLSP2013-WS-data")
 
     input_train_filename = os.path.join(input_path, "VLSP2013_WS_train_gold.txt")
     input_test_filename = os.path.join(input_path, "VLSP2013_WS_test_gold.txt")
-    input_pos_filename = os.path.join(input_path, "VLSP2013_POS_train_BI_POS_Column.txt.goldSeg")
+    
+    input_pos_filename = os.path.join(input_path, "VLSP2013_POS_%s_BI_POS_Column.txt.goldSeg"%args.check_overlap)
     if not os.path.exists(input_train_filename):
         raise FileNotFoundError("Cannot find train set for VLSP at %s" % input_train_filename)
     if not os.path.exists(input_test_filename):
@@ -136,6 +166,7 @@ def convert_vi_vlsp(extern_dir, tokenizer_dir, args):
     output_train_filename = os.path.join(tokenizer_dir, "vi_vlsp.train.gold.conllu")
     output_dev_filename = os.path.join(tokenizer_dir,   "vi_vlsp.dev.gold.conllu")
     output_test_filename = os.path.join(tokenizer_dir,  "vi_vlsp.test.gold.conllu")
+
     
     
     convert_file(args.vlsp_include_spaces, input_train_filename, output_train_filename, "train", output_dev_filename, "dev", pos_data)
