@@ -107,7 +107,8 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
                 continue
             else:
                 words = [w.replace("_", " ") for w in words]
-                sentences.append(words)
+                if words not in sentences:
+                    sentences.append(words)
     
     set_sent = []
     another_set = []
