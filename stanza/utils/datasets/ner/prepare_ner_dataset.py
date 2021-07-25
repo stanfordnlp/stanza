@@ -12,6 +12,10 @@ Also, Finnish Turku dataset, available here:
     $NERBASE/fi_turku
   - prepare_ner_dataset.py hu_nytk fi_turku
 
+FBK in Italy produced an Italian dataset.
+  The processing here is for a combined .tsv file they sent us.
+  - prepare_ner_dataset.py it_fbk
+
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=3
@@ -39,6 +43,7 @@ There are two Hungarian datasets are available here:
   You can also build individual pieces with hu_rgai_business or hu_rgai_criminal
   Create a subdirectory of $NERBASE, $NERBASE/hu_rgai, and download both of
     the pieces and unzip them in that directory.
+  - prepare_ner_dataset.py hu_rgai
 
 Another Hungarian dataset is here:
   - https://github.com/nytud/NYTK-NerKor
@@ -47,6 +52,7 @@ Another Hungarian dataset is here:
 
 The two Hungarian datasets can be combined with hu_combined
   TODO: verify that there is no overlap in text
+  - prepare_ner_dataset.py hu_combined
 
 BSNLP publishes NER datasets for Eastern European languages.
   - In 2019 they published BG, CS, PL, RU.
@@ -65,6 +71,24 @@ BSNLP publishes NER datasets for Eastern European languages.
   - we use the code name "bg_bsnlp19".  Other languages from
     bsnlp 2019 can be supported by adding the appropriate
     functionality in convert_bsnlp.py.
+  - prepare_ner_dataset.py bg_bsnlp19
+
+NCHLT produced NER datasets for many African languages.
+  Unfortunately, it is difficult to make use of many of these,
+  as there is no corresponding UD data from which to build a
+  tokenizer or other tools.
+  - Afrikaans:  https://repo.sadilar.org/handle/20.500.12185/299
+  - isiNdebele: https://repo.sadilar.org/handle/20.500.12185/306
+  - isiXhosa:   https://repo.sadilar.org/handle/20.500.12185/312
+  - isiZulu:    https://repo.sadilar.org/handle/20.500.12185/319
+  - Sepedi:     https://repo.sadilar.org/handle/20.500.12185/328
+  - Sesotho:    https://repo.sadilar.org/handle/20.500.12185/334
+  - Setswana:   https://repo.sadilar.org/handle/20.500.12185/341
+  - Siswati:    https://repo.sadilar.org/handle/20.500.12185/346
+  - Tsivenda:   https://repo.sadilar.org/handle/20.500.12185/355
+  - Xitsonga:   https://repo.sadilar.org/handle/20.500.12185/362
+  Agree to the license, download the zip, and unzip it in
+  $NERBASE/NCHLT
 """
 
 import glob
@@ -88,7 +112,7 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 SHARDS = ('train', 'dev', 'test')
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name):
+def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio"):
     """
     Convert BIO files to json
 
@@ -97,7 +121,7 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name):
     in same path for both base_input_path and base_output_path.
     """
     for shard in SHARDS:
-        input_filename = os.path.join(base_input_path, '%s.%s.bio' % (short_name, shard))
+        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, shard, suffix))
         if not os.path.exists(input_filename):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
@@ -114,6 +138,17 @@ def process_turku(paths):
             raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(input_filename, output_filename)
+
+def process_it_fbk(paths):
+    short_name = "it_fbk"
+    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    csv_file = os.path.join(base_input_path, "all-wiki-split.tsv")
+    if not os.path.exists(csv_file):
+        raise FileNotFoundError("Cannot find the FBK dataset in its expected location: {}".format(csv_file))
+    base_output_path = paths["NER_DATA_DIR"]
+    split_wikiner(base_output_path, csv_file, prefix=short_name, suffix="io", shuffle=False, train_fraction=0.8, dev_fraction=0.1)
+    convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
+
 
 def process_languk(paths):
     short_name = 'uk_languk'
@@ -316,6 +351,40 @@ def process_bsnlp(paths, short_name):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
+NCHLT_LANGUAGE_MAP = {
+    "af":  "NCHLT Afrikaans Named Entity Annotated Corpus",
+    # none of the following have UD datasets as of 2.8.  Until they
+    # exist, we assume the language codes NCHTL are sufficient
+    "nr":  "NCHLT isiNdebele Named Entity Annotated Corpus",
+    "nso": "NCHLT Sepedi Named Entity Annotated Corpus",
+    "ss":  "NCHLT Siswati Named Entity Annotated Corpus",
+    "st":  "NCHLT Sesotho Named Entity Annotated Corpus",
+    "tn":  "NCHLT Setswana Named Entity Annotated Corpus",
+    "ts":  "NCHLT Xitsonga Named Entity Annotated Corpus",
+    "ve":  "NCHLT Tshivenda Named Entity Annotated Corpus",
+    "xh":  "NCHLT isiXhosa Named Entity Annotated Corpus",
+    "zu":  "NCHLT isiZulu Named Entity Annotated Corpus",
+}
+
+def process_nchlt(paths, short_name):
+    language = short_name.split("_")[0]
+    if not language in NCHLT_LANGUAGE_MAP:
+        raise ValueError("Language %s not part of NCHLT" % language)
+    short_name = "%s_nchlt" % language
+
+    base_input_path = os.path.join(paths["NERBASE"], "NCHLT", NCHLT_LANGUAGE_MAP[language], "*Full.txt")
+    input_files = glob.glob(base_input_path)
+    if len(input_files) == 0:
+        raise FileNotFoundError("Cannot find NCHLT dataset in '%s'  Did you remember to download the file?" % base_input_path)
+
+    if len(input_files) > 1:
+        raise ValueError("Unexpected number of files matched '%s'  There should only be one" % base_input_path)
+
+    base_output_path = paths["NER_DATA_DIR"]
+    split_wikiner(base_output_path, input_files[0], prefix=short_name, remap={"OUT": "O"})
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -323,6 +392,8 @@ def main(dataset_name):
 
     if dataset_name == 'fi_turku':
         process_turku(paths)
+    elif dataset_name == 'it_fbk':
+        process_it_fbk(paths)
     elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
         process_languk(paths)
     elif dataset_name == 'hi_ijc':
@@ -339,6 +410,8 @@ def main(dataset_name):
         process_hu_combined(paths)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
+    elif dataset_name.endswith("_nchlt"):
+        process_nchlt(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
