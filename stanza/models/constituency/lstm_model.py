@@ -49,17 +49,23 @@ class LSTMModel(BaseModel, nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
-        self.tags = sorted(list(tags))
         self.root_labels = sorted(list(root_labels))
         constituents = sorted(list(constituents))
         self.constituents = { x: i for (i, x) in enumerate(constituents) }
         # precompute tensors for the constituents
         self.register_buffer('constituent_tensors', torch.tensor(range(len(constituents)), requires_grad=False))
 
-        # TODO: add a tag embedding and a delta embedding
-        self.word_input_size = self.embedding_dim
+        # TODO: add a delta embedding
         self.hidden_size = args['hidden_size']
+        self.tag_embedding_dim = args['tag_embedding_dim']
         self.transition_embedding_dim = args['transition_embedding_dim']
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim
+
+        self.tags = sorted(list(tags))
+        self.tag_map = { t: i for i, t in enumerate(self.tags) }
+        self.tag_embedding = nn.Embedding(num_embeddings = len(tags),
+                                          embedding_dim = self.tag_embedding_dim)
+        self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
 
         self.transitions = sorted(transitions)
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
@@ -110,10 +116,17 @@ class LSTMModel(BaseModel, nn.Module):
         """
         word actually means a ParseTree with a tag node and word node
         """
-        # TODO: here we can append a tag embedding as well
         word_idx = self.vocab_map.get(word.children[0].label, UNK_ID)
         word_idx = self.vocab_tensors[word_idx]
         word_input = self.embedding(word_idx)
+
+        tag_idx = self.tag_map.get(word.label, None)
+        if tag_idx is None:
+            raise ValueError("Parser not trained with tag: {}".format(word.label))
+        tag_idx = self.tag_tensors[tag_idx]
+        tag_input = self.tag_embedding(tag_idx)
+
+        word_input = torch.cat([word_input, tag_input])
         word_input = word_input.unsqueeze(0)
 
         current_node = word_queue.value
