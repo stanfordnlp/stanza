@@ -31,6 +31,8 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
+    parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag")
+
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
