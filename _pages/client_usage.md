@@ -31,18 +31,18 @@ from stanza.server import CoreNLPClient
 
 ## Starting a client-server communication and running annotation
 
-Here we are going to run CoreNLP annotation on some example sentences. We start by first instantiating a `CoreNLPClient` object, and then pass the text into th e client with the `annotate` function. Note that here we use the recommended Python `with` statement to start the client, which can make sure that the client and server are properly closed after the annotation:
+Here we are going to run CoreNLP annotation on some example sentences. We start by first instantiating a `CoreNLPClient` object, and then pass the text into the client with the `annotate` function. Note that here we use the recommended Python `with` statement to start the client, which makes sure that the client and server are properly closed after the annotation:
 
 ```python
 text = "Chris Manning is a nice person. Chris wrote a simple sentence. He also gives oranges to people."
 with CoreNLPClient(
         annotators=['tokenize','ssplit','pos','lemma','ner', 'parse', 'depparse','coref'],
         timeout=30000,
-        memory='16G') as client:
+        memory='6G') as client:
     ann = client.annotate(text)
 ```
 
-The CoreNLP server will be automatically started in the background upon the instantiation of the client, so normally you don't need to worry about it.
+The CoreNLP server will be automatically started in the background upon the instantiation of the client, so normally you don't need to worry about it. If you see an error message about port 9000 already in use, you need to choose a different port; see [Server Start Options](client_properties.html).
 
 ## Accessing basic annotation results
 

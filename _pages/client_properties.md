@@ -143,7 +143,7 @@ Here we provide a list of commonly-used arguments that you can initialize your `
 
 | Option name | Type | Default | Description |
 | --- | --- | --- | --- |
-| endpoint | str | http://localhost:9000 | The host and port where the CoreNLP server will run on; change this when the default port 9000 is occupied. |
+| endpoint | str | http://localhost:9000 | The host and port that the CoreNLP server will run on. If port 9000 is already in use by something else on your machine, you can change this to another free port, like maybe `endpoint="http://localhost:9007"`. You can also point to a CoreNLP server running on a different machine. |
 | classpath | str | None | Classpath to use for CoreNLP.  None means using the classpath as set by the `$CORENLP_HOME` environment variable, "$CLASSPATH" means to use the system CLASSPATH, and otherwise, the given string is used |
 | timeout | int | 60000 | The maximum amount of time, in milliseconds, to wait for an annotation to finish before cancelling it. |
 | threads | int | 5 | The number of threads to hit the server with. If, for example, the server is running on an 8 core machine, you can specify this to be 8, and the client will allow you to make 8 simultaneous requests to the server. |
