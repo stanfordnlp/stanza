@@ -5,10 +5,8 @@ import random
 import logging
 import re
 import torch
-import stanza.utils.default_paths as default_paths
 from .vocab import Vocab
 logger = logging.getLogger('stanza')
-paths = default_paths.get_default_paths()
 
 def filter_consecutive_whitespaces(para):
     filtered = []

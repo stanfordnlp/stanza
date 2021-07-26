@@ -35,38 +35,37 @@ def create_dictionary(lang, train_path, external_path):
                 word = token['form'].lower()
                 #check multiple_syllable word for vi
                 if lang == "vi_vlsp":
-                    if len(word.split(" "))>1 and any(map(str.isalpha, word)):
-                        #do not include the words that contain numbers.
-                        if not any(map(str.isdigit, word)):
-                            if dict.get(word, 0) == 0:
-                                temp = ""
-                                dict[word] = 2
-                                for char in word[:-1]:
-                                    temp += char
-                                    if dict.get(temp, 0) == 0:
-                                        dict[temp] = 1
-                                    elif dict.get(temp, 0) == 2:
-                                        dict[temp] = 3
-                            elif dict.get(word, 0) == 1:
-                                dict[word] = 3
-                            word_list.add(word)
+                    if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
+                        if dict.get(word, 0) == 0:
+                            temp = ""
+                            dict[word] = 2
+                            for char in word[:-1]:
+                                temp += char
+                                if dict.get(temp, 0) == 0:
+                                    dict[temp] = 1
+                                elif dict.get(temp, 0) == 2:
+                                    dict[temp] = 3
+                        elif dict.get(word, 0) == 1:
+                            dict[word] = 3
+                        word_list.add(word)
                 else:
-                    if len(word)>1 and any(map(str.isalpha, word)):
-                        if not any(map(str.isdigit, word)):
-                            if dict.get(word, 0) == 0:
-                                temp = ""
-                                dict[word] = 2
-                                for char in word[:-1]:
-                                    temp += char
-                                    if dict.get(temp, 0) == 0:
-                                        dict[temp] = 1
-                                    elif dict.get(temp, 0) == 2:
-                                        dict[temp] = 3
-                            elif dict.get(word, 0) == 1:
-                                dict[word] = 3
-                            word_list.add(word)
-        print("Added ", len(word_list), " words found in training set to dictionary.")
-    word_list = set()
+                    if len(word)>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
+                        if dict.get(word, 0) == 0:
+                            temp = ""
+                            dict[word] = 2
+                            for char in word[:-1]:
+                                temp += char
+                                if dict.get(temp, 0) == 0:
+                                    dict[temp] = 1
+                                elif dict.get(temp, 0) == 2:
+                                    dict[temp] = 3
+                        elif dict.get(word, 0) == 1:
+                            dict[word] = 3
+                        word_list.add(word)
+        count = len(word_list)
+
+        print("Added ", count, " words found in training set to dictionary.")
+
     if external_path != None:
         if not os.path.isfile(external_path):
             raise FileNotFoundError("Cannot open external dictionary at %s" % external_path)
@@ -78,36 +77,34 @@ def create_dictionary(lang, train_path, external_path):
             word = word.replace("\n","")
             # check multiple_syllable word for vi
             if lang == "vi_vlsp":
-                if len(word.split(" "))>1 and any(map(str.isalpha, word)):
-                    if not any(map(str.isdigit, word)):
-                        if dict.get(word, 0) == 0:
-                            temp = ""
-                            dict[word] = 2
-                            for char in word[:-1]:
-                                temp += char
-                                if dict.get(temp, 0) == 0:
-                                    dict[temp] = 1
-                                elif dict.get(temp, 0) == 2:
-                                    dict[temp] = 3
-                        elif dict.get(word, 0) == 1:
-                            dict[word] = 3
-                        word_list.add(word)
+                if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
+                    if dict.get(word, 0) == 0:
+                        temp = ""
+                        dict[word] = 2
+                        for char in word[:-1]:
+                            temp += char
+                            if dict.get(temp, 0) == 0:
+                                dict[temp] = 1
+                            elif dict.get(temp, 0) == 2:
+                                dict[temp] = 3
+                    elif dict.get(word, 0) == 1:
+                        dict[word] = 3
+                    word_list.add(word)
             else:
-                if len(word) > 1 and any(map(str.isalpha, word)):
-                    if not any(map(str.isdigit, word)):
-                        if dict.get(word, 0) == 0:
-                            temp = ""
-                            dict[word] = 2
-                            for char in word[:-1]:
-                                temp += char
-                                if dict.get(temp, 0) == 0:
-                                    dict[temp] = 1
-                                elif dict.get(temp, 0) == 2:
-                                    dict[temp] = 3
-                        elif dict.get(word, 0) == 1:
-                            dict[word] = 3
-                        word_list.add(word)
-    print("Added ", len(word_list), " words found in external dict to dictionary.")
+                if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
+                    if dict.get(word, 0) == 0:
+                        temp = ""
+                        dict[word] = 2
+                        for char in word[:-1]:
+                            temp += char
+                            if dict.get(temp, 0) == 0:
+                                dict[temp] = 1
+                            elif dict.get(temp, 0) == 2:
+                                dict[temp] = 3
+                    elif dict.get(word, 0) == 1:
+                        dict[word] = 3
+                    word_list.add(word)
+        print("Added another ", len(word_list) - count, " words found in external dict to dictionary.")
 
     return dict
 
@@ -380,11 +377,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in batches.data for y in x]
     counter = Counter(zip(all_preds, labels))
 
-    data = [y[0] for x in batches.data for y in x]
     def f1(pred, gold, mapping):
         pred = [mapping[p] for p in pred]
         gold = [mapping[g] for g in gold]
@@ -408,7 +405,7 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
             elif g > 0:
                 lastg = i
                 fn += 1
-            #check false negative and false positive cases
+
         if tp == 0:
             return 0
         else:
