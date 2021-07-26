@@ -93,14 +93,23 @@ class LSTMModel(BaseModel, nn.Module):
             unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
         self.unary_transforms = nn.ModuleDict(unary_transforms)
 
+        # an embedding for the spot on the constituent LSTM taken up by the Open transitions
         self.dummy_embedding = nn.Embedding(num_embeddings = len(self.constituents),
                                             embedding_dim = self.hidden_size)
 
-        # TODO: the original paper suggests a BI-LSTM.  This is just a single direction LSTM
-        # the original paper also includes an initial input to the LSTM which says what
-        # constituent is being reduced
-        # TODO: also try with making the LSTM "semantically untied"
-        self.reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
+        # an embedding for the first symbol in the reduce lstm
+        # TODO: try both directions have different embeddings?
+        self.constituent_embedding = nn.Embedding(num_embeddings = len(self.constituents),
+                                                  embedding_dim = self.hidden_size)
+
+        # forward and backward pieces to make a bi-lstm
+        # TODO: make the hidden size here an option?
+        self.forward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
+        self.backward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
+        # affine transformation from bi-lstm reduce to a new hidden layer
+        self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
+
+        self.tanh = nn.Tanh()
 
         # matrix for predicting the next transition using word/constituent/transition queues
         self.W = nn.Linear(self.hidden_size * 3, len(transitions))
@@ -166,14 +175,30 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituent(self, label, children):
-        hx = [child.hx for child in children]
-        hx = torch.stack(hx)
-        hx = hx.unsqueeze(1)
+        constituent_index = self.constituent_tensors[self.constituents[label]]
+        node_hx = [child.hx for child in children]
+        label_hx = [self.constituent_embedding(constituent_index)]
+
+        forward_hx = torch.stack(label_hx + node_hx)
+        forward_hx = forward_hx.unsqueeze(1)
         # should now be: (#nodes, 1, hidden_dim)
         # transform...
-        hx = self.reduce_lstm(hx)[0]
+        forward_hx = self.forward_reduce_lstm(forward_hx)[0]
         # take just the output of the final layer
-        hx = hx[-1, 0, :]
+        forward_hx = forward_hx[-1, 0, :]
+
+        node_hx.reverse()
+        backward_hx = torch.stack(label_hx + node_hx)
+        backward_hx = backward_hx.unsqueeze(1)
+        # should now be: (#nodes, 1, hidden_dim)
+        # transform...
+        backward_hx = self.backward_reduce_lstm(backward_hx)[0]
+        # take just the output of the final layer
+        backward_hx = backward_hx[-1, 0, :]
+
+        hx = self.reduce_linear(torch.cat((forward_hx, backward_hx)))
+        # TODO: try others, like relu, to see if they also do the job but faster
+        hx = self.tanh(hx)
 
         node = Tree(label=label, children=[child.value for child in children])
         return ConstituentNode(value=node, hx=hx, cx=None)
