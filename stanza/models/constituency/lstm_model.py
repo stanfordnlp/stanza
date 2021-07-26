@@ -1,4 +1,5 @@
 from collections import namedtuple
+import logging
 import torch
 import torch.nn as nn
 
@@ -6,6 +7,8 @@ from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 
 from stanza.models.constituency.parse_tree import Tree
+
+logger = logging.getLogger('stanza')
 
 WordNode = namedtuple("WordNode", ['value', 'hx', 'cx'])
 TransitionNode = namedtuple("TransitionNode", ['value', 'hx', 'cx'])
@@ -38,6 +41,7 @@ class LSTMModel(BaseModel, nn.Module):
         pipeline time we will load the lists from the saved model.
         """
         super().__init__()
+        self.args = args
         self.unsaved_modules = []
 
         emb_matrix = pretrain.emb
@@ -50,15 +54,15 @@ class LSTMModel(BaseModel, nn.Module):
         self.embedding_dim = emb_matrix.shape[1]
 
         self.root_labels = sorted(list(root_labels))
-        constituents = sorted(list(constituents))
-        self.constituents = { x: i for (i, x) in enumerate(constituents) }
+        self.constituents = sorted(list(constituents))
+        self.constituent_map = { x: i for (i, x) in enumerate(self.constituents) }
         # precompute tensors for the constituents
-        self.register_buffer('constituent_tensors', torch.tensor(range(len(constituents)), requires_grad=False))
+        self.register_buffer('constituent_tensors', torch.tensor(range(len(self.constituent_map)), requires_grad=False))
 
         # TODO: add a delta embedding
-        self.hidden_size = args['hidden_size']
-        self.tag_embedding_dim = args['tag_embedding_dim']
-        self.transition_embedding_dim = args['transition_embedding_dim']
+        self.hidden_size = self.args['hidden_size']
+        self.tag_embedding_dim = self.args['tag_embedding_dim']
+        self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim
 
         self.tags = sorted(list(tags))
@@ -89,17 +93,17 @@ class LSTMModel(BaseModel, nn.Module):
         self.word_to_constituent = nn.Linear(self.hidden_size, self.hidden_size)
 
         unary_transforms = {}
-        for constituent in self.constituents:
+        for constituent in self.constituent_map:
             unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
         self.unary_transforms = nn.ModuleDict(unary_transforms)
 
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
-        self.dummy_embedding = nn.Embedding(num_embeddings = len(self.constituents),
+        self.dummy_embedding = nn.Embedding(num_embeddings = len(self.constituent_map),
                                             embedding_dim = self.hidden_size)
 
         # an embedding for the first symbol in the reduce lstm
         # TODO: try both directions have different embeddings?
-        self.constituent_embedding = nn.Embedding(num_embeddings = len(self.constituents),
+        self.constituent_embedding = nn.Embedding(num_embeddings = len(self.constituent_map),
                                                   embedding_dim = self.hidden_size)
 
         # forward and backward pieces to make a bi-lstm
@@ -160,7 +164,7 @@ class LSTMModel(BaseModel, nn.Module):
 
     def dummy_constituent(self, dummy):
         label = dummy.label
-        constituent_index = self.constituent_tensors[self.constituents[label]]
+        constituent_index = self.constituent_tensors[self.constituent_map[label]]
         hx = self.dummy_embedding(constituent_index)
         return ConstituentNode(value=dummy, hx=hx, cx=None)
 
@@ -175,7 +179,7 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituent(self, label, children):
-        constituent_index = self.constituent_tensors[self.constituents[label]]
+        constituent_index = self.constituent_tensors[self.constituent_map[label]]
         node_hx = [child.hx for child in children]
         label_hx = [self.constituent_embedding(constituent_index)]
 
@@ -280,3 +284,52 @@ class LSTMModel(BaseModel, nn.Module):
                 return predictions, self.transitions[index]
 
         return predictions, None
+
+
+def save(filename, model, skip_modules=True):
+    model_state = model.state_dict()
+    # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+    if skip_modules:
+        skipped = [k for k in model_state.keys() if k.split('.')[0] in model.unsaved_modules]
+        for k in skipped:
+            del model_state[k]
+    params = {
+        'model': model_state,
+        'model_type': "LSTM",
+        'config': model.args,
+        'transitions': model.transitions,
+        'constituents': model.constituents,
+        'tags': model.tags,
+        'root_labels': model.root_labels,
+    }
+
+    torch.save(params, filename, _use_new_zipfile_serialization=False)
+    logger.info("Model saved to {}".format(filename))
+
+
+def load(filename, pretrain):
+    try:
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+    except BaseException:
+        logger.exception("Cannot load model from {}".format(filename))
+        raise
+    logger.debug("Loaded model {}".format(filename))
+
+    model_type = checkpoint['model_type']
+    if model_type == 'LSTM':
+        model = LSTMModel(pretrain=pretrain,
+                          transitions=checkpoint['transitions'],
+                          constituents=checkpoint['constituents'],
+                          tags=checkpoint['tags'],
+                          root_labels=checkpoint['root_labels'],
+                          args=checkpoint['config'])
+    else:
+        raise ValueError("Unknown model type {}".format(model_type))
+    model.load_state_dict(checkpoint['model'], strict=False)
+
+    logger.debug("-- MODEL CONFIG --")
+    for k in model.args.keys():
+        logger.debug("  --{}: {}".format(k, model.args[k]))
+
+    return model
+

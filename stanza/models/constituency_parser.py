@@ -47,7 +47,7 @@ def parse_args(args=None):
     parser.add_argument('--eval_interval', type=int, default=5000)
     parser.add_argument('--train_batch_size', type=int, default=50, help='How many trees to train before taking an optimizer step')
 
-    parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
+    parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -73,10 +73,13 @@ def main(args=None):
     logger.info("Running constituency parser in {} mode".format(args['mode']))
     logger.debug("Using GPU: {}".format(args['cuda']))
 
+    model_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+    model_file = os.path.join(args['save_dir'], model_file)
+
     if args['mode'] == 'train':
-        train(args)
+        train(args, model_file)
     else:
-        evaluate(args)
+        evaluate(args, model_file)
 
 def load_pretrain(args):
     pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
@@ -105,7 +108,19 @@ def verify_transitions(trees, sequences):
         result = model.get_top_constituent(state.constituents)
         assert tree == result
 
-def train(args):
+def evaluate(args, model_file):
+    pretrain = load_pretrain(args)
+    model = lstm_model.load(model_file, pretrain)
+
+    treebank = read_treebank(args['eval_file'])
+    logger.info("Read {} trees for evaluation".format(len(treebank)))
+
+    f1 = run_dev_set(model, treebank)
+    logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
+
+def train(args, model_file):
+    utils.ensure_dir(args['save_dir'])
+
     train_trees = read_treebank(args['train_file'])
     logger.info("Read {} trees for the training set".format(len(train_trees)))
 
@@ -156,9 +171,9 @@ def train(args):
     if args['cuda']:
         model.cuda()
 
-    iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args)
+    iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
 
-def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args):
+def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
     # TODO: try different loss functions and optimizers
     optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     loss_function = nn.CrossEntropyLoss()
@@ -173,6 +188,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
 
     train_data = list(zip(train_trees, train_sequences))
     leftover_training_data = []
+    best_f1 = 0.0
     for epoch in range(args['epochs']):
         logger.info("Starting epoch {}".format(epoch+1))
         epoch_data = leftover_training_data
@@ -220,7 +236,11 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
 
         # print statistics
         f1 = run_dev_set(model, dev_trees)
-        logger.info("Epoch {} finished.  Transitions correct: {} Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n".format(epoch+1, correct, incorrect, epoch_loss, f1))
+        if f1 > best_f1:
+            logger.info("New best dev score: {} > {}".format(f1, best_f1))
+            best_f1 = f1
+            lstm_model.save(model_file, model)
+        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, correct, incorrect, epoch_loss, f1, best_f1))
 
 def run_dev_set(model, dev_trees):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
