@@ -23,7 +23,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, \
-    maintain_processor_list, add_dependencies, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
+    maintain_processor_list, add_dependencies, add_mwt, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -97,7 +97,10 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
-        processors = self.maybe_add_mwt(kwargs, resources, lang, processors)
+        if (not kwargs.get("tokenize_pretokenized")
+            and TOKENIZE in processors
+            and MWT not in processors):
+            add_mwt(processors, resources, lang)
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
@@ -172,33 +175,6 @@ class Pipeline:
             raise PipelineRequirementsException(pipeline_reqs_exceptions)
 
         logger.info("Done loading processors!")
-
-    @staticmethod
-    def maybe_add_mwt(kwargs, resources, lang, processors):
-        """
-        A hack to add MWT to languages which need it
-
-        If tokenize is in the list, but mwt is not, and there is a corresponding
-        tokenize & mwt pair in the resources file, we add mwt
-        otherwise we'll get another 10 bugs regarding missing mwt errors
-        """
-        # first check to see if tokenize_pretokenized is True.
-        # if so, then we assume MWT is already present
-        if kwargs.get("tokenize_pretokenized", None):
-            return processors
-
-        if TOKENIZE in processors and MWT not in processors:
-            value = processors[TOKENIZE]
-            if value == 'default' and MWT in resources[lang]['default_processors']:
-                logger.warning("Language %s package default expects mwt, which has been added" % lang)
-                processors[MWT] = 'default'
-            elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and
-                  value in resources[lang][MWT]):
-                logger.warning("Language %s package %s expects mwt, which has been added" % (lang, value))
-                processors[MWT] = value
-
-        return processors
-
 
     @staticmethod
     def update_kwargs(kwargs, processor_list):
