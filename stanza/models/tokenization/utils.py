@@ -24,7 +24,7 @@ def create_dictionary(lang, train_path, external_path):
     """
     dict = {}
     word_list = set()
-    def add_word():
+    def add_word(word):
         if dict.get(word, 0) == 0:
             temp = ""
             dict[word] = 2
