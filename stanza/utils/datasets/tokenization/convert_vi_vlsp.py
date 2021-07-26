@@ -78,7 +78,6 @@ def write_file(vlsp_include_spaces, output_filename, sentences, shard):
                 fout.write("\n")
             fout.write("\n")
 
-#this function is to process the pos dataset
 def convert_pos_dataset(file_path):
     """
     This function is to process the pos dataset
