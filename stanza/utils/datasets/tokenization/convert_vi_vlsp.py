@@ -38,7 +38,7 @@ def find_spaces(sentence):
     return spaces
 
 def add_vlsp_args(parser):
-    parser.add_argument('--include_pos_data', type=str, default="-", help='To include or not POS dataset (train/dev/test) for tokenization training.')
+    parser.add_argument('--include_pos_data', action='store_true', default=False, help='To include or not POS training dataset for tokenization training.')
     parser.add_argument('--vlsp_include_spaces', action='store_true', default=False, help='When processing vi_vlsp tokenization, include all of the spaces.  Otherwise, we try to turn the text back into standard text')
 def write_file(vlsp_include_spaces, output_filename, sentences, shard):
     with open(output_filename, "w") as fout:
@@ -80,13 +80,18 @@ def write_file(vlsp_include_spaces, output_filename, sentences, shard):
 
 #this function is to process the pos dataset
 def convert_pos_dataset(file_path):
+    """
+    This function is to process the pos dataset
+    """
+    
     file = open(file_path, "r")
     document = file.readlines()
     sentences = []
     sent = []
     for line in document:
         if line == "\n" and len(sent)>1:
-            sentences.append(sent)
+            if sent not in sentences:
+                sentences.append(sent)
             sent = []
         elif line != "\n":
             sent.append(line.split("\t")[0].replace("_"," ").strip())
@@ -121,17 +126,17 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
 
 def convert_vi_vlsp(extern_dir, tokenizer_dir, args):
     input_path = os.path.join(extern_dir, "vietnamese", "VLSP2013-WS-data")
-
+    input_pos_path = os.path.join(extern_dir, "vietnamese", "VLSP2013-POS-data")
     input_train_filename = os.path.join(input_path, "VLSP2013_WS_train_gold.txt")
     input_test_filename = os.path.join(input_path, "VLSP2013_WS_test_gold.txt")
     
-    input_pos_filename = os.path.join(input_path, "VLSP2013_POS_%s_BI_POS_Column.txt.goldSeg"%args.include_pos_data)
+    input_pos_filename = os.path.join(input_pos_path, "VLSP2013_POS_%s_BI_POS_Column.txt.goldSeg" % args.include_pos_data)
     if not os.path.exists(input_train_filename):
         raise FileNotFoundError("Cannot find train set for VLSP at %s" % input_train_filename)
     if not os.path.exists(input_test_filename):
         raise FileNotFoundError("Cannot find test set for VLSP at %s" % input_test_filename)
     pos_data = []
-    if args.include_pos_data != "-":
+    if args.include_pos_data:
         if not os.path.exists(input_pos_filename):
             raise FileNotFoundError("Cannot find pos dataset for VLSP at %" % input_pos_filename)
         else:
