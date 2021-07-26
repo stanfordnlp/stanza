@@ -57,6 +57,8 @@ def parse_args(args=None):
     parser.add_argument('--learning_rate', default=0.005, type=float, help='Learning rate for the optimizer')
     parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
 
+    parser.add_argument('--word_dropout', default=0.1, type=float, help='Dropout on the word embedding')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -190,6 +192,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
     leftover_training_data = []
     best_f1 = 0.0
     for epoch in range(args['epochs']):
+        model.train()
         logger.info("Starting epoch {}".format(epoch+1))
         epoch_data = leftover_training_data
         while len(epoch_data) < args['eval_interval']:
@@ -244,6 +247,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
 
 def run_dev_set(model, dev_trees):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
+    model.eval()
     treebank = []
     for gold_tree in tqdm(dev_trees):
         state = parse_transitions.initial_state_from_gold_tree(gold_tree, model)
