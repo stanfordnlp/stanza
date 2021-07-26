@@ -4,12 +4,134 @@ import json
 import numpy as np
 import re
 import logging
+import os
+from conllu import parse_incr
 
+import stanza.utils.default_paths as default_paths
 from stanza.models.common.utils import ud_scores, harmonic_mean
 from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
+paths = default_paths.get_default_paths()
+
+def create_dictionary(lang, train_path, external_path):
+    """
+    This function is to create a new dictionary.
+    The dictionary will be created using two sources: training dataset and external set (if any).
+    The dictionary will include words and their prefixes as format: {WORD:state} where WORD can be complete word or prefixes and
+    states can be in (1,2,3) where 1 means prefixes only, 2 means complete word and 3 means that string being both prefix and word.
+    """
+    dict = {}
+    word_list = set()
+
+    if train_path!=None:
+        if not os.path.isfile(train_path):
+            raise FileNotFoundError("Cannot open train set at %s" % train_path)
+
+        train_file = open(train_path, "r", encoding="utf-8")
+        for tokenlist in parse_incr(train_file):
+            for token in tokenlist:
+                word = token['form'].lower()
+                #check multiple_syllable word for vi
+                if lang == "vi_vlsp":
+                    if len(word.split(" "))>1 and any(map(str.isalpha, word)):
+                        #do not include the words that contain numbers.
+                        if not any(map(str.isdigit, word)):
+                            if dict.get(word, 0) == 0:
+                                temp = ""
+                                dict[word] = 2
+                                for char in word[:-1]:
+                                    temp += char
+                                    if dict.get(temp, 0) == 0:
+                                        dict[temp] = 1
+                                    elif dict.get(temp, 0) == 2:
+                                        dict[temp] = 3
+                            elif dict.get(word, 0) == 1:
+                                dict[word] = 3
+                            word_list.add(word)
+                else:
+                    if len(word)>1 and any(map(str.isalpha, word)):
+                        if not any(map(str.isdigit, word)):
+                            if dict.get(word, 0) == 0:
+                                temp = ""
+                                dict[word] = 2
+                                for char in word[:-1]:
+                                    temp += char
+                                    if dict.get(temp, 0) == 0:
+                                        dict[temp] = 1
+                                    elif dict.get(temp, 0) == 2:
+                                        dict[temp] = 3
+                            elif dict.get(word, 0) == 1:
+                                dict[word] = 3
+                            word_list.add(word)
+        print("Added ", len(word_list), " words found in training set to dictionary.")
+    word_list = set()
+    if external_path != None:
+        if not os.path.isfile(external_path):
+            raise FileNotFoundError("Cannot open external dictionary at %s" % external_path)
+
+        external_file = open(external_path, "r", encoding="utf-8")
+        lines = external_file.readlines()
+        for line in lines:
+            word = line.lower()
+            word = word.replace("\n","")
+            # check multiple_syllable word for vi
+            if lang == "vi_vlsp":
+                if len(word.split(" "))>1 and any(map(str.isalpha, word)):
+                    if not any(map(str.isdigit, word)):
+                        if dict.get(word, 0) == 0:
+                            temp = ""
+                            dict[word] = 2
+                            for char in word[:-1]:
+                                temp += char
+                                if dict.get(temp, 0) == 0:
+                                    dict[temp] = 1
+                                elif dict.get(temp, 0) == 2:
+                                    dict[temp] = 3
+                        elif dict.get(word, 0) == 1:
+                            dict[word] = 3
+                        word_list.add(word)
+            else:
+                if len(word) > 1 and any(map(str.isalpha, word)):
+                    if not any(map(str.isdigit, word)):
+                        if dict.get(word, 0) == 0:
+                            temp = ""
+                            dict[word] = 2
+                            for char in word[:-1]:
+                                temp += char
+                                if dict.get(temp, 0) == 0:
+                                    dict[temp] = 1
+                                elif dict.get(temp, 0) == 2:
+                                    dict[temp] = 3
+                        elif dict.get(word, 0) == 1:
+                            dict[word] = 3
+                        word_list.add(word)
+    print("Added ", len(word_list), " words found in external dict to dictionary.")
+
+    return dict
+
+def load_dict(args):
+    """
+    This function is to create a new dictionary and load it to training.
+    The external dictionary is expected to be inside the training dataset dir with format of: SHORTNAME-externaldict.txt
+    For example, vi_vlsp-externaldict.txt
+    """
+    shortname = args["shorthand"]
+    tokenize_dir = paths["TOKENIZE_DATA_DIR"]
+    train_path = f"{tokenize_dir}/{shortname}.train.gold.conllu"
+    external_dict_path = f"{tokenize_dir}/{shortname}-externaldict.txt"
+    if not os.path.exists(external_dict_path):
+        logger.info("External dictionary not found!")
+        external_dict_path = None
+    if not os.path.exists(train_path):
+        logger.info("Training dataset does not exist, thus cannot create dictionary" % (shortname))
+        train_path = None
+    if train_path==None and external_dict_path==None:
+        raise FileNotFoundError("Cannot find training set / external dictionary at %s and %s" % (train_path, external_dict_path))
+
+    return create_dictionary(shortname, train_path, external_dict_path)
+
 
 def load_mwt_dict(filename):
     if filename is not None:
@@ -258,11 +380,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
-
     all_preds = np.concatenate(all_preds, 0)
     labels = [y[1] for x in batches.data for y in x]
     counter = Counter(zip(all_preds, labels))
 
+    data = [y[0] for x in batches.data for y in x]
     def f1(pred, gold, mapping):
         pred = [mapping[p] for p in pred]
         gold = [mapping[g] for g in gold]
@@ -286,7 +408,7 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
             elif g > 0:
                 lastg = i
                 fn += 1
-
+            #check false negative and false positive cases
         if tp == 0:
             return 0
         else:

@@ -1,15 +1,14 @@
 from bisect import bisect_right
 from copy import copy
-import json
 import numpy as np
 import random
 import logging
 import re
 import torch
-
+import stanza.utils.default_paths as default_paths
 from .vocab import Vocab
-
 logger = logging.getLogger('stanza')
+paths = default_paths.get_default_paths()
 
 def filter_consecutive_whitespaces(para):
     filtered = []
@@ -26,11 +25,12 @@ NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
 NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
-
 class DataLoader:
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False, dict={}):
         self.args = args
         self.eval = evaluation
+        self.dict = dict
+
 
         # get input files
         txt_file = input_files['txt']
@@ -99,6 +99,7 @@ class DataLoader:
         """ Convert a paragraph to a list of processed sentences. """
         res = []
         funcs = []
+        
         for feat_func in self.args['feat_funcs']:
             if feat_func == 'end_of_para' or feat_func == 'start_of_para':
                 # skip for position-dependent features
@@ -107,17 +108,44 @@ class DataLoader:
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
                 func = lambda x: 1 if x[0].isupper() else 0
-            elif feat_func == 'all_caps':
-                func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
-
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
+
+        length = len(para)
+
+        #This function is to extract dictionary features for each character
+        def extract_dict_feat(idx):
+            dict_forward_feats = [0 for i in range(self.args['dict_feat'])]
+            dict_backward_feats = [0 for i in range(self.args['dict_feat'])]
+            forward_word = para[idx][0]
+            backward_word = para[idx][0]
+            found_prefix = True
+            for t in range(1,self.args['dict_feat']+1):
+                # concatenate each character and check if words found in dict not, stop if prefix not found
+                #check if idx+t is out of bound and if the prefix is already not found
+                if (idx + t) <= length-1 and found_prefix:
+                    forward_word += para[idx+t][0].lower()
+                    #check in json file if the word is present as prefix or word or None.
+                    feat = self.dict.get(forward_word,0)
+                    #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
+                    dict_forward_feats[t-1] = 0 if feat in (0,1) else 1
+                    #if the dict return 0 means no prefixes found, thus, stop looking for forward.
+                    if feat == 0:
+                        found_prefix = False
+            # backward check, similar to forward but looking backward instead.
+                #TODO: not sure how to optimize the backward check
+                if (idx - t) >= 0:
+                    backward_word = para[idx-t][0].lower() + backward_word
+                    feat = 0 if self.dict.get(backward_word,0) in (0,1) else 1
+                    dict_backward_feats[t-1] = feat
+
+            return dict_forward_feats + dict_backward_feats
 
         def process_sentence(sent):
             return [self.vocab.unit2id(y[0]) for y in sent], [y[1] for y in sent], [y[2] for y in sent], [y[0] for y in sent]
@@ -135,13 +163,19 @@ class DataLoader:
             if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
+
+            #if dictionary feature is selected
+            if self.args['dict_feat'] > 0:
+                dict_feats = extract_dict_feat(i)
+                feats = feats + dict_feats
+
             current += [(unit, label, feats)]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
                     res.append(process_sentence(current))
                 current = []
-
+                
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
                 res.append(process_sentence(current))
@@ -156,7 +190,7 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
+    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
@@ -276,6 +310,17 @@ class DataLoader:
                 for j in range(len(raw_units[i])):
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
+
+
+        if self.args['dict_feat'] > 0 and feat_unit_dropout > 0 and not self.eval:
+            #dropout features vector at training time.
+            mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
+            mask_feat[units == padid] = 0
+            for i in range(len(raw_units)):
+                for j in range(len(raw_units[i])):
+                    if mask_feat[i,j]:
+                        features[i,j,:] = 0
+
 
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)
