@@ -119,7 +119,7 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
         # even this is a larger dev set than the train set
         split_point = int(len(sentences) * 0.95)
         #check pos_data that aren't overlapping with current VLSP WS dataset
-        sentences_pos = [] if pos_data==None else [sent for sent in pos_data if ' '.join(sent) not in set_sentences]
+        sentences_pos = [] if pos_data is None else [sent for sent in pos_data if ' '.join(sent) not in set_sentences]
         print("Added ", len(sentences_pos), " sentences from POS dataset.")
         write_file(vlsp_include_spaces, output_filename, sentences[:split_point]+sentences_pos, shard)
         write_file(vlsp_include_spaces, split_filename, sentences[split_point:], split_shard)
