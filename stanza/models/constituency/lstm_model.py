@@ -152,6 +152,9 @@ class LSTMModel(BaseModel, nn.Module):
     def initial_transitions(self):
         return TreeStack(value=TransitionNode(None, self.zeros, self.zeros))
 
+    def initial_constituents(self):
+        return TreeStack(value=ConstituentNode(None, self.zeros, self.zeros))
+
     def get_top_word(self, word_queue):
         word_node = word_queue.value
         return word_node.value
@@ -218,13 +221,11 @@ class LSTMModel(BaseModel, nn.Module):
         constituent_input = constituent.hx
         constituent_input = constituent_input.unsqueeze(0)
 
-        if current_node:
-            hx = current_node.hx.unsqueeze(0)
-            cx = current_node.cx
-            hx, cx = self.constituent_lstm(constituent_input, (hx, cx))
-        else:
-            hx, cx = self.constituent_lstm(constituent_input)
-        hx = hx.squeeze(0)
+        hx = current_node.hx.unsqueeze(0)
+        cx = current_node.cx.unsqueeze(0)
+        hx, cx = self.constituent_lstm(constituent_input, (hx, cx))
+        hx = hx.squeeze()
+        cx = cx.squeeze()
         new_node = ConstituentNode(constituent.value, hx, cx)
         return constituents.push(new_node)
 
@@ -256,9 +257,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         word_hx = state.word_queue.value.hx
         transition_hx = state.transitions.value.hx
-
-        constituent_hx = state.constituents.value
-        constituent_hx = constituent_hx.hx if constituent_hx else self.zeros
+        constituent_hx = state.constituents.value.hx
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx))
         return self.W(hx)

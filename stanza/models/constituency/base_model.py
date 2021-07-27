@@ -30,6 +30,10 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
+    def initial_constituents(self):
+        pass
+
+    @abstractmethod
     def get_top_word(self, word_queue):
         pass
 
@@ -94,6 +98,9 @@ class SimpleModel(BaseModel):
         return word_queue
 
     def initial_transitions(self):
+        return TreeStack(value=None)
+
+    def initial_constituents(self):
         return TreeStack(value=None)
 
     def get_top_word(self, word_queue):
