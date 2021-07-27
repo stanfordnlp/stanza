@@ -96,23 +96,23 @@ class State:
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
 def initial_state_from_tagged_words(words, tags, model):
-    word_queue = TreeStack(value=None)
+    tag_list = []
     for word, tag in zip(reversed(words), reversed(tags)):
         word_node = Tree(label=word)
         tag_node = Tree(label=tag, children=[word_node])
-        word_queue = model.push_word(word_queue, tag_node)
-    return State(sentence_length=len(words), num_opens=0, word_queue=word_queue)
+        tag_list.append(tag_node)
+    return State(sentence_length=len(words), num_opens=0, word_queue=model.initial_word_queue(tag_list))
 
 def initial_state_from_gold_tree(tree, model):
-    word_queue = TreeStack(value=None)
     preterminals = [x for x in tree.yield_preterminals()]
     # put the words on the stack backwards
     preterminals.reverse()
+    tag_list = []
     for pt in preterminals:
         word_node = Tree(label=pt.children[0].label)
         tag_node = Tree(label=pt.label, children=[word_node])
-        word_queue = model.push_word(word_queue, tag_node)
-    return State(sentence_length=len(preterminals), num_opens=0, word_queue=word_queue)
+        tag_list.append(tag_node)
+    return State(sentence_length=len(preterminals), num_opens=0, word_queue=model.initial_word_queue(tag_list))
 
 @functools.total_ordering
 class Transition(ABC):
