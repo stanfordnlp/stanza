@@ -49,6 +49,7 @@ def parse_args(args=None):
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
     parser.add_argument('--train_batch_size', type=int, default=50, help='How many trees to train before taking an optimizer step')
+    parser.add_argument('--eval_batch_size', type=int, default=10, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
@@ -136,7 +137,7 @@ def evaluate(args, model_file):
     treebank = read_treebank(args['eval_file'])
     logger.info("Read {} trees for evaluation".format(len(treebank)))
 
-    f1 = run_dev_set(model, treebank)
+    f1 = run_dev_set(model, treebank, args['eval_batch_size'])
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
 def build_treebank(trees, args):
@@ -270,9 +271,9 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                 errors = []
                 answers = []
                 for gold_transition in sequence:
-                    outputs, pred_transition = model.predict(state)
+                    outputs, pred_transition = model.predict((state,))
                     trans_tensor = transition_tensors[gold_transition]
-                    errors.append(outputs)
+                    errors.append(outputs.squeeze())
                     answers.append(trans_tensor)
                     state = gold_transition.apply(state, model)
                     if pred_transition != gold_transition:
@@ -293,38 +294,63 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
         optimizer.zero_grad()
 
         # print statistics
-        f1 = run_dev_set(model, dev_trees)
+        f1 = run_dev_set(model, dev_trees, args['eval_batch_size'])
         if f1 > best_f1:
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
             lstm_model.save(model_file, model)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, correct, incorrect, epoch_loss, f1, best_f1))
 
-def run_dev_set(model, dev_trees):
+def run_dev_set(model, dev_trees, batch_size):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
     model.eval()
     treebank = []
-    for gold_tree in tqdm(dev_trees):
-        state = parse_transitions.initial_state_from_gold_tree(gold_tree, model)
-        transition_count = 0
-        while not state.finished(model) and transition_count < 1000:
-            transition_count = transition_count + 1
-            _, transition = model.predict(state, is_legal=True)
+
+    tree_iterator = iter(tqdm(dev_trees))
+    tree_batch = []
+    for _ in range(batch_size):
+        gold_tree = next(tree_iterator, None)
+        if gold_tree is None:
+            break
+        # TODO: can batch the initial_states
+        # tree, # transitions, state
+        # TODO: could store the number of transitions in the state...
+        tree_batch.append((gold_tree, 0, parse_transitions.initial_state_from_gold_tree(gold_tree, model)))
+
+    while len(tree_batch) > 0:
+        states = [tree[2] for tree in tree_batch]
+        _, transitions = model.predict(states, is_legal=True)
+
+        remove = set()
+        for idx, (state, transition) in enumerate(zip(states, transitions)):
             if not transition:
-                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))
+                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
+                remove.add(idx)
+                continue
+
+            # TODO: batch this as well!
+            state = transition.apply(state, model)
+            tree_batch[idx] = (tree_batch[idx][0], tree_batch[idx][1] + 1, state)
+            if tree_batch[idx][1] >= 1000:
+                # too many transitions
+                logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
+                remove.add(idx)
+                continue
+
+            if state.finished(model):
+                predicted_tree = state.get_tree(model)
+                gold_tree = tree_batch[idx][0]
+                # TODO: put an actual score here?
+                treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+                remove.add(idx)
+
+        tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+        for _ in range(batch_size - len(tree_batch)):
+            gold_tree = next(tree_iterator, None)
+            if gold_tree is None:
                 break
-            try:
-                state = transition.apply(state, model)
-            except AttributeError as e:
-                raise AttributeError("Ran into an error (possibly null pointer) executing {} after executing the following transitions:\n{}\nCurrent constituents\n{}".format(transition, state.transitions, state.constituents)) from e
+            tree_batch.append((gold_tree, 0, parse_transitions.initial_state_from_gold_tree(gold_tree, model)))
 
-        if transition_count >= 1000:
-            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))
-            continue
-
-        if state.finished(model):
-            predicted_tree = state.get_tree(model)
-            treebank.append((gold_tree, [(predicted_tree, 1.0)]))
 
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))
