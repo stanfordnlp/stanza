@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.tree_stack import TreeStack
 
 """
 The BaseModel is used to perform dependency injection on the transitions.
@@ -21,10 +22,7 @@ class BaseModel(ABC):
     """
 
     @abstractmethod
-    def push_word(self, word_queue, word):
-        """
-        word actually means a ParseTree with a tag node and word node
-        """
+    def initial_word_queue(self, tagged_words):
         pass
 
     @abstractmethod
@@ -80,12 +78,16 @@ class BaseModel(ABC):
     def get_root_labels(self):
         return ("ROOT",)
 
+
 class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
     """
-    def push_word(self, word_queue, word):
-        return word_queue.push(word)
+    def initial_word_queue(self, tagged_words):
+        word_queue = TreeStack(value=None)
+        for tag_node in tagged_words:
+            word_queue = word_queue.push(tag_node)
+        return word_queue
 
     def get_top_word(self, word_queue):
         return word_queue.value

@@ -5,12 +5,13 @@ import torch.nn as nn
 
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
+from stanza.models.constituency.tree_stack import TreeStack
 
 from stanza.models.constituency.parse_tree import Tree
 
 logger = logging.getLogger('stanza')
 
-WordNode = namedtuple("WordNode", ['value', 'hx', 'cx'])
+WordNode = namedtuple("WordNode", ['value', 'hx'])
 TransitionNode = namedtuple("TransitionNode", ['value', 'hx', 'cx'])
 # Invariant: the hx at the top of the constituency stack will have a
 # single dimension
@@ -82,7 +83,7 @@ class LSTMModel(BaseModel, nn.Module):
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
         self.register_buffer('zeros', torch.zeros(self.hidden_size))
 
-        self.word_lstm = nn.LSTMCell(input_size=self.word_input_size, hidden_size=self.hidden_size)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size)
         self.transition_lstm = nn.LSTMCell(input_size=self.transition_embedding_dim, hidden_size=self.hidden_size)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
@@ -125,31 +126,26 @@ class LSTMModel(BaseModel, nn.Module):
     def get_root_labels(self):
         return self.root_labels
 
-    def push_word(self, word_queue, word):
-        """
-        word actually means a ParseTree with a tag node and word node
-        """
-        word_idx = self.vocab_map.get(word.children[0].label, UNK_ID)
-        word_idx = self.vocab_tensors[word_idx]
+    def initial_word_queue(self, tagged_words):
+        word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
         word_input = self.embedding(word_idx)
 
-        tag_idx = self.tag_map.get(word.label, None)
-        if tag_idx is None:
-            raise ValueError("Parser not trained with tag: {}".format(word.label))
-        tag_idx = self.tag_tensors[tag_idx]
-        tag_input = self.tag_embedding(tag_idx)
+        try:
+            tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
+            tag_input = self.tag_embedding(tag_idx)
+        except KeyError as e:
+            raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
-        word_input = torch.cat([word_input, tag_input])
-        word_input = word_input.unsqueeze(0)
+        # now of size sentence x input
+        word_input = torch.cat([word_input, tag_input], dim=1)
+        # now of size sentence x 1 x input
+        word_input = word_input.unsqueeze(1)
+        outputs, _ = self.word_lstm(word_input)
 
-        current_node = word_queue.value
-        if current_node:
-            cx = current_node.cx
-            hx = current_node.hx
-            hx, cx = self.word_lstm(word_input, (hx, cx))
-        else:
-            hx, cx = self.word_lstm(word_input)
-        return word_queue.push(WordNode(word, hx, cx))
+        word_queue = TreeStack(value=None)
+        for idx, tag_node in enumerate(tagged_words):
+            word_queue = word_queue.push(WordNode(tag_node, outputs[idx, 0, :]))
+        return word_queue
 
     def get_top_word(self, word_queue):
         word_node = word_queue.value
@@ -258,7 +254,7 @@ class LSTMModel(BaseModel, nn.Module):
         # would simplify the earlier code blocks
         # TODO: make the word_hx always dim 1?
         word_hx = state.word_queue.value
-        word_hx = word_hx.hx.squeeze(0) if word_hx else self.zeros
+        word_hx = word_hx.hx.squeeze() if word_hx else self.zeros
 
         # TODO: also, ensure that transition_hx is always dim 1
         transition_hx = state.transitions.value
