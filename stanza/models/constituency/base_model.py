@@ -26,6 +26,10 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
+    def initial_transitions(self):
+        pass
+
+    @abstractmethod
     def get_top_word(self, word_queue):
         pass
 
@@ -88,6 +92,9 @@ class SimpleModel(BaseModel):
         for tag_node in tagged_words:
             word_queue = word_queue.push(tag_node)
         return word_queue
+
+    def initial_transitions(self):
+        return TreeStack(value=None)
 
     def get_top_word(self, word_queue):
         return word_queue.value

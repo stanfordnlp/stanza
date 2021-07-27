@@ -11,7 +11,7 @@ def build_initial_state(model):
     words = ["Unban", "Mox", "Opal"]
     tags = ["VB", "NNP", "NNP"]
 
-    state = parse_transitions.initial_state_from_tagged_words(words, tags, model)
+    state = parse_transitions.initial_state_from_words(words, tags, model)
     return state
 
 def test_initial_state(model=None):
