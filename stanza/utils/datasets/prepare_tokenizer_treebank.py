@@ -1023,6 +1023,7 @@ def add_specific_args(parser):
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
     convert_th_lst20.add_lst20_args(parser)
 
+    convert_vi_vlsp.add_vlsp_args(parser)
 def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
