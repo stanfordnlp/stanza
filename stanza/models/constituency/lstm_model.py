@@ -149,6 +149,9 @@ class LSTMModel(BaseModel, nn.Module):
             word_queue = word_queue.push(WordNode(tag_node, outputs[idx, 0, :].squeeze()))
         return word_queue
 
+    def initial_transitions(self):
+        return TreeStack(value=TransitionNode(None, self.zeros, self.zeros))
+
     def get_top_word(self, word_queue):
         word_node = word_queue.value
         return word_node.value
@@ -235,13 +238,10 @@ class LSTMModel(BaseModel, nn.Module):
         transition_input = transition_input.unsqueeze(0)
 
         current_node = transitions.value
-        if current_node:
-            cx = current_node.cx
-            hx = current_node.hx
-            hx, cx = self.transition_lstm(transition_input, (hx, cx))
-        else:
-            hx, cx = self.transition_lstm(transition_input)
-        return transitions.push(TransitionNode(transition, hx, cx))
+        cx = current_node.cx.unsqueeze(0)
+        hx = current_node.hx.unsqueeze(0)
+        hx, cx = self.transition_lstm(transition_input, (hx, cx))
+        return transitions.push(TransitionNode(transition, hx.squeeze(), cx.squeeze()))
 
     def get_top_transition(self, transitions):
         transition_node = transitions.value
@@ -255,15 +255,11 @@ class LSTMModel(BaseModel, nn.Module):
         part of applying the transitions, so this method is very simple
         """
         word_hx = state.word_queue.value.hx
-
-        # TODO: ensure that transition_hx is always dim 1
-        transition_hx = state.transitions.value
-        transition_hx = transition_hx.hx if transition_hx else self.zeros
-        if len(transition_hx.shape) == 2:
-            transition_hx = transition_hx.squeeze(0)
+        transition_hx = state.transitions.value.hx
 
         constituent_hx = state.constituents.value
         constituent_hx = constituent_hx.hx if constituent_hx else self.zeros
+
         hx = torch.cat((word_hx, transition_hx, constituent_hx))
         return self.W(hx)
 
