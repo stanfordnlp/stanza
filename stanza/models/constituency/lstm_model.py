@@ -144,9 +144,9 @@ class LSTMModel(BaseModel, nn.Module):
         word_input = self.word_dropout(word_input)
         outputs, _ = self.word_lstm(word_input)
 
-        word_queue = TreeStack(value=None)
+        word_queue = TreeStack(value=WordNode(None, self.zeros))
         for idx, tag_node in enumerate(tagged_words):
-            word_queue = word_queue.push(WordNode(tag_node, outputs[idx, 0, :]))
+            word_queue = word_queue.push(WordNode(tag_node, outputs[idx, 0, :].squeeze()))
         return word_queue
 
     def get_top_word(self, word_queue):
@@ -254,13 +254,9 @@ class LSTMModel(BaseModel, nn.Module):
         We've basically done all the work analyzing the state as
         part of applying the transitions, so this method is very simple
         """
-        # TODO: could make the sentinel have hx,cx=0
-        # would simplify the earlier code blocks
-        # TODO: make the word_hx always dim 1?
-        word_hx = state.word_queue.value
-        word_hx = word_hx.hx.squeeze() if word_hx else self.zeros
+        word_hx = state.word_queue.value.hx
 
-        # TODO: also, ensure that transition_hx is always dim 1
+        # TODO: ensure that transition_hx is always dim 1
         transition_hx = state.transitions.value
         transition_hx = transition_hx.hx if transition_hx else self.zeros
         if len(transition_hx.shape) == 2:
