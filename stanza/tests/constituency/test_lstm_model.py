@@ -100,22 +100,22 @@ def test_close(unary_model):
 
 def run_forward_checks(model):
     state = test_parse_transitions.build_initial_state(model)
-    model(state)
+    model((state,))
 
     shift = parse_transitions.Shift()
     state = shift.apply(state, model)
-    model(state)
+    model((state,))
 
     open_transition = parse_transitions.OpenConstituent("NP")
     assert open_transition.is_legal(state, model)
     state = open_transition.apply(state, model)
     assert state.num_opens == 1
-    model(state)
+    model((state,))
 
     state = shift.apply(state, model)
-    model(state)
+    model((state,))
     state = shift.apply(state, model)
-    model(state)
+    model((state,))
     assert state.num_opens == 1
     # now should have "mox", "opal" on the constituents
 
@@ -123,7 +123,8 @@ def run_forward_checks(model):
     assert close_transition.is_legal(state, model)
     state = close_transition.apply(state, model)
     assert state.num_opens == 0
-    model(state)
+
+    model((state,))
 
 def test_forward(pt, unary_model):
     """

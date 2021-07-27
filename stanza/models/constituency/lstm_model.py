@@ -14,6 +14,7 @@ logger = logging.getLogger('stanza')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
 TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
+
 # Invariant: the hx at the top of the constituency stack will have a
 # single dimension
 # We do this to maintain consistency between the different operations,
@@ -21,6 +22,7 @@ TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 # This will be unsqueezed in order to put into the next layer if needed
 ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
+
 
 class LSTMModel(BaseModel, nn.Module):
     """
@@ -296,34 +298,39 @@ class LSTMModel(BaseModel, nn.Module):
     def has_unary_transitions(self):
         return self.use_compound_unary
 
-    def forward(self, state):
+    def forward(self, states):
         """
         Return logits for a prediction of what transition to make next
 
         We've basically done all the work analyzing the state as
         part of applying the transitions, so this method is very simple
         """
-        word_hx = state.word_queue.value.hx
-        transition_hx = state.transitions.value.output
-        constituent_hx = state.constituents.value.output
+        word_hx = torch.stack([state.word_queue.value.hx for state in states])
+        transition_hx = torch.stack([state.transitions.value.output for state in states])
+        constituent_hx = torch.stack([state.constituents.value.output for state in states])
 
-        hx = torch.cat((word_hx, transition_hx, constituent_hx))
+        hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         hx = self.predict_dropout(hx)
         return self.W(hx)
 
     # TODO: merge this with forward?
-    def predict(self, state, is_legal=False):
-        predictions = self.forward(state)
-        pred_max = torch.argmax(predictions).item()
-        trans = self.transitions[pred_max]
-        if not is_legal or trans.is_legal(state, self):
-            return predictions, trans
-        _, indices = predictions.sort(descending=True)
-        for index in indices:
-            if self.transitions[index].is_legal(state, self):
-                return predictions, self.transitions[index]
+    def predict(self, states, is_legal=False):
+        predictions = self.forward(states)
+        pred_max = torch.argmax(predictions, axis=1)
 
-        return predictions, None
+        pred_trans = [None] * len(states)
+        for idx, state in enumerate(states):
+            trans = self.transitions[pred_max[idx]]
+            if not is_legal or trans.is_legal(state, self):
+                pred_trans[idx] = trans
+            else:
+                _, indices = predictions[idx, :].sort(descending=True)
+                for index in indices:
+                    if self.transitions[index].is_legal(state, self):
+                        pred_trans[idx] = self.transitions[index]
+                        break
+
+        return predictions, pred_trans
 
 
 def save(filename, model, skip_modules=True):
