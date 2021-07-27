@@ -24,6 +24,8 @@ def create_dictionary(lang, train_path, external_path):
     """
     dict = {}
     word_list = set()
+    pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
+    
     def add_word(word):
         if dict.get(word, 0) == 0:
             temp = ""
@@ -49,6 +51,9 @@ def create_dictionary(lang, train_path, external_path):
                 if lang == "vi_vlsp":
                     if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
                         add_word(word)
+                elif lang.startswith("th_"):
+                    if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)):
+                        add_word(word)
                 else:
                     if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
                         add_word(word)
@@ -67,6 +72,9 @@ def create_dictionary(lang, train_path, external_path):
             # check multiple_syllable word for vi
             if lang == "vi_vlsp":
                 if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
+                    add_word(word)
+            elif lang.startswith("th_"):
+                if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)):
                     add_word(word)
             else:
                 if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
