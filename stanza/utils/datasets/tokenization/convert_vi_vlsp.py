@@ -129,7 +129,7 @@ def convert_vi_vlsp(extern_dir, tokenizer_dir, args):
     input_train_filename = os.path.join(input_path, "VLSP2013_WS_train_gold.txt")
     input_test_filename = os.path.join(input_path, "VLSP2013_WS_test_gold.txt")
     
-    input_pos_filename = os.path.join(input_pos_path, "VLSP2013_POS_%s_BI_POS_Column.txt.goldSeg" % args.include_pos_data)
+    input_pos_filename = os.path.join(input_pos_path, "VLSP2013_POS_train_BI_POS_Column.txt.goldSeg")
     if not os.path.exists(input_train_filename):
         raise FileNotFoundError("Cannot find train set for VLSP at %s" % input_train_filename)
     if not os.path.exists(input_test_filename):
