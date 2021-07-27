@@ -96,11 +96,12 @@ def convert_pos_dataset(file_path):
             sent.append(line.split("\t")[0].replace("_"," ").strip())
     return sentences
         
-def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, split_filename=None, split_shard=None, pos_data = []):
+def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, split_filename=None, split_shard=None, pos_data = None):
     with open(input_filename) as fin:
         lines = fin.readlines()
 
     sentences = []
+    set_sentences = set()
     for line in lines:
         if len(line.replace("_", " ").split())>1:
             words = line.split()
@@ -112,11 +113,13 @@ def convert_file(vlsp_include_spaces, input_filename, output_filename, shard, sp
                 #only add sentences that hasn't been added before
                 if words not in sentences:
                     sentences.append(words)
+                    set_sentences.add(' '.join(words))
+                
     if split_filename is not None:
         # even this is a larger dev set than the train set
         split_point = int(len(sentences) * 0.95)
         #check pos_data that aren't overlapping with current VLSP WS dataset
-        sentences_pos = [sent for sent in pos_data if sent not in sentences]
+        sentences_pos = [] if pos_data==None else [sent for sent in pos_data if ' '.join(sent) not in set_sentences]
         print("Added ", len(sentences_pos), " sentences from POS dataset.")
         write_file(vlsp_include_spaces, output_filename, sentences[:split_point]+sentences_pos, shard)
         write_file(vlsp_include_spaces, split_filename, sentences[split_point:], split_shard)
@@ -134,7 +137,7 @@ def convert_vi_vlsp(extern_dir, tokenizer_dir, args):
         raise FileNotFoundError("Cannot find train set for VLSP at %s" % input_train_filename)
     if not os.path.exists(input_test_filename):
         raise FileNotFoundError("Cannot find test set for VLSP at %s" % input_test_filename)
-    pos_data = []
+    pos_data = None
     if args.include_pos_data:
         if not os.path.exists(input_pos_filename):
             raise FileNotFoundError("Cannot find pos dataset for VLSP at %" % input_pos_filename)
