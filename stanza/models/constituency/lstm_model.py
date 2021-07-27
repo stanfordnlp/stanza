@@ -173,6 +173,8 @@ class LSTMModel(BaseModel, nn.Module):
             node = Tree(label=label, children=[node])
             hx = top_constituent.hx
             hx = self.unary_transforms[label](hx)
+            # non-linearity after the unary transform
+            hx = self.tanh(hx)
             top_constituent = ConstituentNode(value=node, hx=hx, cx=None)
         return top_constituent
 
