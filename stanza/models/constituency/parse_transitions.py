@@ -96,7 +96,7 @@ class State:
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
 def initial_state_from_tagged_words(tagged_word_list, model):
-    return State(sentence_length=len(tagged_word_list), num_opens=0, word_queue=model.initial_word_queue(tagged_word_list), transitions=model.initial_transitions())
+    return State(sentence_length=len(tagged_word_list), num_opens=0, word_queue=model.initial_word_queue(tagged_word_list), transitions=model.initial_transitions(), constituents=model.initial_constituents())
 
 def initial_state_from_words(words, tags, model):
     tagged_word_list = []
