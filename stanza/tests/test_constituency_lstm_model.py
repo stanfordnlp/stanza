@@ -57,7 +57,7 @@ def model():
     tags = parse_tree.Tree.get_unique_tags(trees)
     root_labels = parse_tree.Tree.get_root_labels(trees)
 
-    args = constituency_parser.parse_args(args=[])
+    args = constituency_parser.parse_args(args=["--use_compound_unary"])
 
     model = lstm_model.LSTMModel(pt, transitions, constituents, tags, root_labels, args)
     return model

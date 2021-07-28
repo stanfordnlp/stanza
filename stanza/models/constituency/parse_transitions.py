@@ -51,6 +51,11 @@ class State:
         # and no parent
         return self.word_queue.parent is None
 
+    def empty_transitions(self):
+        # the first element of each stack is a sentinel with no value
+        # and no parent
+        return self.transitions.parent is None
+
     def has_one_constituent(self):
         if self.constituents.parent is None:
             return False
@@ -284,6 +289,13 @@ class OpenConstituent(Transition):
             return False
         if state.empty_word_queue():
             return False
+        if not model.has_unary_transitions():
+            # TODO: maybe cache this value if this is an expensive operation
+            is_root = self.label in model.get_root_labels()
+            if is_root:
+                return state.empty_transitions()
+            else:
+                return not state.empty_transitions()
         return True
 
     def __repr__(self):
@@ -338,6 +350,11 @@ class CloseConstituent(Transition):
         if state.num_opens <= 1 and not state.empty_word_queue():
             # don't close the last open until all words have been used
             return False
+        if not model.has_unary_transitions():
+            # in fact, we have to leave the top level constituent
+            # under the ROOT open if unary transitions are not possible
+            if state.num_opens == 2 and not state.empty_word_queue():
+                return False
         return True
 
     def __repr__(self):

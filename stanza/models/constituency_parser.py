@@ -59,6 +59,8 @@ def parse_args(args=None):
 
     parser.add_argument('--word_dropout', default=0.1, type=float, help='Dropout on the word embedding')
 
+    parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -137,11 +139,11 @@ def train(args, model_file):
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
     logger.info("Building training transition sequences")
-    train_sequences = transition_sequence.build_top_down_treebank(tqdm(train_trees))
+    train_sequences = transition_sequence.build_top_down_treebank(tqdm(train_trees), use_compound_unary=args['use_compound_unary'])
     train_transitions = transition_sequence.all_transitions(train_sequences)
 
     logger.info("Building dev transition sequences")
-    dev_sequences = transition_sequence.build_top_down_treebank(tqdm(dev_trees))
+    dev_sequences = transition_sequence.build_top_down_treebank(tqdm(dev_trees), use_compound_unary=args['use_compound_unary'])
     dev_transitions = transition_sequence.all_transitions(dev_sequences)
 
     logger.info("Total unique transitions in train set: {}".format(len(train_transitions)))
