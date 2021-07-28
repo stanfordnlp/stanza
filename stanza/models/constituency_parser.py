@@ -256,12 +256,12 @@ def run_dev_set(model, dev_trees):
             transition_count = transition_count + 1
             _, transition = model.predict(state, is_legal=True)
             if not transition:
-                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree, state.to_string(model)))
+                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))
                 break
             state = transition.apply(state, model)
 
         if transition_count >= 1000:
-            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree, state.to_string(model)))
+            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))
             continue
 
         if state.finished(model):
