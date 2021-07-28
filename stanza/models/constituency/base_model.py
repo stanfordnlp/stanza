@@ -86,6 +86,9 @@ class BaseModel(ABC):
     def get_root_labels(self):
         return ("ROOT",)
 
+    @abstractmethod
+    def has_unary_transitions(self):
+        pass
 
 class SimpleModel(BaseModel):
     """
@@ -132,3 +135,7 @@ class SimpleModel(BaseModel):
 
     def get_top_transition(self, transitions):
         return transitions.value
+
+    def has_unary_transitions(self):
+        # TODO: make this an option for testing purposes
+        return True
