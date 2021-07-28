@@ -43,3 +43,5 @@ def test_download_tokenize_mwt():
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="ewt", verbose=False)
         pipeline = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package="ewt")
         assert isinstance(pipeline, stanza.Pipeline)
+        # mwt should be added to the list
+        assert len(pipeline.loaded_processors) == 2
