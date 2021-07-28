@@ -221,11 +221,11 @@ class CompoundUnary(Transition):
         # don't unary transition a dummy, dummy
         if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
             return False
-        if not state.empty_word_queue():
-            return True
-        if not state.has_one_constituent():
-            return True
-        return self.labels[0] in model.get_root_labels()
+        is_root = self.labels[0] in model.get_root_labels()
+        if not state.empty_word_queue() or not state.has_one_constituent():
+            return not is_root
+        else:
+            return is_root
 
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)
