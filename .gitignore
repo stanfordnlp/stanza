@@ -162,6 +162,10 @@ cython_debug/
 # IDE-related
 .vscode/
 
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/workspace.xml
+
 # Jekyll stuff, triggered by running the docs locally
 .jekyll-cache/
 .jekyll-metadata
