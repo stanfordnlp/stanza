@@ -248,6 +248,9 @@ class LSTMModel(BaseModel, nn.Module):
         transition_node = transitions.value
         return transition_node.value
 
+    def has_unary_transitions(self):
+        return self.args['use_compound_unary']
+
     def forward(self, state):
         """
         Return logits for a prediction of what transition to make next
