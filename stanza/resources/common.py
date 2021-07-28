@@ -150,11 +150,30 @@ def sort_processors(processor_list):
                 sorted_list.append(item)
     return sorted_list
 
+def add_mwt(processors, resources, lang):
+    """Add mwt if tokenize is passed without mwt.
+
+    If tokenize is in the list, but mwt is not, and there is a corresponding
+    tokenize and mwt pair in the resources file, mwt is added so no missing
+    mwt errors are raised.
+    """
+    value = processors[TOKENIZE]
+    if value == "default" and MWT in resources[lang]['default_processors']:
+        logger.warning("Language %s package default expects mwt, which has been added", lang)
+        processors[MWT] = 'default'
+    elif (value in resources[lang][TOKENIZE]
+          and MWT in resources[lang]
+          and value in resources[lang][MWT]):
+        logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
+        processors[MWT] = value
+
 def maintain_processor_list(resources, lang, package, processors):
     processor_list = {}
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
+        if TOKENIZE in processors and MWT not in processors:
+            add_mwt(processors, resources, lang)
         for key, value in processors.items():
             assert(isinstance(key, str) and isinstance(value, str))
             if key not in PIPELINE_NAMES:
