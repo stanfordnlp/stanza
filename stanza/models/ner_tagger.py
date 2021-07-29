@@ -142,6 +142,12 @@ def train(args):
             # do not save pretrained embeddings individually
             pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
 
+        if pretrain is not None:
+            word_emb_dim = pretrain.emb.shape[1]
+            if args['word_emb_dim'] and args['word_emb_dim'] != word_emb_dim:
+                logger.warning("Embedding file has a dimension of {}.  Model will be built with that size instead of {}".format(word_emb_dim, args['word_emb_dim']))
+            args['word_emb_dim'] = word_emb_dim
+
         if args['charlm']:
             if args['charlm_shorthand'] is None:
                 raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
