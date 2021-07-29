@@ -58,6 +58,7 @@ def parse_args(args=None):
     parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
 
     parser.add_argument('--word_dropout', default=0.1, type=float, help='Dropout on the word embedding')
+    parser.add_argument('--predict_dropout', default=0.1, type=float, help='Dropout on the final prediction layer')
 
     parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
 
