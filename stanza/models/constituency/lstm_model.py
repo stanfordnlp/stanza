@@ -116,6 +116,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.tanh = nn.Tanh()
         self.word_dropout = nn.Dropout(self.args['word_dropout'])
+        self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
 
         # matrix for predicting the next transition using word/constituent/transition queues
         self.W = nn.Linear(self.hidden_size * 3, len(transitions))
@@ -263,6 +264,7 @@ class LSTMModel(BaseModel, nn.Module):
         constituent_hx = state.constituents.value.hx
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx))
+        hx = self.predict_dropout(hx)
         return self.W(hx)
 
     # TODO: merge this with forward?
