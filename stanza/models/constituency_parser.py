@@ -41,7 +41,8 @@ def parse_args(args=None):
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
-    parser.add_argument('--hidden_size', type=int, default=100, help="Size of the output layers of each of the three stacks")
+    parser.add_argument('--transition_hidden_size', type=int, default=20, help="Embedding size for transition stack")
+    parser.add_argument('--hidden_size', type=int, default=100, help="Size of the output layers for constituency stack and word queue")
 
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)

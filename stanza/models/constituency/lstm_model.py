@@ -62,6 +62,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         # TODO: add a delta embedding
         self.hidden_size = self.args['hidden_size']
+        self.transition_hidden_size = self.args['transition_hidden_size']
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim
@@ -82,9 +83,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
         self.register_buffer('zeros', torch.zeros(self.hidden_size))
+        self.register_buffer('transition_zeros', torch.zeros(self.transition_hidden_size))
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size)
-        self.transition_lstm = nn.LSTMCell(input_size=self.transition_embedding_dim, hidden_size=self.hidden_size)
+        self.transition_lstm = nn.LSTMCell(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
 
@@ -119,7 +121,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
 
         # matrix for predicting the next transition using word/constituent/transition queues
-        self.W = nn.Linear(self.hidden_size * 3, len(transitions))
+        self.W = nn.Linear(self.hidden_size * 2 + self.transition_hidden_size, len(transitions))
 
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
@@ -151,7 +153,7 @@ class LSTMModel(BaseModel, nn.Module):
         return word_queue
 
     def initial_transitions(self):
-        return TreeStack(value=TransitionNode(None, self.zeros, self.zeros))
+        return TreeStack(value=TransitionNode(None, self.transition_zeros, self.transition_zeros))
 
     def initial_constituents(self):
         return TreeStack(value=ConstituentNode(None, self.zeros, self.zeros))
