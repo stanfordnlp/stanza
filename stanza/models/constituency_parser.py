@@ -58,6 +58,7 @@ def parse_args(args=None):
 
     parser.add_argument('--learning_rate', default=0.005, type=float, help='Learning rate for the optimizer')
     parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
 
     parser.add_argument('--word_dropout', default=0.0, type=float, help='Dropout on the word embedding')
     parser.add_argument('--predict_dropout', default=0.0, type=float, help='Dropout on the final prediction layer')
@@ -182,7 +183,13 @@ def train(args, model_file):
 
 def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
     # TODO: try different loss functions and optimizers
-    optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+    if args['optim'].lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), weight_decay=args['weight_decay'])
+    else:
+        raise ValueError("Unknown optimizer: %s" % args.optim)
+
     loss_function = nn.CrossEntropyLoss()
     if args['cuda']:
         loss_function.cuda()
