@@ -15,95 +15,123 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 paths = default_paths.get_default_paths()
 
-def create_dictionary(lang, train_path, external_path):
+def create_dictionary(lexicon=None):
     """
-    This function is to create a new dictionary.
-    The dictionary will be created using two sources: training dataset and external set (if any).
-    The dictionary will include words and their prefixes as format: {WORD:state} where WORD can be complete word or prefixes and
+    This function is to create a new dictionary used for improving tokenization model for multi-syllable words languages
+    such as vi, zh or th. The dictionary will include words and their prefixes as format: {WORD:state} where WORD can be complete word or prefixes and
     states can be in (1,2,3) where 1 means prefixes only, 2 means complete word and 3 means that string being both prefix and word.
+    This standard way of labelling the dictionary is just to make it easier to check during data preparation.
+
+    :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
+    :param lexicon - set of words used to create dictionary
+    :return a dictionary object that contains words and their prefixes and suffixes.
     """
-    dict = {}
-    word_list = set()
-    pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
-    
+    dictionary = {"words":set(), "prefixes":set(), "suffixes":set()}
+
     def add_word(word):
-        if dict.get(word, 0) == 0:
-            temp = ""
-            dict[word] = 2
-            for char in word[:-1]:
-                temp += char
-                if dict.get(temp, 0) == 0:
-                    dict[temp] = 1
-                elif dict.get(temp, 0) == 2:
-                    dict[temp] = 3
-        elif dict.get(word, 0) == 1:
-            dict[word] = 3
-        word_list.add(word)
+        if word not in dictionary["words"]:
+            dictionary["words"].add(word)
+            prefix = ""
+            suffix = ""
+            for i in range(0,len(word)-1):
+                prefix = prefix + word[i]
+                suffix = word[len(word) - i - 1] + suffix
+                dictionary["prefixes"].add(prefix)
+                dictionary["suffixes"].add(suffix)
 
-    if train_path!=None:
+    for word in lexicon:
+        if len(word)>1:
+            add_word(word)
+
+    return dictionary
+def create_lexicon(shorthand=None, train_path=None, external_path=None):
+    """
+    This function is to create a lexicon to store all the words from the training set and external dictionary.
+    This lexicon will be saved with the model and will be used to create dictionary when the model is loaded.
+    The idea of separating lexicon and dictionary in two different phases is a good tradeoff between time and space.
+
+    :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
+    :param train_path - path to conllu train file
+    :param external_path - path to extenral dict, expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
+    :return a set lexicon object that contains all distinct words
+    """
+    lexicon = set()
+    pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
+    def check_valid_word(shorthand, word):
+        if shorthand.startswith("vi_"):
+            return True if len(word.split(" ")) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
+        elif shorthand.startswith("th_"):
+            return True if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)) else False
+        else:
+            return True if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
+
+    #checking for words in the training set to add them to lexicon.
+    if train_path is not None:
         if not os.path.isfile(train_path):
-            raise FileNotFoundError("Cannot open train set at %s" % train_path)
+            raise FileNotFoundError(f"Cannot open train set at {train_path}")
 
-        train_file = open(train_path, "r", encoding="utf-8")
+        #train_file = open(train_path, "r", encoding="utf-8")
+        
+        doc_conll,_ = CoNLL.conll2dict(input_file=train_path)
+
+        for sent_conll in doc_conll:
+            for token_conll in sent_conll:
+                #for token in token_conll:
+                #print(token)
+                word = token_conll['text'].lower()
+                #word = token_conll[1].lower()
+                if check_valid_word(shorthand, word):
+                    lexicon.add(word)
+        """
         for tokenlist in parse_incr(train_file):
             for token in tokenlist:
                 word = token['form'].lower()
-                if lang == "vi_vlsp":
-                    if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
-                        add_word(word)
-                elif lang.startswith("th_"):
-                    if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)):
-                        add_word(word)
-                else:
-                    if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
-                        add_word(word)
-        count = len(word_list)
-        print("Added ", count, " words found in training set to dictionary.")
+                if check_valid_word(shorthand, word):
+                    lexicon.add(word)
+        """
+        count_train = len(lexicon)
 
-    if external_path != None:
+        #train_file.close()
+
+        print("Added ", count_train, " words found in training set to dictionary.")
+
+    #checking for external dictionary and add them to lexicon.
+    if external_path is not None:
         if not os.path.isfile(external_path):
-            raise FileNotFoundError("Cannot open external dictionary at %s" % external_path)
+            raise FileNotFoundError(f"Cannot open external dictionary at {external_path}")
 
         external_file = open(external_path, "r", encoding="utf-8")
         lines = external_file.readlines()
         for line in lines:
             word = line.lower()
             word = word.replace("\n","")
-            # check multiple_syllable word for vi
-            if lang == "vi_vlsp":
-                if len(word.split(" "))>1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
-                    add_word(word)
-            elif lang.startswith("th_"):
-                if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)):
-                    add_word(word)
-            else:
-                if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)):
-                    add_word(word)
+            if check_valid_word(shorthand, word):
+                lexicon.add(word)
+        external_file.close()
 
-        print("Added another ", len(word_list) - count, " words found in external dict to dictionary.")
+        print("Added another ", len(lexicon) - count_train, " words found in external dict to dictionary.")
+    return lexicon
 
-    return dict
-
-def load_dict(args):
+def load_lexicon(args):
     """
     This function is to create a new dictionary and load it to training.
     The external dictionary is expected to be inside the training dataset dir with format of: SHORTNAME-externaldict.txt
     For example, vi_vlsp-externaldict.txt
     """
-    shortname = args["shorthand"]
+    shorthand = args["shorthand"]
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
-    train_path = f"{tokenize_dir}/{shortname}.train.gold.conllu"
-    external_dict_path = f"{tokenize_dir}/{shortname}-externaldict.txt"
+    train_path = f"{tokenize_dir}/{shorthand}.train.gold.conllu"
+    external_dict_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
     if not os.path.exists(external_dict_path):
         logger.info("External dictionary not found!")
         external_dict_path = None
     if not os.path.exists(train_path):
-        logger.info("Training dataset does not exist, thus cannot create dictionary" % (shortname))
+        logger.info(f"Training dataset does not exist, thus cannot create dictionary {shorthand}")
         train_path = None
-    if train_path==None and external_dict_path==None:
-        raise FileNotFoundError("Cannot find training set / external dictionary at %s and %s" % (train_path, external_dict_path))
+    if train_path is None and external_dict_path is None:
+        raise FileNotFoundError(f"Cannot find training set / external dictionary at {train_path} and {external_dict_path}")
 
-    return create_dictionary(shortname, train_path, external_dict_path)
+    return create_lexicon(shorthand, train_path, external_dict_path)
 
 
 def load_mwt_dict(filename):

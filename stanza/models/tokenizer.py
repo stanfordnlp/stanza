@@ -17,7 +17,7 @@ import json
 from stanza.models.common import utils
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.data import DataLoader
-from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions, load_dict
+from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
 from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
@@ -49,7 +49,7 @@ def parse_args(args=None):
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
-    parser.add_argument('--dict_feat', type=int, default=0, help="Number of dictionary features, usually the length of longest word in a dict")
+    parser.add_argument('--max_dict_word_len', type=int, default=0, help="Maximum length of word searching in dictionary features, setting to 0 (defaut) means dict feat is not chosen. Rec: 25-30")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
@@ -94,14 +94,16 @@ def main(args=None):
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
-    args['feat_dim'] = len(args['feat_funcs']) if args['dict_feat']==0 else len(args['feat_funcs']) + (args['dict_feat'])*2
+    args['feat_dim'] = len(args['feat_funcs']) if args['max_dict_word_len']==0 else len(args['feat_funcs']) + (args['max_dict_word_len'])*2
     save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
     args['save_name'] = os.path.join(args['save_dir'], save_name)
     utils.ensure_dir(args['save_dir'])
 
     if args['mode'] == 'train':
-        #only create a new dict when training
-        args['dict_tree'] = None if args["dict_feat"] == 0 else load_dict(args)
+        #load lexicon
+        args['lexicon'] = None if args["max_dict_word_len"] == 0 else load_lexicon(args)
+        #create the dictionary
+        args['dictionary'] = None if args["max_dict_word_len"] == 0 else create_dictionary(args['lexicon'])
         train(args)
     else:
         evaluate(args)
@@ -113,7 +115,7 @@ def train(args):
             'txt': args['txt_file'],
             'label': args['label_file']
             }
-    train_batches = DataLoader(args, input_files=train_input_files, dict=args["dict_tree"])
+    train_batches = DataLoader(args, input_files=train_input_files, dictionary=args["dictionary"])
     vocab = train_batches.vocab
 
     args['vocab_size'] = len(vocab)
@@ -122,13 +124,13 @@ def train(args):
             'txt': args['dev_txt_file'],
             'label': args['dev_label_file']
             }
-    dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True,  dict=args["dict_tree"])
+    dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True,  dictionary=args["dictionary"])
 
     if args['use_mwt'] is None:
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, dict=args['dict_tree'], use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, lexicon=args['lexicon'], use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])
@@ -187,8 +189,8 @@ def evaluate(args):
     trainer = Trainer(model_file=args['load_name'] or args['save_name'], use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
-    dict = trainer.dict
-
+    lexicon = trainer.lexicon
+    dictionary = create_dictionary(lexicon)
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'load_name', 'save_name']:
             args[k] = loaded_args[k]
@@ -198,7 +200,8 @@ def evaluate(args):
             'label': args['label_file']
             }
 
-    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dict=dict)
+
+    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dictionary=dictionary)
 
     oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 

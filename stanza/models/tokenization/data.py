@@ -24,10 +24,10 @@ NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
 class DataLoader:
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False, dict={}):
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False, dictionary=None):
         self.args = args
         self.eval = evaluation
-        self.dict = dict
+        self.dictionary = dictionary
 
 
         # get input files
@@ -116,32 +116,36 @@ class DataLoader:
         composite_func = lambda x: [f(x) for f in funcs]
 
         length = len(para)
-
         #This function is to extract dictionary features for each character
         def extract_dict_feat(idx):
-            dict_forward_feats = [0 for i in range(self.args['dict_feat'])]
-            dict_backward_feats = [0 for i in range(self.args['dict_feat'])]
+            dict_forward_feats = [0 for i in range(self.args['max_dict_word_len'])]
+            dict_backward_feats = [0 for i in range(self.args['max_dict_word_len'])]
             forward_word = para[idx][0]
             backward_word = para[idx][0]
-            found_prefix = True
-            for t in range(1,self.args['dict_feat']+1):
+            prefix = True
+            suffix = True
+            for window in range(1,self.args['max_dict_word_len']+1):
                 # concatenate each character and check if words found in dict not, stop if prefix not found
                 #check if idx+t is out of bound and if the prefix is already not found
-                if (idx + t) <= length-1 and found_prefix:
-                    forward_word += para[idx+t][0].lower()
+                if (idx + window) <= length-1 and prefix:
+                    forward_word += para[idx+window][0].lower()
                     #check in json file if the word is present as prefix or word or None.
-                    feat = self.dict.get(forward_word,0)
+                    feat = 1 if forward_word in self.dictionary["words"] else 0
                     #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
-                    dict_forward_feats[t-1] = 0 if feat in (0,1) else 1
+                    dict_forward_feats[window-1] = feat
                     #if the dict return 0 means no prefixes found, thus, stop looking for forward.
-                    if feat == 0:
-                        found_prefix = False
-            # backward check, similar to forward but looking backward instead.
-                #TODO: not sure how to optimize the backward check
-                if (idx - t) >= 0:
-                    backward_word = para[idx-t][0].lower() + backward_word
-                    feat = 0 if self.dict.get(backward_word,0) in (0,1) else 1
-                    dict_backward_feats[t-1] = feat
+                    if forward_word not in self.dictionary["prefixes"]:
+                        prefix = False
+                #backward check: similar to forward
+                if (idx - window) >= 0 and suffix:
+                    backward_word = para[idx-window][0].lower() + backward_word
+                    feat = 1 if backward_word in self.dictionary["words"] else 0
+                    dict_backward_feats[window-1] = feat
+                    if backward_word not in self.dictionary["suffixes"]:
+                        suffix = False
+
+                if not prefix and not suffix:
+                    break
 
             return dict_forward_feats + dict_backward_feats
 
@@ -163,7 +167,7 @@ class DataLoader:
                 feats.append(f)
 
             #if dictionary feature is selected
-            if self.args['dict_feat'] > 0:
+            if self.args['max_dict_word_len'] > 0:
                 dict_feats = extract_dict_feat(i)
                 feats = feats + dict_feats
 
@@ -173,7 +177,6 @@ class DataLoader:
                     # get rid of sentences that are too long during training of the tokenizer
                     res.append(process_sentence(current))
                 current = []
-                
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
                 res.append(process_sentence(current))
@@ -309,9 +312,11 @@ class DataLoader:
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
 
-
-        if self.args['dict_feat'] > 0 and feat_unit_dropout > 0 and not self.eval:
-            #dropout features vector at training time.
+        # dropout unit feature vector in addition to only torch.dropout in the model.
+        # experiments showed that only torch.dropout hurts the model
+        # we believe it is because the dict feature vector is modtly scarse so it makes
+        # more sense to drop out the whole vector instead of only single element.
+        if self.args['max_dict_word_len'] > 0 and feat_unit_dropout > 0 and not self.eval:
             mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
             mask_feat[units == padid] = 0
             for i in range(len(raw_units)):
