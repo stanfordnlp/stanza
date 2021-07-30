@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
@@ -18,6 +17,8 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.server.parser_eval import EvaluateParser
+
+tqdm = utils.get_tqdm()
 
 logger = logging.getLogger('stanza')
 
