@@ -77,7 +77,7 @@ class JavaProtobufContext(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        if self.pipe.poll() is not None:
+        if self.pipe.poll() is None:
             self.pipe.stdin.write((0).to_bytes(4, 'big'))
             self.pipe.stdin.flush()
 
