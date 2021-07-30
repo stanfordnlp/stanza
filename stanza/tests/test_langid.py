@@ -2,9 +2,13 @@
 Basic tests of langid module
 """
 
+import pytest
+
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline.multilingual import MultilingualPipeline
+
+pytestmark = pytest.mark.skip
 
 def test_langid():
     """
