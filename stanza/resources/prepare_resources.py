@@ -89,6 +89,7 @@ default_treebanks = {
 
 # default ner for languages
 default_ners = {
+  "af": "nchlt",
   "ar": "aqmar",
   "bg": "bsnlp19",
   "de": "conll03",
@@ -97,6 +98,7 @@ default_ners = {
   "fi": "turku",
   "fr": "wikiner",
   "hu": "combined",
+  "it": "fbk",
   "nl": "conll02",
   "ru": "wikiner",
   "uk": "languk",
@@ -107,6 +109,7 @@ default_ners = {
 
 # default charlms for languages
 default_charlms = {
+  "af": "oscar",
   "ar": "ccwiki",
   "bg": "conll17",
   "de": "newswiki",
@@ -114,6 +117,7 @@ default_charlms = {
   "es": "newswiki",
   "fi": "conll17",
   "fr": "newswiki",
+  "it": "conll17",
   "nl": "ccwiki",
   "ru": "newswiki",
   "vi": "conll17",
