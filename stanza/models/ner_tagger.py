@@ -128,7 +128,7 @@ def train(args):
         _, trainer, vocab = load_model(args, model_file)
     else:
         if args['finetune']:
-            logger.warning('Finetune is set to true but model file is not found. Continuing with training from scratch.')
+            raise FileNotFoundError('Finetune is set to true but model file is not found: {}'.format(model_file))
 
         # load pretrained vectors
         if args['wordvec_pretrain_file']:
