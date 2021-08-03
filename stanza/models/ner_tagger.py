@@ -166,6 +166,8 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
+    utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev")
+
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
