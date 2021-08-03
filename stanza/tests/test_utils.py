@@ -123,3 +123,9 @@ def test_split_into_batches():
 
     # double check that unsort is working as expected
     assert data == utils.unsort(ordered, orig_idx)
+
+
+def test_find_missing_tags():
+    assert utils.find_missing_tags(["O", "PER", "LOC"], ["O", "PER", "LOC"]) == []
+    assert utils.find_missing_tags(["O", "PER", "LOC"], ["O", "PER", "LOC", "ORG"]) == ['ORG']
+    assert utils.find_missing_tags([["O", "PER"], ["O", "LOC"]], [["O", "PER"], ["LOC", "ORG"]]) == ['ORG']

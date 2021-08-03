@@ -279,3 +279,23 @@ def set_random_seed(seed, cuda):
     if cuda:
         torch.cuda.manual_seed(seed)
     return seed
+
+def find_missing_tags(known_tags, test_tags):
+    if isinstance(known_tags, list) and isinstance(known_tags[0], list):
+        known_tags = set(x for y in known_tags for x in y)
+    if isinstance(test_tags, list) and isinstance(test_tags[0], list):
+        test_tags = sorted(set(x for y in test_tags for x in y))
+    missing_tags = sorted(x for x in test_tags if x not in known_tags)
+    return missing_tags
+
+def warn_missing_tags(known_tags, test_tags, test_set_name):
+    """
+    Print a warning if any tags present in the second list are not in the first list.
+
+    Can also handle a list of lists.
+    """
+    missing_tags = find_missing_tags(known_tags, test_tags)
+    if len(missing_tags) > 0:
+        logger.warning("Found tags in {} missing from the expected tag set: {}".format(test_set_name, missing_tags))
+        return True
+    return False
