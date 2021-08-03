@@ -166,7 +166,9 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
-    utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev")
+    if args['finetune']:
+        utils.warn_missing_tags([i for i in trainer.vocab['tag']], train_batch.tags, "training set")
+    utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -261,7 +263,8 @@ def evaluate(args):
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(json.load(open(args['eval_file'])))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
-    
+    utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
+
     logger.info("Start evaluation...")
     preds = []
     for i, b in enumerate(batch):
