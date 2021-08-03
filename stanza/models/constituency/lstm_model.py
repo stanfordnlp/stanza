@@ -116,7 +116,13 @@ class LSTMModel(BaseModel, nn.Module):
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
-        self.tanh = nn.Tanh()
+        if self.args['nonlinearity'] == 'tanh':
+            self.nonlinearity = nn.Tanh()
+        elif self.args['nonlinearity'] == 'relu':
+            self.nonlinearity = nn.ReLU()
+        else:
+            raise ValueError('Chosen value of nonlinearity, "%s", not handled' % self.args['nonlinearity'])
+
         self.word_dropout = nn.Dropout(self.args['word_dropout'])
         self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
 
@@ -183,7 +189,7 @@ class LSTMModel(BaseModel, nn.Module):
             hx = top_constituent.hx
             hx = self.unary_transforms[label](hx)
             # non-linearity after the unary transform
-            hx = self.tanh(hx)
+            hx = self.nonlinearity(hx)
             top_constituent = ConstituentNode(value=node, hx=hx, cx=None)
         return top_constituent
 
@@ -210,8 +216,7 @@ class LSTMModel(BaseModel, nn.Module):
         backward_hx = backward_hx[-1, 0, :]
 
         hx = self.reduce_linear(torch.cat((forward_hx, backward_hx)))
-        # TODO: try others, like relu, to see if they also do the job but faster
-        hx = self.tanh(hx)
+        hx = self.nonlinearity(hx)
 
         node = Tree(label=label, children=[child.value for child in children])
         return ConstituentNode(value=node, hx=hx, cx=None)
