@@ -12,16 +12,17 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, dict=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
-            # load everything from file
+            # load everything from file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
             self.load(model_file)
         else:
-            # build model from scratch
+            # build model from scratch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
             self.args = args
             self.vocab = vocab
-            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+            self.dict = dict
+            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
         if use_cuda:
             self.model.cuda()
@@ -32,18 +33,19 @@ class Trainer(BaseTrainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = optim.Adam(self.parameters, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
-        self.lang = self.args['lang'] # language determines how token normalization is done
+        self.lang = self.args['lang'] # language determines how token normalization is done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
 
     def update(self, inputs):
         self.model.train()
-        units, labels, features, _ = inputs
+        units, labels, features, _, su = inputs
 
         if self.use_cuda:
             units = units.cuda()
             labels = labels.cuda()
             features = features.cuda()
+            su = su.cuda()
 
-        pred = self.model(units, features)
+        pred = self.model(units, su, features)
 
         self.optimizer.zero_grad()
         classes = pred.size(2)
@@ -57,14 +59,16 @@ class Trainer(BaseTrainer):
 
     def predict(self, inputs):
         self.model.eval()
-        units, labels, features, _ = inputs
+
+        units, labels, features, _, su = inputs
 
         if self.use_cuda:
             units = units.cuda()
             labels = labels.cuda()
             features = features.cuda()
+            su = su.cuda()
 
-        pred = self.model(units, features)
+        pred = self.model(units, su, features)
 
         return pred.data.cpu().numpy()
 
@@ -72,6 +76,7 @@ class Trainer(BaseTrainer):
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
                 'vocab': self.vocab.state_dict(),
+                'dict': self.dict,
                 'config': self.args
                 }
         try:
@@ -88,9 +93,15 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if self.args.get('use_mwt', None) is None:
-            # Default to True as many currently saved models
-            # were built with mwt layers
+            # Default to True as many currently saved models                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+            # were built with mwt layers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
             self.args['use_mwt'] = True
-        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
+        self.dict = checkpoint['dict']
+
+
+
+
+
