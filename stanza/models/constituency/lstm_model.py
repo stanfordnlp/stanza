@@ -92,8 +92,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         # when pushing a new constituent made from a single word_tag pair
         # note that the word_tag pair has been mapped to hidden_size at this point
-        # TODO: test if that is best
-        self.word_to_constituent = nn.Linear(self.hidden_size, self.hidden_size)
+        # also including word_tag pair - could try more configuratioins and sizes
+        self.word_to_constituent = nn.Linear(self.hidden_size + self.word_input_size, self.hidden_size)
 
         unary_transforms = {}
         for constituent in self.constituent_map:
@@ -127,6 +127,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
 
         # matrix for predicting the next transition using word/constituent/transition queues
+        # word size + constituency size + transition size
         self.W = nn.Linear(self.hidden_size * 2 + self.transition_hidden_size, len(transitions))
 
     def add_unsaved_module(self, name, module):
@@ -152,6 +153,8 @@ class LSTMModel(BaseModel, nn.Module):
         word_input = word_input.unsqueeze(1)
         word_input = self.word_dropout(word_input)
         outputs, _ = self.word_lstm(word_input)
+        outputs = torch.cat((outputs, word_input), axis=2)
+        outputs = self.word_to_constituent(outputs)
 
         word_queue = TreeStack(value=WordNode(None, self.zeros))
         for idx, tag_node in enumerate(tagged_words):
@@ -171,8 +174,7 @@ class LSTMModel(BaseModel, nn.Module):
     def transform_word_to_constituent(self, state):
         word_node = state.word_queue.value
         word = word_node.value
-        hx = word_node.hx.squeeze()
-        hx = self.word_to_constituent(hx)
+        hx = word_node.hx
         return ConstituentNode(value=word, hx=hx, cx=None)
 
     def dummy_constituent(self, dummy):
