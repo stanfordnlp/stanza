@@ -33,6 +33,7 @@ def parse_args(args=None):
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag")
+    parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
@@ -170,6 +171,10 @@ def train(args, model_file):
         if tag not in tags:
             raise RuntimeError("Found tag {} in the dev set which is not a tag in the train set".format(tag))
 
+    # we don't check against the words in the dev set as it is
+    # expected there will be some UNK words
+    words = parse_tree.Tree.get_unique_words(train_trees)
+
     pretrain = load_pretrain(args)
 
     # at this point we have:
@@ -177,7 +182,7 @@ def train(args, model_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, root_labels, args)
+    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, root_labels, args)
     if args['cuda']:
         model.cuda()
 

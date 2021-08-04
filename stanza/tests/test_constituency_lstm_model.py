@@ -55,11 +55,12 @@ def model():
     transitions = transition_sequence.all_transitions(transitions)
     constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
     tags = parse_tree.Tree.get_unique_tags(trees)
+    words = parse_tree.Tree.get_unique_words(trees)
     root_labels = parse_tree.Tree.get_root_labels(trees)
 
     args = constituency_parser.parse_args(args=["--use_compound_unary"])
 
-    model = lstm_model.LSTMModel(pt, transitions, constituents, tags, root_labels, args)
+    model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, root_labels, args)
     return model
 
 def test_initial_model(model):

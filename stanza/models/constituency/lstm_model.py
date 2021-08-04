@@ -31,7 +31,7 @@ class LSTMModel(BaseModel, nn.Module):
       transition_embedding_dim
       constituent_embedding_dim
     """
-    def __init__(self, pretrain, transitions, constituents, tags, root_labels, args):
+    def __init__(self, pretrain, transitions, constituents, tags, words, root_labels, args):
         """
         constituents: a list of all possible constituents in the treebank
         tags: a list of all possible tags in the treebank
@@ -60,12 +60,22 @@ class LSTMModel(BaseModel, nn.Module):
         # precompute tensors for the constituents
         self.register_buffer('constituent_tensors', torch.tensor(range(len(self.constituent_map)), requires_grad=False))
 
-        # TODO: add a delta embedding
         self.hidden_size = self.args['hidden_size']
         self.transition_hidden_size = self.args['transition_hidden_size']
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim
+        self.delta_embedding_dim = self.args['delta_embedding_dim']
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+
+        # TODO: add a max_norm?
+        self.delta_words = sorted(list(words))
+        self.delta_word_map = { word: i+2 for i, word in enumerate(self.delta_words) }
+        assert PAD_ID == 0
+        assert UNK_ID == 1
+        self.delta_embedding = nn.Embedding(num_embeddings = len(self.delta_words)+2,
+                                            embedding_dim = self.delta_embedding_dim,
+                                            padding_idx = 0)
+        self.register_buffer('delta_tensors', torch.tensor(range(len(self.delta_words) + 2), requires_grad=False))
 
         self.tags = sorted(list(tags))
         self.tag_map = { t: i for i, t in enumerate(self.tags) }
@@ -141,6 +151,10 @@ class LSTMModel(BaseModel, nn.Module):
         word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
         word_input = self.embedding(word_idx)
 
+        # TODO: occasionally learn UNK at train time
+        delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
+        delta_input = self.delta_embedding(delta_idx)
+
         try:
             tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
             tag_input = self.tag_embedding(tag_idx)
@@ -148,7 +162,7 @@ class LSTMModel(BaseModel, nn.Module):
             raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
         # now of size sentence x input
-        word_input = torch.cat([word_input, tag_input], dim=1)
+        word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
         # now of size sentence x 1 x input
         word_input = word_input.unsqueeze(1)
         word_input = self.word_dropout(word_input)
@@ -305,6 +319,7 @@ def save(filename, model, skip_modules=True):
         'transitions': model.transitions,
         'constituents': model.constituents,
         'tags': model.tags,
+        'words': model.delta_words,
         'root_labels': model.root_labels,
     }
 
@@ -326,6 +341,7 @@ def load(filename, pretrain):
                           transitions=checkpoint['transitions'],
                           constituents=checkpoint['constituents'],
                           tags=checkpoint['tags'],
+                          words=checkpoint['words'],
                           root_labels=checkpoint['root_labels'],
                           args=checkpoint['config'])
     else:
