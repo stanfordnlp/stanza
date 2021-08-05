@@ -200,19 +200,20 @@ def evaluate(args):
     trainer = Trainer(model_file=args['load_name'] or args['save_name'], use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
 
-    lexicon = trainer.lexicon
-    dictionary = create_dictionary(lexicon)
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'load_name', 'save_name']:
             args[k] = loaded_args[k]
-
+    
+    args['lexicon'] = None if not args['use_dictionary'] else trainer.lexicon
+    args['dictionary'] = None if not args['use_dictionary'] else create_dictionary(lexicon)
+        
     eval_input_files = {
             'txt': args['txt_file'],
             'label': args['label_file']
             }
 
 
-    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dictionary=dictionary)
+    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dictionary=args['dictionary'])
 
     oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 

@@ -18,16 +18,17 @@ paths = default_paths.get_default_paths()
 def create_dictionary(lexicon=None):
     """
     This function is to create a new dictionary used for improving tokenization model for multi-syllable words languages
-    such as vi, zh or th. The dictionary will include words and their prefixes as format: {WORD:state} where WORD can be complete word or prefixes and
-    states can be in (1,2,3) where 1 means prefixes only, 2 means complete word and 3 means that string being both prefix and word.
-    This standard way of labelling the dictionary is just to make it easier to check during data preparation.
+    such as vi, zh or th. This function takes the lexicon as input and output a dictionary that contains three set:
+    words, prefixes and suffixes where prefixes set should contains all the prefixes in the lexicon and similar for suffixes.
+    The point of having prefixes/suffixes sets in the  dictionary is just to make it easier to check during data preparation.
 
     :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
     :param lexicon - set of words used to create dictionary
     :return a dictionary object that contains words and their prefixes and suffixes.
     """
+    
     dictionary = {"words":set(), "prefixes":set(), "suffixes":set()}
-
+    
     def add_word(word):
         if word not in dictionary["words"]:
             dictionary["words"].add(word)
@@ -49,6 +50,8 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
     This function is to create a lexicon to store all the words from the training set and external dictionary.
     This lexicon will be saved with the model and will be used to create dictionary when the model is loaded.
     The idea of separating lexicon and dictionary in two different phases is a good tradeoff between time and space.
+    Note that we eliminate all the long words but less frequently appeared in the lexicon by only taking 95-percentile
+    list of words.
 
     :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
     :param train_path - path to conllu train file
@@ -57,7 +60,9 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
     """
     lexicon = set()
     length_freq = []
+    #this regex is to check if a character is an actual Thai character as seems .isalpha() python method doesn't pick up Thai accent characters..
     pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
+    
     def check_valid_word(shorthand, word):
         if shorthand.startswith("vi_"):
             return True if len(word.split(" ")) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
@@ -99,7 +104,7 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         logger.info(f"Added another {len(lexicon) - count_word} words from the external dict to dictionary.")
         
 
-    #automaticallu calculate the number of dictionary features (window size to look for words) based on the frequency of word length
+    #automatically calculate the number of dictionary features (window size to look for words) based on the frequency of word length
     #take the length at 95-percentile to eliminate all the longest (maybe) compounds words in the lexicon
     num_dict_feat = int(np.percentile(length_freq, 95))
     lexicon = {word for word in lexicon if len(word) <= num_dict_feat }

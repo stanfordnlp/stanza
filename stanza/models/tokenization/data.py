@@ -29,7 +29,6 @@ class DataLoader:
         self.eval = evaluation
         self.dictionary = dictionary
 
-
         # get input files
         txt_file = input_files['txt']
         label_file = input_files['label']
@@ -97,7 +96,6 @@ class DataLoader:
         """ Convert a paragraph to a list of processed sentences. """
         res = []
         funcs = []
-        
         for feat_func in self.args['feat_funcs']:
             if feat_func == 'end_of_para' or feat_func == 'start_of_para':
                 # skip for position-dependent features
@@ -112,6 +110,7 @@ class DataLoader:
                 raise Exception('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
+
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
 
@@ -177,6 +176,7 @@ class DataLoader:
                     # get rid of sentences that are too long during training of the tokenizer
                     res.append(process_sentence(current))
                 current = []
+
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
                 res.append(process_sentence(current))
@@ -323,8 +323,7 @@ class DataLoader:
                 for j in range(len(raw_units[i])):
                     if mask_feat[i,j]:
                         features[i,j,:] = 0
-
-
+                        
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)
         features = torch.from_numpy(features)
