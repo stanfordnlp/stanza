@@ -1,5 +1,6 @@
 from collections import namedtuple
 import logging
+import random
 import torch
 import torch.nn as nn
 
@@ -31,7 +32,7 @@ class LSTMModel(BaseModel, nn.Module):
       transition_embedding_dim
       constituent_embedding_dim
     """
-    def __init__(self, pretrain, transitions, constituents, tags, words, root_labels, args):
+    def __init__(self, pretrain, transitions, constituents, tags, words, rare_words, root_labels, args):
         """
         constituents: a list of all possible constituents in the treebank
         tags: a list of all possible tags in the treebank
@@ -76,6 +77,8 @@ class LSTMModel(BaseModel, nn.Module):
                                             embedding_dim = self.delta_embedding_dim,
                                             padding_idx = 0)
         self.register_buffer('delta_tensors', torch.tensor(range(len(self.delta_words) + 2), requires_grad=False))
+
+        self.rare_words = set(rare_words)
 
         self.tags = sorted(list(tags))
         self.tag_map = { t: i for i, t in enumerate(self.tags) }
@@ -151,8 +154,14 @@ class LSTMModel(BaseModel, nn.Module):
         word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
         word_input = self.embedding(word_idx)
 
-        # TODO: occasionally learn UNK at train time
-        delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
+        # this occasionally learns UNK at train time
+        word_labels = [word.children[0].label for word in tagged_words]
+        if self.training:
+            for idx, word in enumerate(word_labels):
+                if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency']:
+                    word_labels[idx] = None
+        delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in word_labels])
+
         delta_input = self.delta_embedding(delta_idx)
 
         try:
@@ -320,6 +329,7 @@ def save(filename, model, skip_modules=True):
         'constituents': model.constituents,
         'tags': model.tags,
         'words': model.delta_words,
+        'rare_words': model.rare_words,
         'root_labels': model.root_labels,
     }
 
@@ -342,6 +352,7 @@ def load(filename, pretrain):
                           constituents=checkpoint['constituents'],
                           tags=checkpoint['tags'],
                           words=checkpoint['words'],
+                          rare_words=checkpoint['rare_words'],
                           root_labels=checkpoint['root_labels'],
                           args=checkpoint['config'])
     else:
