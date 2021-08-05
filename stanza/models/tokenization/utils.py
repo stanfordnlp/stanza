@@ -56,6 +56,7 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
     :return a set lexicon object that contains all distinct words
     """
     lexicon = set()
+    length_freq = []
     pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
     def check_valid_word(shorthand, word):
         if shorthand.startswith("vi_"):
@@ -70,30 +71,16 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         if not os.path.isfile(train_path):
             raise FileNotFoundError(f"Cannot open train set at {train_path}")
 
-        #train_file = open(train_path, "r", encoding="utf-8")
-        
         doc_conll,_ = CoNLL.conll2dict(input_file=train_path)
 
         for sent_conll in doc_conll:
             for token_conll in sent_conll:
-                #for token in token_conll:
-                #print(token)
                 word = token_conll['text'].lower()
-                #word = token_conll[1].lower()
-                if check_valid_word(shorthand, word):
+                if check_valid_word(shorthand, word) and word not in lexicon:
                     lexicon.add(word)
-        """
-        for tokenlist in parse_incr(train_file):
-            for token in tokenlist:
-                word = token['form'].lower()
-                if check_valid_word(shorthand, word):
-                    lexicon.add(word)
-        """
-        count_train = len(lexicon)
-
-        #train_file.close()
-
-        print("Added ", count_train, " words found in training set to dictionary.")
+                    length_freq.append(len(word))
+        count_word = len(lexicon)
+        logger.info(f"Added {count_word} words from the training data to the lexicon.")
 
     #checking for external dictionary and add them to lexicon.
     if external_path is not None:
@@ -105,17 +92,25 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         for line in lines:
             word = line.lower()
             word = word.replace("\n","")
-            if check_valid_word(shorthand, word):
+            if check_valid_word(shorthand, word) and word not in lexicon:
                 lexicon.add(word)
+                length_freq.append(len(word))
         external_file.close()
+        logger.info(f"Added another {len(lexicon) - count_word} words from the external dict to dictionary.")
+        
 
-        print("Added another ", len(lexicon) - count_train, " words found in external dict to dictionary.")
-    return lexicon
+    #automaticallu calculate the number of dictionary features (window size to look for words) based on the frequency of word length
+    #take the length at 95-percentile to eliminate all the longest (maybe) compounds words in the lexicon
+    num_dict_feat = int(np.percentile(length_freq, 95))
+    lexicon = {word for word in lexicon if len(word) <= num_dict_feat }
+    logger.info(f"Final lexicon consists of {len(lexicon)} words after getting rid of long words.")
+
+    return lexicon, num_dict_feat
 
 def load_lexicon(args):
     """
     This function is to create a new dictionary and load it to training.
-    The external dictionary is expected to be inside the training dataset dir with format of: SHORTNAME-externaldict.txt
+    The external dictionary is expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
     For example, vi_vlsp-externaldict.txt
     """
     shorthand = args["shorthand"]
@@ -123,7 +118,7 @@ def load_lexicon(args):
     train_path = f"{tokenize_dir}/{shorthand}.train.gold.conllu"
     external_dict_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
     if not os.path.exists(external_dict_path):
-        logger.info("External dictionary not found!")
+        logger.info("External dictionary not found! Checking training data...")
         external_dict_path = None
     if not os.path.exists(train_path):
         logger.info(f"Training dataset does not exist, thus cannot create dictionary {shorthand}")

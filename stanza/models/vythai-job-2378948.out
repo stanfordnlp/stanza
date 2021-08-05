@@ -1,0 +1,60 @@
+slurm submission log: 2021-08-04 18:09:35.263966
+created following sbatch script: 
+
+###############################
+
+#!/bin/bash
+
+#SBATCH --cpus-per-task=2
+#SBATCH --exclude=jagupard28,jagupard29
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=vythai-job-2378948
+#SBATCH --mem=16G
+#SBATCH --open-mode=append
+#SBATCH --output=vythai-job-2378948.out
+#SBATCH --partition=jag-standard
+#SBATCH --time=10-0
+
+# activate your desired anaconda environment
+. /u/nlp/anaconda/main/anaconda3/etc/profile.d/conda.sh ; conda activate py-3.6.8
+
+# cd to working directory
+cd .
+
+# launch commands
+srun --unbuffered run_as_child_processes '-' 'high'
+
+###############################
+
+submission to slurm complete!
+
+
+###############################
+slurm submission output
+
+Submitted batch job 3176569
+
+
+
+###############################
+
+###############################
+start time: 2021-08-04 18:31:43.782340
+machine: jagupard23.stanford.edu
+conda env: py-3.6.8
+###############################
+running following processes
+
+	-
+	high
+
+
+###############################
+command outputs: 
+
+
+/bin/sh: 0: -c requires an argument
+/bin/sh: 1: high: not found
+###############################
+end time: 2021-08-04 18:32:02.562688
+elapsed time: 0:00:18.780348

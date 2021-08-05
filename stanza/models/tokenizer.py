@@ -4,6 +4,15 @@ Entry point for training and evaluating a neural tokenizer.
 This tokenizer treats tokenization and sentence segmentation as a tagging problem, and uses a combination of
 recurrent and convolutional architectures.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
+
+Updated: This new version of tokenizer model incorporates the dictionary feature, especially useful for languages that
+have multi-syllable words such as Vietnamese, Chinese or Thai. In summary, a lexicon contains all unique words found in 
+training dataset and external lexicon (if any) is created during training and saved alongside the model after training.
+Using this lexicon, a dictionary is created which includes "words", "prefixes" and "suffixes" sets. During data preparation,
+dictionary features are extracted at each character position, to "look ahead" and "look backward" to see if any words formed
+found in the dictionary. The window size (or the dictionary feature length) is defined at the 95-percentile among all the existing
+words in the lexicon, this is to eliminate the less frequent but long words (avoid having a high-dimension feat vector). Prefixes 
+and suffixes are used to stop early during the window-dictionary checking process.  
 """
 
 import argparse
@@ -49,7 +58,7 @@ def parse_args(args=None):
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
-    parser.add_argument('--max_dict_word_len', type=int, default=0, help="Maximum length of word searching in dictionary features, setting to 0 (defaut) means dict feat is not chosen. Rec: 25-30")
+    parser.add_argument('--use_dictionary', action='store_true', help="Use dictionary feature. The lexicon is created using the training data and external dict (if any) expected to be found under the same folder of training dataset, formatted as SHORTHAND-externaldict.txt where each line in this file is a word. For example, data/zh_gsdsimp-externaldict.txt")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
@@ -94,16 +103,18 @@ def main(args=None):
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
-    args['feat_dim'] = len(args['feat_funcs']) if args['max_dict_word_len']==0 else len(args['feat_funcs']) + (args['max_dict_word_len'])*2
+    args['feat_dim'] = len(args['feat_funcs'])
     save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
     args['save_name'] = os.path.join(args['save_dir'], save_name)
     utils.ensure_dir(args['save_dir'])
 
     if args['mode'] == 'train':
         #load lexicon
-        args['lexicon'] = None if args["max_dict_word_len"] == 0 else load_lexicon(args)
+        args['lexicon'], args['num_dict_feat'] = (None, None) if not args["use_dictionary"] else load_lexicon(args)
         #create the dictionary
-        args['dictionary'] = None if args["max_dict_word_len"] == 0 else create_dictionary(args['lexicon'])
+        args['dictionary'] = None if not args["use_dictionary"] else create_dictionary(args['lexicon'])
+        #adjust the feat_dim
+        args['feat_dim'] += args['num_dict_feat']*2 if args["use_dictionary"] else 0
         train(args)
     else:
         evaluate(args)

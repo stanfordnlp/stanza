@@ -118,13 +118,13 @@ class DataLoader:
         length = len(para)
         #This function is to extract dictionary features for each character
         def extract_dict_feat(idx):
-            dict_forward_feats = [0 for i in range(self.args['max_dict_word_len'])]
-            dict_backward_feats = [0 for i in range(self.args['max_dict_word_len'])]
+            dict_forward_feats = [0 for i in range(self.args['num_dict_feat'])]
+            dict_backward_feats = [0 for i in range(self.args['num_dict_feat'])]
             forward_word = para[idx][0]
             backward_word = para[idx][0]
             prefix = True
             suffix = True
-            for window in range(1,self.args['max_dict_word_len']+1):
+            for window in range(1,self.args['num_dict_feat']+1):
                 # concatenate each character and check if words found in dict not, stop if prefix not found
                 #check if idx+t is out of bound and if the prefix is already not found
                 if (idx + window) <= length-1 and prefix:
@@ -143,7 +143,7 @@ class DataLoader:
                     dict_backward_feats[window-1] = feat
                     if backward_word not in self.dictionary["suffixes"]:
                         suffix = False
-
+                #if cannot find both prefix and suffix, then exit the loop
                 if not prefix and not suffix:
                     break
 
@@ -167,7 +167,7 @@ class DataLoader:
                 feats.append(f)
 
             #if dictionary feature is selected
-            if self.args['max_dict_word_len'] > 0:
+            if self.args['use_dictionary']:
                 dict_feats = extract_dict_feat(i)
                 feats = feats + dict_feats
 
@@ -314,9 +314,9 @@ class DataLoader:
 
         # dropout unit feature vector in addition to only torch.dropout in the model.
         # experiments showed that only torch.dropout hurts the model
-        # we believe it is because the dict feature vector is modtly scarse so it makes
+        # we believe it is because the dict feature vector is mostly scarse so it makes
         # more sense to drop out the whole vector instead of only single element.
-        if self.args['max_dict_word_len'] > 0 and feat_unit_dropout > 0 and not self.eval:
+        if self.args['use_dictionary'] and feat_unit_dropout > 0 and not self.eval:
             mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
             mask_feat[units == padid] = 0
             for i in range(len(raw_units)):
