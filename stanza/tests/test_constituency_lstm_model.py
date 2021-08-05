@@ -43,12 +43,12 @@ TREEBANK = """
     (. .)))
 """
 
-
 @pytest.fixture(scope="module")
-def model():
-    # TODO: build a fake embedding some other way?
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+def pt():
+    return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
 
+def build_model(pt, *args):
+    # TODO: build a fake embedding some other way?
     trees = tree_reader.read_trees(TREEBANK)
 
     transitions = transition_sequence.build_top_down_treebank(trees)
@@ -59,38 +59,38 @@ def model():
     rare_words = parse_tree.Tree.get_rare_words(trees)
     root_labels = parse_tree.Tree.get_root_labels(trees)
 
-    args = constituency_parser.parse_args(args=["--use_compound_unary"])
+    args = constituency_parser.parse_args(args)
 
     model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, rare_words, root_labels, args)
     return model
 
-def test_initial_model(model):
+@pytest.fixture(scope="module")
+def unary_model(pt):
+    return build_model(pt, "--use_compound_unary")
+
+def test_initial_model(unary_model):
     # does nothing, just tests that the construction went okay
     pass
     
-def test_initial_state(model):
-    test_constituency_parse_transitions.test_initial_state(model)
+def test_initial_state(unary_model):
+    test_constituency_parse_transitions.test_initial_state(unary_model)
 
-def test_shift(model):
-    test_constituency_parse_transitions.test_shift(model)
+def test_shift(unary_model):
+    test_constituency_parse_transitions.test_shift(unary_model)
 
-def test_unary(model):
-    test_constituency_parse_transitions.test_unary(model)
+def test_unary(unary_model):
+    test_constituency_parse_transitions.test_unary(unary_model)
 
-def test_unary_requires_root(model):
-    test_constituency_parse_transitions.test_unary_requires_root(model)
+def test_unary_requires_root(unary_model):
+    test_constituency_parse_transitions.test_unary_requires_root(unary_model)
 
-def test_open(model):
-    test_constituency_parse_transitions.test_open(model)
+def test_open(unary_model):
+    test_constituency_parse_transitions.test_open(unary_model)
 
-def test_close(model):
-    test_constituency_parse_transitions.test_close(model)
+def test_close(unary_model):
+    test_constituency_parse_transitions.test_close(unary_model)
 
-def test_forward(model):
-    """
-    Checks that the forward pass doesn't crash when run after various operations
-    Doesn't check the forward pass for making reasonable answers
-    """
+def run_forward_checks(model):
     state = test_constituency_parse_transitions.build_initial_state(model)
     model(state)
 
@@ -116,3 +116,11 @@ def test_forward(model):
     state = close_transition.apply(state, model)
     assert state.num_opens == 0
     model(state)
+
+def test_forward(pt, unary_model):
+    """
+    Checks that the forward pass doesn't crash when run after various operations
+
+    Doesn't check the forward pass for making reasonable answers
+    """
+    run_forward_checks(unary_model)
