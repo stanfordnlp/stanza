@@ -2,7 +2,7 @@
 Tree datastructure
 """
 
-from collections import deque
+from collections import deque, Counter
 from io import StringIO
 
 from stanza.models.common.doc import StanzaObject
@@ -136,6 +136,22 @@ class Tree(StanzaObject):
         for tree in trees:
             tree.visit_preorder(leaf = lambda x: words.add(x.label))
         return sorted(words)
+
+    @staticmethod
+    def get_rare_words(trees, threshold=0.05):
+        """
+        Walks over all of the trees and gets the least frequently occurring words.
+
+        threshold: choose the bottom X percent
+        """
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        words = Counter()
+        for tree in trees:
+            tree.visit_preorder(leaf = lambda x: words.update([x.label]))
+        threshold = max(int(len(words) * threshold), 1)
+        return sorted(x[0] for x in words.most_common()[:-threshold-1:-1])
 
     @staticmethod
     def get_root_labels(trees):

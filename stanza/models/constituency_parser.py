@@ -68,6 +68,9 @@ def parse_args(args=None):
 
     parser.add_argument('--nonlinearity', default='tanh', choices=['tanh', 'relu'], help='Nonlinearity to use in the model')
 
+    parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
+    parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -174,6 +177,7 @@ def train(args, model_file):
     # we don't check against the words in the dev set as it is
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
+    rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
 
     pretrain = load_pretrain(args)
 
@@ -182,7 +186,7 @@ def train(args, model_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, root_labels, args)
+    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, args)
     if args['cuda']:
         model.cuda()
 
