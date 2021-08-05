@@ -19,9 +19,8 @@ TransitionNode = namedtuple("TransitionNode", ['value', 'hx', 'cx'])
 # We do this to maintain consistency between the different operations,
 # which sometimes result in different shapes
 # This will be unsqueezed in order to put into the next layer if needed
-# TODO: this is used for the nodes before they get pushed as well
-# perhaps need to separate those uses into different things
 ConstituentNode = namedtuple("ConstituentNode", ['value', 'hx', 'cx'])
+Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 class LSTMModel(BaseModel, nn.Module):
     """
@@ -198,13 +197,13 @@ class LSTMModel(BaseModel, nn.Module):
         word_node = state.word_queue.value
         word = word_node.value
         hx = word_node.hx
-        return ConstituentNode(value=word, hx=hx, cx=None)
+        return Constituent(value=word, hx=hx)
 
     def dummy_constituent(self, dummy):
         label = dummy.label
         constituent_index = self.constituent_tensors[self.constituent_map[label]]
         hx = self.dummy_embedding(constituent_index)
-        return ConstituentNode(value=dummy, hx=hx, cx=None)
+        return Constituent(value=dummy, hx=hx)
 
     def unary_transform(self, constituents, labels):
         top_constituent = constituents.value
@@ -215,7 +214,7 @@ class LSTMModel(BaseModel, nn.Module):
             hx = self.unary_transforms[label](hx)
             # non-linearity after the unary transform
             hx = self.nonlinearity(hx)
-            top_constituent = ConstituentNode(value=node, hx=hx, cx=None)
+            top_constituent = Constituent(value=node, hx=hx)
         return top_constituent
 
     def build_constituent(self, label, children):
@@ -244,7 +243,7 @@ class LSTMModel(BaseModel, nn.Module):
         hx = self.nonlinearity(hx)
 
         node = Tree(label=label, children=[child.value for child in children])
-        return ConstituentNode(value=node, hx=hx, cx=None)
+        return Constituent(value=node, hx=hx)
 
     def push_constituent(self, constituents, constituent):
         current_node = constituents.value
