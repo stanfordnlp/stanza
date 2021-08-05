@@ -13,13 +13,13 @@ from stanza.models.constituency.parse_tree import Tree
 logger = logging.getLogger('stanza')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
-TransitionNode = namedtuple("TransitionNode", ['value', 'hx', 'cx'])
+TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 # Invariant: the hx at the top of the constituency stack will have a
 # single dimension
 # We do this to maintain consistency between the different operations,
 # which sometimes result in different shapes
 # This will be unsqueezed in order to put into the next layer if needed
-ConstituentNode = namedtuple("ConstituentNode", ['value', 'hx', 'cx'])
+ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 class LSTMModel(BaseModel, nn.Module):
@@ -93,14 +93,17 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
 
+        self.num_layers = args['num_lstm_layers']
+
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
         self.register_buffer('zeros', torch.zeros(self.hidden_size))
-        self.register_buffer('transition_zeros', torch.zeros(self.transition_hidden_size))
+        self.register_buffer('transition_zeros', torch.zeros(self.num_layers, 1, self.transition_hidden_size))
+        self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size)
-        self.transition_lstm = nn.LSTMCell(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
+        self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
-        self.constituent_lstm = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
+        self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
 
         # when pushing a new constituent made from a single word_tag pair
         # note that the word_tag pair has been mapped to hidden_size at this point
@@ -123,8 +126,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         # forward and backward pieces to make a bi-lstm
         # TODO: make the hidden size here an option?
-        self.forward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
-        self.backward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
+        self.forward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
+        self.backward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
@@ -184,10 +187,10 @@ class LSTMModel(BaseModel, nn.Module):
         return word_queue
 
     def initial_transitions(self):
-        return TreeStack(value=TransitionNode(None, self.transition_zeros, self.transition_zeros))
+        return TreeStack(value=TransitionNode(None, self.transition_zeros[-1, 0, :], self.transition_zeros, self.transition_zeros))
 
     def initial_constituents(self):
-        return TreeStack(value=ConstituentNode(None, self.zeros, self.zeros))
+        return TreeStack(value=ConstituentNode(None, self.constituent_zeros[-1, 0, :], self.constituent_zeros, self.constituent_zeros))
 
     def get_top_word(self, word_queue):
         word_node = word_queue.value
@@ -207,31 +210,31 @@ class LSTMModel(BaseModel, nn.Module):
 
     def unary_transform(self, constituents, labels):
         top_constituent = constituents.value
+        node = top_constituent.value
+        hx = top_constituent.output
         for label in reversed(labels):
-            node = top_constituent.value
             node = Tree(label=label, children=[node])
-            hx = top_constituent.hx
             hx = self.unary_transforms[label](hx)
             # non-linearity after the unary transform
             hx = self.nonlinearity(hx)
-            top_constituent = Constituent(value=node, hx=hx)
+        top_constituent = Constituent(value=node, hx=hx)
         return top_constituent
 
     def build_constituent(self, label, children):
         constituent_index = self.constituent_tensors[self.constituent_map[label]]
-        node_hx = [child.hx for child in children]
+        node_hx = [child.output for child in children]
         label_hx = [self.constituent_embedding(constituent_index)]
 
-        forward_hx = torch.stack(label_hx + node_hx)
-        forward_hx = forward_hx.unsqueeze(1)
+        forward_hx = torch.stack(label_hx + node_hx, axis=0)
         # should now be: (#nodes, 1, hidden_dim)
+        forward_hx = forward_hx.unsqueeze(1)
         # transform...
         forward_hx = self.forward_reduce_lstm(forward_hx)[0]
         # take just the output of the final layer
         forward_hx = forward_hx[-1, 0, :]
 
         node_hx.reverse()
-        backward_hx = torch.stack(label_hx + node_hx)
+        backward_hx = torch.stack(label_hx + node_hx, axis=0)
         backward_hx = backward_hx.unsqueeze(1)
         # should now be: (#nodes, 1, hidden_dim)
         # transform...
@@ -251,14 +254,12 @@ class LSTMModel(BaseModel, nn.Module):
         # TODO: make the dimensions on the stack consistent
         # shift & unary make different dimension results
         constituent_input = constituent.hx
-        constituent_input = constituent_input.unsqueeze(0)
+        constituent_input = constituent_input.unsqueeze(0).unsqueeze(0)
 
-        hx = current_node.hx.unsqueeze(0)
-        cx = current_node.cx.unsqueeze(0)
-        hx, cx = self.constituent_lstm(constituent_input, (hx, cx))
-        hx = hx.squeeze()
-        cx = cx.squeeze()
-        new_node = ConstituentNode(constituent.value, hx, cx)
+        hx = current_node.hx
+        cx = current_node.cx
+        output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
+        new_node = ConstituentNode(constituent.value, output.squeeze(), hx, cx)
         return constituents.push(new_node)
 
     def get_top_constituent(self, constituents):
@@ -268,13 +269,13 @@ class LSTMModel(BaseModel, nn.Module):
     def push_transition(self, transitions, transition):
         transition_idx = self.transition_tensors[self.transition_map[transition]]
         transition_input = self.transition_embedding(transition_idx)
-        transition_input = transition_input.unsqueeze(0)
+        transition_input = transition_input.unsqueeze(0).unsqueeze(0)
 
         current_node = transitions.value
-        cx = current_node.cx.unsqueeze(0)
-        hx = current_node.hx.unsqueeze(0)
-        hx, cx = self.transition_lstm(transition_input, (hx, cx))
-        return transitions.push(TransitionNode(transition, hx.squeeze(), cx.squeeze()))
+        cx = current_node.cx
+        hx = current_node.hx
+        output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
+        return transitions.push(TransitionNode(transition, output.squeeze(), hx, cx))
 
     def get_top_transition(self, transitions):
         transition_node = transitions.value
@@ -291,8 +292,8 @@ class LSTMModel(BaseModel, nn.Module):
         part of applying the transitions, so this method is very simple
         """
         word_hx = state.word_queue.value.hx
-        transition_hx = state.transitions.value.hx
-        constituent_hx = state.constituents.value.hx
+        transition_hx = state.transitions.value.output
+        constituent_hx = state.constituents.value.output
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx))
         hx = self.predict_dropout(hx)
