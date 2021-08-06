@@ -73,6 +73,8 @@ def parse_args(args=None):
 
     parser.add_argument('--num_lstm_layers', default=1, type=int, help='How many layers to use in the LSTMs')
 
+    parser.add_argument('--train_method', default='gold_entire', choices=['random_step', 'early_termination', 'gold_entire'], help='Different training methods to use')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -237,26 +239,55 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                 optimizer.zero_grad()
 
             state = parse_transitions.initial_state_from_gold_tree(tree, model)
-            for gold_transition in sequence:
-                trans_tensor = transition_tensors[gold_transition]
-                # TODO: try different methods, such as enforcing the GOLD transition and continuing
-                # this is currently the EARLY_TERMINATION method
-                # for GOLD, we would need to do two things:
-                #  1) backward(retain_graph=True)
-                #  2) solve "one of the variables needed for gradient computation has been modified by an inplace operation"
-                # one problem is that gets super slow
+            if args['train_method'] == 'random_step':
+                random_idx = random.randint(0, len(sequence) - 1)
+                for gold_transition in sequence[:random_idx]:
+                    state = gold_transition.apply(state, model)
+                gold_transition = sequence[random_idx]
                 outputs, pred_transition = model.predict(state)
+                outputs = outputs.unsqueeze(0)
+                trans_tensor = transition_tensors[gold_transition]
                 if pred_transition != gold_transition:
                     incorrect = incorrect + 1
-                    outputs = outputs.unsqueeze(0)
-                    tree_loss = loss_function(outputs, trans_tensor)
-                    tree_loss.backward()
-                    epoch_loss += tree_loss.item()
-                    break
                 else:
                     correct = correct + 1
+                tree_loss = loss_function(outputs, trans_tensor)
+                tree_loss.backward()
+                epoch_loss += tree_loss.item()
+            elif args['train_method'] == 'early_termination':
+                for gold_transition in sequence:
+                    outputs, pred_transition = model.predict(state)
+                    if pred_transition != gold_transition:
+                        incorrect = incorrect + 1
+                        outputs = outputs.unsqueeze(0)
+                        trans_tensor = transition_tensors[gold_transition]
+                        tree_loss = loss_function(outputs, trans_tensor)
+                        tree_loss.backward()
+                        epoch_loss += tree_loss.item()
+                        break
+                    else:
+                        correct = correct + 1
 
-                state = gold_transition.apply(state, model)
+                    state = gold_transition.apply(state, model)
+            elif args['train_method'] == 'gold_entire':
+                errors = []
+                answers = []
+                for gold_transition in sequence:
+                    outputs, pred_transition = model.predict(state)
+                    trans_tensor = transition_tensors[gold_transition]
+                    errors.append(outputs)
+                    answers.append(trans_tensor)
+                    state = gold_transition.apply(state, model)
+                    if pred_transition != gold_transition:
+                        incorrect = incorrect + 1
+                    else:
+                        correct = correct + 1
+
+                errors = torch.stack(errors)
+                answers = torch.cat(answers)
+                tree_loss = loss_function(errors, answers)
+                tree_loss.backward()
+                epoch_loss += tree_loss.item()
 
         # there will always be leftover, so call step() one more time
         optimizer.step()
