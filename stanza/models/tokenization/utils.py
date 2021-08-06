@@ -5,7 +5,6 @@ import numpy as np
 import re
 import logging
 import os
-from conllu import parse_incr
 
 import stanza.utils.default_paths as default_paths
 from stanza.models.common.utils import ud_scores, harmonic_mean
@@ -64,6 +63,10 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
     pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
     
     def check_valid_word(shorthand, word):
+        """
+        This function is to check if the word are multi-syllable words and not numbers. 
+        For vi, whitespaces are syllabe-separator.
+        """
         if shorthand.startswith("vi_"):
             return True if len(word.split(" ")) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
         elif shorthand.startswith("th_"):
