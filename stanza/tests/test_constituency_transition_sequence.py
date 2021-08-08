@@ -75,3 +75,22 @@ def test_all_transitions_no_unary():
 
     expected = [Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("PP"), OpenConstituent("ROOT"), OpenConstituent("SBARQ"), OpenConstituent("SQ"), OpenConstituent("VP"), OpenConstituent("WHNP")]
     assert transition_sequence.all_transitions(transitions) == expected
+
+def test_top_down_compound_unary():
+    text = "(ROOT (S (NP (DT The) (NNP Arizona) (NNPS Corporations) (NNP Commission)) (VP (VBD authorized) (NP (NP (DT an) (ADJP (CD 11.5)) (NN %) (NN rate) (NN increase)) (PP (IN at) (NP (NNP Tucson) (NNP Electric) (NNP Power) (NNP Co.))) (, ,) (UCP (ADJP (ADJP (RB substantially) (JJR lower)) (SBAR (IN than) (S (VP (VBN recommended) (NP (JJ last) (NN month)) (PP (IN by) (NP (DT a) (NN commission) (NN hearing) (NN officer))))))) (CC and) (NP (NP (QP (RB barely) (PDT half)) (DT the) (NN rise)) (VP (VBN sought) (PP (IN by) (NP (DT the) (NN utility)))))))) (. .)))"
+
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    tree = trees[0]
+
+    model = SimpleModel()
+    transitions = transition_sequence.build_top_down_sequence(tree, use_compound_unary=False, use_compound_open=True)
+
+    state = parse_transitions.initial_state_from_gold_tree(tree, model)
+
+    for t in transitions:
+        assert t.is_legal(state, model)
+        state = t.apply(state, model)
+
+    result = model.get_top_constituent(state.constituents)
+    assert tree == result

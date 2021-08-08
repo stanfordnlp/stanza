@@ -121,4 +121,37 @@ def test_simplify_labels():
     assert len(trees) == 1
     assert expected == str(trees[0])
 
-    
+
+def test_compound_constituents():
+    # TODO: add skinny trees like this to the various transition tests
+    text="((VP (VB Unban)))"
+    trees = tree_reader.read_trees(text)
+    assert Tree.get_compound_constituents(trees) == [('ROOT', 'VP')]
+
+    text="(ROOT (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in)))) (. ?)))"
+    trees = tree_reader.read_trees(text)
+    assert Tree.get_compound_constituents(trees) == [('PP',), ('ROOT', 'SBARQ'), ('SQ', 'VP'), ('WHNP',)]
+
+    text="((VP (VB Unban)))   (ROOT (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in)))) (. ?)))"
+    trees = tree_reader.read_trees(text)
+    assert Tree.get_compound_constituents(trees) == [('PP',), ('ROOT', 'SBARQ'), ('ROOT', 'VP'), ('SQ', 'VP'), ('WHNP',)]
+
+def test_equals():
+    """
+    Check one tree from the actual dataset for ==
+
+    when built with compound Open, this didn't work because of a silly bug
+    """
+    text = "(ROOT (S (NP (DT The) (NNP Arizona) (NNPS Corporations) (NNP Commission)) (VP (VBD authorized) (NP (NP (DT an) (ADJP (CD 11.5)) (NN %) (NN rate) (NN increase)) (PP (IN at) (NP (NNP Tucson) (NNP Electric) (NNP Power) (NNP Co.))) (, ,) (UCP (ADJP (ADJP (RB substantially) (JJR lower)) (SBAR (IN than) (S (VP (VBN recommended) (NP (JJ last) (NN month)) (PP (IN by) (NP (DT a) (NN commission) (NN hearing) (NN officer))))))) (CC and) (NP (NP (QP (RB barely) (PDT half)) (DT the) (NN rise)) (VP (VBN sought) (PP (IN by) (NP (DT the) (NN utility)))))))) (. .)))"
+
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    tree = trees[0]
+
+    assert tree == tree
+
+    trees2 = tree_reader.read_trees(text)
+    tree2 = trees2[0]
+
+    assert tree is not tree2
+    assert tree == tree2

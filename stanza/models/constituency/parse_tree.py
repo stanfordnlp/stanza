@@ -7,6 +7,11 @@ from io import StringIO
 
 from stanza.models.common.doc import StanzaObject
 
+# useful more for the "is" functionality than the time savings
+CLOSE_PAREN = ')'
+SPACE_SEPARATOR = ' '
+OPEN_PAREN = '('
+
 class Tree(StanzaObject):
     """
     A data structure to represent a parse tree
@@ -49,18 +54,19 @@ class Tree(StanzaObject):
             stack.append(self)
             while len(stack) > 0:
                 node = stack.pop()
-                if node == ')' or node == ' ':
+                # note that == can recursively call == in some circumstances!
+                if node is CLOSE_PAREN or node is SPACE_SEPARATOR:
                     buf.write(node)
                     continue
                 if not node.children:
                     buf.write(node.label)
                     continue
-                buf.write("(")
+                buf.write(OPEN_PAREN)
                 buf.write(node.label)
-                stack.append(')')
+                stack.append(CLOSE_PAREN)
                 for child in reversed(node.children):
                     stack.append(child)
-                    stack.append(' ')
+                    stack.append(SPACE_SEPARATOR)
             buf.seek(0)
             return buf.read()
 
@@ -71,7 +77,9 @@ class Tree(StanzaObject):
             return False
         if self.label != other.label:
             return False
-        if self.children != other.children:
+        if len(self.children) != len(other.children):
+            return False
+        if any(c1 != c2 for c1, c2 in zip(self.children, other.children)):
             return False
         return True
 
@@ -157,6 +165,25 @@ class Tree(StanzaObject):
     def get_root_labels(trees):
         return sorted(set(x.label for x in trees))
 
+    @staticmethod
+    def get_compound_constituents(trees):
+        constituents = set()
+        stack = deque()
+        for tree in trees:
+            stack.append(tree)
+            while len(stack) > 0:
+                node = stack.pop()
+                if node.is_leaf() or node.is_preterminal():
+                    continue
+                labels = [node.label]
+                while len(node.children) == 1 and not node.children[0].is_preterminal():
+                    node = node.children[0]
+                    labels.append(node.label)
+                constituents.add(tuple(labels))
+                for child in node.children:
+                    stack.append(child)
+        return sorted(constituents)
+    
     def simplify_labels(self):
         """
         Return a copy of the tree with the -=# removed
