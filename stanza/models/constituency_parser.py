@@ -136,7 +136,17 @@ def evaluate(args, model_file):
     f1 = run_dev_set(model, treebank)
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
+def print_args(args):
+    """
+    For record keeping purposes, print out the arguments when training
+    """
+    keys = sorted(args.keys())
+    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
+    logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
+
 def train(args, model_file):
+    print_args(args)
+
     utils.ensure_dir(args['save_dir'])
 
     train_trees = read_treebank(args['train_file'])
