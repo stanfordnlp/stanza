@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import pytest
 
 from stanza.models import constituency_parser
@@ -130,3 +133,15 @@ def test_forward(pt, unary_model):
     run_forward_checks(model)
     model = build_model(pt, '--num_lstm_layers', '3')
     run_forward_checks(model)
+
+def test_save_load_model(pt, unary_model):
+    """
+    Just tests that saving and loading works without crashs.
+
+    Currently no test of the values themselves
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        filename = os.path.join(tmpdirname, "parser.pt")
+        lstm_model.save(filename, unary_model)
+        assert os.path.exists(filename)
+        foo = lstm_model.load(filename, pt)
