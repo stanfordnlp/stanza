@@ -62,6 +62,18 @@ def test_shift(model=None):
     constituents = constituents.pop()
     assert model.get_top_constituent(constituents).children[0].label == 'Unban'
 
+def test_initial_unary(model=None):
+    # it doesn't make sense to start with a CompoundUnary
+    if model is None:
+        model = SimpleModel()
+
+    state = build_initial_state(model)
+    unary = parse_transitions.CompoundUnary(['ROOT', 'VP'])
+    assert not unary.is_legal(state, model)
+    unary = parse_transitions.CompoundUnary(['VP'])
+    assert not unary.is_legal(state, model)
+
+
 def test_unary(model=None):
     if model is None:
         model = SimpleModel()
