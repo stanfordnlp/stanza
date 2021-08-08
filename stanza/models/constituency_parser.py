@@ -314,7 +314,10 @@ def run_dev_set(model, dev_trees):
             if not transition:
                 logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))
                 break
-            state = transition.apply(state, model)
+            try:
+                state = transition.apply(state, model)
+            except AttributeError as e:
+                raise AttributeError("Ran into an error (possibly null pointer) executing {} after executing the following transitions:\n{}\nCurrent constituents\n{}".format(transition, state.transitions, state.constituents)) from e
 
         if transition_count >= 1000:
             logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(gold_tree, state.to_string(model)))

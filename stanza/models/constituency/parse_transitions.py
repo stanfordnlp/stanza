@@ -221,10 +221,11 @@ class CompoundUnary(Transition):
         """
         Disallow consecutive CompoundUnary transitions, force final transition to go to ROOT
         """
-        if isinstance(model.get_top_transition(state.transitions), CompoundUnary):
+        # can't unary transition nothing
+        if model.get_top_constituent(state.constituents) is None:
             return False
         # don't unary transition a dummy, dummy
-        if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
+        if isinstance(model.get_top_transition(state.transitions), (CompoundUnary, OpenConstituent)):
             return False
         is_root = self.labels[0] in model.get_root_labels()
         if not state.empty_word_queue() or not state.has_one_constituent():
