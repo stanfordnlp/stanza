@@ -122,7 +122,11 @@ class SimpleModel(BaseModel):
         return top_constituent
 
     def build_constituent(self, label, children):
-        return Tree(label=label, children=children)
+        if isinstance(label, str):
+            label = (label,)
+        for value in reversed(label):
+            children = Tree(label=value, children=children)
+        return children
 
     def push_constituent(self, constituents, constituent):
         return constituents.push(constituent)

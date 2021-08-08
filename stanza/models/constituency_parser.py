@@ -65,6 +65,7 @@ def parse_args(args=None):
     parser.add_argument('--predict_dropout', default=0.0, type=float, help='Dropout on the final prediction layer')
 
     parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
+    parser.add_argument('--use_compound_open', default=False, action='store_true', help='Use compound opens in the transition sequence')
 
     parser.add_argument('--nonlinearity', default='tanh', choices=['tanh', 'relu'], help='Nonlinearity to use in the model')
 
@@ -124,7 +125,8 @@ def verify_transitions(trees, sequences):
         for trans in sequence:
             state = trans.apply(state, model)
         result = model.get_top_constituent(state.constituents)
-        assert tree == result
+        if tree != result:
+            raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
 
 def evaluate(args, model_file):
     pretrain = load_pretrain(args)
@@ -135,6 +137,15 @@ def evaluate(args, model_file):
 
     f1 = run_dev_set(model, treebank)
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
+
+def build_treebank(trees, args):
+    return transition_sequence.build_top_down_treebank(trees, use_compound_unary=args['use_compound_unary'], use_compound_open=args['use_compound_open'])
+
+def get_open_nodes(trees, args):
+    if args['use_compound_open']:
+        return parse_tree.Tree.get_compound_constituents(trees)
+    else:
+        return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
 
 def print_args(args):
     """
@@ -163,11 +174,11 @@ def train(args, model_file):
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
     logger.info("Building training transition sequences")
-    train_sequences = transition_sequence.build_top_down_treebank(tqdm(train_trees), use_compound_unary=args['use_compound_unary'])
+    train_sequences = build_treebank(tqdm(train_trees), args)
     train_transitions = transition_sequence.all_transitions(train_sequences)
 
     logger.info("Building dev transition sequences")
-    dev_sequences = transition_sequence.build_top_down_treebank(tqdm(dev_trees), use_compound_unary=args['use_compound_unary'])
+    dev_sequences = build_treebank(tqdm(dev_trees), args)
     dev_transitions = transition_sequence.all_transitions(dev_sequences)
 
     logger.info("Total unique transitions in train set: {}".format(len(train_transitions)))
@@ -192,6 +203,10 @@ def train(args, model_file):
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
     rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
+    # also, it's not actually an error if there is a pattern of
+    # compound unary or compound open nodes which doesn't exist in the
+    # train set.  it just means we probably won't ever get that right
+    open_nodes = get_open_nodes(train_trees, args)
 
     pretrain = load_pretrain(args)
 
@@ -200,7 +215,8 @@ def train(args, model_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, args)
+    # TODO: instead of train_constituents, create with the proper open tags
+    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
     if args['cuda']:
         model.cuda()
 

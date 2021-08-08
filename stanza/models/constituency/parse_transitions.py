@@ -253,7 +253,7 @@ class Dummy():
         self.label = label
 
     def __str__(self):
-        return "Dummy(%s)" % self.label
+        return "Dummy({})".format(self.label)
 
     def __eq__(self, other):
         if self is other:
@@ -268,8 +268,9 @@ class Dummy():
         return hash(self.label)
 
 class OpenConstituent(Transition):
-    def __init__(self, label):
-        self.label = label
+    def __init__(self, *label):
+        self.label = tuple(label)
+        self.top_label = self.label[0]
 
     def apply(self, state, model):
         # open a new constituent which can later be closed
@@ -292,7 +293,7 @@ class OpenConstituent(Transition):
             return False
         if not model.has_unary_transitions():
             # TODO: maybe cache this value if this is an expensive operation
-            is_root = self.label in model.get_root_labels()
+            is_root = self.top_label in model.get_root_labels()
             if is_root:
                 return state.empty_transitions()
             else:
@@ -300,7 +301,7 @@ class OpenConstituent(Transition):
         return True
 
     def __repr__(self):
-        return "OpenConstituent(%s)" % self.label
+        return "OpenConstituent({})".format(self.label)
 
     def __eq__(self, other):
         if self is other:
