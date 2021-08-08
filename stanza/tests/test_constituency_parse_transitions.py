@@ -161,6 +161,32 @@ def test_open(model=None):
     state = shift.apply(state, model)
     assert not open_transition.is_legal(state, model)
 
+def test_compound_open(model=None):
+    if model is None:
+        model = SimpleModel()
+    state = build_initial_state(model)
+
+    open_transition = parse_transitions.OpenConstituent("ROOT", "S")
+    assert open_transition.is_legal(state, model)
+    shift = parse_transitions.Shift()
+    close_transition = parse_transitions.CloseConstituent()
+
+    state = open_transition.apply(state, model)
+    state = shift.apply(state, model)
+    state = shift.apply(state, model)
+    state = shift.apply(state, model)
+    state = close_transition.apply(state, model)
+
+    tree = model.get_top_constituent(state.constituents)
+    assert tree.label == 'ROOT'
+    assert len(tree.children) == 1
+    tree = tree.children[0]
+    assert tree.label == 'S'
+    assert len(tree.children) == 3
+    assert tree.children[0].children[0].label == 'Unban'
+    assert tree.children[1].children[0].label == 'Mox'
+    assert tree.children[2].children[0].label == 'Opal'
+
 def test_close(model=None):
     if model is None:
         model = SimpleModel()

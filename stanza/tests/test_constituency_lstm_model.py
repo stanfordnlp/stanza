@@ -54,17 +54,18 @@ def build_model(pt, *args):
     # TODO: build a fake embedding some other way?
     trees = tree_reader.read_trees(TREEBANK)
 
-    transitions = transition_sequence.build_top_down_treebank(trees)
+    args = constituency_parser.parse_args(args)
+
+    transitions = constituency_parser.build_treebank(trees, args)
     transitions = transition_sequence.all_transitions(transitions)
     constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
     tags = parse_tree.Tree.get_unique_tags(trees)
     words = parse_tree.Tree.get_unique_words(trees)
     rare_words = parse_tree.Tree.get_rare_words(trees)
     root_labels = parse_tree.Tree.get_root_labels(trees)
+    open_nodes = constituency_parser.get_open_nodes(trees, args)
 
-    args = constituency_parser.parse_args(args)
-
-    model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, rare_words, root_labels, args)
+    model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args)
     return model
 
 @pytest.fixture(scope="module")
@@ -89,6 +90,10 @@ def test_unary_requires_root(unary_model):
 
 def test_open(unary_model):
     test_constituency_parse_transitions.test_open(unary_model)
+
+def test_compound_open(pt):
+    model = build_model(pt, '--use_compound_open')
+    test_constituency_parse_transitions.test_compound_open(model)
 
 def test_close(unary_model):
     test_constituency_parse_transitions.test_close(unary_model)

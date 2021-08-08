@@ -31,10 +31,13 @@ class LSTMModel(BaseModel, nn.Module):
       transition_embedding_dim
       constituent_embedding_dim
     """
-    def __init__(self, pretrain, transitions, constituents, tags, words, rare_words, root_labels, args):
+    def __init__(self, pretrain, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
         """
         constituents: a list of all possible constituents in the treebank
         tags: a list of all possible tags in the treebank
+        open_nodes: a list of all possible open nodes which will go on the stack
+          - this might be different from constituents if there are nodes
+            which represent multiple constituents at once
 
         Note that it might look like a hassle to pass all of this in
         when it can be collected directly from the trees themselves.
@@ -85,7 +88,7 @@ class LSTMModel(BaseModel, nn.Module):
                                           embedding_dim = self.tag_embedding_dim)
         self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
 
-        self.transitions = sorted(transitions)
+        self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
         # precompute tensors for the transitions
         self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
@@ -110,19 +113,22 @@ class LSTMModel(BaseModel, nn.Module):
         # also including word_tag pair - could try more configuratioins and sizes
         self.word_to_constituent = nn.Linear(self.hidden_size + self.word_input_size, self.hidden_size)
 
-        unary_transforms = {}
-        for constituent in self.constituent_map:
-            unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
-        self.unary_transforms = nn.ModuleDict(unary_transforms)
+        self.use_compound_unary = args['use_compound_unary']
+        if self.use_compound_unary:
+            unary_transforms = {}
+            for constituent in self.constituent_map:
+                unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
+            self.unary_transforms = nn.ModuleDict(unary_transforms)
 
+        self.open_nodes = sorted(list(open_nodes))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
-        self.dummy_embedding = nn.Embedding(num_embeddings = len(self.constituent_map),
-                                            embedding_dim = self.hidden_size)
-
-        # an embedding for the first symbol in the reduce lstm
         # TODO: try both directions have different embeddings?
-        self.constituent_embedding = nn.Embedding(num_embeddings = len(self.constituent_map),
-                                                  embedding_dim = self.hidden_size)
+        self.open_node_map = { x: i for (i, x) in enumerate(self.open_nodes) }
+        self.open_node_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
+                                                embedding_dim = self.hidden_size)
+        self.dummy_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
+                                            embedding_dim = self.hidden_size)
+        self.register_buffer('open_node_tensors', torch.tensor(range(len(open_nodes)), requires_grad=False))
 
         # forward and backward pieces to make a bi-lstm
         # TODO: make the hidden size here an option?
@@ -204,8 +210,8 @@ class LSTMModel(BaseModel, nn.Module):
 
     def dummy_constituent(self, dummy):
         label = dummy.label
-        constituent_index = self.constituent_tensors[self.constituent_map[label]]
-        hx = self.dummy_embedding(constituent_index)
+        open_index = self.open_node_tensors[self.open_node_map[label]]
+        hx = self.dummy_embedding(open_index)
         return Constituent(value=dummy, hx=hx)
 
     def unary_transform(self, constituents, labels):
@@ -221,9 +227,9 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituent(self, label, children):
-        constituent_index = self.constituent_tensors[self.constituent_map[label]]
+        open_index = self.open_node_tensors[self.open_node_map[label]]
         node_hx = [child.output for child in children]
-        label_hx = [self.constituent_embedding(constituent_index)]
+        label_hx = [self.open_node_embedding(open_index)]
 
         forward_hx = torch.stack(label_hx + node_hx, axis=0)
         # should now be: (#nodes, 1, hidden_dim)
@@ -245,7 +251,13 @@ class LSTMModel(BaseModel, nn.Module):
         hx = self.reduce_linear(torch.cat((forward_hx, backward_hx)))
         hx = self.nonlinearity(hx)
 
-        node = Tree(label=label, children=[child.value for child in children])
+        children = [child.value for child in children]
+        if isinstance(label, str):
+            node = Tree(label=label, children=children)
+        else:
+            for value in reversed(label):
+                node = Tree(label=value, children=children)
+                children = node
         return Constituent(value=node, hx=hx)
 
     def push_constituent(self, constituents, constituent):
@@ -282,7 +294,7 @@ class LSTMModel(BaseModel, nn.Module):
         return transition_node.value
 
     def has_unary_transitions(self):
-        return self.args['use_compound_unary']
+        return self.use_compound_unary
 
     def forward(self, state):
         """
@@ -331,6 +343,7 @@ def save(filename, model, skip_modules=True):
         'words': model.delta_words,
         'rare_words': model.rare_words,
         'root_labels': model.root_labels,
+        'open_nodes': model.open_nodes,
     }
 
     torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -354,6 +367,7 @@ def load(filename, pretrain):
                           words=checkpoint['words'],
                           rare_words=checkpoint['rare_words'],
                           root_labels=checkpoint['root_labels'],
+                          open_nodes=checkpoint['open_nodes'],
                           args=checkpoint['config'])
     else:
         raise ValueError("Unknown model type {}".format(model_type))
