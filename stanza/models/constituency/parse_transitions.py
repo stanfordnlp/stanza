@@ -146,12 +146,12 @@ class Transition(ABC):
         return a new State transformed via this transition
         """
         word_queue, constituents, new_constituent = self.update_state(state, model)
-        constituents = model.push_constituent(constituents, new_constituent)
+        constituents = model.push_constituents([constituents], [new_constituent])[0]
 
         return State(original_state=state,
                      num_opens=state.num_opens + self.delta_opens(),
                      word_queue=word_queue,
-                     transitions=model.push_transition(state.transitions, self),
+                     transitions=model.push_transitions([state.transitions], [self])[0],
                      constituents=constituents)
 
     @abstractmethod
