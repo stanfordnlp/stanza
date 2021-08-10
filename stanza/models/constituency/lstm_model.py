@@ -265,8 +265,6 @@ class LSTMModel(BaseModel, nn.Module):
     def push_constituent(self, constituents, constituent):
         current_node = constituents.value
 
-        # TODO: make the dimensions on the stack consistent
-        # shift & unary make different dimension results
         constituent_input = constituent.hx
         constituent_input = constituent_input.unsqueeze(0).unsqueeze(0)
 
@@ -275,6 +273,19 @@ class LSTMModel(BaseModel, nn.Module):
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
         new_node = ConstituentNode(constituent.value, output.squeeze(), hx, cx)
         return constituents.push(new_node)
+
+    def push_constituents(self, constituent_stacks, constituents):
+        current_nodes = [stack.value for stack in constituent_stacks]
+
+        constituent_input = torch.stack([x.hx for x in constituents])
+        constituent_input = constituent_input.unsqueeze(0)
+
+        hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
+        cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
+        output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
+        new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
+                      for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
+        return new_stacks
 
     def get_top_constituent(self, constituents):
         constituent_node = constituents.value
@@ -290,6 +301,17 @@ class LSTMModel(BaseModel, nn.Module):
         hx = current_node.hx
         output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
         return transitions.push(TransitionNode(transition, output.squeeze(), hx, cx))
+
+    def push_transitions(self, transition_stacks, transitions):
+        transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
+        transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
+
+        hx = torch.cat([t.value.hx for t in transition_stacks], axis=1)
+        cx = torch.cat([t.value.cx for t in transition_stacks], axis=1)
+        output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
+        new_stacks = [stack.push(TransitionNode(transition, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
+                      for i, (stack, transition) in enumerate(zip(transition_stacks, transitions))]
+        return new_stacks
 
     def get_top_transition(self, transitions):
         transition_node = transitions.value
