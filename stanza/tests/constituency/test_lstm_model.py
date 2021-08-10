@@ -11,7 +11,7 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.tests import *
-from stanza.tests import test_constituency_parse_transitions
+from stanza.tests.constituency import test_parse_transitions
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -77,29 +77,29 @@ def test_initial_model(unary_model):
     pass
     
 def test_initial_state(unary_model):
-    test_constituency_parse_transitions.test_initial_state(unary_model)
+    test_parse_transitions.test_initial_state(unary_model)
 
 def test_shift(unary_model):
-    test_constituency_parse_transitions.test_shift(unary_model)
+    test_parse_transitions.test_shift(unary_model)
 
 def test_unary(unary_model):
-    test_constituency_parse_transitions.test_unary(unary_model)
+    test_parse_transitions.test_unary(unary_model)
 
 def test_unary_requires_root(unary_model):
-    test_constituency_parse_transitions.test_unary_requires_root(unary_model)
+    test_parse_transitions.test_unary_requires_root(unary_model)
 
 def test_open(unary_model):
-    test_constituency_parse_transitions.test_open(unary_model)
+    test_parse_transitions.test_open(unary_model)
 
 def test_compound_open(pt):
     model = build_model(pt, '--use_compound_open')
-    test_constituency_parse_transitions.test_compound_open(model)
+    test_parse_transitions.test_compound_open(model)
 
 def test_close(unary_model):
-    test_constituency_parse_transitions.test_close(unary_model)
+    test_parse_transitions.test_close(unary_model)
 
 def run_forward_checks(model):
-    state = test_constituency_parse_transitions.build_initial_state(model)
+    state = test_parse_transitions.build_initial_state(model)
     model(state)
 
     shift = parse_transitions.Shift()
