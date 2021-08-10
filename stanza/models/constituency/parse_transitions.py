@@ -129,11 +129,27 @@ class Transition(ABC):
     for example, an LSTM model can update hidden & output vectors when transitioning
     """
     @abstractmethod
+    def update_state(self, state, model):
+        """
+        update the word queue, possibly remove old pieces from the constituents state, and return the new constituent
+        """
+        pass
+
+    def delta_opens(self):
+        return 0
+
     def apply(self, state, model):
         """
         return a new State transformed via this transition
         """
-        pass
+        word_queue, constituents, new_constituent = self.update_state(state, model)
+        constituents = model.push_constituent(constituents, new_constituent)
+
+        return State(original_state=state,
+                     num_opens=state.num_opens + self.delta_opens(),
+                     word_queue=word_queue,
+                     transitions=model.push_transition(state.transitions, self),
+                     constituents=constituents)
 
     @abstractmethod
     def is_legal(self, state, model):
@@ -155,22 +171,16 @@ class Transition(ABC):
         return str(self) < str(other)
 
 class Shift(Transition):
-    def apply(self, state, model):
+    def update_state(self, state, model):
         """
         This will handle all aspects of a shift transition
 
-        - push the transition onto the transition stack
         - push the top element of the word queue onto constituents
         - pop the top element of the word queue
         """
-        transitions = model.push_transition(state.transitions, self)
-        constituents = model.push_constituent(state.constituents, model.transform_word_to_constituent(state))
+        new_constituent = model.transform_word_to_constituent(state)
         word_queue = state.word_queue.pop()
-
-        return State(original_state=state,
-                     word_queue=word_queue,
-                     transitions=transitions,
-                     constituents=constituents)
+        return word_queue, state.constituents, new_constituent
 
     def is_legal(self, state, model):
         """
@@ -201,21 +211,14 @@ class CompoundUnary(Transition):
         else:
             self.labels = tuple(labels)
 
-    def apply(self, state, model):
+    def update_state(self, state, model):
         # remove the top constituent
         # apply the labels
         # put the constituent back on the state
-        transitions = model.push_transition(state.transitions, self)
-
         constituents = state.constituents
         new_constituent = model.unary_transform(state.constituents, self.labels)
         constituents = constituents.pop()
-        constituents = model.push_constituent(constituents, new_constituent)
-
-        return State(original_state=state,
-                     word_queue=state.word_queue,
-                     transitions=transitions,
-                     constituents=constituents)
+        return state.word_queue, constituents, new_constituent
 
     def is_legal(self, state, model):
         """
@@ -272,15 +275,13 @@ class OpenConstituent(Transition):
         self.label = tuple(label)
         self.top_label = self.label[0]
 
-    def apply(self, state, model):
+    def delta_opens(self):
+        return 1
+
+    def update_state(self, state, model):
         # open a new constituent which can later be closed
         # puts a DUMMY constituent on the stack to mark where the constituents end
-        return State(original_state=state,
-                     num_opens=state.num_opens+1,
-                     word_queue=state.word_queue,
-                     transitions=model.push_transition(state.transitions, self),
-                     constituents=model.push_constituent(state.constituents,
-                                                         model.dummy_constituent(Dummy(self.label))))
+        return state.word_queue, state.constituents, model.dummy_constituent(Dummy(self.label))
 
     def is_legal(self, state, model):
         """
@@ -316,7 +317,10 @@ class OpenConstituent(Transition):
         return hash(self.label)
 
 class CloseConstituent(Transition):
-    def apply(self, state, model):
+    def delta_opens(self):
+        return -1
+
+    def update_state(self, state, model):
         # pop constituents until we are done
         children = []
         constituents = state.constituents
@@ -332,13 +336,8 @@ class CloseConstituent(Transition):
         # the children are in the opposite order of what we expect
         children.reverse()
         new_constituent = model.build_constituent(label=label, children=children)
-        constituents = model.push_constituent(constituents, new_constituent)
 
-        return State(original_state=state,
-                     num_opens=state.num_opens-1,
-                     word_queue=state.word_queue,
-                     transitions=model.push_transition(state.transitions, self),
-                     constituents=constituents)
+        return state.word_queue, constituents, new_constituent
 
     def is_legal(self, state, model):
         """
@@ -371,3 +370,33 @@ class CloseConstituent(Transition):
 
     def __hash__(self):
         return hash(93)
+
+def bulk_apply(model, tree_batch, states, transitions):
+    finished = []
+
+    remove = set()
+
+    for idx, (state, transition) in enumerate(zip(states, transitions)):
+        if not transition:
+            logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
+            remove.add(idx)
+            continue
+
+        # TODO: batch this as well!
+        state = transition.apply(state, model)
+        tree_batch[idx] = (tree_batch[idx][0], tree_batch[idx][1] + 1, state)
+        if tree_batch[idx][1] >= 1000:
+            # too many transitions
+            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
+            remove.add(idx)
+            continue
+
+        if state.finished(model):
+            predicted_tree = state.get_tree(model)
+            gold_tree = tree_batch[idx][0]
+            # TODO: put an actual score here?
+            finished.append((gold_tree, predicted_tree))
+            remove.add(idx)
+
+    tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+    return tree_batch, finished

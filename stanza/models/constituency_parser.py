@@ -49,7 +49,7 @@ def parse_args(args=None):
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
     parser.add_argument('--train_batch_size', type=int, default=50, help='How many trees to train before taking an optimizer step')
-    parser.add_argument('--eval_batch_size', type=int, default=10, help='How many trees to batch when running eval')
+    parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
@@ -320,31 +320,11 @@ def run_dev_set(model, dev_trees, batch_size):
     while len(tree_batch) > 0:
         states = [tree[2] for tree in tree_batch]
         _, transitions = model.predict(states, is_legal=True)
+        tree_batch, finished = parse_transitions.bulk_apply(model, tree_batch, states, transitions)
 
-        remove = set()
-        for idx, (state, transition) in enumerate(zip(states, transitions)):
-            if not transition:
-                logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
-                remove.add(idx)
-                continue
+        for gold_tree, predicted_tree in finished:
+            treebank.append((gold_tree, [(predicted_tree, 1.0)]))
 
-            # TODO: batch this as well!
-            state = transition.apply(state, model)
-            tree_batch[idx] = (tree_batch[idx][0], tree_batch[idx][1] + 1, state)
-            if tree_batch[idx][1] >= 1000:
-                # too many transitions
-                logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
-                remove.add(idx)
-                continue
-
-            if state.finished(model):
-                predicted_tree = state.get_tree(model)
-                gold_tree = tree_batch[idx][0]
-                # TODO: put an actual score here?
-                treebank.append((gold_tree, [(predicted_tree, 1.0)]))
-                remove.add(idx)
-
-        tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
         for _ in range(batch_size - len(tree_batch)):
             gold_tree = next(tree_iterator, None)
             if gold_tree is None:
