@@ -12,7 +12,7 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, lexicon=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -21,7 +21,8 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+            self.lexicon = lexicon
+            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
         if use_cuda:
             self.model.cuda()
@@ -72,6 +73,7 @@ class Trainer(BaseTrainer):
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
                 'vocab': self.vocab.state_dict(),
+                'lexicon': self.lexicon,
                 'config': self.args
                 }
         try:
@@ -91,6 +93,7 @@ class Trainer(BaseTrainer):
             # Default to True as many currently saved models
             # were built with mwt layers
             self.args['use_mwt'] = True
-        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'])
+        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
+        self.lexicon = checkpoint['lexicon']

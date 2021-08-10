@@ -1,14 +1,11 @@
 from bisect import bisect_right
 from copy import copy
-import json
 import numpy as np
 import random
 import logging
 import re
 import torch
-
 from .vocab import Vocab
-
 logger = logging.getLogger('stanza')
 
 def filter_consecutive_whitespaces(para):
@@ -26,11 +23,11 @@ NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
 NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
-
 class DataLoader:
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False):
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False, dictionary=None):
         self.args = args
         self.eval = evaluation
+        self.dictionary = dictionary
 
         # get input files
         txt_file = input_files['txt']
@@ -107,8 +104,6 @@ class DataLoader:
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
                 func = lambda x: 1 if x[0].isupper() else 0
-            elif feat_func == 'all_caps':
-                func = lambda x: 1 if x.isupper() else 0
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
@@ -118,6 +113,40 @@ class DataLoader:
 
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
+
+        length = len(para)
+        #This function is to extract dictionary features for each character
+        def extract_dict_feat(idx):
+            dict_forward_feats = [0 for i in range(self.args['num_dict_feat'])]
+            dict_backward_feats = [0 for i in range(self.args['num_dict_feat'])]
+            forward_word = para[idx][0]
+            backward_word = para[idx][0]
+            prefix = True
+            suffix = True
+            for window in range(1,self.args['num_dict_feat']+1):
+                # concatenate each character and check if words found in dict not, stop if prefix not found
+                #check if idx+t is out of bound and if the prefix is already not found
+                if (idx + window) <= length-1 and prefix:
+                    forward_word += para[idx+window][0].lower()
+                    #check in json file if the word is present as prefix or word or None.
+                    feat = 1 if forward_word in self.dictionary["words"] else 0
+                    #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
+                    dict_forward_feats[window-1] = feat
+                    #if the dict return 0 means no prefixes found, thus, stop looking for forward.
+                    if forward_word not in self.dictionary["prefixes"]:
+                        prefix = False
+                #backward check: similar to forward
+                if (idx - window) >= 0 and suffix:
+                    backward_word = para[idx-window][0].lower() + backward_word
+                    feat = 1 if backward_word in self.dictionary["words"] else 0
+                    dict_backward_feats[window-1] = feat
+                    if backward_word not in self.dictionary["suffixes"]:
+                        suffix = False
+                #if cannot find both prefix and suffix, then exit the loop
+                if not prefix and not suffix:
+                    break
+
+            return dict_forward_feats + dict_backward_feats
 
         def process_sentence(sent):
             return [self.vocab.unit2id(y[0]) for y in sent], [y[1] for y in sent], [y[2] for y in sent], [y[0] for y in sent]
@@ -135,6 +164,12 @@ class DataLoader:
             if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
+
+            #if dictionary feature is selected
+            if self.args['use_dictionary']:
+                dict_feats = extract_dict_feat(i)
+                feats = feats + dict_feats
+
             current += [(unit, label, feats)]
             if label1 == 2 or label1 == 4: # end of sentence
                 if len(current) <= self.args['max_seqlen']:
@@ -156,7 +191,7 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None):
+    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
@@ -277,6 +312,18 @@ class DataLoader:
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
 
+        # dropout unit feature vector in addition to only torch.dropout in the model.
+        # experiments showed that only torch.dropout hurts the model
+        # we believe it is because the dict feature vector is mostly scarse so it makes
+        # more sense to drop out the whole vector instead of only single element.
+        if self.args['use_dictionary'] and feat_unit_dropout > 0 and not self.eval:
+            mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
+            mask_feat[units == padid] = 0
+            for i in range(len(raw_units)):
+                for j in range(len(raw_units[i])):
+                    if mask_feat[i,j]:
+                        features[i,j,:] = 0
+                        
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)
         features = torch.from_numpy(features)
