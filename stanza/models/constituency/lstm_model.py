@@ -262,18 +262,6 @@ class LSTMModel(BaseModel, nn.Module):
                 children = node
         return Constituent(value=node, hx=hx)
 
-    def push_constituent(self, constituents, constituent):
-        current_node = constituents.value
-
-        constituent_input = constituent.hx
-        constituent_input = constituent_input.unsqueeze(0).unsqueeze(0)
-
-        hx = current_node.hx
-        cx = current_node.cx
-        output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
-        new_node = ConstituentNode(constituent.value, output.squeeze(), hx, cx)
-        return constituents.push(new_node)
-
     def push_constituents(self, constituent_stacks, constituents):
         current_nodes = [stack.value for stack in constituent_stacks]
 
@@ -290,17 +278,6 @@ class LSTMModel(BaseModel, nn.Module):
     def get_top_constituent(self, constituents):
         constituent_node = constituents.value
         return constituent_node.value
-
-    def push_transition(self, transitions, transition):
-        transition_idx = self.transition_tensors[self.transition_map[transition]]
-        transition_input = self.transition_embedding(transition_idx)
-        transition_input = transition_input.unsqueeze(0).unsqueeze(0)
-
-        current_node = transitions.value
-        cx = current_node.cx
-        hx = current_node.hx
-        output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
-        return transitions.push(TransitionNode(transition, output.squeeze(), hx, cx))
 
     def push_transitions(self, transition_stacks, transitions):
         transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
