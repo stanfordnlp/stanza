@@ -68,7 +68,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def push_constituent(self, constituents, constituent):
+    def push_constituents(self, constituent_stacks, constituents):
         pass
 
     @abstractmethod
@@ -76,7 +76,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def push_transition(self, transitions, transition):
+    def push_transitions(self, transition_stacks, transitions):
         pass
 
     @abstractmethod
@@ -128,14 +128,14 @@ class SimpleModel(BaseModel):
             children = Tree(label=value, children=children)
         return children
 
-    def push_constituent(self, constituents, constituent):
-        return constituents.push(constituent)
+    def push_constituents(self, constituent_stacks, constituents):
+        return [stack.push(constituent) for stack, constituent in zip(constituent_stacks, constituents)]
 
     def get_top_constituent(self, constituents):
         return constituents.value
 
-    def push_transition(self, transitions, transition):
-        return transitions.push(transition)
+    def push_transitions(self, transition_stacks, transitions):
+        return [stack.push(transition) for stack, transition in zip(transition_stacks, transitions)]
 
     def get_top_transition(self, transitions):
         return transitions.value
