@@ -95,15 +95,14 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         if not os.path.isfile(external_path):
             raise FileNotFoundError(f"Cannot open external dictionary at {external_path}")
 
-        external_file = open(external_path, "r", encoding="utf-8")
-        lines = external_file.readlines()
+        with open(external_path, "r", encoding="utf-8") as external_file:
+            lines = external_file.readlines()
         for line in lines:
             word = line.lower()
             word = word.replace("\n","")
             if check_valid_word(shorthand, word) and word not in lexicon:
                 lexicon.add(word)
                 length_freq.append(len(word))
-        external_file.close()
         logger.info(f"Added another {len(lexicon) - count_word} words from the external dict to dictionary.")
         
 
