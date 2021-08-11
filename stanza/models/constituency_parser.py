@@ -57,7 +57,7 @@ def parse_args(args=None):
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
-    parser.add_argument('--learning_rate', default=0.005, type=float, help='Learning rate for the optimizer')
+    parser.add_argument('--learning_rate', default=1.0, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.005 for SGD')
     parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
 
@@ -227,7 +227,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), weight_decay=args['weight_decay'])
+        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
 
