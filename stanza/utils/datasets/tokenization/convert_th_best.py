@@ -31,22 +31,22 @@ from stanza.utils.datasets.tokenization.process_thai_tokenization import reproce
 
 def clean_line(line):
     line = line.replace("html>", "html|>")
-    # news_00089.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    # news_00089.txt
     line = line.replace("<NER>", "<NE>")
     line = line.replace("</NER>", "</NE>")
-    # specific error that occurs in encyclopedia_00095.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+    # specific error that occurs in encyclopedia_00095.txt
     line = line.replace("</AB>Penn", "</AB>|Penn>")
-    # news_00058.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    # news_00058.txt
     line = line.replace("<AB>จม.</AB>เปิดผนึก", "<AB>จม.</AB>|เปิดผนึก")
-    # news_00015.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    # news_00015.txt
     line = re.sub("<NE><AB>([^|<>]+)</AB>([^|<>]+)</NE>", "\\1|\\2", line)
-    # news_00024.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    # news_00024.txt
     line = re.sub("<NE><AB>([^|<>]+)</AB></NE>", "\\1", line)
-    # news_00055.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    # news_00055.txt
     line = re.sub("<NE>([^|<>]+)<AB>([^|<>]+)</AB></NE>", "\\1|\\2", line)
     line = re.sub("<NE><AB>([^|<>]+)</AB><AB>([^|<>]+)</AB></NE>", "\\1|\\2", line)
     line = re.sub("<NE>([^|<>]+)<AB>([^|<>]+)</AB> <AB>([^|<>]+)</AB></NE>", "\\1|\\2|\\3", line)
-    # news_00008.txt and other news articles                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    # news_00008.txt and other news articles
     line = re.sub("</AB>([0-9])", "</AB>|\\1", line)
     line = line.replace("</AB> ", "</AB>|")
     line = line.replace("<EM>", "<POEM>")
@@ -56,7 +56,7 @@ def clean_line(line):
 
 
 def clean_word(word):
-    # novel_00078.txt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+    # novel_00078.txt
     if word == '<NEพี่มน</NE>':
         return 'พี่มน'
     if word.startswith("<NE>") and word.endswith("</NE>"):
@@ -65,11 +65,11 @@ def clean_word(word):
         return word[4:-5]
     if word.startswith("<POEM>") and word.endswith("</POEM>"):
         return word[6:-7]
-    """                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
-    if word.startswith("<EM>"):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
-        return word[4:]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
-    if word.endswith("</EM>"):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-        return word[:-5]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+    """
+    if word.startswith("<EM>"):
+        return word[4:]
+    if word.endswith("</EM>"):
+        return word[:-5]
     """
     if word.startswith("<NE>"):
         return word[4:]
@@ -84,12 +84,11 @@ def clean_word(word):
     return word
 
 def read_data(input_dir):
-
-    # data for test sets                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+    # data for test sets
     test_files = [os.path.join(input_dir, 'TEST_100K_ANS.txt')]
     print(test_files)
 
-    # data for train and dev sets                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+    # data for train and dev sets
     subdirs = [os.path.join(input_dir, 'article'),
                os.path.join(input_dir, 'encyclopedia'),
                os.path.join(input_dir, 'news'),
@@ -155,7 +154,7 @@ def main(*args):
     input_dir = args[0]
     full_input_dir = os.path.join(input_dir, "thai", "best")
     if os.path.exists(full_input_dir):
-        # otherwise hopefully the user gave us the full path?                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+        # otherwise hopefully the user gave us the full path?
         input_dir = full_input_dir
 
     output_dir = args[1]
@@ -166,5 +165,4 @@ def main(*args):
 
 if __name__ == '__main__':
     main()
-
 

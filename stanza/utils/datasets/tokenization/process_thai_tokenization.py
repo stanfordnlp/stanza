@@ -81,8 +81,8 @@ def write_dataset(documents, output_dir, dataset_name):
     write_section(output_dir, dataset_name, 'test', documents[num_train+num_dev:])
 
 def write_dataset_best(documents, test_documents, output_dir, dataset_name):
-    """                                                                                                                                                                                                                                                                                                                                                    
-    Shuffle a list of documents, write three sections                                                                                                                                                                                                                                                                                                      
+    """
+    Shuffle a list of documents, write three sections
     """
     random.shuffle(documents)
     num_train = int(len(documents) * 0.85)
@@ -144,19 +144,18 @@ def reprocess_lines(processed_lines):
     return reprocessed_lines
 
 def convert_processed_lines(processed_lines):
-    """                                                                                                                                                                                                                                                                                                                                                    
-    Convert a list of sentences into documents suitable for the output methods in this module.                                                                                                                                                                                                                                                             
-                                                                                                                                                                                                                                                                                                                                                           
-    Input: a list of lines, including space words                                                                                                                                                                                                                                                                                                          
-    Output: a list of documents, each document containing a list of sentences                                                                                                                                                                                                                                                                              
-            Each sentence is a list of words: (text, space_follows)                                                                                                                                                                                                                                                                                        
-            Space words will be eliminated.                                                                                                                                                                                                                                                                                                                
+    """
+    Convert a list of sentences into documents suitable for the output methods in this module.
+
+    Input: a list of lines, including space words
+    Output: a list of documents, each document containing a list of sentences
+            Each sentence is a list of words: (text, space_follows)
+            Space words will be eliminated.
     """
     paragraphs = []
     sentences = []
     for words in processed_lines:
-        # turn the words into a sentence                                                                                                                                                                                                                                                                                                                   
-
+        # turn the words into a sentence
         if len(words) > 1 and " " == words[0]:
             words = words[1:]
         elif len(words) == 1 and " " == words[0]:
@@ -172,7 +171,7 @@ def convert_processed_lines(processed_lines):
                 sentence[-1] = (sentence[-1][0], True)
             else:
                 sentence.append((word, False))
-        # blank lines are very rare in best, but why not treat them as a paragraph break                                                                                                                                                                                                                                                                   
+        # blank lines are very rare in best, but why not treat them as a paragraph break
         if len(sentence) == 0:
             paragraphs.append([sentences])
             sentences = []
