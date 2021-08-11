@@ -225,6 +225,17 @@ def train(args, model_file):
 
     iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
 
+def build_batch(tree_iterator, train_batch_size):
+    batch = []
+    for _ in range(train_batch_size):
+        gold_tree = next(tree_iterator, None)
+        if gold_tree is None:
+            break
+        batch.append(gold_tree)
+
+    return batch
+
+
 def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
     # TODO: try different loss functions and optimizers
     if args['optim'].lower() == 'sgd':
@@ -259,41 +270,57 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
 
         epoch_loss = 0.0
 
-        correct = 0
-        incorrect = 0
-        for step, (tree, sequence) in enumerate(tqdm(epoch_data)):
-            # Currently we do fake batching
-            # TODO: do a real batch over the trees to speed things up
-            if step % args['train_batch_size'] == 0 and step > 0:
-                optimizer.step()
-                optimizer.zero_grad()
+        transitions_correct = 0
+        transitions_incorrect = 0
 
-            state = parse_transitions.initial_state_from_gold_tree(tree, model)
-            if args['train_method'] in ('gold_entire', 'early_entire'):
-                errors = []
-                answers = []
-                for gold_transition in sequence:
-                    outputs, pred_transition = model.predict((state,))
-                    trans_tensor = transition_tensors[gold_transition]
-                    errors.append(outputs.squeeze())
-                    answers.append(trans_tensor)
-                    state = gold_transition.apply(state, model)
-                    if pred_transition != gold_transition:
-                        incorrect = incorrect + 1
-                        if args['train_method'] == 'early_entire':
-                            break
-                    else:
-                        correct = correct + 1
+        tree_iterator = iter(tqdm(epoch_data))
+        batch = build_batch(tree_iterator, args['train_batch_size'])
+        # TODO: sort epoch by length
+        while len(batch) > 0:
+            # the batch will be empty when all trees from this epoch are trained
+            # now we add the state to the trees in the batch
+            # TODO: batch the initial state operation
+            batch = [IncompleteParse(state=parse_transitions.initial_state_from_gold_tree(tree, model),
+                                     num_transitions=0,
+                                     gold_tree=tree,
+                                     gold_sequence=sequence)
+                     for (tree, sequence) in batch]
 
-                errors = torch.stack(errors)
-                answers = torch.cat(answers)
-                tree_loss = loss_function(errors, answers)
-                tree_loss.backward()
-                epoch_loss += tree_loss.item()
+            incorrect = 0
+            correct = 0
+            all_errors = []
+            all_answers = []
+            for incomplete_parse in batch:
+                if args['train_method'] in ('gold_entire', 'early_entire'):
+                    errors = []
+                    answers = []
+                    state = incomplete_parse.state
+                    for gold_transition in incomplete_parse.gold_sequence:
+                        outputs, pred_transition = model.predict((state,))
+                        trans_tensor = transition_tensors[gold_transition]
+                        errors.append(outputs[0])
+                        answers.append(trans_tensor)
+                        state = gold_transition.apply(state, model)
+                        if pred_transition != gold_transition:
+                            incorrect = incorrect + 1
+                            if args['train_method'] == 'early_entire':
+                                break
+                        else:
+                            correct = correct + 1
 
-        # there will always be leftover, so call step() one more time
-        optimizer.step()
-        optimizer.zero_grad()
+                    all_errors.extend(errors)
+                    all_answers.extend(answers)
+
+            errors = torch.stack(all_errors)
+            answers = torch.cat(all_answers)
+            tree_loss = loss_function(errors, answers)
+            tree_loss.backward()
+            epoch_loss += tree_loss.item()
+
+            optimizer.step()
+            optimizer.zero_grad()
+
+            batch = build_batch(tree_iterator, args['train_batch_size'])
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args['eval_batch_size'])
@@ -301,7 +328,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
             lstm_model.save(model_file, model)
-        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, correct, incorrect, epoch_loss, f1, best_f1))
+        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, transitions_correct, transitions_incorrect, epoch_loss, f1, best_f1))
 
 def run_dev_set(model, dev_trees, batch_size):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
