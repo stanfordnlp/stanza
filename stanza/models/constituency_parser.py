@@ -113,6 +113,7 @@ def read_treebank(filename):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
     """
+    logger.info("Reading trees from {}".format(filename))
     trees = tree_reader.read_tree_file(filename)
     trees = [t.prune_none().simplify_labels() for t in trees]
     return trees
