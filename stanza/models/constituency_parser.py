@@ -232,7 +232,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
 
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss(reduction='sum')
     if args['cuda']:
         loss_function.cuda()
 
