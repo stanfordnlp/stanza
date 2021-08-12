@@ -16,6 +16,7 @@ from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.parse_transitions import IncompleteParse
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -257,6 +258,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
         epoch_data = epoch_data[:args['eval_interval']]
 
         epoch_loss = 0.0
+
         correct = 0
         incorrect = 0
         for step, (tree, sequence) in enumerate(tqdm(epoch_data)):
@@ -315,22 +317,34 @@ def run_dev_set(model, dev_trees, batch_size):
         # TODO: can batch the initial_states
         # tree, # transitions, state
         # TODO: could store the number of transitions in the state...
-        tree_batch.append((gold_tree, 0, parse_transitions.initial_state_from_gold_tree(gold_tree, model)))
+        tree_batch.append(IncompleteParse(gold_tree=gold_tree,
+                                          num_transitions=0,
+                                          state=parse_transitions.initial_state_from_gold_tree(gold_tree, model),
+                                          gold_sequence=None))
 
     while len(tree_batch) > 0:
-        states = [tree[2] for tree in tree_batch]
-        _, transitions = model.predict(states, is_legal=True)
-        tree_batch, finished = parse_transitions.bulk_apply(model, tree_batch, states, transitions)
+        _, transitions = model.predict([tree.state for tree in tree_batch], is_legal=True)
+        tree_batch = parse_transitions.bulk_apply(model, tree_batch, transitions)
 
-        for gold_tree, predicted_tree in finished:
-            treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+        remove = set()
+        for idx, tree in enumerate(tree_batch):
+            if tree.state.finished(model):
+                predicted_tree = tree.state.get_tree(model)
+                gold_tree = tree.gold_tree
+                # TODO: put an actual score here?
+                treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+                remove.add(idx)
+
+        tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
 
         for _ in range(batch_size - len(tree_batch)):
             gold_tree = next(tree_iterator, None)
             if gold_tree is None:
                 break
-            tree_batch.append((gold_tree, 0, parse_transitions.initial_state_from_gold_tree(gold_tree, model)))
-
+            tree_batch.append(IncompleteParse(gold_tree=gold_tree,
+                                              num_transitions=0,
+                                              state=parse_transitions.initial_state_from_gold_tree(gold_tree, model),
+                                              gold_sequence=None))
 
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))

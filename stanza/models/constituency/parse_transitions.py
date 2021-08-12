@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import namedtuple
 import functools
 import logging
 
@@ -124,6 +125,9 @@ def initial_state_from_gold_tree(tree, model):
         tag_node = Tree(label=pt.label, children=[word_node])
         tagged_word_list.append(tag_node)
     return initial_state_from_tagged_words(tagged_word_list, model)
+
+# Note that at runtime, gold values will not be available
+IncompleteParse = namedtuple('IncompleteParse', ['state', 'num_transitions', 'gold_tree', 'gold_sequence'])
 
 @functools.total_ordering
 class Transition(ABC):
@@ -374,7 +378,7 @@ class CloseConstituent(Transition):
     def __hash__(self):
         return hash(93)
 
-def bulk_apply(model, tree_batch, states, transitions):
+def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000):
     finished = []
 
     remove = set()
@@ -383,47 +387,48 @@ def bulk_apply(model, tree_batch, states, transitions):
     constituents = []
     new_constituents = []
 
-    for idx, (state, transition) in enumerate(zip(states, transitions)):
+    for idx, (tree, transition) in enumerate(zip(tree_batch, transitions)):
         if not transition:
-            logger.error("Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
-            remove.add(idx)
-            continue
+            error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.state.to_string(model))
+            if fail:
+                raise ValueError(error)
+            else:
+                logger.error(error)
+                remove.add(idx)
+                continue
 
-        if tree_batch[idx][1] >= 1000:
+        if max_transitions and tree.num_transitions >= max_transitions:
             # too many transitions
-            logger.error("Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree_batch[idx][0], state.to_string(model)))
-            remove.add(idx)
-            continue
+            # TODO: this error shouldn't use the gold_tree if it happens in a pipeline
+            error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.state.to_string(model))
+            if fail:
+                raise ValueError(error)
+            else:
+                logger.error(error)
+                remove.add(idx)
+                continue
 
-        wq, c, nc = transition.update_state(state, model)
+        wq, c, nc = transition.update_state(tree.state, model)
 
         word_queues.append(wq)
         constituents.append(c)
         new_constituents.append(nc)
 
     tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
-    states = [state for idx, state in enumerate(states) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
-    remove = set()
 
-    new_transitions = model.push_transitions([state.transitions for state in states], transitions)
+    new_transitions = model.push_transitions([tree.state.transitions for tree in tree_batch], transitions)
     new_constituents = model.push_constituents(constituents, new_constituents)
 
-    for idx, (state, transition, word_queue, transition_stack, constituents) in enumerate(zip(states, transitions, word_queues, new_transitions, new_constituents)):
-        state = State(original_state=state,
-                      num_opens=state.num_opens + transition.delta_opens(),
-                      word_queue=word_queue,
-                      transitions=transition_stack,
-                      constituents=constituents)
-        tree_batch[idx] = (tree_batch[idx][0], tree_batch[idx][1] + 1, state)
+    tree_batch = [IncompleteParse(gold_tree=tree.gold_tree,
+                                  num_transitions=tree.num_transitions+1,
+                                  state=State(original_state=tree.state,
+                                              num_opens=tree.state.num_opens + transition.delta_opens(),
+                                              word_queue=word_queue,
+                                              transitions=transition_stack,
+                                              constituents=constituents),
+                                  gold_sequence=tree.gold_sequence)
+                  for (tree, transition, word_queue, transition_stack, constituents)
+                  in zip(tree_batch, transitions, word_queues, new_transitions, new_constituents)]
 
-        if state.finished(model):
-            predicted_tree = state.get_tree(model)
-            gold_tree = tree_batch[idx][0]
-            # TODO: put an actual score here?
-            finished.append((gold_tree, predicted_tree))
-            remove.add(idx)
-
-    tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
-
-    return tree_batch, finished
+    return tree_batch
