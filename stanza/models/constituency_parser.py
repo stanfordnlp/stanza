@@ -290,28 +290,33 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             correct = 0
             all_errors = []
             all_answers = []
-            for incomplete_parse in batch:
-                if args['train_method'] in ('gold_entire', 'early_entire'):
-                    errors = []
-                    answers = []
-                    state = incomplete_parse.state
-                    for gold_transition in incomplete_parse.gold_sequence:
-                        outputs, pred_transition = model.predict((state,))
-                        trans_tensor = transition_tensors[gold_transition]
-                        errors.append(outputs[0])
-                        answers.append(trans_tensor)
-                        state = gold_transition.apply(state, model)
-                        if pred_transition != gold_transition:
-                            incorrect = incorrect + 1
-                            if args['train_method'] == 'early_entire':
-                                break
-                        else:
-                            correct = correct + 1
 
-                    all_errors.extend(errors)
-                    all_answers.extend(answers)
+            while len(batch) > 0:
+                outputs, pred_transitions = model.predict([x.state for x in batch])
+                gold_transitions = [x.gold_sequence[x.num_transitions] for x in batch]
+                trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
+                all_errors.append(outputs)
+                all_answers.extend(trans_tensor)
 
-            errors = torch.stack(all_errors)
+                for pred_transition, gold_transition in zip(pred_transitions, gold_transitions):
+                    if pred_transition != gold_transition:
+                        transitions_incorrect = transitions_incorrect + 1
+                        # TODO: remove trees which are wrong if we are doing early_entire
+                        # if args['train_method'] == 'early_entire':
+                        #     break
+                    else:
+                        transitions_correct = transitions_correct + 1
+
+                # update states and eliminate finished trees
+                # TODO: bulk_apply instead
+                batch = [IncompleteParse(state=gold_transition.apply(incomplete_parse.state, model),
+                                         num_transitions=incomplete_parse.num_transitions + 1,
+                                         gold_tree=incomplete_parse.gold_tree,
+                                         gold_sequence=incomplete_parse.gold_sequence)
+                         for (incomplete_parse, gold_transition) in zip(batch, gold_transitions)
+                         if incomplete_parse.num_transitions + 1 < len(incomplete_parse.gold_sequence)]
+
+            errors = torch.cat(all_errors)
             answers = torch.cat(all_answers)
             tree_loss = loss_function(errors, answers)
             tree_loss.backward()
