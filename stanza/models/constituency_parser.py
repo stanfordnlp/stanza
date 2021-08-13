@@ -225,17 +225,6 @@ def train(args, model_file):
 
     iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
 
-def build_batch(tree_iterator, train_batch_size):
-    batch = []
-    for _ in range(train_batch_size):
-        gold_tree = next(tree_iterator, None)
-        if gold_tree is None:
-            break
-        batch.append(gold_tree)
-
-    return batch
-
-
 def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
     # TODO: try different loss functions and optimizers
     if args['optim'].lower() == 'sgd':
@@ -267,16 +256,17 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             epoch_data.extend(train_data)
         leftover_training_data = epoch_data[args['eval_interval']:]
         epoch_data = epoch_data[:args['eval_interval']]
+        epoch_data.sort(key=lambda x: len(x[1]))
+        interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
+        random.shuffle(interval_starts)
 
         epoch_loss = 0.0
 
         transitions_correct = 0
         transitions_incorrect = 0
 
-        tree_iterator = iter(tqdm(epoch_data))
-        batch = build_batch(tree_iterator, args['train_batch_size'])
-        # TODO: sort epoch by length
-        while len(batch) > 0:
+        for interval_start in tqdm(interval_starts, postfix="Batch"):
+            batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
             # the batch will be empty when all trees from this epoch are trained
             # now we add the state to the trees in the batch
             # TODO: batch the initial state operation
@@ -324,8 +314,6 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
 
             optimizer.step()
             optimizer.zero_grad()
-
-            batch = build_batch(tree_iterator, args['train_batch_size'])
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args['eval_batch_size'])
