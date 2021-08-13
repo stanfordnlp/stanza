@@ -68,6 +68,13 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
+    def build_constituents(self, labels, children_lists):
+        """
+        Build multiple constituents at once.  This gives the opportunity for batching operations
+        """
+        pass
+
+    @abstractmethod
     def push_constituents(self, constituent_stacks, constituents):
         pass
 
@@ -120,6 +127,9 @@ class SimpleModel(BaseModel):
         for label in reversed(labels):
             top_constituent = Tree(label=label, children=[top_constituent])
         return top_constituent
+
+    def build_constituents(self, labels, children_lists):
+        return [self.build_constituent(label, children) for label, children in zip(labels, children_lists)]
 
     def build_constituent(self, label, children):
         if isinstance(label, str):
