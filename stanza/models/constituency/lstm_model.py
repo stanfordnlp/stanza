@@ -228,6 +228,10 @@ class LSTMModel(BaseModel, nn.Module):
         top_constituent = Constituent(value=node, hx=hx)
         return top_constituent
 
+    def build_constituents(self, labels, children_lists):
+        # TODO: make this a batch operation
+        return [self.build_constituent(label, children) for label, children in zip(labels, children_lists)]
+
     def build_constituent(self, label, children):
         open_index = self.open_node_tensors[self.open_node_map[label]]
         node_hx = [child.output for child in children]
