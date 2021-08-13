@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 import functools
 import logging
 
@@ -139,6 +139,19 @@ class Transition(ABC):
     def update_state(self, state, model):
         """
         update the word queue, possibly remove old pieces from the constituents state, and return the new constituent
+
+        the return value should be a tuple:
+          updated word_queue
+          updated constituents
+          new constituent to put on the queue and None
+            - note that the constituent shouldn't be on the queue yet
+              that allows putting it on as a batch operation, which
+              saves a significant amount of time in an LSTM, for example
+          OR
+          data used to make a new constituent and the method used
+            - for example, CloseConstituent can return the children needed
+              and itself.  this allows a batch operation to build
+              the constituent
         """
         pass
 
@@ -149,7 +162,9 @@ class Transition(ABC):
         """
         return a new State transformed via this transition
         """
-        word_queue, constituents, new_constituent = self.update_state(state, model)
+        word_queue, constituents, new_constituent, callback = self.update_state(state, model)
+        if callback is not None:
+            new_constituent = callback.build_constituents(model, [new_constituent])[0]
         constituents = model.push_constituents([constituents], [new_constituent])[0]
 
         return State(original_state=state,
@@ -187,7 +202,7 @@ class Shift(Transition):
         """
         new_constituent = model.transform_word_to_constituent(state)
         word_queue = state.word_queue.pop()
-        return word_queue, state.constituents, new_constituent
+        return word_queue, state.constituents, new_constituent, None
 
     def is_legal(self, state, model):
         """
@@ -225,7 +240,7 @@ class CompoundUnary(Transition):
         constituents = state.constituents
         new_constituent = model.unary_transform(state.constituents, self.labels)
         constituents = constituents.pop()
-        return state.word_queue, constituents, new_constituent
+        return state.word_queue, constituents, new_constituent, None
 
     def is_legal(self, state, model):
         """
@@ -288,7 +303,7 @@ class OpenConstituent(Transition):
     def update_state(self, state, model):
         # open a new constituent which can later be closed
         # puts a DUMMY constituent on the stack to mark where the constituents end
-        return state.word_queue, state.constituents, model.dummy_constituent(Dummy(self.label))
+        return state.word_queue, state.constituents, model.dummy_constituent(Dummy(self.label)), None
 
     def is_legal(self, state, model):
         """
@@ -342,9 +357,15 @@ class CloseConstituent(Transition):
         constituents = constituents.pop()
         # the children are in the opposite order of what we expect
         children.reverse()
-        new_constituent = model.build_constituent(label=label, children=children)
 
-        return state.word_queue, constituents, new_constituent
+        return state.word_queue, constituents, (label, children), CloseConstituent
+
+    @staticmethod
+    def build_constituents(model, data):
+        labels, children_lists = list(map(list, zip(*data)))
+        new_constituents = model.build_constituents(labels, children_lists)
+        return new_constituents
+
 
     def is_legal(self, state, model):
         """
@@ -386,6 +407,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
     word_queues = []
     constituents = []
     new_constituents = []
+    callbacks = defaultdict(list)
 
     for idx, (tree, transition) in enumerate(zip(tree_batch, transitions)):
         if not transition:
@@ -408,11 +430,19 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
                 remove.add(idx)
                 continue
 
-        wq, c, nc = transition.update_state(tree.state, model)
+        wq, c, nc, callback = transition.update_state(tree.state, model)
 
         word_queues.append(wq)
         constituents.append(c)
         new_constituents.append(nc)
+        if callback:
+            callbacks[callback].append(idx)
+
+    for key, idxs in callbacks.items():
+        data = [new_constituents[x] for x in idxs]
+        callback_constituents = key.build_constituents(model, data)
+        for idx, constituent in zip(idxs, callback_constituents):
+            new_constituents[idx] = constituent
 
     tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
