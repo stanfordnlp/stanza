@@ -3,6 +3,7 @@ import logging
 import random
 import torch
 import torch.nn as nn
+from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
@@ -229,42 +230,44 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
-        # TODO: make this a batch operation
-        return [self.build_constituent(label, children) for label, children in zip(labels, children_lists)]
+        label_hx = torch.stack([self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels])
+        node_hx = [[child.output for child in children] for children in children_lists]
+        node_hx = [torch.stack(nhx) for nhx in node_hx]
 
-    def build_constituent(self, label, children):
-        open_index = self.open_node_tensors[self.open_node_map[label]]
-        node_hx = [child.output for child in children]
-        label_hx = [self.open_node_embedding(open_index)]
-
-        forward_hx = torch.stack(label_hx + node_hx, axis=0)
-        # should now be: (#nodes, 1, hidden_dim)
-        forward_hx = forward_hx.unsqueeze(1)
-        # transform...
-        forward_hx = self.forward_reduce_lstm(forward_hx)[0]
+        max_length = max(len(children) for children in children_lists) + 1   # +1 for the label embedding
+        forward_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx.device)
+        forward_hx[0, :, :] = label_hx
+        for idx, nhx in enumerate(node_hx):
+            forward_hx[1:len(nhx)+1, idx, :] = nhx
+        forward_hx = torch.nn.utils.rnn.pack_padded_sequence(forward_hx, [len(x)+1 for x in children_lists], enforce_sorted=False)
         # take just the output of the final layer
-        forward_hx = forward_hx[-1, 0, :]
+        #   result of lstm is ouput, (hx, cx)
+        #   so [1][0] gets hx
+        #      [1][0][-1] is the final output
+        # will be shape len(children_lists), hidden_size
+        forward_hx = self.forward_reduce_lstm(forward_hx)[1][0][-1]
 
-        node_hx.reverse()
-        backward_hx = torch.stack(label_hx + node_hx, axis=0)
-        backward_hx = backward_hx.unsqueeze(1)
-        # should now be: (#nodes, 1, hidden_dim)
-        # transform...
-        backward_hx = self.backward_reduce_lstm(backward_hx)[0]
-        # take just the output of the final layer
-        backward_hx = backward_hx[-1, 0, :]
+        backward_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx.device)
+        backward_hx[0, :, :] = label_hx
+        for idx, nhx in enumerate(node_hx):
+            backward_hx[1:len(nhx)+1, idx, :] = nhx.flip(dims=(0,))
+        backward_hx = torch.nn.utils.rnn.pack_padded_sequence(backward_hx, [len(x)+1 for x in children_lists], enforce_sorted=False)
+        backward_hx = self.backward_reduce_lstm(backward_hx)[1][0][-1]
 
-        hx = self.reduce_linear(torch.cat((forward_hx, backward_hx)))
+        hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
         hx = self.nonlinearity(hx)
 
-        children = [child.value for child in children]
-        if isinstance(label, str):
-            node = Tree(label=label, children=children)
-        else:
-            for value in reversed(label):
-                node = Tree(label=value, children=children)
-                children = node
-        return Constituent(value=node, hx=hx)
+        constituents = []
+        for idx, (label, children) in enumerate(zip(labels, children_lists)):
+            children = [child.value for child in children]
+            if isinstance(label, str):
+                node = Tree(label=label, children=children)
+            else:
+                for value in reversed(label):
+                    node = Tree(label=value, children=children)
+                    children = node
+            constituents.append(Constituent(value=node, hx=hx[idx, :]))
+        return constituents
 
     def push_constituents(self, constituent_stacks, constituents):
         current_nodes = [stack.value for stack in constituent_stacks]

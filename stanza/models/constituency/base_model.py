@@ -59,15 +59,6 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def build_constituent(self, label, children):
-        """
-        Combine the given children into a new node using the label
-
-        The children are the entire elements popped from the stack, not just the nodes
-        """
-        pass
-
-    @abstractmethod
     def build_constituents(self, labels, children_lists):
         """
         Build multiple constituents at once.  This gives the opportunity for batching operations
@@ -129,14 +120,14 @@ class SimpleModel(BaseModel):
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
-        return [self.build_constituent(label, children) for label, children in zip(labels, children_lists)]
-
-    def build_constituent(self, label, children):
-        if isinstance(label, str):
-            label = (label,)
-        for value in reversed(label):
-            children = Tree(label=value, children=children)
-        return children
+        constituents = []
+        for label, children in zip(labels, children_lists):
+            if isinstance(label, str):
+                label = (label,)
+            for value in reversed(label):
+                children = Tree(label=value, children=children)
+            constituents.append(children)
+        return constituents
 
     def push_constituents(self, constituent_stacks, constituents):
         return [stack.push(constituent) for stack, constituent in zip(constituent_stacks, constituents)]
