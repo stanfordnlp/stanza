@@ -307,14 +307,14 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                     else:
                         transitions_correct = transitions_correct + 1
 
-                # update states and eliminate finished trees
-                # TODO: bulk_apply instead
-                batch = [IncompleteParse(state=gold_transition.apply(incomplete_parse.state, model),
-                                         num_transitions=incomplete_parse.num_transitions + 1,
-                                         gold_tree=incomplete_parse.gold_tree,
-                                         gold_sequence=incomplete_parse.gold_sequence)
-                         for (incomplete_parse, gold_transition) in zip(batch, gold_transitions)
-                         if incomplete_parse.num_transitions + 1 < len(incomplete_parse.gold_sequence)]
+                # eliminate finished trees, keeping only the transitions we will use
+                zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions + 1 < len(x[0].gold_sequence)]
+                batch = [x[0] for x in zipped_batch]
+                gold_transitions = [x[1] for x in zipped_batch]
+
+                if len(batch) > 0:
+                    # bulk update states
+                    batch = parse_transitions.bulk_apply(model, batch, gold_transitions, fail=True, max_transitions=None)
 
             errors = torch.cat(all_errors)
             answers = torch.cat(all_answers)
