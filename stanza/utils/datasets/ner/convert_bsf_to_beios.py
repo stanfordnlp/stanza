@@ -94,6 +94,7 @@ def parse_bsf(bsf_data: str) -> list:
 
 CORPUS_NAME = 'Ukrainian-languk'
 
+
 def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str = 'beios',
                           doc_delim: str = '\n', train_test_split_file: str = None) -> None:
     """
@@ -168,7 +169,8 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
 
     log.info('All done')
 
-def read_languk_train_test_split(file_path:str, dev_split:float = 0.1) -> Tuple:
+
+def read_languk_train_test_split(file_path: str, dev_split: float = 0.1) -> Tuple:
     """
     Read predefined split of train and test files in data set. 
     Originally located under doc/dev-test-split.txt
@@ -196,13 +198,13 @@ def read_languk_train_test_split(file_path:str, dev_split:float = 0.1) -> Tuple:
     # We will take part of train as dev set 
     # This way anyone using test set outside of this code base can be sure that there was no data set polution            
     shuffle(train_files)
-    dev_files = train_files[ : int(len(train_files) * dev_split)]
-    train_files = train_files[int(len(train_files) * dev_split) : ]
+    dev_files = train_files[: int(len(train_files) * dev_split)]
+    train_files = train_files[int(len(train_files) * dev_split):]
 
     assert len(set(train_files).intersection(set(dev_files))) == 0
     
     log.info(f'Files in each set: train={len(train_files)}, dev={len(dev_files)}, test={len(test_files)}')
-    return (train_files, dev_files, test_files)
+    return train_files, dev_files, test_files
 
 
 if __name__ == '__main__':
