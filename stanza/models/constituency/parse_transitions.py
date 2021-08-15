@@ -104,27 +104,42 @@ class State:
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
-def initial_state_from_tagged_words(tagged_word_list, model):
-    return State(sentence_length=len(tagged_word_list), num_opens=0, word_queue=model.initial_word_queue(tagged_word_list), transitions=model.initial_transitions(), constituents=model.initial_constituents())
+def initial_state_from_preterminals(preterminal_lists, model):
+    """
+    what is passed in should be a list of list of preterminals
+    """
+    word_queues = model.initial_word_queues(preterminal_lists)
+    return [State(sentence_length=len(preterminal_list),
+                  num_opens=0,
+                  word_queue=wq,
+                  transitions=model.initial_transitions(),
+                  constituents=model.initial_constituents())
+            for wq, preterminal_list in zip(word_queues, preterminal_lists)]
 
-def initial_state_from_words(words, tags, model):
-    tagged_word_list = []
-    for word, tag in zip(reversed(words), reversed(tags)):
-        word_node = Tree(label=word)
-        tag_node = Tree(label=tag, children=[word_node])
-        tagged_word_list.append(tag_node)
-    return initial_state_from_tagged_words(tagged_word_list, model)
+def initial_state_from_words(word_lists, tag_lists, model):
+    preterminal_lists = []
+    for words, tags in zip(word_lists, tag_lists):
+        tagged_word_list = []
+        for word, tag in zip(reversed(words), reversed(tags)):
+            word_node = Tree(label=word)
+            tag_node = Tree(label=tag, children=[word_node])
+            tagged_word_list.append(tag_node)
+        preterminal_lists.append(tagged_word_list)
+    return initial_state_from_preterminals(preterminal_lists, model)
 
-def initial_state_from_gold_tree(tree, model):
-    preterminals = [x for x in tree.yield_preterminals()]
-    # put the words on the stack backwards
-    preterminals.reverse()
-    tagged_word_list = []
-    for pt in preterminals:
-        word_node = Tree(label=pt.children[0].label)
-        tag_node = Tree(label=pt.label, children=[word_node])
-        tagged_word_list.append(tag_node)
-    return initial_state_from_tagged_words(tagged_word_list, model)
+def initial_state_from_gold_trees(trees, model):
+    # reversed so we put the words on the stack backwards
+    yield_lists = [reversed([x for x in tree.yield_preterminals()]) for tree in trees]
+
+    preterminal_lists = []
+    for preterminals in yield_lists:
+        tagged = []
+        for pt in preterminals:
+            word_node = Tree(label=pt.children[0].label)
+            tag_node = Tree(label=pt.label, children=[word_node])
+            tagged.append(tag_node)
+        preterminal_lists.append(tagged)
+    return initial_state_from_preterminals(preterminal_lists, model)
 
 # Note that at runtime, gold values will not be available
 IncompleteParse = namedtuple('IncompleteParse', ['state', 'num_transitions', 'gold_tree', 'gold_sequence'])

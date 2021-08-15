@@ -11,11 +11,13 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 def test_top_down():
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
-    tree = tree_reader.read_trees(text)[0]
+    trees = tree_reader.read_trees(text)
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(tree, use_compound_unary=True)
-    state = parse_transitions.initial_state_from_gold_tree(tree, model)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=True)
+    states = parse_transitions.initial_state_from_gold_trees(trees, model)
+    assert(len(states)) == 1
+    state = states[0]
 
     for t in transitions:
         assert t.is_legal(state, model)
@@ -31,15 +33,17 @@ def test_top_down():
     assert len(state.transitions) == len(transitions) + 1
 
     result_tree = state.constituents.value
-    assert result_tree == tree
+    assert result_tree == trees[0]
 
 def test_top_down_no_unary():
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
-    tree = tree_reader.read_trees(text)[0]
+    trees = tree_reader.read_trees(text)
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(tree, use_compound_unary=False)
-    state = parse_transitions.initial_state_from_gold_tree(tree, model)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=False)
+    states = parse_transitions.initial_state_from_gold_trees(trees, model)
+    assert len(states) == 1
+    state = states[0]
 
     for t in transitions:
         assert t.is_legal(state, model)
@@ -55,7 +59,7 @@ def test_top_down_no_unary():
     assert len(state.transitions) == len(transitions) + 1
 
     result_tree = state.constituents.value
-    assert result_tree == tree
+    assert result_tree == trees[0]
 
 def test_all_transitions():
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
@@ -81,16 +85,17 @@ def test_top_down_compound_unary():
 
     trees = tree_reader.read_trees(text)
     assert len(trees) == 1
-    tree = trees[0]
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(tree, use_compound_unary=False, use_compound_open=True)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=False, use_compound_open=True)
 
-    state = parse_transitions.initial_state_from_gold_tree(tree, model)
+    states = parse_transitions.initial_state_from_gold_trees(trees, model)
+    assert len(states) == 1
+    state = states[0]
 
     for t in transitions:
         assert t.is_legal(state, model)
         state = t.apply(state, model)
 
     result = model.get_top_constituent(state.constituents)
-    assert tree == result
+    assert trees[0] == result

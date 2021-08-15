@@ -22,7 +22,12 @@ class BaseModel(ABC):
     """
 
     @abstractmethod
-    def initial_word_queue(self, tagged_words):
+    def initial_word_queues(self, tagged_word_lists):
+        """
+        For each list of tagged words, builds a TreeStack of word nodes
+
+        The word lists should be backwards so that the first word is the last word put on the stack (LIFO)
+        """
         pass
 
     @abstractmethod
@@ -92,11 +97,14 @@ class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
     """
-    def initial_word_queue(self, tagged_words):
-        word_queue = TreeStack(value=None)
-        for tag_node in tagged_words:
-            word_queue = word_queue.push(tag_node)
-        return word_queue
+    def initial_word_queues(self, tagged_word_lists):
+        word_queues = []
+        for tagged_words in tagged_word_lists:
+            word_queue = TreeStack(value=None)
+            for tag_node in tagged_words:
+                word_queue = word_queue.push(tag_node)
+            word_queues.append(word_queue)
+        return word_queues
 
     def initial_transitions(self):
         return TreeStack(value=None)

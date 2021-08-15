@@ -164,40 +164,45 @@ class LSTMModel(BaseModel, nn.Module):
     def get_root_labels(self):
         return self.root_labels
 
-    def initial_word_queue(self, tagged_words):
-        word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
-        word_input = self.embedding(word_idx)
+    def initial_word_queues(self, tagged_word_lists):
+        word_queues = []
+        for tagged_words in tagged_word_lists:
+            word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
+            word_input = self.embedding(word_idx)
 
-        # this occasionally learns UNK at train time
-        word_labels = [word.children[0].label for word in tagged_words]
-        if self.training:
-            for idx, word in enumerate(word_labels):
-                if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency']:
-                    word_labels[idx] = None
-        delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in word_labels])
+            # this occasionally learns UNK at train time
+            word_labels = [word.children[0].label for word in tagged_words]
+            if self.training:
+                for idx, word in enumerate(word_labels):
+                    if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency']:
+                        word_labels[idx] = None
+            delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in word_labels])
 
-        delta_input = self.delta_embedding(delta_idx)
+            delta_input = self.delta_embedding(delta_idx)
 
-        try:
-            tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
-            tag_input = self.tag_embedding(tag_idx)
-        except KeyError as e:
-            raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
+            try:
+                tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
+                tag_input = self.tag_embedding(tag_idx)
+            except KeyError as e:
+                raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
-        # now of size sentence x input
-        word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
-        # now sentence x hidden_size
-        word_input = self.word_to_constituent(word_input)
-        word_input = self.nonlinearity(word_input)
-        # now of size sentence x 1 x hidden_size
-        word_input = word_input.unsqueeze(1)
-        word_input = self.word_dropout(word_input)
-        outputs, _ = self.word_lstm(word_input)
+            # now of size sentence x input
+            word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
+            # now sentence x hidden_size
+            word_input = self.word_to_constituent(word_input)
+            word_input = self.nonlinearity(word_input)
+            # now of size sentence x 1 x hidden_size
+            word_input = word_input.unsqueeze(1)
+            word_input = self.word_dropout(word_input)
+            outputs, _ = self.word_lstm(word_input)
 
-        word_queue = TreeStack(value=WordNode(None, self.zeros, self.zeros))
-        for idx, tag_node in enumerate(tagged_words):
-            word_queue = word_queue.push(WordNode(tag_node, embedding=word_input, hx=outputs[idx, 0, :].squeeze()))
-        return word_queue
+            word_queue = TreeStack(value=WordNode(None, self.zeros, self.zeros))
+            for idx, tag_node in enumerate(tagged_words):
+                word_queue = word_queue.push(WordNode(tag_node, embedding=word_input[idx, 0, :], hx=outputs[idx, 0, :].squeeze()))
+
+            word_queues.append(word_queue)
+
+        return word_queues
 
     def initial_transitions(self):
         return TreeStack(value=TransitionNode(None, self.transition_zeros[-1, 0, :], self.transition_zeros, self.transition_zeros))

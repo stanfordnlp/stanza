@@ -11,13 +11,15 @@ def build_initial_state(model):
     words = ["Unban", "Mox", "Opal"]
     tags = ["VB", "NNP", "NNP"]
 
-    state = parse_transitions.initial_state_from_words(words, tags, model)
+    state = parse_transitions.initial_state_from_words([words], [tags], model)
     return state
 
 def test_initial_state(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    states = build_initial_state(model)
+    assert len(states) == 1
+    state = states[0]
 
     assert state.sentence_length == 3
     assert state.num_opens == 0
@@ -29,7 +31,7 @@ def test_initial_state(model=None):
 def test_shift(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     open_transition = parse_transitions.OpenConstituent("ROOT")
     state = open_transition.apply(state, model)
@@ -69,7 +71,7 @@ def test_initial_unary(model=None):
     if model is None:
         model = SimpleModel()
 
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
     unary = parse_transitions.CompoundUnary(['ROOT', 'VP'])
     assert not unary.is_legal(state, model)
     unary = parse_transitions.CompoundUnary(['VP'])
@@ -79,7 +81,7 @@ def test_initial_unary(model=None):
 def test_unary(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     shift = parse_transitions.Shift()
     state = shift.apply(state, model)
@@ -103,7 +105,7 @@ def test_unary(model=None):
 def test_unary_requires_root(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     open_transition = parse_transitions.OpenConstituent("S")
     assert open_transition.is_legal(state, model)
@@ -137,7 +139,7 @@ def test_unary_requires_root(model=None):
 def test_open(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     shift = parse_transitions.Shift()
     state = shift.apply(state, model)
@@ -157,7 +159,7 @@ def test_open(model=None):
     assert state.num_opens == 21
 
     # check that it is illegal if the state is out of words
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
     state = shift.apply(state, model)
     state = shift.apply(state, model)
     state = shift.apply(state, model)
@@ -166,7 +168,7 @@ def test_open(model=None):
 def test_compound_open(model=None):
     if model is None:
         model = SimpleModel()
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     open_transition = parse_transitions.OpenConstituent("ROOT", "S")
     assert open_transition.is_legal(state, model)
@@ -193,7 +195,7 @@ def test_close(model=None):
     if model is None:
         model = SimpleModel()
     # this one actually tests an entire subtree building
-    state = build_initial_state(model)
+    state = build_initial_state(model)[0]
 
     shift = parse_transitions.Shift()
     state = shift.apply(state, model)
