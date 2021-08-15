@@ -208,7 +208,27 @@ class Shift(Transition):
         """
         Disallow shifting when the word queue is empty or there are no opens to eventually eat this word
         """
-        return state.num_opens > 0 and not state.empty_word_queue()
+        if state.num_opens == 0:
+            return False
+        if state.empty_word_queue():
+            return False
+        if state.num_opens == 1:
+            # there must be at least one transition, since there is an open
+            assert state.transitions.parent is not None
+            if state.transitions.parent.parent is None:
+                # only one transition
+                trans = model.get_top_transition(state.transitions)
+                # must be an Open, since there is one open and one transitions
+                # note that an S, FRAG, etc could happen if we're using unary
+                # and ROOT-S is possible in the case of compound Open
+                # in both cases, Shift is legal
+                # Note that the corresponding problem of shifting after the ROOT-S
+                # has been closed to just ROOT is handled in CloseConstituent
+                if len(trans.label) == 1 and trans.top_label in model.get_root_labels():
+                    # don't shift a word at the very start of a parse
+                    # we want there to be an extra layer below ROOT
+                    return False
+        return True
 
     def __repr__(self):
         return "Shift"
@@ -250,6 +270,7 @@ class CompoundUnary(Transition):
         if model.get_top_constituent(state.constituents) is None:
             return False
         # don't unary transition a dummy, dummy
+        # and don't stack CompoundUnary transitions
         if isinstance(model.get_top_transition(state.transitions), (CompoundUnary, OpenConstituent)):
             return False
         is_root = self.labels[0] in model.get_root_labels()
@@ -382,6 +403,7 @@ class CloseConstituent(Transition):
         if not model.has_unary_transitions():
             # in fact, we have to leave the top level constituent
             # under the ROOT open if unary transitions are not possible
+            # TODO: a compound open should be okay (in fact, this is a bug hurting performance)
             if state.num_opens == 2 and not state.empty_word_queue():
                 return False
         return True
