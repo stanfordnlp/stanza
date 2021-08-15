@@ -102,7 +102,7 @@ def test_close(unary_model):
     test_parse_transitions.test_close(unary_model)
 
 def run_forward_checks(model):
-    state = test_parse_transitions.build_initial_state(model)
+    state = test_parse_transitions.build_initial_state(model)[0]
     model((state,))
 
     shift = parse_transitions.Shift()

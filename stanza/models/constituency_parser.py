@@ -131,7 +131,7 @@ def verify_transitions(trees, sequences):
     model = base_model.SimpleModel()
     logger.info("Verifying the transition sequences for {} trees".format(len(trees)))
     for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
-        state = parse_transitions.initial_state_from_gold_tree(tree, model)
+        state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
         for trans in sequence:
             state = trans.apply(state, model)
         result = model.get_top_constituent(state.constituents)
@@ -278,11 +278,12 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             # the batch will be empty when all trees from this epoch are trained
             # now we add the state to the trees in the batch
             # TODO: batch the initial state operation
-            batch = [IncompleteParse(state=parse_transitions.initial_state_from_gold_tree(tree, model),
+            initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
+            batch = [IncompleteParse(state=state,
                                      num_transitions=0,
                                      gold_tree=tree,
                                      gold_sequence=sequence)
-                     for (tree, sequence) in batch]
+                     for (tree, sequence), state in zip(batch, initial_states)]
 
             incorrect = 0
             correct = 0
@@ -331,24 +332,30 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             lstm_model.save(model_file, model)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, transitions_correct, transitions_incorrect, epoch_loss, f1, best_f1))
 
+def build_batch(batch_size, tree_iterator, model):
+    tree_batch = []
+    for _ in range(batch_size):
+        gold_tree = next(tree_iterator, None)
+        if gold_tree is None:
+            break
+        tree_batch.append(gold_tree)
+
+    states = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
+    tree_batch = [IncompleteParse(gold_tree=gold_tree,
+                                  num_transitions=0,
+                                  state=state,
+                                  gold_sequence=None)
+                  for gold_tree, state in zip(tree_batch, states)]
+    return tree_batch
+
 def run_dev_set(model, dev_trees, batch_size):
     logger.info("Processing {} dev trees".format(len(dev_trees)))
     model.eval()
     treebank = []
 
     tree_iterator = iter(tqdm(dev_trees))
-    tree_batch = []
-    for _ in range(batch_size):
-        gold_tree = next(tree_iterator, None)
-        if gold_tree is None:
-            break
-        # TODO: can batch the initial_states
-        # tree, # transitions, state
-        # TODO: could store the number of transitions in the state...
-        tree_batch.append(IncompleteParse(gold_tree=gold_tree,
-                                          num_transitions=0,
-                                          state=parse_transitions.initial_state_from_gold_tree(gold_tree, model),
-                                          gold_sequence=None))
+    tree_batch = build_batch(batch_size, tree_iterator, model)
+    horizon_iterator = iter([])
 
     while len(tree_batch) > 0:
         _, transitions = model.predict([tree.state for tree in tree_batch], is_legal=True)
@@ -366,13 +373,15 @@ def run_dev_set(model, dev_trees, batch_size):
         tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
 
         for _ in range(batch_size - len(tree_batch)):
-            gold_tree = next(tree_iterator, None)
-            if gold_tree is None:
-                break
-            tree_batch.append(IncompleteParse(gold_tree=gold_tree,
-                                              num_transitions=0,
-                                              state=parse_transitions.initial_state_from_gold_tree(gold_tree, model),
-                                              gold_sequence=None))
+            horizon_tree = next(horizon_iterator, None)
+            if not horizon_tree:
+                horizon_batch = build_batch(batch_size, tree_iterator, model)
+                if len(horizon_batch) == 0:
+                    break
+                horizon_iterator = iter(horizon_batch)
+                horizon_tree = next(horizon_iterator, None)
+
+            tree_batch.append(horizon_tree)
 
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))
