@@ -79,8 +79,11 @@ def test_initial_model(unary_model):
 def test_initial_state(unary_model):
     test_parse_transitions.test_initial_state(unary_model)
 
-def test_shift(unary_model):
-    test_parse_transitions.test_shift(unary_model)
+def test_shift(pt):
+    # TODO: might be good to include some tests specifically for shift
+    # in the context of a model with unaries
+    model = build_model(pt)
+    test_parse_transitions.test_shift(model)
 
 def test_unary(unary_model):
     test_parse_transitions.test_unary(unary_model)

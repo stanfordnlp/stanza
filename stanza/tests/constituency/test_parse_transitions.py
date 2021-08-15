@@ -31,6 +31,8 @@ def test_shift(model=None):
         model = SimpleModel()
     state = build_initial_state(model)
 
+    open_transition = parse_transitions.OpenConstituent("ROOT")
+    state = open_transition.apply(state, model)
     open_transition = parse_transitions.OpenConstituent("S")
     state = open_transition.apply(state, model)
     shift = parse_transitions.Shift()
@@ -38,21 +40,21 @@ def test_shift(model=None):
 
     state = shift.apply(state, model)
     assert len(state.word_queue) == 3
-    # 3 because of the dummy created by the open
-    assert len(state.constituents) == 3
-    assert len(state.transitions) == 3
-    assert shift.is_legal(state, model)
-
-    state = shift.apply(state, model)
-    assert len(state.word_queue) == 2
+    # 4 because of the dummy created by the opens
     assert len(state.constituents) == 4
     assert len(state.transitions) == 4
     assert shift.is_legal(state, model)
 
     state = shift.apply(state, model)
-    assert len(state.word_queue) == 1
+    assert len(state.word_queue) == 2
     assert len(state.constituents) == 5
     assert len(state.transitions) == 5
+    assert shift.is_legal(state, model)
+
+    state = shift.apply(state, model)
+    assert len(state.word_queue) == 1
+    assert len(state.constituents) == 6
+    assert len(state.transitions) == 6
     assert not shift.is_legal(state, model)
 
     constituents = state.constituents
