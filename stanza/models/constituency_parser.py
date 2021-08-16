@@ -60,6 +60,8 @@ def parse_args(args=None):
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
     parser.add_argument('--learning_rate', default=1.0, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.005 for SGD')
+    # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
+    # 0.1 was very clearly too high. 0.0001 might have been okay.
     parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
 
