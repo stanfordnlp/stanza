@@ -59,11 +59,12 @@ def parse_args(args=None):
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
-    parser.add_argument('--learning_rate', default=1.0, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.005 for SGD')
+    DEFAULT_LEARNING_RATES = { "adamw": 0.001, "adadelta": 1.0, "sgd": 0.005 }
+    parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.005 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
-    parser.add_argument('--weight_decay', default=0.001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
+    parser.add_argument('--weight_decay', default=0.01, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, or Adadelta')
 
     parser.add_argument('--word_dropout', default=0.0, type=float, help='Dropout on the word embedding')
     parser.add_argument('--predict_dropout', default=0.0, type=float, help='Dropout on the final prediction layer')
@@ -85,6 +86,9 @@ def parse_args(args=None):
         args.lang = args.shorthand.split("_")[0]
     if args.cpu:
         args.cuda = False
+    if args.learning_rate is None:
+        args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
+
     args = vars(args)
     return args
 
@@ -228,11 +232,12 @@ def train(args, model_file):
     iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
 
 def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
-    # TODO: try different loss functions and optimizers
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
 
