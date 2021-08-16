@@ -13,7 +13,7 @@ from stanza.models.constituency.parse_tree import Tree
 
 logger = logging.getLogger('stanza')
 
-WordNode = namedtuple("WordNode", ['value', 'hx'])
+WordNode = namedtuple("WordNode", ['value', 'embedding', 'hx'])
 TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 
 # Invariant: the hx at the top of the constituency stack will have a
@@ -106,15 +106,14 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('transition_zeros', torch.zeros(self.num_layers, 1, self.transition_hidden_size))
         self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
+        self.word_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
 
-        # when pushing a new constituent made from a single word_tag pair
-        # note that the word_tag pair has been mapped to hidden_size at this point
-        # also including word_tag pair - could try more configuratioins and sizes
-        self.word_to_constituent = nn.Linear(self.hidden_size + self.word_input_size, self.hidden_size)
+        # this turns a word_tag embedding into an input for the word_lstm
+        # we could try multiple configurations, including not having this translation at all
+        self.word_to_constituent = nn.Linear(self.word_input_size, self.hidden_size)
 
         self.use_compound_unary = args['use_compound_unary']
         if self.use_compound_unary:
@@ -183,16 +182,17 @@ class LSTMModel(BaseModel, nn.Module):
 
         # now of size sentence x input
         word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
-        # now of size sentence x 1 x input
+        # now sentence x hidden_size
+        word_input = self.word_to_constituent(word_input)
+        word_input = self.nonlinearity(word_input)
+        # now of size sentence x 1 x hidden_size
         word_input = word_input.unsqueeze(1)
         word_input = self.word_dropout(word_input)
         outputs, _ = self.word_lstm(word_input)
-        outputs = torch.cat((outputs, word_input), axis=2)
-        outputs = self.word_to_constituent(outputs)
 
-        word_queue = TreeStack(value=WordNode(None, self.zeros))
+        word_queue = TreeStack(value=WordNode(None, self.zeros, self.zeros))
         for idx, tag_node in enumerate(tagged_words):
-            word_queue = word_queue.push(WordNode(tag_node, outputs[idx, 0, :].squeeze()))
+            word_queue = word_queue.push(WordNode(tag_node, embedding=word_input, hx=outputs[idx, 0, :].squeeze()))
         return word_queue
 
     def initial_transitions(self):
