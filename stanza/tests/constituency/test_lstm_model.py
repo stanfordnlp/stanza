@@ -159,4 +159,4 @@ def test_save_load_model(pt, unary_model):
         filename = os.path.join(tmpdirname, "parser.pt")
         lstm_model.save(filename, unary_model)
         assert os.path.exists(filename)
-        foo = lstm_model.load(filename, pt)
+        foo = lstm_model.load(filename, pt, False)
