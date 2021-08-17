@@ -348,6 +348,22 @@ def build_batch_from_trees(batch_size, data_iterator, model):
                   for gold_tree, state in zip(tree_batch, states)]
     return tree_batch
 
+def build_batch_from_tagged_words(batch_size, data_iterator, model):
+    tree_batch = []
+    for _ in range(batch_size):
+        sentence = next(data_iterator, None)
+        if sentence is None:
+            break
+        tree_batch.append(sentence)
+
+    states = parse_transitions.initial_state_from_words(tree_batch, model)
+    tree_batch = [IncompleteParse(gold_tree=None,
+                                  num_transitions=0,
+                                  state=state,
+                                  gold_sequence=None)
+                  for state in states]
+    return tree_batch
+
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     treebank = []
     tree_batch = build_batch_fn(batch_size, data_iterator, model)
@@ -380,6 +396,16 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
             tree_batch.append(horizon_tree)
 
     return treebank
+
+def parse_tagged_words(model, words, batch_size):
+    logger.debug("Processing {} sentences".format(words))
+    model.eval()
+
+    sentence_iterator = iter(words)
+    treebank = parse_sentences(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
+
+    results = [t[1][0][0] for t in treebank]
+    return results
 
 def run_dev_set(model, dev_trees, batch_size, filename):
     logger.info("Processing {} trees from {}".format(len(dev_trees), filename))
