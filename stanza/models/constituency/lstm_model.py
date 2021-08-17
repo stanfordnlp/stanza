@@ -371,7 +371,7 @@ def save(filename, model, skip_modules=True):
     logger.info("Model saved to {}".format(filename))
 
 
-def load(filename, pretrain):
+def load(filename, pretrain, use_gpu):
     try:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
     except BaseException:
@@ -397,6 +397,9 @@ def load(filename, pretrain):
     logger.debug("-- MODEL CONFIG --")
     for k in model.args.keys():
         logger.debug("  --{}: {}".format(k, model.args[k]))
+
+    if use_gpu:
+        model.cuda()
 
     return model
 

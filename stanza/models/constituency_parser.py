@@ -140,7 +140,7 @@ def verify_transitions(trees, sequences):
 
 def evaluate(args, model_file):
     pretrain = load_pretrain(args)
-    model = lstm_model.load(model_file, pretrain)
+    model = lstm_model.load(model_file, pretrain, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read {} trees for evaluation".format(len(treebank)))
