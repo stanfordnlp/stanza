@@ -116,15 +116,15 @@ def initial_state_from_preterminals(preterminal_lists, model):
                   constituents=model.initial_constituents())
             for wq, preterminal_list in zip(word_queues, preterminal_lists)]
 
-def initial_state_from_words(word_lists, tag_lists, model):
+def initial_state_from_words(word_lists, model):
     preterminal_lists = []
-    for words, tags in zip(word_lists, tag_lists):
-        tagged_word_list = []
-        for word, tag in zip(reversed(words), reversed(tags)):
+    for words in word_lists:
+        preterminals = []
+        for word, tag in reversed(words):
             word_node = Tree(label=word)
             tag_node = Tree(label=tag, children=[word_node])
-            tagged_word_list.append(tag_node)
-        preterminal_lists.append(tagged_word_list)
+            preterminals.append(tag_node)
+        preterminal_lists.append(preterminals)
     return initial_state_from_preterminals(preterminal_lists, model)
 
 def initial_state_from_gold_trees(trees, model):
