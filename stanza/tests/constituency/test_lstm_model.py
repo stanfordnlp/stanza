@@ -129,18 +129,24 @@ def run_forward_checks(model):
 
     model((state,))
 
-def test_forward(pt, unary_model):
+def test_unary_forward(pt, unary_model):
     """
     Checks that the forward pass doesn't crash when run after various operations
 
     Doesn't check the forward pass for making reasonable answers
     """
     run_forward_checks(unary_model)
+
+def test_lstm_forward(pt):
     model = build_model(pt, '--num_lstm_layers', '1')
     run_forward_checks(model)
     model = build_model(pt, '--num_lstm_layers', '2')
     run_forward_checks(model)
     model = build_model(pt, '--num_lstm_layers', '3')
+    run_forward_checks(model)
+
+def test_multiple_output_forward(pt):
+    model = build_model(pt, '--num_output_layers', '2', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
 def test_save_load_model(pt, unary_model):
