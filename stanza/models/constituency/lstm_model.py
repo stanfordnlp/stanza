@@ -151,7 +151,11 @@ class LSTMModel(BaseModel, nn.Module):
 
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
-        self.W = nn.Linear(self.hidden_size * 2 + self.transition_hidden_size, len(transitions))
+        middle_layers = self.args['num_output_layers'] - 1
+        predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
+        predict_output_size = [self.hidden_size] * middle_layers + [len(transitions)]
+        self.output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
+                                            for input_size, output_size in zip(predict_input_size, predict_output_size)])
 
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
@@ -316,8 +320,12 @@ class LSTMModel(BaseModel, nn.Module):
         constituent_hx = torch.stack([state.constituents.value.output for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
-        hx = self.predict_dropout(hx)
-        return self.W(hx)
+        for idx, output_layer in enumerate(self.output_layers):
+            hx = self.predict_dropout(hx)
+            if idx < len(self.output_layers) - 1:
+                hx = self.nonlinearity(hx)
+            hx = output_layer(hx)
+        return hx
 
     # TODO: merge this with forward?
     def predict(self, states, is_legal=False):
