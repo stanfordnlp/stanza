@@ -112,7 +112,8 @@ class CNNClassifier(nn.Module):
             self.extra_vocab = list(extra_vocab)
             self.extra_vocab_map = { word: i for i, word in enumerate(self.extra_vocab) }
             # TODO: possibly add regularization specifically on the extra embedding?
-            # TODO FIXME: word of idx 0 is being shared with the padding!
+            # note: it looks like a bug that this doesn't add UNK or PAD, but actually
+            # those are expected to already be the first two entries
             self.extra_embedding = nn.Embedding(num_embeddings = len(extra_vocab),
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
