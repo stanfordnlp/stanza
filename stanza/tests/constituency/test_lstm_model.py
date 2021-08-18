@@ -8,6 +8,7 @@ from stanza.models.common import pretrain
 from stanza.models.constituency import lstm_model
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
+from stanza.models.constituency import trainer
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.tests import *
@@ -56,14 +57,14 @@ def build_model(pt, *args):
 
     args = constituency_parser.parse_args(args)
 
-    transitions = constituency_parser.build_treebank(trees, args)
+    transitions = trainer.build_treebank(trees, args)
     transitions = transition_sequence.all_transitions(transitions)
     constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
     tags = parse_tree.Tree.get_unique_tags(trees)
     words = parse_tree.Tree.get_unique_words(trees)
     rare_words = parse_tree.Tree.get_rare_words(trees)
     root_labels = parse_tree.Tree.get_root_labels(trees)
-    open_nodes = constituency_parser.get_open_nodes(trees, args)
+    open_nodes = trainer.get_open_nodes(trees, args)
 
     model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args)
     return model
