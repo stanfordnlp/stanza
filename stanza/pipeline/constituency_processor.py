@@ -9,8 +9,8 @@ TODO: a possible way to generalize this would be to make it a
 ClassifierProcessor and have "sentiment" be an option.
 """
 
-import stanza.models.constituency_parser as constituency_parser
 import stanza.models.constituency.lstm_model as lstm_model
+import stanza.models.constituency.trainer as trainer
 
 from stanza.models.common import doc
 from stanza.models.common.pretrain import Pretrain
@@ -44,6 +44,6 @@ class ConstituencyProcessor(UDProcessor):
         # certainly parsing across an MWT boundary is an error
         # TODO: maybe some constituency models are trained on UPOS not XPOS
         words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
-        trees = constituency_parser.parse_tagged_words(self._model, words, self._batch_size)
+        trees = trainer.parse_tagged_words(self._model, words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
