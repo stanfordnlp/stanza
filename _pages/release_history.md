@@ -12,6 +12,8 @@ Note that prior to version 1.0.0, the Stanza library was named as "StanfordNLP".
 
 | Version | Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Notes |
 | :--- | :----------------------------------- | :--- |
+| 1.2.3 | 2021-08-09 | Additional NER models for AF, IT.  A couple minor bugfixes |
+| 1.2.2 | 2021-07-15 | Fix regression in NER results for non-VI languages, fix a couple other minor bugs |
 | 1.2.1 | 2021-06-17 | Additional NER models for BG, HU, FI, VI.  bulk_process mechanism which works much faster in certain settings.  All models updated to UD 2.8 data. |
 | 1.2.0 | 2021-01-29 | Rewriting of the training scripts to python for greater ease of use and system compatibility.  Multiple fixes to tokenization models for common punctuation errors and typos.  All models updated to UD 2.7 data. |
 | 1.1.1 | 2020-08-13 | This release features support for extending the capability of the Stanza pipeline with customized processors, a new sentiment analysis tool for English/German/Chinese, improvements to the CoreNLPClient functionality (including compatibility with CoreNLP 4.1.0), new models for a few languages (including Thai, which is supported for the first time in Stanza), new biomedical and clinical English packages, alternative servers for downloading resource files, and various improvements and bugfixes ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.1.1)). |
