@@ -174,13 +174,6 @@ class Tokenizer(nn.Module):
 
             return pred, loss, trans
 
-if __name__ == "__main__":
-
-    checkpoint = torch.load("/sailhome/gsychi/stanza/stanza/models/tokenization/transfer_model.pth.tar")
-    #model = Tokenizer()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
-
-
-
 
 
 
