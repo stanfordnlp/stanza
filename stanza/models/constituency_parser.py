@@ -1,3 +1,24 @@
+"""
+A command line interface to a shift reduce constituency parser.
+
+This follows the work of
+Recurrent neural network grammars by Dyer et al
+In-Order Transition-based Constituent Parsing by Liu & Zhang
+
+The general outline is:
+
+  Train a model by taking a list of trees, converting them to
+    transition sequences, and learning a model which can predict the
+    next transition given a current state
+  Then, at inference time, repeatedly predict the next transition until parsing is complete
+
+In order to make the runtime a more competitive speed, effort is taken
+to batch the transitions and apply multiple transitions at once.  At
+train time, batches are groups together by length, and at inference
+time, new trees are added to the batch as previous trees on the batch
+finish their inference.
+"""
+
 import argparse
 import logging
 import os
@@ -139,6 +160,9 @@ def verify_transitions(trees, sequences):
             raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
 
 def evaluate(args, model_file):
+    """
+    Uses a subprocess to run the Java EvalB code
+    """
     pretrain = load_pretrain(args)
     model = lstm_model.load(model_file, pretrain, args['cuda'])
 
@@ -149,9 +173,18 @@ def evaluate(args, model_file):
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
 def build_treebank(trees, args):
+    """
+    Convert a set of trees into the corresponding treebank based on the args
+
+    Currently only supports top-down transitions, but more may be added in the future, especially bottom up
+    """
     return transition_sequence.build_top_down_treebank(trees, use_compound_unary=args['use_compound_unary'], use_compound_open=args['use_compound_open'])
 
 def get_open_nodes(trees, args):
+    """
+    Return a list of all open nodes in the given dataset.
+    Depending on the parameters, may be single or compound open transitions.
+    """
     if args['use_compound_open']:
         return parse_tree.Tree.get_compound_constituents(trees)
     else:
@@ -166,6 +199,9 @@ def print_args(args):
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
 def train(args, model_file):
+    """
+    Build a model, train it using the requested train & dev files
+    """
     print_args(args)
 
     utils.ensure_dir(args['save_dir'])
@@ -232,7 +268,10 @@ def train(args, model_file):
 
     iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
 
-def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_file):
+def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
+    """
+    Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
+    """
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
@@ -255,9 +294,10 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
     train_data = list(zip(train_trees, train_sequences))
     leftover_training_data = []
     best_f1 = 0.0
-    for epoch in range(args['epochs']):
+    best_epoch = 0
+    for epoch in range(1, args['epochs']+1):
         model.train()
-        logger.info("Starting epoch {}".format(epoch+1))
+        logger.info("Starting epoch {}".format(epoch))
         epoch_data = leftover_training_data
         while len(epoch_data) < args['eval_interval']:
             random.shuffle(train_data)
@@ -329,10 +369,14 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
         if f1 > best_f1:
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
-            lstm_model.save(model_file, model)
-        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, transitions_correct, transitions_incorrect, epoch_loss, f1, best_f1))
+            best_epoch = epoch
+            lstm_model.save(model_filename, model)
+        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
 
 def build_batch_from_trees(batch_size, data_iterator, model):
+    """
+    Read from the data_iterator batch_size trees and turn them into new parsing states
+    """
     tree_batch = []
     for _ in range(batch_size):
         gold_tree = next(data_iterator, None)
@@ -349,6 +393,9 @@ def build_batch_from_trees(batch_size, data_iterator, model):
     return tree_batch
 
 def build_batch_from_tagged_words(batch_size, data_iterator, model):
+    """
+    Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
+    """
     tree_batch = []
     for _ in range(batch_size):
         sentence = next(data_iterator, None)
@@ -365,6 +412,17 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
     return tree_batch
 
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
+    """
+    Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
+
+    The data_iterator should be anything which returns the data for a parse task via next()
+    build_batch_fn is a function that turns that data into IncompleteParse objects
+    This will be called to generate batches of size batch_size until the data is exhausted
+
+    The return is a list of tuples: (gold_tree, [(predicted, score) ...])
+    gold_tree will be left blank if the data did not include gold trees
+    currently score is always 1.0, but the interface may be expanded to get a score from the result of the parsing
+    """
     treebank = []
     tree_batch = build_batch_fn(batch_size, data_iterator, model)
     horizon_iterator = iter([])
@@ -398,6 +456,14 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     return treebank
 
 def parse_tagged_words(model, words, batch_size):
+    """
+    This parses tagged words and returns a list of trees.
+
+    The tagged words should be represented:
+      one list per sentence
+        each sentence is a list of (word, tag)
+    The return value is a list of ParseTree objects
+    """
     logger.debug("Processing {} sentences".format(words))
     model.eval()
 
@@ -408,6 +474,11 @@ def parse_tagged_words(model, words, batch_size):
     return results
 
 def run_dev_set(model, dev_trees, batch_size, filename):
+    """
+    This reparses a treebank and executes the CoreNLP Java EvalB code.
+
+    It only works if CoreNLP 4.3.0 or higher is in the classpath.
+    """
     logger.info("Processing {} trees from {}".format(len(dev_trees), filename))
     model.eval()
 
