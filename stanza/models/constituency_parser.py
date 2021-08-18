@@ -145,7 +145,7 @@ def evaluate(args, model_file):
     treebank = read_treebank(args['eval_file'])
     logger.info("Read {} trees for evaluation".format(len(treebank)))
 
-    f1 = run_dev_set(model, treebank, args['eval_batch_size'])
+    f1 = run_dev_set(model, treebank, args['eval_batch_size'], args['eval_file'])
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
 def build_treebank(trees, args):
@@ -325,17 +325,17 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             optimizer.zero_grad()
 
         # print statistics
-        f1 = run_dev_set(model, dev_trees, args['eval_batch_size'])
+        f1 = run_dev_set(model, dev_trees, args['eval_batch_size'], args['eval_file'])
         if f1 > best_f1:
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
             lstm_model.save(model_file, model)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score: {}\n  Best dev score: {}".format(epoch+1, transitions_correct, transitions_incorrect, epoch_loss, f1, best_f1))
 
-def build_batch(batch_size, tree_iterator, model):
+def build_batch_from_trees(batch_size, data_iterator, model):
     tree_batch = []
     for _ in range(batch_size):
-        gold_tree = next(tree_iterator, None)
+        gold_tree = next(data_iterator, None)
         if gold_tree is None:
             break
         tree_batch.append(gold_tree)
@@ -348,13 +348,9 @@ def build_batch(batch_size, tree_iterator, model):
                   for gold_tree, state in zip(tree_batch, states)]
     return tree_batch
 
-def run_dev_set(model, dev_trees, batch_size):
-    logger.info("Processing {} dev trees".format(len(dev_trees)))
-    model.eval()
+def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     treebank = []
-
-    tree_iterator = iter(tqdm(dev_trees))
-    tree_batch = build_batch(batch_size, tree_iterator, model)
+    tree_batch = build_batch_fn(batch_size, data_iterator, model)
     horizon_iterator = iter([])
 
     while len(tree_batch) > 0:
@@ -375,13 +371,22 @@ def run_dev_set(model, dev_trees, batch_size):
         for _ in range(batch_size - len(tree_batch)):
             horizon_tree = next(horizon_iterator, None)
             if not horizon_tree:
-                horizon_batch = build_batch(batch_size, tree_iterator, model)
+                horizon_batch = build_batch_fn(batch_size, data_iterator, model)
                 if len(horizon_batch) == 0:
                     break
                 horizon_iterator = iter(horizon_batch)
                 horizon_tree = next(horizon_iterator, None)
 
             tree_batch.append(horizon_tree)
+
+    return treebank
+
+def run_dev_set(model, dev_trees, batch_size, filename):
+    logger.info("Processing {} trees from {}".format(len(dev_trees), filename))
+    model.eval()
+
+    tree_iterator = iter(tqdm(dev_trees))
+    treebank = parse_sentences(tree_iterator, build_batch_from_trees, batch_size, model)
 
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))
