@@ -165,6 +165,12 @@ class Tokenizer(nn.Module):
             sent_pred = torch.cat([nontok, tok+nonsent, tok+sent], 2)
 
             loss, trans = self.crit(sent_pred, word_mask, y)
+            
+            """ CRF for both sentence and word segmentation
+            y[y==-1] = 0
+            word_mask = x.gt(0)
+            loss, trans = self.crit(pred, word_mask, y)
+            """
 
             return pred, loss, trans
 
