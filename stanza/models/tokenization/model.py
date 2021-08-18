@@ -139,7 +139,16 @@ class Tokenizer(nn.Module):
         else:
             pred = torch.cat([nontok, tok+nonsent, tok+sent], 2)
 
-        return pred
+        y[y==-1] = 0
+        y[y==1] = 0
+        y[y==2] = 1
+        word_mask = x.gt(0)
+        sent_pred = torch.cat([nontok, tok+nonsent, tok+sent], 2)
+
+        loss, trans = self.crit(sent_pred, word_mask, y)
+
+        return pred, loss, trans
+
 
 
 
