@@ -84,8 +84,8 @@ def parse_args(args=None):
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
 
-    parser.add_argument('--num_lstm_layers', default=1, type=int, help='How many layers to use in the LSTMs')
-    parser.add_argument('--num_output_layers', default=1, type=int, help='How many layers to use at the prediction level')
+    parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
+    parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
 
     parser.add_argument('--train_method', default='gold_entire', choices=['early_entire', 'gold_entire'], help='Different training methods to use')
 
