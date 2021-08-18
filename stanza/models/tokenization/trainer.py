@@ -15,10 +15,10 @@ class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, dict=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
-            # load everything from file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+            # load everything from file                                                                                                                                                                                                                                                                                                                                                                                     
             self.load(model_file)
         else:
-            # build model from scratch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+            # build model from scratch                                                                                                                                                                                                                                                                                                                                                                                      
             self.args = args
             self.vocab = vocab
             self.dict = dict
@@ -33,7 +33,7 @@ class Trainer(BaseTrainer):
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = optim.Adam(self.parameters, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
-        self.lang = self.args['lang'] # language determines how token normalization is done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+        self.lang = self.args['lang'] # language determines how token normalization is done                                                                                                                                                                                                                                                                                                                                 
 
     def update(self, inputs):
         self.model.train()
@@ -45,11 +45,13 @@ class Trainer(BaseTrainer):
             features = features.cuda()
             su = su.cuda()
 
-        pred = self.model(units, su, features)
+        pred, loss, trans= self.model(units, su, features, labels)
 
         self.optimizer.zero_grad()
+
         classes = pred.size(2)
         loss = self.criterion(pred.view(-1, classes), labels.view(-1))
+        #print(pred)                                                                                                                                                                                                                                                                                                                                                                                                        
 
         loss.backward()
         nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
@@ -68,7 +70,7 @@ class Trainer(BaseTrainer):
             features = features.cuda()
             su = su.cuda()
 
-        pred = self.model(units, su, features)
+        pred, loss, trans = self.model(units, su, features, labels)
 
         return pred.data.cpu().numpy()
 
@@ -93,13 +95,21 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if self.args.get('use_mwt', None) is None:
-            # Default to True as many currently saved models                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-            # were built with mwt layers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+            # Default to True as many currently saved models                                                                                                                                                                                                                                                                                                                                                                
+            # were built with mwt layers                                                                                                                                                                                                                                                                                                                                                                                    
             self.args['use_mwt'] = True
         self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
         self.dict = checkpoint['dict']
+
+
+
+
+
+
+
+
 
 
 
