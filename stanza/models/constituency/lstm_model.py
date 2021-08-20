@@ -16,11 +16,12 @@ logger = logging.getLogger('stanza')
 WordNode = namedtuple("WordNode", ['value', 'embedding', 'hx'])
 TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 
-# Invariant: the hx at the top of the constituency stack will have a
+# Invariant: the output at the top of the constituency stack will have a
 # single dimension
 # We do this to maintain consistency between the different operations,
 # which sometimes result in different shapes
 # This will be unsqueezed in order to put into the next layer if needed
+# hx & cx are the hidden & cell states of the LSTM going across constituents
 ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
 
@@ -188,7 +189,7 @@ class LSTMModel(BaseModel, nn.Module):
 
             # now of size sentence x input
             word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
-            # now of size sentence x 1 x hidden_size
+            # now of size sentence x 1 x input
             word_input = word_input.unsqueeze(1)
             word_input = self.word_dropout(word_input)
             outputs, _ = self.word_lstm(word_input)
@@ -198,7 +199,12 @@ class LSTMModel(BaseModel, nn.Module):
 
             word_queue = TreeStack(value=WordNode(None, self.zeros, self.zeros))
             for idx, tag_node in enumerate(tagged_words):
-                word_queue = word_queue.push(WordNode(tag_node, embedding=word_input[idx, 0, :], hx=outputs[idx, 0, :].squeeze()))
+                # TODO: this makes it so constituents downstream are
+                # build with the outputs of the LSTM, not the word
+                # embeddings themselves.  It is possible we want to
+                # transform the word_input to hidden_size in some way
+                # and use that instead
+                word_queue = word_queue.push(WordNode(tag_node, embedding=outputs[idx, 0, :], hx=outputs[idx, 0, :]))
 
             word_queues.append(word_queue)
 
@@ -217,8 +223,10 @@ class LSTMModel(BaseModel, nn.Module):
     def transform_word_to_constituent(self, state):
         word_node = state.word_queue.value
         word = word_node.value
-        hx = word_node.hx
-        return Constituent(value=word, hx=hx)
+        if self.args['constituency_lstm']:
+            return Constituent(value=word, hx=word_node.hx)
+        else:
+            return Constituent(value=word, hx=word_node.embedding)
 
     def dummy_constituent(self, dummy):
         label = dummy.label
@@ -287,8 +295,12 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
         cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
-        new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
-                      for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
+        if self.args['constituency_lstm']:
+            new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
+                          for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
+        else:
+            new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
+                          for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         return new_stacks
 
     def get_top_constituent(self, constituents):
@@ -322,7 +334,11 @@ class LSTMModel(BaseModel, nn.Module):
         """
         word_hx = torch.stack([state.word_queue.value.hx for state in states])
         transition_hx = torch.stack([state.transitions.value.output for state in states])
-        constituent_hx = torch.stack([state.constituents.value.output for state in states])
+        # note that we use hx instead of output from the constituents
+        # this way, we can, as an option, NOT include the constituents to the left
+        # when building the current vector for a constituent
+        # and the vector used for inference will still incorporate the entire LSTM
+        constituent_hx = torch.stack([state.constituents.value.hx[-1, 0, :] for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
