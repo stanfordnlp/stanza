@@ -79,6 +79,8 @@ def parse_args(args=None):
     parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
     parser.add_argument('--use_compound_open', default=False, action='store_true', help='Use compound opens in the transition sequence')
 
+    parser.add_argument('--no_constituency_lstm', default=True, action='store_false', dest='constituency_lstm', help='Build constituents using just the nodes below a constituent instead of the full LSTM')
+
     parser.add_argument('--nonlinearity', default='tanh', choices=['tanh', 'relu'], help='Nonlinearity to use in the model')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')

@@ -150,6 +150,10 @@ def test_multiple_output_forward(pt):
     model = build_model(pt, '--num_output_layers', '2', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
+def test_forward_no_con_lstm(pt):
+    model = build_model(pt, '--num_lstm_layers', '2', '--no_constituency_lstm')
+    run_forward_checks(model)
+
 def test_save_load_model(pt, unary_model):
     """
     Just tests that saving and loading works without crashs.
