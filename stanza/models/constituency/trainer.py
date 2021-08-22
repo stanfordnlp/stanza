@@ -231,9 +231,6 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                 for pred_transition, gold_transition in zip(pred_transitions, gold_transitions):
                     if pred_transition != gold_transition:
                         transitions_incorrect = transitions_incorrect + 1
-                        # TODO: remove trees which are wrong if we are doing early_entire
-                        # if args['train_method'] == 'early_entire':
-                        #     break
                     else:
                         transitions_correct = transitions_correct + 1
 
