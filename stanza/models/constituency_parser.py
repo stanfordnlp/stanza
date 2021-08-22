@@ -56,7 +56,8 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
-    parser.add_argument('--train_batch_size', type=int, default=50, help='How many trees to train before taking an optimizer step')
+    # 30 is slightly slow than 50, for example, but seems to train a bit better
+    parser.add_argument('--train_batch_size', type=int, default=30, help='How many trees to train before taking an optimizer step')
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
@@ -79,9 +80,9 @@ def parse_args(args=None):
     parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
     parser.add_argument('--use_compound_open', default=False, action='store_true', help='Use compound opens in the transition sequence')
 
-    parser.add_argument('--no_constituency_lstm', default=True, action='store_false', dest='constituency_lstm', help='Build constituents using just the nodes below a constituent instead of the full LSTM')
+    parser.add_argument('--constituency_lstm', default=False, action='store_true', help="Build constituents using the full LSTM instead of just the nodes below the new constituent.  Doesn't match the original papers and might be slightly less effective")
 
-    parser.add_argument('--nonlinearity', default='tanh', choices=['tanh', 'relu'], help='Nonlinearity to use in the model')
+    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu'], help='Nonlinearity to use in the model.  relu is a notiiceable improvement')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
@@ -89,7 +90,9 @@ def parse_args(args=None):
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
     parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
 
-    parser.add_argument('--train_method', default='gold_entire', choices=['early_entire', 'gold_entire'], help='Different training methods to use')
+    # TODO: add the ability to keep training in a different direction
+    # after making an error, eg, add an oracle
+    parser.add_argument('--train_method', default='gold_entire', choices=['gold_entire'], help='Different training methods to use')
 
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
