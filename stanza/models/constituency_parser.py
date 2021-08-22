@@ -23,6 +23,13 @@ train time, batches are groups together by length, and at inference
 time, new trees are added to the batch as previous trees on the batch
 finish their inference.
 
+There are two minor differences in the model:
+  - The word input is a bi-lstm, not a uni-lstm.
+    This gave a small increase in accuracy.
+  - The combination of several constituents into one constituent is done
+    via a single bi-lstm rather than two separate lstms.  This increases
+    speed without a noticeable effect on accuracy.
+
 The code breakdown is as follows:
 
   this file: main interface for training or evaluating models
