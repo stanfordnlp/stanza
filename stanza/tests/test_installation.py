@@ -18,7 +18,7 @@ def test_install_corenlp():
 
         # the download method doesn't install over existing directories
         shutil.rmtree(test_dir)
-        stanza.install_corenlp(dir=test_dir, url='http://nlp.stanford.edu/software/')
+        stanza.install_corenlp(dir=test_dir)
 
         assert os.path.isdir(test_dir), "Installation destination directory not found."
         jar_files = [f for f in os.listdir(test_dir) \

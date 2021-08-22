@@ -12,19 +12,26 @@ from stanza.resources.common import HOME_DIR, request_file, unzip, \
 
 logger = logging.getLogger('stanza')
 
-DEFAULT_CORENLP_URL = os.getenv(
-    'CORENLP_URL',
-    "http://nlp.stanford.edu/software/"
+DEFAULT_CORENLP_MODEL_URL = os.getenv(
+    'CORENLP_MODEL_URL',
+    'https://huggingface.co/stanfordnlp/corenlp-{model}/resolve/{tag}/stanford-corenlp-models-{model}.jar'
 )
+BACKUP_CORENLP_MODEL_URL = "http://nlp.stanford.edu/software/stanford-corenlp-{version}-models-{model}.jar"
+
+DEFAULT_CORENLP_URL = os.getenv(
+    'CORENLP_MODEL_URL',
+    'https://huggingface.co/stanfordnlp/CoreNLP/resolve/{tag}/stanford-corenlp-latest.zip'
+)
+
 DEFAULT_CORENLP_DIR = os.getenv(
     'CORENLP_HOME',
     os.path.join(HOME_DIR, 'stanza_corenlp')
 )
 
-AVAILABLE_MODELS = set(['arabic', 'chinese', 'english', 'english-kbp', 'french', 'german', 'spanish'])
+AVAILABLE_MODELS = set(['arabic', 'chinese', 'english-extra', 'english-kbp', 'french', 'german', 'spanish'])
 
 
-def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level='INFO', proxies=None):
+def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_MODEL_URL, logging_level='INFO', proxies=None):
     """
     A automatic way to download the CoreNLP models.
 
@@ -34,11 +41,12 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         version: the version of the model
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
-        url: the link to download CoreNLP models
+        url: The link to download CoreNLP models.
+             It will need {model} and either {version} or {tag} to properly format the URL
         logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
-    if model is None or version is None:
+    if not model or not version:
         raise ValueError(
             "Both model and model version should be specified."
         )
@@ -49,9 +57,13 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
             f'{model} is currently not supported. '
             f'Must be one of: {list(AVAILABLE_MODELS)}.'
         )
+    # for example:
+    # https://huggingface.co/stanfordnlp/CoreNLP/resolve/v4.2.2/stanford-corenlp-models-french.jar
+    tag = version if version == 'main' else 'v' + version
+    download_url = url.format(tag=tag, model=model, version=version)
     try:
         request_file(
-            url + f'stanford-corenlp-{version}-models-{model}.jar',
+            download_url,
             os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'),
             proxies
         )
@@ -64,7 +76,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         ) from e
 
 
-def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None, proxies=None):
+def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_level=None, proxies=None, version="main"):
     """
     A fully automatic way to install and setting up the CoreNLP library 
     to use the client functionality.
@@ -72,7 +84,8 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     Args:
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
-        url: the link to download CoreNLP models
+        url: The link to download CoreNLP models
+             Needs a {version} or {tag} parameter to specify the version
         logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
@@ -86,8 +99,11 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     logger.info(f"Installing CoreNLP package into {dir}...")
     # First download the URL package
     logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
+    tag = version if version == 'main' else 'v' + version
+    url = url.format(version=version, tag=tag)
     try:
-        request_file(url + 'stanford-corenlp-latest.zip', os.path.join(dir, 'corenlp.zip'), proxies)
+        request_file(url, os.path.join(dir, 'corenlp.zip'), proxies)
+
     except (KeyboardInterrupt, SystemExit):
         raise
     except Exception as e:
