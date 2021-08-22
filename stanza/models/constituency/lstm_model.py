@@ -136,7 +136,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.open_nodes = sorted(list(open_nodes))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
-        # TODO: try both directions have different embeddings?
+        # the pattern when condensing constituents is embedding - con1 - con2 - con3 - embedding
+        # TODO: try the two ends have different embeddings?
         self.open_node_map = { x: i for (i, x) in enumerate(self.open_nodes) }
         self.open_node_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
                                                 embedding_dim = self.hidden_size)
@@ -144,10 +145,10 @@ class LSTMModel(BaseModel, nn.Module):
                                             embedding_dim = self.hidden_size)
         self.register_buffer('open_node_tensors', torch.tensor(range(len(open_nodes)), requires_grad=False))
 
-        # forward and backward pieces to make a bi-lstm
+        # forward and backward pieces for crunching several
+        # constituents into one, combined into a bi-lstm
         # TODO: make the hidden size here an option?
-        self.forward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
-        self.backward_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
+        self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True)
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
@@ -260,29 +261,26 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
-        label_hx = torch.stack([self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels])
+        label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
         node_hx = [[child.output for child in children] for children in children_lists]
-        node_hx = [torch.stack(nhx) for nhx in node_hx]
+        unpacked_hx = [[lhx] + nhx + [lhx] for lhx, nhx in zip(label_hx, node_hx)]
+        unpacked_hx = [torch.stack(nhx) for nhx in unpacked_hx]
 
-        max_length = max(len(children) for children in children_lists) + 1   # +1 for the label embedding
-        forward_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx.device)
-        forward_hx[0, :, :] = label_hx
-        for idx, nhx in enumerate(node_hx):
-            forward_hx[1:len(nhx)+1, idx, :] = nhx
-        forward_hx = torch.nn.utils.rnn.pack_padded_sequence(forward_hx, [len(x)+1 for x in children_lists], enforce_sorted=False)
+        max_length = max(len(children) for children in children_lists) + 2   # +2 for the 2x label embedding
+        packed_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx[0].device)
+        for idx, nhx in enumerate(unpacked_hx):
+            packed_hx[0:len(nhx), idx, :] = nhx
+        packed_hx = torch.nn.utils.rnn.pack_padded_sequence(packed_hx, [len(x)+2 for x in children_lists], enforce_sorted=False)
+        lstm_output = self.constituent_reduce_lstm(packed_hx)
         # take just the output of the final layer
         #   result of lstm is ouput, (hx, cx)
         #   so [1][0] gets hx
         #      [1][0][-1] is the final output
-        # will be shape len(children_lists), hidden_size
-        forward_hx = self.forward_reduce_lstm(forward_hx)[1][0][-1]
-
-        backward_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx.device)
-        backward_hx[0, :, :] = label_hx
-        for idx, nhx in enumerate(node_hx):
-            backward_hx[1:len(nhx)+1, idx, :] = nhx.flip(dims=(0,))
-        backward_hx = torch.nn.utils.rnn.pack_padded_sequence(backward_hx, [len(x)+1 for x in children_lists], enforce_sorted=False)
-        backward_hx = self.backward_reduce_lstm(backward_hx)[1][0][-1]
+        # will be shape len(children_lists) * 2, hidden_size for bidirectional
+        # where forward outputs are -2 and backwards are -1
+        lstm_output = lstm_output[1][0]
+        forward_hx = lstm_output[-2, :]
+        backward_hx = lstm_output[-1, :]
 
         hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
         hx = self.nonlinearity(hx)
