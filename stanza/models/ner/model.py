@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,6 +36,10 @@ class NERTagger(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
+                if args['charlm_forward_file'] is None or not os.path.exists(args['charlm_forward_file']):
+                    raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']))
+                if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
+                    raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
                 add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
                 add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
