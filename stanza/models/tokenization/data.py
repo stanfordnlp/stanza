@@ -29,15 +29,15 @@ class DataLoader:
         self.eval = evaluation
         self.dictionary = dictionary
 
-        # get input files
+        # get input files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
         txt_file = input_files['txt']
         label_file = input_files['label']
 
-        # Load data and process it
+        # Load data and process it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
         if input_data is not None:
             self.data = input_data
         else:
-            # set up text from file or input string
+            # set up text from file or input string                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
             assert txt_file is not None or input_text is not None
             if input_text is None:
                 with open(txt_file) as f:
@@ -52,28 +52,28 @@ class DataLoader:
                 labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
 
             skip_newline = args.get('skip_newline', False)
-            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
-                          for char, label in zip(pt.rstrip(), pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
+            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                          for char, label in zip(pt.rstrip(), pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
                          for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
 
-        # remove consecutive whitespaces
+        # remove consecutive whitespaces                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
         self.data = [filter_consecutive_whitespaces(x) for x in self.data]
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
 
-        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels.
-        # At evaluation time, each paragraph is treated as single "sentence" as we don't know a priori where
-        # sentence breaks occur. We make prediction from left to right for each paragraph and move forward to
-        # the last predicted sentence break to start afresh.
+        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        # At evaluation time, each paragraph is treated as single "sentence" as we don't know a priori where                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+        # sentence breaks occur. We make prediction from left to right for each paragraph and move forward to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        # the last predicted sentence break to start afresh.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
         self.sentences = [self.para_to_sentences(para) for para in self.data]
 
         self.init_sent_ids()
         logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
 
     def has_mwt(self):
-        # presumably this only needs to be called either 0 or 1 times,
-        # 1 when training and 0 any other time, so no effort is put
-        # into caching the result
+        # presumably this only needs to be called either 0 or 1 times,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+        # 1 when training and 0 any other time, so no effort is put                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+        # into caching the result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
         for sentence in self.data:
             for word in sentence:
                 if word[1] > 2:
@@ -94,11 +94,30 @@ class DataLoader:
 
     def para_to_sentences(self, para):
         """ Convert a paragraph to a list of processed sentences. """
+        tmp = []
+
+        word = ""
+        for unit in para:
+            if unit[1] == 0:
+                if unit[0] == " " and word == "": #don't start word with space                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+                    pass
+                else:
+                    word += unit[0]
+            else:
+                """                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                new_units.append(self.vocab.unit2id(word))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+                new_labels.append(unit[1]-1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+                new_raw.append(word)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+                """
+
+                tmp.append((word, unit[1]-1))
+                word = ""
+
         res = []
         funcs = []
         for feat_func in self.args['feat_funcs']:
             if feat_func == 'end_of_para' or feat_func == 'start_of_para':
-                # skip for position-dependent features
+                # skip for position-dependent features                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
                 continue
             if feat_func == 'space_before':
                 func = lambda x: 1 if x.startswith(' ') else 0
@@ -111,11 +130,11 @@ class DataLoader:
 
             funcs.append(func)
 
-        # stacking all featurize functions
+        # stacking all featurize functions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
         composite_func = lambda x: [f(x) for f in funcs]
 
         length = len(para)
-        #This function is to extract dictionary features for each character
+        #This function is to extract dictionary features for each character                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
         def extract_dict_feat(idx):
             dict_forward_feats = [0 for i in range(self.args['num_dict_feat'])]
             dict_backward_feats = [0 for i in range(self.args['num_dict_feat'])]
@@ -124,25 +143,25 @@ class DataLoader:
             prefix = True
             suffix = True
             for window in range(1,self.args['num_dict_feat']+1):
-                # concatenate each character and check if words found in dict not, stop if prefix not found
-                #check if idx+t is out of bound and if the prefix is already not found
+                # concatenate each character and check if words found in dict not, stop if prefix not found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+                #check if idx+t is out of bound and if the prefix is already not found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
                 if (idx + window) <= length-1 and prefix:
                     forward_word += para[idx+window][0].lower()
-                    #check in json file if the word is present as prefix or word or None.
+                    #check in json file if the word is present as prefix or word or None.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
                     feat = 1 if forward_word in self.dictionary["words"] else 0
-                    #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
+                    #if the return value is not 2 or 3 then the checking word is not a valid word in dict.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
                     dict_forward_feats[window-1] = feat
-                    #if the dict return 0 means no prefixes found, thus, stop looking for forward.
+                    #if the dict return 0 means no prefixes found, thus, stop looking for forward.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
                     if forward_word not in self.dictionary["prefixes"]:
                         prefix = False
-                #backward check: similar to forward
+                #backward check: similar to forward                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
                 if (idx - window) >= 0 and suffix:
                     backward_word = para[idx-window][0].lower() + backward_word
                     feat = 1 if backward_word in self.dictionary["words"] else 0
                     dict_backward_feats[window-1] = feat
                     if backward_word not in self.dictionary["suffixes"]:
                         suffix = False
-                #if cannot find both prefix and suffix, then exit the loop
+                #if cannot find both prefix and suffix, then exit the loop                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
                 if not prefix and not suffix:
                     break
 
@@ -153,30 +172,19 @@ class DataLoader:
 
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
+
+        para = tmp
         current = []
         for i, (unit, label) in enumerate(para):
             label1 = label if not self.eval else 0
-            feats = composite_func(unit)
-            # position-dependent features
-            if use_end_of_para:
-                f = 1 if i == len(para)-1 else 0
-                feats.append(f)
-            if use_start_of_para:
-                f = 1 if i == 0 else 0
-                feats.append(f)
-
-            #if dictionary feature is selected
-            if self.args['use_dictionary']:
-                dict_feats = extract_dict_feat(i)
-                feats = feats + dict_feats
+            feats = [] # don't want to use features                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
             current += [(unit, label, feats)]
-            if label1 == 2 or label1 == 4: # end of sentence
+            if label1 == 1: # end of sentence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
                 if len(current) <= self.args['max_seqlen']:
-                    # get rid of sentences that are too long during training of the tokenizer
+                    # get rid of sentences that are too long during training of the tokenizer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
                     res.append(process_sentence(current))
                 current = []
-
         if len(current) > 0:
             if self.eval or len(current) <= self.args['max_seqlen']:
                 res.append(process_sentence(current))
@@ -198,10 +206,10 @@ class DataLoader:
         padid = self.vocab.unit2id('<PAD>')
 
         if old_batch is not None:
-            # If we have previously built a batch of data and made predictions on them, then when we are trying to make
-            # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
-            # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
-            # In this case, eval_offsets index within the old_batch to advance the strings to process.
+            # If we have previously built a batch of data and made predictions on them, then when we are trying to make                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+            # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+            # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+            # In this case, eval_offsets index within the old_batch to advance the strings to process.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
             ounits, olabels, ofeatures, oraw = old_batch
             lens = (ounits != padid).sum(1).tolist()
             pad_len = max(l-i for i, l in zip(eval_offsets, lens))
@@ -225,9 +233,9 @@ class DataLoader:
             return units, labels, features, raw_units
 
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
-            # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed 
-            # by id_pair[1]) into a long string for evaluation. At training time, we just select random sentences
-            # from the entire dataset until we reach max_seqlen.
+            # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+            # by id_pair[1]) into a long string for evaluation. At training time, we just select random sentences                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+            # from the entire dataset until we reach max_seqlen.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
 
@@ -255,7 +263,7 @@ class DataLoader:
                 if total_len > self.args['max_seqlen']:
                     sentences = sentences[:-1]
                 if len(sentences) > 1:
-                    p = [.5 ** i for i in range(1, len(sentences) + 1)] # drop a large number of sentences with smaller probability
+                    p = [.5 ** i for i in range(1, len(sentences) + 1)] # drop a large number of sentences with smaller probability                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
                     cutoff = random.choices(list(range(len(sentences))), weights=list(reversed(p)))[0]
                     sentences = sentences[:cutoff+1]
 
@@ -271,7 +279,7 @@ class DataLoader:
             return units, labels, feats, raw_units
 
         if eval_offsets is not None:
-            # find max padding length
+            # find max padding length                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
             pad_len = 0
             for eval_offset in eval_offsets:
                 if eval_offset < self.cumlen[-1]:
@@ -290,7 +298,7 @@ class DataLoader:
             offsets_pairs = [(0, x) for x in id_pairs]
             pad_len = self.args['max_seqlen']
 
-        # put everything into padded and nicely shaped NumPy arrays and eventually convert to PyTorch tensors
+        # put everything into padded and nicely shaped NumPy arrays and eventually convert to PyTorch tensors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         units = np.full((len(id_pairs), pad_len), padid, dtype=np.int64)
         labels = np.full((len(id_pairs), pad_len), -1, dtype=np.int64)
         features = np.zeros((len(id_pairs), pad_len, feat_size), dtype=np.float32)
@@ -303,7 +311,7 @@ class DataLoader:
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         if unit_dropout > 0 and not self.eval:
-            # dropout characters/units at training time and replace them with UNKs
+            # dropout characters/units at training time and replace them with UNKs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
             mask = np.random.random_sample(units.shape) < unit_dropout
             mask[units == padid] = 0
             units[mask] = unkid
@@ -312,10 +320,10 @@ class DataLoader:
                     if mask[i, j]:
                         raw_units[i][j] = '<UNK>'
 
-        # dropout unit feature vector in addition to only torch.dropout in the model.
-        # experiments showed that only torch.dropout hurts the model
-        # we believe it is because the dict feature vector is mostly scarse so it makes
-        # more sense to drop out the whole vector instead of only single element.
+        # dropout unit feature vector in addition to only torch.dropout in the model.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+        # experiments showed that only torch.dropout hurts the model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+        # we believe it is because the dict feature vector is mostly scarse so it makes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+        # more sense to drop out the whole vector instead of only single element.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
         if self.args['use_dictionary'] and feat_unit_dropout > 0 and not self.eval:
             mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
             mask_feat[units == padid] = 0
@@ -323,10 +331,21 @@ class DataLoader:
                 for j in range(len(raw_units[i])):
                     if mask_feat[i,j]:
                         features[i,j,:] = 0
-                        
+
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)
         features = torch.from_numpy(features)
 
         return units, labels, features, raw_units
+
+
+
+
+
+
+
+
+
+
+
 
