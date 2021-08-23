@@ -244,7 +244,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     for i, p in enumerate(data_generator.sentences):
         start = 0 if i == 0 else paragraphs[-1][2]
         length = sum([len(x[0]) for x in p])
-        paragraphs += [(i, start, start+length, length)] # para idx, start idx, end idx, length
+        paragraphs += [(i, start, start+length, length)] # para idx, start idx, end idx, length                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
     paragraphs = list(sorted(paragraphs, key=lambda x: x[3], reverse=True))
 
@@ -258,9 +258,9 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     batches = int((len(paragraphs) + batch_size - 1) / batch_size)
 
     for i in range(batches):
-        # At evaluation time, each paragraph is treated as a single "sentence", and a batch of `batch_size` paragraphs 
-        # are tokenized together. `offsets` here are used by the data generator to identify which paragraphs to use
-        # for the next batch of evaluation.
+        # At evaluation time, each paragraph is treated as a single "sentence", and a batch of `batch_size` paragraphs                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+        # are tokenized together. `offsets` here are used by the data generator to identify which paragraphs to use                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+        # for the next batch of evaluation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
         batchparas = paragraphs[i * batch_size : (i + 1) * batch_size]
         offsets = [x[1] for x in batchparas]
 
@@ -294,23 +294,24 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
                 if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
                     break
-                # once we've made predictions on a certain number of characters for each paragraph (recorded in `adv`),
-                # we skip the first `adv` characters to make the updated batch
+                # once we've made predictions on a certain number of characters for each paragraph (recorded in `adv`),                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+                # we skip the first `adv` characters to make the updated batch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
                 batch = data_generator.next(eval_offsets=adv, old_batch=batch)
 
             pred = [np.concatenate(p, 0) for p in pred]
 
         for j, p in enumerate(batchparas):
             len1 = len([1 for x in raw[j] if x != '<PAD>'])
-            if pred[j][len1-1] < 2:
-                pred[j][len1-1] = 2
-            elif pred[j][len1-1] > 2:
-                pred[j][len1-1] = 4
+            if pred[j][len1-1] < 1:
+                pred[j][len1-1] = 1
+            elif pred[j][len1-1] > 1:
+                pred[j][len1-1] = 1
             if use_regex_tokens:
                 all_preds[p[0]] = update_pred_regex(raw[j], pred[j][:len1])
             else:
                 all_preds[p[0]] = pred[j][:len1]
             all_raw[p[0]] = raw[j]
+
 
     offset = 0
     oov_count = 0
@@ -322,8 +323,8 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
     UNK_ID = vocab.unit2id('<UNK>')
 
-    # Once everything is fed through the tokenizer model, it's time to decode the predictions
-    # into actual tokens and sentences that the rest of the pipeline uses
+    # Once everything is fed through the tokenizer model, it's time to decode the predictions                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+    # into actual tokens and sentences that the rest of the pipeline uses                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
     for j in range(len(paragraphs)):
         raw = all_raw[j]
         pred = all_preds[j]
@@ -334,7 +335,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
         for t, p in zip(raw, pred):
             if t == '<PAD>':
                 break
-            # hack la_ittb
+            # hack la_ittb                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
             if use_la_ittb_shorthand and t in (":", ";"):
                 p = 2
             offset += 1
@@ -385,7 +386,18 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     all_preds = np.concatenate(all_preds, 0)
-    labels = [y[1] for x in batches.data for y in x]
+
+    labels = []
+    for sent in batches.data:
+        for char in sent:
+            if char[1] == 1:
+                labels.append(0)
+            elif char[1] == 2:
+                labels.append(1)
+    #print(len(labels))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+    #labels = [y[1] for x in batches.data for y in x] # note this is still not in correct form, need to fix.                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+    #print(len(labels))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+
     counter = Counter(zip(all_preds, labels))
 
     def f1(pred, gold, mapping):
@@ -405,7 +417,7 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
                 fp += 1
                 fn += 1
             elif p > 0:
-                # and g == 0
+                # and g == 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
                 lastp = i
                 fp += 1
             elif g > 0:
@@ -417,9 +429,9 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
         else:
             return 2 * tp / (2 * tp + fp + fn)
 
-    f1tok = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
-    f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
-    f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
-    logger.info(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
-    return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
+        #   print("prediction:", all_preds)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+
+    f1sent = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:1, 4:1})
+    logger.info(f"{args['shorthand']}: sentence F1 = {f1sent*100:.2f}")
+    return f1sent
 
