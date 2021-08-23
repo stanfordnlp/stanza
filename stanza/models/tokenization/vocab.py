@@ -15,15 +15,19 @@ class Vocab(BaseVocab):
         paras = self.data
         counter = Counter()
         for para in paras:
+            word = ""
             for unit in para:
-                normalized = self.normalize_unit(unit[0])
-                counter[normalized] += 1
+                if unit[1] == 0:
+                    word+=unit[0]
+                else:
+                    counter[word] += 1
+                    word = ""
 
         self._id2unit = [PAD, UNK] + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
     def normalize_unit(self, unit):
-        # Normalize minimal units used by the tokenizer
+        # Normalize minimal units used by the tokenizer                                                                                                                                                                                                                                    
         return unit
 
     def normalize_token(self, token):
@@ -33,3 +37,8 @@ class Vocab(BaseVocab):
             token = token.replace(' ', '')
 
         return token
+
+
+
+
+
