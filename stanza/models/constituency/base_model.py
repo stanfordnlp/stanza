@@ -4,13 +4,22 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 
 """
-The BaseModel is used to perform dependency injection on the transitions.
+The BaseModel is passed to the transitions so that the transitions
+can operate on a parsing state without knowing the exact
+representation used in the model.
 
 For example, a SimpleModel simply looks at the top of the various stacks in the state.
 
-A model with LSTM scores for the different transitions may attach the
-hidden and output states of the LSTM to the stacks, with the result
-that some extra effort is needed to get the previous value
+A model with LSTM representations for the different transitions may
+attach the hidden and output states of the LSTM to the word /
+constituent / transition stacks.
+
+Reminder: the parsing state is a list of words to parse, the
+transitions used to build a (possibly incomplete) parse, and the
+constituent(s) built so far by those transitions.  Each of these
+components are represented using stacks to improve the efficiency
+of operations such as "combine the most recent 4 constituents"
+or "turn the next input word into a constituent"
 """
 
 class BaseModel(ABC):

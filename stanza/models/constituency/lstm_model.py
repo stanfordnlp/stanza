@@ -1,3 +1,12 @@
+"""
+A version of the BaseModel which uses LSTMs to predict the correct next transition
+based on the current known state.
+
+The primary purpose of this class is to implement the prediction of the next
+transition, which is done by concatenating the output of an LSTM operated over
+previous transitions, the words, and the partially built constituents.
+"""
+
 from collections import namedtuple
 import logging
 import random
@@ -27,21 +36,23 @@ Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 
 class LSTMModel(BaseModel, nn.Module):
-    """
-    Run an LSTM over each item as we put it in the queue
-
-    args:
-      hidden_size
-      transition_embedding_dim
-      constituent_embedding_dim
-    """
     def __init__(self, pretrain, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
         """
+        pretrain: a Pretrain object
+        transitions: a list of all possible transitions which will be
+          used to build trees
         constituents: a list of all possible constituents in the treebank
         tags: a list of all possible tags in the treebank
+        words: a list of all known words, used for a delta word embedding.
+          note that there will be an attempt made to learn UNK words as well,
+          and tags by themselves may help UNK words
+        rare_words: a list of rare words, used to occasionally replace with UNK
+        root_labels: probably ROOT, although apparently some treebanks like TOP
         open_nodes: a list of all possible open nodes which will go on the stack
           - this might be different from constituents if there are nodes
             which represent multiple constituents at once
+        args: hidden_size, transition_hidden_size, etc as gotten from
+          constituency_parser.py
 
         Note that it might look like a hassle to pass all of this in
         when it can be collected directly from the trees themselves.

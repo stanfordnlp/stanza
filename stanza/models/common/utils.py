@@ -309,6 +309,11 @@ def get_tqdm():
     imports tqdm depending on if we're at a console, redir to a file, notebook, etc
 
     from @tcrimi at https://github.com/tqdm/tqdm/issues/506
+
+    This replaces `import tqdm`, so for example, you do this:
+      tqdm = utils.get_tqdm()
+    then do this when you want a scroll bar or regular iterator depending on context:
+      tqdm(list)
     """
     try:
         ipy_str = str(type(get_ipython()))

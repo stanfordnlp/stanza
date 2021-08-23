@@ -1,3 +1,15 @@
+"""
+This file includes a variety of methods needed to train new
+constituency parsers.  It also includes a method to load an
+already-trained parser.
+
+See the `train` method for the code block which starts from
+  raw treebank and returns a new parser.
+`evaluate` reads a treebank and gives a score for those trees.
+`parse_tagged_words` is useful at Pipeline time -
+  it takes words & tags and processes that into trees.
+"""
+
 import logging
 import random
 import os
@@ -40,6 +52,9 @@ def read_treebank(filename):
     return trees
 
 def verify_transitions(trees, sequences):
+    """
+    Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
+    """
     model = base_model.SimpleModel()
     logger.info("Verifying the transition sequences for {} trees".format(len(trees)))
     for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
@@ -162,6 +177,22 @@ def train(args, model_file):
 def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
+
+    The training is iterated in the following loop:
+      extract a batch of trees of the same length from the training set
+      convert those trees into initial parsing states
+      repeat until trees are done:
+        batch predict the model's interpretation of the current states
+        add the errors to the list of things to backprop
+        advance the parsing state for each of the trees
+
+    Currently the only method implemented for advancing the parsing state
+    is to use the gold transition.
+
+    TODO: add a dynamic oracle which can adjust the future expected
+    parsing decisions after the parser makes an error.  This way,
+    the parser will have "experienced" what the correct decision
+    to make is when it gets into incorrect states at runtime.
     """
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
