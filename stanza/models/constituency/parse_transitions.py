@@ -1,3 +1,10 @@
+"""
+Defines a series of transitions (open a constituent, close a constituent, etc
+
+Also defines a State which holds the various data needed to build
+a parse tree out of tagged words.
+"""
+
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
 import functools

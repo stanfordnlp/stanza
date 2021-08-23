@@ -92,7 +92,14 @@ class Tree(StanzaObject):
         """
         Visit the tree in a preorder order
 
-        Applies the given functions to each node
+        Applies the given functions to each node.
+        internal: if not None, applies this function to each non-leaf, non-preterminal node
+        preterminal: if not None, applies this functiion to each preterminal
+        leaf: if not None, applies this function to each leaf
+
+        The functions should *not* destructively alter the trees.
+        There is no attempt to interpret the results of calling these functions.
+        Rather, you can use visit_preorder to collect stats on trees, etc.
         """
         if self.is_leaf():
             if leaf:
@@ -122,7 +129,7 @@ class Tree(StanzaObject):
     @staticmethod
     def get_unique_tags(trees):
         """
-        Walks over all of the trees and gets all of the unique constituent names from the trees
+        Walks over all of the trees and gets all of the unique tags from the trees
         """
         if isinstance(trees, Tree):
             trees = [trees]
@@ -135,7 +142,7 @@ class Tree(StanzaObject):
     @staticmethod
     def get_unique_words(trees):
         """
-        Walks over all of the trees and gets all of the unique constituent names from the trees
+        Walks over all of the trees and gets all of the unique words from the trees
         """
         if isinstance(trees, Tree):
             trees = [trees]
