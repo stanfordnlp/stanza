@@ -56,7 +56,18 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
-    # 30 is slightly slow than 50, for example, but seems to train a bit better
+    # 30 is slightly slower than 50, for example, but seems to train a bit better
+    # earlier version of the model (less accurate overall) had the following results with adadelta:
+    #  30: 0.9085
+    #  50: 0.9070
+    #  75: 0.9010
+    # 150: 0.8985
+    # as another data point, running a newer version with better constituency lstm behavior had:
+    #  30: 0.9111
+    #  50: 0.9094
+    # eval batch should generally be faster the bigger the batch,
+    # up to a point, as it allows for more batching of the LSTM
+    # operations and the prediction step
     parser.add_argument('--train_batch_size', type=int, default=30, help='How many trees to train before taking an optimizer step')
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
