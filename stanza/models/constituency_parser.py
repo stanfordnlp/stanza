@@ -74,15 +74,20 @@ def parse_args(args=None):
     parser.add_argument('--weight_decay', default=0.01, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, or Adadelta')
 
-    parser.add_argument('--word_dropout', default=0.0, type=float, help='Dropout on the word embedding')
-    parser.add_argument('--predict_dropout', default=0.0, type=float, help='Dropout on the final prediction layer')
+    # When using dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:
+    # 0.0: 0.9085
+    # 0.2: 0.9165
+    # 0.4: 0.9162
+    # 0.5: 0.9123
+    parser.add_argument('--word_dropout', default=0.2, type=float, help='Dropout on the word embedding')
+    parser.add_argument('--predict_dropout', default=0.2, type=float, help='Dropout on the final prediction layer')
 
     parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
     parser.add_argument('--use_compound_open', default=False, action='store_true', help='Use compound opens in the transition sequence')
 
     parser.add_argument('--constituency_lstm', default=False, action='store_true', help="Build constituents using the full LSTM instead of just the nodes below the new constituent.  Doesn't match the original papers and might be slightly less effective")
 
-    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu'], help='Nonlinearity to use in the model.  relu is a notiiceable improvement')
+    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
