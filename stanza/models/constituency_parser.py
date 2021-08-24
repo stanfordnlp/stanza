@@ -1,5 +1,4 @@
-"""
-A command line interface to a shift reduce constituency parser.
+"""A command line interface to a shift reduce constituency parser.
 
 This follows the work of
 Recurrent neural network grammars by Dyer et al
@@ -12,11 +11,40 @@ The general outline is:
     next transition given a current state
   Then, at inference time, repeatedly predict the next transition until parsing is complete
 
+The "transitions" are variations on shift/reduce as per an
+intro-to-compilers class.  The idea is that you can treat all of the
+words in a sentence as a buffer of tokens, then either "shift" them to
+represent a new constituent, or "reduce" one or more constituents to
+form a new constituent.
+
 In order to make the runtime a more competitive speed, effort is taken
 to batch the transitions and apply multiple transitions at once.  At
 train time, batches are groups together by length, and at inference
 time, new trees are added to the batch as previous trees on the batch
 finish their inference.
+
+The code breakdown is as follows:
+
+  this file: main interface for training or evaluating models
+  constituency/trainer.py: contains the training & evaluation code
+
+  constituency/parse_tree.py: a data structure for representing a parse tree and utility methods
+  constituency/tree_reader.py: a module which can read trees from a string or input file
+
+  constituency/tree_stack.py: a linked list which can branch in
+    different directions, which will be useful when implementing beam
+    search or a dynamic oracle
+
+  constituency/parse_transitions.py: transitions and a State data structure to store them
+  constituency/transition_sequence.py: turns ParseTree objects into
+    the transition sequences needed to make them
+
+  constituency/base_model.py: operates on the transitions to turn them in to constituents,
+    eventually forming one final parse tree composed of all of the constituents
+  constituency/lstm_model.py: adds LSTM features to the constituents to predict what the
+    correct transition to make is, allowing for predictions on previously unseen text
+
+  stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
 """
 
 import argparse
