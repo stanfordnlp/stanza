@@ -15,9 +15,11 @@ from stanza.models.constituency.tree_stack import TreeStack
 
 logger = logging.getLogger('stanza')
 
+EMPTY_TREE_STACK = TreeStack(value=None)
+
 class State:
     def __init__(self, original_state=None, sentence_length=None, num_opens=None,
-                 word_queue=None, transitions=None, constituents=None):
+                 word_queue=None, transitions=None, constituents=None, gold_tree=None, gold_sequence=None):
         """
         num_opens is useful for tracking
            1) if the parser is in a stuck state where it is making infinite opens
@@ -26,36 +28,53 @@ class State:
         non-stack information such as sentence_length and num_opens
         will be copied from the original_state if possible, with the
         exact arguments overriding the values in the original_state
+
+        gold_tree: the original tree, if made from a gold tree.  might be None
+        gold_sequence: the original transition sequence, if available
+        Note that at runtime, gold values will not be available
         """
-        if word_queue is None:
-            self.word_queue = TreeStack(value=None)
-        else:
-            self.word_queue = word_queue
-
-        if transitions is None:
-            self.transitions = TreeStack(value=None)
-        else:
-            self.transitions = transitions
-
-        if constituents is None:
-            self.constituents = TreeStack(value=None)
-        else:
-            self.constituents = constituents
-
-        # copy non-stack information such as number of opens and sentence length
+        # first, copy all information from the original_state if it exists
         if original_state is None:
             assert not sentence_length is None, "Must provide either an original_state or a sentence_length"
             assert not num_opens is None, "Must provide either an original_state or num_opens"
+
+            self.word_queue = EMPTY_TREE_STACK
+            self.transitions = EMPTY_TREE_STACK
+            self.constituents = EMPTY_TREE_STACK
+
+            self.gold_tree = None
+            self.gold_sequence = None
         else:
             self.sentence_length = original_state.sentence_length
             self.num_opens = original_state.num_opens
 
-        if not num_opens is None:
+            self.word_queue = original_state.word_queue
+            self.transitions = original_state.transitions
+            self.constituents = original_state.constituents
+
+            self.gold_tree = original_state.gold_tree
+            self.gold_sequence = original_state.gold_sequence
+
+        if word_queue is not None:
+            self.word_queue = word_queue
+
+        if transitions is not None:
+            self.transitions = transitions
+
+        if constituents is not None:
+            self.constituents = constituents
+
+        if num_opens is not None:
             self.num_opens = num_opens
 
-        if not sentence_length is None:
+        if sentence_length is not None:
             self.sentence_length = sentence_length
 
+        if gold_tree is not None:
+            self.gold_tree = gold_tree
+
+        if gold_sequence is not None:
+            self.gold_sequence = gold_sequence
 
     def empty_word_queue(self):
         # the first element of each stack is a sentinel with no value
@@ -68,9 +87,12 @@ class State:
         return self.transitions.parent is None
 
     def has_one_constituent(self):
-        if self.constituents.parent is None:
-            return False
-        return self.constituents.parent.parent is None
+        # a length of 1 represents no constituents
+        return len(self.constituents) == 2
+
+    def num_transitions(self):
+        # -1 for the sentinel value
+        return len(self.transitions) - 1
 
     def finished(self, model):
         return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
@@ -111,17 +133,21 @@ class State:
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
-def initial_state_from_preterminals(preterminal_lists, model):
+def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
     """
     what is passed in should be a list of list of preterminals
     """
     word_queues = model.initial_word_queues(preterminal_lists)
-    return [State(sentence_length=len(preterminal_list),
-                  num_opens=0,
-                  word_queue=wq,
-                  transitions=model.initial_transitions(),
-                  constituents=model.initial_constituents())
-            for wq, preterminal_list in zip(word_queues, preterminal_lists)]
+    states = [State(sentence_length=len(preterminal_list),
+                    num_opens=0,
+                    word_queue=wq,
+                    transitions=model.initial_transitions(),
+                    constituents=model.initial_constituents())
+              for wq, preterminal_list in zip(word_queues, preterminal_lists)]
+    if gold_trees is not None:
+        for state, gold_tree in zip(states, gold_trees):
+            state.gold_tree = gold_tree
+    return states
 
 def initial_state_from_words(word_lists, model):
     preterminal_lists = []
@@ -132,7 +158,7 @@ def initial_state_from_words(word_lists, model):
             tag_node = Tree(label=tag, children=[word_node])
             preterminals.append(tag_node)
         preterminal_lists.append(preterminals)
-    return initial_state_from_preterminals(preterminal_lists, model)
+    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=None)
 
 def initial_state_from_gold_trees(trees, model):
     # reversed so we put the words on the stack backwards
@@ -146,10 +172,7 @@ def initial_state_from_gold_trees(trees, model):
             tag_node = Tree(label=pt.label, children=[word_node])
             tagged.append(tag_node)
         preterminal_lists.append(tagged)
-    return initial_state_from_preterminals(preterminal_lists, model)
-
-# Note that at runtime, gold values will not be available
-IncompleteParse = namedtuple('IncompleteParse', ['state', 'num_transitions', 'gold_tree', 'gold_sequence'])
+    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
 
 @functools.total_ordering
 class Transition(ABC):
@@ -455,7 +478,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
 
     for idx, (tree, transition) in enumerate(zip(tree_batch, transitions)):
         if not transition:
-            error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.state.to_string(model))
+            error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             if fail:
                 raise ValueError(error)
             else:
@@ -463,10 +486,10 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
                 remove.add(idx)
                 continue
 
-        if max_transitions and tree.num_transitions >= max_transitions:
+        if max_transitions and tree.num_transitions() >= max_transitions:
             # too many transitions
             # TODO: this error shouldn't use the gold_tree if it happens in a pipeline
-            error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.state.to_string(model))
+            error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             if fail:
                 raise ValueError(error)
             else:
@@ -474,7 +497,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
                 remove.add(idx)
                 continue
 
-        wq, c, nc, callback = transition.update_state(tree.state, model)
+        wq, c, nc, callback = transition.update_state(tree, model)
 
         word_queues.append(wq)
         constituents.append(c)
@@ -491,18 +514,15 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
     tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
 
-    new_transitions = model.push_transitions([tree.state.transitions for tree in tree_batch], transitions)
+    new_transitions = model.push_transitions([tree.transitions for tree in tree_batch], transitions)
     new_constituents = model.push_constituents(constituents, new_constituents)
 
-    tree_batch = [IncompleteParse(gold_tree=tree.gold_tree,
-                                  num_transitions=tree.num_transitions+1,
-                                  state=State(original_state=tree.state,
-                                              num_opens=tree.state.num_opens + transition.delta_opens(),
-                                              word_queue=word_queue,
-                                              transitions=transition_stack,
-                                              constituents=constituents),
-                                  gold_sequence=tree.gold_sequence)
-                  for (tree, transition, word_queue, transition_stack, constituents)
+    tree_batch = [State(original_state=state,
+                        num_opens=state.num_opens + transition.delta_opens(),
+                        word_queue=word_queue,
+                        transitions=transition_stack,
+                        constituents=constituents)
+                  for (state, transition, word_queue, transition_stack, constituents)
                   in zip(tree_batch, transitions, word_queues, new_transitions, new_constituents)]
 
     return tree_batch
