@@ -9,7 +9,6 @@ TODO: a possible way to generalize this would be to make it a
 ClassifierProcessor and have "sentiment" be an option.
 """
 
-import stanza.models.constituency.lstm_model as lstm_model
 import stanza.models.constituency.trainer as trainer
 
 from stanza.models.common import doc
@@ -32,9 +31,9 @@ class ConstituencyProcessor(UDProcessor):
         pretrain_path = config.get('pretrain_path', None)
         self._pretrain = Pretrain(pretrain_path) if pretrain_path else None
         # set up model
-        self._model = lstm_model.load(filename=config['model_path'],
-                                      pretrain=self._pretrain,
-                                      use_gpu=use_gpu)
+        self._model = trainer.Trainer.load(filename=config['model_path'],
+                                           pretrain=self._pretrain,
+                                           use_gpu=use_gpu)
         # batch size counted as sentences
         self._batch_size = config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE)
 
@@ -44,6 +43,6 @@ class ConstituencyProcessor(UDProcessor):
         # certainly parsing across an MWT boundary is an error
         # TODO: maybe some constituency models are trained on UPOS not XPOS
         words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
-        trees = trainer.parse_tagged_words(self._model, words, self._batch_size)
+        trees = trainer.parse_tagged_words(self._model.model, words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document

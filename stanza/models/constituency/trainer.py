@@ -21,17 +21,69 @@ import torch.optim as optim
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.constituency import base_model
-from stanza.models.constituency import lstm_model
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
 
 logger = logging.getLogger('stanza')
+
+
+class Trainer:
+    # not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
+    def __init__(self, model=None, optimizer=None):
+        self.model = model
+        self.optimizer = optimizer
+
+    def save(self, filename):
+        params = self.model.get_params()
+        checkpoint = {
+            'params': params,
+            'model_type': 'LSTM',
+        }
+        torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
+        logger.info("Model saved to {}".format(filename))
+
+
+    @staticmethod
+    def load(filename, pretrain, use_gpu):
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            logger.exception("Cannot load model from {}".format(filename))
+            raise
+        logger.debug("Loaded model {}".format(filename))
+
+        model_type = checkpoint['model_type']
+        params = checkpoint.get('params', checkpoint)
+        if model_type == 'LSTM':
+            model = LSTMModel(pretrain=pretrain,
+                              transitions=params['transitions'],
+                              constituents=params['constituents'],
+                              tags=params['tags'],
+                              words=params['words'],
+                              rare_words=params['rare_words'],
+                              root_labels=params['root_labels'],
+                              open_nodes=params['open_nodes'],
+                              args=params['config'])
+        else:
+            raise ValueError("Unknown model type {}".format(model_type))
+        model.load_state_dict(params['model'], strict=False)
+
+        logger.debug("-- MODEL CONFIG --")
+        for k in model.args.keys():
+            logger.debug("  --{}: {}".format(k, model.args[k]))
+
+        if use_gpu:
+            model.cuda()
+
+        return Trainer(model=model)
+
 
 def load_pretrain(args):
     pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
@@ -70,12 +122,12 @@ def evaluate(args, model_file):
     Uses a subprocess to run the Java EvalB code
     """
     pretrain = load_pretrain(args)
-    model = lstm_model.load(model_file, pretrain, args['cuda'])
+    trainer = Trainer.load(model_file, pretrain, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read {} trees for evaluation".format(len(treebank)))
 
-    f1 = run_dev_set(model, treebank, args['eval_batch_size'], args['eval_file'])
+    f1 = run_dev_set(trainer.model, treebank, args['eval_batch_size'], args['eval_file'])
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
 def build_treebank(trees, args):
@@ -167,13 +219,24 @@ def train(args, model_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
+    model = LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
     if args['cuda']:
         model.cuda()
 
-    iterate_training(model, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
+    if args['optim'].lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    else:
+        raise ValueError("Unknown optimizer: %s" % args.optim)
 
-def iterate_training(model, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
+    trainer = Trainer(model, optimizer)
+
+    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
+
+def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -193,14 +256,8 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
     the parser will have "experienced" what the correct decision
     to make is when it gets into incorrect states at runtime.
     """
-    if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
-    else:
-        raise ValueError("Unknown optimizer: %s" % args.optim)
+    model = trainer.model
+    optimizer = trainer.optimizer
 
     loss_function = nn.CrossEntropyLoss(reduction='sum')
     if args['cuda']:
@@ -285,7 +342,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
             best_epoch = epoch
-            lstm_model.save(model_filename, model)
+            trainer.save(model_filename)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
 
 def build_batch_from_trees(batch_size, data_iterator, model):
