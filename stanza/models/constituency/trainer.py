@@ -26,7 +26,7 @@ from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.parse_transitions import IncompleteParse
+from stanza.models.constituency.parse_transitions import State
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -240,10 +240,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             # now we add the state to the trees in the batch
             # TODO: batch the initial state operation
             initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
-            batch = [IncompleteParse(state=state,
-                                     num_transitions=0,
-                                     gold_tree=tree,
-                                     gold_sequence=sequence)
+            batch = [State(original_state=state, gold_sequence=sequence)
                      for (tree, sequence), state in zip(batch, initial_states)]
 
             incorrect = 0
@@ -252,8 +249,8 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
             all_answers = []
 
             while len(batch) > 0:
-                outputs, pred_transitions = model.predict([x.state for x in batch])
-                gold_transitions = [x.gold_sequence[x.num_transitions] for x in batch]
+                outputs, pred_transitions = model.predict(batch)
+                gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
                 trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
                 all_errors.append(outputs)
                 all_answers.extend(trans_tensor)
@@ -265,7 +262,7 @@ def iterate_training(model, train_trees, train_sequences, transitions, dev_trees
                         transitions_correct = transitions_correct + 1
 
                 # eliminate finished trees, keeping only the transitions we will use
-                zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions + 1 < len(x[0].gold_sequence)]
+                zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions() + 1 < len(x[0].gold_sequence)]
                 batch = [x[0] for x in zipped_batch]
                 gold_transitions = [x[1] for x in zipped_batch]
 
@@ -302,12 +299,7 @@ def build_batch_from_trees(batch_size, data_iterator, model):
             break
         tree_batch.append(gold_tree)
 
-    states = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
-    tree_batch = [IncompleteParse(gold_tree=gold_tree,
-                                  num_transitions=0,
-                                  state=state,
-                                  gold_sequence=None)
-                  for gold_tree, state in zip(tree_batch, states)]
+    tree_batch = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
     return tree_batch
 
 def build_batch_from_tagged_words(batch_size, data_iterator, model):
@@ -321,12 +313,7 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
             break
         tree_batch.append(sentence)
 
-    states = parse_transitions.initial_state_from_words(tree_batch, model)
-    tree_batch = [IncompleteParse(gold_tree=None,
-                                  num_transitions=0,
-                                  state=state,
-                                  gold_sequence=None)
-                  for state in states]
+    tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
     return tree_batch
 
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
@@ -334,7 +321,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
 
     The data_iterator should be anything which returns the data for a parse task via next()
-    build_batch_fn is a function that turns that data into IncompleteParse objects
+    build_batch_fn is a function that turns that data into State objects
     This will be called to generate batches of size batch_size until the data is exhausted
 
     The return is a list of tuples: (gold_tree, [(predicted, score) ...])
@@ -346,13 +333,13 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     horizon_iterator = iter([])
 
     while len(tree_batch) > 0:
-        _, transitions = model.predict([tree.state for tree in tree_batch], is_legal=True)
+        _, transitions = model.predict(tree_batch, is_legal=True)
         tree_batch = parse_transitions.bulk_apply(model, tree_batch, transitions)
 
         remove = set()
         for idx, tree in enumerate(tree_batch):
-            if tree.state.finished(model):
-                predicted_tree = tree.state.get_tree(model)
+            if tree.finished(model):
+                predicted_tree = tree.get_tree(model)
                 gold_tree = tree.gold_tree
                 # TODO: put an actual score here?
                 treebank.append((gold_tree, [(predicted_tree, 1.0)]))

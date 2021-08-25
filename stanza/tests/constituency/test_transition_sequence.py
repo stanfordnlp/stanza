@@ -18,6 +18,7 @@ def test_top_down():
     states = parse_transitions.initial_state_from_gold_trees(trees, model)
     assert(len(states)) == 1
     state = states[0]
+    assert state.num_transitions() == 0
 
     for t in transitions:
         assert t.is_legal(state, model)

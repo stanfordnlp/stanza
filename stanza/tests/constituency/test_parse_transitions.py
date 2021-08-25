@@ -12,6 +12,8 @@ def build_initial_state(model):
     tags = ["VB", "NNP", "NNP"]
 
     state = parse_transitions.initial_state_from_words([list(zip(words, tags))], model)
+    assert len(state) == 1
+    assert state[0].num_transitions() == 0
     return state
 
 def test_initial_state(model=None):
