@@ -167,7 +167,6 @@ def train(args, model_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    # TODO: instead of train_constituents, create with the proper open tags
     model = lstm_model.LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
     if args['cuda']:
         model.cuda()
