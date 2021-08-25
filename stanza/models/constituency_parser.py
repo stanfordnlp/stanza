@@ -84,7 +84,7 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--eval_interval', type=int, default=5000)
-    # 30 is slightly slower than 50, for example, but seems to train a bit better
+    # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
     #  30: 0.9085
     #  50: 0.9070
@@ -93,6 +93,12 @@ def parse_args(args=None):
     # as another data point, running a newer version with better constituency lstm behavior had:
     #  30: 0.9111
     #  50: 0.9094
+    # checking smaller batch sizes to see how this works, at 134 epochs, the values are
+    #  10: 0.8919
+    #  20: 0.9072
+    #  30: 0.9121
+    # obviously these experiments aren't the complete story, but it
+    # looks like 30 trees per batch is the best value for WSJ
     # eval batch should generally be faster the bigger the batch,
     # up to a point, as it allows for more batching of the LSTM
     # operations and the prediction step
