@@ -93,7 +93,7 @@ def parse_args(args=None):
     # as another data point, running a newer version with better constituency lstm behavior had:
     #  30: 0.9111
     #  50: 0.9094
-    # checking smaller batch sizes to see how this works, at 134 epochs, the values are
+    # checking smaller batch sizes to see how this works, at 135 epochs, the values are
     #  10: 0.8919
     #  20: 0.9072
     #  30: 0.9121
