@@ -378,60 +378,25 @@ class LSTMModel(BaseModel, nn.Module):
 
         return predictions, pred_trans
 
+    def get_params(self, skip_modules=True):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
+            for k in skipped:
+                del model_state[k]
+        params = {
+            'model': model_state,
+            'model_type': "LSTM",
+            'config': self.args,
+            'transitions': self.transitions,
+            'constituents': self.constituents,
+            'tags': self.tags,
+            'words': self.delta_words,
+            'rare_words': self.rare_words,
+            'root_labels': self.root_labels,
+            'open_nodes': self.open_nodes,
+        }
 
-def save(filename, model, skip_modules=True):
-    model_state = model.state_dict()
-    # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
-    if skip_modules:
-        skipped = [k for k in model_state.keys() if k.split('.')[0] in model.unsaved_modules]
-        for k in skipped:
-            del model_state[k]
-    params = {
-        'model': model_state,
-        'model_type': "LSTM",
-        'config': model.args,
-        'transitions': model.transitions,
-        'constituents': model.constituents,
-        'tags': model.tags,
-        'words': model.delta_words,
-        'rare_words': model.rare_words,
-        'root_labels': model.root_labels,
-        'open_nodes': model.open_nodes,
-    }
-
-    torch.save(params, filename, _use_new_zipfile_serialization=False)
-    logger.info("Model saved to {}".format(filename))
-
-
-def load(filename, pretrain, use_gpu):
-    try:
-        checkpoint = torch.load(filename, lambda storage, loc: storage)
-    except BaseException:
-        logger.exception("Cannot load model from {}".format(filename))
-        raise
-    logger.debug("Loaded model {}".format(filename))
-
-    model_type = checkpoint['model_type']
-    if model_type == 'LSTM':
-        model = LSTMModel(pretrain=pretrain,
-                          transitions=checkpoint['transitions'],
-                          constituents=checkpoint['constituents'],
-                          tags=checkpoint['tags'],
-                          words=checkpoint['words'],
-                          rare_words=checkpoint['rare_words'],
-                          root_labels=checkpoint['root_labels'],
-                          open_nodes=checkpoint['open_nodes'],
-                          args=checkpoint['config'])
-    else:
-        raise ValueError("Unknown model type {}".format(model_type))
-    model.load_state_dict(checkpoint['model'], strict=False)
-
-    logger.debug("-- MODEL CONFIG --")
-    for k in model.args.keys():
-        logger.debug("  --{}: {}".format(k, model.args[k]))
-
-    if use_gpu:
-        model.cuda()
-
-    return model
+        return params
 

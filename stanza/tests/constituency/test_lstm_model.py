@@ -161,7 +161,13 @@ def test_save_load_model(pt, unary_model):
     Currently no test of the values themselves
     """
     with tempfile.TemporaryDirectory() as tmpdirname:
+        tr = trainer.Trainer(model=unary_model)
+
+        # attempt saving
         filename = os.path.join(tmpdirname, "parser.pt")
-        lstm_model.save(filename, unary_model)
+        tr.save(filename)
+
         assert os.path.exists(filename)
-        foo = lstm_model.load(filename, pt, False)
+
+        # load it back in
+        tr.load(filename, pt, False)
