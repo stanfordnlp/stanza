@@ -32,7 +32,7 @@ class ConstituencyProcessor(UDProcessor):
         self._pretrain = Pretrain(pretrain_path) if pretrain_path else None
         # set up model
         self._model = trainer.Trainer.load(filename=config['model_path'],
-                                           pretrain=self._pretrain,
+                                           pt=self._pretrain,
                                            use_gpu=use_gpu)
         # batch size counted as sentences
         self._batch_size = config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE)

@@ -80,7 +80,7 @@ def parse_args(args=None):
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--mode', default='train', choices=['train', 'predict', 'remove_optimizer'])
 
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -160,6 +160,9 @@ def parse_args(args=None):
     # after making an error, eg, add an oracle
     parser.add_argument('--train_method', default='gold_entire', choices=['gold_entire'], help='Different training methods to use')
 
+    parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
+    parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -179,13 +182,19 @@ def main(args=None):
     logger.info("Running constituency parser in {} mode".format(args['mode']))
     logger.debug("Using GPU: {}".format(args['cuda']))
 
-    model_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
-    model_file = os.path.join(args['save_dir'], model_file)
+    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+    model_save_file = os.path.join(args['save_dir'], model_save_file)
+
+    model_load_file = model_save_file
+    if args['load_name']:
+        model_load_file = os.path.join(args['save_dir'], args['load_name'])
 
     if args['mode'] == 'train':
-        trainer.train(args, model_file)
-    else:
-        trainer.evaluate(args, model_file)
+        trainer.train(args, model_save_file, model_load_file)
+    elif args['mode'] == 'predict':
+        trainer.evaluate(args, model_load_file)
+    elif args['mode'] == 'remove_optimizer':
+        trainer.remove_optimizer(args, model_save_file, model_load_file)
 
 if __name__ == '__main__':
     main()

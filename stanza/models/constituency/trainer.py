@@ -40,18 +40,23 @@ class Trainer:
         self.model = model
         self.optimizer = optimizer
 
-    def save(self, filename):
+    def save(self, filename, save_optimizer=True):
         params = self.model.get_params()
         checkpoint = {
             'params': params,
             'model_type': 'LSTM',
         }
+        if save_optimizer and self.optimizer is not None:
+            checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
 
     @staticmethod
-    def load(filename, pretrain, use_gpu):
+    def load(filename, pt, use_gpu, args=None, load_optimizer=False):
+        if args is None:
+            args = {}
+
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -62,7 +67,7 @@ class Trainer:
         model_type = checkpoint['model_type']
         params = checkpoint.get('params', checkpoint)
         if model_type == 'LSTM':
-            model = LSTMModel(pretrain=pretrain,
+            model = LSTMModel(pretrain=pt,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -75,15 +80,38 @@ class Trainer:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
 
+        if use_gpu:
+            model.cuda()
+
+        if load_optimizer:
+            optimizer_args = dict(params['config'])
+            optimizer_args.update(args)
+            optimizer = build_optimizer(optimizer_args, model)
+
+            if checkpoint.get('optimizer_state_dict', None) is not None:
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            else:
+                logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
+        else:
+            optimizer = None
+
         logger.debug("-- MODEL CONFIG --")
         for k in model.args.keys():
             logger.debug("  --{}: {}".format(k, model.args[k]))
 
-        if use_gpu:
-            model.cuda()
+        return Trainer(model=model, optimizer=optimizer)
 
-        return Trainer(model=model)
 
+def build_optimizer(args, model):
+    if args['optim'].lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    else:
+        raise ValueError("Unknown optimizer: %s" % args.optim)
+    return optimizer
 
 def load_pretrain(args):
     pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
@@ -121,8 +149,8 @@ def evaluate(args, model_file):
     """
     Uses a subprocess to run the Java EvalB code
     """
-    pretrain = load_pretrain(args)
-    trainer = Trainer.load(model_file, pretrain, args['cuda'])
+    pt = load_pretrain(args)
+    trainer = Trainer.load(model_file, pt, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read {} trees for evaluation".format(len(treebank)))
@@ -156,7 +184,18 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
-def train(args, model_file):
+def remove_optimizer(args, model_save_file, model_load_file):
+    """
+    A utility method to remove the optimizer from a save file
+
+    Will make the save file a lot smaller
+    """
+    # TODO: kind of overkill, but probably this isn't used that often anyway
+    pt = load_pretrain(args)
+    trainer = Trainer.load(model_load_file, pt, use_gpu=False, load_optimizer=False)
+    trainer.save(model_save_file)
+
+def train(args, model_save_file, model_load_file):
     """
     Build a model, train it using the requested train & dev files
     """
@@ -212,29 +251,25 @@ def train(args, model_file):
     # train set.  it just means we probably won't ever get that right
     open_nodes = get_open_nodes(train_trees, args)
 
-    pretrain = load_pretrain(args)
+    pt = load_pretrain(args)
 
     # at this point we have:
     # pretrain
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    model = LSTMModel(pretrain, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
-    if args['cuda']:
-        model.cuda()
-
-    if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    if args['finetune']:
+        trainer = Trainer.load(model_load_file, pt, args['cuda'], args, load_optimizer=True)
     else:
-        raise ValueError("Unknown optimizer: %s" % args.optim)
+        model = LSTMModel(pt, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
+        if args['cuda']:
+            model.cuda()
 
-    trainer = Trainer(model, optimizer)
+        optimizer = build_optimizer(args, model)
 
-    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_file)
+        trainer = Trainer(model, optimizer)
+
+    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file)
 
 def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
     """
@@ -342,7 +377,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             logger.info("New best dev score: {} > {}".format(f1, best_f1))
             best_f1 = f1
             best_epoch = epoch
-            trainer.save(model_filename)
+            trainer.save(model_filename, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
 
 def build_batch_from_trees(batch_size, data_iterator, model):
