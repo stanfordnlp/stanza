@@ -22,7 +22,7 @@ import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 
-from stanza.utils.confusion impmort format_confusion
+from stanza.utils.confusion import format_confusion
 
 
 class Loss(Enum):
