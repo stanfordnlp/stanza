@@ -124,6 +124,9 @@ def parse_args(args=None):
     # 0.2: 0.9165
     # 0.4: 0.9162
     # 0.5: 0.9123
+    # Letting 0.2 and 0.4 run for longer, along with 0.3 as another
+    # trial, continued to give extremely similar results over time.
+    # No attempt has been made to test the different dropouts separately...
     parser.add_argument('--word_dropout', default=0.2, type=float, help='Dropout on the word embedding')
     parser.add_argument('--predict_dropout', default=0.2, type=float, help='Dropout on the final prediction layer')
 
@@ -132,6 +135,12 @@ def parse_args(args=None):
 
     parser.add_argument('--constituency_lstm', default=False, action='store_true', help="Build constituents using the full LSTM instead of just the nodes below the new constituent.  Doesn't match the original papers and might be slightly less effective")
 
+    # relu gave at least 1 F1 improvement over tanh in various experiments
+    # relu & gelu seem roughly the same, but relu is clearly faster.
+    # relu, 496 iterations: 0.9176
+    # gelu, 467 iterations: 0.9181
+    # after the same clock time on the same hardware.  the two had been
+    # trading places in terms of accuracy over those ~500 iterations.
     parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu', 'gelu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
