@@ -32,7 +32,7 @@ class TreeStack:
         if parent is None:
             self._len = 1
         else:
-            self._len = len(parent) + 1
+            self._len = parent._len + 1
 
     def pop(self):
         return self.parent
