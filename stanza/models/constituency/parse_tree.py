@@ -32,15 +32,17 @@ class Tree(StanzaObject):
     def is_preterminal(self):
         return len(self.children) == 1 and len(self.children[0].children) == 0
 
-    def yield_preterminals(self):
-        if self.is_leaf():
-            pass
-        elif self.is_preterminal():
-            yield self
-        else:
-            for child in self.children:
-                for preterminal in child.yield_preterminals():
-                    yield preterminal
+    def yield_reversed_preterminals(self):
+        nodes = deque()
+        nodes.append(self)
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if len(node.children) == 0:
+                raise ValueError("Got called with an unexpected tree layout: {}".format(self))
+            elif node.is_preterminal():
+                yield node
+            else:
+                nodes.extend(node.children)
 
     def __repr__(self):
         """

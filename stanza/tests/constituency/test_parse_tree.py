@@ -31,7 +31,7 @@ def test_yield_preterminals():
     text = "((S (VP (VB Unban)) (NP (NNP Mox) (NNP Opal))))"
     trees = tree_reader.read_trees(text)
 
-    preterminals = list(trees[0].yield_preterminals())
+    preterminals = list(reversed(list(trees[0].yield_reversed_preterminals())))
     assert len(preterminals) == 3
     assert str(preterminals) == "[(VB Unban), (NNP Mox), (NNP Opal)]"
 

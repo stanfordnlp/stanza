@@ -162,16 +162,9 @@ def initial_state_from_words(word_lists, model):
 
 def initial_state_from_gold_trees(trees, model):
     # reversed so we put the words on the stack backwards
-    yield_lists = [reversed([x for x in tree.yield_preterminals()]) for tree in trees]
-
-    preterminal_lists = []
-    for preterminals in yield_lists:
-        tagged = []
-        for pt in preterminals:
-            word_node = Tree(label=pt.children[0].label)
-            tag_node = Tree(label=pt.label, children=[word_node])
-            tagged.append(tag_node)
-        preterminal_lists.append(tagged)
+    preterminal_lists = [[Tree(label=pt.label, children=Tree(label=pt.children[0].label))
+                          for pt in tree.yield_reversed_preterminals()]
+                         for tree in trees]
     return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
 
 @functools.total_ordering

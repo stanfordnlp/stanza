@@ -172,6 +172,8 @@ class LSTMModel(BaseModel, nn.Module):
         self.output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
                                             for input_size, output_size in zip(predict_input_size, predict_output_size)])
 
+        self.constituency_lstm = self.args['constituency_lstm']
+
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
@@ -237,7 +239,7 @@ class LSTMModel(BaseModel, nn.Module):
     def transform_word_to_constituent(self, state):
         word_node = state.word_queue.value
         word = word_node.value
-        if self.args['constituency_lstm']:
+        if self.constituency_lstm:
             return Constituent(value=word, hx=word_node.hx)
         else:
             return Constituent(value=word, hx=word_node.embedding)
@@ -262,14 +264,13 @@ class LSTMModel(BaseModel, nn.Module):
 
     def build_constituents(self, labels, children_lists):
         label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
-        node_hx = [[child.output for child in children] for children in children_lists]
-        unpacked_hx = [[lhx] + nhx + [lhx] for lhx, nhx in zip(label_hx, node_hx)]
-        unpacked_hx = [torch.stack(nhx) for nhx in unpacked_hx]
 
-        max_length = max(len(children) for children in children_lists) + 2   # +2 for the 2x label embedding
-        packed_hx = torch.zeros(max_length, len(children_lists), self.hidden_size, device=label_hx[0].device)
-        for idx, nhx in enumerate(unpacked_hx):
-            packed_hx[0:len(nhx), idx, :] = nhx
+        max_length = max(len(children) for children in children_lists)
+        zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
+        node_hx = [[child.output for child in children] for children in children_lists]
+        unpacked_hx = [[lhx] + nhx + [lhx] + [zeros] * (max_length - len(nhx)) for lhx, nhx in zip(label_hx, node_hx)]
+        unpacked_hx = [torch.stack(nhx) for nhx in unpacked_hx]
+        packed_hx = torch.stack(unpacked_hx, axis=1)
         packed_hx = torch.nn.utils.rnn.pack_padded_sequence(packed_hx, [len(x)+2 for x in children_lists], enforce_sorted=False)
         lstm_output = self.constituent_reduce_lstm(packed_hx)
         # take just the output of the final layer
@@ -306,7 +307,7 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
         cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
-        if self.args['constituency_lstm']:
+        if self.constituency_lstm:
             new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
                           for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         else:
@@ -364,17 +365,15 @@ class LSTMModel(BaseModel, nn.Module):
         predictions = self.forward(states)
         pred_max = torch.argmax(predictions, axis=1)
 
-        pred_trans = [None] * len(states)
-        for idx, state in enumerate(states):
-            trans = self.transitions[pred_max[idx]]
-            if not is_legal or trans.is_legal(state, self):
-                pred_trans[idx] = trans
-            else:
-                _, indices = predictions[idx, :].sort(descending=True)
-                for index in indices:
-                    if self.transitions[index].is_legal(state, self):
-                        pred_trans[idx] = self.transitions[index]
-                        break
+        pred_trans = [self.transitions[pred_max[idx]] for idx in range(len(states))]
+        if is_legal:
+            for idx, (state, trans) in enumerate(zip(states, pred_trans)):
+                if not trans.is_legal(state, self):
+                    _, indices = predictions[idx, :].sort(descending=True)
+                    for index in indices:
+                        if self.transitions[index].is_legal(state, self):
+                            pred_trans[idx] = self.transitions[index]
+                            break
 
         return predictions, pred_trans
 
