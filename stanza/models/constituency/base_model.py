@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 
@@ -29,7 +30,6 @@ class BaseModel(ABC):
     Applying transitions may change important metadata about a State
     such as the vectors associated with LSTM hidden states, for example.
     """
-
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
         """
@@ -102,10 +102,17 @@ class BaseModel(ABC):
     def has_unary_transitions(self):
         pass
 
+    @abstractmethod
+    def is_top_down(self):
+        pass
+
 class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
     """
+    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+        self.transition_scheme = transition_scheme
+
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
         for tagged_words in tagged_word_lists:
@@ -159,5 +166,8 @@ class SimpleModel(BaseModel):
         return transitions.value
 
     def has_unary_transitions(self):
-        # TODO: make this an option for testing purposes
-        return True
+        return self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY
+
+    def is_top_down(self):
+        return self.transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
+
