@@ -144,7 +144,9 @@ def verify_transitions(trees, sequences):
     logger.info("Verifying the transition sequences for {} trees".format(len(trees)))
     for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
         state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
-        for trans in sequence:
+        for idx, trans in enumerate(sequence):
+            if not trans.is_legal(state, model):
+                raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(idx, trans, tree, sequence))
             state = trans.apply(state, model)
         result = model.get_top_constituent(state.constituents)
         if tree != result:
