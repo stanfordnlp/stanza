@@ -26,7 +26,7 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.lstm_model import LSTMModel
-from stanza.models.constituency.parse_transitions import State
+from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -66,6 +66,11 @@ class Trainer:
 
         model_type = checkpoint['model_type']
         params = checkpoint.get('params', checkpoint)
+
+        if 'transition_scheme' not in params['config']:
+            # the only models we saved so far are ones with TOP_DOWN
+            params['config']['transition_scheme'] = TransitionScheme.TOP_DOWN
+
         if model_type == 'LSTM':
             model = LSTMModel(pretrain=pt,
                               transitions=params['transitions'],
@@ -164,14 +169,14 @@ def build_treebank(trees, args):
 
     Currently only supports top-down transitions, but more may be added in the future, especially bottom up
     """
-    return transition_sequence.build_top_down_treebank(trees, use_compound_unary=args['use_compound_unary'], use_compound_open=args['use_compound_open'])
+    return transition_sequence.build_top_down_treebank(trees, transition_scheme=args['transition_scheme'])
 
 def get_open_nodes(trees, args):
     """
     Return a list of all open nodes in the given dataset.
     Depending on the parameters, may be single or compound open transitions.
     """
-    if args['use_compound_open']:
+    if args['transition_scheme'] is TransitionScheme.TOP_DOWN_COMPOUND:
         return parse_tree.Tree.get_compound_constituents(trees)
     else:
         return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]

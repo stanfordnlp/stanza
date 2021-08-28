@@ -7,6 +7,7 @@ a parse tree out of tagged words.
 
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
+from enum import Enum
 import functools
 import logging
 
@@ -14,6 +15,11 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 
 logger = logging.getLogger('stanza')
+
+class TransitionScheme(Enum):
+    TOP_DOWN           = 1
+    TOP_DOWN_COMPOUND  = 2
+    TOP_DOWN_UNARY     = 3
 
 EMPTY_TREE_STACK = TreeStack(value=None)
 

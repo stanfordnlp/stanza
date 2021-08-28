@@ -62,6 +62,7 @@ import torch
 
 from stanza.models.common import utils
 from stanza.models.constituency import trainer
+from stanza.models.constituency.parse_transitions import TransitionScheme
 
 logger = logging.getLogger('stanza')
 
@@ -137,8 +138,8 @@ def parse_args(args=None):
     parser.add_argument('--word_dropout', default=0.2, type=float, help='Dropout on the word embedding')
     parser.add_argument('--predict_dropout', default=0.2, type=float, help='Dropout on the final prediction layer')
 
-    parser.add_argument('--use_compound_unary', default=False, action='store_true', help='Use compound unaries in the transition sequence')
-    parser.add_argument('--use_compound_open', default=False, action='store_true', help='Use compound opens in the transition sequence')
+    parser.add_argument('--transition_scheme', default=TransitionScheme.TOP_DOWN, type=lambda x: TransitionScheme[x.upper()],
+                        help='Transition scheme to use.  {}'.format(", ".join(x.name for x in TransitionScheme)))
 
     parser.add_argument('--constituency_lstm', default=False, action='store_true', help="Build constituents using the full LSTM instead of just the nodes below the new constituent.  Doesn't match the original papers and might be slightly less effective")
 

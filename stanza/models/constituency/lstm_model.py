@@ -16,9 +16,9 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
-from stanza.models.constituency.tree_stack import TreeStack
-
+from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.tree_stack import TreeStack
 
 logger = logging.getLogger('stanza')
 
@@ -127,8 +127,8 @@ class LSTMModel(BaseModel, nn.Module):
         # we could try multiple configurations, including not having this translation at all
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
-        self.use_compound_unary = args['use_compound_unary']
-        if self.use_compound_unary:
+        self.transition_scheme = args['transition_scheme']
+        if self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
             unary_transforms = {}
             for constituent in self.constituent_map:
                 unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
@@ -335,7 +335,7 @@ class LSTMModel(BaseModel, nn.Module):
         return transition_node.value
 
     def has_unary_transitions(self):
-        return self.use_compound_unary
+        return self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
     def forward(self, states):
         """

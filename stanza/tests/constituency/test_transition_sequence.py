@@ -14,7 +14,7 @@ def test_top_down():
     trees = tree_reader.read_trees(text)
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=True)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], transition_scheme=TransitionScheme.TOP_DOWN)
     states = parse_transitions.initial_state_from_gold_trees(trees, model)
     assert(len(states)) == 1
     state = states[0]
@@ -41,7 +41,7 @@ def test_top_down_no_unary():
     trees = tree_reader.read_trees(text)
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=False)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], transition_scheme=TransitionScheme.TOP_DOWN)
     states = parse_transitions.initial_state_from_gold_trees(trees, model)
     assert len(states) == 1
     state = states[0]
@@ -76,7 +76,7 @@ def test_all_transitions_no_unary():
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     trees = tree_reader.read_trees(text)
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_treebank(trees, use_compound_unary=False)
+    transitions = transition_sequence.build_top_down_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN)
 
     expected = [Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("PP"), OpenConstituent("ROOT"), OpenConstituent("SBARQ"), OpenConstituent("SQ"), OpenConstituent("VP"), OpenConstituent("WHNP")]
     assert transition_sequence.all_transitions(transitions) == expected
@@ -88,7 +88,7 @@ def test_top_down_compound_unary():
     assert len(trees) == 1
 
     model = SimpleModel()
-    transitions = transition_sequence.build_top_down_sequence(trees[0], use_compound_unary=False, use_compound_open=True)
+    transitions = transition_sequence.build_top_down_sequence(trees[0], transition_scheme=TransitionScheme.TOP_DOWN_COMPOUND)
 
     states = parse_transitions.initial_state_from_gold_trees(trees, model)
     assert len(states) == 1

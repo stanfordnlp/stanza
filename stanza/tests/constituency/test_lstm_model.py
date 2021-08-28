@@ -71,7 +71,7 @@ def build_model(pt, *args):
 
 @pytest.fixture(scope="module")
 def unary_model(pt):
-    return build_model(pt, "--use_compound_unary")
+    return build_model(pt, "--transition_scheme", "TOP_DOWN_UNARY")
 
 def test_initial_model(unary_model):
     # does nothing, just tests that the construction went okay
@@ -96,7 +96,7 @@ def test_open(unary_model):
     test_parse_transitions.test_open(unary_model)
 
 def test_compound_open(pt):
-    model = build_model(pt, '--use_compound_open')
+    model = build_model(pt, '--transition_scheme', "TOP_DOWN_COMPOUND")
     test_parse_transitions.test_compound_open(model)
 
 def test_close(unary_model):

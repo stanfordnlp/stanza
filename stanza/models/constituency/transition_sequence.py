@@ -3,7 +3,7 @@
 from stanza.models.constituency.parse_transitions import *
 from stanza.models.constituency.tree_reader import read_trees
 
-def yield_top_down_sequence(tree, use_compound_unary=True, use_compound_open=False):
+def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     if tree.is_preterminal():
         yield Shift()
         return
@@ -11,18 +11,18 @@ def yield_top_down_sequence(tree, use_compound_unary=True, use_compound_open=Fal
     if tree.is_leaf():
         return
 
-    if use_compound_unary:
+    if transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
         if len(tree.children) == 1:
             labels = []
             while not tree.is_preterminal() and len(tree.children) == 1:
                 labels.append(tree.label)
                 tree = tree.children[0]
-            for transition in yield_top_down_sequence(tree, use_compound_unary, use_compound_open):
+            for transition in yield_top_down_sequence(tree, transition_scheme):
                 yield transition
             yield CompoundUnary(labels)
             return
 
-    if use_compound_open:
+    if transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND:
         labels = [tree.label]
         while len(tree.children) == 1 and not tree.children[0].is_preterminal():
             tree = tree.children[0]
@@ -31,15 +31,15 @@ def yield_top_down_sequence(tree, use_compound_unary=True, use_compound_open=Fal
     else:
         yield OpenConstituent(tree.label)
     for child in tree.children:
-        for transition in yield_top_down_sequence(child, use_compound_unary, use_compound_open):
+        for transition in yield_top_down_sequence(child, transition_scheme):
             yield transition
     yield CloseConstituent()
 
-def build_top_down_sequence(tree, use_compound_unary=True, use_compound_open=False):
-    return [t for t in yield_top_down_sequence(tree, use_compound_unary, use_compound_open)]
+def build_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    return list(yield_top_down_sequence(tree, transition_scheme))
 
-def build_top_down_treebank(trees, use_compound_unary=True, use_compound_open=False):
-    return [build_top_down_sequence(tree, use_compound_unary, use_compound_open) for tree in trees]
+def build_top_down_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    return [build_top_down_sequence(tree, transition_scheme) for tree in trees]
 
 def all_transitions(transition_lists):
     """
