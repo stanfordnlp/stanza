@@ -337,6 +337,9 @@ class LSTMModel(BaseModel, nn.Module):
     def has_unary_transitions(self):
         return self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
+    def is_top_down(self):
+        return self.transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
+
     def forward(self, states):
         """
         Return logits for a prediction of what transition to make next

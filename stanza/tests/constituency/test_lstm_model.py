@@ -57,7 +57,7 @@ def build_model(pt, *args):
 
     args = constituency_parser.parse_args(args)
 
-    transitions = trainer.build_treebank(trees, args)
+    transitions = trainer.build_treebank(trees, args['transition_scheme'])
     transitions = transition_sequence.all_transitions(transitions)
     constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
     tags = parse_tree.Tree.get_unique_tags(trees)

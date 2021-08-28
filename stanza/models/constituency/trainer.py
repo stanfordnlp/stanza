@@ -136,11 +136,11 @@ def read_treebank(filename):
     trees = [t.prune_none().simplify_labels() for t in trees]
     return trees
 
-def verify_transitions(trees, sequences):
+def verify_transitions(trees, sequences, transition_scheme):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
-    model = base_model.SimpleModel()
+    model = base_model.SimpleModel(transition_scheme)
     logger.info("Verifying the transition sequences for {} trees".format(len(trees)))
     for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
         state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
@@ -165,13 +165,13 @@ def evaluate(args, model_file):
     f1 = run_dev_set(trainer.model, treebank, args['eval_batch_size'], args['eval_file'])
     logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
 
-def build_treebank(trees, args):
+def build_treebank(trees, transition_scheme):
     """
     Convert a set of trees into the corresponding treebank based on the args
 
     Currently only supports top-down transitions, but more may be added in the future, especially bottom up
     """
-    return transition_sequence.build_top_down_treebank(trees, transition_scheme=args['transition_scheme'])
+    return transition_sequence.build_top_down_treebank(trees, transition_scheme=transition_scheme)
 
 def get_open_nodes(trees, args):
     """
@@ -224,11 +224,11 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
     logger.info("Building training transition sequences")
-    train_sequences = build_treebank(tqdm(train_trees), args)
+    train_sequences = build_treebank(tqdm(train_trees), args['transition_scheme'])
     train_transitions = transition_sequence.all_transitions(train_sequences)
 
     logger.info("Building dev transition sequences")
-    dev_sequences = build_treebank(tqdm(dev_trees), args)
+    dev_sequences = build_treebank(tqdm(dev_trees), args['transition_scheme'])
     dev_transitions = transition_sequence.all_transitions(dev_sequences)
 
     logger.info("Total unique transitions in train set: {}".format(len(train_transitions)))
@@ -236,8 +236,8 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
         if trans not in train_transitions:
             raise RuntimeError("Found transition {} in the dev set which don't exist in the train set".format(trans))
 
-    verify_transitions(train_trees, train_sequences)
-    verify_transitions(dev_trees, dev_sequences)
+    verify_transitions(train_trees, train_sequences, args['transition_scheme'])
+    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'])
 
     root_labels = parse_tree.Tree.get_root_labels(train_trees)
     for root_state in parse_tree.Tree.get_root_labels(dev_trees):
