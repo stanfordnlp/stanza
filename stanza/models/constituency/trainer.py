@@ -200,7 +200,7 @@ def remove_optimizer(args, model_save_file, model_load_file):
     trainer = Trainer.load(model_load_file, pt, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
 
-def train(args, model_save_file, model_load_file):
+def train(args, model_save_file, model_load_file, model_save_latest_file):
     """
     Build a model, train it using the requested train & dev files
     """
@@ -263,7 +263,8 @@ def train(args, model_save_file, model_load_file):
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    if args['finetune']:
+    if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
+        logger.info("Loading model to continue training from {}".format(model_load_file))
         trainer = Trainer.load(model_load_file, pt, args['cuda'], args, load_optimizer=True)
     else:
         model = LSTMModel(pt, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
@@ -274,9 +275,9 @@ def train(args, model_save_file, model_load_file):
 
         trainer = Trainer(model, optimizer)
 
-    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file)
+    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file)
 
-def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename):
+def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -383,6 +384,8 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             best_f1 = f1
             best_epoch = epoch
             trainer.save(model_filename, save_optimizer=True)
+        if model_latest_filename:
+            trainer.save(model_latest_filename, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
 
 def build_batch_from_trees(batch_size, data_iterator, model):

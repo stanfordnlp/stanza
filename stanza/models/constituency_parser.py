@@ -115,6 +115,7 @@ def parse_args(args=None):
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_latest_name', type=str, default=None, help="Save the latest model here regardless of score.  Useful for restarting training")
 
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -161,7 +162,8 @@ def parse_args(args=None):
     # after making an error, eg, add an oracle
     parser.add_argument('--train_method', default='gold_entire', choices=['gold_entire'], help='Different training methods to use')
 
-    parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
+    parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
+    parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
     args = parser.parse_args(args=args)
@@ -186,12 +188,18 @@ def main(args=None):
     model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
     model_save_file = os.path.join(args['save_dir'], model_save_file)
 
+    model_save_latest_file = None
+    if args['save_latest_name']:
+        model_save_latest_file = os.path.join(args['save_dir'], args['save_latest_name'])
+
     model_load_file = model_save_file
     if args['load_name']:
         model_load_file = os.path.join(args['save_dir'], args['load_name'])
+    elif args['mode'] == 'train' and args['save_latest_name']:
+        model_load_file = model_save_latest_file
 
     if args['mode'] == 'train':
-        trainer.train(args, model_save_file, model_load_file)
+        trainer.train(args, model_save_file, model_load_file, model_save_latest_file)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file)
     elif args['mode'] == 'remove_optimizer':
