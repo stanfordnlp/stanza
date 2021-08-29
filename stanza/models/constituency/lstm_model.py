@@ -377,6 +377,8 @@ class LSTMModel(BaseModel, nn.Module):
                         if self.transitions[index].is_legal(state, self):
                             pred_trans[idx] = self.transitions[index]
                             break
+                    else: # yeah, else on a for loop, deal with it
+                        pred_trans[idx] = None
 
         return predictions, pred_trans
 

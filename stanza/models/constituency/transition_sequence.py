@@ -4,6 +4,15 @@ from stanza.models.constituency.parse_transitions import *
 from stanza.models.constituency.tree_reader import read_trees
 
 def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    """
+    For tree (X A B C D), yield Open(X) A B C D Close
+
+    The details are in how to treat unary transitions
+    Three possibilities handled by this method:
+      TOP_DOWN_UNARY:    (Y (X ...)) -> Open(X) ... Close Unary(Y)
+      TOP_DOWN_COMPOUND: (Y (X ...)) -> Open(Y, X) ... Close
+      TOP_DOWN:          (Y (X ...)) -> Open(Y) Open(X) ... Close Close
+    """
     if tree.is_preterminal():
         yield Shift()
         return
@@ -35,8 +44,33 @@ def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UN
             yield transition
     yield CloseConstituent()
 
+def yield_in_order_sequence(tree):
+    """
+    For tree (X A B C D), yield A Open(X) B C D Close
+    """
+    if tree.is_preterminal():
+        yield Shift()
+        return
+
+    if tree.is_leaf():
+        return
+
+    for transition in yield_in_order_sequence(tree.children[0]):
+        yield transition
+
+    yield OpenConstituent(tree.label)
+
+    for child in tree.children[1:]:
+        for transition in yield_in_order_sequence(child):
+            yield transition
+
+    yield CloseConstituent()
+
 def build_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
-    return list(yield_top_down_sequence(tree, transition_scheme))
+    if transition_scheme is TransitionScheme.IN_ORDER:
+        return list(yield_in_order_sequence(tree))
+    else:
+        return list(yield_top_down_sequence(tree, transition_scheme))
 
 def build_top_down_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     return [build_top_down_sequence(tree, transition_scheme) for tree in trees]
