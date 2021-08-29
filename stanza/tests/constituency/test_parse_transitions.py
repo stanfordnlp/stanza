@@ -2,6 +2,7 @@ import pytest
 
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -192,6 +193,110 @@ def test_compound_open(model=None):
     assert tree.children[0].children[0].label == 'Unban'
     assert tree.children[1].children[0].label == 'Mox'
     assert tree.children[2].children[0].label == 'Opal'
+
+def test_in_order_open(model=None):
+    if model is None:
+        model = SimpleModel(TransitionScheme.IN_ORDER)
+    state = build_initial_state(model)[0]
+
+    shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert not shift.is_legal(state, model)
+
+    open_vp = parse_transitions.OpenConstituent("VP")
+    assert open_vp.is_legal(state, model)
+    state = open_vp.apply(state, model)
+    assert not open_vp.is_legal(state, model)
+
+    close_trans = parse_transitions.CloseConstituent()
+    assert close_trans.is_legal(state, model)
+    state = close_trans.apply(state, model)
+
+    open_s = parse_transitions.OpenConstituent("S")
+    assert open_s.is_legal(state, model)
+    state = open_s.apply(state, model)
+    assert not open_vp.is_legal(state, model)
+
+    # check that root transitions won't happen in the middle of a parse
+    open_root = parse_transitions.OpenConstituent("ROOT")
+    assert not open_root.is_legal(state, model)
+
+    # build (NP (NNP Mox) (NNP Opal))
+    open_np = parse_transitions.OpenConstituent("NP")
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert open_np.is_legal(state, model)
+    # make sure root can't happen in places where an arbitrary open is legal
+    assert not open_root.is_legal(state, model)
+    state = open_np.apply(state, model)
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert close_trans.is_legal(state, model)
+    state = close_trans.apply(state, model)
+
+    assert close_trans.is_legal(state, model)
+    state = close_trans.apply(state, model)
+
+    assert open_root.is_legal(state, model)
+    state = open_root.apply(state, model)
+
+def test_too_many_unaries_close():
+    """
+    This tests rejecting Close at the start of a sequence after too many unary transitions
+
+    The model should reject doing multiple "unaries" - eg, Open then Close - in an IN_ORDER sequence
+    """
+    model = SimpleModel(TransitionScheme.IN_ORDER)
+    state = build_initial_state(model)[0]
+
+    shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+
+    open_np = parse_transitions.OpenConstituent("NP")
+    close_trans = parse_transitions.CloseConstituent()
+    for _ in range(parse_transitions.UNARY_LIMIT):
+        assert open_np.is_legal(state, model)
+        state = open_np.apply(state, model)
+
+        assert close_trans.is_legal(state, model)
+        state = close_trans.apply(state, model)
+
+    assert open_np.is_legal(state, model)
+    state = open_np.apply(state, model)
+    assert not close_trans.is_legal(state, model)
+
+def test_too_many_unaries_open():
+    """
+    This tests rejecting Open in the middle of a sequence after too many unary transitions
+
+    The model should reject doing multiple "unaries" - eg, Open then Close - in an IN_ORDER sequence
+    """
+    model = SimpleModel(TransitionScheme.IN_ORDER)
+    state = build_initial_state(model)[0]
+
+    shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+
+    open_np = parse_transitions.OpenConstituent("NP")
+    close_trans = parse_transitions.CloseConstituent()
+
+    assert open_np.is_legal(state, model)
+    state = open_np.apply(state, model)
+    assert not open_np.is_legal(state, model)
+    assert shift.is_legal(state, model)
+    state = shift.apply(state, model)
+
+    for _ in range(parse_transitions.UNARY_LIMIT):
+        assert open_np.is_legal(state, model)
+        state = open_np.apply(state, model)
+
+        assert close_trans.is_legal(state, model)
+        state = close_trans.apply(state, model)
+
+    assert not open_np.is_legal(state, model)
 
 def test_close(model=None):
     if model is None:

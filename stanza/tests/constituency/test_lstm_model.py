@@ -99,6 +99,10 @@ def test_compound_open(pt):
     model = build_model(pt, '--transition_scheme', "TOP_DOWN_COMPOUND")
     test_parse_transitions.test_compound_open(model)
 
+def test_in_order_open(pt):
+    model = build_model(pt, '--transition_scheme', "IN_ORDER")
+    test_parse_transitions.test_in_order_open(model)
+
 def test_close(unary_model):
     test_parse_transitions.test_close(unary_model)
 
