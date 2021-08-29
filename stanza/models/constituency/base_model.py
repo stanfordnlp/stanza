@@ -99,6 +99,10 @@ class BaseModel(ABC):
         return ("ROOT",)
 
     @abstractmethod
+    def transition_scheme(self):
+        pass
+
+    @abstractmethod
     def has_unary_transitions(self):
         pass
 
@@ -111,7 +115,7 @@ class SimpleModel(BaseModel):
     This model allows pushing and popping with no extra data
     """
     def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
-        self.transition_scheme = transition_scheme
+        self._transition_scheme = transition_scheme
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
@@ -165,9 +169,12 @@ class SimpleModel(BaseModel):
     def get_top_transition(self, transitions):
         return transitions.value
 
+    def transition_scheme(self):
+        return self._transition_scheme
+
     def has_unary_transitions(self):
-        return self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY
+        return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
     def is_top_down(self):
-        return self.transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
+        return self._transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
 

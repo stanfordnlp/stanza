@@ -127,8 +127,8 @@ class LSTMModel(BaseModel, nn.Module):
         # we could try multiple configurations, including not having this translation at all
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
-        self.transition_scheme = args['transition_scheme']
-        if self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
+        self._transition_scheme = args['transition_scheme']
+        if self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
             unary_transforms = {}
             for constituent in self.constituent_map:
                 unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
@@ -334,11 +334,14 @@ class LSTMModel(BaseModel, nn.Module):
         transition_node = transitions.value
         return transition_node.value
 
+    def transition_scheme(self):
+        return self._transition_scheme
+
     def has_unary_transitions(self):
-        return self.transition_scheme is TransitionScheme.TOP_DOWN_UNARY
+        return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
     def is_top_down(self):
-        return self.transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
+        return self._transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
 
     def forward(self, states):
         """

@@ -529,10 +529,15 @@ class CloseConstituent(Transition):
             if state.num_opens <= 1 and not state.empty_word_queue():
                 # don't close the last open until all words have been used
                 return False
-            if not model.has_unary_transitions():
+            if model.transition_scheme() == TransitionScheme.TOP_DOWN_COMPOUND:
+                # when doing TOP_DOWN_COMPOUND, we assume all transitions
+                # at the ROOT level have an S, SQ, FRAG, etc underneath
+                # TODO: good to check this
+                if state.num_opens == 1 and not state.empty_word_queue():
+                    return False
+            elif not model.has_unary_transitions():
                 # in fact, we have to leave the top level constituent
                 # under the ROOT open if unary transitions are not possible
-                # TODO FIXME: a compound open should be okay (in fact, this is a bug hurting performance)
                 if state.num_opens == 2 and not state.empty_word_queue():
                     return False
         else:
