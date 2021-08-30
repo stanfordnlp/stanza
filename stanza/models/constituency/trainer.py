@@ -197,7 +197,9 @@ def remove_optimizer(args, model_save_file, model_load_file):
 
     Will make the save file a lot smaller
     """
-    # TODO: kind of overkill, but probably this isn't used that often anyway
+    # TODO: kind of overkill to load in the pretrain rather than
+    # change the load/save to work without it, but probably this
+    # functionality isn't used that often anyway
     pt = load_pretrain(args)
     trainer = Trainer.load(model_load_file, pt, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
