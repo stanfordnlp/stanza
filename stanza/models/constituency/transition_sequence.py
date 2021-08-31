@@ -66,14 +66,14 @@ def yield_in_order_sequence(tree):
 
     yield CloseConstituent()
 
-def build_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+def build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     if transition_scheme is TransitionScheme.IN_ORDER:
         return list(yield_in_order_sequence(tree))
     else:
         return list(yield_top_down_sequence(tree, transition_scheme))
 
-def build_top_down_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
-    return [build_top_down_sequence(tree, transition_scheme) for tree in trees]
+def build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    return [build_sequence(tree, transition_scheme) for tree in trees]
 
 def all_transitions(transition_lists):
     """
@@ -92,5 +92,5 @@ if __name__ == '__main__':
     tree = read_trees(text)[0]
 
     print(tree)
-    transitions = build_top_down_sequence(tree)
+    transitions = build_sequence(tree)
     print(transitions)

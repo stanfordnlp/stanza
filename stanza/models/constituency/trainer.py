@@ -171,7 +171,7 @@ def build_treebank(trees, transition_scheme):
 
     Currently only supports top-down transitions, but more may be added in the future, especially bottom up
     """
-    return transition_sequence.build_top_down_treebank(trees, transition_scheme=transition_scheme)
+    return transition_sequence.build_treebank(trees, transition_scheme=transition_scheme)
 
 def get_open_nodes(trees, args):
     """
