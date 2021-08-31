@@ -1,9 +1,3 @@
-from abc import ABC, abstractmethod
-
-from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.parse_tree import Tree
-from stanza.models.constituency.tree_stack import TreeStack
-
 """
 The BaseModel is passed to the transitions so that the transitions
 can operate on a parsing state without knowing the exact
@@ -23,6 +17,12 @@ of operations such as "combine the most recent 4 constituents"
 or "turn the next input word into a constituent"
 """
 
+from abc import ABC, abstractmethod
+
+from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.tree_stack import TreeStack
+
 class BaseModel(ABC):
     """
     This base class defines abstract methods for manipulating a State.
@@ -37,78 +37,104 @@ class BaseModel(ABC):
 
         The word lists should be backwards so that the first word is the last word put on the stack (LIFO)
         """
-        pass
 
     @abstractmethod
     def initial_transitions(self):
-        pass
+        """
+        Builds an initial transition stack with whatever values need to go into first position
+        """
 
     @abstractmethod
     def initial_constituents(self):
-        pass
+        """
+        Builds an initial constituent stack with whatever values need to go into first position
+        """
 
     @abstractmethod
     def get_top_word(self, word_queue):
-        pass
+        """
+        Get the next word of the word buffer
+        """
 
     @abstractmethod
     def transform_word_to_constituent(self, state):
         """
         Transform the top node of word_queue to something that can push on the constituent stack
         """
-        pass
 
     @abstractmethod
     def dummy_constituent(self, dummy):
         """
         When using a dummy node as a sentinel, transform it to something usable by this model
         """
-        pass
 
     @abstractmethod
     def unary_transform(self, constituents, labels):
         """
         Transform the top of the constituent stack using a unary transform to the new label
         """
-        pass
 
     @abstractmethod
     def build_constituents(self, labels, children_lists):
         """
         Build multiple constituents at once.  This gives the opportunity for batching operations
         """
-        pass
 
     @abstractmethod
     def push_constituents(self, constituent_stacks, constituents):
-        pass
+        """
+        Add a multiple constituents to multiple constituent_stacks
+
+        Useful to factor this out in case batching will help
+        """
 
     @abstractmethod
     def get_top_constituent(self, constituents):
-        pass
+        """
+        Get the first constituent from the constituent stack
+
+        For example, a model might want to remove embeddings and LSTM state vectors
+        """
 
     @abstractmethod
     def push_transitions(self, transition_stacks, transitions):
-        pass
+        """
+        Add a multiple transitions to multiple transition_stacks
+
+        Useful to factor this out in case batching will help
+        """
 
     @abstractmethod
     def get_top_transition(self, transitions):
-        pass
+        """
+        Get the first transition from the transition stack
+
+        For example, a model might want to remove transition embeddings before returning the transition
+        """
 
     def get_root_labels(self):
+        """
+        Return ROOT labels for this model.  Probably ROOT, TOP, or both
+        """
         return ("ROOT",)
 
     @abstractmethod
     def transition_scheme(self):
-        pass
+        """
+        Transition scheme used - see parse_transitions
+        """
 
     @abstractmethod
     def has_unary_transitions(self):
-        pass
+        """
+        Whether or not this model uses unary transitions, based on transition_scheme
+        """
 
     @abstractmethod
     def is_top_down(self):
-        pass
+        """
+        Whether or not this model is TOP_DOWN
+        """
 
 class SimpleModel(BaseModel):
     """
@@ -177,4 +203,3 @@ class SimpleModel(BaseModel):
 
     def is_top_down(self):
         return self._transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
-

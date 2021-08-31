@@ -15,8 +15,8 @@ import random
 import os
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn
+from torch import optim
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
@@ -49,7 +49,7 @@ class Trainer:
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
-        logger.info("Model saved to {}".format(filename))
+        logger.info("Model saved to %s", filename)
 
 
     @staticmethod
@@ -60,9 +60,9 @@ class Trainer:
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
-            logger.exception("Cannot load model from {}".format(filename))
+            logger.exception("Cannot load model from %s", filename)
             raise
-        logger.debug("Loaded model {}".format(filename))
+        logger.debug("Loaded model from %s", filename)
 
         model_type = checkpoint['model_type']
         params = checkpoint.get('params', checkpoint)
@@ -102,7 +102,7 @@ class Trainer:
 
         logger.debug("-- MODEL CONFIG --")
         for k in model.args.keys():
-            logger.debug("  --{}: {}".format(k, model.args[k]))
+            logger.debug("  --%s: %s", k, model.args[k])
 
         return Trainer(model=model, optimizer=optimizer)
 
@@ -473,7 +473,7 @@ def parse_tagged_words(model, words, batch_size):
         each sentence is a list of (word, tag)
     The return value is a list of ParseTree objects
     """
-    logger.debug("Processing {} sentences".format(words))
+    logger.debug("Processing %d sentences", len(words))
     model.eval()
 
     sentence_iterator = iter(words)
@@ -488,14 +488,14 @@ def run_dev_set(model, dev_trees, batch_size, filename):
 
     It only works if CoreNLP 4.3.0 or higher is in the classpath.
     """
-    logger.info("Processing {} trees from {}".format(len(dev_trees), filename))
+    logger.info("Processing %d trees from %s", len(dev_trees), filename)
     model.eval()
 
     tree_iterator = iter(tqdm(dev_trees))
     treebank = parse_sentences(tree_iterator, build_batch_from_trees, batch_size, model)
 
     if len(treebank) < len(dev_trees):
-        logger.warning("Only evaluating {} trees instead of {}".format(len(treebank), len(dev_trees)))
+        logger.warning("Only evaluating %d trees instead of %d", len(treebank), len(dev_trees))
 
     with EvaluateParser(classpath="$CLASSPATH") as ep:
         response = ep.process(treebank)

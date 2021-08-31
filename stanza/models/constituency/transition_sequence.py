@@ -1,6 +1,10 @@
+"""
+Build a transition sequence from parse trees.
 
+Supports multiple transition schemes - TOP_DOWN and variants, IN_ORDER
+"""
 
-from stanza.models.constituency.parse_transitions import *
+from stanza.models.constituency.parse_transitions import Shift, CompoundUnary, OpenConstituent, CloseConstituent, TransitionScheme
 from stanza.models.constituency.tree_reader import read_trees
 
 def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):

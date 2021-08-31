@@ -67,6 +67,11 @@ from stanza.models.constituency.parse_transitions import TransitionScheme
 logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
+    """
+    Adds the arguments for building the con parser
+
+    For the most part, defaults are set to cross-validated values, at least for WSJ
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--data_dir', type=str, default='data/constituency', help='Directory of constituency data.')
@@ -77,6 +82,12 @@ def parse_args(args=None):
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag")
+    # Smaller values also seem to work
+    # For example, after 700 iterations:
+    #   32: 0.9174
+    #   50: 0.9183
+    #  100: 0.9185
+    # not a huge difference regardless
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
@@ -178,12 +189,17 @@ def parse_args(args=None):
     return args
 
 def main(args=None):
+    """
+    Main function for building con parser
+
+    Processes args, calls the appropriate function for the chosen --mode
+    """
     args = parse_args(args=args)
 
     utils.set_random_seed(args['seed'], args['cuda'])
 
-    logger.info("Running constituency parser in {} mode".format(args['mode']))
-    logger.debug("Using GPU: {}".format(args['cuda']))
+    logger.info("Running constituency parser in %s mode", args['mode'])
+    logger.debug("Using GPU: %s", args['cuda'])
 
     model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
     model_save_file = os.path.join(args['save_dir'], model_save_file)

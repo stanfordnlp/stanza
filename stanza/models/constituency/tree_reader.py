@@ -1,3 +1,10 @@
+"""
+Reads ParseTree objects from a file, string, or similar input
+
+Works by first splitting the input into (, ), and all other tokens,
+then recursively processing those tokens into trees.
+"""
+
 from stanza.models.common import utils
 from stanza.models.constituency.parse_tree import Tree
 

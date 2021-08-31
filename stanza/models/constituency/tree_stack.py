@@ -22,9 +22,11 @@ class TreeStack:
     states at the same time without copying the entire thing.
     """
     def __init__(self, value, parent=None, value_to_str=str):
-        # value could be as transition, a word, or a partially built constituent
-        # value_to_str allows for an alternate value -> str for the case
-        # of more complicated values, such as values which include lstm tensors
+        """
+        value could be as transition, a word, or a partially built constituent
+        value_to_str allows for an alternate value -> str for the case
+        of more complicated values, such as values which include lstm tensors
+        """
         self.value = value
         # parent == None will represent the end of the stack
         self.parent = parent
