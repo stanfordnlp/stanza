@@ -322,7 +322,7 @@ def test_close(model=None):
     state = close_transition.apply(state, model)
     assert state.num_opens == 0
     assert not close_transition.is_legal(state, model)
-    
+
     tree = model.get_top_constituent(state.constituents)
     assert tree.label == 'NP'
     assert len(tree.children) == 2

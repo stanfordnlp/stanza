@@ -33,7 +33,7 @@ TREEBANK = """
 
 ( (S
     (NP (PRP I))
-    (VP 
+    (VP
       (ADVP (RB really))
       (VBP hate)
       (NP (DT the) (NNP @MBTA)))))
@@ -74,9 +74,11 @@ def unary_model(pt):
     return build_model(pt, "--transition_scheme", "TOP_DOWN_UNARY")
 
 def test_initial_model(unary_model):
-    # does nothing, just tests that the construction went okay
+    """
+    does nothing, just tests that the construction went okay
+    """
     pass
-    
+
 def test_initial_state(unary_model):
     test_parse_transitions.test_initial_state(unary_model)
 
