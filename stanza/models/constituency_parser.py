@@ -86,6 +86,7 @@ def parse_args(args=None):
     # For example, after 700 iterations:
     #   32: 0.9174
     #   50: 0.9183
+    #   72: 0.9176
     #  100: 0.9185
     # not a huge difference regardless
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
