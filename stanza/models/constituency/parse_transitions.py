@@ -359,6 +359,9 @@ class CompoundUnary(Transition):
         return hash(self.labels)
 
 class Dummy():
+    """
+    Takes a space on the constituent stack to represent where an Open transition occurred
+    """
     def __init__(self, label):
         self.label = label
 
@@ -379,11 +382,10 @@ class Dummy():
 
 def too_many_unary_nodes(tree):
     """
-    Return True iff there are UNARY_LIMIT patterns of close/open in a row
+    Return True iff there are UNARY_LIMIT unary nodes in a tree in a row
 
+    helps prevent infinite open/close patterns
     otherwise, the model can get stuck in essentially an infinite loop
-
-    TODO FIXME: this doesn't always prevent such a transition
     """
     if tree is None:
         return False
