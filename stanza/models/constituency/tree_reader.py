@@ -19,7 +19,7 @@ def recursive_open_tree(token_iterator, at_root):
     children = []
 
     token = next(token_iterator, None)
-    while token != None:
+    while token is not None:
         if token is OPEN_PAREN:
             children.append(recursive_open_tree(token_iterator, at_root=False))
         elif token is CLOSE_PAREN:
@@ -97,7 +97,10 @@ def read_tree_file(filename):
         trees = read_trees(fin.read())
     return trees
 
-if __name__ == '__main__':
+def main():
     text="( (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     trees = read_trees(text)
     print(trees)
+
+if __name__ == '__main__':
+    main()

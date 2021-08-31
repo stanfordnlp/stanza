@@ -131,7 +131,7 @@ def read_treebank(filename):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
     """
-    logger.info("Reading trees from {}".format(filename))
+    logger.info("Reading trees from %s", filename)
     trees = tree_reader.read_tree_file(filename)
     trees = [t.prune_none().simplify_labels() for t in trees]
     return trees
@@ -141,7 +141,7 @@ def verify_transitions(trees, sequences, transition_scheme):
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
     model = base_model.SimpleModel(transition_scheme)
-    logger.info("Verifying the transition sequences for {} trees".format(len(trees)))
+    logger.info("Verifying the transition sequences for %d trees", len(trees))
     for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
         state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
         for idx, trans in enumerate(sequence):
@@ -160,10 +160,10 @@ def evaluate(args, model_file):
     trainer = Trainer.load(model_file, pt, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
-    logger.info("Read {} trees for evaluation".format(len(treebank)))
+    logger.info("Read %d trees for evaluation", len(treebank))
 
     f1 = run_dev_set(trainer.model, treebank, args['eval_batch_size'], args['eval_file'])
-    logger.info("F1 score on {}: {}".format(args['eval_file'], f1))
+    logger.info("F1 score on %s: %f", args['eval_file'], f1)
 
 def build_treebank(trees, transition_scheme):
     """
@@ -189,7 +189,7 @@ def print_args(args):
     """
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
+    logger.info('ARGS USED AT TRAINING TIME:\n%s\n', '\n'.join(log_lines))
 
 def remove_optimizer(args, model_save_file, model_load_file):
     """

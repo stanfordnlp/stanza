@@ -1,3 +1,7 @@
+"""
+A utilitiy class for keeping track of intermediate parse states
+"""
+
 class TreeStack:
     """
     A stack which can branch in several directions, as long as you
@@ -55,4 +59,3 @@ class TreeStack:
 
     def __len__(self):
         return self._len
-

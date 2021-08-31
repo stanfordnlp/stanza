@@ -175,6 +175,11 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituency_lstm = self.args['constituency_lstm']
 
     def add_unsaved_module(self, name, module):
+        """
+        Adds a module which will not be saved to disk
+
+        Best used for large models such as pretrained word embeddings
+        """
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
@@ -368,6 +373,13 @@ class LSTMModel(BaseModel, nn.Module):
 
     # TODO: merge this with forward?
     def predict(self, states, is_legal=False):
+        """
+        Generate and return predictions, along with the transitions those predictions represent
+
+        If is_legal is set to True, will only return legal transitions.
+        This means returning None if there are no legal transitions.
+        Hopefully the constraints prevent that from happening
+        """
         predictions = self.forward(states)
         pred_max = torch.argmax(predictions, axis=1)
 
@@ -386,6 +398,9 @@ class LSTMModel(BaseModel, nn.Module):
         return predictions, pred_trans
 
     def get_params(self, skip_modules=True):
+        """
+        Get a dictionary for saving the model
+        """
         model_state = self.state_dict()
         # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
         if skip_modules:
