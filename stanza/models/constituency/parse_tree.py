@@ -192,7 +192,7 @@ class Tree(StanzaObject):
                 for child in node.children:
                     stack.append(child)
         return sorted(constituents)
-    
+
     def simplify_labels(self):
         """
         Return a copy of the tree with the -=# removed
