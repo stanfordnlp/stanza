@@ -35,12 +35,19 @@ logger = logging.getLogger('stanza')
 
 
 class Trainer:
-    # not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
+    """
+    Stores a constituency model and its optimizer
+
+    Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
+    """
     def __init__(self, model=None, optimizer=None):
         self.model = model
         self.optimizer = optimizer
 
     def save(self, filename, save_optimizer=True):
+        """
+        Save the model (and by default the optimizer) to the given path
+        """
         params = self.model.get_params()
         checkpoint = {
             'params': params,
@@ -54,6 +61,11 @@ class Trainer:
 
     @staticmethod
     def load(filename, pt, use_gpu, args=None, load_optimizer=False):
+        """
+        Load back a model and possibly its optimizer.
+
+        pt: a Pretrain word embedding
+        """
         if args is None:
             args = {}
 
@@ -108,6 +120,9 @@ class Trainer:
 
 
 def build_optimizer(args, model):
+    """
+    Build an optimizer based on the arguments given
+    """
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
@@ -119,6 +134,9 @@ def build_optimizer(args, model):
     return optimizer
 
 def load_pretrain(args):
+    """
+    Loads a pretrain based on the paths in the arguments
+    """
     pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
     if os.path.exists(pretrain_file):
         vec_file = None
@@ -134,6 +152,7 @@ def read_treebank(filename):
     logger.info("Reading trees from %s", filename)
     trees = tree_reader.read_tree_file(filename)
     trees = [t.prune_none().simplify_labels() for t in trees]
+    # TODO: eliminate / warn / throw exception? for trees with multiple children under ROOT
     return trees
 
 def verify_transitions(trees, sequences, transition_scheme):
@@ -213,14 +232,14 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
     utils.ensure_dir(args['save_dir'])
 
     train_trees = read_treebank(args['train_file'])
-    logger.info("Read {} trees for the training set".format(len(train_trees)))
+    logger.info("Read %d trees for the training set", len(train_trees))
 
     dev_trees = read_treebank(args['eval_file'])
-    logger.info("Read {} trees for the dev set".format(len(dev_trees)))
+    logger.info("Read %d trees for the dev set", len(dev_trees))
 
     train_constituents = parse_tree.Tree.get_unique_constituent_labels(train_trees)
     dev_constituents = parse_tree.Tree.get_unique_constituent_labels(dev_trees)
-    logger.info("Unique constituents in training set: {}".format(train_constituents))
+    logger.info("Unique constituents in training set: %s", train_constituents)
     for con in dev_constituents:
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
@@ -233,7 +252,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
     dev_sequences = build_treebank(tqdm(dev_trees), args['transition_scheme'])
     dev_transitions = transition_sequence.all_transitions(dev_sequences)
 
-    logger.info("Total unique transitions in train set: {}".format(len(train_transitions)))
+    logger.info("Total unique transitions in train set: %d", len(train_transitions))
     for trans in dev_transitions:
         if trans not in train_transitions:
             raise RuntimeError("Found transition {} in the dev set which don't exist in the train set".format(trans))
@@ -268,7 +287,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
-        logger.info("Loading model to continue training from {}".format(model_load_file))
+        logger.info("Loading model to continue training from %s", model_load_file)
         trainer = Trainer.load(model_load_file, pt, args['cuda'], args, load_optimizer=True)
     else:
         model = LSTMModel(pt, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
@@ -320,7 +339,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     best_epoch = 0
     for epoch in range(1, args['epochs']+1):
         model.train()
-        logger.info("Starting epoch {}".format(epoch))
+        logger.info("Starting epoch %d", epoch)
         epoch_data = leftover_training_data
         while len(epoch_data) < args['eval_interval']:
             random.shuffle(train_data)
@@ -345,8 +364,6 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             batch = [State(original_state=state, gold_sequence=sequence)
                      for (tree, sequence), state in zip(batch, initial_states)]
 
-            incorrect = 0
-            correct = 0
             all_errors = []
             all_answers = []
 
@@ -384,7 +401,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         # print statistics
         f1 = run_dev_set(model, dev_trees, args['eval_batch_size'], args['eval_file'])
         if f1 > best_f1:
-            logger.info("New best dev score: {} > {}".format(f1, best_f1))
+            logger.info("New best dev score: %.5f > %.5f", f1, best_f1)
             best_f1 = f1
             best_epoch = epoch
             trainer.save(model_filename, save_optimizer=True)
@@ -497,7 +514,6 @@ def run_dev_set(model, dev_trees, batch_size, filename):
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating %d trees instead of %d", len(treebank), len(dev_trees))
 
-    with EvaluateParser(classpath="$CLASSPATH") as ep:
-        response = ep.process(treebank)
+    with EvaluateParser(classpath="$CLASSPATH") as evaluator:
+        response = evaluator.process(treebank)
         return response.f1
-

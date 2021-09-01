@@ -14,6 +14,9 @@ OPEN_PAREN = "("
 CLOSE_PAREN = ")"
 
 def recursive_open_tree(token_iterator, at_root):
+    """
+    Build a tree from the tokens in the token_iterator
+    """
     # TODO: unwind the recursion
     text = []
     children = []
@@ -42,6 +45,8 @@ def recursive_open_tree(token_iterator, at_root):
 
 def recursive_read_trees(token_iterator):
     """
+    Read all of the trees from the token_iterator
+
     TODO: some of the error cases we hit can be recovered from
     also, the recursive call can throw errors and we should be able to report where
     also, just in general it would be good to unwind the recursion
@@ -93,11 +98,17 @@ def read_trees(text):
     return trees
 
 def read_tree_file(filename):
+    """
+    Read all of the trees in the given file
+    """
     with open(filename) as fin:
         trees = read_trees(fin.read())
     return trees
 
 def main():
+    """
+    Reads a sample tree
+    """
     text="( (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     trees = read_trees(text)
     print(trees)

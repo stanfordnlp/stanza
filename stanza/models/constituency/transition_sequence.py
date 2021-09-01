@@ -71,25 +71,34 @@ def yield_in_order_sequence(tree):
     yield CloseConstituent()
 
 def build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    """
+    Turn a single tree into a list of transitions based on the TransitionScheme
+    """
     if transition_scheme is TransitionScheme.IN_ORDER:
         return list(yield_in_order_sequence(tree))
     else:
         return list(yield_top_down_sequence(tree, transition_scheme))
 
 def build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    """
+    Turn each of the trees in the treebank into a list of transitions based on the TransitionScheme
+    """
     return [build_sequence(tree, transition_scheme) for tree in trees]
 
 def all_transitions(transition_lists):
     """
-    Given a list of transition lists, combine them all into a set of unique transitions.
+    Given a list of transition lists, combine them all into a list of unique transitions.
     """
     transitions = set()
-    for tl in transition_lists:
-        for t in tl:
-            transitions.add(t)
+    for trans_list in transition_lists:
+        for trans in trans_list:
+            transitions.add(trans)
     return sorted(transitions)
 
-if __name__ == '__main__':
+def main():
+    """
+    Convert a sample tree and print its transitions
+    """
     text="( (SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     #text = "(WP Who)"
 
@@ -98,3 +107,6 @@ if __name__ == '__main__':
     print(tree)
     transitions = build_sequence(tree)
     print(transitions)
+
+if __name__ == '__main__':
+    main()
