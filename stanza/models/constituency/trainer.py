@@ -152,7 +152,11 @@ def read_treebank(filename):
     logger.info("Reading trees from %s", filename)
     trees = tree_reader.read_tree_file(filename)
     trees = [t.prune_none().simplify_labels() for t in trees]
-    # TODO: eliminate / warn / throw exception? for trees with multiple children under ROOT
+
+    illegal_trees = [t for t in trees if len(t.children) > 1]
+    if len(illegal_trees) > 0:
+        raise ValueError("Found {} tree(s) which had non-unary transitions at the ROOT.  First illegal tree: {}".format(len(illegal_trees), illegal_trees[0]))
+
     return trees
 
 def verify_transitions(trees, sequences, transition_scheme):

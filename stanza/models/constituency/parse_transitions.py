@@ -534,7 +534,7 @@ class CloseConstituent(Transition):
             if model.transition_scheme() == TransitionScheme.TOP_DOWN_COMPOUND:
                 # when doing TOP_DOWN_COMPOUND, we assume all transitions
                 # at the ROOT level have an S, SQ, FRAG, etc underneath
-                # TODO: good to check this when creating the model
+                # this is checked when the model is first trained
                 if state.num_opens == 1 and not state.empty_word_queue():
                     return False
             elif not model.has_unary_transitions():
