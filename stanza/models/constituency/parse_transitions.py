@@ -28,12 +28,20 @@ EMPTY_TREE_STACK = TreeStack(value=None)
 UNARY_LIMIT = 4
 
 class State:
+    """
+    Represents a partially completed transition parse
+
+    Includes stack/buffers for unused words, already executed transitions, and partially build constituents
+    At training time, also keeps track of the gold data we are reparsing
+    """
     def __init__(self, original_state=None, sentence_length=None, num_opens=None,
                  word_queue=None, transitions=None, constituents=None, gold_tree=None, gold_sequence=None):
         """
         num_opens is useful for tracking
            1) if the parser is in a stuck state where it is making infinite opens
            2) if a close transition is impossible because there are no previous opens
+
+        sentence_length tracks how long the sentence is so we abort if we go infinite
 
         non-stack information such as sentence_length and num_opens
         will be copied from the original_state if possible, with the
