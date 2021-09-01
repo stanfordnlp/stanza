@@ -595,8 +595,10 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
 
         if max_transitions and tree.num_transitions() >= max_transitions:
             # too many transitions
-            # TODO: this error shouldn't use the gold_tree if it happens in a pipeline
-            error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
+            if tree.gold_tree:
+                error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
+            else:
+                error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(model))
             if fail:
                 raise ValueError(error)
             else:
