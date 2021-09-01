@@ -273,7 +273,7 @@ def ensure_dir(dir):
 
 def copy_file(src, dst):
     ensure_dir(Path(dst).parent)
-    shutil.copy(src, dst)
+    shutil.copy2(src, dst)
 
 
 def get_md5(path):
@@ -325,8 +325,7 @@ def process_dirs(args):
             # copy file
             input_path = os.path.join(args.input_dir, model_dir, model)
             output_path = os.path.join(args.output_dir, lang, processor, package + '.pt')
-            ensure_dir(Path(output_path).parent)
-            shutil.copy(input_path, output_path)
+            copy_file(input_path, output_path)
             # maintain md5
             md5 = get_md5(output_path)
             # maintain dependencies
@@ -405,7 +404,6 @@ def process_defaults(args):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
                     if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'langid']:
                         default_processors[processor] = package
-                    zipf.write(processor)
                     zipf.write(os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
                     # we don't have a lot of Thai support yet
