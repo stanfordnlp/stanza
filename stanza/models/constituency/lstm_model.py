@@ -119,13 +119,14 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True)
+        # after putting the word_delta_tag input through the word_lstm, we get back
+        # hidden_size * 2 output with the front and back lstms concatenated.
+        # this transforms it into hidden_size with the values mixed together
+        self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
+
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers)
-
-        # this turns a word_tag embedding into an input for the word_lstm
-        # we could try multiple configurations, including not having this translation at all
-        self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
         self._transition_scheme = args['transition_scheme']
         if self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
