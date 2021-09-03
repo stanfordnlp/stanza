@@ -164,8 +164,11 @@ def test_multiple_output_forward(pt):
 
 def test_no_tag_embedding_forward(pt):
     """
-    Test that the model continues to work if the tag embedding is turned off
+    Test that the model continues to work if the tag embedding is turned on or off
     """
+    model = build_model(pt, '--tag_embedding_dim', '20')
+    run_forward_checks(model)
+
     model = build_model(pt, '--tag_embedding_dim', '0')
     run_forward_checks(model)
 
