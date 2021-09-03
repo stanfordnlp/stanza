@@ -9,11 +9,14 @@ previous transitions, the words, and the partially built constituents.
 
 from collections import namedtuple
 import logging
+from operator import itemgetter
 import random
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 
+from stanza.models.common.data import get_long_tensor
+from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
@@ -36,7 +39,7 @@ Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -65,6 +68,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         emb_matrix = pretrain.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+
         self.vocab_map = { word: i for i, word in enumerate(pretrain.vocab) }
         # precompute tensors for the word indices
         # the tensors should be put on the GPU if needed with a call to cuda()
@@ -84,6 +88,19 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+
+        if forward_charlm is not None:
+            self.add_unsaved_module('forward_charlm', forward_charlm)
+            self.add_unsaved_module('forward_charlm_vocab', forward_charlm.char_vocab())
+            self.word_input_size += self.forward_charlm.hidden_dim()
+        else:
+            self.forward_charlm = None
+        if backward_charlm is not None:
+            self.add_unsaved_module('backward_charlm', forward_charlm)
+            self.add_unsaved_module('backward_charlm_vocab', backward_charlm.char_vocab())
+            self.word_input_size += self.backward_charlm.hidden_dim()
+        else:
+            self.backward_charlm = None
 
         # TODO: add a max_norm?
         self.delta_words = sorted(list(words))
@@ -188,6 +205,47 @@ class LSTMModel(BaseModel, nn.Module):
     def get_root_labels(self):
         return self.root_labels
 
+    def build_char_representation(self, all_word_labels, device, forward):
+        CHARLM_START = "\n"
+        CHARLM_END = " "
+
+        if forward:
+            charlm = self.forward_charlm
+            vocab = self.forward_charlm_vocab
+        else:
+            charlm = self.backward_charlm
+            vocab = self.backward_charlm_vocab
+
+        all_data = []
+        for idx, word_labels in enumerate(all_word_labels):
+            if forward:
+                word_labels = reversed(word_labels)
+            else:
+                word_labels = [x[::-1] for x in word_labels]
+
+            chars = [CHARLM_START]
+            offsets = []
+            for w in word_labels:
+                chars.extend(w)
+                chars.append(CHARLM_END)
+                offsets.append(len(chars) - 1)
+            if not forward:
+                offsets.reverse()
+            chars = vocab.map(chars)
+            all_data.append((chars, offsets, len(chars), len(all_data)))
+
+        all_data.sort(key=itemgetter(2), reverse=True)
+        chars, char_offsets, char_lens, orig_idx = tuple(zip(*all_data))
+        chars = get_long_tensor(chars, len(all_data), pad_id=vocab.unit2id(' ')).to(device=device)
+
+        # TODO: surely this should be stuffed in the charlm model itself rather than done here
+        with torch.no_grad():
+            output, _, _ = charlm.forward(chars, char_lens)
+            res = [output[i, offsets] for i, offsets in enumerate(char_offsets)]
+            res = unsort(res, orig_idx)
+
+        return res
+
     def initial_word_queues(self, tagged_word_lists):
         """
         Produce initial word queues out of the model's LSTMs for use in the tagged word lists.
@@ -197,6 +255,7 @@ class LSTMModel(BaseModel, nn.Module):
         device = next(self.parameters()).device
 
         all_word_inputs = []
+        all_word_labels = []
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
             word_input = self.embedding(word_idx)
@@ -204,10 +263,11 @@ class LSTMModel(BaseModel, nn.Module):
             # this occasionally learns UNK at train time
             word_labels = [word.children[0].label for word in tagged_words]
             if self.training:
-                for idx, word in enumerate(word_labels):
-                    if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency']:
-                        word_labels[idx] = None
-            delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in word_labels])
+                delta_labels = [None if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency'] else word
+                                for word in word_labels]
+            else:
+                delta_labels = word_labels
+            delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
 
@@ -221,7 +281,17 @@ class LSTMModel(BaseModel, nn.Module):
                 except KeyError as e:
                     raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
+            all_word_labels.append(word_labels)
             all_word_inputs.append(word_inputs)
+
+        if self.forward_charlm is not None:
+            all_forward_chars = self.build_char_representation(all_word_labels, device, forward=True)
+            for word_inputs, forward_chars in zip(all_word_inputs, all_forward_chars):
+                word_inputs.append(forward_chars)
+        if self.backward_charlm is not None:
+            all_backward_chars = self.build_char_representation(all_word_labels, device, forward=False)
+            for word_inputs, backward_chars in zip(all_word_inputs, all_backward_chars):
+                word_inputs.append(backward_chars)
 
         word_lstm_input = torch.zeros((max(len(x) for x in tagged_word_lists), len(tagged_word_lists), self.word_input_size), device=device)
 

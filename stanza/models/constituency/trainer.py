@@ -20,6 +20,7 @@ from torch import optim
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
+from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.constituency import base_model
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
@@ -60,7 +61,7 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, use_gpu, args=None, load_optimizer=False):
+    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False):
         """
         Load back a model and possibly its optimizer.
 
@@ -85,6 +86,8 @@ class Trainer:
 
         if model_type == 'LSTM':
             model = LSTMModel(pretrain=pt,
+                              forward_charlm=forward_charlm,
+                              backward_charlm=backward_charlm,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -145,6 +148,12 @@ def load_pretrain(args):
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def load_charlm(charlm_file):
+    if charlm_file:
+        logger.info("Loading charlm from %s", charlm_file)
+        return CharacterLanguageModel.load(charlm_file, finetune=False)
+    return None
+
 def read_treebank(filename):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
@@ -180,7 +189,9 @@ def evaluate(args, model_file):
     Uses a subprocess to run the Java EvalB code
     """
     pt = load_pretrain(args)
-    trainer = Trainer.load(model_file, pt, args['cuda'])
+    forward_charlm = load_charlm(args['charlm_forward_file'])
+    backward_charlm = load_charlm(args['charlm_backward_file'])
+    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read %d trees for evaluation", len(treebank))
@@ -224,7 +235,9 @@ def remove_optimizer(args, model_save_file, model_load_file):
     # change the load/save to work without it, but probably this
     # functionality isn't used that often anyway
     pt = load_pretrain(args)
-    trainer = Trainer.load(model_load_file, pt, use_gpu=False, load_optimizer=False)
+    forward_charlm = load_charlm(args['charlm_forward_file'])
+    backward_charlm = load_charlm(args['charlm_backward_file'])
+    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
 
 def train(args, model_save_file, model_load_file, model_save_latest_file):
@@ -284,6 +297,8 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
     open_nodes = get_open_nodes(train_trees, args)
 
     pt = load_pretrain(args)
+    forward_charlm = load_charlm(args['charlm_forward_file'])
+    backward_charlm = load_charlm(args['charlm_backward_file'])
 
     # at this point we have:
     # pretrain
@@ -292,9 +307,9 @@ def train(args, model_save_file, model_load_file, model_save_latest_file):
 
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
         logger.info("Loading model to continue training from %s", model_load_file)
-        trainer = Trainer.load(model_load_file, pt, args['cuda'], args, load_optimizer=True)
+        trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, args['cuda'], args, load_optimizer=True)
     else:
-        model = LSTMModel(pt, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
         if args['cuda']:
             model.cuda()
 

@@ -66,7 +66,7 @@ def build_model(pt, *args):
     root_labels = parse_tree.Tree.get_root_labels(trees)
     open_nodes = trainer.get_open_nodes(trees, args)
 
-    model = lstm_model.LSTMModel(pt, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args)
+    model = lstm_model.LSTMModel(pt, None, None, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args)
     return model
 
 @pytest.fixture(scope="module")
@@ -195,4 +195,4 @@ def test_save_load_model(pt, unary_model):
         assert os.path.exists(filename)
 
         # load it back in
-        tr.load(filename, pt, False)
+        tr.load(filename, pt, None, None, False)

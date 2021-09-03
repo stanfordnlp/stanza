@@ -81,6 +81,9 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
     # For example, after 700 iterations:
