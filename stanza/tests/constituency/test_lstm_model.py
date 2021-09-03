@@ -162,7 +162,17 @@ def test_multiple_output_forward(pt):
     model = build_model(pt, '--num_output_layers', '2', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
+def test_no_tag_embedding_forward(pt):
+    """
+    Test that the model continues to work if the tag embedding is turned off
+    """
+    model = build_model(pt, '--tag_embedding_dim', '0')
+    run_forward_checks(model)
+
 def test_forward_con_lstm(pt):
+    """
+    Tests an older version of the model
+    """
     model = build_model(pt, '--num_lstm_layers', '2', '--constituency_lstm')
     run_forward_checks(model)
 

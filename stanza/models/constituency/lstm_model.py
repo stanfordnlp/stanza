@@ -98,10 +98,11 @@ class LSTMModel(BaseModel, nn.Module):
         self.rare_words = set(rare_words)
 
         self.tags = sorted(list(tags))
-        self.tag_map = { t: i for i, t in enumerate(self.tags) }
-        self.tag_embedding = nn.Embedding(num_embeddings = len(tags),
-                                          embedding_dim = self.tag_embedding_dim)
-        self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
+        if self.tag_embedding_dim > 0:
+            self.tag_map = { t: i for i, t in enumerate(self.tags) }
+            self.tag_embedding = nn.Embedding(num_embeddings = len(tags),
+                                              embedding_dim = self.tag_embedding_dim)
+            self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
 
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
@@ -203,14 +204,18 @@ class LSTMModel(BaseModel, nn.Module):
 
             delta_input = self.delta_embedding(delta_idx)
 
-            try:
-                tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
-                tag_input = self.tag_embedding(tag_idx)
-            except KeyError as e:
-                raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
+            word_inputs = [word_input, delta_input]
+
+            if self.tag_embedding_dim > 0:
+                try:
+                    tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
+                    tag_input = self.tag_embedding(tag_idx)
+                    word_inputs.append(tag_input)
+                except KeyError as e:
+                    raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
             # now of size sentence x input
-            word_input = torch.cat([word_input, delta_input, tag_input], dim=1)
+            word_input = torch.cat(word_inputs, dim=1)
             # now of size sentence x 1 x input
             word_input = word_input.unsqueeze(1)
             word_input = self.word_dropout(word_input)
