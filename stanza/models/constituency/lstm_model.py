@@ -279,6 +279,7 @@ class LSTMModel(BaseModel, nn.Module):
         max_length = max(len(children) for children in children_lists)
         zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
         node_hx = [[child.output for child in children] for children in children_lists]
+        # weirdly, this is faster than using pack_sequence
         unpacked_hx = [[lhx] + nhx + [lhx] + [zeros] * (max_length - len(nhx)) for lhx, nhx in zip(label_hx, node_hx)]
         unpacked_hx = [torch.stack(nhx) for nhx in unpacked_hx]
         packed_hx = torch.stack(unpacked_hx, axis=1)
