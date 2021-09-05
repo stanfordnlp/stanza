@@ -125,7 +125,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
         # precompute tensors for the transitions
         self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
-        # TODO: include max_norm?
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
 
