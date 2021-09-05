@@ -189,8 +189,15 @@ class LSTMModel(BaseModel, nn.Module):
         return self.root_labels
 
     def initial_word_queues(self, tagged_word_lists):
-        word_queues = []
-        for tagged_words in tagged_word_lists:
+        """
+        Produce initial word queues out of the model's LSTMs for use in the tagged word lists.
+
+        Operates in a batched fashion to reduce the runtime for the LSTM operations
+        """
+        device = next(self.parameters()).device
+
+        all_word_inputs = []
+        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_idx = torch.stack([self.vocab_tensors[self.vocab_map.get(word.children[0].label, UNK_ID)] for word in tagged_words])
             word_input = self.embedding(word_idx)
 
@@ -214,16 +221,29 @@ class LSTMModel(BaseModel, nn.Module):
                 except KeyError as e:
                     raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
+            all_word_inputs.append(word_inputs)
+
+        word_lstm_input = torch.zeros((max(len(x) for x in tagged_word_lists), len(tagged_word_lists), self.word_input_size), device=device)
+
+        for sentence_idx, word_inputs in enumerate(all_word_inputs):
             # now of size sentence x input
             word_input = torch.cat(word_inputs, dim=1)
-            # now of size sentence x 1 x input
-            word_input = word_input.unsqueeze(1)
             word_input = self.word_dropout(word_input)
-            outputs, _ = self.word_lstm(word_input)
-            # now sentence x hidden_size
-            outputs = self.word_to_constituent(outputs)
-            outputs = self.nonlinearity(outputs)
 
+            word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
+
+        packed_word_input = torch.nn.utils.rnn.pack_padded_sequence(word_lstm_input, [len(x) for x in tagged_word_lists], enforce_sorted=False)
+        word_output, _ = self.word_lstm(packed_word_input)
+        # would like to do word_to_constituent here, but it seems PackedSequence doesn't support Linear
+        # word_output will now be sentence x batch x 2*hidden_size
+        word_output, word_output_lens = torch.nn.utils.rnn.pad_packed_sequence(word_output)
+        # now sentence x batch x hidden_size
+
+        word_queues = []
+        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
+            sentence_output = word_output[:len(tagged_words), sentence_idx, :]
+            sentence_output = self.word_to_constituent(sentence_output)
+            sentence_output = self.nonlinearity(sentence_output)
             word_queue = TreeStack(value=WordNode(None, self.zeros, self.zeros))
             for idx, tag_node in enumerate(tagged_words):
                 # TODO: this makes it so constituents downstream are
@@ -231,7 +251,7 @@ class LSTMModel(BaseModel, nn.Module):
                 # embeddings themselves.  It is possible we want to
                 # transform the word_input to hidden_size in some way
                 # and use that instead
-                word_queue = word_queue.push(WordNode(tag_node, embedding=outputs[idx, 0, :], hx=outputs[idx, 0, :]))
+                word_queue = word_queue.push(WordNode(tag_node, embedding=sentence_output[idx, :], hx=sentence_output[idx, :]))
 
             word_queues.append(word_queue)
 

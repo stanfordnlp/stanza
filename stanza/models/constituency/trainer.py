@@ -363,7 +363,6 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
             # the batch will be empty when all trees from this epoch are trained
             # now we add the state to the trees in the batch
-            # TODO: batch the initial state operation
             initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
             batch = [State(original_state=state, gold_sequence=sequence)
                      for (tree, sequence), state in zip(batch, initial_states)]
@@ -424,7 +423,8 @@ def build_batch_from_trees(batch_size, data_iterator, model):
             break
         tree_batch.append(gold_tree)
 
-    tree_batch = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
+    if len(tree_batch) > 0:
+        tree_batch = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
     return tree_batch
 
 def build_batch_from_tagged_words(batch_size, data_iterator, model):
