@@ -6,7 +6,9 @@ import os
 from collections import Counter
 import random
 import json
+import sys
 import unicodedata
+
 import torch
 import numpy as np
 
@@ -299,3 +301,32 @@ def warn_missing_tags(known_tags, test_tags, test_set_name):
         logger.warning("Found tags in {} missing from the expected tag set: {}".format(test_set_name, missing_tags))
         return True
     return False
+
+def get_tqdm():
+    """
+    Return a tqdm appropriate for the situation
+
+    imports tqdm depending on if we're at a console, redir to a file, notebook, etc
+
+    from @tcrimi at https://github.com/tqdm/tqdm/issues/506
+
+    This replaces `import tqdm`, so for example, you do this:
+      tqdm = utils.get_tqdm()
+    then do this when you want a scroll bar or regular iterator depending on context:
+      tqdm(list)
+    """
+    try:
+        ipy_str = str(type(get_ipython()))
+        if 'zmqshell' in ipy_str:
+            from tqdm import tqdm_notebook as tqdm
+            return tqdm
+        if 'terminal' in ipy_str:
+            from tqdm import tqdm
+            return tqdm
+    except:
+        if sys.stderr.isatty():
+            from tqdm import tqdm
+            return tqdm
+    def tqdm(iterable, **kwargs):
+        return iterable
+    return tqdm
