@@ -23,6 +23,7 @@ FAKE_PROPERTIES = {
     "lang":"de",
     'feat_funcs': ("space_before","capitalized"),
     'max_seqlen': 300,
+    'use_dictionary': False,
 }
 
 def test_has_mwt():
