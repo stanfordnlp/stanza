@@ -446,7 +446,7 @@ def process_misc(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
-    resources['url'] = 'http://nlp.stanford.edu/software/stanza'
+    resources['url'] = 'https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}'
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
