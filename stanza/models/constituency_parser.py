@@ -230,6 +230,9 @@ def parse_args(args=None):
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
     parser.add_argument('--num_output_layers', default=3, type=int, help='How many layers to use at the prediction level')
 
+    parser.add_argument('--sentence_boundary_vectors', action='store_true', help='Train vectors for the boundaries of a sentence')
+    parser.add_argument('--no_sentence_boundary_vectors', action='store_false', dest='sentence_boundary_vectors', help="Don't train vectors for the boundaries of a sentence")
+
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
     parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
