@@ -157,6 +157,14 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
+        # possibly add a couple vectors for bookends of the sentence
+        self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', False)
+        if self.sentence_boundary_vectors:
+            self.register_parameter('word_start', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
+            self.register_parameter('word_end', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
+            self.register_parameter('transition_start', torch.nn.Parameter(torch.randn(self.transition_hidden_size, requires_grad=True)))
+            self.register_parameter('constituent_start', torch.nn.Parameter(torch.randn(self.hidden_size, requires_grad=True)))
+
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
         # this transforms it into hidden_size with the values mixed together
@@ -460,16 +468,28 @@ class LSTMModel(BaseModel, nn.Module):
             for word_inputs, backward_chars in zip(all_word_inputs, all_backward_chars):
                 word_inputs.append(backward_chars)
 
-        word_lstm_input = torch.zeros((max(len(x) for x in tagged_word_lists), len(tagged_word_lists), self.word_input_size), device=device)
+        max_sentence_len = max(len(x) for x in tagged_word_lists)
+        if self.sentence_boundary_vectors:
+            max_sentence_len += 2
+        word_lstm_input = torch.zeros((max_sentence_len, len(tagged_word_lists), self.word_input_size), device=device)
 
         for sentence_idx, word_inputs in enumerate(all_word_inputs):
             # now of size sentence x input
             word_input = torch.cat(word_inputs, dim=1)
             word_input = self.word_dropout(word_input)
 
-            word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
+            if self.sentence_boundary_vectors:
+                word_lstm_input[0, sentence_idx, :] = self.word_start
+                word_lstm_input[1:word_input.shape[0]+1, sentence_idx, :] = word_input
+                word_lstm_input[word_input.shape[0]+1, sentence_idx, :] = self.word_end
+            else:
+                word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
 
-        packed_word_input = torch.nn.utils.rnn.pack_padded_sequence(word_lstm_input, [len(x) for x in tagged_word_lists], enforce_sorted=False)
+        if self.sentence_boundary_vectors:
+            seqlens = [len(x)+2 for x in tagged_word_lists]
+        else:
+            seqlens = [len(x) for x in tagged_word_lists]
+        packed_word_input = torch.nn.utils.rnn.pack_padded_sequence(word_lstm_input, seqlens, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
         # would like to do word_to_constituent here, but it seems PackedSequence doesn't support Linear
         # word_output will now be sentence x batch x 2*hidden_size
@@ -478,7 +498,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         word_queues = []
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            sentence_output = word_output[:len(tagged_words), sentence_idx, :]
+            if self.sentence_boundary_vectors:
+                sentence_output = word_output[1:len(tagged_words)+2, sentence_idx, :]
+            else:
+                sentence_output = word_output[:len(tagged_words), sentence_idx, :]
             sentence_output = self.word_to_constituent(sentence_output)
             sentence_output = self.nonlinearity(sentence_output)
             # TODO: this makes it so constituents downstream are
@@ -486,9 +509,14 @@ class LSTMModel(BaseModel, nn.Module):
             # embeddings themselves.  It is possible we want to
             # transform the word_input to hidden_size in some way
             # and use that instead
-            word_queue = [WordNode(tag_node, sentence_output[idx, :])
-                          for idx, tag_node in enumerate(tagged_words)]
-            word_queue.append(WordNode(None, self.word_zeros))
+            if self.sentence_boundary_vectors:
+                word_queue = [WordNode(tag_node, sentence_output[idx, :])
+                              for idx, tag_node in enumerate(tagged_words)]
+                word_queue.append(WordNode(None, sentence_output[len(tagged_words), :]))
+            else:
+                word_queue = [WordNode(tag_node, sentence_output[idx, :])
+                              for idx, tag_node in enumerate(tagged_words)]
+                word_queue.append(WordNode(None, self.word_zeros))
 
             word_queues.append(word_queue)
 
@@ -497,14 +525,33 @@ class LSTMModel(BaseModel, nn.Module):
     def initial_transitions(self):
         """
         Return an initial TreeStack with no transitions
+
+        Note that the transition_start operation is already batched, in a sense
+        The subsequent batch built this way will be used for batch_size trees
         """
-        return TreeStack(value=TransitionNode(None, self.transition_zeros[-1, 0, :], self.transition_zeros, self.transition_zeros), parent=None, length=1)
+        if self.sentence_boundary_vectors:
+            transition_start = self.transition_start.unsqueeze(0).unsqueeze(0)
+            output, (hx, cx) = self.transition_lstm(transition_start)
+            transition_start = output[0, 0, :]
+        else:
+            transition_start = self.transition_zeros[-1, 0, :]
+            hx = self.transition_zeros
+            cx = self.transition_zeros
+        return TreeStack(value=TransitionNode(None, transition_start, hx, cx), parent=None, length=1)
 
     def initial_constituents(self):
         """
         Return an initial TreeStack with no constituents
         """
-        return TreeStack(value=ConstituentNode(None, self.constituent_zeros[-1, 0, :], self.constituent_zeros, self.constituent_zeros), parent=None, length=1)
+        if self.sentence_boundary_vectors:
+            constituent_start = self.constituent_start.unsqueeze(0).unsqueeze(0)
+            output, (hx, cx) = self.constituent_lstm(constituent_start)
+            constituent_start = output[0, 0, :]
+        else:
+            constituent_start = self.constituent_zeros[-1, 0, :]
+            hx = self.constituent_zeros
+            cx = self.constituent_zeros
+        return TreeStack(value=ConstituentNode(None, constituent_start, hx, cx), parent=None, length=1)
 
     def get_word(self, word_node):
         return word_node.value
