@@ -99,14 +99,14 @@ class HighwayLSTM(nn.Module):
 
         for l in range(self.num_layers):
             if l > 0:
-                input = PackedSequence(self.drop(input.data), input.batch_sizes)
+                input = PackedSequence(self.drop(input.data), input.batch_sizes, input.sorted_indices, input.unsorted_indices)
             layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
             h, (ht, ct) = self.lstm[l](input, seqlens, layer_hx)
 
             hs.append(ht)
             cs.append(ct)
 
-            input = PackedSequence(h.data + torch.sigmoid(self.gate[l](input.data)) * highway_func(self.highway[l](input.data)), input.batch_sizes)
+            input = PackedSequence(h.data + torch.sigmoid(self.gate[l](input.data)) * highway_func(self.highway[l](input.data)), input.batch_sizes, input.sorted_indices, input.unsorted_indices)
 
         if self.pad:
             input = pad_packed_sequence(input, batch_first=self.batch_first)[0]
