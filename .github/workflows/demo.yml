@@ -20,10 +20,13 @@ jobs:
           pwd
           pip install -e .
           # set up for tests
+          rm -rf /home/stanzabuild/stanza-github-actions/actions-runner/_work/stanza/stanza/stanza_test
           source stanza/tests/setup_test.sh
           # run tests
           echo "Running tests..."
+          export CUDA_VISIBLE_DEVICES=2
           pytest stanza/tests/test_depparse.py
+          pytest stanza/tests/test_ner_tagger.py
           echo "This currently works!"
           
       - run: echo "🍏 This job's status is ${{ job.status }}."
