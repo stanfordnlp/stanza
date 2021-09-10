@@ -16,6 +16,7 @@ jobs:
           # set up environment
           bash
           . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
+          export CORENLP_HOME=/home/stanzabuild/stanford-corenlp-4.2.2
           # install from stanza repo being evaluated
           pwd
           pip install -e .
@@ -25,9 +26,6 @@ jobs:
           # run tests
           echo "Running tests..."
           export CUDA_VISIBLE_DEVICES=2
-          pytest stanza/tests/test_depparse.py
-          pytest stanza/tests/test_ner_tagger.py
-          pytest stanza/tests/test_langid.py
-          echo "This currently works!"
+          pytest stanza/tests
           
       - run: echo "🍏 This job's status is ${{ job.status }}."
