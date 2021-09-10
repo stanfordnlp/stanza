@@ -75,6 +75,14 @@ for doc in docs:
     print(f"{doc.sentences[0].dependencies_string()}")
 ```
 
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| model_dir | str | DEFAULT_MODEL_DIR | Where language id and language specific resources are stored. |
+| lang_id_config | dict | None | Configurations to use for language identification. |
+| lang_configs | dict | None | Mapping of language name --> pipeline configurations for that language |
+| ld_batch_size | int | 64 | Batch size to use for language identification |
+| max_cache_size | int | 10 | Max number of pipelines to cache |
+
 ## Configure Multilingual Pipeline
 
 You can configure the language identification system and each language specific pipeline in the `MultilingualPipeline`. When the `MultilingualPipeline` is constructed, it can be fed a dictionary with one entry per language, where each entry is a dictionary with that language's settings. The `langid` processor itself can be configured as well with a separate dictionary with `langid` settings.
@@ -106,14 +114,6 @@ detected, the least recently used language pipeline is removed and a new pipelin
 ```python
 nlp = MultilingualPipeline(max_cache_size=2)
 ```
-
-| Option name | Type | Default | Description |
-| --- | --- | --- | --- |
-| model_dir | str | DEFAULT_MODEL_DIR | Where language id and language specific resources are stored. |
-| lang_id_config | dict | None | Configurations to use for language identification. |
-| lang_configs | dict | None | Mapping of language name --> pipeline configurations for that language |
-| ld_batch_size | int | 64 | Batch size to use for language identification |
-| max_cache_size | int | 10 | Max number of pipelines to cache |
 
 ## Training Your Own Model
 
