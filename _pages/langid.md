@@ -17,11 +17,14 @@ Currently the model detects the following languages:
 af ar be bg bxr ca cop cs cu da de el en es et eu fa fi fr fro ga gd gl got grc he hi hr hsb hu hy id it ja kk kmr ko la lt lv lzh mr mt nl nn no olo orv pl pt ro ru sk sl sme sr sv swl ta te tr ug uk ur vi wo zh-hans zh-hant
 ```
 
-## Get The Language ID Model
+## Get The Language ID Model And Resources For English and French
 
 ```python
 import stanza
-stanza.download("multilingual")
+
+stanza.download(lang="multilingual")
+stanza.download(lang="en")
+stanza.download(lang="fr")
 ```
 
 ## Basic Language ID Example
