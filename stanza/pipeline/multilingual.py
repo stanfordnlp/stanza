@@ -7,6 +7,7 @@ import torch
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline._constants import *
+from stanza.resources.common import DEFAULT_MODEL_DIR
 
 
 class MultilingualPipeline:
@@ -17,6 +18,7 @@ class MultilingualPipeline:
 
     def __init__(
         self,
+        model_dir: str = DEFAULT_MODEL_DIR,
         lang_id_config: dict = None,
         lang_configs: dict = None,
         ld_batch_size: int = 64,
@@ -24,6 +26,7 @@ class MultilingualPipeline:
         use_gpu: bool = None
     ):
         # set up configs and cache for various language pipelines
+        self.model_dir = model_dir
         self.lang_id_config = {} if lang_id_config is None else lang_id_config
         self.lang_configs = {} if lang_configs is None else lang_configs
         self.max_cache_size = max_cache_size
@@ -37,8 +40,8 @@ class MultilingualPipeline:
             self.use_gpu = use_gpu
         
         # build language id pipeline
-        self.lang_id_pipeline = Pipeline(lang='multilingual', processors="langid", use_gpu=self.use_gpu, 
-                                         **self.lang_id_config)
+        self.lang_id_pipeline = Pipeline(dir=self.model_dir, lang='multilingual', processors="langid", 
+                                         use_gpu=self.use_gpu, **self.lang_id_config)
 
     def _update_pipeline_cache(self, lang):
         """
@@ -62,7 +65,7 @@ class MultilingualPipeline:
                 lru_lang = self.lang_request_history[0]
                 self.pipeline_cache.remove(lru_lang)
                 self.lang_request_history.remove(lru_lang)
-            self.pipeline_cache[lang] = Pipeline(**self.lang_configs[lang])
+            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
 
     def process(self, doc):
         """
