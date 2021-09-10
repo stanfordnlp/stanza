@@ -17,6 +17,7 @@ jobs:
           bash
           . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
           export CORENLP_HOME=/home/stanzabuild/stanford-corenlp-4.2.2
+          export CLASSPATH=/home/stanzabuild/stanford-corenlp-4.2.2/*:
           # install from stanza repo being evaluated
           pwd
           pip install -e .
