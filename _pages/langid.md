@@ -100,9 +100,20 @@ for doc in docs:
 
 A `MultilingualPipeline` keeps a cache of pipelines for each language. The maximum size of the cache can be configured at pipeline construction.
 
+When a document is processed, its language is detected, and the appropriate pipeline is used. If the cache is at capacity and a new language is
+detected, the least recently used language pipeline is removed and a new pipeline is added.
+
 ```python
 nlp = MultilingualPipeline(max_cache_size=2)
 ```
+
+| Option name | Type | Default | Description |
+| --- | --- | --- | --- |
+| model_dir | str | DEFAULT_MODEL_DIR | Where language id and language specific resources are stored. |
+| lang_id_config | dict | None | Configurations to use for language identification. |
+| lang_configs | dict | None | Mapping of language name --> pipeline configurations for that language |
+| ld_batch_size | int | 64 | Batch size to use for language identification |
+| max_cache_size | int | 10 | Max number of pipelines to cache |
 
 ## Training Your Own Model
 
