@@ -7,8 +7,9 @@ import pytest
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline.multilingual import MultilingualPipeline
+from stanza.tests import *
 
-pytestmark = pytest.mark.skip
+#pytestmark = pytest.mark.skip
 
 def test_langid():
     """
@@ -18,7 +19,7 @@ def test_langid():
     french_text = "C'est une phrase française."
     docs = [english_text, french_text]
 
-    nlp = Pipeline(lang='multilingual', processors="langid")
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang='multilingual', processors="langid")
     docs = [Document([], text=text) for text in docs]
     nlp(docs)
     predictions = [doc.lang for doc in docs]
@@ -530,7 +531,7 @@ def test_langid_benchmark():
     {"text": "Například Pedagogická fakulta Univerzity Karlovy", "label": "cs"},
     {"text": "nostris ut eriperet nos de praesenti saeculo", "label": "la"}]
     
-    nlp = Pipeline(lang="multilingual", processors="langid")
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
     docs = [Document([], text=example["text"]) for example in examples]
     gold_labels = [example["label"] for example in examples]
     nlp(docs)
@@ -546,11 +547,11 @@ def test_text_cleaning():
             "Bonjour le monde! https://t.co/U0Zjp3tusD"]
     docs = [Document([], text=text) for text in docs]
     
-    nlp = Pipeline(lang="multilingual", processors="langid")
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
     nlp(docs)
     assert [doc.lang for doc in docs] == ["it", "it"]
     
-    nlp = Pipeline(lang="multilingual", processors="langid", langid_clean_text=True)
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_clean_text=True)
     assert nlp.processors["langid"]._clean_text
     nlp(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
@@ -563,16 +564,16 @@ def test_lang_subset():
             "Bonjour le monde! https://t.co/U0Zjp3tusD"]
     docs = [Document([], text=text) for text in docs]
     
-    nlp = Pipeline(lang="multilingual", processors="langid")
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
     nlp(docs)
     assert [doc.lang for doc in docs] == ["it", "it"]
     
-    nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en","fr"])
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en","fr"])
     assert nlp.processors["langid"]._model.lang_subset == ["en", "fr"]
     nlp(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
     
-    nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en"])
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en"])
     assert nlp.processors["langid"]._model.lang_subset == ["en"]
     nlp(docs)
     assert [doc.lang for doc in docs] == ["en", "en"]
@@ -601,7 +602,7 @@ def test_multilingual_pipeline():
         "('.', 4, 'punct')"
     ))
 
-    nlp = MultilingualPipeline()
+    nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR)
     docs = [english_text, french_text]
     docs = nlp(docs)
 
