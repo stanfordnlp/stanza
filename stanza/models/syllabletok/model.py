@@ -5,16 +5,14 @@ import torch.nn as nn
 from stanza.models.common.crf import CRFLoss
 
 class Tokenizer(nn.Module):
-    def __init__(self, args, nchars, emb_dim, hidden_dim, dropout, feat_dropout):
+    def __init__(self, args, nchars, nsybs, emb_dim, hidden_dim, dropout, feat_dropout):
         super().__init__()
     
         self.args = args
         feat_dim = args['feat_dim']
-        
-        self.args['rnn_layers'] = 3
-        
+
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
-        self.embeddings2 = nn.Embedding(16264, emb_dim, padding_idx=0)
+        self.embeddings2 = nn.Embedding(nsybs, emb_dim, padding_idx=0)
     
         self.rnn_syb = nn.LSTM(emb_dim, hidden_dim//2, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
         self.rnn_char = nn.LSTM(emb_dim + feat_dim, hidden_dim//2, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
@@ -46,7 +44,6 @@ class Tokenizer(nn.Module):
                 
                 l = nn.Conv1d(hidden_dim, hidden_dim, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0))
                 self.syllable_conv_res.append(l)
-
         
         if args['hierarchical']:
             in_dim = hidden_dim * 2
@@ -60,15 +57,7 @@ class Tokenizer(nn.Module):
         self.dropout_feat = nn.Dropout(feat_dropout)
         
         self.toknoise = nn.Dropout(self.args['tok_noise'])
-
-        # criterion
-        self.crit = CRFLoss(3) # sentence, word boundaries (ignore -1)
-        
-        # Transfer pretrained features:
-        #checkpoint = torch.load("/sailhome/gsychi/stanza/stanza/models/tokenization/transfer_model.pth.tar")
-        #self.rnn_char.load_state_dict(checkpoint["rnn"])
-        #print(checkpoint)
-        
+                
     def forward(self, x, x2, feats, y):
 
         emb = self.embeddings(x)
@@ -105,8 +94,6 @@ class Tokenizer(nn.Module):
                 
                 inp = torch.cat([inp, inp2], 2)
                 
-                
-                #inp = inp + l(conv_input).transpose(1, 2).contiguous()                                                                                                                                                                   
             else:
                 hid = []
                 for l in self.conv_res:
@@ -117,14 +104,6 @@ class Tokenizer(nn.Module):
                 inp = inp + self.conv_res2(hid).transpose(1, 2).contiguous()
 
             inp = self.dropout(inp)
-            
-            """
-            sent = self.crf_module(inp, masks)[1]
-            for i in range(len(sent)):
-                if len(sent[i]) != masks.shape[1]:
-                    sent[i] = sent[i] + [0]*(masks.shape[1]-len(sent[i]))
-            sent = torch.FloatTensor(sent).reshape((masks.shape[0], masks.shape[1], 1)).cuda()
-            """
             
             tok0 = self.tok_clf(inp)
             sent0 = self.sent_clf(inp)

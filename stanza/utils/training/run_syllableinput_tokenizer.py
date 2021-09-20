@@ -22,7 +22,7 @@ import logging
 import math
 import os
 
-from stanza.models import thai_tokenizer
+from stanza.models import syllableinput_tokenizer
 from stanza.utils.avg_sent_len import avg_sent_len
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode
@@ -64,14 +64,14 @@ def run_treebank(mode, paths, treebank, short_name,
                       ["--dev_conll_gold", dev_gold, "--conll_file", dev_pred, "--shorthand", short_name] +
                       extra_args)
         logger.info("Running train step with args: {}".format(train_args))
-        thai_tokenizer.main(train_args)
+        syllableinput_tokenizer.main(train_args)
     
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         dev_args = ["--mode", "predict", dev_type, dev_file, "--lang", short_language,
                     "--conll_file", dev_pred, "--shorthand", short_name, "--mwt_json_file", dev_mwt]
         dev_args = dev_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
-        thai_tokenizer.main(dev_args)
+        syllableinput_tokenizer.main(dev_args)
 
         # TODO: log these results?  The original script logged them to
         # echo $results $args >> ${TOKENIZE_DATA_DIR}/${short}.results
@@ -84,7 +84,7 @@ def run_treebank(mode, paths, treebank, short_name,
                      "--conll_file", test_pred, "--shorthand", short_name, "--mwt_json_file", test_mwt]
         test_args = test_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
-        thai_tokenizer.main(test_args)
+        syllableinput_tokenizer.main(test_args)
 
         results = common.run_eval_script_tokens(test_gold, test_pred)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))

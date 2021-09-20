@@ -3,6 +3,7 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import json
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
 
@@ -22,7 +23,9 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.lexicon = lexicon
-            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
+            with open(self.args['syllable_path'], "r") as fp:
+                self.num_syllables = json.load(fp)
+            self.model = Tokenizer(self.args, self.args['vocab_size'], len(self.num_syllables)+2, self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
         if use_cuda:
             self.model.cuda()

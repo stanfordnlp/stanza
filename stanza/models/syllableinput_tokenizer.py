@@ -5,14 +5,18 @@ This tokenizer treats tokenization and sentence segmentation as a tagging proble
 recurrent and convolutional architectures.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 
-Updated: This new version of tokenizer model incorporates the dictionary feature, especially useful for languages that
-have multi-syllable words such as Vietnamese, Chinese or Thai. In summary, a lexicon contains all unique words found in 
-training dataset and external lexicon (if any) is created during training and saved alongside the model after training.
+Updated: This new version of tokenizer model incorporates the dictionary feature as well as syllable tokens,
+especially useful for languages that have multi-syllable words such as Vietnamese, Chinese or Thai. In summary, a lexicon 
+contains all unique words found in training dataset and external lexicon (if any) is created during training and saved alongside the model after training.
 Using this lexicon, a dictionary is created which includes "words", "prefixes" and "suffixes" sets. During data preparation,
 dictionary features are extracted at each character position, to "look ahead" and "look backward" to see if any words formed
 found in the dictionary. The window size (or the dictionary feature length) is defined at the 95-percentile among all the existing
 words in the lexicon, this is to eliminate the less frequent but long words (avoid having a high-dimension feat vector). Prefixes 
 and suffixes are used to stop early during the window-dictionary checking process.  
+
+The syllable tokens are, conceptually, identical to character tokens in traditional models. They are a useful
+additional plane of information since they reformat languages i.e. Thai, Khmer into Chinese/Vietnamese-like problems, where
+a token/character actually represents a syllable.
 """
 
 import argparse
@@ -24,9 +28,9 @@ import os
 import torch
 import json
 from stanza.models.common import utils
-from stanza.models.thaitok.trainer import Trainer
-from stanza.models.thaitok.data import DataLoader
-from stanza.models.thaitok.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
+from stanza.models.syllabletok.trainer import Trainer
+from stanza.models.syllabletok.data import DataLoader
+from stanza.models.syllabletok.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
 from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')

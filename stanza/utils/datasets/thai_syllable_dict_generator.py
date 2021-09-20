@@ -1,3 +1,17 @@
+"""
+Takes information from a syllables dataset and converts it to a dictionary of syllables,
+with every number from 0 onwards inclusive representing a syllable.
+
+Usage:
+
+python3 stanza.utils.datasets.syllable_dictionary_generator.py --dataset_dir syllable_segmentation_data --save_dir data/thai-syllable.json
+
+The syllable segmentation dataset can be downloaded via https://drive.google.com/file/d/1wAdKZ4ML_IV_MDyFvF9Q_v00qOkVoxZE/view.
+
+Note that this file is required in order to run the syllabletok models.
+
+"""
+
 import glob
 import pathlib
 import argparse

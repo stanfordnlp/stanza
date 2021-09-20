@@ -73,7 +73,8 @@ class DataLoader:
         self.init_sent_ids()
         logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
 
-        print("syllable path:", args['syllable_path'])
+        # download syllable dictionary, where each syllable is numbered from 0 to len(num_syllables).
+        logger.debug(f"Downloading syllables from {args['syllable_path']}.")
         with open(self.args['syllable_path'], "r") as fp:
             self.num_syllables = json.load(fp)
         logger.debug(f"{len(self.num_syllables)} unique syllables loaded.")
@@ -305,8 +306,6 @@ class DataLoader:
         features = np.zeros((len(id_pairs), pad_len, feat_size), dtype=np.float32)
         raw_units = []
         syllable_units = np.full((len(id_pairs), pad_len), padid, dtype=np.int64)
-
- #       print("Reached here.")
         
         for i, (offset, pair) in enumerate(offsets_pairs):
             u_, l_, f_, r_ = strings_starting(pair, offset=offset, pad_len=pad_len)
@@ -348,8 +347,6 @@ class DataLoader:
         labels = torch.from_numpy(labels)
         features = torch.from_numpy(features)
         syllable_units = torch.from_numpy(syllable_units)
-
-#        print(syllable_units)
         
         return units, labels, features, raw_units, syllable_units
 
