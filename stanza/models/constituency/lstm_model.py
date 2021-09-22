@@ -8,6 +8,7 @@ previous transitions, the words, and the partially built constituents.
 """
 
 from collections import namedtuple
+from enum import Enum
 import logging
 from operator import itemgetter
 import math
@@ -39,6 +40,11 @@ TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 # hx & cx are the hidden & cell states of the LSTM going across constituents
 ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
+
+class SentenceBoundary(Enum):
+    NONE               = 1
+    WORDS              = 2
+    EVERYTHING         = 3
 
 
 class LSTMModel(BaseModel, nn.Module):
@@ -158,12 +164,13 @@ class LSTMModel(BaseModel, nn.Module):
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # possibly add a couple vectors for bookends of the sentence
-        self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', False)
-        if self.sentence_boundary_vectors:
+        self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', SentenceBoundary.NONE)
+        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             self.register_parameter('word_start', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
             self.register_parameter('word_end', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
-            self.register_parameter('transition_start', torch.nn.Parameter(torch.randn(self.transition_hidden_size, requires_grad=True)))
-            self.register_parameter('constituent_start', torch.nn.Parameter(torch.randn(self.hidden_size, requires_grad=True)))
+            if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
+                self.register_parameter('transition_start', torch.nn.Parameter(torch.randn(self.transition_hidden_size, requires_grad=True)))
+                self.register_parameter('constituent_start', torch.nn.Parameter(torch.randn(self.hidden_size, requires_grad=True)))
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -469,23 +476,22 @@ class LSTMModel(BaseModel, nn.Module):
                 word_inputs.append(backward_chars)
 
         max_sentence_len = max(len(x) for x in tagged_word_lists)
-        if self.sentence_boundary_vectors:
+        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             max_sentence_len += 2
         word_lstm_input = torch.zeros((max_sentence_len, len(tagged_word_lists), self.word_input_size), device=device)
 
-        for sentence_idx, word_inputs in enumerate(all_word_inputs):
+        all_word_inputs = [torch.cat(word_inputs, dim=1) for word_inputs in all_word_inputs]
+        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
+            word_start = self.word_start.unsqueeze(0)
+            word_end = self.word_end.unsqueeze(0)
+            all_word_inputs = [torch.cat([word_start, word_inputs, word_end], dim=0) for word_inputs in all_word_inputs]
+
+        for sentence_idx, word_input in enumerate(all_word_inputs):
             # now of size sentence x input
-            word_input = torch.cat(word_inputs, dim=1)
             word_input = self.word_dropout(word_input)
+            word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
 
-            if self.sentence_boundary_vectors:
-                word_lstm_input[0, sentence_idx, :] = self.word_start
-                word_lstm_input[1:word_input.shape[0]+1, sentence_idx, :] = word_input
-                word_lstm_input[word_input.shape[0]+1, sentence_idx, :] = self.word_end
-            else:
-                word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
-
-        if self.sentence_boundary_vectors:
+        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             seqlens = [len(x)+2 for x in tagged_word_lists]
         else:
             seqlens = [len(x) for x in tagged_word_lists]
@@ -498,7 +504,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         word_queues = []
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            if self.sentence_boundary_vectors:
+            if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
                 sentence_output = word_output[1:len(tagged_words)+2, sentence_idx, :]
             else:
                 sentence_output = word_output[:len(tagged_words), sentence_idx, :]
@@ -509,7 +515,7 @@ class LSTMModel(BaseModel, nn.Module):
             # embeddings themselves.  It is possible we want to
             # transform the word_input to hidden_size in some way
             # and use that instead
-            if self.sentence_boundary_vectors:
+            if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
                 word_queue = [WordNode(tag_node, sentence_output[idx, :])
                               for idx, tag_node in enumerate(tagged_words)]
                 word_queue.append(WordNode(None, sentence_output[len(tagged_words), :]))
@@ -529,7 +535,7 @@ class LSTMModel(BaseModel, nn.Module):
         Note that the transition_start operation is already batched, in a sense
         The subsequent batch built this way will be used for batch_size trees
         """
-        if self.sentence_boundary_vectors:
+        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
             transition_start = self.transition_start.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.transition_lstm(transition_start)
             transition_start = output[0, 0, :]
@@ -543,7 +549,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         Return an initial TreeStack with no constituents
         """
-        if self.sentence_boundary_vectors:
+        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
             constituent_start = self.constituent_start.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.constituent_lstm(constituent_start)
             constituent_start = output[0, 0, :]

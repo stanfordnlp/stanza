@@ -164,15 +164,21 @@ def test_forward_charlm(pt):
     assert os.path.exists(forward_charlm_path), "Need to download en test models (or update path to the forward charlm)"
     assert os.path.exists(backward_charlm_path), "Need to download en test models (or update path to the backward charlm)"
 
-    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path)
+    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'none')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'words')
     run_forward_checks(model)
 
 def test_forward_sentence_boundaries(pt):
     """
     Test start & stop boundary vectors
     """
-    model = build_model(pt, '--no_sentence_boundary_vectors')
+    model = build_model(pt, '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
 
-    model = build_model(pt, '--sentence_boundary_vectors')
+    model = build_model(pt, '--sentence_boundary_vectors', 'words')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
