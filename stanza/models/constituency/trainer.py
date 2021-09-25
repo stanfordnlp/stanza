@@ -565,6 +565,6 @@ def run_dev_set(model, dev_trees, args):
                     fout.write(str(tree[0]))
                     fout.write("\n")
 
-    with EvaluateParser(classpath="$CLASSPATH") as evaluator:
+    with EvaluateParser() as evaluator:
         response = evaluator.process(treebank)
         return response.f1
