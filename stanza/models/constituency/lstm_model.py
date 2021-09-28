@@ -132,7 +132,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.lstm_layer_dropout = self.args['lstm_layer_dropout']
 
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
-        self.register_buffer('zeros', torch.zeros(self.hidden_size))
+        self.register_buffer('word_zeros', torch.zeros(self.hidden_size))
         self.register_buffer('transition_zeros', torch.zeros(self.num_layers, 1, self.transition_hidden_size))
         self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
@@ -329,7 +329,7 @@ class LSTMModel(BaseModel, nn.Module):
             word_queue = [WordNode(tag_node, sentence_output[idx, :])
                           for idx, tag_node in enumerate(tagged_words)]
             word_queue.reverse()
-            word_queue.append(WordNode(None, self.zeros))
+            word_queue.append(WordNode(None, self.word_zeros))
 
             word_queues.append(word_queue)
 

@@ -33,8 +33,7 @@ from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
 
-logger = logging.getLogger('stanza')
-
+logger = logging.getLogger('stanza.constituency.trainer')
 
 class Trainer:
     """
@@ -171,7 +170,12 @@ def verify_transitions(trees, sequences, transition_scheme):
     """
     model = base_model.SimpleModel(transition_scheme)
     logger.info("Verifying the transition sequences for %d trees", len(trees))
-    for tree, sequence in tqdm(zip(trees, sequences), total=len(trees)):
+
+    data = zip(trees, sequences)
+    if logger.getEffectiveLevel() <= logging.INFO:
+        data = tqdm(zip(trees, sequences), total=len(trees))
+
+    for tree, sequence in data:
         state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
         for idx, trans in enumerate(sequence):
             if not trans.is_legal(state, model):
@@ -245,26 +249,18 @@ def remove_optimizer(args, model_save_file, model_load_file):
     trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
 
-def train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline):
+def convert_trees_to_sequences(trees, tree_type, transition_scheme):
+    logger.info("Building {} transition sequences".format(tree_type))
+    if logger.getEffectiveLevel() <= logging.INFO:
+        trees = tqdm(trees)
+    sequences = build_treebank(trees, transition_scheme)
+    transitions = transition_sequence.all_transitions(sequences)
+    return sequences, transitions
+
+def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm):
     """
-    Build a model, train it using the requested train & dev files
+    Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
-    print_args(args)
-
-    utils.ensure_dir(args['save_dir'])
-
-    train_trees = read_treebank(args['train_file'])
-    logger.info("Read %d trees for the training set", len(train_trees))
-
-    dev_trees = read_treebank(args['eval_file'])
-    logger.info("Read %d trees for the dev set", len(dev_trees))
-
-    if retag_pipeline is not None:
-        logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-        train_trees = retag_trees(train_trees, retag_pipeline, args['retag_xpos'])
-        dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
-        logger.info("Retagging finished")
-
     train_constituents = parse_tree.Tree.get_unique_constituent_labels(train_trees)
     dev_constituents = parse_tree.Tree.get_unique_constituent_labels(dev_trees)
     logger.info("Unique constituents in training set: %s", train_constituents)
@@ -272,13 +268,8 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
-    logger.info("Building training transition sequences")
-    train_sequences = build_treebank(tqdm(train_trees), args['transition_scheme'])
-    train_transitions = transition_sequence.all_transitions(train_sequences)
-
-    logger.info("Building dev transition sequences")
-    dev_sequences = build_treebank(tqdm(dev_trees), args['transition_scheme'])
-    dev_transitions = transition_sequence.all_transitions(dev_sequences)
+    train_sequences, train_transitions = convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
+    dev_sequences, dev_transitions = convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
     for trans in dev_transitions:
@@ -308,10 +299,6 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
     # train set.  it just means we probably won't ever get that right
     open_nodes = get_open_nodes(train_trees, args)
 
-    pt = load_pretrain(args)
-    forward_charlm = load_charlm(args['charlm_forward_file'])
-    backward_charlm = load_charlm(args['charlm_backward_file'])
-
     # at this point we have:
     # pretrain
     # train_trees, dev_trees
@@ -329,7 +316,36 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
         trainer = Trainer(model, optimizer)
 
+    return trainer, train_sequences, train_transitions
+
+def train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline):
+    """
+    Build a model, train it using the requested train & dev files
+    """
+    print_args(args)
+
+    utils.ensure_dir(args['save_dir'])
+
+    train_trees = read_treebank(args['train_file'])
+    logger.info("Read %d trees for the training set", len(train_trees))
+
+    dev_trees = read_treebank(args['eval_file'])
+    logger.info("Read %d trees for the dev set", len(dev_trees))
+
+    if retag_pipeline is not None:
+        logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
+        train_trees = retag_trees(train_trees, retag_pipeline, args['retag_xpos'])
+        dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
+        logger.info("Retagging finished")
+
+    pt = load_pretrain(args)
+    forward_charlm = load_charlm(args['charlm_forward_file'])
+    backward_charlm = load_charlm(args['charlm_backward_file'])
+
+    trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm)
+
     iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file)
+
 
 def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename):
     """

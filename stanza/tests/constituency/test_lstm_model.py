@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 
@@ -15,6 +16,9 @@ from stanza.tests import *
 from stanza.tests.constituency import test_parse_transitions
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
+logger = logging.getLogger('stanza.constituency.trainer')
+logger.setLevel(logging.WARNING)
 
 TREEBANK = """
 ( (S
@@ -53,20 +57,16 @@ def pt():
 
 def build_model(pt, *args):
     # TODO: build a fake embedding some other way?
-    trees = tree_reader.read_trees(TREEBANK)
+    train_trees = tree_reader.read_trees(TREEBANK)
+    dev_trees = train_trees[-1:]
 
     args = constituency_parser.parse_args(args)
+    forward_charlm = trainer.load_charlm(args['charlm_forward_file'])
+    backward_charlm = trainer.load_charlm(args['charlm_backward_file'])
 
-    transitions = trainer.build_treebank(trees, args['transition_scheme'])
-    transitions = transition_sequence.all_transitions(transitions)
-    constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
-    tags = parse_tree.Tree.get_unique_tags(trees)
-    words = parse_tree.Tree.get_unique_words(trees)
-    rare_words = parse_tree.Tree.get_rare_words(trees)
-    root_labels = parse_tree.Tree.get_root_labels(trees)
-    open_nodes = trainer.get_open_nodes(trees, args)
-
-    model = lstm_model.LSTMModel(pt, None, None, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args)
+    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm)
+    model = model.model
+    assert isinstance(model, lstm_model.LSTMModel)
     return model
 
 @pytest.fixture(scope="module")
@@ -187,6 +187,21 @@ def test_forward_combined_dummy(pt):
     run_forward_checks(model)
 
     model = build_model(pt, '--no_combined_dummy_embedding')
+    run_forward_checks(model)
+
+def test_forward_charlm(pt):
+    """
+    Tests loading and running a charlm
+
+    Note that this doesn't test the results of the charlm itself,
+    just that the model is shaped correctly
+    """
+    forward_charlm_path = os.path.join(TEST_MODELS_DIR, "en", "forward_charlm", "1billion.pt")
+    backward_charlm_path = os.path.join(TEST_MODELS_DIR, "en", "backward_charlm", "1billion.pt")
+    assert os.path.exists(forward_charlm_path), "Need to download en test models (or update path to the forward charlm)"
+    assert os.path.exists(backward_charlm_path), "Need to download en test models (or update path to the backward charlm)"
+
+    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path)
     run_forward_checks(model)
 
 def test_save_load_model(pt, unary_model):
