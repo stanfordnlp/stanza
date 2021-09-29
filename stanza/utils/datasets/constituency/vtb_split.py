@@ -3,7 +3,7 @@ From a directory of files with VTB Trees, split into train/dev/test set
 with a split of 70/15/15
 
 The script requires two arguments
-1. org_dir: the original directory obtainable from running vtb_script.py
+1. org_dir: the original directory obtainable from running vtb_convert.py
 2. split_dir: the directory where the train/dev/test splits will be stored
 """
 
