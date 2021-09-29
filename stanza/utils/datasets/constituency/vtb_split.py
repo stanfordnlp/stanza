@@ -3,7 +3,7 @@ From a directory of files with VTB Trees, split into train/dev/test set
 with a split of 70/15/15
 
 The script requires two arguments
-1. org_dir: the original directory obtainable from running vtb_convert.py
+1. org_dir: the original directory obtainable from running vtb_script.py
 2. split_dir: the directory where the train/dev/test splits will be stored
 """
 
@@ -35,10 +35,6 @@ def create_paths(split_dir):
     train_path = os.path.join(split_dir, 'train.mrg')
     dev_path = os.path.join(split_dir, 'dev.mrg')
     test_path = os.path.join(split_dir, 'test.mrg')
-
-    open(train_path, mode='a').close()
-    open(dev_path, mode='a').close()
-    open(test_path, mode='a').close()
 
     return train_path, dev_path, test_path
 
