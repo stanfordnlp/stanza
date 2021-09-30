@@ -87,6 +87,10 @@ class TokenIterator:
         self.lines = text.split("\n")
         self.num_lines = len(self.lines)
         self.line_num = -1
+        if self.num_lines > 1000:
+            self.line_iterator = iter(tqdm(self.lines))
+        else:
+            self.line_iterator = iter(self.lines)
         self.token_iterator = iter([])
 
     def __iter__(self):
@@ -99,7 +103,7 @@ class TokenIterator:
             if self.line_num >= len(self.lines):
                 raise StopIteration
 
-            line = self.lines[self.line_num].strip()
+            line = next(self.line_iterator, "").strip()
             if not line:
                 continue
 
@@ -126,8 +130,6 @@ def read_trees(text, broken_ok=False):
     Reads multiple trees from the text
     """
     token_iterator = TokenIterator(text)
-    if token_iterator.num_lines > 1000:
-        token_iterator = iter(tqdm(token_iterator))
     trees = recursive_read_trees(token_iterator, broken_ok=broken_ok)
     return trees
 
