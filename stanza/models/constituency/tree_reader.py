@@ -101,6 +101,7 @@ class TokenIterator:
         while n is None:
             self.line_num = self.line_num + 1
             if self.line_num >= len(self.lines):
+                next(self.line_iterator, "")
                 raise StopIteration
 
             line = next(self.line_iterator, "").strip()
