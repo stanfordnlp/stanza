@@ -183,6 +183,8 @@ class LSTMModel(BaseModel, nn.Module):
             self.nonlinearity = nn.ReLU()
         elif self.args['nonlinearity'] == 'gelu':
             self.nonlinearity = nn.GELU()
+        elif self.args['nonlinearity'] == 'leaky_relu':
+            self.nonlinearity = nn.LeakyReLU()
         else:
             raise ValueError('Chosen value of nonlinearity, "%s", not handled' % self.args['nonlinearity'])
 

@@ -205,7 +205,8 @@ def parse_args(args=None):
     # gelu, 467 iterations: 0.9181
     # after the same clock time on the same hardware.  the two had been
     # trading places in terms of accuracy over those ~500 iterations.
-    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu', 'gelu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
+    # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
+    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu', 'gelu', 'leaky_relu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
