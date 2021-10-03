@@ -82,7 +82,7 @@ class TokenizeProcessor(UDProcessor):
 
         raw_text = '\n\n'.join(document) if isinstance(document, list) else document
         # set up batches
-        batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True)
+        batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
         # get dict data
         _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                                self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
