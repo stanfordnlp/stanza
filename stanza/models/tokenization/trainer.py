@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
+from stanza.models.tokenization.utils import create_dictionary
 
 from .model import Tokenizer
 from .vocab import Vocab
@@ -12,7 +13,7 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, lexicon=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, use_cuda=False):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
@@ -22,6 +23,7 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.lexicon = lexicon
+            self.dictionary = dictionary
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
         if use_cuda:
@@ -97,3 +99,8 @@ class Trainer(BaseTrainer):
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
         self.lexicon = checkpoint['lexicon']
+
+        if self.lexicon is not None:
+            self.dictionary = create_dictionary(self.lexicon)
+        else:
+            self.dictionary = None
