@@ -171,17 +171,16 @@ ZH_DOC1_GOLD_TOKENS="""
 <Token id=6;words=[<Word id=6;text=。;lemma=。;upos=PUNCT;xpos=.;head=5;deprel=punct>]>
 
 <Token id=1;words=[<Word id=1;text=北京;lemma=北京;upos=PROPN;xpos=NNP;head=2;deprel=nsubj>]>
-<Token id=2;words=[<Word id=2;text=有;lemma=有;upos=VERB;xpos=VV;head=0;deprel=root>]>
+<Token id=2;words=[<Word id=2;text=有;lemma=有;upos=VERB;xpos=VV;head=10;deprel=acl>]>
 <Token id=3;words=[<Word id=3;text=2100万;lemma=2100万;upos=NUM;xpos=CD;feats=NumType=Card;head=4;deprel=nummod>]>
-<Token id=4;words=[<Word id=4;text=人;lemma=人;upos=NOUN;xpos=NN;head=5;deprel=compound>]>
-<Token id=5;words=[<Word id=5;text=口;lemma=口;upos=PART;xpos=SFN;head=2;deprel=obj>]>
-<Token id=6;words=[<Word id=6;text=，;lemma=，;upos=PUNCT;xpos=,;head=11;deprel=punct>]>
-<Token id=7;words=[<Word id=7;text=是;lemma=是;upos=AUX;xpos=VC;head=11;deprel=cop>]>
-<Token id=8;words=[<Word id=8;text=一;lemma=一;upos=NUM;xpos=CD;feats=NumType=Card;head=9;deprel=nummod>]>
-<Token id=9;words=[<Word id=9;text=个;lemma=个;upos=NOUN;xpos=NNB;head=11;deprel=nmod>]>
-<Token id=10;words=[<Word id=10;text=直辖;lemma=直辖;upos=VERB;xpos=VV;head=11;deprel=compound>]>
-<Token id=11;words=[<Word id=11;text=市;lemma=市;upos=PART;xpos=SFN;head=2;deprel=ccomp>]>
-<Token id=12;words=[<Word id=12;text=。;lemma=。;upos=PUNCT;xpos=.;head=2;deprel=punct>]>
+<Token id=4;words=[<Word id=4;text=人口;lemma=人口;upos=NOUN;xpos=NN;head=2;deprel=obj>]>
+<Token id=5;words=[<Word id=5;text=，;lemma=，;upos=PUNCT;xpos=,;head=10;deprel=punct>]>
+<Token id=6;words=[<Word id=6;text=是;lemma=是;upos=AUX;xpos=VC;head=10;deprel=cop>]>
+<Token id=7;words=[<Word id=7;text=一;lemma=一;upos=NUM;xpos=CD;feats=NumType=Card;head=8;deprel=nummod>]>
+<Token id=8;words=[<Word id=8;text=个;lemma=个;upos=NOUN;xpos=NNB;head=10;deprel=nmod>]>
+<Token id=9;words=[<Word id=9;text=直辖;lemma=直辖;upos=VERB;xpos=VV;head=10;deprel=compound>]>
+<Token id=10;words=[<Word id=10;text=市;lemma=市;upos=PART;xpos=SFN;head=0;deprel=root>]>
+<Token id=11;words=[<Word id=11;text=。;lemma=。;upos=PUNCT;xpos=.;head=10;deprel=punct>]>
 """.strip()
 
 ZH_DOC_GOLD_NOSSPLIT_TOKENS = """
