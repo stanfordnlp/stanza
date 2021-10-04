@@ -11,7 +11,7 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 @pytest.fixture(scope="module")
 def pipeline():
-    return Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
+    return Pipeline(dir=TEST_MODELS_DIR, lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
 
 
 
