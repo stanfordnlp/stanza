@@ -37,3 +37,11 @@ def test_download_corenlp_models():
 
         dest_file = os.path.join(test_dir, f"stanford-corenlp-{version}-models-{model_name}.jar")
         assert os.path.isfile(dest_file), "Downloaded model file not found."
+
+def test_download_tokenize_mwt():
+    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+        stanza.download("en", model_dir=test_dir, processors="tokenize", package="ewt", verbose=False)
+        pipeline = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package="ewt")
+        assert isinstance(pipeline, stanza.Pipeline)
+        # mwt should be added to the list
+        assert len(pipeline.loaded_processors) == 2
