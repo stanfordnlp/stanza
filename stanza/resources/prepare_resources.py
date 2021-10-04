@@ -164,6 +164,11 @@ default_sentiment = {
   "zh-hans": "ren",
 }
 
+# also, a few languages (very few, currently) have constituency parser models
+default_constituency = {
+  "en": "wsj",
+}
+
 allowed_empty_languages = [
   # we don't have a lot of Thai support yet
   "th"
@@ -178,6 +183,7 @@ processor_to_ending = {
   "depparse": "parser",
   "ner": "nertagger",
   "sentiment": "sentiment",
+  "constituency": "constituency",
   "pretrain": "pretrain",
   "forward_charlm": "forward_charlm",
   "backward_charlm": "backward_charlm",
@@ -338,6 +344,11 @@ def process_dirs(args):
                 # sentiment models use the default pretrain for the language
                 pretrain_package = default_treebanks[lang]
                 dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+            elif processor == 'constituency':
+                # so far, this invariant is true:
+                # constituency models use the default pretrain for the language
+                pretrain_package = default_treebanks[lang]
+                dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
             else:
                 dependencies = None
             # maintain resources
@@ -369,6 +380,8 @@ def process_defaults(args):
             charlm_package = default_charlms[lang]
         if lang in default_sentiment:
             sentiment_package = default_sentiment[lang]
+        if lang in default_constituency:
+            constituency_package = default_constituency[lang]
 
         if lang in default_ners and lang in default_charlms:
             ner_dependencies = get_ner_dependencies(lang, ner_package)
@@ -377,6 +390,9 @@ def process_defaults(args):
         if lang in default_sentiment:
             # All of the sentiment models created so far have used the default pretrain
             default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
+        if lang in default_constituency:
+            # All of the constituency models created so far also use the default pretrain
+            default_dependencies['constituency'] = [{'model': 'pretrain', 'package': ud_package}]
 
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         if lang in default_ners:
@@ -385,6 +401,8 @@ def process_defaults(args):
             processors.extend(['forward_charlm', 'backward_charlm'])
         if lang in default_sentiment:
             processors.append('sentiment')
+        if lang in default_constituency:
+            processors.append('constituency')
 
         if lang == 'multilingual':
             processors = ['langid']
@@ -395,6 +413,7 @@ def process_defaults(args):
                 if processor == 'ner': package = ner_package
                 elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
                 elif processor == 'sentiment': package = sentiment_package
+                elif processor == 'constituency': package = constituency_package
                 elif processor == 'langid': package = 'ud' 
                 else: package = ud_package
 
@@ -402,7 +421,7 @@ def process_defaults(args):
 
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
-                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'langid']:
+                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'constituency', 'langid']:
                         default_processors[processor] = package
                     zipf.write(os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
