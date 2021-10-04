@@ -62,10 +62,12 @@ The two Hungarian datasets can be combined with hu_combined
 
 BSNLP publishes NER datasets for Eastern European languages.
   - In 2019 they published BG, CS, PL, RU.
+  - http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
   - In 2021 they added some more data, but the test sets
     were not publicly available as of April 2021.
     Therefore, currently the model is made from 2019.
-  - http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
+    In 2021, the link to the 2021 task is here:
+    http://bsnlp.cs.helsinki.fi/shared-task.html
   - The below method processes the 2019 version of the corpus.
     It has specific adjustments for the BG section, which has
     quite a few typos or mis-annotations in it.  Other languages
