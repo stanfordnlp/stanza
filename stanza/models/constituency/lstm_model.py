@@ -22,6 +22,7 @@ from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
+from stanza.models.constituency.utils import build_nonlinearity
 
 logger = logging.getLogger('stanza')
 
@@ -177,16 +178,7 @@ class LSTMModel(BaseModel, nn.Module):
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
 
-        if self.args['nonlinearity'] == 'tanh':
-            self.nonlinearity = nn.Tanh()
-        elif self.args['nonlinearity'] == 'relu':
-            self.nonlinearity = nn.ReLU()
-        elif self.args['nonlinearity'] == 'gelu':
-            self.nonlinearity = nn.GELU()
-        elif self.args['nonlinearity'] == 'leaky_relu':
-            self.nonlinearity = nn.LeakyReLU()
-        else:
-            raise ValueError('Chosen value of nonlinearity, "%s", not handled' % self.args['nonlinearity'])
+        self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
 
         self.word_dropout = nn.Dropout(self.args['word_dropout'])
         self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
