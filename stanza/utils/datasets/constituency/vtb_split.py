@@ -26,15 +26,20 @@ def create_shuffle_list(org_dir):
     return file_names
 
 
-def create_paths(split_dir):
+def create_paths(split_dir, short_name):
     """
     This function creates the necessary paths for the train/dev/test splits
     :param split_dir: directory that stores the splits
     :return: train path, dev path, test path
     """
-    train_path = os.path.join(split_dir, 'train.mrg')
-    dev_path = os.path.join(split_dir, 'dev.mrg')
-    test_path = os.path.join(split_dir, 'test.mrg')
+    if not short_name:
+        short_name = ""
+    elif not short_name.endswith("_"):
+        short_name = short_name + "_"
+
+    train_path = os.path.join(split_dir, '%strain.mrg' % short_name)
+    dev_path = os.path.join(split_dir, '%sdev.mrg' % short_name)
+    test_path = os.path.join(split_dir, '%stest.mrg' % short_name)
 
     return train_path, dev_path, test_path
 
@@ -61,39 +66,12 @@ def get_num_samples(org_dir, file_names):
 
     return count
 
-
-def main():
-    """
-    Main function for the script
-
-    Process args, loop through each tree in each file in the directory
-    and write the trees to the train/dev/test split with a split of
-    70/15/15
-    """
-    parser = argparse.ArgumentParser(
-        description="Script that splits a list of files of vtb trees into train/dev/test sets",
-    )
-    parser.add_argument(
-        'org_dir',
-        help='The location of the original directory storing correctly formatted vtb trees '
-    )
-    parser.add_argument(
-        'split_dir',
-        help='The location of new directory storing the train/dev/test set'
-    )
-
-    args = parser.parse_args()
-
-    org_dir = args.org_dir
-    split_dir = args.split_dir
-
-    random.seed(1234)
-
+def split_files(org_dir, split_dir, short_name=None):
     # Create a random shuffle list of the file names in the original directory
     file_names = create_shuffle_list(org_dir)
 
     # Create train_path, dev_path, test_path
-    train_path, dev_path, test_path = create_paths(split_dir)
+    train_path, dev_path, test_path = create_paths(split_dir, short_name)
 
     # Set up the number of samples for each train/dev/test set
     num_samples = get_num_samples(org_dir, file_names)
@@ -125,6 +103,35 @@ def main():
                 if count > stop_dev:
                     write_dir = test_path
 
+
+def main():
+    """
+    Main function for the script
+
+    Process args, loop through each tree in each file in the directory
+    and write the trees to the train/dev/test split with a split of
+    70/15/15
+    """
+    parser = argparse.ArgumentParser(
+        description="Script that splits a list of files of vtb trees into train/dev/test sets",
+    )
+    parser.add_argument(
+        'org_dir',
+        help='The location of the original directory storing correctly formatted vtb trees '
+    )
+    parser.add_argument(
+        'split_dir',
+        help='The location of new directory storing the train/dev/test set'
+    )
+
+    args = parser.parse_args()
+
+    org_dir = args.org_dir
+    split_dir = args.split_dir
+
+    random.seed(1234)
+
+    split_files(org_dir, split_dir)
 
 if __name__ == '__main__':
     main()

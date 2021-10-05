@@ -34,6 +34,18 @@ def convert_file(org_dir, new_dir):
             else:
                 writer.write(line)
 
+def convert_dir(org_dir, new_dir):
+    for filename in os.listdir(org_dir):
+        file_name, file_extension = os.path.splitext(filename)
+        # Only convert .prd files, skip the .raw files
+        if file_extension == '.raw':
+            continue
+        file_path = os.path.join(org_dir, filename)
+        new_path = os.path.join(new_dir, file_name)
+        new_file_path = f'{new_path}.mrg'
+        # Convert the tree and write to new_file_path
+        convert_file(file_path, new_file_path)
+
 
 def main():
     """
@@ -59,17 +71,7 @@ def main():
     org_dir = args.org_dir
     new_dir = args.new_dir
 
-    for filename in os.listdir(org_dir):
-        file_name, file_extension = os.path.splitext(filename)
-        # Only convert .prd files, skip the .raw files
-        if file_extension == '.raw':
-            continue
-        file_path = os.path.join(org_dir, filename)
-        new_path = os.path.join(new_dir, file_name)
-        new_file_path = f'{new_path}.mrg'
-        # Convert the tree and write to new_file_path
-        convert_file(file_path, new_file_path)
-
+    convert_dir(org_dir, new_dir)
 
 if __name__ == '__main__':
     main()
