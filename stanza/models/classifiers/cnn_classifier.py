@@ -112,6 +112,8 @@ class CNNClassifier(nn.Module):
             self.extra_vocab = list(extra_vocab)
             self.extra_vocab_map = { word: i for i, word in enumerate(self.extra_vocab) }
             # TODO: possibly add regularization specifically on the extra embedding?
+            # note: it looks like a bug that this doesn't add UNK or PAD, but actually
+            # those are expected to already be the first two entries
             self.extra_embedding = nn.Embedding(num_embeddings = len(extra_vocab),
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
@@ -367,6 +369,8 @@ class CNNClassifier(nn.Module):
         for fc in self.fc_layers[:-1]:
             previous_layer = self.dropout(F.relu(fc(previous_layer)))
         out = self.fc_layers[-1](previous_layer)
+        # note that we return the raw logits rather than use a softmax
+        # https://discuss.pytorch.org/t/multi-class-cross-entropy-loss-and-softmax-in-pytorch/24920/4
         return out
 
 

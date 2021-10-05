@@ -72,6 +72,7 @@ class Document(StanzaObject):
             comments: A list of list of strings to use as comments on the sentences, either None or the same length as sentences
         """
         self._sentences = []
+        self._lang = None
         self._text = None
         self._num_tokens = 0
         self._num_words = 0
@@ -79,6 +80,16 @@ class Document(StanzaObject):
         self.text = text
         self._process_sentences(sentences, comments)
         self._ents = []
+
+    @property
+    def lang(self):
+        """ Access the language of this document """
+        return self._lang
+
+    @lang.setter
+    def lang(self, value):
+        """ Set the language of this document """
+        self._lang = value
 
     @property
     def text(self):

@@ -4,12 +4,137 @@ import json
 import numpy as np
 import re
 import logging
+import os
 
+import stanza.utils.default_paths as default_paths
 from stanza.models.common.utils import ud_scores, harmonic_mean
 from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
+paths = default_paths.get_default_paths()
+
+def create_dictionary(lexicon=None):
+    """
+    This function is to create a new dictionary used for improving tokenization model for multi-syllable words languages
+    such as vi, zh or th. This function takes the lexicon as input and output a dictionary that contains three set:
+    words, prefixes and suffixes where prefixes set should contains all the prefixes in the lexicon and similar for suffixes.
+    The point of having prefixes/suffixes sets in the  dictionary is just to make it easier to check during data preparation.
+
+    :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
+    :param lexicon - set of words used to create dictionary
+    :return a dictionary object that contains words and their prefixes and suffixes.
+    """
+    
+    dictionary = {"words":set(), "prefixes":set(), "suffixes":set()}
+    
+    def add_word(word):
+        if word not in dictionary["words"]:
+            dictionary["words"].add(word)
+            prefix = ""
+            suffix = ""
+            for i in range(0,len(word)-1):
+                prefix = prefix + word[i]
+                suffix = word[len(word) - i - 1] + suffix
+                dictionary["prefixes"].add(prefix)
+                dictionary["suffixes"].add(suffix)
+
+    for word in lexicon:
+        if len(word)>1:
+            add_word(word)
+
+    return dictionary
+def create_lexicon(shorthand=None, train_path=None, external_path=None):
+    """
+    This function is to create a lexicon to store all the words from the training set and external dictionary.
+    This lexicon will be saved with the model and will be used to create dictionary when the model is loaded.
+    The idea of separating lexicon and dictionary in two different phases is a good tradeoff between time and space.
+    Note that we eliminate all the long words but less frequently appeared in the lexicon by only taking 95-percentile
+    list of words.
+
+    :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
+    :param train_path - path to conllu train file
+    :param external_path - path to extenral dict, expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
+    :return a set lexicon object that contains all distinct words
+    """
+    lexicon = set()
+    length_freq = []
+    #this regex is to check if a character is an actual Thai character as seems .isalpha() python method doesn't pick up Thai accent characters..
+    pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
+    
+    def check_valid_word(shorthand, word):
+        """
+        This function is to check if the word are multi-syllable words and not numbers. 
+        For vi, whitespaces are syllabe-separator.
+        """
+        if shorthand.startswith("vi_"):
+            return True if len(word.split(" ")) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
+        elif shorthand.startswith("th_"):
+            return True if len(word) > 1 and any(map(pattern_thai.match, word)) and not any(map(str.isdigit, word)) else False
+        else:
+            return True if len(word) > 1 and any(map(str.isalpha, word)) and not any(map(str.isdigit, word)) else False
+
+    #checking for words in the training set to add them to lexicon.
+    if train_path is not None:
+        if not os.path.isfile(train_path):
+            raise FileNotFoundError(f"Cannot open train set at {train_path}")
+
+        doc_conll,_ = CoNLL.conll2dict(input_file=train_path)
+
+        for sent_conll in doc_conll:
+            for token_conll in sent_conll:
+                word = token_conll['text'].lower()
+                if check_valid_word(shorthand, word) and word not in lexicon:
+                    lexicon.add(word)
+                    length_freq.append(len(word))
+        count_word = len(lexicon)
+        logger.info(f"Added {count_word} words from the training data to the lexicon.")
+
+    #checking for external dictionary and add them to lexicon.
+    if external_path is not None:
+        if not os.path.isfile(external_path):
+            raise FileNotFoundError(f"Cannot open external dictionary at {external_path}")
+
+        with open(external_path, "r", encoding="utf-8") as external_file:
+            lines = external_file.readlines()
+        for line in lines:
+            word = line.lower()
+            word = word.replace("\n","")
+            if check_valid_word(shorthand, word) and word not in lexicon:
+                lexicon.add(word)
+                length_freq.append(len(word))
+        logger.info(f"Added another {len(lexicon) - count_word} words from the external dict to dictionary.")
+        
+
+    #automatically calculate the number of dictionary features (window size to look for words) based on the frequency of word length
+    #take the length at 95-percentile to eliminate all the longest (maybe) compounds words in the lexicon
+    num_dict_feat = int(np.percentile(length_freq, 95))
+    lexicon = {word for word in lexicon if len(word) <= num_dict_feat }
+    logger.info(f"Final lexicon consists of {len(lexicon)} words after getting rid of long words.")
+
+    return lexicon, num_dict_feat
+
+def load_lexicon(args):
+    """
+    This function is to create a new dictionary and load it to training.
+    The external dictionary is expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
+    For example, vi_vlsp-externaldict.txt
+    """
+    shorthand = args["shorthand"]
+    tokenize_dir = paths["TOKENIZE_DATA_DIR"]
+    train_path = f"{tokenize_dir}/{shorthand}.train.gold.conllu"
+    external_dict_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
+    if not os.path.exists(external_dict_path):
+        logger.info("External dictionary not found! Checking training data...")
+        external_dict_path = None
+    if not os.path.exists(train_path):
+        logger.info(f"Training dataset does not exist, thus cannot create dictionary {shorthand}")
+        train_path = None
+    if train_path is None and external_dict_path is None:
+        raise FileNotFoundError(f"Cannot find training set / external dictionary at {train_path} and {external_dict_path}")
+
+    return create_lexicon(shorthand, train_path, external_dict_path)
+
 
 def load_mwt_dict(filename):
     if filename is not None:

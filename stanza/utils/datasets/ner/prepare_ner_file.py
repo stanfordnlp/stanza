@@ -34,8 +34,8 @@ def process_dataset(input_filename, output_filename):
         document += [sent]
 
     with open(output_filename, 'w') as outfile:
-        json.dump(document, outfile)
-    print("Generated json file {}.".format(output_filename))
+        json.dump(document, outfile, indent=1)
+    print("Generated json file {}".format(output_filename))
 
 # TODO: make skip_doc_start an argument
 def load_conll03(filename, skip_doc_start=True):
@@ -47,7 +47,9 @@ def load_conll03(filename, skip_doc_start=True):
             if skip_doc_start and DOC_START_TOKEN in line:
                 continue
             if len(line) > 0:
-                array = line.split()
+                array = line.split("\t")
+                if len(array) < MIN_NUM_FIELD:
+                    array = line.split()
                 if len(array) < MIN_NUM_FIELD:
                     continue
                 else:
@@ -64,8 +66,10 @@ def process_cache(cached_lines):
     tokens = []
     ner_tags = []
     for line in cached_lines:
-        array = line.split()
-        assert len(array) >= MIN_NUM_FIELD and len(array) <= MAX_NUM_FIELD
+        array = line.split("\t")
+        if len(array) < MIN_NUM_FIELD:
+            array = line.split()
+        assert len(array) >= MIN_NUM_FIELD and len(array) <= MAX_NUM_FIELD, "Got unexpected line length: {}".format(array)
         tokens.append(array[0])
         ner_tags.append(array[-1])
     return (tokens, ner_tags)

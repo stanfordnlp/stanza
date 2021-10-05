@@ -10,7 +10,11 @@ Also, Finnish Turku dataset, available here:
   - https://turkunlp.org/fin-ner.html
   - Download and unzip the corpus, putting the .tsv files into
     $NERBASE/fi_turku
-  - prepare_ner_dataset.py hu_nytk fi_turku
+  - prepare_ner_dataset.py fi_turku
+
+FBK in Italy produced an Italian dataset.
+  The processing here is for a combined .tsv file they sent us.
+  - prepare_ner_dataset.py it_fbk
 
 FBK in Italy produced an Italian dataset.
   The processing here is for a combined .tsv file they sent us.
@@ -22,12 +26,14 @@ IJCNLP 2008 produced a few Indian language NER datasets.
   download:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=5
   The models produced from these datasets have extremely low recall, unfortunately.
+  - prepare_ner_dataset.py hi_ijc
 
 FIRE 2013 also produced NER datasets for Indian languages.
   http://au-kbc.org/nlp/NER-FIRE2013/index.html
   The datasets are password locked.
   For Stanford users, contact Chris Manning for license details.
   For external users, please contact the organizers for more information.
+  - prepare_ner_dataset.py hi-fire2013
 
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
@@ -56,10 +62,12 @@ The two Hungarian datasets can be combined with hu_combined
 
 BSNLP publishes NER datasets for Eastern European languages.
   - In 2019 they published BG, CS, PL, RU.
+  - http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
   - In 2021 they added some more data, but the test sets
     were not publicly available as of April 2021.
     Therefore, currently the model is made from 2019.
-  - http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html
+    In 2021, the link to the 2021 task is here:
+    http://bsnlp.cs.helsinki.fi/shared-task.html
   - The below method processes the 2019 version of the corpus.
     It has specific adjustments for the BG section, which has
     quite a few typos or mis-annotations in it.  Other languages
@@ -100,11 +108,11 @@ import tempfile
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang
 import stanza.utils.default_paths as default_paths
 
-from stanza.utils.datasets.ner.convert_fire_2013 import convert_fire_2013
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
+import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
@@ -154,7 +162,8 @@ def process_languk(paths):
     short_name = 'uk_languk'
     base_input_path = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'data')
     base_output_path = paths["NER_DATA_DIR"]
-    convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path)
+    train_test_split_fname = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'doc', 'dev-test-split.txt')
+    convert_bsf_to_beios.convert_bsf_in_folder(base_input_path, base_output_path, train_test_split_file=train_test_split_fname)
     for shard in SHARDS:
         input_filename = os.path.join(base_output_path, convert_bsf_to_beios.CORPUS_NAME, "%s.bio" % shard)
         if not os.path.exists(input_filename):
@@ -204,6 +213,7 @@ def process_fire_2013(paths, dataset):
     """
     short_name = treebank_to_short_name(dataset)
     langcode, _ = short_name.split("_")
+    short_name = "%s_fire2013" % langcode
     if not langcode in ("hi", "en", "ta", "bn", "mal"):
         raise ValueError("Language %s not one of the FIRE 2013 languages")
     language = lcode2lang[langcode].lower()
@@ -216,7 +226,7 @@ def process_fire_2013(paths, dataset):
     dev_csv_file   = os.path.join(base_output_path, "%s.dev.csv" % short_name)
     test_csv_file  = os.path.join(base_output_path, "%s.test.csv" % short_name)
 
-    convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
+    convert_fire_2013.convert_fire_2013(base_input_path, train_csv_file, dev_csv_file, test_csv_file)
 
     for csv_file, shard in zip((train_csv_file, dev_csv_file, test_csv_file), SHARDS):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
@@ -398,7 +408,7 @@ def main(dataset_name):
         process_languk(paths)
     elif dataset_name == 'hi_ijc':
         process_ijc(paths, dataset_name)
-    elif dataset_name.endswith("FIRE2013"):
+    elif dataset_name.endswith("FIRE2013") or dataset_name.endswith("fire2013"):
         process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
         process_wikiner(paths, dataset_name)

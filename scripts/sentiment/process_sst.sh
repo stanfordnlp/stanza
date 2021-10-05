@@ -39,6 +39,12 @@ java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/dev.txt >
 echo $OUTPUT_DIR/fiveclass/test-phrases.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/test.txt > $OUTPUT_DIR/fiveclass/test-phrases.txt
 
+echo $OUTPUT_DIR/fiveclass/extra-train-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/extra-train.txt > $OUTPUT_DIR/fiveclass/extra-train-phrases.txt
+
+echo $OUTPUT_DIR/fiveclass/checked-extra-train-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/checked-extra-train.txt > $OUTPUT_DIR/fiveclass/checked-extra-train-phrases.txt
+
 
 echo $OUTPUT_DIR/fiveclass/train-roots.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/train.txt -root_only > $OUTPUT_DIR/fiveclass/train-roots.txt
@@ -59,6 +65,12 @@ java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/dev.txt -
 echo $OUTPUT_DIR/binary/test-binary-phrases.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/test.txt -ignore_labels 2 -remap_labels "1=0,2=-1,3=1,4=1" > $OUTPUT_DIR/binary/test-binary-phrases.txt
 
+echo $OUTPUT_DIR/binary/extra-train-binary-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/extra-train.txt -ignore_labels 2 -remap_labels "1=0,2=-1,3=1,4=1" > $OUTPUT_DIR/binary/extra-train-binary-phrases.txt
+
+echo $OUTPUT_DIR/binary/checked-extra-train-binary-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/checked-extra-train.txt -ignore_labels 2 -remap_labels "1=0,2=-1,3=1,4=1" > $OUTPUT_DIR/binary/checked-extra-train-binary-phrases.txt
+
 echo $OUTPUT_DIR/binary/dev-binary-roots.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/dev.txt -root_only -ignore_labels 2 -remap_labels "1=0,2=-1,3=1,4=1" > $OUTPUT_DIR/binary/dev-binary-roots.txt
 
@@ -75,6 +87,13 @@ java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/dev.txt -
 
 echo $OUTPUT_DIR/threeclass/test-threeclass-phrases.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/test.txt -remap_labels "0=0,1=0,2=1,3=2,4=2" > $OUTPUT_DIR/threeclass/test-threeclass-phrases.txt
+
+echo $OUTPUT_DIR/threeclass/extra-train-threeclass-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/extra-train.txt -remap_labels "0=0,1=0,2=1,3=2,4=2" > $OUTPUT_DIR/threeclass/extra-train-threeclass-phrases.txt
+
+echo $OUTPUT_DIR/threeclass/checked-extra-train-threeclass-phrases.txt
+java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/checked-extra-train.txt -remap_labels "0=0,1=0,2=1,3=2,4=2" > $OUTPUT_DIR/threeclass/checked-extra-train-threeclass-phrases.txt
+
 
 echo $OUTPUT_DIR/threeclass/dev-threeclass-roots.txt
 java edu.stanford.nlp.trees.OutputSubtrees -input $INPUT_DIR/fiveclass/dev.txt -root_only -remap_labels "0=0,1=0,2=1,3=2,4=2" > $OUTPUT_DIR/threeclass/dev-threeclass-roots.txt

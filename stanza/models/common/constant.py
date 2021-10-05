@@ -134,6 +134,7 @@ langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
+lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
 
 lang2lcode['Chinese'] = 'zh'
@@ -142,12 +143,12 @@ lang2lcode['Chinese'] = 'zh'
 lang2lcode['Old_Russian'] = 'orv'
 
 treebank_special_cases = {
-    "UD_Chinese-GSDSimp": "zh_gsdsimp",
+    "UD_Chinese-GSDSimp": "zh-hans_gsdsimp",
     "UD_Chinese-GSD": "zh-hant_gsd",
     "UD_Chinese-HK": "zh-hant_hk",
-    "UD_Chinese-CFL": "zh-hant_cfl",
+    "UD_Chinese-CFL": "zh-hans_cfl",
     "UD_Chinese-PUD": "zh-hant_pud",
-    "UD_Norwegian-Bokmaal": "nb_bokmaal",
+    "UD_Norwegian-Bokmaal": "no_bokmaal",
     "UD_Norwegian-Nynorsk": "nn_nynorsk",
     "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
 }
@@ -159,7 +160,13 @@ def treebank_to_short_name(treebank):
 
     if treebank.startswith('UD_'):
         treebank = treebank[3:]
-    splits = treebank.split('-')
+    # special case starting with zh in case the input is an already-converted ZH treebank
+    if treebank.startswith("zh-hans") or treebank.startswith("zh-hant"):
+        splits = (treebank[:len("zh-hans")], treebank[len("zh-hans")+1:])
+    else:
+        splits = treebank.split('-')
+        if len(splits) == 1:
+            splits = treebank.split("_", 1)
     assert len(splits) == 2, "Unable to process %s" % treebank
     lang, corpus = splits
 
@@ -174,3 +181,9 @@ def treebank_to_short_name(treebank):
 
     short = "{}_{}".format(lcode, corpus.lower())
     return short
+
+def treebank_to_langid(treebank):
+    """ Convert treebank name to langid """
+    short_name = treebank_to_short_name(treebank)
+    return short_name.split("_")[0]
+

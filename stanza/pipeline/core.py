@@ -15,12 +15,14 @@ from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
+from stanza.pipeline.langid_processor import LangIDProcessor
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
 from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
+from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, \
     maintain_processor_list, add_dependencies, add_mwt, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors

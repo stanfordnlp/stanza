@@ -4,8 +4,9 @@ import os
 import glob
 from collections import namedtuple
 import re
+from typing import Tuple
 from tqdm import tqdm
-from random import choices
+from random import choices, shuffle
 
 BsfInfo = namedtuple('BsfInfo', 'id, tag, start_idx, end_idx, token')
 
@@ -93,14 +94,16 @@ def parse_bsf(bsf_data: str) -> list:
 
 CORPUS_NAME = 'Ukrainian-languk'
 
+
 def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str = 'beios',
-                          doc_delim: str = '\n') -> None:
+                          doc_delim: str = '\n', train_test_split_file: str = None) -> None:
     """
 
     :param doc_delim: delimiter to be used between documents
     :param src_dir_path: path to directory with BSF marked files
     :param dst_dir_path: where to save output data
     :param converter: `beios` or `iob` output formats
+    :param train_test_split_file: path to file cotaining train/test lists of file names
     :return:
     """
     ann_path = os.path.join(src_dir_path, '*.tok.ann')
@@ -127,7 +130,10 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
     data_sets = [train_set, dev_set, test_set]
     split_weights = (8, 1, 1)
 
-    log.info(f'Found {len(tok_files)} files')
+    if train_test_split_file is not None:
+        train_names, dev_names, test_names = read_languk_train_test_split(train_test_split_file)
+
+    log.info(f'Found {len(tok_files)} files in data folder "{src_dir_path}"')
     for (tok_fname, ann_fname) in tqdm(zip(tok_files, ann_files), total=len(tok_files), unit='file'):
         if tok_fname[:-3] != ann_fname[:-3]:
             tqdm.write(f'Token and Annotation file names do not match ann={ann_fname}, tok={tok_fname}')
@@ -138,7 +144,16 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
             ann_data = ann_file.read()
             out_data = convert_bsf(token_data, ann_data, converter)
 
-            target_dataset = choices(data_sets, split_weights)[0]
+            if train_test_split_file is None:
+                target_dataset = choices(data_sets, split_weights)[0]
+            else:
+                target_dataset = train_set
+                fkey = os.path.basename(tok_fname)[:-4]
+                if fkey in dev_names:
+                    target_dataset = dev_set
+                elif fkey in test_names:
+                    target_dataset = test_set
+
             target_dataset.append(out_data)
     log.info(f'Data is split as following: train={len(train_set)}, dev={len(dev_set)}, test={len(test_set)}')
 
@@ -155,6 +170,43 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
     log.info('All done')
 
 
+def read_languk_train_test_split(file_path: str, dev_split: float = 0.1) -> Tuple:
+    """
+    Read predefined split of train and test files in data set. 
+    Originally located under doc/dev-test-split.txt
+    :param file_path: path to dev-test-split.txt file (should include file name with extension)
+    :param dev_split: 0 to 1 float value defining how much to allocate to dev split
+    :return: tuple of (train, dev, test) each containing list of files to be used for respective data sets
+    """
+    log.info(f'Trying to read train/dev/test split from file "{file_path}". Dev allocation = {dev_split}')
+    train_files, test_files, dev_files = [], [], []
+    container = test_files
+    with open(file_path, 'r') as f:
+        for ln in f:
+            ln = ln.strip()
+            if ln == 'DEV':
+                container = train_files
+            elif ln == 'TEST':
+                container = test_files
+            elif ln == '':
+                pass
+            else:
+                container.append(ln)
+
+    # split in file only contains train and test split. 
+    # For Stanza training we need train, dev, test
+    # We will take part of train as dev set 
+    # This way anyone using test set outside of this code base can be sure that there was no data set polution            
+    shuffle(train_files)
+    dev_files = train_files[: int(len(train_files) * dev_split)]
+    train_files = train_files[int(len(train_files) * dev_split):]
+
+    assert len(set(train_files).intersection(set(dev_files))) == 0
+    
+    log.info(f'Files in each set: train={len(train_files)}, dev={len(dev_files)}, test={len(test_files)}')
+    return train_files, dev_files, test_files
+
+
 if __name__ == '__main__':
     logging.basicConfig()
 
@@ -165,7 +217,8 @@ if __name__ == '__main__':
     parser.add_argument('--dst', type=str, default='data/ner', help='Where to store the converted dataset')
     parser.add_argument('-c', type=str, default='beios', help='`beios` or `iob` formats to be used for output')
     parser.add_argument('--doc_delim', type=str, default='\n', help='Delimiter to be used to separate documents in the output data')
+    parser.add_argument('--split_file', type=str, help='Name of a file containing Train/Test split (files in train and test set)')
     parser.print_help()
     args = parser.parse_args()
 
-    convert_bsf_in_folder(args.src_dataset, args.dst, args.c, args.doc_delim)
+    convert_bsf_in_folder(args.src_dataset, args.dst, args.c, args.doc_delim, train_test_split_file=args.split_file)

@@ -5,7 +5,7 @@ https://github.com/korakot/thainlp/blob/master/xmlchid.xml
 For example, if you put the data file in the above link in
 extern_data/thai/orchid/xmlchid.xml
 you would then run
-python3 -m stanza.utils.datasets.process_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
+python3 -m stanza.utils.datasets.tokenization.convert_th_orchid extern_data/thai/orchid/xmlchid.xml data/tokenize
 
 Because there is no definitive train/dev/test split that we have found
 so far, we randomly shuffle the data on a paragraph level and split it
@@ -17,7 +17,7 @@ give it a fake UD name to make life easier for the downstream tools.
 Training on this dataset seems to work best with low dropout numbers.
 For example:
 
-./scripts/run_tokenize.sh UD_Thai-orchid --dropout 0.05 --unit_dropout 0.05
+python3 -m stanza.utils.training.run_tokenizer th_orchid --dropout 0.05 --unit_dropout 0.05
 
 This results in a model with dev set scores:
  th_orchid 87.98 70.94
@@ -27,11 +27,12 @@ test set scores:
 Apparently the random split produced a test set easier than the dev set.
 """
 
+import os
 import random
 import sys
 import xml.etree.ElementTree as ET
 
-from stanza.utils.datasets.process_thai_tokenization import write_dataset
+from stanza.utils.datasets.tokenization.process_thai_tokenization import write_dataset
 
 # line "122819" has some error in the tokenization of the musical notation
 # line "209380" is also messed up
@@ -91,8 +92,14 @@ allowed_sequences = {
 }
 
 def read_data(input_filename):
+    print("Reading {}".format(input_filename))
     tree = ET.parse(input_filename)
+    documents = parse_xml(tree)
+    print("Number of documents: {}".format(len(documents)))
+    print("Number of paragraphs: {}".format(sum(len(document) for document in documents)))
+    return documents
 
+def parse_xml(tree):
     # we will put each paragraph in a separate block in the output file
     # we won't pay any attention to the document boundaries unless we
     # later find out it was necessary
@@ -132,19 +139,22 @@ def read_data(input_filename):
                     words.append((word, False))
                 if len(words) == 0:
                     continue
+                words[-1] = (words[-1][0], True)
                 sentences.append(words)
             paragraphs.append(sentences)
         documents.append(paragraphs)
 
-    print("Number of documents: {}".format(len(documents)))
-    print("Number of paragraphs: {}".format(sum(len(document) for document in documents)))
     return documents
 
 
-def main():
+def main(*args):
     random.seed(1007)
-    input_filename = sys.argv[1]
-    output_dir = sys.argv[2]
+    if not args:
+        args = sys.argv[1:]
+    input_filename = args[0]
+    if os.path.isdir(input_filename):
+        input_filename = os.path.join(input_filename, "thai", "orchid", "xmlchid.xml")
+    output_dir = args[1]
     documents = read_data(input_filename)
     write_dataset(documents, output_dir, "orchid")
 

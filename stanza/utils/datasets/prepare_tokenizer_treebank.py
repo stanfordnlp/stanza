@@ -34,7 +34,10 @@ from collections import Counter
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
-
+import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
+import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
+import stanza.utils.datasets.tokenization.convert_th_lst20 as convert_th_lst20
+import stanza.utils.datasets.tokenization.convert_th_orchid as convert_th_orchid
 
 def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
     original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
@@ -136,15 +139,24 @@ def prepare_treebank_labels(tokenizer_dir, short_name):
     for dataset in ("train", "dev", "test"):
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
-        prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
+        try:
+            prepare_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            print("Failed to convert %s to %s" % (output_txt, output_conllu))
+            raise
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
-def convert_conllu_to_txt(tokenizer_dir, short_name):
-    for dataset in ("train", "dev", "test"):
+def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
+    for dataset in shards:
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
+        if not os.path.exists(output_conllu):
+            # the perl script doesn't raise an error code for file not found!
+            raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
         # use an external script to produce the txt files
         subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
 
@@ -944,7 +956,7 @@ def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
         build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment)
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
-    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu")
+    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
 
     if short_name == "te_mtg" and dataset == 'train' and augment:
@@ -1009,14 +1021,15 @@ def add_specific_args(parser):
                         help='Augment the dataset in various ways')
     parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
+    convert_th_lst20.add_lst20_args(parser)
 
+    convert_vi_vlsp.add_vlsp_args(parser)
 def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
 
-    TODO
-    Currently assumes it is always a UD treebank.  There are Thai
-    treebanks which are not included in UD.
+    Includes processing for a few external tokenization datasets:
+      vi_vlsp, th_orchid, th_best
 
     Also, there is no specific mechanism for UD_Arabic-NYUAD or
     similar treebanks, which need integration with LDC datsets
@@ -1030,7 +1043,15 @@ def process_treebank(treebank, paths, args):
 
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    if short_name.startswith("ko_combined"):
+    if short_name == "vi_vlsp":
+        convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
+    elif short_name == "th_orchid":
+        convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
+    elif short_name == "th_lst20":
+        convert_th_lst20.convert(paths["EXTERN_DIR"], tokenizer_dir, args)
+    elif short_name == "th_best":
+        convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
+    elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in ("it_combined", "en_combined", "es_combined"):
         build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
@@ -1049,7 +1070,8 @@ def process_treebank(treebank, paths, args):
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
-    convert_conllu_to_txt(tokenizer_dir, short_name)
+    if not short_name in ('th_orchid', 'th_lst20'):
+        convert_conllu_to_txt(tokenizer_dir, short_name)
 
     if args.prepare_labels:
         prepare_treebank_labels(tokenizer_dir, short_name)

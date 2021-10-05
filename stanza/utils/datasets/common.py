@@ -115,6 +115,7 @@ def get_ud_treebanks(udbase_dir, filtered=True):
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
+
     return parser
 
 

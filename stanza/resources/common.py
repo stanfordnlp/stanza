@@ -424,8 +424,12 @@ def download(
         logger.info(
             f'Downloading default packages for language: {lang} ({lang_name})...'
         )
+        # want the URL to become, for example:
+        # https://huggingface.co/stanfordnlp/stanza-af/resolve/v1.3.0/models/default.zip
+        # so we hopefully start from
+        # https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}
         request_file(
-            f'{url}/{resources_version}/{lang}/default.zip',
+            url.format(resources_version=resources_version, lang=lang, filename="default.zip"),
             os.path.join(model_dir, lang, f'default.zip'),
             proxies,
             md5=resources[lang]['default_md5'],
@@ -448,7 +452,7 @@ def download(
         for key, value in download_list:
             try:
                 request_file(
-                    f'{url}/{resources_version}/{lang}/{key}/{value}.pt',
+                    url.format(resources_version=resources_version, lang=lang, filename=f"{key}/{value}.pt"),
                     os.path.join(model_dir, lang, key, f'{value}.pt'),
                     proxies,
                     md5=resources[lang][key][value]['md5']

@@ -11,6 +11,10 @@ def update_text(sentence, wordvec_type):
     # stanford sentiment dataset has a lot of random - and /
     sentence = sentence.replace("-", " ")
     sentence = sentence.replace("/", " ")
+    sentence = sentence.strip()
+    if sentence == "":
+        # removed too much
+        sentence = "-"
     sentence = sentence.split()
     # our current word vectors are all entirely lowercased
     sentence = [word.lower() for word in sentence]

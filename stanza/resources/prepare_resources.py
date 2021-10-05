@@ -6,6 +6,16 @@ import hashlib
 import shutil
 import zipfile
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/current-models", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
+    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/built-models", help='Output dir for various models.')
+    args = parser.parse_args()
+    args.input_dir = os.path.abspath(args.input_dir)
+    args.output_dir = os.path.abspath(args.output_dir)
+    return args
+
+
 # default treebank for languages
 default_treebanks = {
   "af": "afribooms",
@@ -83,9 +93,9 @@ default_treebanks = {
   "te": "mtg",
   "orv": "torot",
   "nn": "nynorsk",
-  "mr": "ufal"
+  "mr": "ufal",
+  "multilingual": "ud"
 }
-
 
 # default ner for languages
 default_ners = {
@@ -105,7 +115,6 @@ default_ners = {
   "vi": "vlsp",
   "zh-hans": "ontonotes",
 }
-
 
 # default charlms for languages
 default_charlms = {
@@ -155,6 +164,11 @@ default_sentiment = {
   "zh-hans": "ren",
 }
 
+# also, a few languages (very few, currently) have constituency parser models
+default_constituency = {
+  "en": "wsj",
+}
+
 allowed_empty_languages = [
   # we don't have a lot of Thai support yet
   "th"
@@ -169,9 +183,11 @@ processor_to_ending = {
   "depparse": "parser",
   "ner": "nertagger",
   "sentiment": "sentiment",
+  "constituency": "constituency",
   "pretrain": "pretrain",
   "forward_charlm": "forward_charlm",
-  "backward_charlm": "backward_charlm"
+  "backward_charlm": "backward_charlm",
+  "langid": "langid"
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
 
@@ -263,20 +279,12 @@ def ensure_dir(dir):
 
 def copy_file(src, dst):
     ensure_dir(Path(dst).parent)
-    shutil.copy(src, dst)
+    shutil.copy2(src, dst)
 
 
 def get_md5(path):
     data = open(path, 'rb').read()
     return hashlib.md5(data).hexdigest()
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, help='Input dir for various models.')
-    parser.add_argument('--output_dir', type=str, help='Output dir for various models.')
-    args = parser.parse_args()
-    return args
 
 
 def split_model_name(model):
@@ -313,18 +321,17 @@ def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
 
-    for dir in dirs:
-        print(f"Processing models in {dir}")
-        models = sorted(os.listdir(os.path.join(args.input_dir, dir)))
+    for model_dir in dirs:
+        print(f"Processing models in {model_dir}")
+        models = sorted(os.listdir(os.path.join(args.input_dir, model_dir)))
         for model in models:
             if not model.endswith('.pt'): continue
             # get processor
             lang, package, processor = split_model_name(model)
             # copy file
-            input_path = os.path.join(args.input_dir, dir, model)
+            input_path = os.path.join(args.input_dir, model_dir, model)
             output_path = os.path.join(args.output_dir, lang, processor, package + '.pt')
-            ensure_dir(Path(output_path).parent)
-            shutil.copy(input_path, output_path)
+            copy_file(input_path, output_path)
             # maintain md5
             md5 = get_md5(output_path)
             # maintain dependencies
@@ -335,6 +342,11 @@ def process_dirs(args):
             elif processor == 'sentiment':
                 # so far, this invariant is true:
                 # sentiment models use the default pretrain for the language
+                pretrain_package = default_treebanks[lang]
+                dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+            elif processor == 'constituency':
+                # so far, this invariant is true:
+                # constituency models use the default pretrain for the language
                 pretrain_package = default_treebanks[lang]
                 dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
             else:
@@ -368,6 +380,8 @@ def process_defaults(args):
             charlm_package = default_charlms[lang]
         if lang in default_sentiment:
             sentiment_package = default_sentiment[lang]
+        if lang in default_constituency:
+            constituency_package = default_constituency[lang]
 
         if lang in default_ners and lang in default_charlms:
             ner_dependencies = get_ner_dependencies(lang, ner_package)
@@ -376,6 +390,9 @@ def process_defaults(args):
         if lang in default_sentiment:
             # All of the sentiment models created so far have used the default pretrain
             default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
+        if lang in default_constituency:
+            # All of the constituency models created so far also use the default pretrain
+            default_dependencies['constituency'] = [{'model': 'pretrain', 'package': ud_package}]
 
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         if lang in default_ners:
@@ -384,20 +401,28 @@ def process_defaults(args):
             processors.extend(['forward_charlm', 'backward_charlm'])
         if lang in default_sentiment:
             processors.append('sentiment')
+        if lang in default_constituency:
+            processors.append('constituency')
+
+        if lang == 'multilingual':
+            processors = ['langid']
+            default_dependencies = {}
 
         with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
                 if processor == 'ner': package = ner_package
                 elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
                 elif processor == 'sentiment': package = sentiment_package
+                elif processor == 'constituency': package = constituency_package
+                elif processor == 'langid': package = 'ud' 
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
-                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment']:
+                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'constituency', 'langid']:
                         default_processors[processor] = package
-                    zipf.write(processor)
                     zipf.write(os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
                     # we don't have a lot of Thai support yet
@@ -424,6 +449,7 @@ def process_defaults(args):
 def process_lcode(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources_new = {}
+    resources_new["multilingual"] = resources["multilingual"]
     for lang in resources:
         if lang not in lcode2lang:
             print(lang + ' not found in lcode2lang!')
@@ -439,7 +465,7 @@ def process_misc(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
-    resources['url'] = 'http://nlp.stanford.edu/software/stanza'
+    resources['url'] = 'https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}'
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
@@ -453,3 +479,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

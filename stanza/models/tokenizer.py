@@ -4,6 +4,15 @@ Entry point for training and evaluating a neural tokenizer.
 This tokenizer treats tokenization and sentence segmentation as a tagging problem, and uses a combination of
 recurrent and convolutional architectures.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
+
+Updated: This new version of tokenizer model incorporates the dictionary feature, especially useful for languages that
+have multi-syllable words such as Vietnamese, Chinese or Thai. In summary, a lexicon contains all unique words found in 
+training dataset and external lexicon (if any) is created during training and saved alongside the model after training.
+Using this lexicon, a dictionary is created which includes "words", "prefixes" and "suffixes" sets. During data preparation,
+dictionary features are extracted at each character position, to "look ahead" and "look backward" to see if any words formed
+found in the dictionary. The window size (or the dictionary feature length) is defined at the 95-percentile among all the existing
+words in the lexicon, this is to eliminate the less frequent but long words (avoid having a high-dimension feat vector). Prefixes 
+and suffixes are used to stop early during the window-dictionary checking process.  
 """
 
 import argparse
@@ -13,11 +22,11 @@ import random
 import numpy as np
 import os
 import torch
-
+import json
 from stanza.models.common import utils
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.data import DataLoader
-from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions
+from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
 from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
@@ -49,6 +58,7 @@ def parse_args(args=None):
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
+    parser.add_argument('--use_dictionary', action='store_true', help="Use dictionary feature. The lexicon is created using the training data and external dict (if any) expected to be found under the same folder of training dataset, formatted as SHORTHAND-externaldict.txt where each line in this file is a word. For example, data/tokenize/zh_gsdsimp-externaldict.txt")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
@@ -56,6 +66,8 @@ def parse_args(args=None):
     parser.add_argument('--lr0', type=float, default=2e-3, help="Initial learning rate")
     parser.add_argument('--dropout', type=float, default=0.33, help="Dropout probability")
     parser.add_argument('--unit_dropout', type=float, default=0.33, help="Unit dropout probability")
+    parser.add_argument('--feat_dropout', type=float, default=0.05, help="Features dropout probability for each element in feature vector")
+    parser.add_argument('--feat_unit_dropout', type=float, default=0.33, help="The whole feature of units dropout probability")
     parser.add_argument('--tok_noise', type=float, default=0.02, help="Probability to induce noise to the input of the higher RNN")
     parser.add_argument('--sent_drop_prob', type=float, default=0.2, help="Probability to drop sentences at the end of batches during training uniformly at random.  Idea is to fake paragraph endings.")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
@@ -90,7 +102,7 @@ def main(args=None):
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
-    args['feat_funcs'] = ['space_before', 'capitalized', 'all_caps', 'numeric']
+    args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
     args['feat_dim'] = len(args['feat_funcs'])
     save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
     args['save_name'] = os.path.join(args['save_dir'], save_name)
@@ -102,27 +114,40 @@ def main(args=None):
         evaluate(args)
 
 def train(args):
+    if args['use_dictionary']:
+        #load lexicon
+        lexicon, args['num_dict_feat'] = load_lexicon(args)
+        #create the dictionary
+        dictionary = create_dictionary(lexicon)
+        #adjust the feat_dim
+        args['feat_dim'] += args['num_dict_feat']*2
+    else:
+        args['num_dict_feat'] = 0
+        lexicon=None
+        dictionary=None
+
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
 
     train_input_files = {
             'txt': args['txt_file'],
             'label': args['label_file']
             }
-    train_batches = DataLoader(args, input_files=train_input_files)
+    train_batches = DataLoader(args, input_files=train_input_files, dictionary=dictionary)
     vocab = train_batches.vocab
+
     args['vocab_size'] = len(vocab)
 
     dev_input_files = {
             'txt': args['dev_txt_file'],
             'label': args['dev_label_file']
             }
-    dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True)
+    dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True,  dictionary=dictionary)
 
     if args['use_mwt'] is None:
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, use_cuda=args['cuda'])
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])
@@ -138,7 +163,7 @@ def train(args):
     best_dev_step = -1
 
     for step in range(1, steps+1):
-        batch = train_batches.next(unit_dropout=args['unit_dropout'])
+        batch = train_batches.next(unit_dropout=args['unit_dropout'], feat_unit_dropout = args['feat_unit_dropout'])
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:
@@ -180,16 +205,18 @@ def evaluate(args):
     use_cuda = args['cuda'] and not args['cpu']
     trainer = Trainer(model_file=args['load_name'] or args['save_name'], use_cuda=use_cuda)
     loaded_args, vocab = trainer.args, trainer.vocab
+
     for k in loaded_args:
         if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'load_name', 'save_name']:
             args[k] = loaded_args[k]
-
+    
     eval_input_files = {
             'txt': args['txt_file'],
             'label': args['label_file']
             }
 
-    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True)
+
+    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dictionary=trainer.dictionary)
 
     oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 

@@ -36,3 +36,12 @@ def test_multiple_sentences(pipeline):
     results = [sentence.sentiment for sentence in doc.sentences]
     assert EXPECTED == results
 
+def test_empty_text(pipeline):
+    """
+    Test empty text and a text which might get reduced to empty text by removing dashes
+    """
+    doc = pipeline("")
+    assert len(doc.sentences) == 0
+
+    doc = pipeline("--")
+    assert len(doc.sentences) == 1

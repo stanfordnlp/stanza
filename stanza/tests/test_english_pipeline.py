@@ -166,6 +166,7 @@ def test_dependency_parse(processed_doc):
 def test_empty(pipeline):
     # make sure that various models handle the degenerate empty case
     pipeline("")
+    pipeline("--")
 
 @pytest.fixture(scope="module")
 def processed_multidoc(pipeline):
@@ -200,3 +201,8 @@ def processed_multidoc_variant():
 def test_dependency_parse_multidoc_variant(processed_multidoc_variant):
     assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc_variant for sent in processed_doc.sentences]) == \
            EN_DOC_DEPENDENCY_PARSES_GOLD
+
+def test_constituency_parser():
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency")
+    doc = nlp("This is a test")
+    assert str(doc.sentences[0].constituency) == '(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))'
