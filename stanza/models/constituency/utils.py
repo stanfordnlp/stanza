@@ -5,6 +5,8 @@ Collects a few of the conparser utility methods which don't belong elsewhere
 from collections import deque
 import copy
 
+import torch.nn as nn
+
 from stanza.models.common.doc import TEXT, Document
 
 def replace_tags(tree, tags):
@@ -56,3 +58,14 @@ def retag_trees(trees, pipeline, xpos=True):
     new_trees = [replace_tags(tree, tags) for tree, tags in zip(trees, tag_lists)]
     return new_trees
 
+def build_nonlinearity(nonlinearity):
+    if nonlinearity == 'tanh':
+        return nn.Tanh()
+    elif nonlinearity == 'relu':
+        return nn.ReLU()
+    elif nonlinearity == 'gelu':
+        return nn.GELU()
+    elif nonlinearity == 'leaky_relu':
+        return nn.LeakyReLU()
+    else:
+        raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
