@@ -287,12 +287,13 @@ class Tree(StanzaObject):
         """
         Return a copy of the tree, eliminating all nodes which are in one of two categories:
             they are a preterminal -NONE-, such as appears in PTB
+              *E* shows up in a VLSP dataset
             they have been pruned to 0 children by the recursive call
         """
         if self.is_leaf():
             return Tree(self.label)
         if self.is_preterminal():
-            if self.label == '-NONE-':
+            if self.label == '-NONE-' or self.label == '*E*':
                 return None
             return Tree(self.label, Tree(self.children[0].label))
         # must be internal node
