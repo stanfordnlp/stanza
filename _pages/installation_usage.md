@@ -59,6 +59,8 @@ The following minimal example shows how to download and load default processors 
 >>> nlp = stanza.Pipeline('en')
 ```
 
+Note that you only need to call `download` once for a fresh install or to check for model updates.
+
 ### Specifying Processors
 
 You can specify the processors to download or load, by listing the processor names in a comma-separated string. For example, here we only download and load the default `tokenize` ([TokenizeProcessor](tokenize.md)) and `pos` ([POSProcessor](pos.md)) processors for Chinese:
