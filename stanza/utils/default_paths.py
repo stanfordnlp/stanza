@@ -19,6 +19,7 @@ def get_default_paths():
         "NER_DATA_DIR": DATA_ROOT + "/ner",
         "CHARLM_DATA_DIR": DATA_ROOT + "/charlm",
         "SENTIMENT_DATA_DIR": DATA_ROOT + "/sentiment",
+        "CONSTITUENCY_DATA_DIR": DATA_ROOT + "/constituency",
 
         # Set directories to store external word vector data
         "WORDVEC_DIR": "extern_data/wordvec",
@@ -28,13 +29,14 @@ def get_default_paths():
         "UDBASE": "extern_data/ud2/ud-treebanks-v2.8",
 
         "NERBASE": "extern_data/ner",
+        "CONSTITUENCY_BASE": "extern_data/constituency",
 
         # there's a stanford github, stanfordnlp/handparsed-treebank,
         # with some data for different languages
         "HANDPARSED_DIR": "extern_data/handparsed-treebank",
 
         # data root for other general input files, such as VI_VLSP
-        "EXTERN_DIR": "extern_data"
+        "EXTERN_DIR": "extern_data",
     }
 
     paths = { "DATA_ROOT" : DATA_ROOT }
