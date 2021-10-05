@@ -225,6 +225,13 @@ def load_trees(filename, pipeline):
             continue
 
         tree = tree.prune_none().simplify_labels(CONSTITUENT_SPLIT)
+
+        # The expectation is that the retagging will handle this anyway
+        for pt in tree.preterminals():
+            if not pt.label:
+                pt.label = "UNK"
+                print("Found a tree with a blank preterminal label.  Setting it to UNK.  {}: {}".format(filename, tree))
+
         tree = tree.remap_constituent_labels(REMAP_NODES)
         tree = tree.remap_words(REMAP_WORDS)
 
@@ -253,11 +260,8 @@ def save_trees(out_file, trees):
             fout.write(str(tree))
             fout.write("\n")
 
-def main():
+def convert_it_turin(input_path, output_path):
     pipeline = stanza.Pipeline("it", processors="tokenize, mwt", tokenize_no_ssplit=True)
-
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
 
     os.makedirs(output_path, exist_ok=True)
 
@@ -317,6 +321,12 @@ def main():
 
     it_dev = os.path.join(output_path, "it_turin_dev.mrg")
     save_trees(it_dev, dev_trees)
+
+def main():
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+
+    convert_it_turin(input_path, output_path)
 
 if __name__ == '__main__':
     main()
