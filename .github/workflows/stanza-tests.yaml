@@ -23,7 +23,7 @@ jobs:
           pip install -e .
           # set up for tests
           rm -rf /home/stanzabuild/stanza-github-actions/actions-runner/_work/stanza/stanza/stanza_test
-          source stanza/tests/setup_test.sh
+          python stanza/tests/setup.py
           # run tests
           echo "Running tests..."
           export CUDA_VISIBLE_DEVICES=2
