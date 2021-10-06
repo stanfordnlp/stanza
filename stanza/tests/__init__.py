@@ -10,15 +10,11 @@ import re
 TEST_HOME_VAR = 'STANZA_TEST_HOME'
 
 # Global Variables
-# test working directory base name must be stanza_test
 TEST_DIR_BASE_NAME = 'stanza_test'
 
-# check the working dir is set and compliant
-assert os.getenv(TEST_HOME_VAR) is not None, \
-    f'Please set {TEST_HOME_VAR} environment variable for test working dir, base name must be: {TEST_DIR_BASE_NAME}'
-TEST_WORKING_DIR = os.getenv(TEST_HOME_VAR)
-assert os.path.basename(TEST_WORKING_DIR) == TEST_DIR_BASE_NAME, \
-    f'Base name of test home dir must be: {TEST_DIR_BASE_NAME}'
+TEST_WORKING_DIR = os.getenv(TEST_HOME_VAR, None)
+if not TEST_WORKING_DIR:
+    TEST_WORKING_DIR = os.path.join(os.getcwd(), TEST_DIR_BASE_NAME)
 
 TEST_MODELS_DIR = f'{TEST_WORKING_DIR}/models'
 
