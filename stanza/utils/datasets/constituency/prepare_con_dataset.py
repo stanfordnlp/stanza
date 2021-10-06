@@ -9,6 +9,10 @@ vlsp09 is the 2009 constituency treebank:
     Proceedings of The Third Linguistic Annotation Workshop
     In conjunction with ACL-IJCNLP 2009, Suntec City, Singapore, 2009
   This can be obtained by contacting vlsp.resources@gmail.com
+
+it_turin
+  A combination of Evalita competition from 2011 and the ParTUT trees
+  More information is available in convert_it_turin
 """
 
 import os
@@ -17,6 +21,7 @@ import sys
 import tempfile
 
 import stanza.utils.default_paths as default_paths
+from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
 
@@ -30,12 +35,22 @@ def process_vlsp09(paths):
         vtb_convert.convert_dir(vlsp_path, tmp_output_path)
         vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name)
 
+def process_it_turin(paths):
+    """
+    Convert the it_turin dataset
+    """
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "italian")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_it_turin(input_dir, output_dir)
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
     random.seed(1234)
 
-    if dataset_name == 'vi_vlsp09':
+    if dataset_name == 'it_turin':
+        process_it_turin(paths)
+    elif dataset_name == 'vi_vlsp09':
         process_vlsp09(paths)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
