@@ -226,6 +226,13 @@ def load_trees(filename, pipeline):
 
         tree = tree.prune_none().simplify_labels(CONSTITUENT_SPLIT)
 
+        if len(tree.children) > 1:
+            print("Found a tree with a non-unary root!  {}: {}".format(filename, tree))
+            continue
+        if tree.children[0].is_preterminal():
+            print("Found a tree with a single preterminal node!  {}: {}".format(filename, tree))
+            continue
+
         # The expectation is that the retagging will handle this anyway
         for pt in tree.preterminals():
             if not pt.label:
