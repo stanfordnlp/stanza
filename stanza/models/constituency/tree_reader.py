@@ -13,6 +13,36 @@ tqdm = utils.get_tqdm()
 OPEN_PAREN = "("
 CLOSE_PAREN = ")"
 
+# A few specific exception types to clarify parsing errors
+# They store the line number where the error occurred
+
+class UnclosedTreeError(ValueError):
+    """
+    A tree looked like (Foo
+    """
+    def __init__(self, line_num):
+        super().__init__("Found an unfinished tree (missing close brackets).  Tree started on line %d" % line_num)
+        self.line_num = line_num
+
+class UnlabeledTreeError(ValueError):
+    """
+    A tree had no label, such as ((Foo) (Bar))
+
+    This does not actually happen at the root, btw, as ROOT is silently added
+    """
+    def __init__(self, line_num):
+        super().__init__("Found a tree with no label on a node!  Line number %d" % line_num)
+        self.line_num = line_num
+
+class MixedTreeError(ValueError):
+    """
+    Leaf and constituent children are mixed in the same node
+    """
+    def __init__(self, line_num):
+        super().__init__("Found a tree with both text children and bracketed children!  Line number %d" % line_num)
+        self.line_num = line_num
+
+
 def recursive_open_tree(token_iterator, at_root, broken_ok):
     """
     Build a tree from the tokens in the token_iterator
@@ -22,6 +52,8 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
     children = []
 
     token = next(token_iterator, None)
+    if at_root:
+        token_iterator.set_mark()
     while token is not None:
         if token is OPEN_PAREN:
             children.append(recursive_open_tree(token_iterator, at_root=False, broken_ok=broken_ok))
@@ -32,7 +64,7 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
                 elif broken_ok:
                     return Tree(label=None, children=children)
                 else:
-                    raise ValueError("Found a tree with no label on a node!  Line number %d" % token_iterator.line_num)
+                    raise UnlabeledTreeError(token_iterator.line_num)
 
             pieces = " ".join(text).split()
             if len(pieces) == 1:
@@ -47,11 +79,12 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
                 if broken_ok:
                     return Tree(label=label, children=children + [Tree(label=child_label)])
                 else:
-                    raise ValueError("Found a tree with both text children and bracketed children!  Line number %d" % token_iterator.line_num)
+                    raise MixedTreeError(token_iterator.line_num)
             return Tree(label=label, children=Tree(label=child_label))
         else:
             text.append(token)
         token = next(token_iterator, None)
+    raise UnclosedTreeError(token_iterator.get_mark())
 
 def recursive_read_trees(token_iterator, broken_ok):
     """
@@ -64,7 +97,10 @@ def recursive_read_trees(token_iterator, broken_ok):
     token = next(token_iterator, None)
     while token:
         if token is OPEN_PAREN:
-            trees.append(recursive_open_tree(token_iterator, at_root=True, broken_ok=broken_ok))
+            next_tree = recursive_open_tree(token_iterator, at_root=True, broken_ok=broken_ok)
+            if next_tree is None:
+                raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
+            trees.append(next_tree)
             token = next(token_iterator, None)
             continue
 
@@ -92,6 +128,15 @@ class TokenIterator:
         else:
             self.line_iterator = iter(self.lines)
         self.token_iterator = iter([])
+        self.mark = None
+
+    def set_mark(self):
+        self.mark = self.line_num
+
+    def get_mark(self):
+        if self.mark is None:
+            raise ValueError("No mark set!")
+        return self.mark
 
     def __iter__(self):
         return self
