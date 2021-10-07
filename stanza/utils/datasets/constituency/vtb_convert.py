@@ -41,7 +41,6 @@ def convert_file(org_dir, new_dir):
             elif line == '<s>':
                 tree += '(ROOT '
                 reading_tree = True
-                # writer.write('(ROOT ')
             elif line == '</s>' and reading_tree:
                 tree += ')\n'
                 writer.write(tree)
