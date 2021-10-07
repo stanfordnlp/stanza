@@ -9,9 +9,36 @@ The script requires two arguments:
 2. New directory storing the converted trees
 """
 
-
 import os
 import argparse
+
+
+def is_closed_tree(tree):
+    """
+    Checks if the tree is properly closed
+    :param tree: tree as a string
+    :return: True if closed otherwise False
+    """
+    count = 0
+    for char in tree:
+        if char == '(':
+            count += 1
+        elif char == ')':
+            count -= 1
+    return count == 0
+
+
+def is_valid_line(line):
+    """
+    Check if a line being read is a valid constituent
+    :param line: constituent being read
+    :return: True if it has open and closing parenthesis. This can be done better with regex but requires extra
+    work and knowledge of the constituents tags
+    """
+    if line.startswith('(') and line.endswith(')'):
+        return True
+
+    return False
 
 
 def convert_file(org_dir, new_dir):
@@ -23,16 +50,34 @@ def convert_file(org_dir, new_dir):
     """
     with open(org_dir, 'r') as reader, open(new_dir, 'w') as writer:
         content = reader.readlines()
+        # Tree string will only be written if the currently read
+        # tree is a valid tree. It will not be written if it
+        # does not have a '(' that signifies the presence of constituents
+        tree = ""
+        reading_tree = False
         for line in content:
             line = ' '.join(line.split())
             if line == '':
                 continue
             elif line == '<s>':
-                writer.write('(ROOT ')
-            elif line == '</s>':
-                writer.write(')\n')
+                tree = ""
+                tree += '(ROOT '
+                reading_tree = True
+            elif line == '</s>' and reading_tree:
+                tree += ')\n'
+                if not is_closed_tree(tree):
+                    tree = ""
+                    continue
+                writer.write(tree)
+                reading_tree = False
+                tree = ""
             else:
-                writer.write(line)
+                if is_valid_line(line) and reading_tree:
+                    tree += line
+                else:
+                    tree = ""
+                    reading_tree = False
+
 
 def convert_dir(org_dir, new_dir):
     for filename in os.listdir(org_dir):
@@ -72,6 +117,7 @@ def main():
     new_dir = args.new_dir
 
     convert_dir(org_dir, new_dir)
+
 
 if __name__ == '__main__':
     main()
