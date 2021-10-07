@@ -1,5 +1,6 @@
 import pytest
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.tree_reader import MixedTreeError, UnclosedTreeError, UnlabeledTreeError
 
 from stanza.tests import *
 
@@ -59,3 +60,44 @@ def test_one_word():
 
     assert trees[1].is_leaf()
     assert trees[1].label == 'BAR'
+
+def test_missing_close_parens():
+    """
+    Test the unclosed error condition
+    """
+    text = "(Foo) \n (Bar \n zzz"
+    try:
+        trees = tree_reader.read_trees(text)
+        raise AssertionError("Expected an exception")
+    except UnclosedTreeError as e:
+        assert e.line_num == 1
+
+def test_mixed_tree():
+    """
+    Test the mixed error condition
+    """
+    text = "(Foo) \n (Bar) \n (Unban (Mox) Opal)"
+    try:
+        trees = tree_reader.read_trees(text)
+        raise AssertionError("Expected an exception")
+    except MixedTreeError as e:
+        assert e.line_num == 2
+
+    trees = tree_reader.read_trees(text, broken_ok=True)
+    assert len(trees) == 3
+
+def test_unlabeled_tree():
+    """
+    Test the unlabeled error condition
+    """
+    text = "(ROOT ((Foo) (Bar)))"
+    try:
+        trees = tree_reader.read_trees(text)
+        raise AssertionError("Expected an exception")
+    except UnlabeledTreeError as e:
+        assert e.line_num == 0
+
+    trees = tree_reader.read_trees(text, broken_ok=True)
+    assert len(trees) == 1
+
+    
