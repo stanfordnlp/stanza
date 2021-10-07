@@ -9,9 +9,15 @@ The script requires two arguments:
 2. New directory storing the converted trees
 """
 
-
 import os
 import argparse
+
+
+def is_valid_line(line):
+    if line.startswith('(') and line.endswith(')'):
+        return True
+
+    return False
 
 
 def convert_file(org_dir, new_dir):
@@ -23,16 +29,31 @@ def convert_file(org_dir, new_dir):
     """
     with open(org_dir, 'r') as reader, open(new_dir, 'w') as writer:
         content = reader.readlines()
+        # Tree string will only be written if the currently read
+        # tree is a valid tree. It will not be written if it
+        # does not have a '(' that signifies the presence of constituents
+        tree = ""
+        reading_tree = False
         for line in content:
             line = ' '.join(line.split())
             if line == '':
                 continue
             elif line == '<s>':
-                writer.write('(ROOT ')
-            elif line == '</s>':
-                writer.write(')\n')
+                tree += '(ROOT '
+                reading_tree = True
+                # writer.write('(ROOT ')
+            elif line == '</s>' and reading_tree:
+                tree += ')\n'
+                writer.write(tree)
+                reading_tree = False
+                tree = ""
             else:
-                writer.write(line)
+                if is_valid_line(line):
+                    tree += line
+                else:
+                    tree = ""
+                    reading_tree = False
+
 
 def convert_dir(org_dir, new_dir):
     for filename in os.listdir(org_dir):
@@ -72,6 +93,7 @@ def main():
     new_dir = args.new_dir
 
     convert_dir(org_dir, new_dir)
+
 
 if __name__ == '__main__':
     main()
