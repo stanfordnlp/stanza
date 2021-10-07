@@ -13,7 +13,34 @@ import os
 import argparse
 
 
+def is_closed_tree(tree):
+    """
+    Checks if the tree is properly closed
+    :param tree: tree as a string
+    :return: True if closed otherwise False
+    """
+    stack = []
+    for char in tree:
+        if char == '(':
+            stack.append(char)
+        elif char == ')':
+            if len(stack) > 0 and stack[-1] == '(':
+                stack.pop()
+            else:
+                return False
+    if len(stack) == 0:
+        return True
+    else:
+        return False
+
+
 def is_valid_line(line):
+    """
+    Check if a line being read is a valid constituent
+    :param line: constituent being read
+    :return: True if it has open and closing parenthesis. This can be done better with regex but requires extra
+    work and knowledge of the constituents tags
+    """
     if line.startswith('(') and line.endswith(')'):
         return True
 
@@ -39,15 +66,19 @@ def convert_file(org_dir, new_dir):
             if line == '':
                 continue
             elif line == '<s>':
+                tree = ""
                 tree += '(ROOT '
                 reading_tree = True
             elif line == '</s>' and reading_tree:
                 tree += ')\n'
+                if not is_closed_tree(tree):
+                    tree = ""
+                    continue
                 writer.write(tree)
                 reading_tree = False
                 tree = ""
             else:
-                if is_valid_line(line):
+                if is_valid_line(line) and reading_tree:
                     tree += line
                 else:
                     tree = ""
