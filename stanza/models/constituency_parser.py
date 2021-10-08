@@ -123,8 +123,9 @@ def parse_args(args=None):
     # larger was more effective, up to a point
     parser.add_argument('--hidden_size', type=int, default=128, help="Size of the output layers for constituency stack and word queue")
 
-    parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('--eval_interval', type=int, default=5000)
+    parser.add_argument('--epochs', type=int, default=2000)
+    parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
+
     # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
     #  30: 0.9085
@@ -201,7 +202,7 @@ def parse_args(args=None):
     # another (with a different structure) had 850 iterations
     # True:     0.9155
     # False:    0.9149
-    parser.add_argument('--combined_dummy_embedding', default=False, action='store_true', help="Use the same embedding for dummy nodes and the vectors used when combining constituents")
+    parser.add_argument('--combined_dummy_embedding', default=True, action='store_true', help="Use the same embedding for dummy nodes and the vectors used when combining constituents")
     parser.add_argument('--no_combined_dummy_embedding', dest='combined_dummy_embedding', action='store_false', help="Don't use the same embedding for dummy nodes and the vectors used when combining constituents")
 
     # relu gave at least 1 F1 improvement over tanh in various experiments

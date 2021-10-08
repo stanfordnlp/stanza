@@ -381,6 +381,10 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     model.train()
 
     train_data = list(zip(train_trees, train_sequences))
+
+    if not args['epoch_size']:
+        args['epoch_size'] = len(train_data)
+
     leftover_training_data = []
     best_f1 = 0.0
     best_epoch = 0
@@ -388,11 +392,11 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         model.train()
         logger.info("Starting epoch %d", epoch)
         epoch_data = leftover_training_data
-        while len(epoch_data) < args['eval_interval']:
+        while len(epoch_data) < args['epoch_size']:
             random.shuffle(train_data)
             epoch_data.extend(train_data)
-        leftover_training_data = epoch_data[args['eval_interval']:]
-        epoch_data = epoch_data[:args['eval_interval']]
+        leftover_training_data = epoch_data[args['epoch_size']:]
+        epoch_data = epoch_data[:args['epoch_size']]
         epoch_data.sort(key=lambda x: len(x[1]))
         interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
         random.shuffle(interval_starts)
