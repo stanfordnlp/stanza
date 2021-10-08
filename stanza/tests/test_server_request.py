@@ -3,6 +3,7 @@ Tests for setting request properties of servers
 """
 
 import json
+import os
 import pytest
 import stanza.server as corenlp
 
@@ -147,7 +148,17 @@ advmod(jours-13, tôt-15)
 punct(fait-4, .-16)
 """
 
-FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json').read())
+# Try to load the FRENCH_JSON_GOLD example for testing.
+# If the test working directory is not setup, it will default to the stanza/tests/data folder
+try:
+  FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json').read())
+except FileNotFoundError:
+  TEST_WORKING_DIR = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    'data',
+    )
+  FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/example_french.json').read())
+
 
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 

@@ -1,0 +1,18 @@
+[tool.pytest.ini_options]
+
+addopts = "--ignore-glob='*iterate_test*'"
+
+filterwarnings = [
+    'ignore:the imp module is deprecated in favour of importlib:DeprecationWarning',
+    'ignore:Using or importing the ABCs from:DeprecationWarning'
+]
+
+markers = [
+    "travis",
+    "pipeline",
+    "client",
+]
+
+norecursedirs= [
+    '/stanza/',
+]
