@@ -147,7 +147,7 @@ advmod(jours-13, tôt-15)
 punct(fait-4, .-16)
 """
 
-FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json').read())
+FRENCH_JSON_GOLD = json.loads(open(f'{TEST_WORKING_DIR}/out/example_french.json', encoding="utf-8").read())
 
 ES_DOC = 'Andrés Manuel López Obrador es el presidente de México.'
 
@@ -197,7 +197,7 @@ def corenlp_client():
 def test_basic(corenlp_client):
     """ Basic test of making a request, test default output format is a Document """
     ann = corenlp_client.annotate(EN_DOC, output_format="text")
-    assert ann.strip() == EN_DOC_GOLD.strip()
+    compare_ignoring_whitespace(ann, EN_DOC_GOLD)
     ann = corenlp_client.annotate(EN_DOC)
     assert isinstance(ann, Document)
 
@@ -205,9 +205,9 @@ def test_basic(corenlp_client):
 def test_python_dict(corenlp_client):
     """ Test using a Python dictionary to specify all request properties """
     ann = corenlp_client.annotate(ES_DOC, properties=ES_PROPS, output_format="text")
-    assert ann.strip() == ES_PROPS_GOLD.strip()
+    compare_ignoring_whitespace(ann, ES_PROPS_GOLD)
     ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_CUSTOM_PROPS)
-    assert ann.strip() == FRENCH_CUSTOM_GOLD.strip()
+    compare_ignoring_whitespace(ann, FRENCH_CUSTOM_GOLD)
 
 
 def test_lang_setting(corenlp_client):
@@ -220,4 +220,4 @@ def test_annotators_and_output_format(corenlp_client):
     """ Test setting the annotators and output_format """
     ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_EXTRA_PROPS,
                                   annotators="tokenize,ssplit,mwt,pos", output_format="json")
-    assert FRENCH_JSON_GOLD == ann
+    assert ann == FRENCH_JSON_GOLD
