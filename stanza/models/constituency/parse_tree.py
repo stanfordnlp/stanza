@@ -17,6 +17,8 @@ EMPTY_CHILDREN = ()
 
 CONSTITUENT_SPLIT = re.compile("[-=#]")
 
+WORDS_TO_PRUNE = ('*E*', '*T*')
+
 class Tree(StanzaObject):
     """
     A data structure to represent a parse tree
@@ -293,7 +295,7 @@ class Tree(StanzaObject):
         if self.is_leaf():
             return Tree(self.label)
         if self.is_preterminal():
-            if self.label == '-NONE-' or self.label == '*E*':
+            if self.label == '-NONE-' or self.children[0].label in WORDS_TO_PRUNE:
                 return None
             return Tree(self.label, Tree(self.children[0].label))
         # must be internal node
