@@ -72,37 +72,35 @@ def split_files(org_dir, split_dir, short_name=None):
 
     # Create train_path, dev_path, test_path
     train_path, dev_path, test_path = create_paths(split_dir, short_name)
+    output_names = (train_path, dev_path, test_path)
 
     # Set up the number of samples for each train/dev/test set
     num_samples = get_num_samples(org_dir, file_names)
     stop_train = int(num_samples * 0.7)
     stop_dev = int(num_samples * 0.85)
+    output_limits = (stop_train, stop_dev, num_samples)
 
-    # Write directory and write count
-    write_dir = train_path
+    # Count how much stuff we've written.
+    # We will switch to the next output file when we're written enough
     count = 0
 
-    # Loop through the files, which then loop through the trees and write to write_dir
-    for filename in file_names:
-        # Skip files that are not .mrg
-        if not filename.endswith('.mrg'):
-            continue
-        # File is .mrg. Start processing
-        file_dir = os.path.join(org_dir, filename)
-        with open(file_dir, 'r') as reader, open(write_dir, 'a') as writer:
-            content = reader.readlines()
-            for line in content:
-                # Write to write_dir
-                writer.write(line)
-                # Check current count to switch write_dir
-                count += 1
-                # Switch to writing dev set
-                if count > stop_train:
-                    write_dir = dev_path
-                # Switch to writing test set
-                if count > stop_dev:
-                    write_dir = test_path
-
+    filename_iter = iter(file_names)
+    for write_path, count_limit in zip(output_names, output_limits):
+        with open(write_path, 'w') as writer:
+            # Loop through the files, which then loop through the trees and write to write_path
+            while count < count_limit:
+                filename = next(filename_iter, None)
+                # Skip files that are not .mrg
+                if not filename.endswith('.mrg'):
+                    continue
+                # File is .mrg. Start processing
+                file_dir = os.path.join(org_dir, filename)
+                with open(file_dir, 'r') as reader:
+                    content = reader.readlines()
+                    for line in content:
+                        # Write to write_dir
+                        writer.write(line)
+                        count += 1
 
 def main():
     """
