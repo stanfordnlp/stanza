@@ -1,4 +1,5 @@
 import argparse
+import glob
 import logging
 import os
 import pathlib
@@ -10,6 +11,7 @@ import tempfile
 from enum import Enum
 
 from stanza.models.common.constant import treebank_to_short_name
+from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
 from stanza.utils import conll18_ud_eval as ud_eval
@@ -131,3 +133,17 @@ def run_eval_script_pos(eval_gold, eval_pred):
 
 def run_eval_script_depparse(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["UAS", "LAS", "CLAS", "MLAS", "BLEX"])
+
+
+def find_wordvec_pretrain(language):
+    # TODO: try to extract/remember the specific pretrain for the given model
+    # That would be a good way to archive which pretrains are used for which NER models, anyway
+    pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
+    pretrains = glob.glob(pretrain_path)
+    if len(pretrains) == 0:
+        raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_path to specify a .pt file to use")
+    if len(pretrains) > 1:
+        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Must specify an exact path to a --wordvec_pretrain_file")
+    pretrain = pretrains[0]
+    logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
+    return pretrain
