@@ -36,6 +36,11 @@ A couple experiments which have been tried with little noticeable impact:
     and is a little slower
   - Using multiple layers of LSTM hidden state for the input to the final
     classification layers didn't help
+  - Initializing Linear layers with He initialization and a positive bias
+    (to avoid dead connections) had no noticeable effect on accuracy
+    0.8396 on it_turin with the original initialization
+    0.8401 and 0.8427 on two runs with updated initialization
+    (so maybe a small improvement...)
 
 The code breakdown is as follows:
 
