@@ -44,9 +44,12 @@ def retag_trees(trees, pipeline, xpos=True):
     Returns a list of new trees
     """
     sentences = []
-    for tree in trees:
-        tokens = [{TEXT: pt.children[0].label} for pt in tree.preterminals()]
-        sentences.append(tokens)
+    try:
+        for idx, tree in enumerate(trees):
+            tokens = [{TEXT: pt.children[0].label} for pt in tree.preterminals()]
+            sentences.append(tokens)
+    except ValueError as e:
+        raise ValueError("Unable to process tree %d" % idx) from e
 
     doc = Document(sentences)
     doc = pipeline(doc)
