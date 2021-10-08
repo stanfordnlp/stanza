@@ -64,10 +64,20 @@ def convert_file(org_dir, new_dir):
                 tree += '(ROOT '
                 reading_tree = True
             elif line == '</s>' and reading_tree:
+                # one tree in 25432.prd is not valid because
+                # it is just a bunch of blank lines
+                if tree.strip() == '(ROOT':
+                    tree = ""
+                    continue
                 tree += ')\n'
                 if not is_closed_tree(tree):
                     tree = ""
                     continue
+                # TODO: this eliminates 5 trees.  maybe those
+                # trees can be salvaged?
+                if tree.find("WP") >= 0:
+                    continue
+                tree = tree.replace("SE-SPL", "S-SPL")
                 writer.write(tree)
                 reading_tree = False
                 tree = ""
