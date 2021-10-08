@@ -19,19 +19,13 @@ def is_closed_tree(tree):
     :param tree: tree as a string
     :return: True if closed otherwise False
     """
-    stack = []
+    count = 0
     for char in tree:
         if char == '(':
-            stack.append(char)
+            count += 1
         elif char == ')':
-            if len(stack) > 0 and stack[-1] == '(':
-                stack.pop()
-            else:
-                return False
-    if len(stack) == 0:
-        return True
-    else:
-        return False
+            count -= 1
+    return count == 0
 
 
 def is_valid_line(line):
