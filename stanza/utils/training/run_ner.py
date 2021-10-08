@@ -19,14 +19,13 @@ have licenses which must be agreed to, so no attempt is made to
 automatically download the data.
 """
 
-import glob
 import logging
 import os
 
 from stanza.models import ner_tagger
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, ner_charlms
 from stanza.resources.common import DEFAULT_MODEL_DIR
@@ -56,19 +55,6 @@ def find_charlm(direction, language, charlm):
         return resource_path
 
     raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}")
-
-def find_wordvec_pretrain(language):
-    # TODO: try to extract/remember the specific pretrain for the given model
-    # That would be a good way to archive which pretrains are used for which NER models, anyway
-    pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
-    pretrains = glob.glob(pretrain_path)
-    if len(pretrains) == 0:
-        raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_path to specify a .pt file to use")
-    if len(pretrains) > 1:
-        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Must specify an exact path to a --wordvec_pretrain_file")
-    pretrain = pretrains[0]
-    logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
-    return pretrain
 
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
