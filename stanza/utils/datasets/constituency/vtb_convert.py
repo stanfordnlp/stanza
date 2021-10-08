@@ -1,5 +1,6 @@
 """
 Script for processing the VTB files and turning their trees into the desired tree syntax
+
 The VTB original trees are stored in the directory:
 VietTreebank_VLSP_SP73/Kho ngu lieu 10000 cay cu phap
 The script requires two arguments:
@@ -111,7 +112,8 @@ def convert_dir(org_dir, new_dir):
 
 def main():
     """
-    Main function for the script
+    Converts files from the 2009 version of VLSP to .mrg files
+    
     Process args, loop through each file in the directory and convert
     to the desired tree format
     """
