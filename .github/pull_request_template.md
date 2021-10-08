@@ -1,6 +1,6 @@
 **BEFORE YOU START**: please make sure your pull request is against the `dev` branch. 
-We cannot accept pull requests against the `master` branch. 
-See our [contributing guide](https://github.com/stanfordnlp/stanza/blob/master/CONTRIBUTING.md) for details.
+We cannot accept pull requests against the `main` branch. 
+See our [contributing guide](https://github.com/stanfordnlp/stanza/blob/main/CONTRIBUTING.md) for details.
 
 ## Description
 A brief and concise description of what your pull request is trying to accomplish.
