@@ -3,7 +3,6 @@ Script for processing the VTB files and turning their trees into the desired tre
 
 The VTB original trees are stored in the directory:
 VietTreebank_VLSP_SP73/Kho ngu lieu 10000 cay cu phap
-
 The script requires two arguments:
 1. Original directory storing the original trees
 2. New directory storing the converted trees
@@ -11,6 +10,15 @@ The script requires two arguments:
 
 import os
 import argparse
+
+
+def unify_label(tree):
+    old = ['(MPD', '(MP ', '(MP(', '(NPDOB', '(NPTMP', '(PPLOC', '(SBA', '(SBAS', '(SE-SPL']
+    new = ['(MDP', '(M ', '(M(', '(NP-DOB', '(NP-TMP', '(PP-LOC', '(SBAR', '(SBAR', '(S-SPL']
+    for old, new in zip(old, new):
+        tree = tree.replace(old, new)
+
+    return tree
 
 
 def is_closed_tree(tree):
@@ -45,7 +53,6 @@ def convert_file(org_dir, new_dir):
     """
     :param org_dir: original directory storing original trees
     :param new_dir: new directory storing formatted constituency trees
-
     This function writes new trees to the corresponding files in new_dir
     """
     with open(org_dir, 'r') as reader, open(new_dir, 'w') as writer:
@@ -77,7 +84,8 @@ def convert_file(org_dir, new_dir):
                 # trees can be salvaged?
                 if tree.find("WP") >= 0:
                     continue
-                tree = tree.replace("SE-SPL", "S-SPL")
+                # Unify the labels
+                tree = unify_label(tree)
                 writer.write(tree)
                 reading_tree = False
                 tree = ""
@@ -104,8 +112,8 @@ def convert_dir(org_dir, new_dir):
 
 def main():
     """
-    Main function for the script
-
+    Converts files from the 2009 version of VLSP to .mrg files
+    
     Process args, loop through each file in the directory and convert
     to the desired tree format
     """
