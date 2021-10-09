@@ -217,8 +217,9 @@ def load_conllu(file):
                     word.parent.functional_children.append(word)
 
             # Check there is a single root node
-            if len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
-                raise UDError("There are multiple roots in a sentence")
+            num_roots = len([word for word in ud.words[sentence_start:] if word.parent is None])
+            if num_roots != 1:
+                raise UDError("There are %d roots in a sentence" % num_roots)
 
             # End the sentence
             ud.sentences[-1].end = index
