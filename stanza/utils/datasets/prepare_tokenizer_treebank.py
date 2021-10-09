@@ -34,6 +34,7 @@ from collections import Counter
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
+import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
 import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
 import stanza.utils.datasets.tokenization.convert_th_lst20 as convert_th_lst20
@@ -1066,7 +1067,9 @@ def process_treebank(treebank, paths, args):
 
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    if short_name == "vi_vlsp":
+    if short_name == "my_alt":
+        convert_my_alt.convert_my_alt(paths["CONSTITUENCY_BASE"], tokenizer_dir)
+    elif short_name == "vi_vlsp":
         convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_orchid":
         convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
