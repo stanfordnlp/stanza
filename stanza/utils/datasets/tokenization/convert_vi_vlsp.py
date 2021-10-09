@@ -40,6 +40,8 @@ def find_spaces(sentence):
 def add_vlsp_args(parser):
     parser.add_argument('--include_pos_data', action='store_true', default=False, help='To include or not POS training dataset for tokenization training. The path to POS dataset is expected to be in the same dir with WS path. For example, extern_dir/vietnamese/VLSP2013-POS-data')
     parser.add_argument('--vlsp_include_spaces', action='store_true', default=False, help='When processing vi_vlsp tokenization, include all of the spaces.  Otherwise, we try to turn the text back into standard text')
+
+
 def write_file(vlsp_include_spaces, output_filename, sentences, shard):
     with open(output_filename, "w") as fout:
         check_headlines = False
