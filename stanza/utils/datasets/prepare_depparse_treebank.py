@@ -31,7 +31,7 @@ def add_specific_args(parser):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
 
 
-def process_treebank(treebank, paths, args):
+def process_treebank(treebank, paths, args) -> None:
     if args.tag_method is Tags.GOLD:
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
@@ -59,13 +59,12 @@ def process_treebank(treebank, paths, args):
 
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"], retag_dataset)
     else:
-        raise ValueError("Unknown tags method: {}".format(arg.tag_method))
+        raise ValueError("Unknown tags method: {}".format(args.tag_method))
 
 
-def main():
+def main() -> None:
     common.main(process_treebank, add_specific_args)
+
 
 if __name__ == '__main__':
     main()
-
-
