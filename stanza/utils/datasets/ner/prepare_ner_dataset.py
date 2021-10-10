@@ -93,6 +93,14 @@ NCHLT produced NER datasets for many African languages.
   - Xitsonga:   https://repo.sadilar.org/handle/20.500.12185/362
   Agree to the license, download the zip, and unzip it in
   $NERBASE/NCHLT
+
+UCSY built a Myanmar dataset.  They have not made it publicly
+  available, but they did make it available to Stanford for research
+  purposes.  Contact Chris Manning or John Bauer for the data files if
+  you are Stanford affiliated.
+  - https://arxiv.org/abs/1903.04739
+  - Syllable-based Neural Named Entity Recognition for Myanmar Language
+    by Hsu Myat Mo and Khin Mar Soe
 """
 
 import glob
@@ -110,6 +118,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
@@ -390,6 +399,14 @@ def process_nchlt(paths, short_name):
     split_wikiner(base_output_path, input_files[0], prefix=short_name, remap={"OUT": "O"})
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_my_ucsy(paths):
+    language = "my"
+    short_name = "my_ucsy"
+
+    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_my_ucsy.convert_my_ucsy(base_input_path, base_output_path)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -416,6 +433,8 @@ def main(dataset_name):
         process_hu_combined(paths)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
+    elif dataset_name == 'my_ucsy':
+        process_my_ucsy(paths)
     elif dataset_name.endswith("_nchlt"):
         process_nchlt(paths, dataset_name)
     else:
