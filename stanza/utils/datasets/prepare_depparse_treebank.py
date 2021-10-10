@@ -21,12 +21,15 @@ logger = logging.getLogger('stanza')
 
 
 class Tags(Enum):
+    """Tags parameter values."""
+
     GOLD = 1
     PREDICTED = 2
 
 
 # fmt: off
 def add_specific_args(parser) -> None:
+    """Add specific args."""
     parser.add_argument("--gold", dest='tag_method', action='store_const', const=Tags.GOLD, default=Tags.PREDICTED,
                         help='Use gold tags for building the depparse data')
     parser.add_argument("--predicted", dest='tag_method', action='store_const', const=Tags.PREDICTED,
@@ -37,6 +40,7 @@ def add_specific_args(parser) -> None:
 
 
 def process_treebank(treebank, paths, args) -> None:
+    """Process treebank."""
     if args.tag_method is Tags.GOLD:
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
@@ -72,6 +76,7 @@ def process_treebank(treebank, paths, args) -> None:
 
 
 def main() -> None:
+    """Call Process Treebank."""
     common.main(process_treebank, add_specific_args)
 
 
