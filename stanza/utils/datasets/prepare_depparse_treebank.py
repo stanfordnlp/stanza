@@ -19,9 +19,11 @@ from stanza.utils.training.run_pos import pos_batch_size, wordvec_args
 
 logger = logging.getLogger('stanza')
 
+
 class Tags(Enum):
     GOLD = 1
     PREDICTED = 2
+
 
 # fmt: off
 def add_specific_args(parser) -> None:
@@ -29,8 +31,10 @@ def add_specific_args(parser) -> None:
                         help='Use gold tags for building the depparse data')
     parser.add_argument("--predicted", dest='tag_method', action='store_const', const=Tags.PREDICTED,
                         help='Use predicted tags for building the depparse data')
-    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None,
+                        help='Exact name of the pretrain file to read')
 # fmt: on
+
 
 def process_treebank(treebank, paths, args) -> None:
     if args.tag_method is Tags.GOLD:
@@ -70,7 +74,6 @@ def process_treebank(treebank, paths, args) -> None:
 def main() -> None:
     common.main(process_treebank, add_specific_args)
 
+
 if __name__ == '__main__':
     main()
-
-
