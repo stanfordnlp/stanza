@@ -16,10 +16,6 @@ FBK in Italy produced an Italian dataset.
   The processing here is for a combined .tsv file they sent us.
   - prepare_ner_dataset.py it_fbk
 
-FBK in Italy produced an Italian dataset.
-  The processing here is for a combined .tsv file they sent us.
-  - prepare_ner_dataset.py it_fbk
-
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
     http://ltrc.iiit.ac.in/ner-ssea-08/index.cgi?topic=3
