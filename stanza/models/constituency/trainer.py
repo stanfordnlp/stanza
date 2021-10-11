@@ -311,6 +311,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         model = LSTMModel(pt, forward_charlm, backward_charlm, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
         if args['cuda']:
             model.cuda()
+        logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
 
         optimizer = build_optimizer(args, model)
 
