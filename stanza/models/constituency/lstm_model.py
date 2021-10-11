@@ -144,6 +144,9 @@ class LSTMModel(BaseModel, nn.Module):
         # hidden_size * 2 output with the front and back lstms concatenated.
         # this transforms it into hidden_size with the values mixed together
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
+        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+            nn.init.kaiming_normal_(self.word_to_constituent.weight, nonlinearity=self.args['nonlinearity'])
+            nn.init.uniform_(self.word_to_constituent.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
 
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers, dropout=self.lstm_layer_dropout)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
@@ -178,6 +181,9 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
+        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+            nn.init.kaiming_normal_(self.reduce_linear.weight, nonlinearity=self.args['nonlinearity'])
+            nn.init.uniform_(self.reduce_linear.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
 
         self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
 
@@ -192,6 +198,10 @@ class LSTMModel(BaseModel, nn.Module):
         predict_output_size = [self.hidden_size] * middle_layers + [len(transitions)]
         self.output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
                                             for input_size, output_size in zip(predict_input_size, predict_output_size)])
+        for output_layer, input_size in zip(self.output_layers, predict_input_size):
+            if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+                nn.init.kaiming_normal_(output_layer.weight, nonlinearity=self.args['nonlinearity'])
+                nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
 
         self.constituency_lstm = self.args['constituency_lstm']
 
