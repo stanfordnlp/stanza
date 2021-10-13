@@ -35,6 +35,10 @@ def get_default_paths():
         # with some data for different languages
         "HANDPARSED_DIR": "extern_data/handparsed-treebank",
 
+        # directory with the contents of https://nlp.stanford.edu/projects/stanza/bio/
+        # on the cluster, for example, /u/nlp/software/stanza/bio_ud
+        "BIO_UD_DIR": "extern_data/bio",
+
         # data root for other general input files, such as VI_VLSP
         "EXTERN_DIR": "extern_data",
     }
