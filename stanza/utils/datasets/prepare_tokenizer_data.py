@@ -34,7 +34,6 @@ def find_next_word(index, text, word, output):
     """
     idx = 0
     word_sofar = ''
-    yeah=False
     while index < len(text) and idx < len(word):
         para_break, break_len = is_para_break(index, text)
         if para_break:
