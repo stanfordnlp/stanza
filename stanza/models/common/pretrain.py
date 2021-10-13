@@ -52,14 +52,20 @@ class Pretrain:
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
                 logger.debug("Loaded pretrain from {}".format(self.filename))
+                if 'emb' not in data or 'vocab' not in data:
+                    raise RuntimeError("File {} exists but is not a stanza pretrain file".format(self.filename))
                 self._vocab, self._emb = PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
                 return
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
-                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
+                if not self._vec_filename:
+                    raise
+                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}\nAttempting to fall back to {}".format(self.filename, e, self._vec_filename))
                 vocab, emb = self.read_pretrain()
         else:
+            if not self._vec_filename:
+                raise FileNotFoundError("Pretrained file {} does not exist, and no text/xz file was provided".format(self.filename))
             if self.filename is not None:
                 logger.info("Pretrained filename %s specified, but file does not exist.  Attempting to load from text file" % self.filename)
             vocab, emb = self.read_pretrain()
