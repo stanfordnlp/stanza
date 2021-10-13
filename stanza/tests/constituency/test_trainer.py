@@ -50,9 +50,9 @@ TREEBANK = """
 def pt():
     return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
 
-def build_trainer(pt, *args):
+def build_trainer(pt, *args, treebank=TREEBANK):
     # TODO: build a fake embedding some other way?
-    train_trees = tree_reader.read_trees(TREEBANK)
+    train_trees = tree_reader.read_trees(treebank)
     dev_trees = train_trees[-1:]
 
     args = constituency_parser.parse_args(args)
