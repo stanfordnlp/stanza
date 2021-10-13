@@ -855,7 +855,6 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
     sents = strip_mwt_from_sentences(sents)
     return sents
 
-
 def replace_semicolons(sentences):
     """
     Spanish GSD and AnCora have different standards for semicolons.
@@ -927,6 +926,29 @@ def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name
         sents = build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
         if dataset == 'train' and augment:
             sents = augment_punct(sents)
+        write_sentences_to_conllu(output_conllu, sents)
+
+BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
+
+def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
+    """
+    Process the en bio datasets
+
+    Creates a dataset by combining the en_combined data with one of the bio sets
+    """
+    random.seed(1234)
+    name, bio_dataset = short_name.split("_")
+    assert name == 'en'
+    for dataset in ("train", "dev", "test"):
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        if dataset == 'train':
+            sents = build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
+            if dataset == 'train' and augment:
+                sents = augment_punct(sents)
+        else:
+            sents = []
+        bio_file = os.path.join(paths["BIO_UD_DIR"], "UD_English-%s" % bio_dataset.upper(), "en_%s-ud-%s.conllu" % (bio_dataset.lower(), dataset))
+        sents.extend(read_sentences_from_conllu(bio_file))
         write_sentences_to_conllu(output_conllu, sents)
 
 def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment):
@@ -1024,6 +1046,7 @@ def add_specific_args(parser):
     convert_th_lst20.add_lst20_args(parser)
 
     convert_vi_vlsp.add_vlsp_args(parser)
+
 def process_treebank(treebank, paths, args):
     """
     Processes a single treebank into train, dev, test parts
@@ -1053,8 +1076,10 @@ def process_treebank(treebank, paths, args):
         convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
-    elif short_name in ("it_combined", "en_combined", "es_combined"):
+    elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
         build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
+    elif short_name in BIO_DATASETS:
+        build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
