@@ -81,6 +81,7 @@ lcode2lang = {
     "gun": "Mbya_Guarani",
     "mdf": "Moksha",
     "myu": "Munduruku",
+    "my": "Myanmar",
     "pcm": "Naija",
     "nyq": "Nayini",
     "sme": "North_Sami",
