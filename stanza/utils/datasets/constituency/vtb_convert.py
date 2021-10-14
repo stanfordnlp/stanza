@@ -8,14 +8,50 @@ The script requires two arguments:
 2. New directory storing the converted trees
 """
 
-import os
 import argparse
+import os
 
+from collections import Counter
+
+from stanza.models.constituency.tree_reader import read_trees, MixedTreeError
+
+REMAPPING = {
+    '(MPD':     '(MDP',
+    '(MP ':     '(M ',
+    '(MP(':     '(M(',
+    '(Np(':     '(NP(',
+    '(Np (':    '(NP (',
+    '(NLOC':    '(NP-LOC',
+    '(N-P-LOC': '(NP-LOC',
+    '(NPDOB':   '(NP-DOB',
+    '(NPSUB':   '(NP-SUB',
+    '(NPTMP':   '(NP-TMP',
+    '(PPLOC':   '(PP-LOC',
+    '(SBA ':    '(SBAR ',
+    '(SBA-':    '(SBAR-',
+    '(SBA(':    '(SBAR(',
+    '(SBAS':    '(SBAR',
+    '(SABR':    '(SBAR',
+    '(SE-SPL':  '(S-SPL',
+    '(SBARR':   '(SBAR',
+    'PPADV':    'PP-ADV',
+    '(PR':      '(PP',
+    '(PPP':     '(PP',
+    'VP0ADV':   'VP-ADV',
+    '(S1':      '(S',
+    '(S2':      '(S',
+    '(S3':      '(S',
+    'BP-SUB':   'NP-SUB',
+    'APPPD':    'AP-PPD',
+    'APPRD':    'AP-PPD',
+    'Np--H':    'Np-H',
+    '(WHRPP':   '(WHRP',
+    # the only PV tags are after S, so this should be the right conversion
+    '(PV':     '(S-PV',
+}
 
 def unify_label(tree):
-    old = ['(MPD', '(MP ', '(MP(', '(NPDOB', '(NPTMP', '(PPLOC', '(SBA', '(SBAS', '(SE-SPL']
-    new = ['(MDP', '(M ', '(M(', '(NP-DOB', '(NP-TMP', '(PP-LOC', '(SBAR', '(SBAR', '(S-SPL']
-    for old, new in zip(old, new):
+    for old, new in REMAPPING.items():
         tree = tree.replace(old, new)
 
     return tree
@@ -39,23 +75,29 @@ def is_closed_tree(tree):
 def is_valid_line(line):
     """
     Check if a line being read is a valid constituent
+
+    The idea is that some "trees" are just a long list of words with
+    no tree structure and need to be eliminated.
+
     :param line: constituent being read
-    :return: True if it has open and closing parenthesis. This can be done better with regex but requires extra
-    work and knowledge of the constituents tags
+    :return: True if it has open OR closing parenthesis.
     """
-    if line.startswith('(') and line.endswith(')'):
+    if line.startswith('(') or line.endswith(')'):
         return True
 
     return False
 
+# not clear if TP is supposed to be NP or PP - needs a native speaker to decode
+WEIRD_LABELS = ["WP", "YP", "SNP", "STC", "UPC", "(TP"]
 
-def convert_file(org_dir, new_dir):
+def convert_file(orig_file, new_file):
     """
-    :param org_dir: original directory storing original trees
-    :param new_dir: new directory storing formatted constituency trees
-    This function writes new trees to the corresponding files in new_dir
+    :param orig_file: original directory storing original trees
+    :param new_file: new directory storing formatted constituency trees
+    This function writes new trees to the corresponding files in new_file
     """
-    with open(org_dir, 'r') as reader, open(new_dir, 'w') as writer:
+    errors = Counter()
+    with open(orig_file, 'r') as reader, open(new_file, 'w') as writer:
         content = reader.readlines()
         # Tree string will only be written if the currently read
         # tree is a valid tree. It will not be written if it
@@ -75,29 +117,49 @@ def convert_file(org_dir, new_dir):
                 # it is just a bunch of blank lines
                 if tree.strip() == '(ROOT':
                     tree = ""
+                    errors["empty"] += 1
                     continue
                 tree += ')\n'
                 if not is_closed_tree(tree):
+                    #print("Rejecting the following tree from {} for being unclosed: |{}|".format(orig_file, tree))
                     tree = ""
+                    errors["unclosed"] += 1
                     continue
-                # TODO: this eliminates 5 trees.  maybe those
-                # trees can be salvaged?
-                if tree.find("WP") >= 0:
+                # TODO: these blocks eliminate 11 trees
+                # maybe those trees can be salvaged?
+                bad_label = False
+                for weird_label in WEIRD_LABELS:
+                    if tree.find(weird_label) >= 0:
+                        bad_label = True
+                        errors[weird_label] += 1
+                        break
+                if bad_label:
                     continue
-                # Unify the labels
-                tree = unify_label(tree)
-                writer.write(tree)
-                reading_tree = False
-                tree = ""
-            else:
+                try:
+                    # test that the tree can be read in properly
+                    read_trees(tree)
+                    # Unify the labels
+                    tree = unify_label(tree)
+                    writer.write(tree)
+                    reading_tree = False
+                    tree = ""
+                except MixedTreeError:
+                    #print("Skipping an illegal tree: {}".format(tree))
+                    errors["illegal"] += 1
+            else:  # content line
                 if is_valid_line(line) and reading_tree:
                     tree += line
-                else:
+                elif reading_tree:
+                    errors["invalid"] += 1
+                    #print("Invalid tree error in {}: |{}|, rejected because of line |{}|".format(orig_file, tree, line))
                     tree = ""
                     reading_tree = False
 
+    return errors
+
 
 def convert_dir(org_dir, new_dir):
+    errors = Counter()
     for filename in os.listdir(org_dir):
         file_name, file_extension = os.path.splitext(filename)
         # Only convert .prd files, skip the .raw files
@@ -107,8 +169,10 @@ def convert_dir(org_dir, new_dir):
         new_path = os.path.join(new_dir, file_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        convert_file(file_path, new_file_path)
+        errors += convert_file(file_path, new_file_path)
 
+    errors = "\n  ".join(sorted(["%s: %s" % x for x in  errors.items()]))
+    print("Found the following error counts when processing {}:\n  {}".format(org_dir, errors))
 
 def main():
     """
