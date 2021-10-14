@@ -79,6 +79,8 @@ def split_files(org_dir, split_dir, short_name=None):
     stop_train = int(num_samples * 0.7)
     stop_dev = int(num_samples * 0.85)
     output_limits = (stop_train, stop_dev, num_samples)
+    print("Found {} total samples in {}".format(num_samples, org_dir))
+    print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
 
     # Count how much stuff we've written.
     # We will switch to the next output file when we're written enough
