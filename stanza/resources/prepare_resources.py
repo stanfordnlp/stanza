@@ -59,6 +59,7 @@ default_treebanks = {
   "cu": "proiel",
   "fro": "srcmf",
   "fa": "perdt",
+  "my": "ucsy",
   "pl": "pdb",
   "pt": "bosque",
   "ro": "rrt",
@@ -109,6 +110,7 @@ default_ners = {
   "fr": "wikiner",
   "hu": "combined",
   "it": "fbk",
+  "my": "ucsy",
   "nl": "conll02",
   "ru": "wikiner",
   "uk": "languk",
@@ -127,6 +129,7 @@ default_charlms = {
   "fi": "conll17",
   "fr": "newswiki",
   "it": "conll17",
+  "my": "oscar",
   "nl": "ccwiki",
   "ru": "newswiki",
   "vi": "conll17",
@@ -169,9 +172,16 @@ default_constituency = {
   "en": "wsj",
 }
 
+# an alternate tokenizer for languages which aren't trained from a base UD source
+default_tokenizer = {
+  "my": "alt",
+}
+
 allowed_empty_languages = [
   # we don't have a lot of Thai support yet
-  "th"
+  "th",
+  # only tokenize and NER for Myanmar right now (soon...)
+  "my",
 ]
 
 # map processor name to file ending
@@ -236,6 +246,7 @@ lcode2lang = {
     "lv": "Latvian",
     "mt": "Maltese",
     "mr": "Marathi",
+    "my": "Myanmar",
     "pcm": "Naija",
     "sme": "North_Sami",
     "nb": "Norwegian_Bokmaal",
@@ -371,8 +382,11 @@ def process_defaults(args):
         ud_package = default_treebanks[lang]
         os.chdir(os.path.join(args.output_dir, lang))
         default_processors = {}
-        default_dependencies = {'pos': [{'model': 'pretrain', 'package': ud_package}],
-                                'depparse': [{'model': 'pretrain', 'package': ud_package}]}
+        if lang in allowed_empty_languages:
+            default_dependencies = {}
+        else:
+            default_dependencies = {'pos': [{'model': 'pretrain', 'package': ud_package}],
+                                    'depparse': [{'model': 'pretrain', 'package': ud_package}]}
 
         if lang in default_ners:
             ner_package = default_ners[lang]
@@ -415,6 +429,7 @@ def process_defaults(args):
                 elif processor == 'sentiment': package = sentiment_package
                 elif processor == 'constituency': package = constituency_package
                 elif processor == 'langid': package = 'ud' 
+                elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
@@ -425,7 +440,7 @@ def process_defaults(args):
                         default_processors[processor] = package
                     zipf.write(os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
-                    # we don't have a lot of Thai support yet
+                    # we don't have a lot of Thai or Myanmar support yet
                     pass
                 elif processor == 'lemma':
                     # a few languages use the identity lemmatizer -
