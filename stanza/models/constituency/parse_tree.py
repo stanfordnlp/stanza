@@ -71,13 +71,18 @@ class Tree(StanzaObject):
     def preterminals(self):
         return list(reversed(list(self.yield_reversed_preterminals())))
 
-    def __repr__(self):
+    def __format__(self, spec):
         """
         Turn the tree into a string representing the tree
 
         Note that this is not a recursive traversal
         Otherwise, a tree too deep might blow up the call stack
         """
+        if spec and len(spec) > 0:
+            space_replacement = spec[0]
+        else:
+            space_replacement = " "
+
         with StringIO() as buf:
             stack = deque()
             stack.append(self)
@@ -89,17 +94,20 @@ class Tree(StanzaObject):
                     continue
                 if len(node.children) == 0:
                     if node.label is not None:
-                        buf.write(node.label)
+                        buf.write(node.label.replace(" ", space_replacement))
                     continue
                 buf.write(OPEN_PAREN)
                 if node.label is not None:
-                    buf.write(node.label)
+                    buf.write(node.label.replace(" ", space_replacement))
                 stack.append(CLOSE_PAREN)
                 for child in reversed(node.children):
                     stack.append(child)
                     stack.append(SPACE_SEPARATOR)
             buf.seek(0)
             return buf.read()
+
+    def __repr__(self):
+        return "{}".format(self)
 
     def __eq__(self, other):
         if self is other:

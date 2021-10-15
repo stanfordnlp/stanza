@@ -578,12 +578,12 @@ def run_dev_set(model, dev_trees, args):
         else:
             with open(pred_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write(str(tree[1][0][0]))
+                    fout.write("{:_}".format(tree[1][0][0]))
                     fout.write("\n")
 
             with open(orig_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write(str(tree[0]))
+                    fout.write("{:_}".format(tree[0]))
                     fout.write("\n")
 
     with EvaluateParser() as evaluator:

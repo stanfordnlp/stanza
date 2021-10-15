@@ -17,7 +17,9 @@ from stanza.tests.constituency.test_trainer import build_trainer
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 # just one tree so far, but maybe we can add more
-VI_TREEBANK = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài Loan) (" ") (PP (E-H ở) (NP (N-H đồng bằng) (NP (N-H sông) (Np Cửu Long))))) (. .)))'
+VI_TREEBANK            = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài Loan) (" ") (PP (E-H ở) (NP (N-H đồng bằng) (NP (N-H sông) (Np Cửu Long))))) (. .)))'
+
+VI_TREEBANK_UNDERSCORE = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài_Loan) (" ") (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .)))'
 
 def test_read_vi_tree():
     """
@@ -60,3 +62,14 @@ def test_vi_embedding():
 
     assert model.num_words_known(words) == 4
 
+
+def test_space_formatting():
+    """
+    By default, spaces are left as spaces, but there is a format option to change spaces
+    """
+    text = VI_TREEBANK.split("\n")[0]
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    assert str(trees[0]) == text
+
+    assert "{:_}".format(trees[0]) == VI_TREEBANK_UNDERSCORE
