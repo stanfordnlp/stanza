@@ -128,6 +128,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 
 | Language | Corpus | # Types | F1 |
 | :------- | :----- | :-------- | :---- |
+| Afrikaans | NCHLT | 4 | 80.08 |
 | Arabic | AQMAR | 4 | 74.3 |
 | Bulgarian *New in 1.2.1* | BSNLP 2019 | 5 | 83.21 |
 | Chinese | OntoNotes | 18 | 79.2 |
@@ -140,6 +141,8 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | German | CoNLL03 | 4 | 81.9 |
 | German | GermEval2014 | 4 | 85.2 |
 | Hungarian *New in 1.2.1* | Combined | 4 | - |
+| Italian *New in 1.2.3* | FBK | 3 | 87.92 |
+| Myanmar *New in 1.3.1* | UCSY | 7 | 95.86 |
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
@@ -150,11 +153,18 @@ In the table below you can find the performance of Stanza's pretrained NER model
 
 We have provided links to all NER datasets used to train the released models on our [available NER models page](available_models.md#available-ner-models). Here we provide notes on how to find several of these corpora:
 
+- **Afrikaans**: The Afrikaans data is part of [the NCHLT corpus of South African languages](https://repo.sadilar.org/handle/20.500.12185/299).  Van Huyssteen, G.B., Puttkammer, M.J., Trollip, E.B., Liversage, J.C., Eiselen, R. 2016. [NCHLT Afrikaans Named Entity Annotated Corpus. 1.0](https://hdl.handle.net/20.500.12185/299).
+
+
 - **Bulgarian**: The Bulgarian BSNLP 2019 data is available from [the shared task page](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html). You can also find their [dataset description paper](https://www.aclweb.org/anthology/W19-3709/).
 
 - **Finnish**: The Turku dataset used for Finnish NER training can be found on [the Turku NLP website](https://turkunlp.org/fin-ner.html), and they also provide [a Turku NER dataset description paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf).
 
 - **Hungarian**: The dataset used for training our Hungarian NER system is a combination of 3 separate datasets. Two of these datasets can be found from [this Szeged page](https://rgai.inf.u-szeged.hu/node/130), and the third can be found in [this NYTK-NerKor github repo](https://github.com/nytud/NYTK-NerKor). A dataset description paper can also be found [here](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf).
+
+- **Italian**: The Italian FBK dataset was licensed to us from [FBK](https://dh.fbk.eu/).
+
+- **Myanmar**: The Myanmar dataset is by special request from [UCSY](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf).
 
 - **Vietnamese**: The Vietnamese VLSP dataset is available by [request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
 
