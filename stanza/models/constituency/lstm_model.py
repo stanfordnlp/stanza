@@ -246,7 +246,8 @@ class LSTMModel(BaseModel, nn.Module):
         # TODO: surely this should be stuffed in the charlm model itself rather than done here
         with torch.no_grad():
             output, _, _ = charlm.forward(chars, char_lens)
-            res = [output[i, offsets] for i, offsets in enumerate(char_offsets)]
+            # TODO: if we stop reversing the inputs, don't forget to flip this back
+            res = [output[i, offsets].flip(0) for i, offsets in enumerate(char_offsets)]
             res = unsort(res, orig_idx)
 
         return res
