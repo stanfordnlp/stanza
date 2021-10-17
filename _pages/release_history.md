@@ -12,6 +12,7 @@ Note that prior to version 1.0.0, the Stanza library was named as "StanfordNLP".
 
 | Version | Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Notes |
 | :--- | :----------------------------------- | :--- |
+| 1.3.0 | 2021&#8209;10&#8209;05 | Multilingual Pipeline, Constituency Parser. |
 | 1.2.3 | 2021&#8209;08&#8209;09 | Additional NER models for AF, IT.  A couple minor bugfixes.  Additional NER finetuning support. |
 | 1.2.2 | 2021-07-15 | Fix regression in NER results for non-VI languages, fix a couple other minor bugs |
 | 1.2.1 | 2021-06-17 | Additional NER models for BG, HU, FI, VI.  bulk_process mechanism which works much faster in certain settings.  All models updated to UD 2.8 data. |
