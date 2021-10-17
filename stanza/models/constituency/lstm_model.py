@@ -223,10 +223,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         all_data = []
         for idx, word_labels in enumerate(all_word_labels):
-            if forward:
-                word_labels = reversed(word_labels)
-            else:
-                word_labels = [x[::-1] for x in word_labels]
+            if not forward:
+                word_labels = [x[::-1] for x in reversed(word_labels)]
 
             chars = [CHARLM_START]
             offsets = []
@@ -246,8 +244,7 @@ class LSTMModel(BaseModel, nn.Module):
         # TODO: surely this should be stuffed in the charlm model itself rather than done here
         with torch.no_grad():
             output, _, _ = charlm.forward(chars, char_lens)
-            # TODO: if we stop reversing the inputs, don't forget to flip this back
-            res = [output[i, offsets].flip(0) for i, offsets in enumerate(char_offsets)]
+            res = [output[i, offsets] for i, offsets in enumerate(char_offsets)]
             res = unsort(res, orig_idx)
 
         return res
@@ -335,7 +332,6 @@ class LSTMModel(BaseModel, nn.Module):
             # and use that instead
             word_queue = [WordNode(tag_node, sentence_output[idx, :])
                           for idx, tag_node in enumerate(tagged_words)]
-            word_queue.reverse()
             word_queue.append(WordNode(None, self.word_zeros))
 
             word_queues.append(word_queue)

@@ -100,7 +100,7 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
         return [model.get_word(x) for x in self.word_queue]
 
     def to_string(self, model):
-        return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.all_words(model)), str(self.all_transitions(model)), str(self.all_constituents(model)))
+        return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s\n  word_position:%d num_opens:%d)" % (str(self.all_words(model)), str(self.all_transitions(model)), str(self.all_constituents(model)), self.word_position, self.num_opens)
 
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
@@ -127,11 +127,10 @@ def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
     return states
 
 def initial_state_from_words(word_lists, model):
-    # TODO: stop reversing the words
     preterminal_lists = []
     for words in word_lists:
         preterminals = []
-        for word, tag in reversed(words):
+        for word, tag in words:
             word_node = Tree(label=word)
             tag_node = Tree(label=tag, children=[word_node])
             preterminals.append(tag_node)
@@ -139,9 +138,8 @@ def initial_state_from_words(word_lists, model):
     return initial_state_from_preterminals(preterminal_lists, model, gold_trees=None)
 
 def initial_state_from_gold_trees(trees, model):
-    # reversed so we put the words on the stack backwards
     preterminal_lists = [[Tree(label=pt.label, children=Tree(label=pt.children[0].label))
-                          for pt in tree.yield_reversed_preterminals()]
+                          for pt in tree.yield_preterminals()]
                          for tree in trees]
     return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
 
