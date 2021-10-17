@@ -4,6 +4,7 @@ Tree datastructure
 
 from collections import deque, Counter
 from io import StringIO
+import itertools
 import re
 
 from stanza.models.common.doc import StanzaObject
@@ -39,37 +40,32 @@ class Tree(StanzaObject):
     def is_preterminal(self):
         return len(self.children) == 1 and len(self.children[0].children) == 0
 
-    def yield_reversed_preterminals(self):
+    def yield_preterminals(self):
         """
-        Yield the preterminals one at a time in BACKWARDS order
+        Yield the preterminals one at a time in order
+        """
+        if self.is_preterminal():
+            yield self
+            return
 
-        This is done reversed as it is a frequently used method in the
-        parser, so this is a tiny optimization
-        """
-        nodes = deque()
-        nodes.append(self)
-        while len(nodes) > 0:
-            node = nodes.pop()
-            if len(node.children) == 0:
-                raise ValueError("Got called with an unexpected tree layout: {}".format(self))
-            elif node.is_preterminal():
+        if self.is_leaf():
+            raise ValueError("Attempted to iterate preterminals on non-internal node")
+
+        iterator = iter(self.children)
+        node = next(iterator, None)
+        while node is not None:
+            if node.is_preterminal():
                 yield node
             else:
-                nodes.extend(node.children)
+                iterator = itertools.chain(node.children, iterator)
+            node = next(iterator, None)
 
     def leaf_labels(self):
         """
         Get the labels of the leaves
-
-        Not optimized whatsoever - current not an important part of
-        the parser
         """
-        preterminals = reversed([x for x in self.yield_reversed_preterminals()])
-        words = [x.children[0].label for x in preterminals]
+        words = [x.children[0].label for x in self.yield_preterminals()]
         return words
-
-    def preterminals(self):
-        return list(reversed(list(self.yield_reversed_preterminals())))
 
     def __format__(self, spec):
         """

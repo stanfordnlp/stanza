@@ -46,7 +46,7 @@ def retag_trees(trees, pipeline, xpos=True):
     sentences = []
     try:
         for idx, tree in enumerate(trees):
-            tokens = [{TEXT: pt.children[0].label} for pt in tree.preterminals()]
+            tokens = [{TEXT: pt.children[0].label} for pt in tree.yield_preterminals()]
             sentences.append(tokens)
     except ValueError as e:
         raise ValueError("Unable to process tree %d" % idx) from e
