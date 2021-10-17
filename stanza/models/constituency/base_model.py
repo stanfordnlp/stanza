@@ -147,7 +147,6 @@ class SimpleModel(BaseModel):
         word_queues = []
         for tagged_words in tagged_word_lists:
             word_queue = [tag_node for tag_node in tagged_words]
-            word_queue.reverse()
             word_queue.append(None)
             word_queues.append(word_queue)
         return word_queues
