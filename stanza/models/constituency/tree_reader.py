@@ -42,6 +42,8 @@ class MixedTreeError(ValueError):
         super().__init__("Found a tree with both text children and bracketed children!  Line number %d" % line_num)
         self.line_num = line_num
 
+def normalize(text):
+    return text.replace("-LRB-", "(").replace("-RRB-", ")")
 
 def recursive_open_tree(token_iterator, at_root, broken_ok):
     """
@@ -80,7 +82,7 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
                     return Tree(label=label, children=children + [Tree(label=child_label)])
                 else:
                     raise MixedTreeError(token_iterator.line_num)
-            return Tree(label=label, children=Tree(label=child_label))
+            return Tree(label=label, children=Tree(label=normalize(child_label)))
         else:
             text.append(token)
         token = next(token_iterator, None)
