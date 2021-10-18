@@ -48,6 +48,7 @@ class ConstituencyProcessor(UDProcessor):
                                            forward_charlm=trainer.load_charlm(charlm_forward_file),
                                            backward_charlm=trainer.load_charlm(charlm_backward_file),
                                            use_gpu=use_gpu)
+        self._model.model.eval()
         # batch size counted as sentences
         self._batch_size = config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE)
         self._tqdm = 'tqdm' in config and config['tqdm']
