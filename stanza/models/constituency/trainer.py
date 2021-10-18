@@ -504,6 +504,11 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     The return is a list of tuples: (gold_tree, [(predicted, score) ...])
     gold_tree will be left blank if the data did not include gold trees
     currently score is always 1.0, but the interface may be expanded to get a score from the result of the parsing
+
+    TODO: in large bulk operations this runs out of memory because the
+    State objects and the associated tensors are kept until parsing is
+    finished.  This is not necessary in the case of parsing a large
+    dataset for the trees, though.
     """
     treebank = []
     tree_batch = build_batch_fn(batch_size, data_iterator, model)
