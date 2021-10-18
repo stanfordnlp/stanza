@@ -55,10 +55,10 @@ class ConstituencyProcessor(UDProcessor):
     def process(self, document):
         sentences = document.sentences
 
-        # TODO: perhaps MWT should be relevant here?
-        # certainly parsing across an MWT boundary is an error
-        # TODO: maybe some constituency models are trained on UPOS not XPOS
-        words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
+        if self._model.uses_xpos():
+            words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
+        else:
+            words = [[(w.text, w.upos) for w in s.words] for s in sentences]
         if self._tqdm:
             words = tqdm(words)
 

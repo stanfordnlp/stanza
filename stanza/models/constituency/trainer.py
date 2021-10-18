@@ -45,6 +45,9 @@ class Trainer:
         self.model = model
         self.optimizer = optimizer
 
+    def uses_xpos(self):
+        return self.model.args['retag_package'] is not None and self.model.args['retag_method'] == 'xpos'
+
     def save(self, filename, save_optimizer=True):
         """
         Save the model (and by default the optimizer) to the given path
