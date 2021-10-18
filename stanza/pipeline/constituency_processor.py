@@ -13,8 +13,11 @@ import stanza.models.constituency.trainer as trainer
 
 from stanza.models.common import doc
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.utils import get_tqdm
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
+
+tqdm = get_tqdm()
 
 @register_processor(CONSTITUENCY)
 class ConstituencyProcessor(UDProcessor):
@@ -25,6 +28,13 @@ class ConstituencyProcessor(UDProcessor):
 
     # default batch size, measured in sentences
     DEFAULT_BATCH_SIZE = 50
+
+    def _set_up_requires(self):
+        self._pretagged = self._config.get('pretagged')
+        if self._pretagged:
+            self._requires = set()
+        else:
+            self._requires = self.__class__.REQUIRES_DEFAULT
 
     def _set_up_model(self, config, use_gpu):
         # get pretrained word vectors
@@ -40,13 +50,18 @@ class ConstituencyProcessor(UDProcessor):
                                            use_gpu=use_gpu)
         # batch size counted as sentences
         self._batch_size = config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE)
+        self._tqdm = 'tqdm' in config and config['tqdm']
 
     def process(self, document):
         sentences = document.sentences
+
         # TODO: perhaps MWT should be relevant here?
         # certainly parsing across an MWT boundary is an error
         # TODO: maybe some constituency models are trained on UPOS not XPOS
         words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
+        if self._tqdm:
+            words = tqdm(words)
+
         trees = trainer.parse_tagged_words(self._model.model, words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
