@@ -170,6 +170,7 @@ default_sentiment = {
 # also, a few languages (very few, currently) have constituency parser models
 default_constituency = {
   "en": "wsj",
+  "it": "turin-inorder",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
@@ -316,6 +317,17 @@ def split_model_name(model):
     lang, package = model.split('_', 1)
     return lang, package, processor
 
+def get_con_dependencies(lang, package):
+    # so far, this invariant is true:
+    # constituency models use the default pretrain and charlm for the language
+    charlm_package = default_charlms[lang]
+    pretrain_package = default_treebanks[lang]
+
+    return [{'model': 'forward_charlm', 'package': charlm_package},
+            {'model': 'backward_charlm', 'package': charlm_package},
+            {'model': 'pretrain', 'package': pretrain_package}]
+
+
 def get_ner_dependencies(lang, package):
     if lang not in ner_charlms or package not in ner_charlms[lang]:
         charlm_package = default_charlms[lang]
@@ -356,10 +368,7 @@ def process_dirs(args):
                 pretrain_package = default_treebanks[lang]
                 dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
             elif processor == 'constituency':
-                # so far, this invariant is true:
-                # constituency models use the default pretrain for the language
-                pretrain_package = default_treebanks[lang]
-                dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+                dependencies = get_con_dependencies(lang, package)
             else:
                 dependencies = None
             # maintain resources
@@ -405,8 +414,7 @@ def process_defaults(args):
             # All of the sentiment models created so far have used the default pretrain
             default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
         if lang in default_constituency:
-            # All of the constituency models created so far also use the default pretrain
-            default_dependencies['constituency'] = [{'model': 'pretrain', 'package': ud_package}]
+            default_dependencies['constituency'] = get_con_dependencies(lang, constituency_package)
 
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         if lang in default_ners:
