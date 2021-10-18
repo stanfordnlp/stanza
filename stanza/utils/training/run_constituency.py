@@ -21,6 +21,12 @@ RETAG_PACKAGE = {
     "vi": "vi_vtb",
 }
 
+# xpos tagger doesn't produce PP tag on the turin treebank,
+# so instead we use upos to avoid unknown tag errors
+RETAG_METHOD = {
+    "it": "upos",
+}
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     constituency_dir = paths["CONSTITUENCY_DATA_DIR"]
@@ -42,6 +48,9 @@ def run_treebank(mode, paths, treebank, short_name,
         retag_args = ["--retag_package", RETAG_PACKAGE[language]]
     else:
         retag_args = []
+
+    if language in RETAG_METHOD:
+        retag_args.extend(["--retag_method", "upos"])
 
     if '--wordvec_pretrain_file' not in extra_args:
         # will throw an error if the pretrain can't be found
