@@ -28,6 +28,22 @@ def test_newlines():
     trees = tree_reader.read_trees(text)
     assert len(trees) == 2
 
+def test_parens():
+    """
+    Parens should be escaped in the tree files and escaped when written
+    """
+    text = "(-LRB- -LRB-) (-RRB- -RRB-)"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 2
+
+    assert trees[0].label == '-LRB-'
+    assert trees[0].children[0].label == '('
+    assert "{}".format(trees[0]) == '(-LRB- -LRB-)'
+
+    assert trees[1].label == '-RRB-'
+    assert trees[1].children[0].label == ')'
+    assert "{}".format(trees[1]) == '(-RRB- -RRB-)'
+
 def test_complicated():
     """
     A more complicated tree that should successfully read
