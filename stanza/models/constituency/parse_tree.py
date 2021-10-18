@@ -79,6 +79,9 @@ class Tree(StanzaObject):
         else:
             space_replacement = " "
 
+        def normalize(text):
+            return text.replace(" ", space_replacement).replace("(", "-LRB-").replace(")", "-RRB-")
+
         with StringIO() as buf:
             stack = deque()
             stack.append(self)
@@ -90,11 +93,11 @@ class Tree(StanzaObject):
                     continue
                 if len(node.children) == 0:
                     if node.label is not None:
-                        buf.write(node.label.replace(" ", space_replacement))
+                        buf.write(normalize(node.label))
                     continue
                 buf.write(OPEN_PAREN)
                 if node.label is not None:
-                    buf.write(node.label.replace(" ", space_replacement))
+                    buf.write(normalize(node.label))
                 stack.append(CLOSE_PAREN)
                 for child in reversed(node.children):
                     stack.append(child)
