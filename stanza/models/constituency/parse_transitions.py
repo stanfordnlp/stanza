@@ -536,7 +536,7 @@ class CloseConstituent(Transition):
     def __hash__(self):
         return hash(93)
 
-def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000):
+def bulk_apply(model, tree_batch, transitions, fail=False):
     remove = set()
 
     word_positions = []
@@ -554,7 +554,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False, max_transitions=1000)
                 remove.add(idx)
                 continue
 
-        if max_transitions and tree.num_transitions() >= max_transitions:
+        if tree.num_transitions() >= len(tree.word_queue) * 10:
             # too many transitions
             if tree.gold_tree:
                 error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
