@@ -47,6 +47,13 @@ def test_close(unary_model):
     test_parse_transitions.test_close(unary_model)
 
 def run_forward_checks(model):
+    """
+    Run a couple small transitions and a forward pass on the given model
+
+    Results are not checked in any way.  This function allows for
+    testing that building models with various options results in a
+    functional model.
+    """
     state = test_parse_transitions.build_initial_state(model)[0]
     model((state,))
 
@@ -100,6 +107,9 @@ def test_multiple_output_forward(pt):
     model = build_model(pt, '--num_output_layers', '2', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
+    model = build_model(pt, '--num_output_layers', '3', '--num_lstm_layers', '2')
+    run_forward_checks(model)
+
 def test_no_tag_embedding_forward(pt):
     """
     Test that the model continues to work if the tag embedding is turned on or off
@@ -125,6 +135,16 @@ def test_forward_combined_dummy(pt):
     run_forward_checks(model)
 
     model = build_model(pt, '--no_combined_dummy_embedding')
+    run_forward_checks(model)
+
+def test_nonlinearity_init(pt):
+    """
+    Tests that different initialization methods of the nonlinearities result in valid tensors
+    """
+    model = build_model(pt, '--nonlinearity', 'relu')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--nonlinearity', 'tanh')
     run_forward_checks(model)
 
 def test_forward_charlm(pt):
