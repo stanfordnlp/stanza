@@ -101,11 +101,23 @@ UCSY built a Myanmar dataset.  They have not made it publicly
   - https://arxiv.org/abs/1903.04739
   - Syllable-based Neural Named Entity Recognition for Myanmar Language
     by Hsu Myat Mo and Khin Mar Soe
+
+Hanieh Poostchi et al produced a Persian NER dataset:
+  - git@github.com:HaniehP/PersianNER.git
+  - https://github.com/HaniehP/PersianNER
+  - Hanieh Poostchi, Ehsan Zare Borzeshi, Mohammad Abdous, and Massimo Piccardi,
+    "PersoNER: Persian Named-Entity Recognition"
+  - Hanieh Poostchi, Ehsan Zare Borzeshi, and Massimo Piccardi,
+    "BiLSTM-CRF for Persian Named-Entity Recognition; ArmanPersoNERCorpus: the First Entity-Annotated Persian Dataset"
+  - Conveniently, this dataset is already in BIO format.  It does not have a dev split, though.
+    git clone the above repo, unzip ArmanPersoNERCorpus.zip, and this script will split the
+    first train fold into a dev section.
 """
 
 import glob
 import os
 import random
+import shutil
 import sys
 import tempfile
 
@@ -408,6 +420,31 @@ def process_my_ucsy(paths):
     convert_my_ucsy.convert_my_ucsy(base_input_path, base_output_path)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_fa_arman(paths, short_name):
+    """
+    Converts fa_arman dataset
+
+    The conversion is quite simple, actually.
+    Just need to split the train file and then convert bio -> json
+    """
+    assert short_name == "fa_arman"
+    language = "fa"
+    base_input_path = os.path.join(paths["NERBASE"], "PersianNER")
+    train_input_file = os.path.join(base_input_path, "train_fold1.txt")
+    test_input_file = os.path.join(base_input_path, "test_fold1.txt")
+    if not os.path.exists(train_input_file) or not os.path.exists(test_input_file):
+        full_corpus_file = os.path.join(base_input_path, "ArmanPersoNERCorpus.zip")
+        if os.path.exists(full_corpus_file):
+            raise FileNotFoundError("Please unzip the file {}".format(full_corpus_file))
+        raise FileNotFoundError("Cannot find the arman corpus in the expected directory: {}".format(base_input_path))
+
+    base_output_path = paths["NER_DATA_DIR"]
+    test_output_file = os.path.join(base_output_path, "%s.test.bio" % short_name)
+
+    split_wikiner(base_output_path, train_input_file, prefix=short_name, train_fraction=0.8, test_section=False)
+    shutil.copy2(test_input_file, test_output_file)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -437,6 +474,8 @@ def main(dataset_name):
         process_my_ucsy(paths)
     elif dataset_name.endswith("_nchlt"):
         process_nchlt(paths, dataset_name)
+    elif dataset_name == "fa_arman":
+        process_fa_arman(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
