@@ -441,7 +441,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
 
                 if len(batch) > 0:
                     # bulk update states
-                    batch = parse_transitions.bulk_apply(model, batch, gold_transitions, fail=True, max_transitions=None)
+                    batch = parse_transitions.bulk_apply(model, batch, gold_transitions, fail=True)
 
             errors = torch.cat(all_errors)
             answers = torch.cat(all_answers)
