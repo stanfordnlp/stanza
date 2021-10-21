@@ -3,7 +3,7 @@ layout: page
 title: Constituency Parser
 keywords: constituency
 permalink: '/constituency.html'
-nav_order: 10
+nav_order: 9
 parent: Neural Pipeline
 ---
 

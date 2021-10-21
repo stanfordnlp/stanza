@@ -3,7 +3,7 @@ layout: page
 title: Named Entity Recognition
 keywords: ner, named entity recognition, NERProcessor
 permalink: '/ner.html'
-nav_order: 9
+nav_order: 10
 parent: Neural Pipeline
 ---
 

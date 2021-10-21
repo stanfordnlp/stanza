@@ -3,7 +3,7 @@ layout: page
 title: Sentiment Analysis
 keywords: sentiment, classifier
 permalink: '/sentiment.html'
-nav_order: 10
+nav_order: 11
 parent: Neural Pipeline
 ---
 
