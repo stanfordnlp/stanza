@@ -3,7 +3,7 @@ layout: page
 title: Language Identification
 keywords: language identification
 permalink: '/langid.html'
-nav_order: 11
+nav_order: 12
 parent: Neural Pipeline
 ---
 

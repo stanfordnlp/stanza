@@ -9,9 +9,7 @@ parent: Neural Pipeline
 
 ## Description
 
-Sentiment is added to the stanza pipeline by using a CNN classifier.
-
-https://arxiv.org/abs/1408.5882
+Sentiment is added to the stanza pipeline by using [a CNN classifier](https://arxiv.org/abs/1408.5882).
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
 | --- | --- | --- | --- | --- |

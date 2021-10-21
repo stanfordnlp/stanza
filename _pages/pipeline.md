@@ -38,6 +38,8 @@ Processors are units of the neural pipeline that perform specific NLP functions 
 | lemma | Lemma&shy;Processor | tokenize, mwt, pos | Perform [lemmatization](https://en.wikipedia.org/wiki/Lemmatisation) on a [`Word`](data_objects.md#word) using the `Word.text` and `Word.upos` values. The result can be accessed as `Word.lemma`. | Generates the word lemmas for all words in the Document. |
 | depparse | Depparse&shy;Processor | tokenize, mwt, pos, lemma | Determines the syntactic head of each word in a sentence and the dependency relation between the two words that are accessible through [`Word`](data_objects.md#word)'s `head` and `deprel` attributes. | Provides an accurate syntactic dependency parsing analysis. |
 | ner | NER&shy;Processor | tokenize, mwt | Named entities accessible through [`Document`](data_objects.md#document) or [`Sentence`](data_objects.md#sentence)'s properties `entities` or `ents`. Token-level NER tags accessible through [`Token`](data_objects.md#token)'s properties `ner`. | Recognize named entities for all token spans in the corpus. |
+| sentiment | Sentiment&shy;Processor | tokenize, mwt | Sentiment scores of 0, 1, or 2 (negative, neutral, positive).  Accessible using a  [`Sentence`](data_objects.md#sentence)'s `sentiment` property. | Assign per-sentence sentiment scores. |
+| constituency | Constituency&shy;Processor | tokenize, mwt, pos | Parse trees accessible a  [`Sentence`](data_objects.md#sentence)'s `constituency`  property. | Parse each sentence in a document using a phrase structure parser. |
 
 ### Processor variants
 
