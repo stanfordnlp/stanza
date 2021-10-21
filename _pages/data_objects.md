@@ -48,7 +48,7 @@ A [`Sentence`](data_objects.md#sentence) object represents a sentence (as is seg
 | words | `List[Word]` | The list of words in this sentence. |
 | entities (ents) | `List[Span]` | The list of entities in this sentence. |
 | sentiment | `str` | The sentiment value for this sentence, as a string. Note that only a few languages have a sentiment model. |
-| constituency | [`ParseTree`](data_objects.md#ParseTree) | The constituency parse for this sentence, as a ParseTree. Note that only a few languages have a [constituency model](constituency.md). |
+| constituency | [`ParseTree`](data_objects.md#parsetree) | The constituency parse for this sentence, as a ParseTree. Note that only a few languages have a [constituency model](constituency.md). |
 
 [`Sentence`](data_objects.md#sentence) also contains the following methods:
 
@@ -136,7 +136,7 @@ A [`Span`](data_objects.md#span) object stores attributes of a contiguous span o
 
 ## ParseTree
 
-A [`ParseTree`](data_objects.md#ParseTree) object is a nested tree structure, intended to represent the result of the [constituency parser](constituency.md).  Each layer of nesting has the following properties:
+A [`ParseTree`](data_objects.md#parsetree) object is a nested tree structure, intended to represent the result of the [constituency parser](constituency.md).  Each layer of nesting has the following properties:
 
 | Property | Type | Description |
 | --- | --- | --- |

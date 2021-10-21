@@ -25,7 +25,7 @@ Constituency parsing is added to the stanza pipeline by using [a shift-reduce pa
 ## Example Usage
 
 The `ConstituencyProcessor` adds a constituency / phrase structure
-parse tree to each [`Sentence`](data_objects.md#sentence).
+[parse tree](data_objects.md#parsetree) to each [`Sentence`](data_objects.md#sentence).
 
 Bracket types are dependent on the treebank; for example, the PTB
 model using the PTB bracket types.  Custom models could support any
