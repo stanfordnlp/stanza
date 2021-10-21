@@ -1,8 +1,8 @@
 ---
 layout: page
-title: Sentiment Analysis
-keywords: sentiment, classifier
-permalink: '/sentiment.html'
+title: Constituency Parser
+keywords: constituency
+permalink: '/constituency.html'
 nav_order: 10
 parent: Neural Pipeline
 ---
