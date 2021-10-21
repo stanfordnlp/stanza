@@ -991,8 +991,13 @@ $(document).ready(function() {
   // Language-specific changes
   $('#language').on('change', function() {
     $('#text').attr('dir', '');
-    if ($('#language').val() === 'ar') {
+    if ($('#language').val() === 'ar' ||
+        $('#language').val() === 'fa' ||
+        $('#language').val() === 'he' ||
+        $('#language').val() === 'ur') {
       $('#text').attr('dir', 'rtl');
+    }
+    if ($('#language').val() === 'ar') {
       $('#text').attr('placeholder', 'على سبيل المثال، قفز الثعلب البني السريع فوق الكلب الكسول.');
     } else if ($('#language').val() === 'en') {
       $('#text').attr('placeholder', 'e.g., The quick brown fox jumped over the lazy dog.');
@@ -1008,7 +1013,6 @@ $(document).ready(function() {
       $('#text').attr('placeholder', 'Por ejemplo, el rápido zorro marrón saltó sobre el perro perezoso.');
     } else {
       $('#text').attr('placeholder', 'Unknown language for placeholder query: ' + $('#language').val());
-
     }
   });
 
@@ -1127,7 +1131,7 @@ $(document).ready(function() {
           $('.corenlp_error').remove();  // Clear error messages
           $('#annotations').show();
           // Render
-          var reverse = $('#language').val() === 'ar';
+          var reverse = ($('#language').val() === 'ar' || $('#language').val() === 'fa' || $('#language').val() === 'he' || $('#language').val() === 'ur');
           render(data, reverse);
           // Render patterns
           //$('#annotations').append('<h4 class="red" style="margin-top: 4ex;">CoreNLP Tools:</h4>');  // TODO(gabor) a strange place to add this header to
