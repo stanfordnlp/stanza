@@ -92,7 +92,9 @@ Note that for the various scripts supported, you need to first download the data
 For a new dataset not already supported, there is a specific `.json` format expected by our models.  There is a conversion script called several times in `prepare_ner_dataset.py` which converts [IOB](https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_\(tagging\)) format to our internal NER format:
 
 ```python
-prepare_ner_file.process_dataset(input_filename, output_filename)
+import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
+
+prepare_ner_file.process_dataset(input_iob, output_json)
 ```
 
 
