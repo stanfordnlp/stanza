@@ -22,7 +22,7 @@ Example command line:
 logger = logging.getLogger('stanza')
 
 
-def parse_args() -> None:
+def parse_args():
     parser = argparse.ArgumentParser()
 
     classifier_args.add_common_args(parser)
