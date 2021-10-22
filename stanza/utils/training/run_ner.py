@@ -32,10 +32,11 @@ from stanza.resources.common import DEFAULT_MODEL_DIR
 
 # extra arguments specific to a particular dataset
 DATASET_EXTRA_ARGS = {
-    "vi_vlsp": [ "--dropout", "0.6",
-                 "--word_dropout", "0.1",
-                 "--locked_dropout", "0.1",
-                 "--char_dropout", "0.1" ],
+    "fa_arman": [ "--dropout", "0.6" ],
+    "vi_vlsp":  [ "--dropout", "0.6",
+                  "--word_dropout", "0.1",
+                  "--locked_dropout", "0.1",
+                  "--char_dropout", "0.1" ],
 }
 
 logger = logging.getLogger('stanza')
