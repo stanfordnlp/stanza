@@ -25,7 +25,7 @@ import os
 from stanza.models import ner_tagger
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, build_charlm_args, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, ner_charlms
 from stanza.resources.common import DEFAULT_MODEL_DIR
@@ -42,19 +42,6 @@ logger = logging.getLogger('stanza')
 
 def add_ner_args(parser):
     parser.add_argument('--charlm', default=None, type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
-
-def find_charlm(direction, language, charlm):
-    saved_path = 'saved_models/charlm/{}_{}_{}_charlm.pt'.format(language, charlm, direction)
-    if os.path.exists(saved_path):
-        logger.info(f'Using model {saved_path} for {direction} charlm')
-        return saved_path
-
-    resource_path = '{}/{}/{}_charlm/{}.pt'.format(DEFAULT_MODEL_DIR, language, direction, charlm)
-    if os.path.exists(resource_path):
-        logger.info(f'Using model {resource_path} for {direction} charlm')
-        return resource_path
-
-    raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}")
 
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
@@ -91,15 +78,7 @@ def run_treebank(mode, paths, treebank, short_name,
     else:
         charlm = None
 
-    if charlm:
-        forward = find_charlm('forward', language, charlm)
-        backward = find_charlm('backward', language, charlm)
-        charlm_args = ['--charlm',
-                       '--charlm_shorthand', f'{language}_{charlm}',
-                       '--charlm_forward_file', forward,
-                       '--charlm_backward_file', backward]
-    else:
-        charlm_args = []
+    charlm_args = build_charlm_args(language, charlm)
 
     if mode == Mode.TRAIN:
         # VI example arguments:
