@@ -147,3 +147,35 @@ def find_wordvec_pretrain(language):
     pretrain = pretrains[0]
     logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pretrain
+
+def find_charlm(direction, language, charlm):
+    """
+    Return the path to the forward or backward charlm if it exists for the given package
+    """
+    saved_path = 'saved_models/charlm/{}_{}_{}_charlm.pt'.format(language, charlm, direction)
+    if os.path.exists(saved_path):
+        logger.info(f'Using model {saved_path} for {direction} charlm')
+        return saved_path
+
+    resource_path = '{}/{}/{}_charlm/{}.pt'.format(DEFAULT_MODEL_DIR, language, direction, charlm)
+    if os.path.exists(resource_path):
+        logger.info(f'Using model {resource_path} for {direction} charlm')
+        return resource_path
+
+    raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}")
+
+def build_charlm_args(language, charlm, base_args=True):
+    """
+    If specified, return forward and backward charlm args
+    """
+    if charlm:
+        forward = find_charlm('forward', language, charlm)
+        backward = find_charlm('backward', language, charlm)
+        char_args = ['--charlm_forward_file', forward,
+                     '--charlm_backward_file', backward]
+        if not base_args:
+            return char_args
+        return ['--charlm',
+                '--charlm_shorthand', f'{language}_{charlm}'] + char_args
+
+    return []

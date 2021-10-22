@@ -10,7 +10,7 @@ import os
 from stanza.models import constituency_parser
 from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, build_charlm_args, find_wordvec_pretrain
 
 logger = logging.getLogger('stanza')
 
@@ -26,6 +26,9 @@ RETAG_PACKAGE = {
 RETAG_METHOD = {
     "it": "upos",
 }
+
+def add_constituency_args(parser):
+    parser.add_argument('--charlm', default=None, type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -59,12 +62,14 @@ def run_treebank(mode, paths, treebank, short_name,
     else:
         wordvec_args = []
 
+    charlm_args = build_charlm_args(language, command_args.charlm, base_args=False)
+
     if mode == Mode.TRAIN:
         train_args = ['--train_file', train_file,
                       '--eval_file', dev_file,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + wordvec_args + retag_args + extra_args
+        train_args = train_args + wordvec_args + charlm_args + retag_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         constituency_parser.main(train_args)
 
@@ -72,7 +77,7 @@ def run_treebank(mode, paths, treebank, short_name,
         dev_args = ['--eval_file', dev_file,
                     '--shorthand', short_name,
                     '--mode', 'predict']
-        dev_args = dev_args + wordvec_args + retag_args + extra_args
+        dev_args = dev_args + wordvec_args + charlm_args + retag_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         constituency_parser.main(dev_args)
 
@@ -80,14 +85,14 @@ def run_treebank(mode, paths, treebank, short_name,
         test_args = ['--eval_file', test_file,
                      '--shorthand', short_name,
                      '--mode', 'predict']
-        test_args = test_args + wordvec_args + retag_args + extra_args
+        test_args = test_args + wordvec_args + charlm_args + retag_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         constituency_parser.main(test_args)
 
 
 
 def main():
-    common.main(run_treebank, "constituency", "constituency")
+    common.main(run_treebank, "constituency", "constituency", add_constituency_args)
 
 if __name__ == "__main__":
     main()
