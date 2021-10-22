@@ -70,7 +70,7 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
         confusion, labels = condense_ner_labels(confusion, labels)
 
     # Print header
-    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
+    fst_empty_cell = (columnwidth-3)//2 * " " + "t\p" + (columnwidth-3)//2 * " "
     if len(fst_empty_cell) < len(empty_cell):
         fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
     header = "    " + fst_empty_cell + " "

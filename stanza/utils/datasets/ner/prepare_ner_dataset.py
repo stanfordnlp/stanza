@@ -112,6 +112,27 @@ Hanieh Poostchi et al produced a Persian NER dataset:
   - Conveniently, this dataset is already in BIO format.  It does not have a dev split, though.
     git clone the above repo, unzip ArmanPersoNERCorpus.zip, and this script will split the
     first train fold into a dev section.
+
+SUC3 is a Swedish NER dataset provided by Språkbanken
+  - https://spraakbanken.gu.se/en/resources/suc3
+  - The splitting tool is generously provided by
+    Emil Stenstrom
+    https://github.com/EmilStenstrom/suc_to_iob
+  - Download the .bz2 file at this URL and put it in $NERBASE/sv_suc3
+    It is not necessary to unzip it.
+  - Gustafson-Capková, Sophia and Britt Hartmann, 2006, 
+    Manual of the Stockholm Umeå Corpus version 2.0.
+    Stockholm University.
+  - Östling, Robert, 2013, Stagger 
+    an Open-Source Part of Speech Tagger for Swedish
+    Northern European Journal of Language Technology 3: 1–18
+    DOI 10.3384/nejlt.2000-1533.1331
+  - TODO: the latter paper mentions a specific test set
+    to use, but that cannot be done until we get the
+    un-scrambled data.  The publicly available data
+    is scrambled with the filenames removed.
+    Currently the model is produced using a random split
+    of sentences from the scrambled data.
 """
 
 import glob
@@ -134,6 +155,7 @@ import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
+import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -445,6 +467,26 @@ def process_fa_arman(paths, short_name):
     shutil.copy2(test_input_file, test_output_file)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_sv_suc3(paths, short_name):
+    """
+    Uses an externally provided script to read the SUC3 XML file, then splits it
+    """
+    assert short_name == "sv_suc3"
+    language = "sv"
+    train_input_file = os.path.join(paths["NERBASE"], "sv_suc3", "suc3.xml.bz2")
+    if not os.path.exists(train_input_file):
+        train_input_file = train_input_file[:-4]
+    if not os.path.exists(train_input_file):
+        raise FileNotFoundError("Unable to find the SUC3 dataset in {}.bz2".format(train_input_file))
+
+    base_output_path = paths["NER_DATA_DIR"]
+    train_output_file = os.path.join(base_output_path, "sv_suc3.iob")
+    # Here we use the <name> tags instead of the <ne> tags to get the NER types
+    # There are some obviously missed NEs in the <ne> tags, such as Moselle
+    suc_to_iob.main([train_input_file, train_output_file, "--ner_tag", "name"])
+    split_wikiner(base_output_path, train_output_file, prefix=short_name)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)    
+    
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -476,6 +518,8 @@ def main(dataset_name):
         process_nchlt(paths, dataset_name)
     elif dataset_name == "fa_arman":
         process_fa_arman(paths, dataset_name)
+    elif dataset_name == "sv_suc3":
+        process_sv_suc3(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
