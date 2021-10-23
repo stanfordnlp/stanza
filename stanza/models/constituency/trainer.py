@@ -374,9 +374,9 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     model = trainer.model
     optimizer = trainer.optimizer
 
-    loss_function = nn.CrossEntropyLoss(reduction='sum')
+    model_loss_function = nn.CrossEntropyLoss(reduction='sum')
     if args['cuda']:
-        loss_function.cuda()
+        model_loss_function.cuda()
 
     device = next(model.parameters()).device
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
@@ -405,52 +405,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
         random.shuffle(interval_starts)
 
-        epoch_loss = 0.0
-
-        transitions_correct = 0
-        transitions_incorrect = 0
-
-        for interval_start in tqdm(interval_starts, postfix="Batch"):
-            batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-            # the batch will be empty when all trees from this epoch are trained
-            # now we add the state to the trees in the batch
-            initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
-            batch = [state._replace(gold_sequence=sequence)
-                     for (tree, sequence), state in zip(batch, initial_states)]
-
-            all_errors = []
-            all_answers = []
-
-            while len(batch) > 0:
-                outputs, pred_transitions = model.predict(batch)
-                gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
-                trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
-                all_errors.append(outputs)
-                all_answers.extend(trans_tensor)
-
-                for pred_transition, gold_transition in zip(pred_transitions, gold_transitions):
-                    if pred_transition != gold_transition:
-                        transitions_incorrect = transitions_incorrect + 1
-                    else:
-                        transitions_correct = transitions_correct + 1
-
-                # eliminate finished trees, keeping only the transitions we will use
-                zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions() + 1 < len(x[0].gold_sequence)]
-                batch = [x[0] for x in zipped_batch]
-                gold_transitions = [x[1] for x in zipped_batch]
-
-                if len(batch) > 0:
-                    # bulk update states
-                    batch = parse_transitions.bulk_apply(model, batch, gold_transitions, fail=True)
-
-            errors = torch.cat(all_errors)
-            answers = torch.cat(all_answers)
-            tree_loss = loss_function(errors, answers)
-            tree_loss.backward()
-            epoch_loss += tree_loss.item()
-
-            optimizer.step()
-            optimizer.zero_grad()
+        epoch_loss, transitions_correct, transitions_incorrect = train_model_one_epoch(trainer, transition_tensors, model_loss_function, epoch_data, interval_starts, args)
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args)
@@ -462,6 +417,59 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         if model_latest_filename:
             trainer.save(model_latest_filename, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
+
+def train_model_one_epoch(trainer, transition_tensors, model_loss_function, epoch_data, interval_starts, args):
+    epoch_loss = 0.0
+
+    transitions_correct = 0
+    transitions_incorrect = 0
+
+    model = trainer.model
+    optimizer = trainer.optimizer
+
+    for interval_start in tqdm(interval_starts, postfix="Batch"):
+        batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
+        # the batch will be empty when all trees from this epoch are trained
+        # now we add the state to the trees in the batch
+        initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
+        batch = [state._replace(gold_sequence=sequence)
+                 for (tree, sequence), state in zip(batch, initial_states)]
+
+        all_errors = []
+        all_answers = []
+
+        while len(batch) > 0:
+            outputs, pred_transitions = model.predict(batch)
+            gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
+            trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
+            all_errors.append(outputs)
+            all_answers.extend(trans_tensor)
+
+            for pred_transition, gold_transition in zip(pred_transitions, gold_transitions):
+                if pred_transition != gold_transition:
+                    transitions_incorrect = transitions_incorrect + 1
+                else:
+                    transitions_correct = transitions_correct + 1
+
+            # eliminate finished trees, keeping only the transitions we will use
+            zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions() + 1 < len(x[0].gold_sequence)]
+            batch = [x[0] for x in zipped_batch]
+            gold_transitions = [x[1] for x in zipped_batch]
+
+            if len(batch) > 0:
+                # bulk update states
+                batch = parse_transitions.bulk_apply(model, batch, gold_transitions, fail=True)
+
+        errors = torch.cat(all_errors)
+        answers = torch.cat(all_answers)
+        tree_loss = model_loss_function(errors, answers)
+        tree_loss.backward()
+        epoch_loss += tree_loss.item()
+
+        optimizer.step()
+        optimizer.zero_grad()
+
+    return epoch_loss, transitions_correct, transitions_incorrect
 
 def build_batch_from_trees(batch_size, data_iterator, model):
     """
