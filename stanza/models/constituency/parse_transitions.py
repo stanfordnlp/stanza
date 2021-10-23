@@ -195,6 +195,12 @@ class Transition(ABC):
         """
         pass
 
+    @abstractmethod
+    def short_name(self):
+        """
+        A short name to identify this transition
+        """
+
     def __lt__(self, other):
         # put the Shift at the front of a list, and otherwise sort alphabetically
         if self == other:
@@ -255,6 +261,9 @@ class Shift(Transition):
                     return False
         return True
 
+    def short_name(self):
+        return "Shift"
+
     def __repr__(self):
         return "Shift"
 
@@ -303,6 +312,9 @@ class CompoundUnary(Transition):
             return not is_root
         else:
             return is_root
+
+    def short_name(self):
+        return "Unary"
 
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)
@@ -429,6 +441,9 @@ class OpenConstituent(Transition):
                 return True
         return True
 
+    def short_name(self):
+        return "Open"
+
     def __repr__(self):
         return "OpenConstituent({})".format(self.label)
 
@@ -522,6 +537,9 @@ class CloseConstituent(Transition):
                 # this node, so instead we make the Close illegal
                 return False
         return True
+
+    def short_name(self):
+        return "Close"
 
     def __repr__(self):
         return "CloseConstituent"
