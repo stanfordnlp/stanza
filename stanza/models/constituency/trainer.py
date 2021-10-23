@@ -10,6 +10,7 @@ See the `train` method for the code block which starts from
   it takes words & tags and processes that into trees.
 """
 
+from collections import Counter
 import logging
 import random
 import os
@@ -421,11 +422,11 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
 def train_model_one_epoch(trainer, transition_tensors, model_loss_function, epoch_data, interval_starts, args):
     epoch_loss = 0.0
 
-    transitions_correct = 0
-    transitions_incorrect = 0
-
     model = trainer.model
     optimizer = trainer.optimizer
+
+    transitions_correct = Counter()
+    transitions_incorrect = Counter()
 
     for interval_start in tqdm(interval_starts, postfix="Batch"):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
@@ -447,9 +448,9 @@ def train_model_one_epoch(trainer, transition_tensors, model_loss_function, epoc
 
             for pred_transition, gold_transition in zip(pred_transitions, gold_transitions):
                 if pred_transition != gold_transition:
-                    transitions_incorrect = transitions_incorrect + 1
+                    transitions_incorrect[gold_transition.short_name(), pred_transition.short_name()] += 1
                 else:
-                    transitions_correct = transitions_correct + 1
+                    transitions_correct[gold_transition.short_name()] += 1
 
             # eliminate finished trees, keeping only the transitions we will use
             zipped_batch = [x for x in zip(batch, gold_transitions) if x[0].num_transitions() + 1 < len(x[0].gold_sequence)]
@@ -469,7 +470,12 @@ def train_model_one_epoch(trainer, transition_tensors, model_loss_function, epoc
         optimizer.step()
         optimizer.zero_grad()
 
-    return epoch_loss, transitions_correct, transitions_incorrect
+    total_correct = sum(v for _, v in transitions_correct.items())
+    total_incorrect = sum(v for _, v in transitions_incorrect.items())
+    logger.info("Transitions correct: %d\n%s", total_correct, str(transitions_correct))
+    logger.info("Transitions incorrect: %d\n%s", total_incorrect, str(transitions_incorrect))
+
+    return epoch_loss, total_correct, total_incorrect
 
 def build_batch_from_trees(batch_size, data_iterator, model):
     """
