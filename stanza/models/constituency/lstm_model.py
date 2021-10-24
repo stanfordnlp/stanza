@@ -266,23 +266,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         return res
     
-    def preprocess(self, data, vocab, args):
-        processed = []
-        """
-        if args.get('lowercase', True): # handle word case
-            case = lambda x: x.lower()
-        else:
-            case = lambda x: x
-        if args.get('char_lowercase', False): # handle character case
-            char_case = lambda x: x.lower()
-        else:
-            char_case = lambda x: x
-        """
-        tokenized_sents = []
-        print("start checking bert emb...")
-        print("length of data: ", len(data))
-
-        list_tokenized = []
+    def extract_phobert_embeddings(self, data):
+        processed = [] # final product, returns the list of list of word representation
+        tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
+        list_tokenized = [] # list of tokenized sentences from phobert
         for sent in data:
             #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
             tokenized = [word[0].replace("\xa0","_") for word in sent]
@@ -300,80 +287,53 @@ class LSTMModel(BaseModel, nn.Module):
             sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
             #add start and end tokens to sent_ids
             tokenized_sent = [0] + sent_ids + [2]
-        
-            #tokenized_sent = [word[0].replace("\xa0"," ") for word in sent]
             
             if len(tokenized_sent)>256:
                 print(len(tokenized_sent))
-                print("oops", tokenized_sent)
+                print("Invalid size, phobert max size: 256 -", tokenized_sent)
 
             #add to tokenized_sents
             tokenized_sents.append(torch.tensor(tokenized_sent).detach())
-            #processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
-            #processed_sent = [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
-            #processed_sent += [vocab['tag'].map([w[1] for w in sent])]
+        
             processed_sent = []
             processed.append(processed_sent)
 
-            #print("done loading bert emb!")
+            # done loading bert emb
 
-
-        logger.info("preparing to feed into phobert 128 at a time") 
         size = len(tokenized_sents)
-        print(f"size is {size}")
-        for sent in tokenized_sents:
-            print(f"sent size: {len(sent)}")
+        
         #padding the inputs
         tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=1)
-        print(f"tokenized_sents_padded shape: {tokenized_sents_padded.shape}")
+        
         features = []
         tokenized_sents_padded_tensor = torch.tensor(tokenized_sents_padded)
-        print(f"tensor shape before feeding: {tokenized_sents_padded_tensor.shape}")
-        #Feed into PhoBERT 128 at a time.
+    
+        # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
+        # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
             with torch.no_grad():
-                feed_in_tensor  = torch.tensor(tokenized_sents_padded[128*i:128*i+128])
-                print(f"feed_in_tensor shape: {feed_in_tensor.shape}")
                 feature = phobert(torch.tensor(tokenized_sents_padded[128*i:128*i+128]).to(torch.device("cuda:0")), output_hidden_states=True)
-            logger.info("ADDING THE FEATURE TO RESULT")
-            print(f"feature should have 3 outputs: {len(feature)}")
-            print(f"feature's final layer size: {feature[0].shape}")
-            check_tensor = torch.tensor(feature[2][-2]).detach().cpu()
-            print(f"check_tensor size is: {check_tensor.shape}")
+        
             #take the second output layer since experiments shows it give the best result
             features += torch.tensor(feature[2][-2]).detach().cpu()
             del feature
             
-            print("done ", (i+1)*128)
-            print(asizeof.asizeof(features))
-            #print(len(features))
-        print(len(processed))
-        #print(len(tokenized))
-
-        print("Length of features", len(features))
         assert len(features)==size
         assert len(features)==len(processed)
         
         #process the output
         for idx, sent in enumerate(processed):
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
-            new_sent=[features[idx][idx2 +1].numpy() for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
+            new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             #add new vector to processed
-            logger.info("Add new_sent to processed")
-            print(len(new_sent))
-            processed[idx] = new_sent #+ processed[idx]
-            """
-            if len(processed[idx][0]) != len(processed[idx][1]):
-                print(len(processed[idx][0]), len(processed[idx][1]))
-                #print(processed[idx])
-                print(list_tokenized[idx])
-            assert len(processed[idx][0]) == len(processed[idx][1])
-            #processed[idx] = [features[idx][1:1+end_list[idx]]] + processed[idx]
-            """
-        #del list_tokenized
+            processed[idx] = new_sent 
+    
         del tokenized_sents
         del tokenized
         del features
+
+        # This is a list of list of tensors
+        # Each tensor holds the representation of a word extracted from phobert
         return processed
     
     def initial_word_queues(self, tagged_word_lists):
@@ -395,27 +355,18 @@ class LSTMModel(BaseModel, nn.Module):
         all_word_labels = []
 
         # BERT embedding extraction
-        logger.info("---EXTRACTING BERT---")
         raw_data = []
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             sentence = [word.children[0].label for word in tagged_words]
             raw_data.append(sentence)
-            
-        print(f"length of data: {len(raw_data)}")
-        print(f"length of tagged_word_lists: {len(tagged_word_lists)}")
 
-        bert_embeddings = self.preprocess(raw_data, None, None)
-        print(f"bert_data size: {len(bert_embeddings)}")
-        logger.info("---Checking BERT embedding' content---")
-        for embedding in bert_embeddings:
-            print(len(embedding))
+        phobert_embeddings = self.extract_phobert_embeddings(raw_data)
+            
         # Normal initial_word_queues script resumes
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            print(f"---sentence_idx--- {sentence_idx}")
             word_ids = [word.children[0].label for word in tagged_words]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
             word_input = self.embedding(word_idx)
-            print(f" word_input shape: {word_input.shape}")
 
             # this occasionally learns UNK at train time
             word_labels = [word.children[0].label for word in tagged_words]
@@ -427,26 +378,21 @@ class LSTMModel(BaseModel, nn.Module):
             delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
-            print(f"delta_input shape: {delta_input.shape}")
 
             word_inputs = [word_input, delta_input]
-            print(f"word_inputs shape: {len(word_inputs)}")
 
             if self.tag_embedding_dim > 0:
                 try:
                     tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
                     tag_input = self.tag_embedding(tag_idx)
-                    print(f"tag_input size: {tag_input.shape}")
+                    
                     word_inputs.append(tag_input)
                 except KeyError as e:
                     raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
             all_word_labels.append(word_labels)
-            print(f"word_labels shape: {len(word_labels)}")
             all_word_inputs.append(word_inputs)
-            print(f"word_inputs shape: {len(word_inputs)}")
-        print(f"self.forward_charlm is: {self.forward_charlm}")
-        print(f"self.backward_charlm is: {self.backward_charlm}")
+            
         if self.forward_charlm is not None:
             all_forward_chars = self.build_char_representation(all_word_labels, device, forward=True)
             for word_inputs, forward_chars in zip(all_word_inputs, all_forward_chars):
@@ -460,11 +406,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         for sentence_idx, word_inputs in enumerate(all_word_inputs):
             # now of size sentence x input
-            logger.info(f"Concatenating phase. ---sentence_idx: {sentence_idx}---")
-            for word in word_inputs:
-                print(f"shape: {word.shape}")
             word_input = torch.cat(word_inputs, dim=1)
-            print(f"shape after concatenation: {word_input.shape}")
             word_input = self.word_dropout(word_input)
 
             word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
@@ -481,7 +423,6 @@ class LSTMModel(BaseModel, nn.Module):
             sentence_output = word_output[:len(tagged_words), sentence_idx, :]
             sentence_output = self.word_to_constituent(sentence_output)
             sentence_output = self.nonlinearity(sentence_output)
-            print(f"sentence_output shape: {sentence_output.shape}, sentence_idx: {sentence_idx}")
             # TODO: this makes it so constituents downstream are
             # build with the outputs of the LSTM, not the word
             # embeddings themselves.  It is possible we want to
