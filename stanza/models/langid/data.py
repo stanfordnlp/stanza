@@ -6,6 +6,12 @@ import torch
 class DataLoader:
     """
     Class for loading language id data and providing batches
+
+    Attempt to recreate data pre-processing from: https://github.com/AU-DIS/LSTM_langid
+
+    Uses methods from: https://github.com/AU-DIS/LSTM_langid/blob/main/src/language_datasets.py
+
+    Data format is same as LSTM_langid
     """
 
     def __init__(self, use_gpu=None):
