@@ -364,21 +364,12 @@ class LSTMModel(BaseModel, nn.Module):
         phobert_embeddings = self.extract_phobert_embeddings(raw_data)
             
         # Normal initial_word_queues script resumes
-        logger.info("-----SANITY CHECK BEFORE INTEGRATION-----")
-        print("===Checking Phobert===")
-        print(f"length phobert: {len(phobert_embeddings)}")
-        print(f"type phobert: {type(phobert_embeddings)}")
-        print(f"element type phobert: {type(phobert_embeddings[0])}")
-        print(f"element length: {len(phobert_embeddings[0])}")
-        print(f"word type: {type(phobert_embeddings[0][0])}")
-        print(f"word shape: {phobert_embeddings[0][0].shape}")
 
-        logger.info("---Convert phobert_embeddings to a list of tensors of shape: seq_size x 768===")
+        # Change list of words to tensors of shape seq_length x 768
         for idx, sent, in enumerate(phobert_embeddings):
             phobert_embeddings[idx]  = torch.stack(sent)
-            print(phobert_embeddings[idx].shape)
 
-        logger.info("-----Attaching to the word_inputs-----")
+        # Attaching
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_ids = [word.children[0].label for word in tagged_words]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
@@ -395,12 +386,7 @@ class LSTMModel(BaseModel, nn.Module):
 
             delta_input = self.delta_embedding(delta_idx)
             phobert_input = phobert_embeddings[sentence_idx]
-            print(f"word_input type: {type(word_input)}")
-            print(f"word_input shape: {word_input.shape}")
-            print(f"delta_input type: {type(delta_input)}")
-            print(f"delta_input shape: {delta_input.shape}")
-            print(f"phobert_input type: {type(phobert_input)}")
-            print(f"phobert_input shape: {phobert_input.shape}")
+            
             word_inputs = [word_input, delta_input, phobert_input]
 
             if self.tag_embedding_dim > 0:
