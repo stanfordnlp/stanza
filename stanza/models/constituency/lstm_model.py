@@ -96,7 +96,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 768
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
@@ -291,6 +291,7 @@ class LSTMModel(BaseModel, nn.Module):
             if len(tokenized_sent)>256:
                 print(len(tokenized_sent))
                 print("Invalid size, phobert max size: 256 -", tokenized_sent)
+                continue
 
             #add to tokenized_sents
             tokenized_sents.append(torch.tensor(tokenized_sent).detach())
@@ -315,7 +316,7 @@ class LSTMModel(BaseModel, nn.Module):
                 feature = phobert(torch.tensor(tokenized_sents_padded[128*i:128*i+128]).to(torch.device("cuda:0")), output_hidden_states=True)
         
             #take the second output layer since experiments shows it give the best result
-            features += torch.tensor(feature[2][-2]).detach().cpu()
+            features += torch.tensor(feature[2][-2])
             del feature
             
         assert len(features)==size
@@ -363,6 +364,21 @@ class LSTMModel(BaseModel, nn.Module):
         phobert_embeddings = self.extract_phobert_embeddings(raw_data)
             
         # Normal initial_word_queues script resumes
+        logger.info("-----SANITY CHECK BEFORE INTEGRATION-----")
+        print("===Checking Phobert===")
+        print(f"length phobert: {len(phobert_embeddings)}")
+        print(f"type phobert: {type(phobert_embeddings)}")
+        print(f"element type phobert: {type(phobert_embeddings[0])}")
+        print(f"element length: {len(phobert_embeddings[0])}")
+        print(f"word type: {type(phobert_embeddings[0][0])}")
+        print(f"word shape: {phobert_embeddings[0][0].shape}")
+
+        logger.info("---Convert phobert_embeddings to a list of tensors of shape: seq_size x 768===")
+        for idx, sent, in enumerate(phobert_embeddings):
+            phobert_embeddings[idx]  = torch.stack(sent)
+            print(phobert_embeddings[idx].shape)
+
+        logger.info("-----Attaching to the word_inputs-----")
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_ids = [word.children[0].label for word in tagged_words]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
@@ -378,8 +394,14 @@ class LSTMModel(BaseModel, nn.Module):
             delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
-
-            word_inputs = [word_input, delta_input]
+            phobert_input = phobert_embeddings[sentence_idx]
+            print(f"word_input type: {type(word_input)}")
+            print(f"word_input shape: {word_input.shape}")
+            print(f"delta_input type: {type(delta_input)}")
+            print(f"delta_input shape: {delta_input.shape}")
+            print(f"phobert_input type: {type(phobert_input)}")
+            print(f"phobert_input shape: {phobert_input.shape}")
+            word_inputs = [word_input, delta_input, phobert_input]
 
             if self.tag_embedding_dim > 0:
                 try:
