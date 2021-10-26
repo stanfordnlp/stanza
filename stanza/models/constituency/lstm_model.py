@@ -97,6 +97,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 768
+        
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
@@ -272,8 +273,8 @@ class LSTMModel(BaseModel, nn.Module):
         list_tokenized = [] # list of tokenized sentences from phobert
         for sent in data:
             #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
-            tokenized = [word[0].replace("\xa0","_") for word in sent]
-
+            tokenized = [word.replace(" ","_") for word in sent]
+    
             #concatenate to a sentence
             sentence = ' '.join(tokenized)
 
@@ -285,6 +286,7 @@ class LSTMModel(BaseModel, nn.Module):
 
             #convert tokens to ids
             sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
+            
             #add start and end tokens to sent_ids
             tokenized_sent = [0] + sent_ids + [2]
             
@@ -307,16 +309,15 @@ class LSTMModel(BaseModel, nn.Module):
         tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=1)
         
         features = []
-        tokenized_sents_padded_tensor = torch.tensor(tokenized_sents_padded)
     
         # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
         # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
             with torch.no_grad():
-                feature = phobert(torch.tensor(tokenized_sents_padded[128*i:128*i+128]).to(torch.device("cuda:0")), output_hidden_states=True)
+                feature = phobert(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
         
             #take the second output layer since experiments shows it give the best result
-            features += torch.tensor(feature[2][-2])
+            features += feature[2][-2].clone().detach()
             del feature
             
         assert len(features)==size
@@ -388,6 +389,8 @@ class LSTMModel(BaseModel, nn.Module):
             phobert_input = phobert_embeddings[sentence_idx]
             
             word_inputs = [word_input, delta_input, phobert_input]
+
+            
 
             if self.tag_embedding_dim > 0:
                 try:
