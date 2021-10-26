@@ -330,7 +330,7 @@ class LSTMModel(BaseModel, nn.Module):
             newsent = []
             temp = []
             for idx2, i in enumerate(list_tokenized[idx]):
-                temp.append(list_tokenized[idx][idx2])
+                temp.append(features[idx][idx2])
                 if list_tokenized[idx][idx2].endswith("@@"):
                     continue
                 else:
