@@ -326,7 +326,18 @@ class LSTMModel(BaseModel, nn.Module):
         #process the output
         for idx, sent in enumerate(processed):
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
-            new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
+            #new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
+            newsent = []
+            temp = []
+            for idx2, i in enumerate(list_tokenized[idx]):
+                temp.append(list_tokenized[idx][idx2])
+                if list_tokenized[idx][idx2].endswith("@@"):
+                    continue
+                else:
+                    out = torch.stack(temp).mean(dim=0)
+                    new_sent.append(out)
+                    temp = []
+                    
             #add new vector to processed
             processed[idx] = new_sent 
     
