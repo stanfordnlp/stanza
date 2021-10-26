@@ -327,7 +327,7 @@ class LSTMModel(BaseModel, nn.Module):
         for idx, sent in enumerate(processed):
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
             #new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
-            newsent = []
+            new_sent = []
             temp = []
             for idx2, i in enumerate(list_tokenized[idx]):
                 temp.append(features[idx][idx2])
