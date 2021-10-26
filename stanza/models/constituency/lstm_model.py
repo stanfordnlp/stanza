@@ -28,8 +28,8 @@ from pympler import asizeof
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast
 import math
 
-phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
+phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
+tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
 #
 logger = logging.getLogger('stanza')
 
@@ -96,7 +96,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 768
         
 
         if forward_charlm is not None:
@@ -268,29 +268,25 @@ class LSTMModel(BaseModel, nn.Module):
         return res
     
     def extract_phobert_embeddings(self, data):
-        logger.info("=====Extracting Phobert Embeddings for a BATCH=====")
         processed = [] # final product, returns the list of list of word representation
         tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
         list_tokenized = [] # list of tokenized sentences from phobert
         for sent in data:
-            print(f"sent is: {sent}")
             #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
             tokenized = [word.replace(" ","_") for word in sent]
-            print(f"tokenized: {tokenized}")
+    
             #concatenate to a sentence
             sentence = ' '.join(tokenized)
-            print(f"sentence: {sentence}")
 
             #tokenize using AutoTokenizer PhoBERT
             tokenized = tokenizer.tokenize(sentence)
-            print(f"tokenized after tokenized by phobert: {tokenized}")
 
             #add tokenized to list_tokenzied for later checking
             list_tokenized.append(tokenized)
 
             #convert tokens to ids
             sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
-            print(f"sent_ids: {sent_ids}")
+            
             #add start and end tokens to sent_ids
             tokenized_sent = [0] + sent_ids + [2]
             
@@ -328,12 +324,7 @@ class LSTMModel(BaseModel, nn.Module):
         assert len(features)==len(processed)
         
         #process the output
-        logger.info("========== PROCESSING PHOBERT EMBEDDING: FINAL STAGE ==========")
         for idx, sent in enumerate(processed):
-            print(f"sent idx: {idx}")
-            print(f"  feature vector length: {features[idx].shape}")
-            print(f"  obtained from: {tokenized_sents[idx]}")
-            print(f"  tokenized length: {len(list_tokenized[idx])}")
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
             new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             #add new vector to processed
