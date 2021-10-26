@@ -328,7 +328,12 @@ class LSTMModel(BaseModel, nn.Module):
         assert len(features)==len(processed)
         
         #process the output
+        logger.info("========== PROCESSING PHOBERT EMBEDDING: FINAL STAGE ==========")
         for idx, sent in enumerate(processed):
+            print(f"sent idx: {idx}")
+            print(f"  feature vector length: {features[idx].shape}")
+            print(f"  obtained from: {tokenized_sents[idx]}")
+            print(f"  tokenized length: {len(list_tokenized[idx])}")
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
             new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             #add new vector to processed
