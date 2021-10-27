@@ -9,6 +9,8 @@ class LangIDBiLSTM(nn.Module):
 
     Arxiv: https://arxiv.org/abs/2102.06282
     GitHub: https://github.com/AU-DIS/LSTM_langid
+
+    This class is similar to https://github.com/AU-DIS/LSTM_langid/blob/main/src/LSTMLID.py
     """
 
     def __init__(self, char_to_idx, tag_to_idx, num_layers, embedding_dim, hidden_dim, batch_size=64, weights=None, 

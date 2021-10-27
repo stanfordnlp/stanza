@@ -5,6 +5,11 @@ Example output data format (one example per line):
 
 {"text": "Hello world.", "label": "en"}
 
+This is an attempt to recreate data pre-processing in https://github.com/AU-DIS/LSTM_langid
+
+Specifically borrows methods from https://github.com/AU-DIS/LSTM_langid/blob/main/src/dataset_creator.py
+
+Data format is same as LSTM_langid as well.
 """
 
 import argparse
