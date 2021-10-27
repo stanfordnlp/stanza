@@ -41,7 +41,7 @@ def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> Li
         raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
 
 
-def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: bool) -> List[tuple]:
+def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) -> List[tuple]:
     """
     returns a list where the values of the list are
       label, [token...]
