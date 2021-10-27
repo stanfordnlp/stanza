@@ -331,6 +331,7 @@ class LSTMModel(BaseModel, nn.Module):
             temp = []
             for idx2, i in enumerate(list_tokenized[idx]):
                 temp.append(features[idx][idx2+1])
+                first_flag = False
                 if idx2 == 0:
                     temp.append(features[idx][0])
                     first_flag = True
