@@ -1,3 +1,4 @@
+"""Iterate test."""
 import argparse
 import glob
 import logging
@@ -23,14 +24,13 @@ logger = logging.getLogger('stanza')
 
 
 def parse_args() -> None:
+    """Add and parse arguments."""
     parser = argparse.ArgumentParser()
 
     classifier_args.add_common_args(parser)
 
-    # fmt:off
     parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
     parser.add_argument('--glob', type=str, default='saved_models/classifier/*classifier*pt', help='Model file(s) to test.')
-    # fmt:on
 
     args = parser.parse_args()
     return args
@@ -64,9 +64,5 @@ for load_name in model_files:
 
     confusion = classifier.confusion_dataset(model, test_set, device=device)
     correct, total = classifier.confusion_to_accuracy(confusion)
-    # fmt:off
-    logger.info("  Results: %d correct of %d examples.  Accuracy: %f" %
-                (correct, total, correct / total))
+    logger.info("  Results: %d correct of %d examples.  Accuracy: %f" % (correct, total, correct / total))
     logger.info("Confusion matrix:\n{}".format(classifier.format_confusion(confusion, model.labels)))
-    # fmt:on
-
