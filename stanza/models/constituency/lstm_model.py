@@ -28,8 +28,8 @@ from pympler import asizeof
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast
 import math
 
-phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
+phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
+tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
 #
 logger = logging.getLogger('stanza')
 
@@ -96,7 +96,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 768
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
         
 
         if forward_charlm is not None:
