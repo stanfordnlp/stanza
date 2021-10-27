@@ -334,8 +334,8 @@ class LSTMModel(BaseModel, nn.Module):
                 if list_tokenized[idx][idx2].endswith("@@"):
                     continue
                 else:
-                    out = torch.stack(temp).mean(dim=0)
-                    new_sent.append(out)
+                    #out = torch.stack(temp).mean(dim=0)
+                    new_sent.append(temp[0])
                     temp = []
                     
             #add new vector to processed
