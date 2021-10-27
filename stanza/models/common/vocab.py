@@ -225,7 +225,7 @@ class BaseMultiVocab:
 
 class CharVocab(BaseVocab):
     def build_vocab(self):
-        if type(self.data[0][0]) is list: # general data from DataLoader
+        if isinstance(self.data[0][0], (list, tuple)): # general data from DataLoader
             counter = Counter([c for sent in self.data for w in sent for c in w[self.idx]])
             for k in list(counter.keys()):
                 if counter[k] < self.cutoff:
