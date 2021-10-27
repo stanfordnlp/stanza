@@ -331,11 +331,21 @@ class LSTMModel(BaseModel, nn.Module):
             temp = []
             for idx2, i in enumerate(list_tokenized[idx]):
                 temp.append(features[idx][idx2+1])
+                if idx2 == 0:
+                    temp.append(features[idx][0])
+                    first_flag = True
+                
                 if list_tokenized[idx][idx2].endswith("@@"):
                     continue
                 else:
-                    #out = torch.stack(temp).mean(dim=0)
-                    new_sent.append(temp[0])
+                    # If this is the last word piece in sent
+                    if (idx2 == len(list_tokenized[idx]) - 1): 
+                        temp.append(features[idx][idx2+2])
+                        temp = torch.stack(temp).mean(dim=0)
+                    if first_flag:
+                        temp = torch.stack(temp).mean(dim=0)
+                        first_flag = False
+                    new_sent.append(temp[-1])
                     temp = []
                     
             #add new vector to processed
