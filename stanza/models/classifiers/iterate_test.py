@@ -1,12 +1,12 @@
+"""Iterate test."""
 import argparse
 import glob
 import logging
 
 import stanza.models.classifier as classifier
-import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.classifier_args as classifier_args
+import stanza.models.classifiers.cnn_classifier as cnn_classifier
 from stanza.models.common import utils
-from stanza.models.common.pretrain import Pretrain
 
 """
 A script for running the same test file on several different classifiers.
@@ -22,17 +22,19 @@ Example command line:
 
 logger = logging.getLogger('stanza')
 
-def parse_args():
+
+def parse_args() -> None:
+    """Add and parse arguments."""
     parser = argparse.ArgumentParser()
 
     classifier_args.add_common_args(parser)
 
     parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
-
     parser.add_argument('--glob', type=str, default='saved_models/classifier/*classifier*pt', help='Model file(s) to test.')
 
     args = parser.parse_args()
     return args
+
 
 args = parse_args()
 seed = utils.set_random_seed(args.seed, args.cuda)
@@ -62,6 +64,5 @@ for load_name in model_files:
 
     confusion = classifier.confusion_dataset(model, test_set, device=device)
     correct, total = classifier.confusion_to_accuracy(confusion)
-    logger.info("  Results: %d correct of %d examples.  Accuracy: %f" %
-                (correct, total, correct / total))
+    logger.info("  Results: %d correct of %d examples.  Accuracy: %f" % (correct, total, correct / total))
     logger.info("Confusion matrix:\n{}".format(classifier.format_confusion(confusion, model.labels)))
