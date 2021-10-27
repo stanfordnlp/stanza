@@ -1,9 +1,15 @@
+"""Stanza models classifier data functions."""
+
 import logging
+import re
+from typing import List
+
 import stanza.models.classifiers.classifier_args as classifier_args
 
 logger = logging.getLogger('stanza')
 
-def update_text(sentence, wordvec_type):
+
+def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> List[str]:
     """
     Process a line of text (with tokenization provided as whitespace)
     into a list of strings.
@@ -35,7 +41,7 @@ def update_text(sentence, wordvec_type):
         raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
 
 
-def read_dataset(dataset, wordvec_type, min_len):
+def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) -> List[tuple]:
     """
     returns a list where the values of the list are
       label, [token...]
@@ -58,4 +64,3 @@ def read_dataset(dataset, wordvec_type, min_len):
     if min_len:
         lines = [x for x in lines if len(x[1]) >= min_len]
     return lines
-
