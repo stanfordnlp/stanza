@@ -343,10 +343,11 @@ class LSTMModel(BaseModel, nn.Module):
                     # If this is the last word piece in sent
                     if (idx2 == len(list_tokenized[idx]) - 1): 
                         temp.append(features[idx][idx2+2])
-                        out = torch.stack(temp).mean(dim=0)
+                        #out = torch.stack(temp).mean(dim=0)
+                        out = temp[-1]
                     if first_flag:
-                        out = torch.stack(temp).mean(dim=0)
-                        
+                        #out = torch.stack(temp).mean(dim=0)
+                        out = temp[0]
                         first_flag = False
                     else:
                         out = torch.stack(temp).mean(dim=0)
