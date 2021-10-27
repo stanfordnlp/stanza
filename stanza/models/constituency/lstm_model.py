@@ -349,7 +349,7 @@ class LSTMModel(BaseModel, nn.Module):
                         
                         first_flag = False
                     else:
-                        out = temp[-1]
+                        out = torch.stack(temp).mean(dim=0)
                     new_sent.append(out)
                     temp = []
                     
