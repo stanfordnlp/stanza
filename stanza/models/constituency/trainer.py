@@ -424,6 +424,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     transitions_correct = Counter()
     transitions_incorrect = Counter()
     repairs_used = Counter()
+    fake_transitions_used = 0
 
     for interval_start in tqdm(interval_starts, postfix="Batch"):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
@@ -449,6 +450,15 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
                 if pred_transition == gold_transition:
                     transitions_correct[gold_transition.short_name()] += 1
                     if state.num_transitions() + 1 < len(state.gold_sequence):
+                        if args['transition_scheme'] is TransitionScheme.IN_ORDER and random.random() < args['oracle_forced_errors']:
+                            fake_transition = random.choice(model.transitions)
+                            if fake_transition.is_legal(state, model):
+                                _, new_sequence = oracle_inorder_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+                                if new_sequence is not None:
+                                    new_batch.append(state._replace(gold_sequence=new_sequence))
+                                    update_transitions.append(fake_transition)
+                                    fake_transitions_used = fake_transitions_used + 1
+                                    continue
                         new_batch.append(state)
                         update_transitions.append(gold_transition)
                     continue
@@ -462,12 +472,13 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
                 if state.num_transitions() + 1 >= len(state.gold_sequence):
                     continue
 
-                if epoch < args['initial_oracle_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
+                if epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
                     new_batch.append(state)
                     update_transitions.append(gold_transition)
                     continue
 
                 repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+                # we can only reach here on an error
                 assert repair_type != RepairType.CORRECT
                 repairs_used[repair_type] += 1
                 if new_sequence is not None and random.random() < args['oracle_frequency']:
@@ -494,7 +505,10 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     total_incorrect = sum(v for _, v in transitions_incorrect.items())
     logger.info("Transitions correct: %d\n  %s", total_correct, str(transitions_correct))
     logger.info("Transitions incorrect: %d\n  %s", total_incorrect, str(transitions_incorrect))
-    logger.info("Oracle repairs:\n  %s", repairs_used)
+    if len(repairs_used) > 0:
+        logger.info("Oracle repairs:\n  %s", repairs_used)
+    if fake_transitions_used > 0:
+        logger.info("Fake transitions used: %d", fake_transitions_used)
 
     return epoch_loss, total_correct, total_incorrect
 
