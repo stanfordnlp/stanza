@@ -118,10 +118,11 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.tags = sorted(list(tags))
         if self.tag_embedding_dim > 0:
-            self.tag_map = { t: i for i, t in enumerate(self.tags) }
-            self.tag_embedding = nn.Embedding(num_embeddings = len(tags),
-                                              embedding_dim = self.tag_embedding_dim)
-            self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
+            self.tag_map = { t: i+2 for i, t in enumerate(self.tags) }
+            self.tag_embedding = nn.Embedding(num_embeddings = len(tags)+2,
+                                              embedding_dim = self.tag_embedding_dim,
+                                              padding_idx = 0)
+            self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
@@ -295,12 +296,13 @@ class LSTMModel(BaseModel, nn.Module):
             word_inputs = [word_input, delta_input]
 
             if self.tag_embedding_dim > 0:
-                try:
-                    tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
-                    tag_input = self.tag_embedding(tag_idx)
-                    word_inputs.append(tag_input)
-                except KeyError as e:
-                    raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
+                if self.training:
+                    tag_labels = [None if random.random() < self.args['tag_unknown_frequency'] else word.label for word in tagged_words]
+                else:
+                    tag_labels = [word.label for word in tagged_words]
+                tag_idx = torch.stack([self.tag_tensors[self.tag_map.get(tag, UNK_ID)] for tag in tag_labels])
+                tag_input = self.tag_embedding(tag_idx)
+                word_inputs.append(tag_input)
 
             all_word_labels.append(word_labels)
             all_word_inputs.append(word_inputs)
