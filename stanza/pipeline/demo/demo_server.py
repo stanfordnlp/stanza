@@ -47,6 +47,8 @@ def annotate():
             deps.append({'dep': word.deprel, 'governor': word.head, 'governorGloss': sentence.words[word.head-1].text,
                 'dependent': word.id, 'dependentGloss': word.text})
         annotated_sentences.append({'basicDependencies': deps, 'tokens': tokens})
+        if hasattr(sentence, 'constituency') and sentence.constituency is not None:
+            annotated_sentences[-1]['parse'] = str(sentence.constituency)
 
     return json.dumps({'sentences': annotated_sentences})
 
