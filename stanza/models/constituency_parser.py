@@ -126,6 +126,11 @@ def parse_args(args=None):
     parser.add_argument('--epochs', type=int, default=2000)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
 
+    # probably this should be higher?
+    parser.add_argument('--oracle_initial_epoch', type=int, default=1, help="Epoch where we start using the dynamic oracle to let the parser keep going with wrong decisions")
+    parser.add_argument('--oracle_frequency', type=float, default=0.5, help="How often to use the oracle vs how often to force the correct transition")
+    parser.add_argument('--oracle_forced_errors', type=float, default=0.001, help="Occasionally have the model randomly walk through the state space to try to learn how to recover")
+
     # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
     #  30: 0.9085
@@ -216,13 +221,10 @@ def parse_args(args=None):
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
+    parser.add_argument('--tag_unknown_frequency', default=0.001, type=float, help='How often to replace a tag with UNK when training')
 
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
     parser.add_argument('--num_output_layers', default=3, type=int, help='How many layers to use at the prediction level')
-
-    # TODO: add the ability to keep training in a different direction
-    # after making an error, eg, add an oracle
-    parser.add_argument('--train_method', default='gold_entire', choices=['gold_entire'], help='Different training methods to use')
 
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
     parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
