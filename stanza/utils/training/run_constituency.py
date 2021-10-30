@@ -14,13 +14,6 @@ from stanza.utils.training.common import Mode, build_charlm_args, find_wordvec_p
 
 logger = logging.getLogger('stanza')
 
-# TODO: get this from the resources
-RETAG_PACKAGE = {
-    "en": "en_combined",
-    "it": "it_combined",
-    "vi": "vi_vtb",
-}
-
 # xpos tagger doesn't produce PP tag on the turin treebank,
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
@@ -47,13 +40,10 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 
-    if language in RETAG_PACKAGE:
-        retag_args = ["--retag_package", RETAG_PACKAGE[language]]
+    if language in RETAG_METHOD:
+        retag_args = ["--retag_method", RETAG_METHOD[language]]
     else:
         retag_args = []
-
-    if language in RETAG_METHOD:
-        retag_args.extend(["--retag_method", "upos"])
 
     if '--wordvec_pretrain_file' not in extra_args:
         # will throw an error if the pretrain can't be found

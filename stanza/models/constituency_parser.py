@@ -230,8 +230,9 @@ def parse_args(args=None):
     parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
-    parser.add_argument('--retag_package', default=None, help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
+    parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
     parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
+    parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
 
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
@@ -281,10 +282,10 @@ def main(args=None):
     if args['retag_package'] is not None:
         if '_' in args['retag_package']:
             lang, package = args['retag_package'].split('_', 1)
-            retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
         else:
-            lang = args['retag_package']
-            retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_tqdm=True)
+            lang = args['lang']
+            package = args['retag_package']
+        retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
     else:
         retag_pipeline = None
 
