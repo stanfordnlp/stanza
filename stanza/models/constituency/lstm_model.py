@@ -219,6 +219,18 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.constituency_lstm = self.args['constituency_lstm']
 
+        # Initializations of parameters for the Partitioned Attention
+        d_pretrained = 1024
+        d_model = 1024
+        morpho_emb_dropout = 0.2
+        encoder_max_len = 512
+        num_heads = 8
+        d_kv = 64
+        d_ff = 2048
+        relu_dropout = 0.1
+        residual_dropout = 0.2
+        attention_dropout = 0.2
+        num_layers = 2
         # Initializations for the Partitioned Attention
         self.project_pretrained = nn.Linear(
             d_pretrained, d_model // 2, bias=False
