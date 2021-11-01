@@ -24,9 +24,15 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
 # imports added for bert and lal integration
-from pympler import asizeof
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast
 import math
+import torch.nn.functional as F
+from partitioned_transformer import (
+    ConcatPositionalEncoding,
+    FeatureDropout,
+    PartitionedTransformerEncoder,
+    PartitionedTransformerEncoderLayer,
+)
 
 phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
 tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
@@ -213,6 +219,29 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.constituency_lstm = self.args['constituency_lstm']
 
+        # Initializations for the Partitioned Attention
+        self.project_pretrained = nn.Linear(
+            d_pretrained, d_model // 2, bias=False
+        )
+
+        self.morpho_emb_dropout = FeatureDropout(morpho_emb_dropout)
+        self.add_timing = ConcatPositionalEncoding(
+            d_model=d_model,
+            max_len=encoder_max_len,
+        )
+        encoder_layer = PartitionedTransformerEncoderLayer(
+            d_model,
+            n_head=num_heads,
+            d_qkv=d_kv,
+            d_ff=d_ff,
+            ff_dropout=relu_dropout,
+            residual_dropout=residual_dropout,
+            attention_dropout=attention_dropout,
+        )
+        self.encoder= PartitionedTransformerEncoder(
+            encoder_layer, num_layers
+        )
+        
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
 
@@ -364,6 +393,28 @@ class LSTMModel(BaseModel, nn.Module):
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
         return processed
+
+    def partitioned_attention(self, raw_data):
+        """
+        Let's decide the input format later
+        """
+        # pretrained_out: output of pretrained model, in this case phobert
+        features = pretrained_out.last_hidden_state.to(self.output_device)
+        features = features[torch.arange(features.shape[0])[:, None],
+                            F.relu(words_from_tokens),
+                    ]
+        features.masked_fill_(~valid_token_mask[:,:, None], 0)
+
+        # Project the pretrained embedding onto the desired dimension
+        extra_content_annotations = self.project_pretrained(features)
+
+        # Add positional information through the table 
+        encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
+        # Put the partitioned input through the partitioned attention 
+        annotations = self.encoder(encoder_in, valid_token_mask)
+
+        return annotations
+        
     
     def initial_word_queues(self, tagged_word_lists):
         """
@@ -390,7 +441,9 @@ class LSTMModel(BaseModel, nn.Module):
             raw_data.append(sentence)
 
         phobert_embeddings = self.extract_phobert_embeddings(raw_data)
-            
+
+        # Partitioned Attention layer
+        partitioned_embeddings = partitioned_attention(phobert_embeddings)
         # Normal initial_word_queues script resumes
 
         # Change list of words to tensors of shape seq_length x 768
