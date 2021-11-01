@@ -311,3 +311,18 @@ class Tree(StanzaObject):
         if len(new_children) == 0:
             return None
         return Tree(self.label, new_children)
+
+    def count_unary_depth(self):
+        if self.is_preterminal() or self.is_leaf():
+            return 0
+        if len(self.children) == 1:
+            t = self
+            score = 0
+            while not t.is_preterminal() and not t.is_leaf() and len(t.children) == 1:
+                score = score + 1
+                t = t.children[0]
+            child_score = max(tc.count_unary_depth() for tc in t.children)
+            score = max(score, child_score)
+            return score
+        score = max(t.count_unary_depth() for t in self.children)
+        return score

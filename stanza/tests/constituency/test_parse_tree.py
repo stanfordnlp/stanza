@@ -194,3 +194,93 @@ def test_equals():
 
     assert tree is not tree2
     assert tree == tree2
+
+
+# This tree was causing the model to barf on CTB7,
+# although it turns out the problem was just the
+# depth of the unary, not the list
+CHINESE_LONG_LIST_TREE = """
+(ROOT
+ (IP
+  (NP (NNP 证券法))
+  (VP
+   (PP
+    (IN 对)
+    (NP
+     (DNP
+      (NP
+       (NP (NNP 中国))
+       (NP
+        (NN 证券)
+        (NN 市场)))
+      (DEC 的))
+     (NP (NN 运作))))
+   (, ，)
+   (PP
+    (PP
+     (IN 从)
+     (NP
+      (NP (NN 股票))
+      (NP (VV 发行) (EC 、) (VV 交易))))
+    (, ，)
+    (PP
+     (VV 到)
+     (NP
+      (NP (NN 上市) (NN 公司) (NN 收购))
+      (EC 、)
+      (NP (NN 证券) (NN 交易所))
+      (EC 、)
+      (NP (NN 证券) (NN 公司))
+      (EC 、)
+      (NP (NN 登记) (NN 结算) (NN 机构))
+      (EC 、)
+      (NP (NN 交易) (NN 服务) (NN 机构))
+      (EC 、)
+      (NP (NN 证券业) (NN 协会))
+      (EC 、)
+      (NP (NN 证券) (NN 监督) (NN 管理) (NN 机构))
+      (CC 和)
+      (NP
+       (DNP
+        (NP (CP (CP (IP (VP (VV 违法))))))
+        (DEC 的))
+       (NP (NN 法律) (NN 责任))))))
+   (ADVP (RB 都))
+   (VP
+    (VV 作)
+    (AS 了)
+    (NP
+     (ADJP (JJ 详细))
+     (NP (NN 规定)))))
+  (. 。)))
+"""
+
+WEIRD_UNARY = """
+  (DNP
+    (NP (CP (CP (IP (VP (ASDF
+      (NP (NN 上市) (NN 公司) (NN 收购))
+      (EC 、)
+      (NP (NN 证券) (NN 交易所))
+      (EC 、)
+      (NP (NN 证券) (NN 公司))
+      (EC 、)
+      (NP (NN 登记) (NN 结算) (NN 机构))
+      (EC 、)
+      (NP (NN 交易) (NN 服务) (NN 机构))
+      (EC 、)
+      (NP (NN 证券业) (NN 协会))
+      (EC 、)
+      (NP (NN 证券) (NN 监督) (NN 管理) (NN 机构))))))))
+    (DEC 的))
+"""
+
+
+def test_count_unaries():
+    trees = tree_reader.read_trees(CHINESE_LONG_LIST_TREE)
+    assert len(trees) == 1
+    assert trees[0].count_unary_depth() == 5
+
+    trees = tree_reader.read_trees(WEIRD_UNARY)
+    assert len(trees) == 1
+    assert trees[0].count_unary_depth() == 5
+

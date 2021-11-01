@@ -18,7 +18,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
-from stanza.models.constituency.base_model import BaseModel
+from stanza.models.constituency.base_model import BaseModel, UNARY_LIMIT
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
@@ -40,7 +40,7 @@ Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -205,6 +205,8 @@ class LSTMModel(BaseModel, nn.Module):
                 nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
 
         self.constituency_lstm = self.args['constituency_lstm']
+
+        self._unary_limit = unary_limit
 
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
@@ -472,6 +474,9 @@ class LSTMModel(BaseModel, nn.Module):
         """
         transition_node = transitions.value
         return transition_node.value
+
+    def unary_limit(self):
+        return self._unary_limit
 
     def transition_scheme(self):
         return self._transition_scheme

@@ -23,6 +23,9 @@ from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 
+# default unary limit.  some treebanks may have longer chains (CTB, for example)
+UNARY_LIMIT = 4
+
 class BaseModel(ABC):
     """
     This base class defines abstract methods for manipulating a State.
@@ -119,6 +122,12 @@ class BaseModel(ABC):
         return ("ROOT",)
 
     @abstractmethod
+    def unary_limit(self):
+        """
+        Limit on the number of consecutive unary transitions
+        """
+
+    @abstractmethod
     def transition_scheme(self):
         """
         Transition scheme used - see parse_transitions
@@ -140,8 +149,9 @@ class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
     """
-    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT):
         self._transition_scheme = transition_scheme
+        self._unary_limit = unary_limit
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
@@ -193,6 +203,9 @@ class SimpleModel(BaseModel):
 
     def get_top_transition(self, transitions):
         return transitions.value
+
+    def unary_limit(self):
+        return self._unary_limit
 
     def transition_scheme(self):
         return self._transition_scheme

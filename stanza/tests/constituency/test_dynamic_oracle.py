@@ -10,6 +10,7 @@ from stanza.models.constituency.parse_transitions import CloseConstituent, OpenC
 from stanza.models.constituency.transition_sequence import build_treebank
 
 from stanza.tests import *
+from stanza.tests.constituency.test_transition_sequence import reconstruct_tree
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -177,19 +178,6 @@ def test_missed_unary(gold_sequences):
     assert repairs[2][0] == 23
     assert repairs[2][1] == gold_sequences[3][:23] + gold_sequences[3][25:]
 
-
-def reconstruct_tree(tree, sequence):
-    model = SimpleModel(TransitionScheme.IN_ORDER)
-    states = parse_transitions.initial_state_from_gold_trees([tree], model)
-    assert(len(states)) == 1
-    assert states[0].num_transitions() == 0
-
-    for t in sequence:
-        assert t.is_legal(states[0], model)
-        states = parse_transitions.bulk_apply(model, states, [t])
-
-    result_tree = states[0].constituents.value
-    return result_tree
 
 def test_open_with_stuff(unary_trees, gold_sequences):
     wrong_transition = OpenConstituent("S")
