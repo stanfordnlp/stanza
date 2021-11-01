@@ -1,7 +1,7 @@
 import pytest
 
 from stanza.models.constituency import parse_transitions
-from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.tests import *
 
@@ -265,7 +265,7 @@ def test_too_many_unaries_close():
 
     open_np = parse_transitions.OpenConstituent("NP")
     close_trans = parse_transitions.CloseConstituent()
-    for _ in range(parse_transitions.UNARY_LIMIT):
+    for _ in range(UNARY_LIMIT):
         assert open_np.is_legal(state, model)
         state = open_np.apply(state, model)
 
@@ -298,7 +298,7 @@ def test_too_many_unaries_open():
     assert shift.is_legal(state, model)
     state = shift.apply(state, model)
 
-    for _ in range(parse_transitions.UNARY_LIMIT):
+    for _ in range(UNARY_LIMIT):
         assert open_np.is_legal(state, model)
         state = open_np.apply(state, model)
 
