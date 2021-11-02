@@ -451,6 +451,7 @@ class LSTMModel(BaseModel, nn.Module):
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             sentence = [word.children[0].label for word in tagged_words]
             raw_data.append(sentence)
+            
 
         phobert_embeddings = self.extract_phobert_embeddings(raw_data)
 
