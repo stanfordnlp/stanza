@@ -2,12 +2,29 @@ import pytest
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.parse_transitions import *
 
 from stanza.tests import *
+from stanza.tests.constituency.test_parse_tree import CHINESE_LONG_LIST_TREE
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
+def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER, unary_limit=UNARY_LIMIT):
+    """
+    Starting from a tree and a list of transitions, build the tree caused by the transitions
+    """
+    model = SimpleModel(transition_scheme=transition_scheme, unary_limit=unary_limit)
+    states = parse_transitions.initial_state_from_gold_trees([tree], model)
+    assert(len(states)) == 1
+    assert states[0].num_transitions() == 0
+
+    for idx, t in enumerate(sequence):
+        assert t.is_legal(states[0], model), "Transition {} not legal at step {} in sequence {}".format(t, idx, sequence)
+        states = parse_transitions.bulk_apply(model, states, [t])
+
+    result_tree = states[0].constituents.value
+    return result_tree
 
 def check_reproduce_tree(transition_scheme):
     text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
@@ -85,3 +102,18 @@ def test_top_down_compound_unary():
 
     result = model.get_top_constituent(state.constituents)
     assert trees[0] == result
+
+
+def test_chinese_tree():
+    trees = tree_reader.read_trees(CHINESE_LONG_LIST_TREE)
+
+    transitions = transition_sequence.build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN)
+    redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.TOP_DOWN)
+    assert redone == trees[0]
+
+    transitions = transition_sequence.build_treebank(trees, transition_scheme=TransitionScheme.IN_ORDER)
+    with pytest.raises(AssertionError):
+        redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER)
+
+    redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER, unary_limit=6)
+    assert redone == trees[0]

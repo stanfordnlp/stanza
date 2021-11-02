@@ -25,10 +25,9 @@ import os
 from stanza.models import ner_tagger
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, ner_charlms
-from stanza.resources.common import DEFAULT_MODEL_DIR
 
 # extra arguments specific to a particular dataset
 DATASET_EXTRA_ARGS = {
@@ -42,7 +41,8 @@ DATASET_EXTRA_ARGS = {
 logger = logging.getLogger('stanza')
 
 def add_ner_args(parser):
-    parser.add_argument('--charlm', default=None, type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
+    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
+    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
@@ -66,19 +66,7 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 
-    default_charlm = default_charlms.get(language, None)
-    specific_charlm = ner_charlms.get(language, {}).get(dataset, None)
-    if command_args.charlm:
-        charlm = command_args.charlm
-        if charlm == 'None':
-            charlm = None
-    elif specific_charlm:
-        charlm = specific_charlm
-    elif default_charlm:
-        charlm = default_charlm
-    else:
-        charlm = None
-
+    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, ner_charlms)
     charlm_args = build_charlm_args(language, charlm)
 
     if mode == Mode.TRAIN:

@@ -22,11 +22,11 @@ from torch import optim
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.char_model import CharacterLanguageModel
-from stanza.models.constituency import base_model
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
@@ -84,6 +84,7 @@ class Trainer:
 
         model_type = checkpoint['model_type']
         params = checkpoint.get('params', checkpoint)
+        unary_limit = params.get("unary_limit", UNARY_LIMIT)
 
         if model_type == 'LSTM':
             model = LSTMModel(pretrain=pt,
@@ -96,6 +97,7 @@ class Trainer:
                               rare_words=params['rare_words'],
                               root_labels=params['root_labels'],
                               open_nodes=params['open_nodes'],
+                              unary_limit=unary_limit,
                               args=params['config'])
         else:
             raise ValueError("Unknown model type {}".format(model_type))
@@ -169,11 +171,11 @@ def read_treebank(filename):
 
     return trees
 
-def verify_transitions(trees, sequences, transition_scheme):
+def verify_transitions(trees, sequences, transition_scheme, unary_limit):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
-    model = base_model.SimpleModel(transition_scheme)
+    model = SimpleModel(transition_scheme, unary_limit)
     logger.info("Verifying the transition sequences for %d trees", len(trees))
 
     data = zip(trees, sequences)
@@ -273,6 +275,8 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
+    unary_limit = max(max(t.count_unary_depth() for t in train_trees),
+                      max(t.count_unary_depth() for t in dev_trees)) + 1
     train_sequences, train_transitions = convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
     dev_sequences, dev_transitions = convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
 
@@ -281,8 +285,8 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         if trans not in train_transitions:
             raise RuntimeError("Found transition {} in the dev set which don't exist in the train set".format(trans))
 
-    verify_transitions(train_trees, train_sequences, args['transition_scheme'])
-    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'])
+    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit)
+    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit)
 
     root_labels = parse_tree.Tree.get_root_labels(train_trees)
     for root_state in parse_tree.Tree.get_root_labels(dev_trees):
@@ -313,7 +317,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         logger.info("Loading model to continue training from %s", model_load_file)
         trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, args['cuda'], args, load_optimizer=True)
     else:
-        model = LSTMModel(pt, forward_charlm, backward_charlm, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
             model.cuda()
         logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
