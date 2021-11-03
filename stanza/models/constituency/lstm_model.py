@@ -18,7 +18,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
-from stanza.models.constituency.base_model import BaseModel, UNARY_LIMIT
+from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
