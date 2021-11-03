@@ -389,20 +389,17 @@ class LSTMModel(BaseModel, nn.Module):
             
             word_inputs = [word_input, delta_input, phobert_input]
 
-            
-
             if self.tag_embedding_dim > 0:
                 try:
                     tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
                     tag_input = self.tag_embedding(tag_idx)
-                    
                     word_inputs.append(tag_input)
                 except KeyError as e:
                     raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
             all_word_labels.append(word_labels)
             all_word_inputs.append(word_inputs)
-            
+
         if self.forward_charlm is not None:
             all_forward_chars = self.build_char_representation(all_word_labels, device, forward=True)
             for word_inputs, forward_chars in zip(all_word_inputs, all_forward_chars):
