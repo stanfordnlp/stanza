@@ -348,6 +348,14 @@ class LSTMModel(BaseModel, nn.Module):
         
         #padding the inputs
         tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=1)
+
+        # Prepare tokenized_valid for attention masking
+        tokenized_valids = []
+        for sent in list_tokenized:
+            sent_valid = [word for word in sent if not word.endswith("@@")]
+            sent_ids = tokenizer.convert_tokens_to_ids(sent_valid)
+            tokenized_valid = [0] + sent_ids + [2]
+            tokenized_valids.append(torch.tensor(tokenized_valid).detach())
         
         features = []
     
@@ -406,7 +414,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
-        return tokenized_sents, processed
+        return tokenized_valids, processed
 
     def partitioned_attention(self, tokenized_sents, phobert_embeddings):
         """
