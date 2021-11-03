@@ -20,6 +20,7 @@ logger = logging.getLogger('stanza')
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
     "it": "upos",
+    "vi": "upos",
 }
 
 def add_constituency_args(parser):
