@@ -90,22 +90,28 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     count = 0
 
     filename_iter = iter(file_names)
+    tree_iter = iter([])
     for write_path, count_limit in zip(output_names, output_limits):
         with open(write_path, 'w') as writer:
             # Loop through the files, which then loop through the trees and write to write_path
             while count < count_limit:
-                filename = next(filename_iter, None)
-                # Skip files that are not .mrg
-                if not filename.endswith('.mrg'):
-                    continue
-                # File is .mrg. Start processing
-                file_dir = os.path.join(org_dir, filename)
-                with open(file_dir, 'r') as reader:
-                    content = reader.readlines()
-                    for line in content:
-                        # Write to write_dir
-                        writer.write(line)
-                        count += 1
+                next_tree = next(tree_iter, None)
+                while next_tree is None:
+                    filename = next(filename_iter, None)
+                    if filename is None:
+                        raise RuntimeError("Ran out of trees before reading all of the expected trees")
+                    # Skip files that are not .mrg
+                    if not filename.endswith('.mrg'):
+                        continue
+                    # File is .mrg. Start processing
+                    file_dir = os.path.join(org_dir, filename)
+                    with open(file_dir, 'r') as reader:
+                        content = reader.readlines()
+                        tree_iter = iter(content)
+                        next_tree = next(tree_iter, None)
+                # Write to write_dir
+                writer.write(next_tree)
+                count += 1
 
 def main():
     """
