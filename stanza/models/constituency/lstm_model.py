@@ -27,15 +27,15 @@ from stanza.models.constituency.utils import build_nonlinearity
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast
 import math
 import torch.nn.functional as F
-from partitioned_transformer import (
+from stanza.models.constituency.partitioned_transformer import (
     ConcatPositionalEncoding,
     FeatureDropout,
     PartitionedTransformerEncoder,
     PartitionedTransformerEncoderLayer,
 )
 
-phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
+phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
+tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
 #
 logger = logging.getLogger('stanza')
 
@@ -363,12 +363,13 @@ class LSTMModel(BaseModel, nn.Module):
             
         assert len(features)==size
         assert len(features)==len(processed)
-        
+
         #process the output
         for idx, sent in enumerate(processed):
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
             #new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             new_sent = []
+            new_sent.append(features[idx][0]) # append <START> token 
             temp = []
             for idx2, i in enumerate(list_tokenized[idx]):
                 temp.append(features[idx][idx2+1])
@@ -388,43 +389,74 @@ class LSTMModel(BaseModel, nn.Module):
                         out = temp[-1]
                     if first_flag:
                         #out = torch.stack(temp).mean(dim=0)
-                        out = temp[0]
+                        out = temp[-1]
                         first_flag = False
                     else:
                         out = temp[-1]
                     new_sent.append(out)
                     temp = []
-                    
+
+            new_sent.append(features[idx][len(list_tokenized[idx])-1]) # append <END> token
             #add new vector to processed
             processed[idx] = new_sent 
     
-        del tokenized_sents
+        
         del tokenized
         del features
 
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
-        return processed
+        return tokenized_sents, processed
 
-    def partitioned_attention(self, raw_data):
+    def partitioned_attention(self, tokenized_sents, phobert_embeddings):
         """
         Let's decide the input format later
         """
         # pretrained_out: output of pretrained model, in this case phobert
-        features = pretrained_out.last_hidden_state.to(self.output_device)
-        features = features[torch.arange(features.shape[0])[:, None],
-                            F.relu(words_from_tokens),
-                    ]
-        features.masked_fill_(~valid_token_mask[:,:, None], 0)
-
+        # features = pretrained_out.last_hidden_state.to(self.output_device)
+        # features = features[torch.arange(features.shape[0])[:, None],
+        #                    F.relu(words_from_tokens),
+        #            ]
+        logger.info("=====PARTITIONING ATTENTION=====")
+        padded_data = torch.nn.utils.rnn.pad_sequence(
+            [
+                sent
+                for sent in tokenized_sents
+            ],
+            batch_first=True,
+            padding_value=-100
+        )
+        print(f"padded_data shape: {padded_data.shape}")
+        print(padded_data)
+        valid_token_mask = padded_data != -100
+        print(f"valid_token_mask shape: {valid_token_mask.shape}")
+        print(valid_token_mask)
+        pad_pho = torch.nn.utils.rnn.pad_sequence(
+            [
+                torch.tensor(torch.stack(sent))
+                for sent in phobert_embeddings
+            ],
+            batch_first=True,
+            padding_value=0
+        )
+        print(f"pad_pho type: {type(pad_pho)}")
+        print(f"pad_pho shape: {pad_pho.shape}")
+        print(pad_pho)
+        #features = torch.stack(pad_pho)
+        #features.masked_fill_(~valid_token_mask[:,:, None], 0)
+        valid_token_mask = valid_token_mask.to(device="cuda:0")
+        pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
+        print(f"features: {pad_pho}")
+        logger.info("=====Finish masking, starts projection=====")
         # Project the pretrained embedding onto the desired dimension
-        extra_content_annotations = self.project_pretrained(features)
+        extra_content_annotations = self.project_pretrained(pad_pho)
 
         # Add positional information through the table 
         encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
         # Put the partitioned input through the partitioned attention 
         annotations = self.encoder(encoder_in, valid_token_mask)
-
+        print(f"annotations: {annotations.shape}")
+        
         return annotations
         
     
@@ -453,12 +485,13 @@ class LSTMModel(BaseModel, nn.Module):
             raw_data.append(sentence)
             
 
-        phobert_embeddings = self.extract_phobert_embeddings(raw_data)
+        tokenized_sents, phobert_embeddings = self.extract_phobert_embeddings(raw_data)
 
         # Partitioned Attention layer
-        partitioned_embeddings = partitioned_attention(phobert_embeddings)
+        partitioned_embeddings = self.partitioned_attention(tokenized_sents, phobert_embeddings)
         # Normal initial_word_queues script resumes
-
+        logger.info("====Normal script resumes=====")
+        
         # Change list of words to tensors of shape seq_length x 768
         for idx, sent, in enumerate(phobert_embeddings):
             phobert_embeddings[idx]  = torch.stack(sent)
@@ -480,8 +513,13 @@ class LSTMModel(BaseModel, nn.Module):
 
             delta_input = self.delta_embedding(delta_idx)
             phobert_input = phobert_embeddings[sentence_idx]
-            
-            word_inputs = [word_input, delta_input, phobert_input]
+            partitioned_input = partitioned_embeddings[sentence_idx][1:(word_input.shape[0]+1), :]
+            logger.info("=====Appending embeddings=====")
+            print(f"word_input shape: {word_input.shape}")
+            print(f"delta_input shape: {delta_input.shape}")
+            print(f"phobert_input shape: {phobert_input.shape}")
+            print(f"partitioned_input shape: {partitioned_input.shape}")
+            word_inputs = [word_input, delta_input, partitioned_input]
 
             
 
