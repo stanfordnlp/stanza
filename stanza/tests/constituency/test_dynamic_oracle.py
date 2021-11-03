@@ -342,3 +342,18 @@ def test_shift_close(unary_trees, gold_sequences):
     else:
         raise AssertionError("Did not find an expected repair location")
 
+def test_close_shift_nested(unary_trees, gold_sequences):
+    shift_transition = Shift()
+
+    expected_trees = [{},
+                      {4: "(ROOT (S (NP (RB Not) (PDT all) (DT those) (SBAR (WHNP (WP who)) (S (VP (VBD wrote))))) (VP (VBP oppose) (NP (DT the) (NNS changes))) (. .)))"},
+                      {13: "(ROOT (S (PRN (S (VP (VB See)))) (, ,) (NP (DT the) (JJ other) (NN rule) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning))))))"},
+                      {}]
+
+    for tree, gold_sequence, expected in zip(unary_trees, gold_sequences, expected_trees):
+        repairs = get_repairs(gold_sequence, shift_transition, fix_close_shift_nested)
+        assert len(repairs) == len(expected)
+        if len(expected) == 1:
+            assert repairs[0][0] in expected.keys()
+            result_tree = reconstruct_tree(tree, repairs[0][1])
+            assert str(result_tree) == expected[repairs[0][0]]

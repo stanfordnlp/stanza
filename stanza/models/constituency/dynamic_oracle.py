@@ -303,6 +303,33 @@ def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index,
 
     return gold_sequence[:gold_index] + [pred_transition, prev_open] + gold_sequence[cur_index:]
 
+def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
+    """
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    if len(gold_sequence) < gold_index + 3:
+        return None
+    # check that the next operation was to open the same constituent
+    # we just closed
+    prev_open_index = find_previous_open(gold_sequence, gold_index)
+    if prev_open_index is None:
+        return None
+    prev_open = gold_sequence[prev_open_index]
+    if gold_sequence[gold_index+1] != prev_open:
+        return None
+
+    # TODO: here could skip unary transitions
+    # could also look for unary transitions of the same type after a
+    # different constituent was built (more complicated and rare)
+    if not isinstance(gold_sequence[gold_index+2], Shift):
+        return None
+
+    return gold_sequence[:gold_index] + gold_sequence[gold_index+2:]
 
 class RepairType(Enum):
     """
@@ -377,6 +404,13 @@ class RepairType(Enum):
     # rather than also breaking some existing brackets.
     # The fix here is to reopen the closed bracket.
     SHIFT_CLOSE            = (fix_shift_close,)
+
+    # Specifically fixes an error where bracket X is
+    # closed and then immediately opened to build a
+    # new X bracket.  In this case, the simplest fix
+    # will be to skip both the close and the new open
+    # and continue from there.
+    CLOSE_SHIFT_NESTED     = (fix_close_shift_nested,)
 
     UNKNOWN                = None
 
