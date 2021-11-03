@@ -66,7 +66,10 @@ def get_num_samples(org_dir, file_names):
 
     return count
 
-def split_files(org_dir, split_dir, short_name=None):
+def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
+    if train_size + dev_size >= 1.0:
+        raise ValueError("Unable to make 3 slices with the given ratios")
+
     # Create a random shuffle list of the file names in the original directory
     file_names = create_shuffle_list(org_dir)
 
@@ -76,8 +79,8 @@ def split_files(org_dir, split_dir, short_name=None):
 
     # Set up the number of samples for each train/dev/test set
     num_samples = get_num_samples(org_dir, file_names)
-    stop_train = int(num_samples * 0.7)
-    stop_dev = int(num_samples * 0.85)
+    stop_train = int(num_samples * train_size)
+    stop_dev = int(num_samples * (train_size + dev_size))
     output_limits = (stop_train, stop_dev, num_samples)
     print("Found {} total samples in {}".format(num_samples, org_dir))
     print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))

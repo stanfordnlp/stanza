@@ -157,22 +157,23 @@ def convert_file(orig_file, new_file):
 
     return errors
 
-
-def convert_dir(org_dir, new_dir):
+def convert_files(file_list, new_dir):
     errors = Counter()
-    for filename in os.listdir(org_dir):
-        file_name, file_extension = os.path.splitext(filename)
-        # Only convert .prd files, skip the .raw files
-        if file_extension == '.raw':
-            continue
-        file_path = os.path.join(org_dir, filename)
-        new_path = os.path.join(new_dir, file_name)
+    for filename in file_list:
+        base_name, _ = os.path.splitext(os.path.split(filename)[-1])
+        new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        errors += convert_file(file_path, new_file_path)
+        errors += convert_file(filename, new_file_path)
 
     errors = "\n  ".join(sorted(["%s: %s" % x for x in  errors.items()]))
-    print("Found the following error counts when processing {}:\n  {}".format(org_dir, errors))
+    print("Found the following error counts:\n  {}".format(errors))
+
+def convert_dir(orig_dir, new_dir):
+    file_list = os.listdir(orig_dir)
+    # Only convert .prd files, skip the .raw files from VLSP 2009
+    file_list = [os.path.join(orig_dir, f) for f in file_list if os.path.splitext(f)[1] != '.raw']
+    convert_files(file_list, new_dir)
 
 def main():
     """
@@ -185,7 +186,7 @@ def main():
         description="Script that converts a VTB Tree into the desired format",
     )
     parser.add_argument(
-        'org_dir',
+        'orig_dir',
         help='The location of the original directory storing original trees '
     )
     parser.add_argument(

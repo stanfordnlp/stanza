@@ -34,13 +34,26 @@ def process_it_turin(paths):
 
 def process_vlsp09(paths):
     """
-    TODO: this currently doesn't quite work because some files, especially 51496.prd, have broken trees
+    Processes the VLSP 2009 dataset, discarding or fixing trees when needed
     """
     short_name = "vi_vlsp09"
     vlsp_path = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", "VietTreebank_VLSP_SP73", "Kho ngu lieu 10000 cay cu phap")
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_dir(vlsp_path, tmp_output_path)
         vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name)
+
+def process_vlsp21(paths):
+    """
+    Processes the VLSP 2021 dataset, which is just a single file
+    """
+    short_name = "vi_vlsp21"
+    vlsp_file = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", "VLSP_2021", "VTB_VLSP21_tree.txt")
+    if not os.path.exists(vlsp_file):
+        raise FileNotFoundError("Could not find the 2021 dataset in the expected location of {}".format(vlsp_file))
+    with tempfile.TemporaryDirectory() as tmp_output_path:
+        vtb_convert.convert_files([vlsp_file], tmp_output_path)
+        # This produces a tiny test set, just as a placeholder until the actual test set is released
+        vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name, train_size=0.9, dev_size=0.09)
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -51,6 +64,8 @@ def main(dataset_name):
         process_it_turin(paths)
     elif dataset_name == 'vi_vlsp09':
         process_vlsp09(paths)
+    elif dataset_name == 'vi_vlsp21':
+        process_vlsp21(paths)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
