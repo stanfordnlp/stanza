@@ -420,12 +420,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         Let's decide the input format later
         """
-        # pretrained_out: output of pretrained model, in this case phobert
-        # features = pretrained_out.last_hidden_state.to(self.output_device)
-        # features = features[torch.arange(features.shape[0])[:, None],
-        #                    F.relu(words_from_tokens),
-        #            ]
-        #logger.info("=====PARTITIONING ATTENTION=====")
+        # Preparing padded from valid tokens 
         padded_data = torch.nn.utils.rnn.pad_sequence(
             [
                 sent
@@ -434,11 +429,11 @@ class LSTMModel(BaseModel, nn.Module):
             batch_first=True,
             padding_value=-100
         )
-        #print(f"padded_data shape: {padded_data.shape}")
-        #print(padded_data)
+
+        # Create masks from the valid tokens
         valid_token_mask = padded_data != -100
-        #print(f"valid_token_mask shape: {valid_token_mask.shape}")
-        #print(valid_token_mask)
+
+        # Phobert embedding padded to the length of the longest sentence
         pad_pho = torch.nn.utils.rnn.pad_sequence(
             [
                 torch.tensor(torch.stack(sent))
@@ -447,23 +442,19 @@ class LSTMModel(BaseModel, nn.Module):
             batch_first=True,
             padding_value=0
         )
-        #print(f"pad_pho type: {type(pad_pho)}")
-        #print(f"pad_pho shape: {pad_pho.shape}")
-        #print(pad_pho)
-        #features = torch.stack(pad_pho)
-        #features.masked_fill_(~valid_token_mask[:,:, None], 0)
+
+        # Masking. I think this may be removed later as the pad_pho
+        # may already be what we need
         valid_token_mask = valid_token_mask.to(device="cuda:0")
         pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
-        #print(f"features: {pad_pho}")
-        #logger.info("=====Finish masking, starts projection=====")
-        # Project the pretrained embedding onto the desired dimension
+
+        # Projecting to the required size for the partitioned attention
         extra_content_annotations = self.project_pretrained(pad_pho)
 
         # Add positional information through the table 
         encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
         # Put the partitioned input through the partitioned attention 
         annotations = self.encoder(encoder_in, valid_token_mask)
-        #print(f"annotations: {annotations.shape}")
 
         del padded_data
         del pad_pho
@@ -503,8 +494,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Partitioned Attention layer
         partitioned_embeddings = self.partitioned_attention(tokenized_sents, phobert_embeddings)
+        
         # Normal initial_word_queues script resumes
-        #logger.info("====Normal script resumes=====")
         
         # Change list of words to tensors of shape seq_length x 768
         for idx, sent, in enumerate(phobert_embeddings):
@@ -528,11 +519,8 @@ class LSTMModel(BaseModel, nn.Module):
             delta_input = self.delta_embedding(delta_idx)
             phobert_input = phobert_embeddings[sentence_idx]
             partitioned_input = partitioned_embeddings[sentence_idx][1:(word_input.shape[0]+1), :]
-            #logger.info("=====Appending embeddings=====")
-            #print(f"word_input shape: {word_input.shape}")
-            #print(f"delta_input shape: {delta_input.shape}")
-            #print(f"phobert_input shape: {phobert_input.shape}")
-            #print(f"partitioned_input shape: {partitioned_input.shape}")
+
+            # Putting the partitioned_input to replace the PhoBERT
             word_inputs = [word_input, delta_input, partitioned_input]
 
             
