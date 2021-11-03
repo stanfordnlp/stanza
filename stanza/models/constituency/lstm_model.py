@@ -24,7 +24,6 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
 # imports added for bert and lal integration
-from pympler import asizeof
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast
 import math
 
