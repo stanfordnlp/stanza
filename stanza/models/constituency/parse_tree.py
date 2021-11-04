@@ -18,7 +18,10 @@ EMPTY_CHILDREN = ()
 
 CONSTITUENT_SPLIT = re.compile("[-=#]")
 
-WORDS_TO_PRUNE = ('*E*', '*T*')
+# These words occur in the VLSP dataset.
+# The documentation claims there might be *O*, although those don't
+# seem to exist in practice
+WORDS_TO_PRUNE = ('*E*', '*T*', '*O*')
 
 class Tree(StanzaObject):
     """
