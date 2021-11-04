@@ -102,7 +102,8 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
+        #self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
+        self.word_input_size = self.tag_embedding_dim + 1024
         
 
         if forward_charlm is not None:
