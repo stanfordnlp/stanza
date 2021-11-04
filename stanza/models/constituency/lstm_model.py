@@ -16,7 +16,6 @@ import random
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
-from transformers import AutoModel, AutoTokenizer
 
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
@@ -26,9 +25,6 @@ from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
-
-phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
 
 logger = logging.getLogger('stanza')
 
@@ -46,7 +42,7 @@ Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -96,11 +92,18 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
 
-        self.add_unsaved_module('bert_model', phobert)
-        self.add_unsaved_module('bert_tokenizer', tokenizer)
-        self.bert_dim = self.bert_model.config.hidden_size
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + self.bert_dim
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
 
+        if bert_model is not None:
+            if bert_tokenizer is None:
+                raise ValueError("Cannot have a bert model without a tokenizer")
+            self.add_unsaved_module('bert_model', bert_model)
+            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            self.bert_dim = self.bert_model.config.hidden_size
+            self.word_input_size = self.word_input_size + self.bert_dim
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
@@ -361,16 +364,17 @@ class LSTMModel(BaseModel, nn.Module):
         all_word_inputs = []
         all_word_labels = []
 
-        # BERT embedding extraction
-        # TODO: reuse word_labels from below
-        raw_data = []
-        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            sentence = [word.children[0].label for word in tagged_words]
-            raw_data.append(sentence)
+        if self.bert_model is not None:
+            # BERT embedding extraction
+            # TODO: reuse word_labels from below
+            raw_data = []
+            for sentence_idx, tagged_words in enumerate(tagged_word_lists):
+                sentence = [word.children[0].label for word in tagged_words]
+                raw_data.append(sentence)
 
-        bert_embeddings = self.extract_bert_embeddings(raw_data)
-        # Change list of words to tensors of shape seq_length x 768
-        bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
+            bert_embeddings = self.extract_bert_embeddings(raw_data)
+            # Change list of words to tensors of shape seq_length x 768
+            bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_ids = [word.children[0].label for word in tagged_words]
@@ -387,9 +391,11 @@ class LSTMModel(BaseModel, nn.Module):
             delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
-            bert_input = bert_embeddings[sentence_idx]
+            word_inputs = [word_input, delta_input]
 
-            word_inputs = [word_input, delta_input, bert_input]
+            if self.bert_model is not None:
+                bert_input = bert_embeddings[sentence_idx]
+                word_inputs.append(bert_input)
 
             if self.tag_embedding_dim > 0:
                 if self.training:

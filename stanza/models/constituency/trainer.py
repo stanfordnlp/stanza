@@ -66,7 +66,7 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False):
+    def load(filename, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, use_gpu, args=None, load_optimizer=False):
         """
         Load back a model and possibly its optimizer.
 
@@ -90,6 +90,8 @@ class Trainer:
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
+                              bert_model=bert_model,
+                              bert_tokenizer=bert_tokenizer,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -157,6 +159,17 @@ def load_charlm(charlm_file):
         return CharacterLanguageModel.load(charlm_file, finetune=False)
     return None
 
+def load_bert(model_name):
+    if model_name:
+        from transformers import AutoModel, AutoTokenizer
+        # such as: "vinai/phobert-base"
+        bert_model = AutoModel.from_pretrained(model_name)
+        bert_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+        return bert_model, bert_tokenizer
+
+    return None, None
+    
+
 def read_treebank(filename):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
@@ -202,7 +215,8 @@ def evaluate(args, model_file, retag_pipeline):
     pt = load_pretrain(args)
     forward_charlm = load_charlm(args['charlm_forward_file'])
     backward_charlm = load_charlm(args['charlm_backward_file'])
-    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
+    bert_model, bert_tokenizer = load_bert(args['bert_model'])
+    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read %d trees for evaluation", len(treebank))
@@ -253,7 +267,8 @@ def remove_optimizer(args, model_save_file, model_load_file):
     pt = load_pretrain(args)
     forward_charlm = load_charlm(args['charlm_forward_file'])
     backward_charlm = load_charlm(args['charlm_backward_file'])
-    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, use_gpu=False, load_optimizer=False)
+    bert_model, bert_tokenizer = load_bert(args['bert_model'])
+    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
 
 def convert_trees_to_sequences(trees, tree_type, transition_scheme):
@@ -264,7 +279,7 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
-def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm):
+def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
@@ -317,7 +332,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         logger.info("Loading model to continue training from %s", model_load_file)
         trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, args['cuda'], args, load_optimizer=True)
     else:
-        model = LSTMModel(pt, forward_charlm, backward_charlm, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
             model.cuda()
         logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
@@ -351,8 +366,9 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
     pt = load_pretrain(args)
     forward_charlm = load_charlm(args['charlm_forward_file'])
     backward_charlm = load_charlm(args['charlm_backward_file'])
+    bert_model, bert_tokenizer = load_bert(args['bert_model'])
 
-    trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm)
+    trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer)
 
     iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file)
 
