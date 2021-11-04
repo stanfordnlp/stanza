@@ -53,7 +53,11 @@ def process_vlsp21(paths):
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files([vlsp_file], tmp_output_path)
         # This produces a tiny test set, just as a placeholder until the actual test set is released
-        vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name, train_size=0.9, dev_size=0.09)
+        vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name, train_size=0.9, dev_size=0.1)
+    _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], short_name)
+    with open(test_file, "w"):
+        # create an empty test file - currently we don't have actual test data for VLSP 21
+        pass
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
