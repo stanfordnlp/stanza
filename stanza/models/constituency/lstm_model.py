@@ -426,44 +426,45 @@ class LSTMModel(BaseModel, nn.Module):
         #                    F.relu(words_from_tokens),
         #            ]
         #logger.info("=====PARTITIONING ATTENTION=====")
-        padded_data = torch.nn.utils.rnn.pad_sequence(
-            [
-                sent
-                for sent in tokenized_sents
-            ],
-            batch_first=True,
-            padding_value=-100
-        )
-        #print(f"padded_data shape: {padded_data.shape}")
-        #print(padded_data)
-        valid_token_mask = padded_data != -100
-        #print(f"valid_token_mask shape: {valid_token_mask.shape}")
-        #print(valid_token_mask)
-        pad_pho = torch.nn.utils.rnn.pad_sequence(
-            [
-                torch.tensor(torch.stack(sent))
-                for sent in phobert_embeddings
-            ],
-            batch_first=True,
-            padding_value=0
-        )
-        #print(f"pad_pho type: {type(pad_pho)}")
-        #print(f"pad_pho shape: {pad_pho.shape}")
-        #print(pad_pho)
-        #features = torch.stack(pad_pho)
-        #features.masked_fill_(~valid_token_mask[:,:, None], 0)
-        valid_token_mask = valid_token_mask.to(device="cuda:0")
-        pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
-        #print(f"features: {pad_pho}")
-        #logger.info("=====Finish masking, starts projection=====")
-        # Project the pretrained embedding onto the desired dimension
-        extra_content_annotations = self.project_pretrained(pad_pho)
+        with torch.no_grad():
+            padded_data = torch.nn.utils.rnn.pad_sequence(
+                [
+                    sent
+                    for sent in tokenized_sents
+                ],
+                batch_first=True,
+                padding_value=-100
+            )
+            #print(f"padded_data shape: {padded_data.shape}")
+            #print(padded_data)
+            valid_token_mask = padded_data != -100
+            #print(f"valid_token_mask shape: {valid_token_mask.shape}")
+            #print(valid_token_mask)
+            pad_pho = torch.nn.utils.rnn.pad_sequence(
+                [
+                    torch.tensor(torch.stack(sent))
+                    for sent in phobert_embeddings
+                ],
+                batch_first=True,
+                padding_value=0
+            )
+            #print(f"pad_pho type: {type(pad_pho)}")
+            #print(f"pad_pho shape: {pad_pho.shape}")
+            #print(pad_pho)
+            #features = torch.stack(pad_pho)
+            #features.masked_fill_(~valid_token_mask[:,:, None], 0)
+            valid_token_mask = valid_token_mask.to(device="cuda:0")
+            pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
+            #print(f"features: {pad_pho}")
+            #logger.info("=====Finish masking, starts projection=====")
+            # Project the pretrained embedding onto the desired dimension
+            extra_content_annotations = self.project_pretrained(pad_pho)
 
-        # Add positional information through the table 
-        encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
-        # Put the partitioned input through the partitioned attention 
-        annotations = self.encoder(encoder_in, valid_token_mask)
-        #print(f"annotations: {annotations.shape}")
+            # Add positional information through the table 
+            encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
+            # Put the partitioned input through the partitioned attention 
+            annotations = self.encoder(encoder_in, valid_token_mask)
+            #print(f"annotations: {annotations.shape}")
 
         del padded_data
         del pad_pho
