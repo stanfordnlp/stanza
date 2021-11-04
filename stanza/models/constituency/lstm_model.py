@@ -103,7 +103,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
         #self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
-        self.word_input_size = self.tag_embedding_dim + 1024
+        self.word_input_size = 1024
         
 
         if forward_charlm is not None:
@@ -545,7 +545,7 @@ class LSTMModel(BaseModel, nn.Module):
                     tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
                     tag_input = self.tag_embedding(tag_idx)
                     
-                    word_inputs.append(tag_input)
+                    #word_inputs.append(tag_input)
                 except KeyError as e:
                     raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
 
