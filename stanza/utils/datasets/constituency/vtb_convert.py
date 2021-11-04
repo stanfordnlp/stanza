@@ -98,7 +98,7 @@ def convert_file(orig_file, new_file):
     This function writes new trees to the corresponding files in new_file
     """
     errors = Counter()
-    with open(orig_file, 'r') as reader, open(new_file, 'w') as writer:
+    with open(orig_file, 'r', encoding='utf-8') as reader, open(new_file, 'w', encoding='utf-8') as writer:
         content = reader.readlines()
         # Tree string will only be written if the currently read
         # tree is a valid tree. It will not be written if it

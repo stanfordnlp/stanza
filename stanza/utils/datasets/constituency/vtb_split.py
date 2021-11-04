@@ -59,7 +59,7 @@ def get_num_samples(org_dir, file_names):
             continue
         # File is .mrg. Start processing
         file_dir = os.path.join(org_dir, filename)
-        with open(file_dir, 'r') as reader:
+        with open(file_dir, 'r', encoding='utf-8') as reader:
             content = reader.readlines()
             for _ in content:
                 count += 1
@@ -67,6 +67,8 @@ def get_num_samples(org_dir, file_names):
     return count
 
 def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
+    os.makedirs(split_dir, exist_ok=True)
+
     if train_size + dev_size >= 1.0:
         print("Not making a test slice with the given ratios: train {} dev {}".format(train_size, dev_size))
 
@@ -99,7 +101,7 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     filename_iter = iter(file_names)
     tree_iter = iter([])
     for write_path, count_limit in zip(output_names, output_limits):
-        with open(write_path, 'w') as writer:
+        with open(write_path, 'w', encoding='utf-8') as writer:
             # Loop through the files, which then loop through the trees and write to write_path
             while count < count_limit:
                 next_tree = next(tree_iter, None)
@@ -112,7 +114,7 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
                         continue
                     # File is .mrg. Start processing
                     file_dir = os.path.join(org_dir, filename)
-                    with open(file_dir, 'r') as reader:
+                    with open(file_dir, 'r', encoding='utf-8') as reader:
                         content = reader.readlines()
                         tree_iter = iter(content)
                         next_tree = next(tree_iter, None)
