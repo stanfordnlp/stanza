@@ -68,22 +68,29 @@ def get_num_samples(org_dir, file_names):
 
 def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
     if train_size + dev_size >= 1.0:
-        raise ValueError("Unable to make 3 slices with the given ratios")
+        print("Not making a test slice with the given ratios: train {} dev {}".format(train_size, dev_size))
 
     # Create a random shuffle list of the file names in the original directory
     file_names = create_shuffle_list(org_dir)
 
     # Create train_path, dev_path, test_path
     train_path, dev_path, test_path = create_paths(split_dir, short_name)
-    output_names = (train_path, dev_path, test_path)
 
     # Set up the number of samples for each train/dev/test set
     num_samples = get_num_samples(org_dir, file_names)
-    stop_train = int(num_samples * train_size)
-    stop_dev = int(num_samples * (train_size + dev_size))
-    output_limits = (stop_train, stop_dev, num_samples)
     print("Found {} total samples in {}".format(num_samples, org_dir))
-    print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
+
+    stop_train = int(num_samples * train_size)
+    if train_size + dev_size >= 1.0:
+        stop_dev = num_samples
+        output_limits = (stop_train, stop_dev)
+        output_names = (train_path, dev_path)
+        print("Splitting {} train, {} dev".format(stop_train, stop_dev - stop_train))
+    else:
+        stop_dev = int(num_samples * (train_size + dev_size))
+        output_limits = (stop_train, stop_dev, num_samples)
+        output_names = (train_path, dev_path, test_path)
+        print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
 
     # Count how much stuff we've written.
     # We will switch to the next output file when we're written enough
