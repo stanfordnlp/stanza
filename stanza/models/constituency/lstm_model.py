@@ -534,7 +534,8 @@ class LSTMModel(BaseModel, nn.Module):
             #print(f"delta_input shape: {delta_input.shape}")
             #print(f"phobert_input shape: {phobert_input.shape}")
             #print(f"partitioned_input shape: {partitioned_input.shape}")
-            word_inputs = [word_input, delta_input, partitioned_input]
+            #word_inputs = [word_input, delta_input, partitioned_input]
+            word_inputs = [partitioned_input]
 
             
 
