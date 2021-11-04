@@ -447,21 +447,23 @@ class LSTMModel(BaseModel, nn.Module):
             #print(valid_token_mask)
             valid_token_mask = valid_token_mask.to(device="cuda:0")
             
-        pad_pho = torch.nn.utils.rnn.pad_sequence(
-            [
-                torch.stack(sent)
-                for sent in phobert_embeddings
-            ],
-            batch_first=True,
-            padding_value=0
-        )
+            pad_pho = torch.nn.utils.rnn.pad_sequence(
+                [
+                    torch.stack(sent)
+                    for sent in phobert_embeddings
+                ],
+                batch_first=True,
+                padding_value=0
+            )
             #print(f"pad_pho type: {type(pad_pho)}")
             #print(f"pad_pho shape: {pad_pho.shape}")
             #print(pad_pho)
             #features = torch.stack(pad_pho)
             #features.masked_fill_(~valid_token_mask[:,:, None], 0)
-            
-        pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
+        #logger.info("=====Partitioned Attention=====")
+        #print(f"pad_pho: {pad_pho}")
+        #pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
+        #print(f"after padding: {pad_pho}")
             #print(f"features: {pad_pho}")
             #logger.info("=====Finish masking, starts projection=====")
             # Project the pretrained embedding onto the desired dimension
