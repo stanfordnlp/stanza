@@ -49,7 +49,7 @@ def process_vlsp21(paths):
     short_name = "vi_vlsp21"
     vlsp_file = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", "VLSP_2021", "VTB_VLSP21_tree.txt")
     if not os.path.exists(vlsp_file):
-        raise FileNotFoundError("Could not find the 2021 dataset in the expected location of {}".format(vlsp_file))
+        raise FileNotFoundError("Could not find the 2021 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_file, paths["CONSTITUENCY_BASE"]))
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files([vlsp_file], tmp_output_path)
         # This produces a tiny test set, just as a placeholder until the actual test set is released
