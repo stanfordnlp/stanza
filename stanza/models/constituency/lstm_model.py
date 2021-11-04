@@ -431,6 +431,8 @@ class LSTMModel(BaseModel, nn.Module):
         #                    F.relu(words_from_tokens),
         #            ]
         #logger.info("=====PARTITIONING ATTENTION=====")
+        # Anything under torch.no_grad() is here because it does not
+        # require gradient
         with torch.no_grad():
             padded_data = torch.nn.utils.rnn.pad_sequence(
                 [
@@ -447,14 +449,14 @@ class LSTMModel(BaseModel, nn.Module):
             #print(valid_token_mask)
             valid_token_mask = valid_token_mask.to(device="cuda:0")
             
-            pad_pho = torch.nn.utils.rnn.pad_sequence(
-                [
-                    torch.stack(sent)
-                    for sent in phobert_embeddings
-                ],
-                batch_first=True,
-                padding_value=0
-            )
+        pad_pho = torch.nn.utils.rnn.pad_sequence(
+            [
+                torch.stack(sent)
+                for sent in phobert_embeddings
+            ],
+            batch_first=True,
+            padding_value=0
+        )
             #print(f"pad_pho type: {type(pad_pho)}")
             #print(f"pad_pho shape: {pad_pho.shape}")
             #print(pad_pho)
@@ -462,6 +464,10 @@ class LSTMModel(BaseModel, nn.Module):
             #features.masked_fill_(~valid_token_mask[:,:, None], 0)
         #logger.info("=====Partitioned Attention=====")
         #print(f"pad_pho: {pad_pho}")
+
+        # I commented out this line because it seems to do nothing,
+        # as the pad_pho was obtained from a re-aligned word representation,
+        # so padding it with 0 functions similar to masking out the padding
         #pad_pho.masked_fill_(~valid_token_mask[:,:, None], 0)
         #print(f"after padding: {pad_pho}")
             #print(f"features: {pad_pho}")
