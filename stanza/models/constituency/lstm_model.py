@@ -34,8 +34,8 @@ from stanza.models.constituency.partitioned_transformer import (
     PartitionedTransformerEncoderLayer,
 )
 
-phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
+#phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
+#tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
 #
 logger = logging.getLogger('stanza')
 
@@ -220,6 +220,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.constituency_lstm = self.args['constituency_lstm']
 
+        # Initialization of PhoBERT
+        self.phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
+        self.tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
+
         # Initializations of parameters for the Partitioned Attention
         d_pretrained = 1024
         d_model = 1024
@@ -231,7 +235,7 @@ class LSTMModel(BaseModel, nn.Module):
         relu_dropout = 0.1
         residual_dropout = 0.2
         attention_dropout = 0.2
-        num_layers = 4
+        num_layers = 2
         # Initializations for the Partitioned Attention
         self.project_pretrained = nn.Linear(
             d_pretrained, d_model // 2, bias=False
@@ -321,13 +325,13 @@ class LSTMModel(BaseModel, nn.Module):
             sentence = ' '.join(tokenized)
 
             #tokenize using AutoTokenizer PhoBERT
-            tokenized = tokenizer.tokenize(sentence)
+            tokenized = self.tokenizer.tokenize(sentence)
 
             #add tokenized to list_tokenzied for later checking
             list_tokenized.append(tokenized)
 
             #convert tokens to ids
-            sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
+            sent_ids = self.tokenizer.convert_tokens_to_ids(tokenized)
             
             #add start and end tokens to sent_ids
             tokenized_sent = [0] + sent_ids + [2]
@@ -354,7 +358,7 @@ class LSTMModel(BaseModel, nn.Module):
         tokenized_valids = []
         for sent in list_tokenized:
             sent_valid = [word for word in sent if not word.endswith("@@")]
-            sent_ids = tokenizer.convert_tokens_to_ids(sent_valid)
+            sent_ids = self.tokenizer.convert_tokens_to_ids(sent_valid)
             tokenized_valid = [0] + sent_ids + [2]
             tokenized_valids.append(torch.tensor(tokenized_valid).detach())
         
@@ -363,11 +367,11 @@ class LSTMModel(BaseModel, nn.Module):
         # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
         # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
-            with torch.no_grad():
-                feature = phobert(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
+            feature = self.phobert(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
         
             #take the second output layer since experiments shows it give the best result
-            features += feature[2][-2].clone().detach()
+            #features += feature[2][-2].clone().detach()
+            features += torch.tensor(feature[2][-2]).detach().cpu()
             del feature
             
         assert len(features)==size
