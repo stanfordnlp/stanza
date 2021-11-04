@@ -34,8 +34,8 @@ from stanza.models.constituency.partitioned_transformer import (
     PartitionedTransformerEncoderLayer,
 )
 
-phobert = AutoModel.from_pretrained("vinai/phobert-base").to(torch.device("cuda:0"))
-tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
+phobert = AutoModel.from_pretrained("vinai/phobert-large").to(torch.device("cuda:0"))
+tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-large", use_fast=True)
 #
 logger = logging.getLogger('stanza')
 
@@ -220,7 +220,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituency_lstm = self.args['constituency_lstm']
 
         # Initializations of parameters for the Partitioned Attention
-        d_pretrained = 768
+        d_pretrained = 1024
         d_model = 1024
         morpho_emb_dropout = 0.2
         encoder_max_len = 512
@@ -366,7 +366,7 @@ class LSTMModel(BaseModel, nn.Module):
                 feature = phobert(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
         
             #take the second output layer since experiments shows it give the best result
-            features += feature[2][-1].clone().detach()
+            features += feature[2][-2].clone().detach()
             del feature
             
         assert len(features)==size
