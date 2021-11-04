@@ -47,7 +47,8 @@ REMAPPING = {
     'Np--H':    'Np-H',
     '(WHRPP':   '(WHRP',
     # the only PV tags are after S, so this should be the right conversion
-    '(PV':     '(S-PV',
+    #'(PV':      '(S-PV',
+    '(Mpd':     '(MDP',
 }
 
 def unify_label(tree):
