@@ -230,7 +230,7 @@ class LSTMModel(BaseModel, nn.Module):
         relu_dropout = 0.1
         residual_dropout = 0.2
         attention_dropout = 0.2
-        num_layers = 2
+        num_layers = 4
         # Initializations for the Partitioned Attention
         self.project_pretrained = nn.Linear(
             d_pretrained, d_model // 2, bias=False
