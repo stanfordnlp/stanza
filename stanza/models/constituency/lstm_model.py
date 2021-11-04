@@ -366,7 +366,7 @@ class LSTMModel(BaseModel, nn.Module):
                 feature = phobert(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
         
             #take the second output layer since experiments shows it give the best result
-            features += feature[2][-2].clone().detach()
+            features += feature[2][-1].clone().detach()
             del feature
             
         assert len(features)==size
@@ -392,7 +392,7 @@ class LSTMModel(BaseModel, nn.Module):
                     out = None
                     # If this is the last word piece in sent
                     if (idx2 == len(list_tokenized[idx]) - 1): 
-                        temp.append(features[idx][idx2+2])
+                        #temp.append(features[idx][idx2+2])
                         #out = torch.stack(temp).mean(dim=0)
                         out = temp[-1]
                     if first_flag:
@@ -404,7 +404,7 @@ class LSTMModel(BaseModel, nn.Module):
                     new_sent.append(out)
                     temp = []
 
-            new_sent.append(features[idx][len(list_tokenized[idx])-1]) # append <END> token
+            new_sent.append(features[idx][len(list_tokenized[idx])+1]) # append <END> token
             #add new vector to processed
             processed[idx] = new_sent 
     
