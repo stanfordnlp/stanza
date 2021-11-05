@@ -23,7 +23,7 @@ REMAPPING = {
     '(Np (':    '(NP (',
     '(NLOC':    '(NP-LOC',
     '(N-P-LOC': '(NP-LOC',
-    '(N-p-LOC': '(NP-LOC',
+    '(N-p-loc': '(NP-LOC',
     '(NPDOB':   '(NP-DOB',
     '(NPSUB':   '(NP-SUB',
     '(NPTMP':   '(NP-TMP',
