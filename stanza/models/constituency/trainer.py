@@ -562,6 +562,7 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
         tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
     return tree_batch
 
+@torch.no_grad()
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     """
     Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
@@ -572,12 +573,11 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
 
     The return is a list of tuples: (gold_tree, [(predicted, score) ...])
     gold_tree will be left blank if the data did not include gold trees
-    currently score is always 1.0, but the interface may be expanded to get a score from the result of the parsing
+    currently score is always 1.0, but the interface may be expanded
+    to get a score from the result of the parsing
 
-    TODO: in large bulk operations this runs out of memory because the
-    State objects and the associated tensors are kept until parsing is
-    finished.  This is not necessary in the case of parsing a large
-    dataset for the trees, though.
+    no_grad() is so that gradients aren't kept, which makes the model
+    run faster and use less memory at inference time
     """
     treebank = []
     tree_batch = build_batch_fn(batch_size, data_iterator, model)
