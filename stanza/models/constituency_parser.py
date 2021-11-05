@@ -130,7 +130,8 @@ def parse_args(args=None):
     parser.add_argument('--epochs', type=int, default=2000)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
 
-    parser.add_argument('--oracle_initial_epoch', type=int, default=2, help="Epoch where we start using the dynamic oracle to let the parser keep going with wrong decisions")
+    # 1 seems to be the most effective, but we should cross-validate
+    parser.add_argument('--oracle_initial_epoch', type=int, default=1, help="Epoch where we start using the dynamic oracle to let the parser keep going with wrong decisions")
     parser.add_argument('--oracle_frequency', type=float, default=0.8, help="How often to use the oracle vs how often to force the correct transition")
     parser.add_argument('--oracle_forced_errors', type=float, default=0.001, help="Occasionally have the model randomly walk through the state space to try to learn how to recover")
 
