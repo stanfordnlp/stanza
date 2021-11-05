@@ -17,8 +17,8 @@ from stanza.models.constituency.tree_reader import read_trees, MixedTreeError
 
 REMAPPING = {
     '(MPD':     '(MDP',
-    '(MP ':     '(M ',
-    '(MP(':     '(M(',
+    '(MP ':     '(NP ',
+    '(MP(':     '(NP(',
     '(Np(':     '(NP(',
     '(Np (':    '(NP (',
     '(NLOC':    '(NP-LOC',
@@ -46,9 +46,13 @@ REMAPPING = {
     'APPRD':    'AP-PPD',
     'Np--H':    'Np-H',
     '(WHRPP':   '(WHRP',
-    # the only PV tags are after S, so this should be the right conversion
-    #'(PV':      '(S-PV',
+    # the one mistagged PV is on a prepositional phrase
+    # (the subtree there maybe needs an SBAR as well, but who's counting)
+    '(PV':      '(PP',
     '(Mpd':     '(MDP',
+    # this only occurs on "bao giờ", "when"
+    # that seems to be WHNP when under an SBAR, but WHRP otherwise
+    '(Whadv ':  '(WHRP ',
 }
 
 def unify_label(tree):
