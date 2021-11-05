@@ -570,8 +570,11 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
                 remove.add(idx)
                 continue
 
-        if tree.num_transitions() >= len(tree.word_queue) * 10:
+        if tree.num_transitions() >= len(tree.word_queue) * 20:
             # too many transitions
+            # x20 is somewhat empirically chosen based on certain
+            # treebanks having deep unary structures, especially early
+            # on when the model is fumbling around
             if tree.gold_tree:
                 error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             else:
