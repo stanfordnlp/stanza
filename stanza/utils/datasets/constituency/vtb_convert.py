@@ -23,6 +23,7 @@ REMAPPING = {
     '(Np (':    '(NP (',
     '(NLOC':    '(NP-LOC',
     '(N-P-LOC': '(NP-LOC',
+    '(N-p-LOC': '(NP-LOC',
     '(NPDOB':   '(NP-DOB',
     '(NPSUB':   '(NP-SUB',
     '(NPTMP':   '(NP-TMP',
@@ -53,6 +54,16 @@ REMAPPING = {
     # this only occurs on "bao giờ", "when"
     # that seems to be WHNP when under an SBAR, but WHRP otherwise
     '(Whadv ':  '(WHRP ',
+    # Whpr Occurs in two places: on "sao" in a context which is always WHRP,
+    # and on "nào", which appears to be a WHNP but not guaranteed correct (TODO)
+    '(Whpr (Pro-h nào))': '(WHNP (Pro-h nào))',
+    '(Whpr (Pro-h Sao))': '(WHRP (Pro-h Sao))',
+    # This is very clearly an NP: (Tp-tmp (N-h hiện nay))
+    # which is only ever in NP-TMP contexts
+    '(Tp-tmp':  '(NP-TMP',
+    # This occurs once, in the context of (Yp (SYM @))
+    # The other times (SYM @) shows up, it's always NP
+    '(Yp':      '(NP',
 }
 
 def unify_label(tree):
