@@ -28,6 +28,7 @@ from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
 from stanza.models.constituency.partitioned_transformer import (
     ConcatPositionalEncoding,
+    ConcatSinusoidalEncoding,
     FeatureDropout,
     PartitionedTransformerEncoder,
     PartitionedTransformerEncoderLayer,
@@ -200,10 +201,12 @@ class LSTMModel(BaseModel, nn.Module):
             )
 
             self.pattention_morpho_emb_dropout = FeatureDropout(self.args['pattn_morpho_emb_dropout'])
-            self.add_timing = ConcatPositionalEncoding(
-                d_model=self.pattn_d_model,
-                max_len=self.args['pattn_encoder_max_len'],
-            )
+            if self.args['pattn_timing'] == 'sin':
+                self.add_timing = ConcatSinusoidalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
+            elif self.args['pattn_timing'] == 'learned':
+                self.add_timing = ConcatPositionalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
+            else:
+                raise ValueError("Unhandled timing type: %s" % self.args['pattn_timing'])
             self.pattn_encoder = PartitionedTransformerEncoder(
                 self.args['pattn_num_layers'],
                 d_model=self.pattn_d_model,
