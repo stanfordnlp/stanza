@@ -55,8 +55,8 @@ REMAPPING = {
     # that seems to be WHNP when under an SBAR, but WHRP otherwise
     '(Whadv ':  '(WHRP ',
     # Whpr Occurs in two places: on "sao" in a context which is always WHRP,
-    # and on "nào", which appears to be a WHNP but not guaranteed correct (TODO)
-    '(Whpr (Pro-h nào))': '(WHNP (Pro-h nào))',
+    # and on "nào", which Vy says is more like a preposition
+    '(Whpr (Pro-h nào))': '(WHPP (Pro-h nào))',
     '(Whpr (Pro-h Sao))': '(WHRP (Pro-h Sao))',
     # This is very clearly an NP: (Tp-tmp (N-h hiện nay))
     # which is only ever in NP-TMP contexts
