@@ -112,6 +112,7 @@ def parse_args(args=None):
     # not a huge difference regardless
     # (these numbers were without retagging)
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
+    parser.add_argument('--position_embedding_dim', type=int, default=40, help="If set to non-zero, uses a sinusoidal embedding to represent the position of each word")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')

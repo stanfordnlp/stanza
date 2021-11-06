@@ -23,6 +23,7 @@ from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.positional_encoding import SinusoidalEncoding
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
 
@@ -91,8 +92,10 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
+        # this could be 0
+        self.position_embedding_dim = self.args['position_embedding_dim']
 
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + self.position_embedding_dim
 
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -117,6 +120,9 @@ class LSTMModel(BaseModel, nn.Module):
             self.word_input_size += self.backward_charlm.hidden_dim()
         else:
             self.backward_charlm = None
+
+        if self.position_embedding_dim > 0:
+            self.position_encoding = SinusoidalEncoding(model_dim=self.position_embedding_dim, max_len=1000)
 
         # TODO: add a max_norm?
         self.delta_words = sorted(set(words))
@@ -405,6 +411,9 @@ class LSTMModel(BaseModel, nn.Module):
                 tag_idx = torch.stack([self.tag_tensors[self.tag_map.get(tag, UNK_ID)] for tag in tag_labels])
                 tag_input = self.tag_embedding(tag_idx)
                 word_inputs.append(tag_input)
+
+            if self.position_embedding_dim > 0:
+                word_inputs.append(self.position_encoding(torch.arange(len(tagged_words), device=device)))
 
             all_word_labels.append(word_labels)
             all_word_inputs.append(word_inputs)
