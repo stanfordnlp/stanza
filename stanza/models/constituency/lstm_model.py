@@ -377,7 +377,6 @@ class LSTMModel(BaseModel, nn.Module):
             bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            word_ids = [word.children[0].label for word in tagged_words]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
             word_input = self.embedding(word_idx)
 
