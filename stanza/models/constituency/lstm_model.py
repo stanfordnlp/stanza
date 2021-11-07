@@ -362,26 +362,21 @@ class LSTMModel(BaseModel, nn.Module):
             return vocab_map.get(word.lower(), UNK_ID)
 
         all_word_inputs = []
-        all_word_labels = []
+        all_word_labels = [[word.children[0].label for word in tagged_words]
+                           for tagged_words in tagged_word_lists]
 
         if self.bert_model is not None:
             # BERT embedding extraction
-            # TODO: reuse word_labels from below
-            raw_data = []
-            for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-                sentence = [word.children[0].label for word in tagged_words]
-                raw_data.append(sentence)
-
-            bert_embeddings = self.extract_bert_embeddings(raw_data)
+            bert_embeddings = self.extract_bert_embeddings(all_word_labels)
             # Change list of words to tensors of shape seq_length x 768
             bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
+            word_labels = all_word_labels[sentence_idx]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
             word_input = self.embedding(word_idx)
 
             # this occasionally learns UNK at train time
-            word_labels = [word.children[0].label for word in tagged_words]
             if self.training:
                 delta_labels = [None if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency'] else word
                                 for word in word_labels]
@@ -405,7 +400,6 @@ class LSTMModel(BaseModel, nn.Module):
                 tag_input = self.tag_embedding(tag_idx)
                 word_inputs.append(tag_input)
 
-            all_word_labels.append(word_labels)
             all_word_inputs.append(word_inputs)
 
         if self.forward_charlm is not None:
