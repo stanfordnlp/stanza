@@ -101,9 +101,11 @@ class LSTMModel(BaseModel, nn.Module):
             self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
             self.bert_dim = self.bert_model.config.hidden_size
             self.word_input_size = self.word_input_size + self.bert_dim
+            self.is_phobert = self.bert_tokenizer.name_or_path.startswith("vinai/phobert")
         else:
             self.bert_model = None
             self.bert_tokenizer = None
+            self.is_phobert = False
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
@@ -276,7 +278,50 @@ class LSTMModel(BaseModel, nn.Module):
 
         return res
 
-    def extract_bert_embeddings(self, data, device):
+    @staticmethod
+    def extract_bert_embeddings(tokenizer, model, data, device):
+        """
+        Extract transformer embeddings using a generic roberta extraction
+
+        data: list of list of string (the text tokens)
+        """
+        tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
+        list_offsets = [[None] * len(sentence) for sentence in data]
+        for idx in range(len(data)):
+            offsets = tokenized.word_ids(batch_index=idx)
+            for pos, offset in enumerate(offsets):
+                if offset is None:
+                    continue
+                # this uses the last token piece for any offset by overwriting the previous value
+                list_offsets[idx][offset] = pos
+
+            if len(offsets) > tokenizer.model_max_length:
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
+
+        features = []
+        for i in range(int(math.ceil(len(data)/128))):
+            with torch.no_grad():
+                feature = model(torch.tensor(tokenized['input_ids'][128*i:128*i+128]).to(device), output_hidden_states=True)
+        features += feature[2][-2].clone().detach()
+
+        processed = []
+        #process the output
+        for feature, offsets in zip(features, list_offsets):
+            new_sent = [feature[idx] for idx in offsets]
+            processed.append(new_sent)
+
+        return processed
+
+    @staticmethod
+    def extract_phobert_embeddings(tokenizer, model, data, device):
+        """
+        Extract transformer embeddings using a method specifically for phobert
+
+        Since phobert doesn't have the is_split_into_words / tokenized.word_ids(batch_index=0)
+        capability, we instead look for @@ to denote a continued token.
+
+        data: list of list of string (the text tokens)
+        """
         processed = [] # final product, returns the list of list of word representation
         tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
         list_tokenized = [] # list of tokenized sentences from phobert
@@ -288,19 +333,19 @@ class LSTMModel(BaseModel, nn.Module):
             sentence = ' '.join(tokenized)
 
             #tokenize using AutoTokenizer PhoBERT
-            tokenized = self.bert_tokenizer.tokenize(sentence)
+            tokenized = tokenizer.tokenize(sentence)
 
             #add tokenized to list_tokenzied for later checking
             list_tokenized.append(tokenized)
 
             #convert tokens to ids
-            sent_ids = self.bert_tokenizer.convert_tokens_to_ids(tokenized)
+            sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
 
             #add start and end tokens to sent_ids
-            tokenized_sent = [self.bert_tokenizer.bos_token_id] + sent_ids + [self.bert_tokenizer.eos_token_id]
+            tokenized_sent = [tokenizer.bos_token_id] + sent_ids + [tokenizer.eos_token_id]
 
-            if len(tokenized_sent) > self.bert_tokenizer.model_max_length:
-                logger.error("Invalid size, max size: %d, got %d %s", self.bert_tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
+            if len(tokenized_sent) > tokenizer.model_max_length:
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
                 continue
 
             #add to tokenized_sents
@@ -314,7 +359,7 @@ class LSTMModel(BaseModel, nn.Module):
         size = len(tokenized_sents)
 
         #padding the inputs
-        tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=self.bert_tokenizer.pad_token_id)
+        tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=tokenizer.pad_token_id)
 
         features = []
 
@@ -322,7 +367,7 @@ class LSTMModel(BaseModel, nn.Module):
         # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
             with torch.no_grad():
-                feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
+                feature = model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
 
             #take the second output layer since experiments shows it give the best result
             features += feature[2][-2].clone().detach()
@@ -362,7 +407,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         if self.bert_model is not None:
             # BERT embedding extraction
-            bert_embeddings = self.extract_bert_embeddings(all_word_labels, device)
+            if self.is_phobert:
+                bert_embeddings = self.extract_phobert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
+            else:
+                bert_embeddings = self.extract_bert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
             # Change list of words to tensors of shape seq_length x 768
             bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 

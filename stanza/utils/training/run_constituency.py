@@ -24,7 +24,24 @@ RETAG_METHOD = {
 }
 
 BERT = {
+    # from https://github.com/idb-ita/GilBERTo
+    # annoyingly, it doesn't handle cased text
+    # supposedly there is an argument "do_lower_case"
+    # but that still leaves a lot of unk tokens
+    # "it": "idb-ita/gilberto-uncased-from-camembert",
+
+    # from https://github.com/musixmatchresearch/umberto
+    "it": "Musixmatch/umberto-commoncrawl-cased-v1",
+
+    # from https://github.com/VinAIResearch/PhoBERT
     "vi": "vinai/phobert-base",
+    # another option is phobert-large, but that doesn't
+    # change the scores any
+    # "vi": "vinai/phobert-large",
+
+    # need to test this out
+    # https://huggingface.co/roberta-base
+    "en": "roberta-base",
 }
 
 def add_constituency_args(parser):

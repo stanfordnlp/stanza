@@ -159,16 +159,25 @@ def load_charlm(charlm_file):
         return CharacterLanguageModel.load(charlm_file, finetune=False)
     return None
 
+BERT_ARGS = {
+    "vinai/phobert-base": { "use_fast": True },
+    "vinai/phobert-large": { "use_fast": True },
+}
+
 def load_bert(model_name):
     if model_name:
         from transformers import AutoModel, AutoTokenizer
         # such as: "vinai/phobert-base"
         bert_model = AutoModel.from_pretrained(model_name)
-        bert_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+        # note that use_fast is the default
+        bert_args = BERT_ARGS.get(model_name, dict())
+        if not model_name.startswith("vinai/phobert"):
+            bert_args["add_prefix_space"] = True
+        bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
         return bert_model, bert_tokenizer
 
     return None, None
-    
+
 
 def read_treebank(filename):
     """
