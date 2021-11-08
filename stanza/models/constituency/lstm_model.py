@@ -321,12 +321,11 @@ class LSTMModel(BaseModel, nn.Module):
         # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
         # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
-            with torch.no_grad():
-                feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
+            feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
 
             #take the second output layer since experiments shows it give the best result
-            features += feature[2][-2].clone().detach()
-            del feature
+            features += feature[2][-2]
+            
 
         assert len(features)==size
         assert len(features)==len(processed)
@@ -340,7 +339,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         del tokenized_sents
         del tokenized
-        del features
 
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
