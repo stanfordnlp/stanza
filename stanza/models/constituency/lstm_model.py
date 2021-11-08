@@ -367,7 +367,7 @@ class LSTMModel(BaseModel, nn.Module):
         for sent in list_tokenized:
             sent_valid = [word for word in sent if not word.endswith("@@")]
             sent_ids = self.bert_tokenizer.convert_tokens_to_ids(sent_valid)
-            tokenized_valids = [0] + sent_ids + [2]
+            tokenized_valid = [0] + sent_ids + [2]
             tokenized_valids.append(torch.tensor(tokenized_valid).detach())
 
         features = []
