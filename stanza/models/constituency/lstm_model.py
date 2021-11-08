@@ -222,6 +222,44 @@ class LSTMModel(BaseModel, nn.Module):
 
         self._unary_limit = unary_limit
 
+        # Initializations of parameters for the Partitioned Attention
+        self.pattn = dict(
+            d_pretrained = 1024,
+            d_model = 1024,
+            morpho_emb_dropout = 0.2,
+            encoder_max_len = 512,
+            num_heads = 8,
+            d_kv = 64,
+            d_ff = 2048,
+            relu_dropout = 0.1,
+            residual_dropout = 0.2,
+            attention_dropout = 0.2,
+            num_layers = 2
+        )
+        # Initializations for the Partitioned Attention
+        self.project_pretrained = nn.Linear(
+            self.pattn['d_pretrained'], self.pattn['d_model'] // 2, bias=False
+        )
+
+        self.morpho_emb_dropout = FeatureDropout(self.pattn['morpho_emb_dropout'])
+        self.add_timing = ConcatPositionalEncoding(
+            d_model=self.pattn['d_model'],
+            max_len=self.pattn['encoder_max_len'],
+        )
+        encoder_layer = PartitionedTransformerEncoderLayer(
+            self.pattn['d_model'],
+            n_head=self.pattn['num_heads'],
+            d_qkv=self.pattn['d_kv'],
+            d_ff=self.pattn['d_ff'],
+            ff_dropout=self.['relu_dropout'],
+            residual_dropout=self.pattn['residual_dropout'],
+            attention_dropout=self.pattn['attention_dropout'],
+        )
+        self.encoder= PartitionedTransformerEncoder(
+            encoder_layer, num_layers
+        )
+
+
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
 
@@ -343,6 +381,45 @@ class LSTMModel(BaseModel, nn.Module):
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
         return processed
+
+    
+    def partitioned_attention(self, tokenized_sents, phobert_embeddings):
+        """
+        Let's decide the input format later
+        """
+        # Anything under torch.no_grad() is here because it does not
+        # require gradient
+        with torch.no_grad():
+            padded_data = torch.nn.utils.rnn.pad_sequence(
+                [
+                    sent
+                    for sent in tokenized_sents
+                ],
+                batch_first=True,
+                padding_value=-100
+            )
+            
+            valid_token_mask = padded_data != -100
+            valid_token_mask = valid_token_mask.to(device="cuda:0")
+            
+        pad_pho = torch.nn.utils.rnn.pad_sequence(
+            [
+                torch.stack(sent)
+                for sent in phobert_embeddings
+            ],
+            batch_first=True,
+            padding_value=0
+        )
+
+        # Project the pretrained embedding onto the desired dimension
+        extra_content_annotations = self.project_pretrained(pad_pho)
+
+        # Add positional information through the table 
+        encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
+        # Put the partitioned input through the partitioned attention 
+        annotations = self.encoder(encoder_in, valid_token_mask)
+        
+        return annotations
 
     def initial_word_queues(self, tagged_word_lists):
         """
