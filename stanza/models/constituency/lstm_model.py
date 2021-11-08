@@ -417,10 +417,7 @@ class LSTMModel(BaseModel, nn.Module):
             valid_token_mask = valid_token_mask.to(device="cuda:0")
             
         padded_embeddings = torch.nn.utils.rnn.pad_sequence(
-            [
-                torch.stack(sent)
-                for sent in bert_embeddings
-            ],
+            bert_embeddings,
             batch_first=True,
             padding_value=0
         )
