@@ -25,6 +25,12 @@ from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
+from stanza.models.constituency.partitioned_transformer import (
+    ConcatPositionalEncoding,
+    FeatureDropout,
+    PartitionedTransformerEncoder,
+    PartitionedTransformerEncoderLayer,
+)
 
 logger = logging.getLogger('stanza')
 
