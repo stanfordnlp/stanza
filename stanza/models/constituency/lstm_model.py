@@ -92,7 +92,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
 
-        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+        self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim + 1024
 
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -354,6 +354,14 @@ class LSTMModel(BaseModel, nn.Module):
         #padding the inputs
         tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=1)
 
+        # Prepare tokenized_valid for attention masking
+        tokenized_valids = []
+        for sent in list_tokenized:
+            sent_valid = [word for word in sent if not word.endswith("@@")]
+            sent_ids = self.tokenizer.convert_tokens_to_ids(sent_valid)
+            tokenized_valids = [0] + sent_ids + [2]
+            tokenized_valids.append(torch.tensor(tokenized_valid).detach())
+
         features = []
 
         # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
@@ -373,17 +381,14 @@ class LSTMModel(BaseModel, nn.Module):
             #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
             new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             #add new vector to processed
-            processed[idx] = new_sent
-
-        del tokenized_sents
-        del tokenized
+            processed[idx] = [features[idx][0]] + new_sent + [features[idx][len(list_tokenized[idx])+1]]
 
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
-        return processed
+        return tokenized_valids, processed
 
     
-    def partitioned_attention(self, tokenized_sents, phobert_embeddings):
+    def partitioned_attention(self, tokenized_valids, bert_embeddings):
         """
         Let's decide the input format later
         """
@@ -393,7 +398,7 @@ class LSTMModel(BaseModel, nn.Module):
             padded_data = torch.nn.utils.rnn.pad_sequence(
                 [
                     sent
-                    for sent in tokenized_sents
+                    for sent in tokenized_valids
                 ],
                 batch_first=True,
                 padding_value=-100
@@ -402,17 +407,17 @@ class LSTMModel(BaseModel, nn.Module):
             valid_token_mask = padded_data != -100
             valid_token_mask = valid_token_mask.to(device="cuda:0")
             
-        pad_pho = torch.nn.utils.rnn.pad_sequence(
+        padded_embeddings = torch.nn.utils.rnn.pad_sequence(
             [
                 torch.stack(sent)
-                for sent in phobert_embeddings
+                for sent in bert_embeddings
             ],
             batch_first=True,
             padding_value=0
         )
 
         # Project the pretrained embedding onto the desired dimension
-        extra_content_annotations = self.project_pretrained(pad_pho)
+        extra_content_annotations = self.project_pretrained(padded_embeddings)
 
         # Add positional information through the table 
         encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
@@ -447,9 +452,12 @@ class LSTMModel(BaseModel, nn.Module):
                 sentence = [word.children[0].label for word in tagged_words]
                 raw_data.append(sentence)
 
-            bert_embeddings = self.extract_bert_embeddings(raw_data)
+            tokenized_valids, bert_embeddings = self.extract_bert_embeddings(raw_data)
             # Change list of words to tensors of shape seq_length x 768
             bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
+
+        # Extract partitioned representation
+        partitioned_embeddings = self.partitioned_attention(tokenized_valids, bert_embeddings)
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_ids = [word.children[0].label for word in tagged_words]
@@ -466,10 +474,11 @@ class LSTMModel(BaseModel, nn.Module):
             delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
-            word_inputs = [word_input, delta_input]
+            partitioned_input = partitioned_embeddings[sentence_idx][1:(word_input.shape[0]+1), :]
+            word_inputs = [word_input, delta_input, partitioned_input]
 
             if self.bert_model is not None:
-                bert_input = bert_embeddings[sentence_idx]
+                bert_input = bert_embeddings[sentence_idx][1:-1]
                 word_inputs.append(bert_input)
 
             if self.tag_embedding_dim > 0:
