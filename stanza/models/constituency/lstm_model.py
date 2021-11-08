@@ -264,7 +264,7 @@ class LSTMModel(BaseModel, nn.Module):
             attention_dropout=self.pattn['attention_dropout'],
         )
         self.encoder= PartitionedTransformerEncoder(
-            encoder_layer, num_layers
+            encoder_layer, self.pattn['num_layers']
         )
 
 
