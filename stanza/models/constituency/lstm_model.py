@@ -326,7 +326,6 @@ class LSTMModel(BaseModel, nn.Module):
 
             #take the second output layer since experiments shows it give the best result
             features += feature[2][-2].clone().detach()
-            del feature
 
         assert len(features)==size
         assert len(features)==len(processed)
@@ -337,10 +336,6 @@ class LSTMModel(BaseModel, nn.Module):
             new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
             #add new vector to processed
             processed[idx] = new_sent
-
-        del tokenized_sents
-        del tokenized
-        del features
 
         # This is a list of list of tensors
         # Each tensor holds the representation of a word extracted from phobert
