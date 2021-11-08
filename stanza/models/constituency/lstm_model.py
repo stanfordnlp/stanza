@@ -97,8 +97,10 @@ class LSTMModel(BaseModel, nn.Module):
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
-            self.bert_model = bert_model
-            self.bert_tokenizer = bert_tokenizer
+            #self.bert_model = bert_model
+            #self.bert_tokenizer = bert_tokenizer
+            self.add_unsaved_module('bert_model', bert_model)
+            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
             self.bert_dim = self.bert_model.config.hidden_size
             self.word_input_size = self.word_input_size + self.bert_dim
         else:
@@ -234,7 +236,7 @@ class LSTMModel(BaseModel, nn.Module):
             relu_dropout = 0.1,
             residual_dropout = 0.2,
             attention_dropout = 0.2,
-            num_layers = 2
+            num_layers = 4
         )
         # Initializations for the Partitioned Attention
         self.project_pretrained = nn.Linear(
@@ -358,7 +360,7 @@ class LSTMModel(BaseModel, nn.Module):
         tokenized_valids = []
         for sent in list_tokenized:
             sent_valid = [word for word in sent if not word.endswith("@@")]
-            sent_ids = self.tokenizer.convert_tokens_to_ids(sent_valid)
+            sent_ids = self.bert_tokenizer.convert_tokens_to_ids(sent_valid)
             tokenized_valids = [0] + sent_ids + [2]
             tokenized_valids.append(torch.tensor(tokenized_valid).detach())
 
@@ -367,10 +369,11 @@ class LSTMModel(BaseModel, nn.Module):
         # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
         # run only 1 time as the batch size seems to be 30
         for i in range(int(math.ceil(size/128))):
-            feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
+            with torch.no_grad():
+                feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
 
             #take the second output layer since experiments shows it give the best result
-            features += feature[2][-2]
+            features += feature[2][-2].clone().detach()
             
 
         assert len(features)==size
