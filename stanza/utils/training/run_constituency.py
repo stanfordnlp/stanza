@@ -24,7 +24,7 @@ RETAG_METHOD = {
 }
 
 BERT = {
-    "vi": "vinai/phobert-base",
+    "vi": "vinai/phobert-large",
 }
 
 def add_constituency_args(parser):
