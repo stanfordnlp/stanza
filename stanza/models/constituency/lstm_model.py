@@ -97,8 +97,8 @@ class LSTMModel(BaseModel, nn.Module):
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
-            self.add_unsaved_module('bert_model', bert_model)
-            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            self.bert_model = bert_model
+            self.bert_tokenizer = bert_tokenizer
             self.bert_dim = self.bert_model.config.hidden_size
             self.word_input_size = self.word_input_size + self.bert_dim
         else:
