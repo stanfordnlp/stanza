@@ -253,7 +253,7 @@ class LSTMModel(BaseModel, nn.Module):
             n_head=self.pattn['num_heads'],
             d_qkv=self.pattn['d_kv'],
             d_ff=self.pattn['d_ff'],
-            ff_dropout=self.['relu_dropout'],
+            ff_dropout=self.pattn['relu_dropout'],
             residual_dropout=self.pattn['residual_dropout'],
             attention_dropout=self.pattn['attention_dropout'],
         )
