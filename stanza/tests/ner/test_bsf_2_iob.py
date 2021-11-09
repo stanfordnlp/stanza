@@ -48,6 +48,8 @@ T2	ORG 67 75	Лілея НВ'''
 Василь B-PERS
 Нагірний I-PERS
 . O
+
+
 В O
 івано-франківському O
 видавництві O
@@ -81,6 +83,8 @@ Kubler I-MISC
 маестро I-MISC
 » O
 . O
+
+
 Причому O'''
         self.assertEqual(expected, convert_bsf(data, bsf_markup, converter='iob'))
 

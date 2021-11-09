@@ -52,7 +52,10 @@ def convert_bsf(data: str, bsf_markup: str, converter: str = 'beios') -> str:
     def join_simple_chunk(chunk: str) -> list:
         if len(chunk.strip()) == 0:
             return []
-        tokens = re.split(r'\s', chunk.strip())
+        # keep the newlines, but discard the non-newline whitespace
+        tokens = re.split(r'(\n)|\s', chunk.strip())
+        # the re will return None for splits which were not caught in a group
+        tokens = [x for x in tokens if x is not None]
         return [token + ' O' if len(token.strip()) > 0 else token for token in tokens]
 
     converters = {'beios': format_token_as_beios, 'iob': format_token_as_iob}
