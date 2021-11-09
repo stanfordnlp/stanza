@@ -46,10 +46,6 @@ TREEBANK = """
     (. .)))
 """
 
-@pytest.fixture(scope="module")
-def pt():
-    return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
-
 def build_trainer(pt, *args, treebank=TREEBANK):
     # TODO: build a fake embedding some other way?
     train_trees = tree_reader.read_trees(treebank)
@@ -63,27 +59,32 @@ def build_trainer(pt, *args, treebank=TREEBANK):
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
-def test_initial_model(pt):
-    """
-    does nothing, just tests that the construction went okay
-    """
-    build_trainer(pt)
+class TestTrainer:
+    @pytest.fixture(scope="class")
+    def pt(self):
+        return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+
+    def test_initial_model(self, pt):
+        """
+        does nothing, just tests that the construction went okay
+        """
+        build_trainer(pt)
 
 
-def test_save_load_model(pt):
-    """
-    Just tests that saving and loading works without crashs.
+    def test_save_load_model(self, pt):
+        """
+        Just tests that saving and loading works without crashs.
 
-    Currently no test of the values themselves
-    """
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tr = build_trainer(pt)
+        Currently no test of the values themselves
+        """
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tr = build_trainer(pt)
 
-        # attempt saving
-        filename = os.path.join(tmpdirname, "parser.pt")
-        tr.save(filename)
+            # attempt saving
+            filename = os.path.join(tmpdirname, "parser.pt")
+            tr.save(filename)
 
-        assert os.path.exists(filename)
+            assert os.path.exists(filename)
 
-        # load it back in
-        tr.load(filename, pt, None, None, None, None, False)
+            # load it back in
+            tr.load(filename, pt, None, None, None, None, False)

@@ -2,12 +2,17 @@ import os
 
 import pytest
 
+from stanza.models.common import pretrain
 from stanza.models.constituency import parse_transitions
 from stanza.tests import *
 from stanza.tests.constituency import test_parse_transitions
-from stanza.tests.constituency.test_trainer import build_trainer, pt
+from stanza.tests.constituency.test_trainer import build_trainer
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
+@pytest.fixture(scope="module")
+def pt():
+    return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
 
 def build_model(pt, *args):
     trainer = build_trainer(pt, *args)

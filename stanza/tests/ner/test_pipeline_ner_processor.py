@@ -41,26 +41,6 @@ EXPECTED_ENTS = [[{
 }]]
 
 
-@pytest.fixture(scope="module")
-def pipeline():
-    """
-    A reusable pipeline with the NER module
-    """
-    return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner")
-    
-
-@pytest.fixture(scope="module")
-def processed_doc(pipeline):
-    """ Document created by running full English pipeline on a few sentences """
-    return [pipeline(text) for text in  EN_DOCS]
-
-
-@pytest.fixture(scope="module")
-def processed_bulk(pipeline):
-    """ Document created by running full English pipeline on a few sentences """
-    docs = [Document([], text=t) for t in EN_DOCS]
-    return pipeline(docs)
-
 def check_entities_equal(doc, expected):
     """
     Checks that the entities of a doc are equal to the given list of maps
@@ -70,12 +50,32 @@ def check_entities_equal(doc, expected):
         for k in expected_entity:
             assert getattr(doc_entity, k) == expected_entity[k]
 
-def test_bulk_ents(processed_bulk):
-    assert len(processed_bulk) == len(EXPECTED_ENTS)
-    for doc, expected in zip(processed_bulk, EXPECTED_ENTS):
-        check_entities_equal(doc, expected)
+class TestNERProcessor:
+    @pytest.fixture(scope="class")
+    def pipeline(self):
+        """
+        A reusable pipeline with the NER module
+        """
+        return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner")
 
-def test_ents(processed_doc):
-    assert len(processed_doc) == len(EXPECTED_ENTS)
-    for doc, expected in zip(processed_doc, EXPECTED_ENTS):
-        check_entities_equal(doc, expected)
+    @pytest.fixture
+    def processed_doc(self, pipeline):
+        """ Document created by running full English pipeline on a few sentences """
+        return [pipeline(text) for text in  EN_DOCS]
+
+
+    @pytest.fixture
+    def processed_bulk(self, pipeline):
+        """ Document created by running full English pipeline on a few sentences """
+        docs = [Document([], text=t) for t in EN_DOCS]
+        return pipeline(docs)
+
+    def test_bulk_ents(self, processed_bulk):
+        assert len(processed_bulk) == len(EXPECTED_ENTS)
+        for doc, expected in zip(processed_bulk, EXPECTED_ENTS):
+            check_entities_equal(doc, expected)
+
+    def test_ents(self, processed_doc):
+        assert len(processed_doc) == len(EXPECTED_ENTS)
+        for doc, expected in zip(processed_doc, EXPECTED_ENTS):
+            check_entities_equal(doc, expected)

@@ -15,33 +15,34 @@ EN_DOC = "  ".join(EN_DOCS)
 
 EXPECTED = [0, 1, 2]
 
-@pytest.fixture(scope="module")
-def pipeline():
-    """
-    A reusable pipeline with the NER module
-    """
-    return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,sentiment")
+class TestSentimentPipeline:
+    @pytest.fixture(scope="class")
+    def pipeline(self):
+        """
+        A reusable pipeline with the NER module
+        """
+        return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,sentiment")
 
-def test_simple(pipeline):
-    results = []
-    for text in EN_DOCS:
-        doc = pipeline(text)
+    def test_simple(self, pipeline):
+        results = []
+        for text in EN_DOCS:
+            doc = pipeline(text)
+            assert len(doc.sentences) == 1
+            results.append(doc.sentences[0].sentiment)
+        assert EXPECTED == results
+
+    def test_multiple_sentences(self, pipeline):
+        doc = pipeline(EN_DOC)
+        assert len(doc.sentences) == 3
+        results = [sentence.sentiment for sentence in doc.sentences]
+        assert EXPECTED == results
+
+    def test_empty_text(self, pipeline):
+        """
+        Test empty text and a text which might get reduced to empty text by removing dashes
+        """
+        doc = pipeline("")
+        assert len(doc.sentences) == 0
+
+        doc = pipeline("--")
         assert len(doc.sentences) == 1
-        results.append(doc.sentences[0].sentiment)
-    assert EXPECTED == results
-
-def test_multiple_sentences(pipeline):
-    doc = pipeline(EN_DOC)
-    assert len(doc.sentences) == 3
-    results = [sentence.sentiment for sentence in doc.sentences]
-    assert EXPECTED == results
-
-def test_empty_text(pipeline):
-    """
-    Test empty text and a text which might get reduced to empty text by removing dashes
-    """
-    doc = pipeline("")
-    assert len(doc.sentences) == 0
-
-    doc = pipeline("--")
-    assert len(doc.sentences) == 1
