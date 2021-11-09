@@ -175,6 +175,7 @@ default_sentiment = {
 default_constituency = {
   "en": "wsj",
   "it": "turin-inorder",
+  "zh-hans": "ctb7",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
