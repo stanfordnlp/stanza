@@ -17,9 +17,14 @@ from stanza.tests.constituency.test_trainer import build_trainer
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 # just one tree so far, but maybe we can add more
-VI_TREEBANK            = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài Loan) (" ") (PP (E-H ở) (NP (N-H đồng bằng) (NP (N-H sông) (Np Cửu Long))))) (. .)))'
+VI_TREEBANK               = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài Loan) (" ") (PP (E-H ở) (NP (N-H đồng bằng) (NP (N-H sông) (Np Cửu Long))))) (. .)))'
 
-VI_TREEBANK_UNDERSCORE = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài_Loan) (" ") (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .)))'
+VI_TREEBANK_UNDERSCORE    = '(ROOT (S-TTL (NP (" ") (N-H Đảo) (Np Đài_Loan) (" ") (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .)))'
+
+VI_TREEBANK_SIMPLE        = '(ROOT (S (NP (" ") (N Đảo) (Np Đài Loan) (" ") (PP (E ở) (NP (N đồng bằng) (NP (N sông) (Np Cửu Long))))) (. .)))'
+
+EXPECTED_LABELED_BRACKETS = '(_ROOT (_S (_NP (_" " )_" (_N Đảo )_N (_Np Đài_Loan )_Np (_" " )_" (_PP (_E ở )_E (_NP (_N đồng_bằng )_N (_NP (_N sông )_N (_Np Cửu_Long )_Np )_NP )_NP )_PP )_NP (_. . )_. )_S )_ROOT'
+
 
 def test_read_vi_tree():
     """
@@ -73,3 +78,18 @@ def test_space_formatting():
     assert str(trees[0]) == text
 
     assert "{:_}".format(trees[0]) == VI_TREEBANK_UNDERSCORE
+
+
+def test_language_formatting():
+    """
+    Test turning the parse tree into a 'language' for GPT
+    """
+    text = VI_TREEBANK.split("\n")[0]
+    trees = tree_reader.read_trees(text)
+    trees = [t.prune_none().simplify_labels() for t in trees]
+    assert len(trees) == 1
+    assert str(trees[0]) == VI_TREEBANK_SIMPLE
+
+    text = "{:L}".format(trees[0])
+    assert text == EXPECTED_LABELED_BRACKETS
+

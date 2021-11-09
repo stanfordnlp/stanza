@@ -59,50 +59,68 @@ def get_num_samples(org_dir, file_names):
             continue
         # File is .mrg. Start processing
         file_dir = os.path.join(org_dir, filename)
-        with open(file_dir, 'r') as reader:
+        with open(file_dir, 'r', encoding='utf-8') as reader:
             content = reader.readlines()
             for _ in content:
                 count += 1
 
     return count
 
-def split_files(org_dir, split_dir, short_name=None):
+def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
+    os.makedirs(split_dir, exist_ok=True)
+
+    if train_size + dev_size >= 1.0:
+        print("Not making a test slice with the given ratios: train {} dev {}".format(train_size, dev_size))
+
     # Create a random shuffle list of the file names in the original directory
     file_names = create_shuffle_list(org_dir)
 
     # Create train_path, dev_path, test_path
     train_path, dev_path, test_path = create_paths(split_dir, short_name)
-    output_names = (train_path, dev_path, test_path)
 
     # Set up the number of samples for each train/dev/test set
     num_samples = get_num_samples(org_dir, file_names)
-    stop_train = int(num_samples * 0.7)
-    stop_dev = int(num_samples * 0.85)
-    output_limits = (stop_train, stop_dev, num_samples)
     print("Found {} total samples in {}".format(num_samples, org_dir))
-    print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
+
+    stop_train = int(num_samples * train_size)
+    if train_size + dev_size >= 1.0:
+        stop_dev = num_samples
+        output_limits = (stop_train, stop_dev)
+        output_names = (train_path, dev_path)
+        print("Splitting {} train, {} dev".format(stop_train, stop_dev - stop_train))
+    else:
+        stop_dev = int(num_samples * (train_size + dev_size))
+        output_limits = (stop_train, stop_dev, num_samples)
+        output_names = (train_path, dev_path, test_path)
+        print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
 
     # Count how much stuff we've written.
     # We will switch to the next output file when we're written enough
     count = 0
 
     filename_iter = iter(file_names)
+    tree_iter = iter([])
     for write_path, count_limit in zip(output_names, output_limits):
-        with open(write_path, 'w') as writer:
+        with open(write_path, 'w', encoding='utf-8') as writer:
             # Loop through the files, which then loop through the trees and write to write_path
             while count < count_limit:
-                filename = next(filename_iter, None)
-                # Skip files that are not .mrg
-                if not filename.endswith('.mrg'):
-                    continue
-                # File is .mrg. Start processing
-                file_dir = os.path.join(org_dir, filename)
-                with open(file_dir, 'r') as reader:
-                    content = reader.readlines()
-                    for line in content:
-                        # Write to write_dir
-                        writer.write(line)
-                        count += 1
+                next_tree = next(tree_iter, None)
+                while next_tree is None:
+                    filename = next(filename_iter, None)
+                    if filename is None:
+                        raise RuntimeError("Ran out of trees before reading all of the expected trees")
+                    # Skip files that are not .mrg
+                    if not filename.endswith('.mrg'):
+                        continue
+                    # File is .mrg. Start processing
+                    file_dir = os.path.join(org_dir, filename)
+                    with open(file_dir, 'r', encoding='utf-8') as reader:
+                        content = reader.readlines()
+                        tree_iter = iter(content)
+                        next_tree = next(tree_iter, None)
+                # Write to write_dir
+                writer.write(next_tree)
+                count += 1
 
 def main():
     """

@@ -1118,8 +1118,8 @@ $(document).ready(function() {
           createAnnotationDiv('upos',     'upos',       'upos',                                'Universal Part-of-Speech');
           createAnnotationDiv('lemma',    'lemma',      'lemma',                               'Lemmas'                  );
           createAnnotationDiv('ner',      'ner',        'ner',                                 'Named Entity Recognition');
-          //createAnnotationDiv('parse',    'parse',      'parseTree',                           'Constituency Parse'      );
           createAnnotationDiv('deps',     'depparse',   'basicDependencies',                   'Universal Dependencies'      );
+          createAnnotationDiv('parse',    'parse',      'parseTree',                           'Constituency Parse'      );
           //createAnnotationDiv('deps2',    'depparse',   'enhancedPlusPlusDependencies',        'Enhanced++ Dependencies' );
           //createAnnotationDiv('openie',   'openie',     'openie',                              'Open IE'                 );
           //createAnnotationDiv('coref',    'coref',      'corefs',                              'Coreference'             );

@@ -17,12 +17,13 @@ from stanza.models.constituency.tree_reader import read_trees, MixedTreeError
 
 REMAPPING = {
     '(MPD':     '(MDP',
-    '(MP ':     '(M ',
-    '(MP(':     '(M(',
+    '(MP ':     '(NP ',
+    '(MP(':     '(NP(',
     '(Np(':     '(NP(',
     '(Np (':    '(NP (',
     '(NLOC':    '(NP-LOC',
     '(N-P-LOC': '(NP-LOC',
+    '(N-p-loc': '(NP-LOC',
     '(NPDOB':   '(NP-DOB',
     '(NPSUB':   '(NP-SUB',
     '(NPTMP':   '(NP-TMP',
@@ -46,8 +47,23 @@ REMAPPING = {
     'APPRD':    'AP-PPD',
     'Np--H':    'Np-H',
     '(WHRPP':   '(WHRP',
-    # the only PV tags are after S, so this should be the right conversion
-    '(PV':     '(S-PV',
+    # the one mistagged PV is on a prepositional phrase
+    # (the subtree there maybe needs an SBAR as well, but who's counting)
+    '(PV':      '(PP',
+    '(Mpd':     '(MDP',
+    # this only occurs on "bao giờ", "when"
+    # that seems to be WHNP when under an SBAR, but WHRP otherwise
+    '(Whadv ':  '(WHRP ',
+    # Whpr Occurs in two places: on "sao" in a context which is always WHRP,
+    # and on "nào", which Vy says is more like a preposition
+    '(Whpr (Pro-h nào))': '(WHPP (Pro-h nào))',
+    '(Whpr (Pro-h Sao))': '(WHRP (Pro-h Sao))',
+    # This is very clearly an NP: (Tp-tmp (N-h hiện nay))
+    # which is only ever in NP-TMP contexts
+    '(Tp-tmp':  '(NP-TMP',
+    # This occurs once, in the context of (Yp (SYM @))
+    # The other times (SYM @) shows up, it's always NP
+    '(Yp':      '(NP',
 }
 
 def unify_label(tree):
@@ -97,7 +113,7 @@ def convert_file(orig_file, new_file):
     This function writes new trees to the corresponding files in new_file
     """
     errors = Counter()
-    with open(orig_file, 'r') as reader, open(new_file, 'w') as writer:
+    with open(orig_file, 'r', encoding='utf-8') as reader, open(new_file, 'w', encoding='utf-8') as writer:
         content = reader.readlines()
         # Tree string will only be written if the currently read
         # tree is a valid tree. It will not be written if it
@@ -157,22 +173,23 @@ def convert_file(orig_file, new_file):
 
     return errors
 
-
-def convert_dir(org_dir, new_dir):
+def convert_files(file_list, new_dir):
     errors = Counter()
-    for filename in os.listdir(org_dir):
-        file_name, file_extension = os.path.splitext(filename)
-        # Only convert .prd files, skip the .raw files
-        if file_extension == '.raw':
-            continue
-        file_path = os.path.join(org_dir, filename)
-        new_path = os.path.join(new_dir, file_name)
+    for filename in file_list:
+        base_name, _ = os.path.splitext(os.path.split(filename)[-1])
+        new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        errors += convert_file(file_path, new_file_path)
+        errors += convert_file(filename, new_file_path)
 
     errors = "\n  ".join(sorted(["%s: %s" % x for x in  errors.items()]))
-    print("Found the following error counts when processing {}:\n  {}".format(org_dir, errors))
+    print("Found the following error counts:\n  {}".format(errors))
+
+def convert_dir(orig_dir, new_dir):
+    file_list = os.listdir(orig_dir)
+    # Only convert .prd files, skip the .raw files from VLSP 2009
+    file_list = [os.path.join(orig_dir, f) for f in file_list if os.path.splitext(f)[1] != '.raw']
+    convert_files(file_list, new_dir)
 
 def main():
     """
@@ -185,7 +202,7 @@ def main():
         description="Script that converts a VTB Tree into the desired format",
     )
     parser.add_argument(
-        'org_dir',
+        'orig_dir',
         help='The location of the original directory storing original trees '
     )
     parser.add_argument(

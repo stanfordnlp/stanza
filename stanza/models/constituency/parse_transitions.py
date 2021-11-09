@@ -22,8 +22,6 @@ class TransitionScheme(Enum):
 
     IN_ORDER           = 4
 
-UNARY_LIMIT = 4
-
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
                                  'sentence_length', 'num_opens', 'word_position'])):
     """
@@ -195,6 +193,12 @@ class Transition(ABC):
         """
         pass
 
+    @abstractmethod
+    def short_name(self):
+        """
+        A short name to identify this transition
+        """
+
     def __lt__(self, other):
         # put the Shift at the front of a list, and otherwise sort alphabetically
         if self == other:
@@ -255,6 +259,9 @@ class Shift(Transition):
                     return False
         return True
 
+    def short_name(self):
+        return "Shift"
+
     def __repr__(self):
         return "Shift"
 
@@ -304,6 +311,9 @@ class CompoundUnary(Transition):
         else:
             return is_root
 
+    def short_name(self):
+        return "Unary"
+
     def __repr__(self):
         return "CompoundUnary(%s)" % ",".join(self.labels)
 
@@ -341,7 +351,7 @@ class Dummy():
     def __hash__(self):
         return hash(self.label)
 
-def too_many_unary_nodes(tree):
+def too_many_unary_nodes(tree, unary_limit):
     """
     Return True iff there are UNARY_LIMIT unary nodes in a tree in a row
 
@@ -350,7 +360,7 @@ def too_many_unary_nodes(tree):
     """
     if tree is None:
         return False
-    for _ in range(UNARY_LIMIT + 1):
+    for _ in range(unary_limit + 1):
         if len(tree.children) != 1:
             return False
         tree = tree.children[0]
@@ -416,7 +426,7 @@ class OpenConstituent(Transition):
                 # nodes under one root
                 return state.num_opens == 0 and state.empty_word_queue()
             else:
-                if (state.num_opens > 0 or state.empty_word_queue()) and too_many_unary_nodes(model.get_top_constituent(state.constituents)):
+                if (state.num_opens > 0 or state.empty_word_queue()) and too_many_unary_nodes(model.get_top_constituent(state.constituents), model.unary_limit()):
                     # looks like we've been in a loop of lots of unary transitions
                     # note that we check `num_opens > 0` because otherwise we might wind up stuck
                     # in a state where the only legal transition is open, such as if the
@@ -428,6 +438,9 @@ class OpenConstituent(Transition):
                     return False
                 return True
         return True
+
+    def short_name(self):
+        return "Open"
 
     def __repr__(self):
         return "OpenConstituent({})".format(self.label)
@@ -512,7 +525,7 @@ class CloseConstituent(Transition):
                 # if we're stuck in a loop of unaries
                 return True
             node = model.get_top_constituent(state.constituents.pop())
-            if too_many_unary_nodes(node):
+            if too_many_unary_nodes(node, model.unary_limit()):
                 # at this point, we are in a situation where
                 # - multiple unaries have happened in a row
                 # - there is stuff on the word_queue, so a ROOT open isn't legal
@@ -522,6 +535,9 @@ class CloseConstituent(Transition):
                 # this node, so instead we make the Close illegal
                 return False
         return True
+
+    def short_name(self):
+        return "Close"
 
     def __repr__(self):
         return "CloseConstituent"
@@ -554,8 +570,11 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
                 remove.add(idx)
                 continue
 
-        if tree.num_transitions() >= len(tree.word_queue) * 10:
+        if tree.num_transitions() >= len(tree.word_queue) * 20:
             # too many transitions
+            # x20 is somewhat empirically chosen based on certain
+            # treebanks having deep unary structures, especially early
+            # on when the model is fumbling around
             if tree.gold_tree:
                 error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             else:

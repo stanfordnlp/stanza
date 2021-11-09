@@ -59,7 +59,7 @@ def build_trainer(pt, *args, treebank=TREEBANK):
     forward_charlm = trainer.load_charlm(args['charlm_forward_file'])
     backward_charlm = trainer.load_charlm(args['charlm_backward_file'])
 
-    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm)
+    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, None, None)
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
@@ -86,4 +86,4 @@ def test_save_load_model(pt):
         assert os.path.exists(filename)
 
         # load it back in
-        tr.load(filename, pt, None, None, False)
+        tr.load(filename, pt, None, None, None, None, False)

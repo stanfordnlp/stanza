@@ -18,7 +18,10 @@ EMPTY_CHILDREN = ()
 
 CONSTITUENT_SPLIT = re.compile("[-=#]")
 
-WORDS_TO_PRUNE = ('*E*', '*T*')
+# These words occur in the VLSP dataset.
+# The documentation claims there might be *O*, although those don't
+# seem to exist in practice
+WORDS_TO_PRUNE = ('*E*', '*T*', '*O*')
 
 class Tree(StanzaObject):
     """
@@ -73,11 +76,22 @@ class Tree(StanzaObject):
 
         Note that this is not a recursive traversal
         Otherwise, a tree too deep might blow up the call stack
+
+        There is a type specific format:
+          L  -> open and close brackets are labeled, spaces in the tokens are replaced with _
+          ?  -> spaces in the tokens are replaced with ? for any non-L value of ?
+          ?L -> bracket labels AND a custom space replacement
         """
-        if spec and len(spec) > 0:
+        space_replacement = " "
+        bracket_labels = False
+        if spec == 'L':
+            bracket_labels = True
+            space_replacement = "_"
+        elif spec and spec[-1] == 'L':
+            bracket_labels = True
             space_replacement = spec[0]
-        else:
-            space_replacement = " "
+        elif spec:
+            space_replacement = spec[0]
 
         def normalize(text):
             return text.replace(" ", space_replacement).replace("(", "-LRB-").replace(")", "-RRB-")
@@ -87,18 +101,27 @@ class Tree(StanzaObject):
             stack.append(self)
             while len(stack) > 0:
                 node = stack.pop()
-                # note that == can recursively call == in some circumstances!
-                if node is CLOSE_PAREN or node is SPACE_SEPARATOR:
+                if isinstance(node, str):
                     buf.write(node)
                     continue
                 if len(node.children) == 0:
                     if node.label is not None:
                         buf.write(normalize(node.label))
                     continue
-                buf.write(OPEN_PAREN)
-                if node.label is not None:
-                    buf.write(normalize(node.label))
-                stack.append(CLOSE_PAREN)
+
+                if bracket_labels:
+                    buf.write("%s_%s" % (OPEN_PAREN, normalize(node.label)))
+                else:
+                    buf.write(OPEN_PAREN)
+                    if node.label is not None:
+                        buf.write(normalize(node.label))
+
+                if bracket_labels:
+                    stack.append(CLOSE_PAREN + "_" + normalize(node.label))
+                    stack.append(SPACE_SEPARATOR)
+                else:
+                    stack.append(CLOSE_PAREN)
+
                 for child in reversed(node.children):
                     stack.append(child)
                     stack.append(SPACE_SEPARATOR)
@@ -311,3 +334,18 @@ class Tree(StanzaObject):
         if len(new_children) == 0:
             return None
         return Tree(self.label, new_children)
+
+    def count_unary_depth(self):
+        if self.is_preterminal() or self.is_leaf():
+            return 0
+        if len(self.children) == 1:
+            t = self
+            score = 0
+            while not t.is_preterminal() and not t.is_leaf() and len(t.children) == 1:
+                score = score + 1
+                t = t.children[0]
+            child_score = max(tc.count_unary_depth() for tc in t.children)
+            score = max(score, child_score)
+            return score
+        score = max(t.count_unary_depth() for t in self.children)
+        return score

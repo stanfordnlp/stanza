@@ -10,25 +10,26 @@ import os
 from stanza.models import constituency_parser
 from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
+
+from stanza.resources.prepare_resources import default_charlms
 
 logger = logging.getLogger('stanza')
-
-# TODO: get this from the resources
-RETAG_PACKAGE = {
-    "en": "en_combined",
-    "it": "it_combined",
-    "vi": "vi_vtb",
-}
 
 # xpos tagger doesn't produce PP tag on the turin treebank,
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
     "it": "upos",
+    "vi": "upos",
+}
+
+BERT = {
+    "vi": "vinai/phobert-base",
 }
 
 def add_constituency_args(parser):
-    parser.add_argument('--charlm', default=None, type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
+    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
+    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -47,13 +48,10 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 
-    if language in RETAG_PACKAGE:
-        retag_args = ["--retag_package", RETAG_PACKAGE[language]]
+    if language in RETAG_METHOD:
+        retag_args = ["--retag_method", RETAG_METHOD[language]]
     else:
         retag_args = []
-
-    if language in RETAG_METHOD:
-        retag_args.extend(["--retag_method", "upos"])
 
     if '--wordvec_pretrain_file' not in extra_args:
         # will throw an error if the pretrain can't be found
@@ -62,14 +60,19 @@ def run_treebank(mode, paths, treebank, short_name,
     else:
         wordvec_args = []
 
-    charlm_args = build_charlm_args(language, command_args.charlm, base_args=False)
+    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, {})
+    charlm_args = build_charlm_args(language, charlm, base_args=False)
+
+    default_args = retag_args + wordvec_args + charlm_args
+    if language in BERT:
+        default_args.extend(['--bert_model', BERT.get(language)])
 
     if mode == Mode.TRAIN:
         train_args = ['--train_file', train_file,
                       '--eval_file', dev_file,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + wordvec_args + charlm_args + retag_args + extra_args
+        train_args = train_args + default_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         constituency_parser.main(train_args)
 
@@ -77,7 +80,7 @@ def run_treebank(mode, paths, treebank, short_name,
         dev_args = ['--eval_file', dev_file,
                     '--shorthand', short_name,
                     '--mode', 'predict']
-        dev_args = dev_args + wordvec_args + charlm_args + retag_args + extra_args
+        dev_args = dev_args + default_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         constituency_parser.main(dev_args)
 
@@ -85,7 +88,7 @@ def run_treebank(mode, paths, treebank, short_name,
         test_args = ['--eval_file', test_file,
                      '--shorthand', short_name,
                      '--mode', 'predict']
-        test_args = test_args + wordvec_args + charlm_args + retag_args + extra_args
+        test_args = test_args + default_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         constituency_parser.main(test_args)
 

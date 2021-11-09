@@ -179,3 +179,19 @@ def build_charlm_args(language, charlm, base_args=True):
                 '--charlm_shorthand', f'{language}_{charlm}'] + char_args
 
     return []
+
+def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
+    default_charlm = language_charlms.get(language, None)
+    specific_charlm = dataset_charlms.get(language, {}).get(dataset, None)
+
+    if charlm is None:
+        return None
+    elif charlm != "default":
+        return charlm
+    elif specific_charlm:
+        return specific_charlm
+    elif default_charlm:
+        return default_charlm
+    else:
+        return None
+

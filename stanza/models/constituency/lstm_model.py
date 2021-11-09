@@ -10,7 +10,9 @@ previous transitions, the words, and the partially built constituents.
 from collections import namedtuple
 import logging
 from operator import itemgetter
+import math
 import random
+
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
@@ -40,7 +42,7 @@ Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -89,7 +91,19 @@ class LSTMModel(BaseModel, nn.Module):
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
+
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
+
+        if bert_model is not None:
+            if bert_tokenizer is None:
+                raise ValueError("Cannot have a bert model without a tokenizer")
+            self.add_unsaved_module('bert_model', bert_model)
+            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            self.bert_dim = self.bert_model.config.hidden_size
+            self.word_input_size = self.word_input_size + self.bert_dim
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
@@ -118,10 +132,11 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.tags = sorted(list(tags))
         if self.tag_embedding_dim > 0:
-            self.tag_map = { t: i for i, t in enumerate(self.tags) }
-            self.tag_embedding = nn.Embedding(num_embeddings = len(tags),
-                                              embedding_dim = self.tag_embedding_dim)
-            self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags)), requires_grad=False))
+            self.tag_map = { t: i+2 for i, t in enumerate(self.tags) }
+            self.tag_embedding = nn.Embedding(num_embeddings = len(tags)+2,
+                                              embedding_dim = self.tag_embedding_dim,
+                                              padding_idx = 0)
+            self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
@@ -205,6 +220,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.constituency_lstm = self.args['constituency_lstm']
 
+        self._unary_limit = unary_limit
+
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
 
@@ -259,6 +276,76 @@ class LSTMModel(BaseModel, nn.Module):
 
         return res
 
+    def extract_bert_embeddings(self, data):
+        processed = [] # final product, returns the list of list of word representation
+        tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
+        list_tokenized = [] # list of tokenized sentences from phobert
+        for sent in data:
+            #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
+            tokenized = [word.replace(" ","_") for word in sent]
+
+            #concatenate to a sentence
+            sentence = ' '.join(tokenized)
+
+            #tokenize using AutoTokenizer PhoBERT
+            tokenized = self.bert_tokenizer.tokenize(sentence)
+
+            #add tokenized to list_tokenzied for later checking
+            list_tokenized.append(tokenized)
+
+            #convert tokens to ids
+            sent_ids = self.bert_tokenizer.convert_tokens_to_ids(tokenized)
+
+            #add start and end tokens to sent_ids
+            tokenized_sent = [0] + sent_ids + [2]
+
+            if len(tokenized_sent)>256:
+                logger.error("Invalid size, max size: 256, got %d %s", len(tokenized_sent), tokenized_sent)
+                continue
+
+            #add to tokenized_sents
+            tokenized_sents.append(torch.tensor(tokenized_sent).detach())
+
+            processed_sent = []
+            processed.append(processed_sent)
+
+            # done loading bert emb
+
+        size = len(tokenized_sents)
+
+        #padding the inputs
+        tokenized_sents_padded = torch.nn.utils.rnn.pad_sequence(tokenized_sents,batch_first=True,padding_value=1)
+
+        features = []
+
+        # Feed into PhoBERT 128 at a time in a batch fashion. In testing, the loop was
+        # run only 1 time as the batch size seems to be 30
+        for i in range(int(math.ceil(size/128))):
+            with torch.no_grad():
+                feature = self.bert_model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(torch.device("cuda:0")), output_hidden_states=True)
+
+            #take the second output layer since experiments shows it give the best result
+            features += feature[2][-2].clone().detach()
+            del feature
+
+        assert len(features)==size
+        assert len(features)==len(processed)
+
+        #process the output
+        for idx, sent in enumerate(processed):
+            #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
+            new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
+            #add new vector to processed
+            processed[idx] = new_sent
+
+        del tokenized_sents
+        del tokenized
+        del features
+
+        # This is a list of list of tensors
+        # Each tensor holds the representation of a word extracted from phobert
+        return processed
+
     def initial_word_queues(self, tagged_word_lists):
         """
         Produce initial word queues out of the model's LSTMs for use in the tagged word lists.
@@ -275,14 +362,21 @@ class LSTMModel(BaseModel, nn.Module):
             return vocab_map.get(word.lower(), UNK_ID)
 
         all_word_inputs = []
-        all_word_labels = []
+        all_word_labels = [[word.children[0].label for word in tagged_words]
+                           for tagged_words in tagged_word_lists]
+
+        if self.bert_model is not None:
+            # BERT embedding extraction
+            bert_embeddings = self.extract_bert_embeddings(all_word_labels)
+            # Change list of words to tensors of shape seq_length x 768
+            bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
+
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            word_ids = [word.children[0].label for word in tagged_words]
+            word_labels = all_word_labels[sentence_idx]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
             word_input = self.embedding(word_idx)
 
             # this occasionally learns UNK at train time
-            word_labels = [word.children[0].label for word in tagged_words]
             if self.training:
                 delta_labels = [None if word in self.rare_words and random.random() < self.args['rare_word_unknown_frequency'] else word
                                 for word in word_labels]
@@ -291,18 +385,21 @@ class LSTMModel(BaseModel, nn.Module):
             delta_idx = torch.stack([self.delta_tensors[self.delta_word_map.get(word, UNK_ID)] for word in delta_labels])
 
             delta_input = self.delta_embedding(delta_idx)
-
             word_inputs = [word_input, delta_input]
 
-            if self.tag_embedding_dim > 0:
-                try:
-                    tag_idx = torch.stack([self.tag_tensors[self.tag_map[word.label]] for word in tagged_words])
-                    tag_input = self.tag_embedding(tag_idx)
-                    word_inputs.append(tag_input)
-                except KeyError as e:
-                    raise KeyError("Constituency parser not trained with tag {}".format(str(e))) from e
+            if self.bert_model is not None:
+                bert_input = bert_embeddings[sentence_idx]
+                word_inputs.append(bert_input)
 
-            all_word_labels.append(word_labels)
+            if self.tag_embedding_dim > 0:
+                if self.training:
+                    tag_labels = [None if random.random() < self.args['tag_unknown_frequency'] else word.label for word in tagged_words]
+                else:
+                    tag_labels = [word.label for word in tagged_words]
+                tag_idx = torch.stack([self.tag_tensors[self.tag_map.get(tag, UNK_ID)] for tag in tag_labels])
+                tag_input = self.tag_embedding(tag_idx)
+                word_inputs.append(tag_input)
+
             all_word_inputs.append(word_inputs)
 
         if self.forward_charlm is not None:
@@ -470,6 +567,9 @@ class LSTMModel(BaseModel, nn.Module):
         """
         transition_node = transitions.value
         return transition_node.value
+
+    def unary_limit(self):
+        return self._unary_limit
 
     def transition_scheme(self):
         return self._transition_scheme

@@ -11,17 +11,19 @@ jobs:
         uses: actions/checkout@v2
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: Run demo
+      - name: Run Stanza Tests
         run: |
           # set up environment
+          echo "Setting up environment..."
           bash
           . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
-          export CORENLP_HOME=/home/stanzabuild/stanford-corenlp-4.3.0
-          export CLASSPATH=/home/stanzabuild/stanford-corenlp-4.3.0/*:
+          export CORENLP_HOME=/home/stanzabuild/stanford-corenlp-4.3.1
+          export CLASSPATH=/home/stanzabuild/stanford-corenlp-4.3.1/*:
           # install from stanza repo being evaluated
           pwd
           pip install -e .
           # set up for tests
+          echo "Running stanza test set up..."
           rm -rf /home/stanzabuild/stanza-github-actions/actions-runner/_work/stanza/stanza/stanza_test
           python stanza/tests/setup.py
           # run tests
