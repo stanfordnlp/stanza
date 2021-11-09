@@ -43,14 +43,10 @@ class ConstituencyProcessor(UDProcessor):
         # set up model
         charlm_forward_file = config.get('forward_charlm_path', None)
         charlm_backward_file = config.get('backward_charlm_path', None)
-        bert_name = config.get('bert_model', None)
-        bert_model, bert_tokenizer = trainer.load_bert(bert_name)
         self._model = trainer.Trainer.load(filename=config['model_path'],
                                            pt=self._pretrain,
                                            forward_charlm=trainer.load_charlm(charlm_forward_file),
                                            backward_charlm=trainer.load_charlm(charlm_backward_file),
-                                           bert_model=bert_model,
-                                           bert_tokenizer=bert_tokenizer,
                                            use_gpu=use_gpu)
         self._model.model.eval()
         # batch size counted as sentences
