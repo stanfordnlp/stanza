@@ -66,7 +66,7 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, use_gpu, args=None, load_optimizer=False):
+    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False):
         """
         Load back a model and possibly its optimizer.
 
@@ -87,6 +87,7 @@ class Trainer:
         unary_limit = params.get("unary_limit", UNARY_LIMIT)
 
         if model_type == 'LSTM':
+            bert_model, bert_tokenizer = load_bert(params['config'].get('bert_model', None))
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -224,8 +225,7 @@ def evaluate(args, model_file, retag_pipeline):
     pt = load_pretrain(args)
     forward_charlm = load_charlm(args['charlm_forward_file'])
     backward_charlm = load_charlm(args['charlm_backward_file'])
-    bert_model, bert_tokenizer = load_bert(args['bert_model'])
-    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, args['cuda'])
+    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
 
     treebank = read_treebank(args['eval_file'])
     logger.info("Read %d trees for evaluation", len(treebank))
@@ -276,8 +276,7 @@ def remove_optimizer(args, model_save_file, model_load_file):
     pt = load_pretrain(args)
     forward_charlm = load_charlm(args['charlm_forward_file'])
     backward_charlm = load_charlm(args['charlm_backward_file'])
-    bert_model, bert_tokenizer = load_bert(args['bert_model'])
-    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, use_gpu=False, load_optimizer=False)
+    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, use_gpu=False, load_optimizer=False)
     trainer.save(model_save_file)
 
 def convert_trees_to_sequences(trees, tree_type, transition_scheme):
