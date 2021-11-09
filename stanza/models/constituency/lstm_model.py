@@ -401,20 +401,18 @@ class LSTMModel(BaseModel, nn.Module):
         """
         Let's decide the input format later
         """
-        # Anything under torch.no_grad() is here because it does not
-        # require gradient
-        with torch.no_grad():
-            padded_data = torch.nn.utils.rnn.pad_sequence(
-                [
-                    sent
-                    for sent in tokenized_valids
-                ],
-                batch_first=True,
-                padding_value=-100
-            )
+        # Prepares attention mask for feeding into the self-attention
+        padded_data = torch.nn.utils.rnn.pad_sequence(
+            [
+                sent
+                for sent in tokenized_valids
+            ],
+            batch_first=True,
+            padding_value=-100
+        )
             
-            valid_token_mask = padded_data != -100
-            valid_token_mask = valid_token_mask.to(device="cuda:0")
+        valid_token_mask = padded_data != -100
+        valid_token_mask = valid_token_mask.to(device="cuda:0")
             
         padded_embeddings = torch.nn.utils.rnn.pad_sequence(
             bert_embeddings,
