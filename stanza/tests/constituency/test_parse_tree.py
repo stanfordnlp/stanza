@@ -284,3 +284,10 @@ def test_count_unaries():
     assert len(trees) == 1
     assert trees[0].count_unary_depth() == 5
 
+def test_str_bracket_labels():
+    text = "((S (VP (VB Unban)) (NP (NNP Mox) (NNP Opal))))"
+    expected = "(_ROOT (_S (_VP (_VB Unban )_VB )_VP (_NP (_NNP Mox )_NNP (_NNP Opal )_NNP )_NP )_S )_ROOT"
+
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    assert "{:L}".format(trees[0]) == expected
