@@ -5,6 +5,8 @@ Works by first splitting the input into (, ), and all other tokens,
 then recursively processing those tokens into trees.
 """
 
+import logging
+
 from stanza.models.common import utils
 from stanza.models.constituency.parse_tree import Tree
 
@@ -12,6 +14,8 @@ tqdm = utils.get_tqdm()
 
 OPEN_PAREN = "("
 CLOSE_PAREN = ")"
+
+logger = logging.getLogger('stanza.constituency')
 
 # A few specific exception types to clarify parsing errors
 # They store the line number where the error occurred
@@ -187,6 +191,20 @@ def read_tree_file(filename):
     """
     with open(filename) as fin:
         trees = read_trees(fin.read())
+    return trees
+
+def read_treebank(filename):
+    """
+    Read a treebank and alter the trees to be a simpler format for learning to parse
+    """
+    logger.info("Reading trees from %s", filename)
+    trees = read_tree_file(filename)
+    trees = [t.prune_none().simplify_labels() for t in trees]
+
+    illegal_trees = [t for t in trees if len(t.children) > 1]
+    if len(illegal_trees) > 0:
+        raise ValueError("Found {} tree(s) which had non-unary transitions at the ROOT.  First illegal tree: {}".format(len(illegal_trees), illegal_trees[0]))
+
     return trees
 
 def main():
