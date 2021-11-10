@@ -7,7 +7,7 @@ import stanza
 from stanza.models.constituency import tree_reader
 from stanza.protobuf import EvaluateParserRequest, EvaluateParserResponse
 from stanza.server.parser_eval import build_request, EvaluateParser
-from stanza.tests.test_java_protobuf_requests import check_tree
+from stanza.tests.server.test_java_protobuf_requests import check_tree
 
 from stanza.tests import *
 
