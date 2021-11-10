@@ -180,20 +180,6 @@ def load_bert(model_name):
     return None, None
 
 
-def read_treebank(filename):
-    """
-    Read a treebank and alter the trees to be a simpler format for learning to parse
-    """
-    logger.info("Reading trees from %s", filename)
-    trees = tree_reader.read_tree_file(filename)
-    trees = [t.prune_none().simplify_labels() for t in trees]
-
-    illegal_trees = [t for t in trees if len(t.children) > 1]
-    if len(illegal_trees) > 0:
-        raise ValueError("Found {} tree(s) which had non-unary transitions at the ROOT.  First illegal tree: {}".format(len(illegal_trees), illegal_trees[0]))
-
-    return trees
-
 def verify_transitions(trees, sequences, transition_scheme, unary_limit):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
@@ -227,7 +213,7 @@ def evaluate(args, model_file, retag_pipeline):
     backward_charlm = load_charlm(args['charlm_backward_file'])
     trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
 
-    treebank = read_treebank(args['eval_file'])
+    treebank = tree_reader.read_treebank(args['eval_file'])
     logger.info("Read %d trees for evaluation", len(treebank))
 
     if retag_pipeline is not None:
@@ -359,10 +345,10 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
     utils.ensure_dir(args['save_dir'])
 
-    train_trees = read_treebank(args['train_file'])
+    train_trees = tree_reader.read_treebank(args['train_file'])
     logger.info("Read %d trees for the training set", len(train_trees))
 
-    dev_trees = read_treebank(args['eval_file'])
+    dev_trees = tree_reader.read_treebank(args['eval_file'])
     logger.info("Read %d trees for the dev set", len(dev_trees))
 
     if retag_pipeline is not None:
