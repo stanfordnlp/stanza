@@ -100,19 +100,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.word_input_size = self.embedding_dim + self.tag_embedding_dim + self.delta_embedding_dim
 
-        if bert_model is not None:
-            if bert_tokenizer is None:
-                raise ValueError("Cannot have a bert model without a tokenizer")
-            self.add_unsaved_module('bert_model', bert_model)
-            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
-            self.bert_dim = self.bert_model.config.hidden_size
-            self.word_input_size = self.word_input_size + self.bert_dim
-            self.is_phobert = self.bert_tokenizer.name_or_path.startswith("vinai/phobert")
-        else:
-            self.bert_model = None
-            self.bert_tokenizer = None
-            self.is_phobert = False
-
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
             self.add_unsaved_module('forward_charlm_vocab', forward_charlm.char_vocab())
@@ -161,8 +148,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('transition_zeros', torch.zeros(self.num_layers, 1, self.transition_hidden_size))
         self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
-
         # possibly add a couple vectors for bookends of the sentence
         self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', SentenceBoundary.NONE)
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
@@ -171,6 +156,24 @@ class LSTMModel(BaseModel, nn.Module):
             if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
                 self.register_parameter('transition_start', torch.nn.Parameter(torch.randn(self.transition_hidden_size, requires_grad=True)))
                 self.register_parameter('constituent_start', torch.nn.Parameter(torch.randn(self.hidden_size, requires_grad=True)))
+
+        # we set up the bert AFTER building word_start and word_end
+        # so that we can use the charlm endpoint values rather than
+        # try to train our own
+        if bert_model is not None:
+            if bert_tokenizer is None:
+                raise ValueError("Cannot have a bert model without a tokenizer")
+            self.add_unsaved_module('bert_model', bert_model)
+            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            self.bert_dim = self.bert_model.config.hidden_size
+            self.word_input_size = self.word_input_size + self.bert_dim
+            self.is_phobert = self.bert_tokenizer.name_or_path.startswith("vinai/phobert")
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
+            self.is_phobert = False
+
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -426,15 +429,6 @@ class LSTMModel(BaseModel, nn.Module):
         all_word_labels = [[word.children[0].label for word in tagged_words]
                            for tagged_words in tagged_word_lists]
 
-        if self.bert_model is not None:
-            # BERT embedding extraction
-            # result will be len+2 for each sentence
-            # we will take 1:-1 if we don't care about the endpoints
-            if self.is_phobert:
-                bert_embeddings = self.extract_phobert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
-            else:
-                bert_embeddings = self.extract_bert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
-
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_labels = all_word_labels[sentence_idx]
             word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
@@ -450,10 +444,6 @@ class LSTMModel(BaseModel, nn.Module):
 
             delta_input = self.delta_embedding(delta_idx)
             word_inputs = [word_input, delta_input]
-
-            if self.bert_model is not None:
-                bert_input = bert_embeddings[sentence_idx][1:-1]
-                word_inputs.append(bert_input)
 
             if self.tag_embedding_dim > 0:
                 if self.training:
@@ -485,6 +475,19 @@ class LSTMModel(BaseModel, nn.Module):
             word_start = self.word_start.unsqueeze(0)
             word_end = self.word_end.unsqueeze(0)
             all_word_inputs = [torch.cat([word_start, word_inputs, word_end], dim=0) for word_inputs in all_word_inputs]
+
+        if self.bert_model is not None:
+            # BERT embedding extraction
+            # result will be len+2 for each sentence
+            # we will take 1:-1 if we don't care about the endpoints
+            if self.is_phobert:
+                bert_embeddings = self.extract_phobert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
+            else:
+                bert_embeddings = self.extract_bert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
+
+            if self.sentence_boundary_vectors is SentenceBoundary.NONE:
+                bert_embeddings = [be[1:-1] for be in bert_embeddings]
+            all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
         for sentence_idx, word_input in enumerate(all_word_inputs):
             # now of size sentence x input
