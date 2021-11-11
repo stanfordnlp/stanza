@@ -286,14 +286,16 @@ class LSTMModel(BaseModel, nn.Module):
         data: list of list of string (the text tokens)
         """
         tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
-        list_offsets = [[None] * len(sentence) for sentence in data]
+        list_offsets = [[None] * (len(sentence)+2) for sentence in data]
         for idx in range(len(data)):
             offsets = tokenized.word_ids(batch_index=idx)
             for pos, offset in enumerate(offsets):
                 if offset is None:
                     continue
                 # this uses the last token piece for any offset by overwriting the previous value
-                list_offsets[idx][offset] = pos
+                list_offsets[idx][offset+1] = pos
+            list_offsets[idx][0] = 0
+            list_offsets[idx][-1] = -1
 
             if len(offsets) > tokenizer.model_max_length:
                 logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
@@ -307,7 +309,7 @@ class LSTMModel(BaseModel, nn.Module):
         processed = []
         #process the output
         for feature, offsets in zip(features, list_offsets):
-            new_sent = [feature[idx] for idx in offsets]
+            new_sent = feature[offsets]
             processed.append(new_sent)
 
         return processed
@@ -376,14 +378,15 @@ class LSTMModel(BaseModel, nn.Module):
         assert len(features)==len(processed)
 
         #process the output
-        for idx, sent in enumerate(processed):
-            #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
-            new_sent=[features[idx][idx2 +1] for idx2, i in enumerate(list_tokenized[idx]) if (idx2 > 0  and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
-            #add new vector to processed
-            processed[idx] = new_sent
+        #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
+        # idx2+1 compensates for the start token at the start of a sentence
+        # [0] and [-1] grab the start and end representations as well
+        offsets = [[0] + [idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)] + [-1]
+                   for idx, sent in enumerate(processed)]
+        processed = [feature[offset] for feature, offset in zip(features, offsets)]
 
-        # This is a list of list of tensors
-        # Each tensor holds the representation of a word extracted from phobert
+        # This is a list of ltensors
+        # Each tensor holds the representation of a sentence extracted from phobert
         return processed
 
     def initial_word_queues(self, tagged_word_lists):
@@ -407,12 +410,12 @@ class LSTMModel(BaseModel, nn.Module):
 
         if self.bert_model is not None:
             # BERT embedding extraction
+            # result will be len+2 for each sentence
+            # we will take 1:-1 if we don't care about the endpoints
             if self.is_phobert:
                 bert_embeddings = self.extract_phobert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
             else:
                 bert_embeddings = self.extract_bert_embeddings(self.bert_tokenizer, self.bert_model, all_word_labels, device)
-            # Change list of words to tensors of shape seq_length x 768
-            bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_labels = all_word_labels[sentence_idx]
@@ -431,7 +434,7 @@ class LSTMModel(BaseModel, nn.Module):
             word_inputs = [word_input, delta_input]
 
             if self.bert_model is not None:
-                bert_input = bert_embeddings[sentence_idx]
+                bert_input = bert_embeddings[sentence_idx][1:-1]
                 word_inputs.append(bert_input)
 
             if self.tag_embedding_dim > 0:
