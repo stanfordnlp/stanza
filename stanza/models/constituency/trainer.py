@@ -17,7 +17,6 @@ import os
 
 import torch
 from torch import nn
-from torch import optim
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
@@ -30,7 +29,7 @@ from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
-from stanza.models.constituency.utils import retag_trees
+from stanza.models.constituency.utils import retag_trees, build_optimizer
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -127,20 +126,6 @@ class Trainer:
 
         return Trainer(model=model, optimizer=optimizer)
 
-
-def build_optimizer(args, model):
-    """
-    Build an optimizer based on the arguments given
-    """
-    if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
-    else:
-        raise ValueError("Unknown optimizer: %s" % args.optim)
-    return optimizer
 
 def load_pretrain(args):
     """

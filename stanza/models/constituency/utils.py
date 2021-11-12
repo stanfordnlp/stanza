@@ -6,6 +6,7 @@ from collections import deque
 import copy
 
 import torch.nn as nn
+from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 
@@ -72,3 +73,25 @@ def build_nonlinearity(nonlinearity):
         return nn.LeakyReLU()
     else:
         raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
+
+def build_optimizer(args, model):
+    """
+    Build an optimizer based on the arguments given
+    """
+    if args['optim'].lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    elif args['optim'].lower() == 'adabelief':
+        from adabelief_pytorch import AdaBelief
+        # TODO: make these args
+        optimizer = AdaBelief(model.parameters(), lr=args['learning_rate'], eps=1e-12, weight_decay=args['weight_decay'], weight_decouple=False, rectify=False)
+    elif args['optim'].lower() == 'madgrad':
+        import madgrad
+        optimizer = madgrad.MADGRAD(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+    else:
+        raise ValueError("Unknown optimizer: %s" % args.optim)
+    return optimizer
+
