@@ -58,7 +58,7 @@ def test_vi_embedding():
     with tempfile.TemporaryDirectory() as tempdir:
         emb_filename = os.path.join(tempdir, "emb.txt")
         pt_filename = os.path.join(tempdir, "emb.pt")
-        with open(emb_filename, "w") as fout:
+        with open(emb_filename, "w", encoding="utf-8") as fout:
             fout.write(VI_EMBEDDING)
         pt = pretrain.Pretrain(vec_filename=emb_filename, save_to_file=False)
 
