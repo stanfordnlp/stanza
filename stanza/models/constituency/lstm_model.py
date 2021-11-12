@@ -304,7 +304,7 @@ class LSTMModel(BaseModel, nn.Module):
         for i in range(int(math.ceil(len(data)/128))):
             with torch.no_grad():
                 feature = model(torch.tensor(tokenized['input_ids'][128*i:128*i+128]).to(device), output_hidden_states=True)
-        features += feature[2][-2].clone().detach()
+                features += feature[2][-2].clone().detach()
 
         processed = []
         #process the output
