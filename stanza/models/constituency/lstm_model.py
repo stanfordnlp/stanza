@@ -304,7 +304,9 @@ class LSTMModel(BaseModel, nn.Module):
         for i in range(int(math.ceil(len(data)/128))):
             with torch.no_grad():
                 feature = model(torch.tensor(tokenized['input_ids'][128*i:128*i+128]).to(device), output_hidden_states=True)
-                features += feature[2][-2].clone().detach()
+                feature = feature[2]
+                feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+                features += feature.clone().detach()
 
         processed = []
         #process the output
@@ -370,9 +372,10 @@ class LSTMModel(BaseModel, nn.Module):
         for i in range(int(math.ceil(size/128))):
             with torch.no_grad():
                 feature = model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
-
-            #take the second output layer since experiments shows it give the best result
-            features += feature[2][-2].clone().detach()
+                # averaging the last four layers worked well for non-VI languages
+                feature = feature[2]
+                feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+                features += feature.clone().detach()
 
         assert len(features)==size
         assert len(features)==len(processed)
