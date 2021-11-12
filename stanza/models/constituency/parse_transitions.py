@@ -172,16 +172,12 @@ class Transition(ABC):
     def apply(self, state, model):
         """
         return a new State transformed via this transition
-        """
-        word_position, constituents, new_constituent, callback = self.update_state(state, model)
-        if callback is not None:
-            new_constituent = callback.build_constituents(model, [new_constituent])[0]
-        constituents = model.push_constituents([constituents], [new_constituent])[0]
 
-        return state._replace(num_opens=state.num_opens + self.delta_opens(),
-                              word_position=word_position,
-                              transitions=model.push_transitions([state.transitions], [self])[0],
-                              constituents=constituents)
+        convenience method to call bulk_apply, which is significantly
+        faster than single operations for an NN based model
+        """
+        update = bulk_apply(model, [state], [self])
+        return update[0]
 
     @abstractmethod
     def is_legal(self, state, model):
@@ -551,6 +547,14 @@ class CloseConstituent(Transition):
         return hash(93)
 
 def bulk_apply(model, tree_batch, transitions, fail=False):
+    """
+    Apply the given list of Transitions to the given list of States, using the model as a reference
+
+    model: SimpleModel, LSTMModel, or any other form of model
+    tree_batch: list of States (legacy name)
+    transitions: list of transitions
+    fail: throw an exception on a failed transition, as opposed to skipping the tree
+    """
     remove = set()
 
     word_positions = []
