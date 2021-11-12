@@ -165,7 +165,6 @@ class Transition(ABC):
               and itself.  this allows a batch operation to build
               the constituent
         """
-        pass
 
     def delta_opens(self):
         return 0
@@ -191,7 +190,6 @@ class Transition(ABC):
 
         at parse time, the parser might choose a transition which cannot be made
         """
-        pass
 
     @abstractmethod
     def short_name(self):
