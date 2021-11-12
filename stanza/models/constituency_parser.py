@@ -64,6 +64,10 @@ The code breakdown is as follows:
     correct transition to make is, allowing for predictions on previously unseen text
 
   stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
+
+Some alternate optimizer methods:
+  adabelief: https://github.com/juntang-zhuang/Adabelief-Optimizer
+  madgrad: https://github.com/facebookresearch/madgrad
 """
 
 import argparse
@@ -167,12 +171,40 @@ def parse_args(args=None):
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
-    DEFAULT_LEARNING_RATES = { "adamw": 0.001, "adadelta": 1.0, "sgd": 0.001 }
+    # Numbers are on a VLSP dataset, before adding attn or other improvements
+    # baseline is an 80.6 model that occurs when trained using adadelta, lr 1.0
+    #
+    # adabelief 0.1:      fails horribly
+    #           0.02:     converges very low scores
+    #           0.01:     very slow learning
+    #           0.002:    almost decent
+    #           0.001:    close, but about 1 f1 low on IT
+    #           0.0005:   79.71
+    #           0.0002:   80.11
+    #           0.0001:   79.85
+    #           0.00005:  80.40
+    #           0.00002:  80.02
+    #           0.00001:  78.95
+    # madgrad   0.005:    fails horribly
+    #           0.001:    low scores
+    #           0.0005:   still somewhat low
+    #           0.0002:   close, but about 1 f1 low on IT
+    #           0.0001:   80.04
+    #           0.00005:  79.91
+    #           0.00002:  80.15
+    #           0.00001:  80.44
+    #           0.000005: 80.34
+    #           0.000002: 80.39
+    DEFAULT_LEARNING_RATES = { "adamw": 0.001, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
+    DEFAULT_LEARNING_EPS = { "adabelief": 1e-12 }
+    parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
-    parser.add_argument('--weight_decay', default=0.01, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, or Adadelta')
+    # weight decay values other than adadelta have not been thoroughly tested.
+    DEFAULT_WEIGHT_DECAY = { "adamw": 0.01, "adadelta": 0.01, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
+    parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief')
 
     # When using word_dropout and predict_dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:
     # 0.0: 0.9085
@@ -249,6 +281,10 @@ def parse_args(args=None):
         args.cuda = False
     if args.learning_rate is None:
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
+    if args.learning_eps is None:
+        args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
+    if args.weight_decay is None:
+        args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
     args = vars(args)
 
