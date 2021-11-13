@@ -97,6 +97,9 @@ class Trainer:
                               tags=params['tags'],
                               words=params['words'],
                               rare_words=params['rare_words'],
+                              # TODO: remove get() when no longer necessary
+                              # eg the models have been rebuilt
+                              common_words=params.get('common_words', list()),
                               root_labels=params['root_labels'],
                               open_nodes=params['open_nodes'],
                               unary_limit=unary_limit,
@@ -297,6 +300,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
     rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
+    common_words = parse_tree.Tree.get_common_words(train_trees, args['common_word_len'])
     # also, it's not actually an error if there is a pattern of
     # compound unary or compound open nodes which doesn't exist in the
     # train set.  it just means we probably won't ever get that right
@@ -311,7 +315,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         logger.info("Loading model to continue training from %s", model_load_file)
         trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, args['cuda'], args, load_optimizer=True)
     else:
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, common_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
             model.cuda()
         logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))

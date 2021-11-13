@@ -155,6 +155,9 @@ class Transition(ABC):
         the return value should be a tuple:
           updated word_position
           updated constituents
+          supplementary data for the transition
+            - word shifted, for example
+              the model may want to use this for scoring the transition
           new constituent to put on the queue and None
             - note that the constituent shouldn't be on the queue yet
               that allows putting it on as a batch operation, which
@@ -212,7 +215,8 @@ class Shift(Transition):
         - pop the top element of the word queue
         """
         new_constituent = model.transform_word_to_constituent(state)
-        return state.word_position+1, state.constituents, new_constituent, None
+        word = model.get_word(state.word_queue[state.word_position]).children[0].label
+        return state.word_position+1, state.constituents, word, new_constituent, None
 
     def is_legal(self, state, model):
         """
@@ -286,7 +290,7 @@ class CompoundUnary(Transition):
         constituents = state.constituents
         new_constituent = model.unary_transform(state.constituents, self.labels)
         constituents = constituents.pop()
-        return state.word_position, constituents, new_constituent, None
+        return state.word_position, constituents, None, new_constituent, None
 
     def is_legal(self, state, model):
         """
@@ -371,7 +375,7 @@ class OpenConstituent(Transition):
     def update_state(self, state, model):
         # open a new constituent which can later be closed
         # puts a DUMMY constituent on the stack to mark where the constituents end
-        return state.word_position, state.constituents, model.dummy_constituent(Dummy(self.label)), None
+        return state.word_position, state.constituents, None, model.dummy_constituent(Dummy(self.label)), None
 
     def is_legal(self, state, model):
         """
@@ -476,7 +480,7 @@ class CloseConstituent(Transition):
         # the children are in the opposite order of what we expect
         children.reverse()
 
-        return state.word_position, constituents, (label, children), CloseConstituent
+        return state.word_position, constituents, label, (label, children), CloseConstituent
 
     @staticmethod
     def build_constituents(model, data):
@@ -559,6 +563,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
 
     word_positions = []
     constituents = []
+    transition_data = []
     new_constituents = []
     callbacks = defaultdict(list)
 
@@ -588,10 +593,11 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
                 remove.add(idx)
                 continue
 
-        wq, c, nc, callback = transition.update_state(tree, model)
+        word_pos, con_pos, td, nc, callback = transition.update_state(tree, model)
 
-        word_positions.append(wq)
-        constituents.append(c)
+        word_positions.append(word_pos)
+        constituents.append(con_pos)
+        transition_data.append(td)
         new_constituents.append(nc)
         if callback:
             # not `idx` in case something was removed
@@ -605,14 +611,16 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
 
     tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
+    transitions = [(trans, data) for trans, data in zip(transitions, transition_data)]
 
     if len(tree_batch) == 0:
         return tree_batch
 
     new_transitions = model.push_transitions([tree.transitions for tree in tree_batch], transitions)
+
     new_constituents = model.push_constituents(constituents, new_constituents)
 
-    tree_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
+    tree_batch = [state._replace(num_opens=state.num_opens + transition[0].delta_opens(),
                                  word_position=word_position,
                                  transitions=transition_stack,
                                  constituents=constituents)

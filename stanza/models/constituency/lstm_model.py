@@ -22,7 +22,7 @@ from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
-from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_transitions import Shift, CloseConstituent, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity
@@ -52,7 +52,7 @@ class SentenceBoundary(Enum):
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, common_words, root_labels, open_nodes, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -128,6 +128,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('delta_tensors', torch.tensor(range(len(self.delta_words) + 2), requires_grad=False))
 
         self.rare_words = set(rare_words)
+        self.common_words = sorted(list(common_words))
 
         self.tags = sorted(list(tags))
         if self.tag_embedding_dim > 0:
@@ -137,11 +138,20 @@ class LSTMModel(BaseModel, nn.Module):
                                               padding_idx = 0)
             self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
+        # TODO: refactor?
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
+        if self.args.get('labeled_transition_embedding', False):
+            for common_word in common_words:
+                labeled_transition = (Shift(), common_word)
+                self.transition_map[labeled_transition] = len(self.transition_map)
+            for label in open_nodes:
+                labeled_transition = (CloseConstituent(), label)
+                self.transition_map[labeled_transition] = len(self.transition_map)
+        assert len(set(self.transition_map.values())) == len(self.transition_map)
         # precompute tensors for the transitions
-        self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
-        self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
+        self.register_buffer('transition_tensors', torch.tensor(range(len(self.transition_map)), requires_grad=False))
+        self.transition_embedding = nn.Embedding(num_embeddings = len(self.transition_map),
                                                  embedding_dim = self.transition_embedding_dim)
 
         self.num_layers = self.args['num_lstm_layers']
@@ -649,14 +659,30 @@ class LSTMModel(BaseModel, nn.Module):
         return constituent_node.value
 
     def push_transitions(self, transition_stacks, transitions):
-        transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
-        transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
+        """
+        Push all of the given transitions on to the stack as a batch operations.
+
+        Significantly faster than doing one transition at a time.
+
+        The transitions are pairs of (transition, data) where data can
+        be None or can be used to choose a labeled form of the
+        transition.  If a labeled form of the transition is given,
+        it is averaged with the base form of the same transition.
+        """
+        half_mapped = [self.transition_map[t[0]] for t in transitions]
+        full_mapped = [self.transition_map.get(t, None) for t in transitions]
+        transition_input = [(self.transition_embedding(self.transition_tensors[half]) +
+                             self.transition_embedding(self.transition_tensors[full])) / 2 if full is not None
+                            else self.transition_embedding(self.transition_tensors[half])
+                            for half, full in zip(half_mapped, full_mapped)]
+        transition_input = torch.stack(transition_input).unsqueeze(0)
+        # transition_input is now 1 x batch x dim
         transition_input = self.lstm_input_dropout(transition_input)
 
         hx = torch.cat([t.value.hx for t in transition_stacks], axis=1)
         cx = torch.cat([t.value.cx for t in transition_stacks], axis=1)
         output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
-        new_stacks = [stack.push(TransitionNode(transition, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
+        new_stacks = [stack.push(TransitionNode(transition[0], output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
                       for i, (stack, transition) in enumerate(zip(transition_stacks, transitions))]
         return new_stacks
 
@@ -749,6 +775,7 @@ class LSTMModel(BaseModel, nn.Module):
             'tags': self.tags,
             'words': self.delta_words,
             'rare_words': self.rare_words,
+            'common_words': self.common_words,
             'root_labels': self.root_labels,
             'open_nodes': self.open_nodes,
         }

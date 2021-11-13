@@ -214,20 +214,35 @@ class Tree(StanzaObject):
         return sorted(words)
 
     @staticmethod
-    def get_rare_words(trees, threshold=0.05):
-        """
-        Walks over all of the trees and gets the least frequently occurring words.
-
-        threshold: choose the bottom X percent
-        """
+    def count_words(trees):
         if isinstance(trees, Tree):
             trees = [trees]
 
         words = Counter()
         for tree in trees:
             tree.visit_preorder(leaf = lambda x: words.update([x.label]))
+        return words
+
+    @staticmethod
+    def get_rare_words(trees, threshold=0.05):
+        """
+        Walks over all of the trees and gets the least frequently occurring words.
+
+        threshold: choose the bottom X percent
+        """
+        words = Tree.count_words(trees)
         threshold = max(int(len(words) * threshold), 1)
         return sorted(x[0] for x in words.most_common()[:-threshold-1:-1])
+
+    @staticmethod
+    def get_common_words(trees, num_words=100):
+        """
+        Walks over all of the trees and gets the least frequently occurring words.
+
+        threshold: choose the bottom X percent
+        """
+        words = Tree.count_words(trees)
+        return sorted(x[0] for x in words.most_common()[:num_words])
 
     @staticmethod
     def get_root_labels(trees):

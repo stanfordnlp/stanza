@@ -182,3 +182,17 @@ def test_forward_sentence_boundaries(pt):
 
     model = build_model(pt, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
+
+def test_forward_labeled_transitions(pt):
+    """
+    Test with & without labels on the transition embeddings.
+
+    TODO: needs a more detailed test to check that the splits are
+    actually doing anything
+    """
+    model = build_model(pt, '--labeled_transition_embedding')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--no_labeled_transition_embedding')
+    run_forward_checks(model)
+    

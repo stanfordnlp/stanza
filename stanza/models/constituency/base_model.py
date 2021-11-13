@@ -199,7 +199,7 @@ class SimpleModel(BaseModel):
         return constituents.value
 
     def push_transitions(self, transition_stacks, transitions):
-        return [stack.push(transition) for stack, transition in zip(transition_stacks, transitions)]
+        return [stack.push(transition[0]) for stack, transition in zip(transition_stacks, transitions)]
 
     def get_top_transition(self, transitions):
         return transitions.value
