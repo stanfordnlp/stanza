@@ -50,6 +50,30 @@ def advance_past_constituents(gold_sequence, cur_index):
         cur_index = cur_index + 1
     return None
 
+def find_constituent_end(gold_sequence, cur_index):
+    """
+    Advance cur_index through gold_sequence until the next block has ended
+
+    This is different from advance_past_constituents in that it will
+    also return when there is a Shift when count == 0.  That way, we
+    return the first block of things we know attach to the left
+    """
+    count = 0
+    saw_shift = False
+    while cur_index < len(gold_sequence):
+        if isinstance(gold_sequence[cur_index], OpenConstituent):
+            count = count + 1
+        elif isinstance(gold_sequence[cur_index], CloseConstituent):
+            count = count - 1
+            if count == -1: return cur_index
+        elif isinstance(gold_sequence[cur_index], Shift):
+            if saw_shift and count == 0:
+                return cur_index
+            else:
+                saw_shift = True
+        cur_index = cur_index + 1
+    return None
+
 def advance_past_unaries(gold_sequence, cur_index):
     while cur_index + 2 < len(gold_sequence) and isinstance(gold_sequence[cur_index], OpenConstituent) and isinstance(gold_sequence[cur_index+1], CloseConstituent):
         cur_index += 2
@@ -331,6 +355,37 @@ def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold
 
     return gold_sequence[:gold_index] + gold_sequence[gold_index+2:]
 
+def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    Repair Close/Shift -> Shift by moving the Close to after the next block is created
+    """
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+    if len(gold_sequence) < gold_index + 2:
+        return None
+    start_index = gold_index + 1
+    start_index = advance_past_unaries(gold_sequence, start_index)
+    if len(gold_sequence) < start_index + 2:
+        return None
+    if not isinstance(gold_sequence[start_index], Shift):
+        return None
+
+    end_index = find_constituent_end(gold_sequence, start_index)
+    if end_index is None:
+        return None
+    # if this *isn't* a close, we don't allow it.
+    # that case seems to be ambiguous...
+    #   stuff_1 close stuff_2 stuff_3
+    # if you would normally start building stuff_3,
+    # it is not clear if you want to close at the end of
+    # stuff_2 or build stuff_3 instead.
+    if not isinstance(gold_sequence[end_index], CloseConstituent):
+        return None
+
+    return gold_sequence[:gold_index] + gold_sequence[start_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
+
 class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
@@ -411,6 +466,20 @@ class RepairType(Enum):
     # will be to skip both the close and the new open
     # and continue from there.
     CLOSE_SHIFT_NESTED     = (fix_close_shift_nested,)
+
+    # If the model is supposed to build a block after a Close
+    # operation, attach that block to the piece to the left
+    # a couple different variations on this were tried
+    # we tried attaching all constituents to the
+    #   bracket which should have been closed
+    # we tried attaching exactly one constituent
+    # and we tried attaching only if there was
+    #   exactly one following constituent
+    # none of these improved f1.  for example, on the VI dataset, we
+    # lost 0.15 F1 with the exactly one following constituent version
+    # it might be worthwhile double checking some of the other
+    # versions to make sure those also fail, though
+    # CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift,)
 
     UNKNOWN                = None
 

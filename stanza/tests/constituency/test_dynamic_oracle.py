@@ -82,6 +82,13 @@ TRIPLE_UNARY_END_TREE = """
 TREES = [SINGLE_UNARY_TREE, DOUBLE_UNARY_TREE, TRIPLE_UNARY_START_TREE, TRIPLE_UNARY_END_TREE]
 TREEBANK = "\n".join(TREES)
 
+NOUN_PHRASE_TREE = """
+( (NP
+    (NP (NNP Chicago) (POS 's))
+    (NNP Goodman)
+    (NNP Theatre)))
+"""
+
 ROOT_LABELS = ["ROOT"]
 
 def get_repairs(gold_sequence, wrong_transition, repair_fn):
@@ -357,3 +364,33 @@ def test_close_shift_nested(unary_trees, gold_sequences):
             assert repairs[0][0] in expected.keys()
             result_tree = reconstruct_tree(tree, repairs[0][1])
             assert str(result_tree) == expected[repairs[0][0]]
+
+def test_close_shift_shift(unary_trees):
+    """
+    Test that close -> shift works when there is a single block shifted after
+
+    Includes a test specifically that there is no oracle action when there are two blocks after the missed close
+    """
+    shift_transition = Shift()
+
+    expected_trees = [[(15, "(ROOT (S (NP (DT A) (NN record) (NN date)) (VP (VBZ has) (RB n't) (VP (VBN been) (VP (VBN set))) (. .))))")],
+                      [(24, "(ROOT (S (NP (NP (RB Not) (PDT all) (DT those)) (SBAR (WHNP (WP who)) (S (VP (VBD wrote))))) (VP (VBP oppose) (NP (DT the) (NNS changes)) (. .))))")],
+                      [(20, "(ROOT (S (PRN (S (VP (VB See)))) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb)) (PP (IN about) (NP (NN ballooning)))))))")],
+                      [(17, "(ROOT (S (NP (NNS optimists)) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong)) (VP (TO to) (VP (VB hum) (ADVP (RB along) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))")],
+                      []]
+
+    np_trees = tree_reader.read_trees(NOUN_PHRASE_TREE)
+    np_trees = [t.prune_none().simplify_labels() for t in np_trees]
+    assert len(np_trees) == 1
+
+    test_trees = unary_trees + np_trees
+    gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
+
+    for tree, gold_sequence, expected_repairs in zip(test_trees, gold_sequences, expected_trees):
+        repairs = get_repairs(gold_sequence, shift_transition, fix_close_shift_shift)
+        assert len(repairs) == len(expected_repairs)
+        for repair, expected in zip(repairs, expected_repairs):
+            assert repair[0] == expected[0]
+            result_tree = reconstruct_tree(tree, repair[1])
+            assert str(result_tree) == expected[1]
+
