@@ -274,6 +274,16 @@ def parse_args(args=None):
     parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
     parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
 
+    parser.add_argument('--pattn_d_model', default=1024, type=int, help='Partitioned attention model dimensionality')
+    parser.add_argument('--pattn_morpho_emb_dropout', default=0.2, type=float, help='Dropout rate for morphological features obtained from pretrained model')
+    parser.add_argument('--pattn_encoder_max_len', default=512, type=int, help='Max length that can be put into the transformer attention layer')
+    parser.add_argument('--pattn_num_heads', default=8, type=int, help='Partitioned attention model number of attention heads')
+    parser.add_argument('--pattn_d_kv', default=64, type=int, help='Size of the query and key vector')
+    parser.add_argument('--pattn_d_ff', default=2048, type=int, help='Size of the intermediate vectors in the feed-forward sublayer')
+    parser.add_argument('--pattn_relu_dropout', default=0.1, type=float, help='ReLU dropout probability in feed-forward sublayer')
+    parser.add_argument('--pattn_residual_dropout', default=0.2, type=float, help='Residual dropout probability for all residual connections')
+    parser.add_argument('--pattn_attention_dropout', default=0.2, type=float, help='Attention dropout probability')
+    parser.add_argument('--pattn_num_layers', default=12, type=int, help='Number of layers for the Partitioned Attention')
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
