@@ -34,10 +34,10 @@ BERT = {
     "it": "Musixmatch/umberto-commoncrawl-cased-v1",
 
     # from https://github.com/VinAIResearch/PhoBERT
-    "vi": "vinai/phobert-base",
+    # "vi": "vinai/phobert-base",
     # another option is phobert-large, but that doesn't
     # change the scores any
-    # "vi": "vinai/phobert-large",
+    "vi": "vinai/phobert-large",
 
     # need to test this out
     # https://huggingface.co/roberta-base
