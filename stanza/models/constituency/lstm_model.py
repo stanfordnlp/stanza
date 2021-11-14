@@ -103,8 +103,6 @@ class LSTMModel(BaseModel, nn.Module):
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
-            #self.bert_model = bert_model
-            #self.bert_tokenizer = bert_tokenizer
             self.add_unsaved_module('bert_model', bert_model)
             self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
             self.bert_dim = self.bert_model.config.hidden_size
@@ -230,41 +228,40 @@ class LSTMModel(BaseModel, nn.Module):
 
         self._unary_limit = unary_limit
 
-        # Initializations of parameters for the Partitioned Attention
-        self.pattn = dict(
-            d_pretrained = 1024,
-            d_model = 1024,
-            morpho_emb_dropout = 0.2,
-            encoder_max_len = 512,
-            num_heads = 8,
-            d_kv = 64,
-            d_ff = 2048,
-            relu_dropout = 0.1,
-            residual_dropout = 0.2,
-            attention_dropout = 0.2,
-            num_layers = 4
-        )
+        # Initializations of parameters for the Partitioned Attention 
+        self.pattn_d_pretrained = self.bert_dim
+        self.pattn_d_model = self.args['pattn_d_model']
+        self.pattn_morpho_emb_dropout = self.args['pattn_morpho_emb_dropout']
+        self.pattn_encoder_max_len = self.args['pattn_encoder_max_len']
+        self.pattn_num_heads = self.args['pattn_num_heads']
+        self.pattn_d_kv = self.args['pattn_d_kv']
+        self.pattn_d_ff = self.args['pattn_d_ff']
+        self.pattn_relu_dropout = self.args['pattn_relu_dropout']
+        self.pattn_residual_dropout = self.args['pattn_residual_dropout']
+        self.pattn_attention_dropout = self.args['pattn_attention_dropout']
+        self.pattn_num_layers = self.args['pattn_num_layers']
+    
         # Initializations for the Partitioned Attention
         self.project_pretrained = nn.Linear(
-            self.pattn['d_pretrained'], self.pattn['d_model'] // 2, bias=False
+            self.pattn_d_pretrained, self.pattn_d_model // 2, bias=False
         )
 
-        self.morpho_emb_dropout = FeatureDropout(self.pattn['morpho_emb_dropout'])
+        self.morpho_emb_dropout = FeatureDropout(self.pattn_morpho_emb_dropout)
         self.add_timing = ConcatPositionalEncoding(
-            d_model=self.pattn['d_model'],
-            max_len=self.pattn['encoder_max_len'],
+            d_model=self.pattn_d_model,
+            max_len=self.pattn_encoder_max_len,
         )
         encoder_layer = PartitionedTransformerEncoderLayer(
-            self.pattn['d_model'],
-            n_head=self.pattn['num_heads'],
-            d_qkv=self.pattn['d_kv'],
-            d_ff=self.pattn['d_ff'],
-            ff_dropout=self.pattn['relu_dropout'],
-            residual_dropout=self.pattn['residual_dropout'],
-            attention_dropout=self.pattn['attention_dropout'],
+            self.pattn_d_model,
+            n_head=self.pattn_num_heads,
+            d_qkv=self.pattn_d_kv,
+            d_ff=self.pattn_d_ff,
+            ff_dropout=self.pattn_relu_dropout,
+            residual_dropout=self.pattn_residual_dropout,
+            attention_dropout=self.pattn_attention_dropout,
         )
         self.encoder= PartitionedTransformerEncoder(
-            encoder_layer, self.pattn['num_layers']
+            encoder_layer, self.pattn_num_layers
         )
 
 
@@ -397,23 +394,29 @@ class LSTMModel(BaseModel, nn.Module):
         return tokenized_valids, processed
 
     
-    def partitioned_attention(self, tokenized_valids, bert_embeddings):
+    def partitioned_attention(self, attention_mask, bert_embeddings):
         """
-        Let's decide the input format later
+        Partitioned Self Attention layer 
+        This can take in an attention_mask for the normal BERT, for
+        phobert, the attention_mask will be obtained from the phobert_embeddings
         """
         # Prepares attention mask for feeding into the self-attention
-        padded_data = torch.nn.utils.rnn.pad_sequence(
-            [
-                sent
-                for sent in tokenized_valids
-            ],
-            batch_first=True,
-            padding_value=-100
-        )
+        if attention_mask:
+            valid_token_mask = attention_mask
+        else:
+            valids = []
+            for sent in bert_embeddings:
+                valids.append(torch.ones(len(sent)))
+
+            padded_data = torch.nn.utils.rnn.pad_sequence(
+                valids,
+                batch_first=True,
+                padding_value=-100
+            )
+
+            valid_token_mask = padded_data != -100
             
-        valid_token_mask = padded_data != -100
         valid_token_mask = valid_token_mask.to(device="cuda:0")
-            
         padded_embeddings = torch.nn.utils.rnn.pad_sequence(
             bert_embeddings,
             batch_first=True,
@@ -461,7 +464,7 @@ class LSTMModel(BaseModel, nn.Module):
             bert_embeddings = [torch.stack(sent) for sent in bert_embeddings]
 
         # Extract partitioned representation
-        partitioned_embeddings = self.partitioned_attention(tokenized_valids, bert_embeddings)
+        partitioned_embeddings = self.partitioned_attention(None, bert_embeddings)
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_ids = [word.children[0].label for word in tagged_words]
