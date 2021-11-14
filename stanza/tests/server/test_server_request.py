@@ -185,39 +185,39 @@ nmod:de(presidente-7, México-9)
 punct(presidente-7, .-10)
 """
 
-
-@pytest.fixture(scope="module")
-def corenlp_client():
-    """ Client to run tests on """
-    client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos', server_id='stanza_request_tests_server')
-    yield client
-    client.stop()
-
-
-def test_basic(corenlp_client):
-    """ Basic test of making a request, test default output format is a Document """
-    ann = corenlp_client.annotate(EN_DOC, output_format="text")
-    compare_ignoring_whitespace(ann, EN_DOC_GOLD)
-    ann = corenlp_client.annotate(EN_DOC)
-    assert isinstance(ann, Document)
+class TestServerRequest:
+    @pytest.fixture(scope="class")
+    def corenlp_client(self):
+        """ Client to run tests on """
+        client = corenlp.CoreNLPClient(annotators='tokenize,ssplit,pos', server_id='stanza_request_tests_server')
+        yield client
+        client.stop()
 
 
-def test_python_dict(corenlp_client):
-    """ Test using a Python dictionary to specify all request properties """
-    ann = corenlp_client.annotate(ES_DOC, properties=ES_PROPS, output_format="text")
-    compare_ignoring_whitespace(ann, ES_PROPS_GOLD)
-    ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_CUSTOM_PROPS)
-    compare_ignoring_whitespace(ann, FRENCH_CUSTOM_GOLD)
+    def test_basic(self, corenlp_client):
+        """ Basic test of making a request, test default output format is a Document """
+        ann = corenlp_client.annotate(EN_DOC, output_format="text")
+        compare_ignoring_whitespace(ann, EN_DOC_GOLD)
+        ann = corenlp_client.annotate(EN_DOC)
+        assert isinstance(ann, Document)
 
 
-def test_lang_setting(corenlp_client):
-    """ Test using a Stanford CoreNLP supported languages as a properties key """
-    ann = corenlp_client.annotate(GERMAN_DOC, properties="german", output_format="text")
-    compare_ignoring_whitespace(ann, GERMAN_DOC_GOLD)
+    def test_python_dict(self, corenlp_client):
+        """ Test using a Python dictionary to specify all request properties """
+        ann = corenlp_client.annotate(ES_DOC, properties=ES_PROPS, output_format="text")
+        compare_ignoring_whitespace(ann, ES_PROPS_GOLD)
+        ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_CUSTOM_PROPS)
+        compare_ignoring_whitespace(ann, FRENCH_CUSTOM_GOLD)
 
 
-def test_annotators_and_output_format(corenlp_client):
-    """ Test setting the annotators and output_format """
-    ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_EXTRA_PROPS,
-                                  annotators="tokenize,ssplit,mwt,pos", output_format="json")
-    assert ann == FRENCH_JSON_GOLD
+    def test_lang_setting(self, corenlp_client):
+        """ Test using a Stanford CoreNLP supported languages as a properties key """
+        ann = corenlp_client.annotate(GERMAN_DOC, properties="german", output_format="text")
+        compare_ignoring_whitespace(ann, GERMAN_DOC_GOLD)
+
+
+    def test_annotators_and_output_format(self, corenlp_client):
+        """ Test setting the annotators and output_format """
+        ann = corenlp_client.annotate(FRENCH_DOC, properties=FRENCH_EXTRA_PROPS,
+                                      annotators="tokenize,ssplit,mwt,pos", output_format="json")
+        assert ann == FRENCH_JSON_GOLD

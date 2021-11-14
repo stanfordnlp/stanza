@@ -133,76 +133,76 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 """.lstrip()
 
+class TestEnglishPipeline:
+    @pytest.fixture(scope="class")
+    def pipeline(self):
+        return stanza.Pipeline(dir=TEST_MODELS_DIR)
 
-@pytest.fixture(scope="module")
-def pipeline():
-    return stanza.Pipeline(dir=TEST_MODELS_DIR)
+    @pytest.fixture(scope="class")
+    def processed_doc(self, pipeline):
+        """ Document created by running full English pipeline on a few sentences """
+        return pipeline(EN_DOC)
 
-@pytest.fixture(scope="module")
-def processed_doc(pipeline):
-    """ Document created by running full English pipeline on a few sentences """
-    return pipeline(EN_DOC)
-
-def test_text(processed_doc):
-    assert processed_doc.text == EN_DOC
-
-
-def test_conllu(processed_doc):
-    assert CoNLL.doc2conll_text(processed_doc) == EN_DOC_CONLLU_GOLD
+    def test_text(self, processed_doc):
+        assert processed_doc.text == EN_DOC
 
 
-def test_tokens(processed_doc):
-    assert "\n\n".join([sent.tokens_string() for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
+    def test_conllu(self, processed_doc):
+        assert CoNLL.doc2conll_text(processed_doc) == EN_DOC_CONLLU_GOLD
 
 
-def test_words(processed_doc):
-    assert "\n\n".join([sent.words_string() for sent in processed_doc.sentences]) == EN_DOC_WORDS_GOLD
+    def test_tokens(self, processed_doc):
+        assert "\n\n".join([sent.tokens_string() for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
 
 
-def test_dependency_parse(processed_doc):
-    assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == \
-           EN_DOC_DEPENDENCY_PARSES_GOLD
-
-def test_empty(pipeline):
-    # make sure that various models handle the degenerate empty case
-    pipeline("")
-    pipeline("--")
-
-@pytest.fixture(scope="module")
-def processed_multidoc(pipeline):
-    """ Document created by running full English pipeline on a few sentences """
-    docs = [Document([], text=t) for t in EN_DOCS]
-    return pipeline(docs)
+    def test_words(self, processed_doc):
+        assert "\n\n".join([sent.words_string() for sent in processed_doc.sentences]) == EN_DOC_WORDS_GOLD
 
 
-def test_conllu_multidoc(processed_multidoc):
-    assert "".join([CoNLL.doc2conll_text(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+    def test_dependency_parse(self, processed_doc):
+        assert "\n\n".join([sent.dependencies_string() for sent in processed_doc.sentences]) == \
+               EN_DOC_DEPENDENCY_PARSES_GOLD
 
-def test_tokens_multidoc(processed_multidoc):
-    assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
+    def test_empty(self, pipeline):
+        # make sure that various models handle the degenerate empty case
+        pipeline("")
+        pipeline("--")
+
+    @pytest.fixture(scope="class")
+    def processed_multidoc(self, pipeline):
+        """ Document created by running full English pipeline on a few sentences """
+        docs = [Document([], text=t) for t in EN_DOCS]
+        return pipeline(docs)
 
 
-def test_words_multidoc(processed_multidoc):
-    assert "\n\n".join([sent.words_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_WORDS_GOLD
+    def test_conllu_multidoc(self, processed_multidoc):
+        assert "".join([CoNLL.doc2conll_text(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
+    def test_tokens_multidoc(self, processed_multidoc):
+        assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
 
 
-def test_dependency_parse_multidoc(processed_multidoc):
-    assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == \
-           EN_DOC_DEPENDENCY_PARSES_GOLD
+    def test_words_multidoc(self, processed_multidoc):
+        assert "\n\n".join([sent.words_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_WORDS_GOLD
 
 
-@pytest.fixture(scope="module")
-def processed_multidoc_variant():
-    """ Document created by running full English pipeline on a few sentences """
-    docs = [Document([], text=t) for t in EN_DOCS]
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors={'tokenize': 'spacy'})
-    return nlp(docs)
+    def test_dependency_parse_multidoc(self, processed_multidoc):
+        assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == \
+               EN_DOC_DEPENDENCY_PARSES_GOLD
 
-def test_dependency_parse_multidoc_variant(processed_multidoc_variant):
-    assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc_variant for sent in processed_doc.sentences]) == \
-           EN_DOC_DEPENDENCY_PARSES_GOLD
 
-def test_constituency_parser():
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency")
-    doc = nlp("This is a test")
-    assert str(doc.sentences[0].constituency) == '(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))'
+    @pytest.fixture(scope="class")
+    def processed_multidoc_variant(self):
+        """ Document created by running full English pipeline on a few sentences """
+        docs = [Document([], text=t) for t in EN_DOCS]
+        nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors={'tokenize': 'spacy'})
+        return nlp(docs)
+
+    def test_dependency_parse_multidoc_variant(self, processed_multidoc_variant):
+        assert "\n\n".join([sent.dependencies_string() for processed_doc in processed_multidoc_variant for sent in processed_doc.sentences]) == \
+               EN_DOC_DEPENDENCY_PARSES_GOLD
+
+    def test_constituency_parser(self):
+        nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency")
+        doc = nlp("This is a test")
+        assert str(doc.sentences[0].constituency) == '(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))'

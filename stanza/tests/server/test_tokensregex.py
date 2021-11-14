@@ -6,7 +6,7 @@ import stanza.server.tokensregex as tokensregex
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
-from stanza.tests.test_semgrex import ONE_SENTENCE_DOC, TWO_SENTENCE_DOC
+from stanza.tests.server.test_semgrex import ONE_SENTENCE_DOC, TWO_SENTENCE_DOC
 
 def test_single_sentence():
     #expected:
