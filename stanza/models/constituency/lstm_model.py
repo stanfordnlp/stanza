@@ -246,7 +246,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.pattn_d_pretrained, self.pattn_d_model // 2, bias=False
         )
 
-        self.morpho_emb_dropout = FeatureDropout(self.pattn_morpho_emb_dropout)
+        self.pattention_morpho_emb_dropout = FeatureDropout(self.pattn_morpho_emb_dropout)
         self.add_timing = ConcatPositionalEncoding(
             d_model=self.pattn_d_model,
             max_len=self.pattn_encoder_max_len,
@@ -427,7 +427,7 @@ class LSTMModel(BaseModel, nn.Module):
         extra_content_annotations = self.project_pretrained(padded_embeddings)
 
         # Add positional information through the table 
-        encoder_in = self.add_timing(self.morpho_emb_dropout(extra_content_annotations))
+        encoder_in = self.add_timing(self.pattention_morpho_emb_dropout(extra_content_annotations))
         # Put the partitioned input through the partitioned attention 
         annotations = self.encoder(encoder_in, valid_token_mask)
         
