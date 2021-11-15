@@ -153,6 +153,11 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('constituent_zeros', torch.zeros(self.num_layers, 1, self.hidden_size))
 
         # possibly add a couple vectors for bookends of the sentence
+        # We put the word_start and word_end here, AFTER counting the
+        # charlm dimension, but BEFORE counting the bert dimension,
+        # as we want word_start and word_end to not have dimensions
+        # for the bert embedding.  The bert model will add its own
+        # start and end representation.
         self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', SentenceBoundary.NONE)
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             self.register_parameter('word_start', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
