@@ -63,6 +63,11 @@ The code breakdown is as follows:
   constituency/lstm_model.py: adds LSTM features to the constituents to predict what the
     correct transition to make is, allowing for predictions on previously unseen text
 
+  constituency/utils.py: a couple utility methods
+
+  constituency/partitioned_transformer.py: implementation of a transformer for self-attention.
+     including attention noticeably improves model scores
+
   stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
 
 Some alternate optimizer methods:
@@ -284,6 +289,7 @@ def parse_args(args=None):
     parser.add_argument('--pattn_residual_dropout', default=0.2, type=float, help='Residual dropout probability for all residual connections')
     parser.add_argument('--pattn_attention_dropout', default=0.2, type=float, help='Attention dropout probability')
     parser.add_argument('--pattn_num_layers', default=12, type=int, help='Number of layers for the Partitioned Attention')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
         args.lang = args.shorthand.split("_")[0]
