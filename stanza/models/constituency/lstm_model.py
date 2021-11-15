@@ -474,11 +474,6 @@ class LSTMModel(BaseModel, nn.Module):
             for word_inputs, backward_chars in zip(all_word_inputs, all_backward_chars):
                 word_inputs.append(backward_chars)
 
-        max_sentence_len = max(len(x) for x in tagged_word_lists)
-        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-            max_sentence_len += 2
-        word_lstm_input = torch.zeros((max_sentence_len, len(tagged_word_lists), self.word_input_size), device=device)
-
         all_word_inputs = [torch.cat(word_inputs, dim=1) for word_inputs in all_word_inputs]
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             word_start = self.word_start.unsqueeze(0)
@@ -498,16 +493,8 @@ class LSTMModel(BaseModel, nn.Module):
                 bert_embeddings = [be[1:-1] for be in bert_embeddings]
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
-        for sentence_idx, word_input in enumerate(all_word_inputs):
-            # now of size sentence x input
-            word_input = self.word_dropout(word_input)
-            word_lstm_input[:word_input.shape[0], sentence_idx, :] = word_input
-
-        if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-            seqlens = [len(x)+2 for x in tagged_word_lists]
-        else:
-            seqlens = [len(x) for x in tagged_word_lists]
-        packed_word_input = torch.nn.utils.rnn.pack_padded_sequence(word_lstm_input, seqlens, enforce_sorted=False)
+        all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
+        packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
         # would like to do word_to_constituent here, but it seems PackedSequence doesn't support Linear
         # word_output will now be sentence x batch x 2*hidden_size
