@@ -41,6 +41,10 @@ TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
 ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
 
+# The sentence boundary vectors are marginally useful at best.
+# However, they make it much easier to use non-bert layers as input to
+# attention layers, as the attention layers work better when they have
+# an index 0 to attend to.
 class SentenceBoundary(Enum):
     NONE               = 1
     WORDS              = 2
