@@ -140,16 +140,15 @@ class PartitionedMultiHeadAttention(nn.Module):
 
 
 class PartitionedTransformerEncoderLayer(nn.Module):
-    def __init__(
-        self,
-        d_model,
-        n_head,
-        d_qkv,
-        d_ff,
-        ff_dropout=0.1,
-        residual_dropout=0.1,
-        attention_dropout=0.1,
-        activation=PartitionedReLU(),
+    def __init__(self,
+                 d_model,
+                 n_head,
+                 d_qkv,
+                 d_ff,
+                 ff_dropout,
+                 residual_dropout,
+                 attention_dropout,
+                 activation=PartitionedReLU(),
     ):
         super().__init__()
         self.self_attn = PartitionedMultiHeadAttention(
@@ -179,11 +178,27 @@ class PartitionedTransformerEncoderLayer(nn.Module):
 
 
 class PartitionedTransformerEncoder(nn.Module):
-    def __init__(self, encoder_layer, n_layers):
+    def __init__(self,
+                 n_layers,
+                 d_model,
+                 n_head,
+                 d_qkv,
+                 d_ff,
+                 ff_dropout,
+                 residual_dropout,
+                 attention_dropout,
+                 activation=PartitionedReLU(),
+    ):
         super().__init__()
-        self.layers = nn.ModuleList(
-            [copy.deepcopy(encoder_layer) for i in range(n_layers)]
-        )
+        self.layers = nn.ModuleList([PartitionedTransformerEncoderLayer(d_model=d_model,
+                                                                        n_head=n_head,
+                                                                        d_qkv=d_qkv,
+                                                                        d_ff=d_ff,
+                                                                        ff_dropout=ff_dropout,
+                                                                        residual_dropout=residual_dropout,
+                                                                        attention_dropout=attention_dropout,
+                                                                        activation=activation)
+                                     for i in range(n_layers)])
 
     def forward(self, x, mask=None):
         for layer in self.layers:

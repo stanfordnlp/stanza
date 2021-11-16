@@ -204,17 +204,15 @@ class LSTMModel(BaseModel, nn.Module):
                 d_model=self.pattn_d_model,
                 max_len=self.args['pattn_encoder_max_len'],
             )
-            encoder_layer = PartitionedTransformerEncoderLayer(
-                self.pattn_d_model,
+            self.pattn_encoder = PartitionedTransformerEncoder(
+                self.args['pattn_num_layers'],
+                d_model=self.pattn_d_model,
                 n_head=self.args['pattn_num_heads'],
                 d_qkv=self.args['pattn_d_kv'],
                 d_ff=self.args['pattn_d_ff'],
                 ff_dropout=self.args['pattn_relu_dropout'],
                 residual_dropout=self.args['pattn_residual_dropout'],
                 attention_dropout=self.args['pattn_attention_dropout'],
-            )
-            self.pattn_encoder = PartitionedTransformerEncoder(
-                encoder_layer, self.args['pattn_num_layers']
             )
             self.word_input_size += self.pattn_d_model
         else:
