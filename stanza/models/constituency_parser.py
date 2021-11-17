@@ -311,6 +311,7 @@ def parse_args(args=None):
     parser.add_argument('--pattn_residual_dropout', default=0.2, type=float, help='Residual dropout probability for all residual connections')
     parser.add_argument('--pattn_attention_dropout', default=0.2, type=float, help='Attention dropout probability')
     parser.add_argument('--pattn_num_layers', default=12, type=int, help='Number of layers for the Partitioned Attention')
+    parser.add_argument('--pattn_bias', default=False, action='store_true', help='Whether or not to learn an additive bias')
     # Results seem relatively similar with learned position embeddings or sin/cos position embeddings
     parser.add_argument('--pattn_timing', default='sin', choices=['learned', 'sin'], help='Use a learned embedding or a sin embedding')
 

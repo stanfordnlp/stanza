@@ -239,3 +239,81 @@ class ConcatSinusoidalEncoding(nn.Module):
         out = torch.cat([x, timing], dim=-1)
         out = self.norm(out)
         return out
+
+#
+class PartitionedTransformerModule(nn.Module):
+    def __init__(self,
+                 n_layers,
+                 d_model,
+                 n_head,
+                 d_qkv,
+                 d_ff,
+                 ff_dropout,
+                 residual_dropout,
+                 attention_dropout, #
+                 word_input_size,
+                 bias,
+                 morpho_emb_dropout,
+                 timing,
+                 encoder_max_len,
+                 activation=PartitionedReLU()
+    ):
+        super().__init__()
+        self.project_pretrained = nn.Linear(
+            word_input_size, d_model // 2, bias=bias
+        )
+
+        self.pattention_morpho_emb_dropout = FeatureDropout(morpho_emb_dropout)
+        if timing == 'sin':
+            self.add_timing = ConcatSinusoidalEncoding(d_model=d_model, max_len=encoder_max_len)
+        elif timing == 'learned':
+            self.add_timing = ConcatPositionalEncoding(d_model=d_model, max_len=encoder_max_len)
+        else:
+            raise ValueError("Unhandled timing type: %s" % timing)
+        self.pattn_encoder = PartitionedTransformerEncoder(
+            n_layers,
+            d_model=d_model,
+            n_head=n_head,
+            d_qkv=d_qkv,
+            d_ff=d_ff,
+            ff_dropout=ff_dropout,
+            residual_dropout=residual_dropout,
+            attention_dropout=attention_dropout,
+        )
+
+
+    #
+    def forward(self, attention_mask, bert_embeddings):
+        # Prepares attention mask for feeding into the self-attention
+        if attention_mask:
+            valid_token_mask = attention_mask
+        else:
+            valids = []
+            for sent in bert_embeddings:
+                valids.append(torch.ones(len(sent)))
+
+            padded_data = torch.nn.utils.rnn.pad_sequence(
+                valids,
+                batch_first=True,
+                padding_value=-100
+            )
+
+            valid_token_mask = padded_data != -100
+
+        valid_token_mask = valid_token_mask.to(device="cuda:0")
+        padded_embeddings = torch.nn.utils.rnn.pad_sequence(
+            bert_embeddings,
+            batch_first=True,
+            padding_value=0
+        )
+
+        # Project the pretrained embedding onto the desired dimension
+        extra_content_annotations = self.project_pretrained(padded_embeddings)
+
+        # Add positional information through the table
+        encoder_in = self.add_timing(self.pattention_morpho_emb_dropout(extra_content_annotations))
+        # Put the partitioned input through the partitioned attention
+        annotations = self.pattn_encoder(encoder_in, valid_token_mask)
+
+        return annotations
+
