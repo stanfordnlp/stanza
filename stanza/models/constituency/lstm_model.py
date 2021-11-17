@@ -26,12 +26,7 @@ from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
-from stanza.models.constituency.partitioned_transformer import (
-    ConcatPositionalEncoding,
-    ConcatSinusoidalEncoding,
-    FeatureDropout,
-    PartitionedTransformerEncoder,
-)
+from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
 
 logger = logging.getLogger('stanza')
 
@@ -196,18 +191,7 @@ class LSTMModel(BaseModel, nn.Module):
 
             # Initializations for the Partitioned Attention
             # experiments suggest having a bias does not help here
-            self.project_pretrained = nn.Linear(
-                self.word_input_size, self.pattn_d_model // 2, bias=False
-            )
-
-            self.pattention_morpho_emb_dropout = FeatureDropout(self.args['pattn_morpho_emb_dropout'])
-            if self.args['pattn_timing'] == 'sin':
-                self.add_timing = ConcatSinusoidalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
-            elif self.args['pattn_timing'] == 'learned':
-                self.add_timing = ConcatPositionalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
-            else:
-                raise ValueError("Unhandled timing type: %s" % self.args['pattn_timing'])
-            self.pattn_encoder = PartitionedTransformerEncoder(
+            self.partitioned_transformer_module = PartitionedTransformerModule(
                 self.args['pattn_num_layers'],
                 d_model=self.pattn_d_model,
                 n_head=self.args['pattn_num_heads'],
@@ -216,11 +200,15 @@ class LSTMModel(BaseModel, nn.Module):
                 ff_dropout=self.args['pattn_relu_dropout'],
                 residual_dropout=self.args['pattn_residual_dropout'],
                 attention_dropout=self.args['pattn_attention_dropout'],
+                word_input_size=self.word_input_size,
+                bias=self.args['pattn_bias'],
+                morpho_emb_dropout=self.args['pattn_morpho_emb_dropout'],
+                timing=self.args['pattn_timing'],
+                encoder_max_len=self.args['pattn_encoder_max_len']
             )
             self.word_input_size += self.pattn_d_model
         else:
-            self.pattn_d_model = None
-            self.pattn_encoder = None
+            self.partitioned_transformer_module = None
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
@@ -465,45 +453,6 @@ class LSTMModel(BaseModel, nn.Module):
         # Each tensor holds the representation of a sentence extracted from phobert
         return processed
 
-    def partitioned_attention(self, attention_mask, bert_embeddings):
-        """
-        Partitioned Self Attention layer
-        This can take in an attention_mask for the normal BERT, for
-        phobert, the attention_mask will be obtained from the phobert_embeddings
-        """
-        # Prepares attention mask for feeding into the self-attention
-        if attention_mask:
-            valid_token_mask = attention_mask
-        else:
-            valids = []
-            for sent in bert_embeddings:
-                valids.append(torch.ones(len(sent)))
-
-            padded_data = torch.nn.utils.rnn.pad_sequence(
-                valids,
-                batch_first=True,
-                padding_value=-100
-            )
-
-            valid_token_mask = padded_data != -100
-
-        valid_token_mask = valid_token_mask.to(device="cuda:0")
-        padded_embeddings = torch.nn.utils.rnn.pad_sequence(
-            bert_embeddings,
-            batch_first=True,
-            padding_value=0
-        )
-
-        # Project the pretrained embedding onto the desired dimension
-        extra_content_annotations = self.project_pretrained(padded_embeddings)
-
-        # Add positional information through the table
-        encoder_in = self.add_timing(self.pattention_morpho_emb_dropout(extra_content_annotations))
-        # Put the partitioned input through the partitioned attention
-        annotations = self.pattn_encoder(encoder_in, valid_token_mask)
-
-        return annotations
-
     def initial_word_queues(self, tagged_word_lists):
         """
         Produce initial word queues out of the model's LSTMs for use in the tagged word lists.
@@ -579,8 +528,8 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
         # Extract partitioned representation
-        if self.pattn_encoder is not None:
-            partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
+        if self.partitioned_transformer_module is not None:
+            partitioned_embeddings = self.partitioned_transformer_module(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
