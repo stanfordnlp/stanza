@@ -197,7 +197,7 @@ class LSTMModel(BaseModel, nn.Module):
             # Initializations for the Partitioned Attention
             # experiments suggest having a bias does not help here
             self.project_pretrained = nn.Linear(
-                self.word_input_size, self.pattn_d_model // 2, bias=False
+                self.word_input_size, self.pattn_d_model // 2, bias=True
             )
 
             self.pattention_morpho_emb_dropout = FeatureDropout(self.args['pattn_morpho_emb_dropout'])
