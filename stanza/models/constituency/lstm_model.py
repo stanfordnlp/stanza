@@ -649,6 +649,11 @@ class LSTMModel(BaseModel, nn.Module):
         return constituent_node.value
 
     def push_transitions(self, transition_stacks, transitions):
+        """
+        Push all of the given transitions on to the stack as a batch operations.
+
+        Significantly faster than doing one transition at a time.
+        """
         transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
         transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
         transition_input = self.lstm_input_dropout(transition_input)
