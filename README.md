@@ -3,9 +3,7 @@
 <h2 align="center">Stanza: A Python NLP Library for Many Human Languages</h2>
 
 <div align="center">
-    <a href="https://travis-ci.com/stanfordnlp/stanza">
-        <img alt="Travis Status" src="https://travis-ci.com/stanfordnlp/stanza.svg?token=RPNzRzNDQRoq2x3J2juj&branch=master">
-    </a>
+    ![Build Status](https://github.com/stanfordnlp/stanza/actions/workflows/stanza-tests.yaml/badge.svg)
     <a href="https://pypi.org/project/stanza/">
         <img alt="PyPI Version" src="https://img.shields.io/pypi/v/stanza?color=blue">
     </a>
