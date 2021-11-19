@@ -574,7 +574,9 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     run faster and use less memory at inference time
     """
     treebank = []
+    treebank_indices = []
     tree_batch = build_batch_fn(batch_size, data_iterator, model)
+    batch_indices = list(range(len(tree_batch)))
     horizon_iterator = iter([])
 
     while len(tree_batch) > 0:
@@ -588,9 +590,12 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
                 gold_tree = tree.gold_tree
                 # TODO: put an actual score here?
                 treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+                treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 
-        tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+        if len(remove) > 0:
+            tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+            batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
 
         for _ in range(batch_size - len(tree_batch)):
             horizon_tree = next(horizon_iterator, None)
@@ -602,7 +607,9 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
                 horizon_tree = next(horizon_iterator, None)
 
             tree_batch.append(horizon_tree)
+            batch_indices.append(len(treebank) + len(tree_batch))
 
+    treebank = utils.unsort(treebank, treebank_indices)
     return treebank
 
 def parse_tagged_words(model, words, batch_size):
