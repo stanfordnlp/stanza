@@ -50,7 +50,7 @@ class ConstituencyProcessor(UDProcessor):
                                            use_gpu=use_gpu)
         self._model.model.eval()
         # batch size counted as sentences
-        self._batch_size = config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE)
+        self._batch_size = int(config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE))
         self._tqdm = 'tqdm' in config and config['tqdm']
 
     def process(self, document):
