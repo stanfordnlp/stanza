@@ -192,10 +192,11 @@ class LSTMModel(BaseModel, nn.Module):
         # TODO: remove this `get` once it's not needed
         if self.args.get('pattn_num_heads', 0) > 0 and self.args.get('pattn_num_layers', 0) > 0:
             # Initializations of parameters for the Partitioned Attention
+            # round off the size of the model so that it divides in half evenly
             self.pattn_d_model = self.args['pattn_d_model'] // 2 * 2
 
             # Initializations for the Partitioned Attention
-            # we build the layer using all of the 
+            # experiments suggest having a bias does not help here
             self.project_pretrained = nn.Linear(
                 self.word_input_size, self.pattn_d_model // 2, bias=False
             )
