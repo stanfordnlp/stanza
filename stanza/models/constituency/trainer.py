@@ -11,6 +11,7 @@ See the `train` method for the code block which starts from
 """
 
 from collections import Counter
+from collections import namedtuple
 import logging
 import random
 import os
@@ -437,7 +438,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
         all_answers = []
 
         while len(batch) > 0:
-            outputs, pred_transitions = model.predict(batch)
+            outputs, pred_transitions = model.predict(batch, is_legal=False)
             gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
             trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
             all_errors.append(outputs)
@@ -541,8 +542,11 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
         tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
     return tree_batch
 
+ParseResult = namedtuple("ParseResult", ['gold', 'predictions'])
+ParsePrediction = namedtuple("ParsePrediction", ['tree', 'score'])
+
 @torch.no_grad()
-def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
+def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True):
     """
     Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
 
@@ -564,8 +568,13 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
     batch_indices = list(range(len(tree_batch)))
     horizon_iterator = iter([])
 
+    if best:
+        predict = model.predict
+    else:
+        predict = model.weighted_choice
+
     while len(tree_batch) > 0:
-        _, transitions = model.predict(tree_batch, is_legal=True)
+        _, transitions = predict(tree_batch)
         tree_batch = parse_transitions.bulk_apply(model, tree_batch, transitions)
 
         remove = set()
@@ -574,7 +583,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model):
                 predicted_tree = tree.get_tree(model)
                 gold_tree = tree.gold_tree
                 # TODO: put an actual score here?
-                treebank.append((gold_tree, [(predicted_tree, 1.0)]))
+                treebank.append(ParseResult(gold_tree, [ParsePrediction(predicted_tree, 1.0)]))
                 treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 
@@ -612,7 +621,7 @@ def parse_tagged_words(model, words, batch_size):
     sentence_iterator = iter(words)
     treebank = parse_sentences(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
 
-    results = [t[1][0][0] for t in treebank]
+    results = [t.predictions[0].tree for t in treebank]
     return results
 
 def run_dev_set(model, dev_trees, args):
@@ -626,6 +635,17 @@ def run_dev_set(model, dev_trees, args):
 
     tree_iterator = iter(tqdm(dev_trees))
     treebank = parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model)
+    full_results = treebank
+
+    if args['num_generate'] > 0:
+        logger.info("Generating %d random analyses", args['num_generate'])
+        generated_treebanks = [treebank]
+        for i in range(args['num_generate']):
+            tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
+            generated_treebanks.append(parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, best=False))
+
+        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses])
+                        for parses in zip(*generated_treebanks)]
 
     if len(treebank) < len(dev_trees):
         logger.warning("Only evaluating %d trees instead of %d", len(treebank), len(dev_trees))
@@ -641,14 +661,27 @@ def run_dev_set(model, dev_trees, args):
         else:
             with open(pred_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write("{:_}".format(tree[1][0][0]))
+                    fout.write("{:_}".format(tree.predictions[0].tree))
                     fout.write("\n")
+
+            for i in range(args['num_generate']):
+                pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
+                with open(pred_file, 'w') as fout:
+                    for tree in generated_treebanks[i+1]:
+                        fout.write("{:_}".format(tree.predictions[0].tree))
+                        fout.write("\n")
 
             with open(orig_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write("{:_}".format(tree[0]))
+                    fout.write("{:_}".format(tree.gold))
                     fout.write("\n")
 
-    with EvaluateParser() as evaluator:
-        response = evaluator.process(treebank)
+    if len(full_results) == 0:
+        return 0.0
+    if args['num_generate'] > 0:
+        kbest = max(len(fr.predictions) for fr in full_results)
+    else:
+        kbest = None
+    with EvaluateParser(kbest=kbest) as evaluator:
+        response = evaluator.process(full_results)
         return response.f1

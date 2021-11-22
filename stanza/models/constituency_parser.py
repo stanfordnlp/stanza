@@ -132,7 +132,8 @@ def parse_args(args=None):
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--mode', default='train', choices=['train', 'predict', 'remove_optimizer'])
-    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  The orig file is important as the results will be shuffled')
+    parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
+    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
     parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
 
     parser.add_argument('--lang', type=str, help='Language')

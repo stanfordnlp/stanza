@@ -803,8 +803,7 @@ class LSTMModel(BaseModel, nn.Module):
             hx = output_layer(hx)
         return hx
 
-    # TODO: merge this with forward?
-    def predict(self, states, is_legal=False):
+    def predict(self, states, is_legal=True):
         """
         Generate and return predictions, along with the transitions those predictions represent
 
@@ -827,6 +826,26 @@ class LSTMModel(BaseModel, nn.Module):
                     else: # yeah, else on a for loop, deal with it
                         pred_trans[idx] = None
 
+        return predictions, pred_trans
+
+    def weighted_choice(self, states):
+        """
+        Generate and return predictions, and randomly choose a prediction weighted by the scores
+
+        TODO: pass in a temperature
+        """
+        predictions = self.forward(states)
+        pred_trans = []
+        for state, prediction in zip(states, predictions):
+            legal_idx = [idx for idx in range(prediction.shape[0]) if self.transitions[idx].is_legal(state, self)]
+            if len(legal_idx) == 0:
+                pred_trans.append(None)
+                continue
+            scores = prediction[legal_idx]
+            scores = torch.softmax(scores, dim=0)
+            idx = torch.multinomial(scores, 1)
+            idx = legal_idx[idx]
+            pred_trans.append(self.transitions[idx])
         return predictions, pred_trans
 
     def get_params(self, skip_modules=True):
