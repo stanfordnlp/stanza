@@ -182,3 +182,24 @@ def test_forward_sentence_boundaries(pt):
 
     model = build_model(pt, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
+    
+def test_forward_partitioned_attention(pt):
+    """
+    Test with & without partitioned attention layers
+    """
+    model = build_model(pt, '--pattn_num_heads', '8', '--pattn_num_layers', '8')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--pattn_num_heads', '0', '--pattn_num_layers', '0')
+    run_forward_checks(model)
+
+def test_forward_timing_choices(pt):
+    """
+    Test different timing / position encodings
+    """
+    model = build_model(pt, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'sin')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
+    run_forward_checks(model)
+
