@@ -65,6 +65,11 @@ The code breakdown is as follows:
 
   constituency/utils.py: a couple utility methods
 
+  constituency/dyanmic_oracle.py: a dynamic oracle which currently
+    only operates for the inorder transition sequence.
+    uses deterministic rules to redo the correct action sequence when
+    the parser makes an error.
+
   constituency/partitioned_transformer.py: implementation of a transformer for self-attention.
      including attention noticeably improves model scores
 
@@ -73,6 +78,7 @@ The code breakdown is as follows:
 Some alternate optimizer methods:
   adabelief: https://github.com/juntang-zhuang/Adabelief-Optimizer
   madgrad: https://github.com/facebookresearch/madgrad
+
 """
 
 import argparse
