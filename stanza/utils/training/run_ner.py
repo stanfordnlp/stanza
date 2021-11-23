@@ -27,7 +27,7 @@ from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, ner_charlms
+from stanza.resources.prepare_resources import default_charlms, default_treebanks, ner_charlms
 
 # extra arguments specific to a particular dataset
 DATASET_EXTRA_ARGS = {
@@ -89,7 +89,7 @@ def run_treebank(mode, paths, treebank, short_name,
         train_args = train_args + charlm_args + dataset_args + extra_args
         if '--wordvec_pretrain_file' not in train_args:
             # will throw an error if the pretrain can't be found
-            wordvec_pretrain = find_wordvec_pretrain(language)
+            wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
             train_args = train_args + ['--wordvec_pretrain_file', wordvec_pretrain]
         logger.info("Running train step with args: {}".format(train_args))
         ner_tagger.main(train_args)

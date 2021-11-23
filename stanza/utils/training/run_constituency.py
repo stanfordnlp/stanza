@@ -12,7 +12,7 @@ from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms
+from stanza.resources.prepare_resources import default_charlms, default_treebanks
 
 logger = logging.getLogger('stanza')
 
@@ -72,7 +72,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
     if '--wordvec_pretrain_file' not in extra_args:
         # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language)
+        wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
         wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
     else:
         wordvec_args = []
