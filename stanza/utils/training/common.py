@@ -135,7 +135,7 @@ def run_eval_script_depparse(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["UAS", "LAS", "CLAS", "MLAS", "BLEX"])
 
 
-def find_wordvec_pretrain(language):
+def find_wordvec_pretrain(language, default_pretrain):
     # TODO: try to extract/remember the specific pretrain for the given model
     # That would be a good way to archive which pretrains are used for which NER models, anyway
     pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
@@ -143,10 +143,19 @@ def find_wordvec_pretrain(language):
     if len(pretrains) == 0:
         raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_file to specify a .pt file to use")
     if len(pretrains) > 1:
-        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Must specify an exact path to a --wordvec_pretrain_file")
-    pretrain = pretrains[0]
-    logger.info(f"Using pretrain found in {pretrain}  To use a different pretrain, specify --wordvec_pretrain_file")
-    return pretrain
+        default_pt = default_pretrain.get(language, None)
+        if default_pt is None:
+            raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  No default pretrain is specified for language {language}  Must specify an exact path to a --wordvec_pretrain_file")
+        for pt_file in pretrains:
+            pt_name = os.path.split(pt_file)[1]
+            pt_name = os.path.splitext(pt_name)[0]
+            if pt_name == default_pt:
+                logger.info(f"Using default pretrain for language, found in {pt_file}  To use a different pretrain, specify --wordvec_pretrain_file")
+                return pt_file
+        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Could not find default pt {default_pt} for language {language}  Must specify an exact path to a --wordvec_pretrain_file")
+    pt = pretrains[0]
+    logger.info(f"Using pretrain found in {pt}  To use a different pretrain, specify --wordvec_pretrain_file")
+    return pt
 
 def find_charlm(direction, language, charlm):
     """
