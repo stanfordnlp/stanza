@@ -671,6 +671,13 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
+        """
+        Build new constituents with the given label from the list of children
+
+        labels is a list of labels for each of the new nodes to construct
+        children_lists is a list of children that go under each of the new nodes
+        lists of each are used so that we can stack operations
+        """
         label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
 
         max_length = max(len(children) for children in children_lists)
