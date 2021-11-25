@@ -25,7 +25,7 @@ from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
-from stanza.models.constituency.utils import build_nonlinearity
+from stanza.models.constituency.utils import build_nonlinearity, TextTooLongError
 from stanza.models.constituency.partitioned_transformer import (
     ConcatPositionalEncoding,
     ConcatSinusoidalEncoding,
@@ -367,7 +367,8 @@ class LSTMModel(BaseModel, nn.Module):
             list_offsets[idx][-1] = -1
 
             if len(offsets) > tokenizer.model_max_length:
-                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
+                raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
         features = []
         for i in range(int(math.ceil(len(data)/128))):
@@ -398,7 +399,7 @@ class LSTMModel(BaseModel, nn.Module):
         processed = [] # final product, returns the list of list of word representation
         tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
         list_tokenized = [] # list of tokenized sentences from phobert
-        for sent in data:
+        for idx, sent in enumerate(data):
             #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
             tokenized = [word.replace(" ","_") for word in sent]
 
@@ -418,8 +419,8 @@ class LSTMModel(BaseModel, nn.Module):
             tokenized_sent = [tokenizer.bos_token_id] + sent_ids + [tokenizer.eos_token_id]
 
             if len(tokenized_sent) > tokenizer.model_max_length:
-                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
-                continue
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), data[idx])
+                raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
             #add to tokenized_sents
             tokenized_sents.append(torch.tensor(tokenized_sent).detach())
