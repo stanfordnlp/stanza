@@ -10,6 +10,16 @@ from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 
+class TextTooLongError(ValueError):
+    """
+    A text was too long for the underlying model (possibly BERT)
+    """
+    def __init__(self, length, max_len, line_num, text):
+        super().__init__("Found a text of length %d (possibly after tokenizing).  Maximum handled length is %d  Error occurred at line %d" % (length, max_len, line_num))
+        self.line_num = line_num
+        self.text = text
+
+
 def replace_tags(tree, tags):
     if tree.is_leaf():
         raise ValueError("Must call replace_tags with non-leaf")
