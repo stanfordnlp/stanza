@@ -193,7 +193,7 @@ def main():
         pass
 
     accepted_trees = set()
-    for filename in tqdm(wiki_files):
+    for filename in tqdm(wiki_files, disable=False):
         docs = read_wiki_file(filename)
         new_trees = find_matching_trees(docs, args.num_sentences, accepted_trees, tag_pipe, parser_pipes)
         accepted_trees.update(new_trees)
