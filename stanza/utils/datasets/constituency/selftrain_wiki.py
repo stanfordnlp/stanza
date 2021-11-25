@@ -43,12 +43,18 @@ def parse_args():
     parser.add_argument(
         '--num_sentences',
         default=1000,
-        help='How many sentences to get per file'
+        help='How many sentences to get per file (max)'
     )
     parser.add_argument(
         '--models',
         default='saved_models/constituency/vi_vlsp21_inorder.pt',
         help='What models to use for parsing.  comma-separated'
+    )
+    parser.add_argument(
+        '--no_shuffle',
+        dest='shuffle',
+        action='store_false',
+        help="Don't shuffle files when processing the directory"
     )
 
     args = parser.parse_args()
@@ -72,8 +78,7 @@ def list_wikipedia_files(input_dir):
             wiki_files.append(next_file)
 
     wiki_files.sort()
-
-    return glob.glob(os.path.join(input_dir, "*", "wiki_*"))
+    return wiki_files
 
 def read_wiki_file(filename):
     """
@@ -176,7 +181,8 @@ def main():
     random.seed(1234)
 
     wiki_files = list_wikipedia_files(args.input_dir)
-    random.shuffle(wiki_files)
+    if args.shuffle:
+        random.shuffle(wiki_files)
 
     tag_pipe = build_tag_pipe(ssplit=True, lang=args.lang)
     parser_pipes = build_parser_pipes(args.lang, args.models)
