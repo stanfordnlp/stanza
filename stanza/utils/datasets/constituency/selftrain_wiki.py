@@ -11,6 +11,7 @@ http://www.italianlp.it/resources/paccss-it-parallel-corpus-of-complex-simple-se
 """
 
 import argparse
+from collections import deque
 import glob
 import os
 import random
@@ -56,7 +57,22 @@ def parse_args():
 def list_wikipedia_files(input_dir):
     """
     Get a list of wiki files under the input_dir
+
+    Recursively traverse the directory, then sort
     """
+    wiki_files = []
+
+    recursive_files = deque()
+    recursive_files.extend(glob.glob(os.path.join(input_dir, "*")))
+    while len(recursive_files) > 0:
+        next_file = recursive_files.pop()
+        if os.path.isdir(next_file):
+            recursive_files.extend(glob.glob(os.path.join(next_file, "*")))
+        elif os.path.split(next_file)[1].startswith("wiki_"):
+            wiki_files.append(next_file)
+
+    wiki_files.sort()
+
     return glob.glob(os.path.join(input_dir, "*", "wiki_*"))
 
 def read_wiki_file(filename):
@@ -85,6 +101,7 @@ def read_wiki_file(filename):
             # not the start or end of a doc
             # hopefully this is valid text
             line = line.replace("()", " ")
+            line = line.replace("( )", " ")
             line = line.strip()
             if line.find("&lt;") > 0 or line.find("&gt;") > 0:
                 line = ""
