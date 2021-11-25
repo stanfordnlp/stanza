@@ -314,6 +314,9 @@ def get_tqdm():
       tqdm = utils.get_tqdm()
     then do this when you want a scroll bar or regular iterator depending on context:
       tqdm(list)
+
+    If there is no tty, the returned tqdm will always be disabled
+    unless disable=False is specifically set.
     """
     try:
         ipy_str = str(type(get_ipython()))
@@ -327,6 +330,12 @@ def get_tqdm():
         if sys.stderr.isatty():
             from tqdm import tqdm
             return tqdm
-    def tqdm(iterable, **kwargs):
-        return iterable
-    return tqdm
+
+    from tqdm import tqdm
+    def hidden_tqdm(*args, **kwargs):
+        if "disable" in kwargs:
+            return tqdm(*args, **kwargs)
+        kwargs["disable"] = True
+        return tqdm(*args, **kwargs)
+
+    return hidden_tqdm
