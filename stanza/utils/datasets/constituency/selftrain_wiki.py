@@ -42,6 +42,7 @@ def parse_args():
     )
     parser.add_argument(
         '--num_sentences',
+        type=int,
         default=1000,
         help='How many sentences to get per file (max)'
     )
