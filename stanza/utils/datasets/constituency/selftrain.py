@@ -36,6 +36,11 @@ def common_args(parser):
         help='What models to use for parsing.  comma-separated'
     )
 
+def build_ssplit_pipe(ssplit, lang):
+    if ssplit:
+        return stanza.Pipeline(lang, processors="tokenize")
+    else:
+        return stanza.Pipeline(lang, processors="tokenize", tokenize_no_ssplit=True)
 
 def build_tag_pipe(ssplit, lang):
     if ssplit:
