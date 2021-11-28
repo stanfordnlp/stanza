@@ -91,7 +91,7 @@ def build_optimizer(args, model):
     if args['optim'].lower() == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adamw':
         optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adabelief':
