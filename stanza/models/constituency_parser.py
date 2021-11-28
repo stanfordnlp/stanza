@@ -208,12 +208,19 @@ def parse_args(args=None):
     #           0.000002: 80.39
     DEFAULT_LEARNING_RATES = { "adamw": 0.001, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
-    DEFAULT_LEARNING_EPS = { "adabelief": 1e-12 }
+    DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6 }
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
+    # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
-    # weight decay values other than adadelta have not been thoroughly tested.
-    DEFAULT_WEIGHT_DECAY = { "adamw": 0.01, "adadelta": 0.01, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
+    # Running a series of 5x experiments on a VI dataset:
+    #    0.030:   0.8167018
+    #    0.025:   0.81659
+    #    0.020:   0.81722
+    #    0.015:   0.81721
+    #    0.010:   0.81474348
+    #    0.005:   0.81503
+    DEFAULT_WEIGHT_DECAY = { "adamw": 0.01, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
     parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief')
 
