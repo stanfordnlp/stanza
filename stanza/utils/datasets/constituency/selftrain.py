@@ -84,9 +84,12 @@ def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pi
             chunk = [stanza.Document([], text=t) for t in chunk]
             tag_pipe(chunk)
 
+            chunk = [d for d in chunk if len(d.sentences) > 0]
             if max_len is not None:
                 # for now, we don't have a good way to deal with sentences longer than the bert maxlen
                 chunk = [d for d in chunk if max(len(s.words) for s in d.sentences) < max_len]
+            if len(chunk) == 0:
+                continue
 
             parses = []
             try:
