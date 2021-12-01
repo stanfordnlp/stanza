@@ -82,7 +82,7 @@ class DynamicLSTM(nn.Module):
 
         return actions.unsqueeze(-1)
 
-    def forward(self, input, agent_action=None, agent_prob=None):
+    def forward(self, input, agent_action=None, agent_prob=None, cur_h=None, cur_c=None, observed_h=None, observed_c=None):
         # input shape [batch_size, timestep, feature_dim]
         batch_size = input.size(0)
         time_step = input.size(1)
@@ -97,14 +97,14 @@ class DynamicLSTM(nn.Module):
             agent_prob = []  # Probabilities for agents
         device = input.device
         # Hidden state for lstm
-        cur_h = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
+        if cur_h is None:
+            cur_h = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
         # Cell memory for lstm
-        cur_c = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
-        full_c = []  # Cell memory list for lstm
-        full_h = []  # Hidden state list for lstm
+        if cur_c is None:
+            cur_c = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
 
         for cur_time in range(time_step):
-            if cur_time == 0:
+            if observed_c is None or observed_h is None:
                 self.choose_action(
                     torch.cat((input[:, 0, :], cur_h), 1), cur_time, agent_action, agent_prob)
                 observed_c = torch.zeros_like(cur_c, dtype=torch.float32, device=device).view(-1).repeat(
@@ -146,10 +146,8 @@ class DynamicLSTM(nn.Module):
             cur_c = torch.mul(weighted_c, forgetgate) + \
                 torch.mul(ingate, cellgate)
             cur_h = torch.mul(outgate, self.tanh(cur_c))
-            full_c.append(cur_c)
-            full_h.append(cur_h)
 
         opt = self.output(cur_h)
         opt = self.softmax(opt)
 
-        return opt, (agent_action, agent_prob)
+        return opt, (agent_action, agent_prob, cur_h, cur_c, observed_h, observed_c)

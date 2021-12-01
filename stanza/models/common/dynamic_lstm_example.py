@@ -59,7 +59,7 @@ def train_model(train_dataset, test_dataset):
             optimizer.zero_grad()
             # output will be, for each item in the batch,just the last item
             # so 100 x 10
-            output, (acts, act_prob) = model(data)
+            output, (acts, act_prob, cur_h, cur_c, observed_h, observed_c) = model(data)
             loss_task = torch.mean(-torch.log(output+1e-7)*target)
             correct_pred = torch.argmax(output, 1).eq(torch.argmax(target, 1))
             accuracy = torch.mean(correct_pred.float())
@@ -91,7 +91,7 @@ def train_model(train_dataset, test_dataset):
         test_acc = []
         for batch_idx, (data, target) in enumerate(test_loader):
             data, target = Variable(data), Variable(target)
-            output, (acts, act_prob) = model(data)
+            output, (acts, act_prob, cur_h, cur_c, observed_h, observed_c) = model(data)
             loss_task = torch.mean(-torch.log(output+1e-7)*target)
             correct_pred = torch.argmax(output, 1).eq(torch.argmax(target, 1))
             accuracy = torch.mean(correct_pred.float())
