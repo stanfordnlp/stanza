@@ -65,7 +65,7 @@ class DynamicLSTM(nn.Module):
         self.h2h = nn.Linear(self.n_hidden, 4 * self.n_hidden)
         self.output = nn.Linear(self.n_hidden, self.n_output)
         self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=-1)
         self.dropout = nn.Dropout(p=self.dropout)
         self.tanh = nn.Tanh()
 
@@ -95,10 +95,11 @@ class DynamicLSTM(nn.Module):
             agent_action = []  # Actions for agents
         if agent_prob is None:
             agent_prob = []  # Probabilities for agents
+        device = input.device
         # Hidden state for lstm
-        cur_h = Variable(torch.zeros(batch_size, self.n_hidden))
+        cur_h = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
         # Cell memory for lstm
-        cur_c = Variable(torch.zeros(batch_size, self.n_hidden))
+        cur_c = Variable(torch.zeros(batch_size, self.n_hidden, device=device))
         full_c = []  # Cell memory list for lstm
         full_h = []  # Hidden state list for lstm
 
@@ -106,9 +107,9 @@ class DynamicLSTM(nn.Module):
             if cur_time == 0:
                 self.choose_action(
                     torch.cat((input[:, 0, :], cur_h), 1), cur_time, agent_action, agent_prob)
-                observed_c = torch.zeros_like(cur_c, dtype=torch.float32).view(-1).repeat(
+                observed_c = torch.zeros_like(cur_c, dtype=torch.float32, device=device).view(-1).repeat(
                     self.n_actions).view(self.n_actions, batch_size, self.n_hidden)
-                observed_h = torch.zeros_like(cur_h, dtype=torch.float32).view(-1).repeat(
+                observed_h = torch.zeros_like(cur_h, dtype=torch.float32, device=device).view(-1).repeat(
                     self.n_actions).view(self.n_actions, batch_size, self.n_hidden)
                 action_c = cur_c
                 action_h = cur_h
@@ -119,7 +120,7 @@ class DynamicLSTM(nn.Module):
                 observation = torch.cat((input[:, cur_time, :], cur_h), 1)
                 actions = self.choose_action(observation, cur_time, agent_action, agent_prob)
                 coord = torch.cat((actions.int(), torch.arange(
-                    batch_size, dtype=torch.int).unsqueeze(-1)), 1)
+                    batch_size, dtype=torch.int, device=device).unsqueeze(-1)), 1)
                 action_c = torch.stack([observed_c[i, j, :]
                                         for [i, j] in coord])
                 action_h = torch.stack([observed_h[i, j, :]
@@ -129,7 +130,8 @@ class DynamicLSTM(nn.Module):
             weighted_h = self.lamda * action_h + (1-self.lamda)*cur_h
 
             gates = self.x2h(input[:, cur_time, :]) + self.h2h(weighted_h)
-            gates = gates.squeeze()
+            # This was in the original code, but it causes problems for batch_size 1
+            #gates = gates.squeeze()
 
             ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
