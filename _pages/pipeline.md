@@ -158,13 +158,18 @@ When there are many options you want to configure, or even set programmatically,
 import stanza
 
 config = {
-	'processors': 'tokenize,mwt,pos', # Comma-separated list of processors to use
-	'lang': 'fr', # Language code for the language to build the Pipeline in
-	'tokenize_model_path': './fr_gsd_models/fr_gsd_tokenizer.pt', # Processor-specific arguments are set with keys "{processor_name}_{argument_name}"
+        # Comma-separated list of processors to use
+	'processors': 'tokenize,mwt,pos',
+        # Language code for the language to build the Pipeline in
+        'lang': 'fr',
+        # Processor-specific arguments are set with keys "{processor_name}_{argument_name}"
+        # You only need model paths if you have a specific model outside of stanza_resources
+	'tokenize_model_path': './fr_gsd_models/fr_gsd_tokenizer.pt',
 	'mwt_model_path': './fr_gsd_models/fr_gsd_mwt_expander.pt',
 	'pos_model_path': './fr_gsd_models/fr_gsd_tagger.pt',
 	'pos_pretrain_path': './fr_gsd_models/fr_gsd.pretrain.pt',
-	'tokenize_pretokenized': True # Use pretokenized text as input and disable tokenization
+        # Use pretokenized text as input and disable tokenization
+	'tokenize_pretokenized': True
 }
 nlp = stanza.Pipeline(**config) # Initialize the pipeline using a configuration dict
 doc = nlp("Van Gogh grandit au sein d'une famille de l'ancienne bourgeoisie .") # Run the pipeline on the pretokenized input text
