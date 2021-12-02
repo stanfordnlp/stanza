@@ -278,20 +278,30 @@ class LSTMModel(BaseModel, nn.Module):
 
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
-        middle_layers = self.args['num_output_layers'] - 1
-        predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
-        predict_output_size = [self.hidden_size] * middle_layers + [len(transitions)]
-        self.output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
-                                            for input_size, output_size in zip(predict_input_size, predict_output_size)])
-        for output_layer, input_size in zip(self.output_layers, predict_input_size):
-            if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
-                nn.init.kaiming_normal_(output_layer.weight, nonlinearity=self.args['nonlinearity'])
-                nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
+        self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
 
         self.constituency_lstm = self.args['constituency_lstm']
 
         self._unary_limit = unary_limit
 
+    def build_output_layers(self, num_output_layers, final_layer_size):
+        """
+        Build a ModuleList of Linear transformations for the given num_output_layers
+
+        The final layer size can be specified.
+        Initial layer size is the combination of word, constituent, and transition vectors
+        Middle layer sizes are self.hidden_size
+        """
+        middle_layers = num_output_layers - 1
+        predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
+        predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
+        output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
+                                       for input_size, output_size in zip(predict_input_size, predict_output_size)])
+        for output_layer, input_size in zip(output_layers, predict_input_size):
+            if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+                nn.init.kaiming_normal_(output_layer.weight, nonlinearity=self.args['nonlinearity'])
+                nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
+        return output_layers
 
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
