@@ -60,7 +60,7 @@ TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'cur_h', 'cur_
 # which sometimes result in different shapes
 # This will be unsqueezed in order to put into the next layer if needed
 # hx & cx are the hidden & cell states of the LSTM going across constituents
-ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
+ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'cur_h', 'cur_c', 'observed_h', 'observed_c'])
 Constituent = namedtuple("Constituent", ['value', 'hx'])
 
 # The sentence boundary vectors are marginally useful at best.
@@ -212,7 +212,7 @@ class LSTMModel(BaseModel, nn.Module):
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
         self.register_buffer('word_zeros', torch.zeros(self.hidden_size))
         self.register_buffer('transition_zeros', torch.zeros(1, 1, self.transition_hidden_size))
-        self.register_buffer('constituent_zeros', torch.zeros(self.num_lstm_layers, 1, self.hidden_size))
+        self.register_buffer('constituent_zeros', torch.zeros(1, 1, self.hidden_size))
 
         # possibly add a couple vectors for bookends of the sentence
         # We put the word_start and word_end here, AFTER counting the
@@ -305,7 +305,9 @@ class LSTMModel(BaseModel, nn.Module):
                                            n_hidden=self.transition_hidden_size, n_output=self.transition_hidden_size,
                                            lamda=1, dropout=self.lstm_layer_dropout)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
-        self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
+        self.constituent_lstm = DynamicLSTM(n_actions=10, n_units=10, n_input=self.hidden_size,
+                                            n_hidden=self.hidden_size, n_output=self.hidden_size,
+                                            lamda=1, dropout=self.lstm_layer_dropout)
 
         if self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
             unary_transforms = {}
@@ -700,13 +702,15 @@ class LSTMModel(BaseModel, nn.Module):
         """
         if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
             constituent_start = self.constituent_start.unsqueeze(0).unsqueeze(0)
-            output, (hx, cx) = self.constituent_lstm(constituent_start)
-            constituent_start = output[0, 0, :]
         else:
-            constituent_start = self.constituent_zeros[-1, 0, :]
-            hx = self.constituent_zeros
-            cx = self.constituent_zeros
-        return TreeStack(value=ConstituentNode(None, constituent_start, hx, cx), parent=None, length=1)
+            constituent_start = self.constituent_zeros
+        # cur_h: 1 x dim
+        # cur_c: 1 x dim
+        # observed_h: actions x 1 x dim
+        # observed_c: actions x 1 x dim
+        output, (_, _, cur_h, cur_c, observed_h, observed_c) = self.constituent_lstm(constituent_start)
+        constituent_start = output[0, :]
+        return TreeStack(value=ConstituentNode(None, constituent_start, cur_h[0, :], cur_c[0, :], observed_h[:, 0, :], observed_c[:, 0, :]), parent=None, length=1)
 
     def get_word(self, word_node):
         return word_node.value
@@ -798,12 +802,9 @@ class LSTMModel(BaseModel, nn.Module):
         current_nodes = [stack.value for stack in constituent_stacks]
 
         constituent_input = torch.stack([x.hx for x in constituents])
-        constituent_input = constituent_input.unsqueeze(0)
+        constituent_input = constituent_input.unsqueeze(1)
         constituent_input = self.lstm_input_dropout(constituent_input)
 
-        hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
-        cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
-        output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
         # Another possibility here would be to use output[0, i, :]
         # from the constituency lstm for the value of the new node.
         # This might theoretically make the new constituent include
@@ -813,7 +814,12 @@ class LSTMModel(BaseModel, nn.Module):
         # averaged over 5 trials, had the following loss in accuracy:
         # 150 epochs: 0.8971 to 0.8953
         # 200 epochs: 0.8985 to 0.8964
-        new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
+        cur_h = torch.stack([current_node.cur_h for current_node in current_nodes], axis=0)
+        cur_c = torch.stack([current_node.cur_c for current_node in current_nodes], axis=0)
+        observed_h = torch.stack([current_node.observed_h for current_node in current_nodes], axis=1)
+        observed_c = torch.stack([current_node.observed_c for current_node in current_nodes], axis=1)
+        output, (_, _, cur_h, cur_c, observed_h, observed_c) = self.constituent_lstm(constituent_input, None, None, cur_h, cur_c, observed_h, observed_c)
+        new_stacks = [stack.push(ConstituentNode(constituent.value, output[i, :], cur_h[i, :], cur_c[i, :], observed_h[:, i, :], observed_c[:, i, :]))
                       for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         return new_stacks
 
@@ -867,7 +873,7 @@ class LSTMModel(BaseModel, nn.Module):
         # this way, we can, as an option, NOT include the constituents to the left
         # when building the current vector for a constituent
         # and the vector used for inference will still incorporate the entire LSTM
-        constituent_hx = torch.stack([state.constituents.value.hx[-1, 0, :] for state in states])
+        constituent_hx = torch.stack([state.constituents.value.output for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
