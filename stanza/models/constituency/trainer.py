@@ -429,78 +429,13 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     for interval_start in tqdm(interval_starts, postfix="Batch"):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        # the batch will be empty when all trees from this epoch are trained
-        # now we add the state to the trees in the batch
-        initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
-        batch = [state._replace(gold_sequence=sequence)
-                 for (tree, sequence), state in zip(batch, initial_states)]
+        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args)
 
-        all_errors = []
-        all_answers = []
-
-        while len(batch) > 0:
-            outputs, pred_transitions = model.predict(batch, is_legal=False)
-            gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
-            trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
-            all_errors.append(outputs)
-            all_answers.extend(trans_tensor)
-
-            new_batch = []
-            update_transitions = []
-            for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, batch):
-                if pred_transition == gold_transition:
-                    transitions_correct[gold_transition.short_name()] += 1
-                    if state.num_transitions() + 1 < len(state.gold_sequence):
-                        if args['transition_scheme'] is TransitionScheme.IN_ORDER and random.random() < args['oracle_forced_errors']:
-                            fake_transition = random.choice(model.transitions)
-                            if fake_transition.is_legal(state, model):
-                                _, new_sequence = oracle_inorder_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
-                                if new_sequence is not None:
-                                    new_batch.append(state._replace(gold_sequence=new_sequence))
-                                    update_transitions.append(fake_transition)
-                                    fake_transitions_used = fake_transitions_used + 1
-                                    continue
-                        new_batch.append(state)
-                        update_transitions.append(gold_transition)
-                    continue
-
-                transitions_incorrect[gold_transition.short_name(), pred_transition.short_name()] += 1
-                # if we are on the final operation, there are two choices:
-                #   - the parsing mode is IN_ORDER, and the final transition
-                #     is the close to end the sequence, which has no alternatives
-                #   - the parsing mode is something else, in which case
-                #     we have no oracle anyway
-                if state.num_transitions() + 1 >= len(state.gold_sequence):
-                    continue
-
-                if epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
-                    new_batch.append(state)
-                    update_transitions.append(gold_transition)
-                    continue
-
-                repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
-                # we can only reach here on an error
-                assert repair_type != RepairType.CORRECT
-                repairs_used[repair_type] += 1
-                if new_sequence is not None and random.random() < args['oracle_frequency']:
-                    new_batch.append(state._replace(gold_sequence=new_sequence))
-                    update_transitions.append(pred_transition)
-                else:
-                    new_batch.append(state)
-                    update_transitions.append(gold_transition)
-
-            if len(batch) > 0:
-                # bulk update states - significantly faster
-                batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
-
-        errors = torch.cat(all_errors)
-        answers = torch.cat(all_answers)
-        tree_loss = model_loss_function(errors, answers)
-        tree_loss.backward()
-        epoch_loss += tree_loss.item()
-
-        optimizer.step()
-        optimizer.zero_grad()
+        transitions_correct += new_tc
+        transitions_incorrect += new_ti
+        repairs_used += new_ru
+        fake_transitions_used += ftu
+        epoch_loss += batch_loss
 
     total_correct = sum(v for _, v in transitions_correct.items())
     total_incorrect = sum(v for _, v in transitions_incorrect.items())
@@ -512,6 +447,88 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
         logger.info("Fake transitions used: %d", fake_transitions_used)
 
     return epoch_loss, total_correct, total_incorrect
+
+def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args):
+    # the batch will be empty when all trees from this epoch are trained
+    # now we add the state to the trees in the batch
+    initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
+    batch = [state._replace(gold_sequence=sequence)
+             for (tree, sequence), state in zip(batch, initial_states)]
+
+    transitions_correct = Counter()
+    transitions_incorrect = Counter()
+    repairs_used = Counter()
+    fake_transitions_used = 0
+
+    all_errors = []
+    all_answers = []
+
+    while len(batch) > 0:
+        outputs, pred_transitions = model.predict(batch, is_legal=False)
+        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
+        trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
+        all_errors.append(outputs)
+        all_answers.extend(trans_tensor)
+
+        new_batch = []
+        update_transitions = []
+        for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, batch):
+            if pred_transition == gold_transition:
+                transitions_correct[gold_transition.short_name()] += 1
+                if state.num_transitions() + 1 < len(state.gold_sequence):
+                    if args['transition_scheme'] is TransitionScheme.IN_ORDER and random.random() < args['oracle_forced_errors']:
+                        fake_transition = random.choice(model.transitions)
+                        if fake_transition.is_legal(state, model):
+                            _, new_sequence = oracle_inorder_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+                            if new_sequence is not None:
+                                new_batch.append(state._replace(gold_sequence=new_sequence))
+                                update_transitions.append(fake_transition)
+                                fake_transitions_used = fake_transitions_used + 1
+                                continue
+                    new_batch.append(state)
+                    update_transitions.append(gold_transition)
+                continue
+
+            transitions_incorrect[gold_transition.short_name(), pred_transition.short_name()] += 1
+            # if we are on the final operation, there are two choices:
+            #   - the parsing mode is IN_ORDER, and the final transition
+            #     is the close to end the sequence, which has no alternatives
+            #   - the parsing mode is something else, in which case
+            #     we have no oracle anyway
+            if state.num_transitions() + 1 >= len(state.gold_sequence):
+                continue
+
+            if epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
+                new_batch.append(state)
+                update_transitions.append(gold_transition)
+                continue
+
+            repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+            # we can only reach here on an error
+            assert repair_type != RepairType.CORRECT
+            repairs_used[repair_type] += 1
+            if new_sequence is not None and random.random() < args['oracle_frequency']:
+                new_batch.append(state._replace(gold_sequence=new_sequence))
+                update_transitions.append(pred_transition)
+            else:
+                new_batch.append(state)
+                update_transitions.append(gold_transition)
+
+        if len(batch) > 0:
+            # bulk update states - significantly faster
+            batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
+
+    errors = torch.cat(all_errors)
+    answers = torch.cat(all_answers)
+
+    tree_loss = model_loss_function(errors, answers)
+    tree_loss.backward()
+    batch_loss = tree_loss.item()
+
+    optimizer.step()
+    optimizer.zero_grad()
+
+    return transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, batch_loss
 
 def build_batch_from_trees(batch_size, data_iterator, model):
     """
