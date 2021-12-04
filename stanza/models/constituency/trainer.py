@@ -399,10 +399,8 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         leftover_training_data = epoch_data[args['epoch_size']:]
         epoch_data = epoch_data[:args['epoch_size']]
         epoch_data.sort(key=lambda x: len(x[1]))
-        interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
-        random.shuffle(interval_starts)
 
-        epoch_loss, transitions_correct, transitions_incorrect = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, interval_starts, args)
+        epoch_loss, transitions_correct, transitions_incorrect = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args)
@@ -415,7 +413,10 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             trainer.save(model_latest_filename, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, interval_starts, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
+    interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
+    random.shuffle(interval_starts)
+
     epoch_loss = 0.0
 
     model = trainer.model
