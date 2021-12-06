@@ -641,7 +641,7 @@ def run_dev_set(model, dev_trees, args):
     if args['num_generate'] > 0:
         logger.info("Generating %d random analyses", args['num_generate'])
         generated_treebanks = [treebank]
-        for i in range(args['num_generate']):
+        for i in tqdm(range(args['num_generate'])):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
             generated_treebanks.append(parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, best=False))
 
