@@ -97,6 +97,7 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 prepare_ner_file.process_dataset(input_iob, output_json)
 ```
 
+The expectation is that the `.json` files will go in the `data/ner` directory, although you can change that with the `$NER_DATA_DIR` environment variable.
 
 ## Training with Scripts
 
