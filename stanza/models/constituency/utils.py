@@ -111,3 +111,10 @@ def build_optimizer(args, model):
         raise ValueError("Unknown optimizer: %s" % args.optim)
     return optimizer
 
+def initialize_linear(linear, nonlinearity, bias):
+    """
+    Initializes the bias to a positive value, hopefully preventing dead neurons
+    """
+    if nonlinearity in ('relu', 'leaky_relu'):
+        nn.init.kaiming_normal_(linear.weight, nonlinearity=nonlinearity)
+        nn.init.uniform_(linear.bias, 0, 1 / (bias * 2) ** 0.5)
