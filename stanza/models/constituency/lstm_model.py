@@ -25,7 +25,7 @@ from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
-from stanza.models.constituency.utils import build_nonlinearity, TextTooLongError
+from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
 from stanza.models.constituency.partitioned_transformer import (
     ConcatPositionalEncoding,
     ConcatSinusoidalEncoding,
@@ -229,9 +229,7 @@ class LSTMModel(BaseModel, nn.Module):
         # hidden_size * 2 output with the front and back lstms concatenated.
         # this transforms it into hidden_size with the values mixed together
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
-            nn.init.kaiming_normal_(self.word_to_constituent.weight, nonlinearity=self.args['nonlinearity'])
-            nn.init.uniform_(self.word_to_constituent.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
+        initialize_linear(self.word_to_constituent, self.args['nonlinearity'], self.hidden_size * 2)
 
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers, dropout=self.lstm_layer_dropout)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
@@ -266,9 +264,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
-            nn.init.kaiming_normal_(self.reduce_linear.weight, nonlinearity=self.args['nonlinearity'])
-            nn.init.uniform_(self.reduce_linear.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
+        initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
 
         self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
 
@@ -298,9 +294,7 @@ class LSTMModel(BaseModel, nn.Module):
         output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
                                        for input_size, output_size in zip(predict_input_size, predict_output_size)])
         for output_layer, input_size in zip(output_layers, predict_input_size):
-            if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
-                nn.init.kaiming_normal_(output_layer.weight, nonlinearity=self.args['nonlinearity'])
-                nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
+            initialize_linear(output_layer, self.args['nonlinearity'], input_size)
         return output_layers
 
     def num_words_known(self, words):
