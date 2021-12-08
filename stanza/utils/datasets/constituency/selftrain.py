@@ -63,12 +63,45 @@ def build_parser_pipes(lang, models):
         parser_pipes.append(pipe)
     return parser_pipes
 
+def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=100, chunk_size=2000):
+    """
+    Using the ssplit pipeline, break up the documents into sentences
+
+    Filters out sentences which are too long or have words too long.
+
+    This step is necessary because some web text has unstructured
+    sentences which overwhelm the tagger, or even text with no
+    whitespace which breaks the charlm in the tokenizer or tagger
+    """
+    raw_sentences = 0
+    filtered_sentences = 0
+    new_docs = []
+
+    logger.info("Splitting raw docs into sentences: %d", len(docs))
+    for chunk_start in tqdm(range(0, len(docs), chunk_size)):
+        chunk = docs[chunk_start:chunk_start+chunk_size]
+        chunk = [stanza.Document([], text=t) for t in chunk]
+        chunk = ssplit_pipe(chunk)
+        sentences = [s for d in chunk for s in d.sentences]
+        raw_sentences += len(sentences)
+        sentences = [s for s in sentences if len(s.words) < max_len]
+        sentences = [s for s in sentences if max(len(w.text) for w in s.words) < max_word_len]
+        filtered_sentences += len(sentences)
+        new_docs.extend([s.text for s in sentences])
+
+    logger.info("Split sentences: %d", raw_sentences)
+    logger.info("Sentences filtered for length: %d", filtered_sentences)
+    return new_docs
+
 def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pipes, shuffle=True, chunk_size=10, max_len=140):
     """
     Find trees where all the parsers in parser_pipes agree
 
     docs should be a list of strings.
-      one sentence per string or a whole block of text as long as the tag_pipe can process it correctly
+      one sentence per string or a whole block of text as long as the tag_pipe can break it into sentences
+
+    num_sentences > 0 gives an upper limit on how many sentences to extract.
+      If < 0, all possible sentences are extracted
     """
     if num_sentences < 0:
         tqdm_total = len(docs)
