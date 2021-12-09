@@ -615,6 +615,8 @@ class CoreNLPClient(RobustService):
                 timeout=(self.timeout*2)/1000,
             )
             r.raise_for_status()
+            if r.encoding is None:
+                r.encoding = "utf-8"
             return json.loads(r.text)
         except requests.HTTPError as e:
             if r.text.startswith("Timeout"):
