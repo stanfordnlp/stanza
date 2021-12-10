@@ -7,6 +7,7 @@ The test corresponds to annotations for the following sentence:
     Chris wrote a simple sentence that he parsed with Stanford CoreNLP.
 """
 import os
+from pathlib import Path
 import pytest
 
 from pytest import fixture
@@ -24,6 +25,7 @@ TEXT = "Chris wrote a simple sentence that he parsed with Stanford CoreNLP.\n"
 @fixture
 def doc_pb():
     test_dir = os.path.dirname(os.path.abspath(__file__))
+    test_dir = Path(test_dir).parent
     test_data = os.path.join(test_dir, 'data', 'test.dat')
     with open(test_data, 'rb') as f:
         buf = f.read()
