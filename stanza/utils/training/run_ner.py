@@ -63,7 +63,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.warning(f"The data for {short_name} is missing or incomplete.  Cannot find {missing_file}  Attempting to rebuild...")
         try:
             prepare_ner_dataset.main(short_name)
-        except BaseException as e:
+        except Exception as e:
             raise FileNotFoundError(f"An exception occurred while trying to build the data for {short_name}  At least one portion of the data was missing: {missing_file}  Please correctly build these files and then try again.") from e
 
     charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, ner_charlms)
