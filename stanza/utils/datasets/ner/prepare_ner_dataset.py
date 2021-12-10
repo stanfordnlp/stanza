@@ -159,6 +159,11 @@ import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 
 SHARDS = ('train', 'dev', 'test')
 
+class UnknownDatasetError(ValueError):
+    def __init__(self, dataset, text):
+        super().__init__(text)
+        self.dataset = dataset
+
 def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio"):
     """
     Convert BIO files to json
@@ -254,7 +259,7 @@ def process_fire_2013(paths, dataset):
     langcode, _ = short_name.split("_")
     short_name = "%s_fire2013" % langcode
     if not langcode in ("hi", "en", "ta", "bn", "mal"):
-        raise ValueError("Language %s not one of the FIRE 2013 languages")
+        raise UnkonwnDatasetError(dataset, "Language %s not one of the FIRE 2013 languages" % langcode)
     language = lcode2lang[langcode].lower()
     
     # for example, FIRE2013/hindi_train
@@ -317,7 +322,7 @@ def process_rgai(paths, short_name):
         use_business = False
         use_criminal = True
     else:
-        raise ValueError("Unknown subset of hu_rgai data: %s" % short_name)
+        raise UnknownDatasetError(short_name, "Unknown subset of hu_rgai data: %s" % short_name)
 
     convert_rgai.convert_rgai(base_input_path, base_output_path, short_name, use_business, use_criminal)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
@@ -418,7 +423,7 @@ NCHLT_LANGUAGE_MAP = {
 def process_nchlt(paths, short_name):
     language = short_name.split("_")[0]
     if not language in NCHLT_LANGUAGE_MAP:
-        raise ValueError("Language %s not part of NCHLT" % language)
+        raise UnknownDatasetError(short_name, "Language %s not part of NCHLT" % language)
     short_name = "%s_nchlt" % language
 
     base_input_path = os.path.join(paths["NERBASE"], "NCHLT", NCHLT_LANGUAGE_MAP[language], "*Full.txt")
@@ -521,7 +526,7 @@ def main(dataset_name):
     elif dataset_name == "sv_suc3":
         process_sv_suc3(paths, dataset_name)
     else:
-        raise ValueError(f"dataset {dataset_name} currently not handled")
+        raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
 if __name__ == '__main__':
     main(sys.argv[1])
