@@ -39,9 +39,12 @@ BERT = {
     # change the scores any
     "vi": "vinai/phobert-large",
 
-    # need to test this out
     # https://huggingface.co/roberta-base
     "en": "roberta-base",
+
+    # https://github.com/ymcui/Chinese-BERT-wwm
+    # there's also hfl/chinese-roberta-wwm-ext-large
+    "zh-hans": "hfl/chinese-roberta-wwm-ext",
 }
 
 def add_constituency_args(parser):
