@@ -16,6 +16,8 @@ import hashlib
 import shutil
 import zipfile
 
+from stanza.models.common.constant import lcode2lang
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/current-models", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
@@ -216,89 +218,6 @@ processor_to_ending = {
   "langid": "langid"
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
-
-# add full language name to language code and add alias in resources
-lcode2lang = {
-    "af": "Afrikaans",
-    "grc": "Ancient_Greek",
-    "ar": "Arabic",
-    "hy": "Armenian",
-    "eu": "Basque",
-    "be": "Belarusian",
-    "br": "Breton",
-    "bg": "Bulgarian",
-    "bxr": "Buryat",
-    "ca": "Catalan",
-    "zh-hant": "Traditional_Chinese",
-    "lzh": "Classical_Chinese",
-    "cop": "Coptic",
-    "hr": "Croatian",
-    "cs": "Czech",
-    "da": "Danish",
-    "nl": "Dutch",
-    "en": "English",
-    "et": "Estonian",
-    "fo": "Faroese",
-    "fi": "Finnish",
-    "fr": "French",
-    "gl": "Galician",
-    "de": "German",
-    "got": "Gothic",
-    "el": "Greek",
-    "he": "Hebrew",
-    "hi": "Hindi",
-    "hu": "Hungarian",
-    "id": "Indonesian",
-    "is": "Icelandic",
-    "ga": "Irish",
-    "it": "Italian",
-    "ja": "Japanese",
-    "kk": "Kazakh",
-    "ko": "Korean",
-    "kmr": "Kurmanji",
-    "lt": "Lithuanian",
-    "olo": "Livvi",
-    "la": "Latin",
-    "lv": "Latvian",
-    "mt": "Maltese",
-    "mr": "Marathi",
-    "my": "Myanmar",
-    "pcm": "Naija",
-    "sme": "North_Sami",
-    "nb": "Norwegian_Bokmaal",
-    "nn": "Norwegian_Nynorsk",
-    "cu": "Old_Church_Slavonic",
-    "fro": "Old_French",
-    "orv": "Old_East_Slavic",
-    "fa": "Persian",
-    "pl": "Polish",
-    "pt": "Portuguese",
-    "ro": "Romanian",
-    "ru": "Russian",
-    "sa": "Sanskrit",
-    "gd": "Scottish_Gaelic",
-    "sr": "Serbian",
-    "zh-hans": "Simplified_Chinese",
-    "sk": "Slovak",
-    "sl": "Slovenian",
-    "es": "Spanish",
-    "sv": "Swedish",
-    "swl": "Swedish_Sign_Language",
-    "ta": "Tamil",
-    "te": "Telugu",
-    "th": "Thai",
-    "tr": "Turkish",
-    "qtd": "Turkish_German",
-    "uk": "Ukrainian",
-    "hsb": "Upper_Sorbian",
-    "ur": "Urdu",
-    "ug": "Uyghur",
-    "vi": "Vietnamese",
-    "cy": "Welsh",
-    "hyw": "Western_Armenian",
-    "wo": "Wolof"
-}
-
 
 def ensure_dir(dir):
     Path(dir).mkdir(parents=True, exist_ok=True)
