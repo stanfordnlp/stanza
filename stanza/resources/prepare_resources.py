@@ -312,6 +312,7 @@ def process_dirs(args):
                 resources[lang][processor][package] = {'md5': md5, 'dependencies': dependencies}
             else:
                 resources[lang][processor][package] = {'md5': md5}
+    print("Processed initial model directories.  Writing preliminary resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
@@ -400,6 +401,7 @@ def process_defaults(args):
         resources[lang]['default_dependencies'] = default_dependencies
         resources[lang]['default_md5'] = default_md5
 
+    print("Processed default model dependencies.  Writing resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
@@ -408,6 +410,8 @@ def process_lcode(args):
     resources_new = {}
     resources_new["multilingual"] = resources["multilingual"]
     for lang in resources:
+        if lang == 'multilingual':
+            continue
         if lang not in lcode2lang:
             print(lang + ' not found in lcode2lang!')
             continue
@@ -415,6 +419,7 @@ def process_lcode(args):
         resources[lang]['lang_name'] = lang_name
         resources_new[lang.lower()] = resources[lang.lower()]
         resources_new[lang_name.lower()] = {'alias': lang.lower()}
+    print("Processed lcode aliases.  Writing resources.json")
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
@@ -423,6 +428,7 @@ def process_misc(args):
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
     resources['url'] = 'https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}'
+    print("Finalized misc attributes.  Writing resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 
