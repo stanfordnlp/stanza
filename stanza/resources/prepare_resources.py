@@ -1,3 +1,13 @@
+"""
+Converts a directory of models organized by type into a directory organized by language.
+
+Also produces the resources.json file.
+
+For example, on the cluster, you can do this:
+
+python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models --output_dir /u/nlp/software/stanza/models/1.3.1b > resources.out 2>&1
+"""
+
 import json
 import argparse
 import os
