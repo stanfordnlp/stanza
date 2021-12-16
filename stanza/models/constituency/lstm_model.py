@@ -32,7 +32,7 @@ from stanza.models.constituency.partitioned_transformer import (
     PartitionedTransformerEncoder,
     PartitionedTransformerEncoderLayer,
 )
-from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward
+from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward, BatchIndices
 
 logger = logging.getLogger('stanza')
 
@@ -619,6 +619,22 @@ class LSTMModel(BaseModel, nn.Module):
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
+        # Extract Labeled Representation
+        packed_len = sum([(len(sentence) + 2) for sentence in tagged_word_lists])
+        batch_idxs = np.zeros(packed_len, dtype=int)
+        # Some processing
+        i = 0
+        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
+            for word in tagged_words:
+                batch_idxs[i] = sentence_idx
+                i += 1
+        
+        batch_idxs = BatchIndices(batch_idxs)
+        
+        labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
+        labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
+        logger.info(f"labeled_representations: {type(labeled_representations)}")
+        print(labeled_representations.shape)
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
         packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
