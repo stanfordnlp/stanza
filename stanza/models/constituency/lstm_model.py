@@ -32,6 +32,7 @@ from stanza.models.constituency.partitioned_transformer import (
     FeatureDropout,
     PartitionedTransformerEncoder,
 )
+from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward
 
 logger = logging.getLogger('stanza')
 
@@ -222,6 +223,23 @@ class LSTMModel(BaseModel, nn.Module):
             self.pattn_d_model = None
             self.pattn_encoder = None
 
+
+        # Integration of the Label Attention Layer
+        lal_params = {
+            "lal_d_kv": 64,
+            "lal_d_proj": 64,
+            "lal_resdrop": True,
+            "lal_pwff": True,
+            "lal_q_as_matrix": False,
+            "lal_partitioned": True,
+            "lal_combine_as_self": False,
+            "lal_d_positional": self.pattn_d_model // 2
+        }
+
+        self.label_attention = LabelAttention(lal_params, self.pattn_d_model, lal_params["lal_d_kv"],
+                                              lal_params["lal_d_kv"], 112, lal_params["lal_d_proj"], use_resdrop=lal_params["lal_resdrop"], q_as_matrix=lal_params["lal_q_as_matrix"],
+                                              residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
+            
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
