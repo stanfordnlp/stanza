@@ -305,6 +305,7 @@ def parse_args(args=None):
     parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
     parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
 
+    # Partitioned Attention
     parser.add_argument('--pattn_d_model', default=1024, type=int, help='Partitioned attention model dimensionality')
     parser.add_argument('--pattn_morpho_emb_dropout', default=0.2, type=float, help='Dropout rate for morphological features obtained from pretrained model')
     parser.add_argument('--pattn_encoder_max_len', default=512, type=int, help='Max length that can be put into the transformer attention layer')
@@ -318,6 +319,22 @@ def parse_args(args=None):
     parser.add_argument('--pattn_bias', default=False, action='store_true', help='Whether or not to learn an additive bias')
     # Results seem relatively similar with learned position embeddings or sin/cos position embeddings
     parser.add_argument('--pattn_timing', default='sin', choices=['learned', 'sin'], help='Use a learned embedding or a sin embedding')
+
+    # Label Attention
+    parser.add_argument('--lattn_d_model', default=1024, type=int, help='Label Attention Layer dimensionality')
+    parser.add_argument('--lattn_d_kv', default=64, type=int, help='Dimension of the key/query vector')
+    parser.add_argument('--lattn_d_proj', default=64, type=int, help='Dimension of the output vector from each label attention head')
+    parser.add_argument('--lattn_resdrop', default=True, action='store_true', help='Whether or not to use Residual Dropout')
+    parser.add_argument('--lattn_pwff', default=True, action='store_true', help='Whether or not to use a Position-wise Feed-forward Layer')
+    parser.add_argument('--lattn_q_as_matrix', default=False, action='store_true', help='Whether or not Label Attention uses learned query vectors. False means it does')
+    parser.add_argument('--lattn_partitioned', default=True, action='store_true', help='Whether or not it is partitioned')
+    parser.add_argument('--lattn_combine_as_self', default=False, action='store_true', help='Whether or not the layer uses concatenation. False means it does')
+    parser.add_argument('--lattn_d_positional', default=512, type=int, help='Dimension for the positional embedding')
+    parser.add_argument('--lattn_d_l', default=32, type=int, help='Number of labels')
+    parser.add_argument('--lattn_attention_dropout', default=0.2, type=float, help='Dropout for attention layer')
+    parser.add_argument('--lattn_d_ff', default=2048, type=int, help='Dimension of the Feed-forward layer')
+    parser.add_argument('--lattn_relu_dropout', default=0.2, type=float, help='Relu dropout for the label attention')
+    parser.add_argument('--lattn_residual_dropout', default=0.2, type=float, help='Residual dropout for the label attention')
 
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
