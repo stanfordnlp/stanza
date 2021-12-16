@@ -22,15 +22,15 @@ from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
-from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_transitions import Shift, CloseConstituent, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
-from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
+from stanza.models.constituency.utils import build_nonlinearity
 from stanza.models.constituency.partitioned_transformer import (
     ConcatPositionalEncoding,
-    ConcatSinusoidalEncoding,
     FeatureDropout,
     PartitionedTransformerEncoder,
+    PartitionedTransformerEncoderLayer,
 )
 from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward
 
@@ -59,7 +59,7 @@ class SentenceBoundary(Enum):
 
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, common_words, root_labels, open_nodes, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -135,6 +135,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('delta_tensors', torch.tensor(range(len(self.delta_words) + 2), requires_grad=False))
 
         self.rare_words = set(rare_words)
+        self.common_words = sorted(list(common_words))
 
         self.tags = sorted(list(tags))
         if self.tag_embedding_dim > 0:
@@ -144,11 +145,20 @@ class LSTMModel(BaseModel, nn.Module):
                                               padding_idx = 0)
             self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
+        # TODO: refactor?
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
+        if self.args.get('labeled_transition_embedding', False):
+            for common_word in common_words:
+                labeled_transition = (Shift(), common_word)
+                self.transition_map[labeled_transition] = len(self.transition_map)
+            for label in open_nodes:
+                labeled_transition = (CloseConstituent(), label)
+                self.transition_map[labeled_transition] = len(self.transition_map)
+        assert len(set(self.transition_map.values())) == len(self.transition_map)
         # precompute tensors for the transitions
-        self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
-        self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
+        self.register_buffer('transition_tensors', torch.tensor(range(len(self.transition_map)), requires_grad=False))
+        self.transition_embedding = nn.Embedding(num_embeddings = len(self.transition_map),
                                                  embedding_dim = self.transition_embedding_dim)
 
         self.num_layers = self.args['num_lstm_layers']
@@ -192,31 +202,30 @@ class LSTMModel(BaseModel, nn.Module):
         # TODO: remove this `get` once it's not needed
         if self.args.get('pattn_num_heads', 0) > 0 and self.args.get('pattn_num_layers', 0) > 0:
             # Initializations of parameters for the Partitioned Attention
-            # round off the size of the model so that it divides in half evenly
             self.pattn_d_model = self.args['pattn_d_model'] // 2 * 2
 
             # Initializations for the Partitioned Attention
-            # experiments suggest having a bias does not help here
+            # we build the layer using all of the 
             self.project_pretrained = nn.Linear(
                 self.word_input_size, self.pattn_d_model // 2, bias=True
             )
 
             self.pattention_morpho_emb_dropout = FeatureDropout(self.args['pattn_morpho_emb_dropout'])
-            if self.args['pattn_timing'] == 'sin':
-                self.add_timing = ConcatSinusoidalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
-            elif self.args['pattn_timing'] == 'learned':
-                self.add_timing = ConcatPositionalEncoding(d_model=self.pattn_d_model, max_len=self.args['pattn_encoder_max_len'])
-            else:
-                raise ValueError("Unhandled timing type: %s" % self.args['pattn_timing'])
-            self.pattn_encoder = PartitionedTransformerEncoder(
-                self.args['pattn_num_layers'],
+            self.add_timing = ConcatPositionalEncoding(
                 d_model=self.pattn_d_model,
+                max_len=self.args['pattn_encoder_max_len'],
+            )
+            encoder_layer = PartitionedTransformerEncoderLayer(
+                self.pattn_d_model,
                 n_head=self.args['pattn_num_heads'],
                 d_qkv=self.args['pattn_d_kv'],
                 d_ff=self.args['pattn_d_ff'],
                 ff_dropout=self.args['pattn_relu_dropout'],
                 residual_dropout=self.args['pattn_residual_dropout'],
                 attention_dropout=self.args['pattn_attention_dropout'],
+            )
+            self.pattn_encoder = PartitionedTransformerEncoder(
+                encoder_layer, self.args['pattn_num_layers']
             )
             self.word_input_size += self.pattn_d_model
         else:
@@ -260,7 +269,9 @@ class LSTMModel(BaseModel, nn.Module):
         # hidden_size * 2 output with the front and back lstms concatenated.
         # this transforms it into hidden_size with the values mixed together
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        initialize_linear(self.word_to_constituent, self.args['nonlinearity'], self.hidden_size * 2)
+        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+            nn.init.kaiming_normal_(self.word_to_constituent.weight, nonlinearity=self.args['nonlinearity'])
+            nn.init.uniform_(self.word_to_constituent.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
 
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_layers, dropout=self.lstm_layer_dropout)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
@@ -295,7 +306,9 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
         # affine transformation from bi-lstm reduce to a new hidden layer
         self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
+        if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+            nn.init.kaiming_normal_(self.reduce_linear.weight, nonlinearity=self.args['nonlinearity'])
+            nn.init.uniform_(self.reduce_linear.bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
 
         self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
 
@@ -305,28 +318,20 @@ class LSTMModel(BaseModel, nn.Module):
 
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
-        self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
+        middle_layers = self.args['num_output_layers'] - 1
+        predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
+        predict_output_size = [self.hidden_size] * middle_layers + [len(transitions)]
+        self.output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
+                                            for input_size, output_size in zip(predict_input_size, predict_output_size)])
+        for output_layer, input_size in zip(self.output_layers, predict_input_size):
+            if self.args['nonlinearity'] in ('relu', 'leaky_relu'):
+                nn.init.kaiming_normal_(output_layer.weight, nonlinearity=self.args['nonlinearity'])
+                nn.init.uniform_(output_layer.bias, 0, 1 / input_size ** 0.5)
 
         self.constituency_lstm = self.args['constituency_lstm']
 
         self._unary_limit = unary_limit
 
-    def build_output_layers(self, num_output_layers, final_layer_size):
-        """
-        Build a ModuleList of Linear transformations for the given num_output_layers
-
-        The final layer size can be specified.
-        Initial layer size is the combination of word, constituent, and transition vectors
-        Middle layer sizes are self.hidden_size
-        """
-        middle_layers = num_output_layers - 1
-        predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
-        predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
-        output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
-                                       for input_size, output_size in zip(predict_input_size, predict_output_size)])
-        for output_layer, input_size in zip(output_layers, predict_input_size):
-            initialize_linear(output_layer, self.args['nonlinearity'], input_size)
-        return output_layers
 
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
@@ -402,8 +407,7 @@ class LSTMModel(BaseModel, nn.Module):
             list_offsets[idx][-1] = -1
 
             if len(offsets) > tokenizer.model_max_length:
-                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
-                raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
 
         features = []
         for i in range(int(math.ceil(len(data)/128))):
@@ -434,7 +438,7 @@ class LSTMModel(BaseModel, nn.Module):
         processed = [] # final product, returns the list of list of word representation
         tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
         list_tokenized = [] # list of tokenized sentences from phobert
-        for idx, sent in enumerate(data):
+        for sent in data:
             #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
             tokenized = [word.replace(" ","_") for word in sent]
 
@@ -454,8 +458,8 @@ class LSTMModel(BaseModel, nn.Module):
             tokenized_sent = [tokenizer.bos_token_id] + sent_ids + [tokenizer.eos_token_id]
 
             if len(tokenized_sent) > tokenizer.model_max_length:
-                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), data[idx])
-                raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
+                logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), tokenized_sent)
+                continue
 
             #add to tokenized_sents
             tokenized_sents.append(torch.tensor(tokenized_sent).detach())
@@ -615,6 +619,8 @@ class LSTMModel(BaseModel, nn.Module):
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
+        # Extract Label Attention Representation
+        lal_embeddings = self.label_attention
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
         packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
@@ -707,13 +713,6 @@ class LSTMModel(BaseModel, nn.Module):
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
-        """
-        Build new constituents with the given label from the list of children
-
-        labels is a list of labels for each of the new nodes to construct
-        children_lists is a list of children that go under each of the new nodes
-        lists of each are used so that we can stack operations
-        """
         label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
 
         max_length = max(len(children) for children in children_lists)
@@ -782,15 +781,26 @@ class LSTMModel(BaseModel, nn.Module):
         Push all of the given transitions on to the stack as a batch operations.
 
         Significantly faster than doing one transition at a time.
+
+        The transitions are pairs of (transition, data) where data can
+        be None or can be used to choose a labeled form of the
+        transition.  If a labeled form of the transition is given,
+        it is averaged with the base form of the same transition.
         """
-        transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
-        transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
+        half_mapped = [self.transition_map[t[0]] for t in transitions]
+        full_mapped = [self.transition_map.get(t, None) for t in transitions]
+        transition_input = [(self.transition_embedding(self.transition_tensors[half]) +
+                             self.transition_embedding(self.transition_tensors[full])) / 2 if full is not None
+                            else self.transition_embedding(self.transition_tensors[half])
+                            for half, full in zip(half_mapped, full_mapped)]
+        transition_input = torch.stack(transition_input).unsqueeze(0)
+        # transition_input is now 1 x batch x dim
         transition_input = self.lstm_input_dropout(transition_input)
 
         hx = torch.cat([t.value.hx for t in transition_stacks], axis=1)
         cx = torch.cat([t.value.cx for t in transition_stacks], axis=1)
         output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
-        new_stacks = [stack.push(TransitionNode(transition, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
+        new_stacks = [stack.push(TransitionNode(transition[0], output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
                       for i, (stack, transition) in enumerate(zip(transition_stacks, transitions))]
         return new_stacks
 
@@ -838,7 +848,8 @@ class LSTMModel(BaseModel, nn.Module):
             hx = output_layer(hx)
         return hx
 
-    def predict(self, states, is_legal=True):
+    # TODO: merge this with forward?
+    def predict(self, states, is_legal=False):
         """
         Generate and return predictions, along with the transitions those predictions represent
 
@@ -863,26 +874,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         return predictions, pred_trans
 
-    def weighted_choice(self, states):
-        """
-        Generate and return predictions, and randomly choose a prediction weighted by the scores
-
-        TODO: pass in a temperature
-        """
-        predictions = self.forward(states)
-        pred_trans = []
-        for state, prediction in zip(states, predictions):
-            legal_idx = [idx for idx in range(prediction.shape[0]) if self.transitions[idx].is_legal(state, self)]
-            if len(legal_idx) == 0:
-                pred_trans.append(None)
-                continue
-            scores = prediction[legal_idx]
-            scores = torch.softmax(scores, dim=0)
-            idx = torch.multinomial(scores, 1)
-            idx = legal_idx[idx]
-            pred_trans.append(self.transitions[idx])
-        return predictions, pred_trans
-
     def get_params(self, skip_modules=True):
         """
         Get a dictionary for saving the model
@@ -902,6 +893,7 @@ class LSTMModel(BaseModel, nn.Module):
             'tags': self.tags,
             'words': self.delta_words,
             'rare_words': self.rare_words,
+            'common_words': self.common_words,
             'root_labels': self.root_labels,
             'open_nodes': self.open_nodes,
         }

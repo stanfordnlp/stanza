@@ -20,6 +20,23 @@ else:
     torch_t = torch
     from torch import from_numpy
 
+class BatchIndices:
+    """
+    Batch indices container class (used to implement packed batches)
+    """
+    def __init__(self, batch_idxs_np):
+        self.batch_idxs_np = batch_idxs_np
+        self.batch_idxs_torch = from_numpy(batch_idxs_np)
+
+        self.batch_size = int(1 + np.max(batch_idxs_np))
+
+        batch_idxs_np_extra = np.concatenate([[-1], batch_idxs_np, [-1]])
+        self.boundaries_np = np.nonzero(batch_idxs_np_extra[1:] != batch_idxs_np_extra[:-1])[0]
+        self.seq_lens_np = self.boundaries_np[1:] - self.boundaries_np[:-1]
+        assert len(self.seq_lens_np) == self.batch_size
+        self.max_len = int(np.max(self.boundaries_np[1:] - self.boundaries_np[:-1]))
+
+
 class FeatureDropoutFunction(torch.autograd.function.InplaceFunction):
     @classmethod
     def forward(cls, ctx, input, batch_idxs, p=0.5, train=False, inplace=False):
