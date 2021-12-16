@@ -7,6 +7,18 @@ import torch.nn as nn
 import torch.nn.init as init
 import transformers
 
+use_cuda = torch.cuda.is_available()
+if use_cuda:
+    torch_t = torch.cuda
+    def from_numpy(ndarray):
+        if float(sys.version[:3]) <= 3.6:
+            return eval('torch.from_numpy(ndarray).pin_memory().cuda(async=True)')
+        else:
+            return torch.from_numpy(ndarray).pin_memory().cuda(non_blocking=True)
+else:
+    print("Not using CUDA!")
+    torch_t = torch
+    from torch import from_numpy
 
 class FeatureDropoutFunction(torch.autograd.function.InplaceFunction):
     @classmethod
@@ -364,7 +376,7 @@ class LabelAttention(nn.Module):
         self.d_proj = d_proj # Projection dimension of each label output
         self.use_resdrop = use_resdrop # Using Residual Dropout?
         self.q_as_matrix = q_as_matrix # Using a Matrix of Q to be multiplied with input instead of learned q vectors
-        self.combine_as_self = hparams.lal_combine_as_self # Using the Combination Method of Self-Attention
+        self.combine_as_self = hparams["lal_combine_as_self"] # Using the Combination Method of Self-Attention
 
         if d_positional is None:
             self.partitioned = False
