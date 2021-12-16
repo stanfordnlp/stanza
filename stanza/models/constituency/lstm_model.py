@@ -27,6 +27,7 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
 from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
+from stanza.models.constituency.label_attention import LabelAttentionModule
 
 logger = logging.getLogger('stanza')
 
@@ -218,6 +219,26 @@ class LSTMModel(BaseModel, nn.Module):
         else:
             self.partitioned_transformer_module = None
 
+        # Integration of the Label Attention Layer
+        #
+        self.label_attention_module = LabelAttentionModule(self.args['lattn_d_model'],
+                                              self.args['lattn_d_kv'],
+                                              self.args['lattn_d_kv'],
+                                              self.args['lattn_d_l'],
+                                              self.args['lattn_d_proj'],
+                                              self.args['lattn_combine_as_self'],
+                                              self.args['lattn_resdrop'],
+                                              self.args['lattn_q_as_matrix'],
+                                              self.args['lattn_residual_dropout'],
+                                              self.args['lattn_attention_dropout'],
+                                              self.args['lattn_d_positional'],
+                                              self.args['lattn_d_ff'],
+                                              self.args['lattn_relu_dropout'],
+                                              self.args['lattn_partitioned'])
+        
+        self.word_input_size = self.word_input_size + self.args['lattn_d_proj']*self.args['lattn_d_l'] # ff_dim
+        # End of Label Attention Specs
+            
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
@@ -548,6 +569,12 @@ class LSTMModel(BaseModel, nn.Module):
             partitioned_embeddings = self.partitioned_transformer_module(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
+        # Extract Labeled Representation
+        labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
+        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
+        
+        # End of Labeled Representation
+        
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
         packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
