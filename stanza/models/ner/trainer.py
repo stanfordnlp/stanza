@@ -8,6 +8,7 @@ import torch
 from torch import nn
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
+from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common import utils, loss
 from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
@@ -144,3 +145,19 @@ class Trainer(BaseTrainer):
         self.model = NERTagger(self.args, self.vocab)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
+    def get_known_tags(self):
+        """
+        Return the tags known by this model
+
+        Removes the S-, B-, etc, and does not include O
+        """
+        tags = set()
+        for tag in self.vocab['tag']:
+            if tag in VOCAB_PREFIX:
+                continue
+            if tag == 'O':
+                continue
+            if len(tag) > 2 and tag[:2] in ('S-', 'B-', 'I-', 'E-'):
+                tag = tag[2:]
+            tags.add(tag)
+        return sorted(tags)
