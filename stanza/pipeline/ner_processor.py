@@ -47,3 +47,11 @@ class NERProcessor(UDProcessor):
         for doc in docs:
             doc.build_ents()
         return docs
+
+    def get_known_tags(self):
+        """
+        Return the tags known by this model
+
+        Removes the S-, B-, etc, and does not include O
+        """        
+        return self._trainer.get_known_tags()
