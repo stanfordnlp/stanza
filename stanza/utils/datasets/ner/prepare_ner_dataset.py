@@ -127,12 +127,8 @@ SUC3 is a Swedish NER dataset provided by Språkbanken
     an Open-Source Part of Speech Tagger for Swedish
     Northern European Journal of Language Technology 3: 1–18
     DOI 10.3384/nejlt.2000-1533.1331
-  - TODO: the latter paper mentions a specific test set
-    to use, but that cannot be done until we get the
-    un-scrambled data.  The publicly available data
-    is scrambled with the filenames removed.
-    Currently the model is produced using a random split
-    of sentences from the scrambled data.
+  - The shuffled dataset can be converted with dataset code
+    prepare_ner_dataset.py sv_suc3shuffle
 """
 
 import glob
@@ -472,20 +468,20 @@ def process_fa_arman(paths, short_name):
     shutil.copy2(test_input_file, test_output_file)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
-def process_sv_suc3(paths, short_name):
+def process_sv_suc3shuffle(paths, short_name):
     """
     Uses an externally provided script to read the SUC3 XML file, then splits it
     """
-    assert short_name == "sv_suc3"
+    assert short_name == "sv_suc3shuffle"
     language = "sv"
-    train_input_file = os.path.join(paths["NERBASE"], "sv_suc3", "suc3.xml.bz2")
+    train_input_file = os.path.join(paths["NERBASE"], "sv_suc3shuffle", "suc3.xml.bz2")
     if not os.path.exists(train_input_file):
         train_input_file = train_input_file[:-4]
     if not os.path.exists(train_input_file):
         raise FileNotFoundError("Unable to find the SUC3 dataset in {}.bz2".format(train_input_file))
 
     base_output_path = paths["NER_DATA_DIR"]
-    train_output_file = os.path.join(base_output_path, "sv_suc3.iob")
+    train_output_file = os.path.join(base_output_path, "sv_suc3shuffle.iob")
     # Here we use the <name> tags instead of the <ne> tags to get the NER types
     # There are some obviously missed NEs in the <ne> tags, such as Moselle
     suc_to_iob.main([train_input_file, train_output_file, "--ner_tag", "name"])
@@ -523,8 +519,8 @@ def main(dataset_name):
         process_nchlt(paths, dataset_name)
     elif dataset_name == "fa_arman":
         process_fa_arman(paths, dataset_name)
-    elif dataset_name == "sv_suc3":
-        process_sv_suc3(paths, dataset_name)
+    elif dataset_name == "sv_suc3shuffle":
+        process_sv_suc3shuffle(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
