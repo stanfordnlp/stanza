@@ -31,7 +31,6 @@ from stanza.models.constituency.partitioned_transformer import (
     ConcatSinusoidalEncoding,
     FeatureDropout,
     PartitionedTransformerEncoder,
-    PartitionedTransformerEncoderLayer,
 )
 
 logger = logging.getLogger('stanza')
