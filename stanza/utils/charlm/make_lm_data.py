@@ -1,6 +1,7 @@
 """
 Create Stanza character LM train/dev/test data, by reading from txt files in each source corpus directory,
 shuffling, splitting and saving into multiple smaller files (50MB by default) in a target directory.
+
 This script assumes the following source directory structures:
     - {src_dir}/{language}/{corpus}/*.txt
 It will read from all source .txt files and create the following target directory structures:
@@ -23,6 +24,8 @@ import shutil
 from pathlib import Path
 import argparse
 
+from tqdm import tqdm
+
 EXCLUDED_FOLDERS = ['raw_corpus']
 
 def main():
@@ -30,6 +33,7 @@ def main():
     parser.add_argument("src_root", default="src", help="Root directory with all source files.")
     parser.add_argument("tgt_root", default="tgt", help="Root directory with all target files.")
     parser.add_argument("--langs", default="", help="A list of language codes to process.")
+    parser.add_argument("--no_xz_output", default=True, dest="xz_output", action="store_false", help="Output compressed xz files")
     args = parser.parse_args()
 
     print("Processing files:")
@@ -65,11 +69,11 @@ def main():
             if not os.path.exists(tgt_dir):
                 os.makedirs(tgt_dir)
             print(f"-> Processing {lang}-{dataset_name}")
-            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name)
+            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output)
         
         print("")
 
-def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name):
+def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
     """
     Combine, shuffle and split data into smaller files, following a naming convention.
     """
@@ -107,8 +111,16 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name):
     print(f"--> {total} total files generated.")
 
     print("--> Creating dev and test files...")
-    shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", f"{tgt_dir}/dev.txt")
-    shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", f"{tgt_dir}/test.txt")
+    dev_file = f"{tgt_dir}/dev.txt"
+    test_file = f"{tgt_dir}/test.txt"
+    shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
+    shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
+
+    if compress:
+        print("--> Compressing files...")
+        txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
+        for txt_file in tqdm(txt_files):
+            subprocess.run(['xz', txt_file])
 
     print("--> Cleaning up...")
     os.remove(tgt_tmp)
