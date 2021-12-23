@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.init as init
 import transformers
 
+DTYPE = torch.uint8 if float(sys.version[:3]) < 3.7 else torch.bool
+
 use_cuda = torch.cuda.is_available()
 if use_cuda:
     torch_t = torch.cuda
@@ -20,6 +22,10 @@ else:
     torch_t = torch
     from torch import from_numpy
 
+print(f"using cuda: {torch.cuda.is_available()}")
+print()
+print()
+
 class BatchIndices:
     """
     Batch indices container class (used to implement packed batches)
@@ -32,7 +38,14 @@ class BatchIndices:
 
         batch_idxs_np_extra = np.concatenate([[-1], batch_idxs_np, [-1]])
         self.boundaries_np = np.nonzero(batch_idxs_np_extra[1:] != batch_idxs_np_extra[:-1])[0]
+        print()
+        print()
+        print(f"boundaries_np: {self.boundaries_np}")
+        print(f"boundaries_np[1:]: {self.boundaries_np[1:]}")
+        print(f"boundaries_np[:-1]: {self.boundaries_np[:-1]}")
         self.seq_lens_np = self.boundaries_np[1:] - self.boundaries_np[:-1]
+        print(f"seq_lens_np: {self.seq_lens_np}")
+        print(f"batch_size: {self.batch_size}")
         assert len(self.seq_lens_np) == self.batch_size
         self.max_len = int(np.max(self.boundaries_np[1:] - self.boundaries_np[:-1]))
 
@@ -570,7 +583,10 @@ class LabelAttention(nn.Module):
 
     def forward(self, inp, batch_idxs, k_inp=None):
         residual = inp # len_inp x d_model
+        print()
+        print(f"inp.shape: {inp.shape}")
         len_inp = inp.size(0)
+        print(f"len_inp: {len_inp}")
 
         # While still using a packed representation, project to obtain the
         # query/key/value for each head
@@ -597,6 +613,7 @@ class LabelAttention(nn.Module):
         # output_mask: (d_l * batch_size) x max_len
         torch.cuda.empty_cache()
         outputs = self.combine_v(outputs)
+        print(f"outputs shape: {outputs.shape}")
         # outputs: len_inp x d_l x d_model, whereas a normal self-attention layer gets len_inp x d_model
         if self.use_resdrop:
             if self.combine_as_self:
