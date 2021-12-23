@@ -253,6 +253,9 @@ class LSTMModel(BaseModel, nn.Module):
                                               residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
 
         ff_dim = lal_params["lal_d_proj"] * d_l
+        # This line is where the code starts to go wrong
+        # I need to add this line so that there will not be a mismatch in input size for the word_lstm, but if I add this, there's an error with
+        # the concatenation of the all_word_inputs and the labeled_representations
         #self.word_input_size = self.word_input_size + ff_dim
         logger.info(f"word_input_size: {self.word_input_size}")
         d_ff = 2048
@@ -266,7 +269,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         # End of Label Attention Specs
             
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size+ff_dim, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -619,32 +622,22 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Extract partitioned representation
         if self.pattn_encoder is not None:
-            print()
-            print()
-            logger.info("Concatenating Partitioned Representation")
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
-            logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
-            logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
-            print()
-            print()
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
-        logger.info(f"all_word_inputs type: {type(all_word_inputs)}")
-        logger.info(f"element type: {type(all_word_inputs[0])}")
-        for idx, word_input in enumerate(all_word_inputs):
-            print(f"{idx}: {word_input.shape}")
+        # Packing 
         packed_len = sum([int(sentence.shape[0]) for sentence in all_word_inputs])
-        logger.info(f"packed_len: {packed_len}")
+        
         batch_idxs = np.zeros(packed_len, dtype=int)
-        # Some processing
+        # Obtaining batch size and checking the sentences that are being processed
         i = 0
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            sentence = [word.children[0].label for word in tagged_words]
+            #sentence = [word.children[0].label for word in tagged_words]
+            #print(f"{sentence_idx}: {sentence}")
             if sentence_idx > i:
                 i = sentence_idx
-            print(f"{sentence_idx}: {sentence}")
-
+            
         batch_size = i + 1
         
         i = 0
@@ -655,9 +648,9 @@ class LSTMModel(BaseModel, nn.Module):
                 batch_idxs[i] = sentence_idx
                 i += 1
 
-        logger.info(f"batch_idxs: {batch_idxs}")
+        # BatchIndices Object for Packing the Padded Partitioned_Embeddings
         batch_idxs = BatchIndices(batch_idxs)
-        logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
+        
         new_embeds = []
         for sentence_idx, batch in enumerate(partitioned_embeddings):
             for word_idx, embed in enumerate(batch):
@@ -671,17 +664,12 @@ class LSTMModel(BaseModel, nn.Module):
         second_dim = labeled_representations.shape[0] // first_dim
         third_dim = labeled_representations.shape[1]
         labeled_representations = labeled_representations.contiguous().view(first_dim, second_dim, -1)
-        print()
-        print()
-        logger.info("Concatenating Labeled Representations")
-        logger.info(f"labeled_representations: {type(labeled_representations)}")
-        logger.info(f"labeled_representations shape: {labeled_representations.shape}")
-        logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
-        logger.info(f"an element of all_word_inputs has shape: {all_word_inputs[0].shape}")
-        print()
-        print()
+
+        # Appending the labeled_representations to the all_word_inputs
         all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
-        # If everything goes well, the only error would be in the shape of all_word_inputs
+
+        # Because I commented out line 259, after this there will definitely be an error
+        # in line 677, as the word_lstm input size has not been updated
         # End of Labeled Representation
         
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
