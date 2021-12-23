@@ -33,6 +33,7 @@ from stanza.models.constituency.partitioned_transformer import (
     PartitionedTransformerEncoderLayer,
 )
 from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward, BatchIndices
+import numpy as np
 
 logger = logging.getLogger('stanza')
 
@@ -258,9 +259,9 @@ class LSTMModel(BaseModel, nn.Module):
         lal_partitioned = True
         self.lal_ff = None
         if not lal_partitioned:
-            lal_ff = PositionwiseFeedForward(ff_dim, d_ff, relu_dropout=relu_dropout, residual_dropout=residual_dropout)
+            self.lal_ff = PositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         else:
-            lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, relu_dropout=relu_dropout, residual_dropout=residual_dropout)
+            self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         
             
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
@@ -620,21 +621,47 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
-        packed_len = sum([(len(sentence) + 2) for sentence in tagged_word_lists])
+        logger.info(f"all_word_inputs type: {type(all_word_inputs)}")
+        logger.info(f"element type: {type(all_word_inputs[0])}")
+        for idx, word_input in enumerate(all_word_inputs):
+            print(f"{idx}: {word_input.shape}")
+        packed_len = sum([int(sentence.shape[0]) for sentence in all_word_inputs])
+        logger.info(f"packed_len: {packed_len}")
         batch_idxs = np.zeros(packed_len, dtype=int)
         # Some processing
         i = 0
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            for word in tagged_words:
+            sentence = [word.children[0].label for word in tagged_words]
+            if sentence_idx > i:
+                i = sentence_idx
+            print(f"{sentence_idx}: {sentence}")
+
+        batch_size = i + 1
+        
+        i = 0
+        sentence_lengths = [0] * batch_size 
+        for sentence_idx, sentence in enumerate(all_word_inputs):
+            sentence_lengths[sentence_idx] = len(sentence)
+            for word in sentence:
                 batch_idxs[i] = sentence_idx
                 i += 1
-        
+
+        logger.info(f"batch_idxs: {batch_idxs}")
         batch_idxs = BatchIndices(batch_idxs)
-        
+        logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
+        new_embeds = []
+        for sentence_idx, batch in enumerate(partitioned_embeddings):
+            for word_idx, embed in enumerate(batch):
+                if word_idx < sentence_lengths[sentence_idx]:
+                    new_embeds.append(embed)
+                
+        partitioned_embeddings = torch.stack(new_embeds)
         labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
         labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
         logger.info(f"labeled_representations: {type(labeled_representations)}")
         print(labeled_representations.shape)
+        # End of Labeled Representation
+        
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
         packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)
         word_output, _ = self.word_lstm(packed_word_input)
