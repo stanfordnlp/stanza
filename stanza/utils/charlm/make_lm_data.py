@@ -17,12 +17,13 @@ Args:
 Note: edit the {EXCLUDED_FOLDERS} variable to exclude more folders in the source directory.
 """
 
-import subprocess
+import argparse
 import glob
 import os
-import shutil
 from pathlib import Path
-import argparse
+import shutil
+import subprocess
+import tempfile
 
 from tqdm import tqdm
 
@@ -79,52 +80,49 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
     """
     assert isinstance(src_dir, Path)
     assert isinstance(tgt_dir, Path)
-    tgt_tmp = tgt_dir / f"{lang}-{dataset_name}.tmp"
-    if os.path.exists(tgt_tmp):
-        os.remove(tgt_tmp)
-    print(f"--> Copying files into {tgt_tmp}...")
-    # TODO: we can do this without the shell commands
-    for src_fn in glob.glob(str(src_dir) + '/*.txt'):
-        cmd = f"cat {src_fn} >> {tgt_tmp}"
+    with tempfile.TemporaryDirectory(dir=tgt_dir) as tempdir:
+        tgt_tmp = os.path.join(tempdir, f"{lang}-{dataset_name}.tmp")
+        print(f"--> Copying files into {tgt_tmp}...")
+        # TODO: we can do this without the shell commands
+        for src_fn in glob.glob(str(src_dir) + '/*.txt'):
+            cmd = f"cat {src_fn} >> {tgt_tmp}"
+            subprocess.run(cmd, shell=True)
+        for src_fn in glob.glob(str(src_dir) + '/*.txt.xz'):
+            cmd = f"xzcat {src_fn} >> {tgt_tmp}"
+            subprocess.run(cmd, shell=True)
+        for src_fn in glob.glob(str(src_dir) + '/*.txt.gz'):
+            cmd = f"zcat {src_fn} >> {tgt_tmp}"
+            subprocess.run(cmd, shell=True)
+        tgt_tmp_shuffled = os.path.join(tempdir, f"{lang}-{dataset_name}.tmp.shuffled")
+
+        print(f"--> Shuffling files into {tgt_tmp_shuffled}...")
+        cmd = f"cat {tgt_tmp} | shuf > {tgt_tmp_shuffled}"
         subprocess.run(cmd, shell=True)
-    for src_fn in glob.glob(str(src_dir) + '/*.txt.xz'):
-        cmd = f"xzcat {src_fn} >> {tgt_tmp}"
+        size = os.path.getsize(tgt_tmp_shuffled) / 1024 / 1024 / 1024
+        print(f"--> Shuffled file size: {size:.4f} GB")
+
+        print(f"--> Splitting into smaller files...")
+        train_dir = tgt_dir / 'train'
+        if not os.path.exists(train_dir): # make training dir
+            os.makedirs(train_dir)
+        cmd = f"split -C 52428800 -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
         subprocess.run(cmd, shell=True)
-    for src_fn in glob.glob(str(src_dir) + '/*.txt.gz'):
-        cmd = f"zcat {src_fn} >> {tgt_tmp}"
-        subprocess.run(cmd, shell=True)
-    tgt_tmp_shuffled = Path(str(tgt_tmp) + ".shuffled")
+        total = len(glob.glob(f'{train_dir}/*.txt'))
+        print(f"--> {total} total files generated.")
 
-    print(f"--> Shuffling files into {tgt_tmp_shuffled}...")
-    cmd = f"cat {tgt_tmp} | shuf > {tgt_tmp_shuffled}"
-    subprocess.run(cmd, shell=True)
-    size = os.path.getsize(tgt_tmp_shuffled) / 1024 / 1024 / 1024
-    print(f"--> Shuffled file size: {size:.4f} GB")
+        print("--> Creating dev and test files...")
+        dev_file = f"{tgt_dir}/dev.txt"
+        test_file = f"{tgt_dir}/test.txt"
+        shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
+        shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
 
-    print(f"--> Splitting into smaller files...")
-    train_dir = tgt_dir / 'train'
-    if not os.path.exists(train_dir): # make training dir
-        os.makedirs(train_dir)
-    cmd = f"split -C 52428800 -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
-    subprocess.run(cmd, shell=True)
-    total = len(glob.glob(f'{train_dir}/*.txt'))
-    print(f"--> {total} total files generated.")
+        if compress:
+            print("--> Compressing files...")
+            txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
+            for txt_file in tqdm(txt_files):
+                subprocess.run(['xz', txt_file])
 
-    print("--> Creating dev and test files...")
-    dev_file = f"{tgt_dir}/dev.txt"
-    test_file = f"{tgt_dir}/test.txt"
-    shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
-    shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
-
-    if compress:
-        print("--> Compressing files...")
-        txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
-        for txt_file in tqdm(txt_files):
-            subprocess.run(['xz', txt_file])
-
-    print("--> Cleaning up...")
-    os.remove(tgt_tmp)
-    os.remove(tgt_tmp_shuffled)
+        print("--> Cleaning up...")
     print(f"--> All done for {lang}-{dataset_name}.\n")
 
 if __name__ == "__main__":
