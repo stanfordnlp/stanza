@@ -253,6 +253,8 @@ class LSTMModel(BaseModel, nn.Module):
                                               residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
 
         ff_dim = lal_params["lal_d_proj"] * d_l
+        #self.word_input_size = self.word_input_size + ff_dim
+        logger.info(f"word_input_size: {self.word_input_size}")
         d_ff = 2048
         relu_dropout = 0.2
         residual_dropout = 0.2
@@ -262,9 +264,9 @@ class LSTMModel(BaseModel, nn.Module):
             self.lal_ff = PositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         else:
             self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
-        
+        # End of Label Attention Specs
             
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size+ff_dim, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -617,7 +619,14 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Extract partitioned representation
         if self.pattn_encoder is not None:
+            print()
+            print()
+            logger.info("Concatenating Partitioned Representation")
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
+            logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
+            logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
+            print()
+            print()
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
@@ -658,8 +667,21 @@ class LSTMModel(BaseModel, nn.Module):
         partitioned_embeddings = torch.stack(new_embeds)
         labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
         labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
+        first_dim = len(all_word_inputs)
+        second_dim = labeled_representations.shape[0] // first_dim
+        third_dim = labeled_representations.shape[1]
+        labeled_representations = labeled_representations.contiguous().view(first_dim, second_dim, -1)
+        print()
+        print()
+        logger.info("Concatenating Labeled Representations")
         logger.info(f"labeled_representations: {type(labeled_representations)}")
-        print(labeled_representations.shape)
+        logger.info(f"labeled_representations shape: {labeled_representations.shape}")
+        logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
+        logger.info(f"an element of all_word_inputs has shape: {all_word_inputs[0].shape}")
+        print()
+        print()
+        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
+        # If everything goes well, the only error would be in the shape of all_word_inputs
         # End of Labeled Representation
         
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
