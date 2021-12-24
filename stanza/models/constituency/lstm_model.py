@@ -623,7 +623,7 @@ class LSTMModel(BaseModel, nn.Module):
             print()
             logger.info("Concatenating Partitioned Representation")
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
-            logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
+            logger.info(f"partitioned_embeddings shape, concatenating phase: {partitioned_embeddings.shape}")
             logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
             print()
             print()
