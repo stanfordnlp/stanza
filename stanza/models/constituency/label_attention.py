@@ -22,10 +22,6 @@ else:
     torch_t = torch
     from torch import from_numpy
 
-print(f"using cuda: {torch.cuda.is_available()}")
-print()
-print()
-
 class BatchIndices:
     """
     Batch indices container class (used to implement packed batches)
@@ -38,8 +34,7 @@ class BatchIndices:
 
         batch_idxs_np_extra = np.concatenate([[-1], batch_idxs_np, [-1]])
         self.boundaries_np = np.nonzero(batch_idxs_np_extra[1:] != batch_idxs_np_extra[:-1])[0]
-        print()
-        print()
+        
         #print(f"boundaries_np: {self.boundaries_np}")
         #print(f"boundaries_np[1:]: {self.boundaries_np[1:]}")
         #print(f"boundaries_np[:-1]: {self.boundaries_np[:-1]}")

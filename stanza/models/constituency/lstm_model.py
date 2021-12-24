@@ -254,7 +254,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         ff_dim = lal_params["lal_d_proj"] * d_l
         self.word_input_size = self.word_input_size + ff_dim
-        logger.info(f"word_input_size: {self.word_input_size}")
+        
         d_ff = 2048
         relu_dropout = 0.2
         residual_dropout = 0.2
@@ -619,25 +619,13 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Extract partitioned representation
         if self.pattn_encoder is not None:
-            #print()
-            #print()
-            #logger.info("Concatenating Partitioned Representation")
             partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
-            #logger.info(f"partitioned_embeddings shape, concatenating phase: {partitioned_embeddings.shape}")
-            #logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
-            #print()
-            #print()
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
-        #logger.info("partitione_embeddings before labeled procedures: {partitioned_embeddings.shape}")
         # Extract Labeled Representation
-        #logger.info(f"all_word_inputs type: {type(all_word_inputs)}")
-        #logger.info(f"element type: {type(all_word_inputs[0])}")
-        #for idx, word_input in enumerate(all_word_inputs):
-            #print(f"{idx}: {word_input.shape}")
         packed_len = sum([int(sentence.shape[0]) for sentence in all_word_inputs])
-        #logger.info(f"packed_len: {packed_len}")
         batch_idxs = np.zeros(packed_len, dtype=int)
+        
         # Some processing
         i = 0
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
@@ -655,12 +643,10 @@ class LSTMModel(BaseModel, nn.Module):
             for word in sentence:
                 batch_idxs[i] = sentence_idx
                 i += 1
-
-        #logger.info(f"batch_idxs: {batch_idxs}")
-        #print(len(batch_idxs))
+        
         batch_indices = batch_idxs
         batch_idxs = BatchIndices(batch_idxs)
-        #logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
+        
         new_embeds = []
         for sentence_idx, batch in enumerate(partitioned_embeddings):
             for word_idx, embed in enumerate(batch):
@@ -668,45 +654,19 @@ class LSTMModel(BaseModel, nn.Module):
                     new_embeds.append(embed)
                 
         partitioned_embeddings = torch.stack(new_embeds)
-        #logger.info(f"NEW EMBEDDINGS: {partitioned_embeddings.shape}")
+        
         labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
         labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
         final_labeled_representations = [[] for i in range(batch_size)]
-        #logger.info(f"final rep type: {type(final_labeled_representations)}")
-        #print(len(final_labeled_representations))
+        
         for idx, embed in enumerate(labeled_representations):
-            #print(idx)
-            #print(f"actual index: {batch_indices[idx]}")
             final_labeled_representations[batch_indices[idx]].append(embed)
 
         for idx, representation in enumerate(final_labeled_representations):
             final_labeled_representations[idx]  = torch.stack(representation)
-
-        #logger.info("type checking final_labeled_representations")
-        #for rep in final_labeled_representations:
-            #print(f"type: {type(rep)}")
-            
-        #first_dim = len(all_word_inputs)
-        #second_dim = labeled_representations.shape[0] // first_dim
-        #third_dim = labeled_representations.shape[1]
-        #labeled_representations = labeled_representations.contiguous().view(first_dim, second_dim, -1)
-        #print()
-        #print()
-        #logger.info("Concatenating Final Labeled Representations")
-        #logger.info(f"labeled_representations: {type(final_labeled_representations)}")
-        #logger.info(f"labeled_representations shape: {len(final_labeled_representations)}")
-        #logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
-        #logger.info(f"an element of all_word_inputs has shape: {all_word_inputs[0].shape}")
-        #print()
-        #print()
-        #logger.info("checking types")
-        #for idx, (word_input, labeled_input) in enumerate(zip(all_word_inputs, final_labeled_representations)):
-            #print(f"idx: {idx}")
-            #print(f"word_input shape: {word_input.shape}")
-            #print(f"labeled_input shape: {labeled_input.shape}")
         
         all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, final_labeled_representations)]
-        # If everything goes well, the only error would be in the shape of all_word_inputs
+        
         # End of Labeled Representation
         
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
