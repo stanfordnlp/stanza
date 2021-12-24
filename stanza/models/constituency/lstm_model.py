@@ -629,6 +629,7 @@ class LSTMModel(BaseModel, nn.Module):
             print()
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
+        logger.info("partitione_embeddings before labeled procedures: {partitioned_embeddings.shape}")
         # Extract Labeled Representation
         logger.info(f"all_word_inputs type: {type(all_word_inputs)}")
         logger.info(f"element type: {type(all_word_inputs[0])}")
@@ -656,6 +657,8 @@ class LSTMModel(BaseModel, nn.Module):
                 i += 1
 
         logger.info(f"batch_idxs: {batch_idxs}")
+        print(len(batch_idxs))
+        batch_indices = batch_idxs
         batch_idxs = BatchIndices(batch_idxs)
         logger.info(f"partitioned_embeddings shape: {partitioned_embeddings.shape}")
         new_embeds = []
@@ -665,22 +668,44 @@ class LSTMModel(BaseModel, nn.Module):
                     new_embeds.append(embed)
                 
         partitioned_embeddings = torch.stack(new_embeds)
+        logger.info(f"NEW EMBEDDINGS: {partitioned_embeddings.shape}")
         labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
         labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
-        first_dim = len(all_word_inputs)
-        second_dim = labeled_representations.shape[0] // first_dim
-        third_dim = labeled_representations.shape[1]
-        labeled_representations = labeled_representations.contiguous().view(first_dim, second_dim, -1)
+        final_labeled_representations = [[] for i in range(batch_size)]
+        logger.info(f"final rep type: {type(final_labeled_representations)}")
+        print(len(final_labeled_representations))
+        for idx, embed in enumerate(labeled_representations):
+            print(idx)
+            print(f"actual index: {batch_indices[idx]}")
+            final_labeled_representations[batch_indices[idx]].append(embed)
+
+        for idx, representation in enumerate(final_labeled_representations):
+            final_labeled_representations[idx]  = torch.stack(representation)
+
+        logger.info("type checking final_labeled_representations")
+        for rep in final_labeled_representations:
+            print(f"type: {type(rep)}")
+            
+        #first_dim = len(all_word_inputs)
+        #second_dim = labeled_representations.shape[0] // first_dim
+        #third_dim = labeled_representations.shape[1]
+        #labeled_representations = labeled_representations.contiguous().view(first_dim, second_dim, -1)
         print()
         print()
-        logger.info("Concatenating Labeled Representations")
-        logger.info(f"labeled_representations: {type(labeled_representations)}")
-        logger.info(f"labeled_representations shape: {labeled_representations.shape}")
+        logger.info("Concatenating Final Labeled Representations")
+        logger.info(f"labeled_representations: {type(final_labeled_representations)}")
+        logger.info(f"labeled_representations shape: {len(final_labeled_representations)}")
         logger.info(f"all_word_inputs shape: {len(all_word_inputs)}")
         logger.info(f"an element of all_word_inputs has shape: {all_word_inputs[0].shape}")
         print()
         print()
-        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
+        logger.info("checking types")
+        for idx, (word_input, labeled_input) in enumerate(zip(all_word_inputs, final_labeled_representations)):
+            print(f"idx: {idx}")
+            print(f"word_input shape: {word_input.shape}")
+            print(f"labeled_input shape: {labeled_input.shape}")
+        
+        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, final_labeled_representations)]
         # If everything goes well, the only error would be in the shape of all_word_inputs
         # End of Labeled Representation
         
