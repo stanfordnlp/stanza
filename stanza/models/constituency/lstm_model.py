@@ -244,7 +244,7 @@ class LSTMModel(BaseModel, nn.Module):
                                               residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
 
         ff_dim = lal_params["lal_d_proj"] * d_l
-        #self.word_input_size = self.word_input_size + ff_dim
+        self.word_input_size = self.word_input_size + ff_dim
         logger.info(f"word_input_size: {self.word_input_size}")
         d_ff = 2048
         relu_dropout = 0.2
@@ -257,7 +257,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         # End of Label Attention Specs
             
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size+ff_dim, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
