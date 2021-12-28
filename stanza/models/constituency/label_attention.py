@@ -5,7 +5,6 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.init as init
-import transformers
 
 DTYPE = torch.uint8 if float(sys.version[:3]) < 3.7 else torch.bool
 
