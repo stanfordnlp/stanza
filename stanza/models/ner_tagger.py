@@ -164,7 +164,7 @@ def train(args):
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(json.load(open(args['eval_file'])))
-    logger.info("Loaded %d sentences of dev data", len(train_doc.sentences))
+    logger.info("Loaded %d sentences of dev data", len(dev_doc.sentences))
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
