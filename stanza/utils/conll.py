@@ -3,6 +3,7 @@ Utility functions for the loading and conversion of CoNLL-format files.
 """
 import os
 import io
+from zipfile import ZipFile
 
 FIELD_NUM = 10
 
@@ -98,21 +99,29 @@ class CoNLL:
         return token_dict
 
     @staticmethod
-    def conll2dict(input_file=None, input_str=None, ignore_gapping=True):
+    def conll2dict(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
         """ Load the CoNLL-U format data from file or string into lists of dictionaries.
         """
-        assert any([input_file, input_str]) and not all([input_file, input_str]), 'either input input file or input string'
+        assert any([input_file, input_str]) and not all([input_file, input_str]), 'either use input file or input string'
+        if zip_file: assert input_file, 'must provide input_file if zip_file is set'
+
         if input_str:
             infile = io.StringIO(input_str)
+            doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
+        elif zip_file:
+            with ZipFile(zip_file) as zin:
+                with zin.open(input_file) as fin:
+                    doc_conll, doc_comments = CoNLL.load_conll(io.TextIOWrapper(fin, encoding="utf-8"), ignore_gapping)
         else:
-            infile = open(input_file, encoding='utf-8')
-        doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
+            with open(input_file, encoding='utf-8') as fin:
+                doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping)
+
         doc_dict = CoNLL.convert_conll(doc_conll)
         return doc_dict, doc_comments
 
     @staticmethod
-    def conll2doc(input_file=None, input_str=None, ignore_gapping=True):
-        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping)
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
+        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
         return Document(doc_dict, text=None, comments=doc_comments)
     
     @staticmethod
