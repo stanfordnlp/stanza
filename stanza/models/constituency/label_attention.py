@@ -6,7 +6,9 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.init as init
 
-DTYPE = torch.uint8 if float(sys.version[:3]) < 3.7 else torch.bool
+# publicly available versions alternate between torch.uint8 and torch.bool,
+# but that is for older versions of torch anyway
+DTYPE = torch.bool
 
 use_cuda = torch.cuda.is_available()
 if use_cuda:
