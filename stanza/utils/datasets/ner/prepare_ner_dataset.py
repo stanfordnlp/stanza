@@ -133,6 +133,16 @@ SUC3 is a Swedish NER dataset provided by Språkbanken
     you can get the official splits by putting the provided zip file
     in $NERBASE/sv_suc3.  Again, not necessary to unzip it
     prepare_ner_dataset.py sv_suc3
+
+DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
+  - https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane
+  - direct download link as of late 2021: https://danlp.alexandra.dk/304bd159d5de/datasets/ddt.zip
+  - https://aclanthology.org/2020.lrec-1.565.pdf
+    DaNE: A Named Entity Resource for Danish
+    Rasmus Hvingelby, Amalie Brogaard Pauli, Maria Barrett,
+    Christina Rosted, Lasse Malm Lidegaard, Anders Søgaard
+  - place ddt.zip in $NERBASE/da_ddt/ddt.zip
+    prepare_ner_dataset.py da_ddt
 """
 
 import glob
@@ -147,6 +157,7 @@ import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
+import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
@@ -509,6 +520,35 @@ def process_sv_suc3shuffle(paths, short_name):
     split_wikiner(base_output_path, train_output_file, prefix=short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)    
     
+def process_da_ddt(paths, short_name):
+    """
+    Processes Danish DDT dataset
+
+    This dataset is in a conll file with the "name" attribute in the
+    misc column for the NER tag.  This function uses a script to
+    convert such CoNLL files to .bio
+    """
+    assert short_name == "da_ddt"
+    language = "da"
+    IN_FILES = ("ddt.train.conllu", "ddt.dev.conllu", "ddt.test.conllu")
+
+    base_output_path = paths["NER_DATA_DIR"]
+    OUT_FILES = [os.path.join(base_output_path, "%s.%s.bio" % (short_name, shard)) for shard in SHARDS]
+
+    zip_file = os.path.join(paths["NERBASE"], "da_ddt", "ddt.zip")
+    if os.path.exists(zip_file):
+        for in_filename, out_filename, shard in zip(IN_FILES, OUT_FILES, SHARDS):
+            conll_to_iob.process_conll(in_filename, out_filename, zip_file)
+    else:
+        for in_filename, out_filename, shard in zip(IN_FILES, OUT_FILES, SHARDS):
+            in_filename = os.path.join(paths["NERBASE"], "da_ddt", in_filename)
+            if not os.path.exists(in_filename):
+                raise FileNotFoundError("Could not find zip in expected location %s and could not file %s file in %s" % (zip_file, shard, in_filename))
+
+            conll_to_iob.process_conll(in_filename, out_filename)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -544,6 +584,8 @@ def main(dataset_name):
         process_sv_suc3(paths, dataset_name)
     elif dataset_name == "sv_suc3shuffle":
         process_sv_suc3shuffle(paths, dataset_name)
+    elif dataset_name == "da_ddt":
+        process_da_ddt(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
