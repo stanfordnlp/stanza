@@ -5,6 +5,7 @@ The main program processes the expected location, or you can pass in a
 specific zip or filename to read
 """
 
+from io import TextIOWrapper
 from zipfile import ZipFile
 
 def extract(infile, outfile):
@@ -19,7 +20,6 @@ def extract(infile, outfile):
     sentences = []
     cur_sentence = []
     for idx, line in enumerate(lines):
-        line = line.decode("utf-8")
         line = line.strip()
         if not line:
             # if we're currently reading a sentence, append it to the list
@@ -56,7 +56,7 @@ def extract_from_zip(zip_filename, in_filename, out_filename):
     with ZipFile(zip_filename) as zin:
         with zin.open(in_filename) as fin:
             with open(out_filename, "w") as fout:
-                num = extract(fin, fout)
+                num = extract(TextIOWrapper(fin, encoding="utf-8"), fout)
                 print("Processed %d sentences from %s:%s to %s" % (num, zip_filename, in_filename, out_filename))
                 return num
 
