@@ -402,7 +402,7 @@ def process_bsnlp(paths, short_name):
     convert_bsnlp.convert_bsnlp(language, base_test_path, output_test_filename)
     convert_bsnlp.convert_bsnlp(language, base_train_path, output_train_filename, output_dev_filename)
 
-    for shard, csv_file in zip(('train', 'dev', 'test'), (output_train_filename, output_dev_filename, output_test_filename)):
+    for shard, csv_file in zip(SHARDS, (output_train_filename, output_dev_filename, output_test_filename)):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(csv_file, output_filename)
 
