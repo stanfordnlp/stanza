@@ -2,6 +2,8 @@
 Basic tests of the data conversion
 """
 import pytest
+import tempfile
+from zipfile import ZipFile
 
 import stanza
 from stanza.utils.conll import CoNLL
@@ -79,13 +81,11 @@ RUSSIAN_SAMPLE="""
 """.strip()
 
 
-def test_doc_with_comments():
+def check_russian_doc(doc):
     """
-    Test that a doc with comments gets converted back with comments
+    Refactored the test for the Russian doc so we can use it to test various file methods
     """
     lines = RUSSIAN_SAMPLE.split("\n")
-
-    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
     assert len(doc.sentences) == 1
     assert len(doc.sentences[0].comments) == 3
     assert lines[0] == doc.sentences[0].comments[0]
@@ -100,6 +100,13 @@ def test_doc_with_comments():
     assert lines[0] == sentence[0]
     assert lines[1] == sentence[1]
     assert lines[2] == sentence[2]
+
+def test_doc_with_comments():
+    """
+    Test that a doc with comments gets converted back with comments
+    """
+    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
+    check_russian_doc(doc)
 
 def test_unusual_misc():
     """
@@ -116,3 +123,28 @@ def test_unusual_misc():
         assert len(pieces) == 1 or len(pieces) == 10
         if len(pieces) == 10:
             assert all(piece for piece in pieces)
+
+def test_file():
+    """
+    Test loading a doc from a file
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        filename = os.path.join(tempdir, "russian.conll")
+        with open(filename, "w", encoding="utf-8") as fout:
+            fout.write(RUSSIAN_SAMPLE)
+        doc = CoNLL.conll2doc(input_file=filename)
+        check_russian_doc(doc)
+
+def test_zip_file():
+    """
+    Test loading a doc from a zip file
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        zip_file = os.path.join(tempdir, "russian.zip")
+        filename = "russian.conll"
+        with ZipFile(zip_file, "w") as zout:
+            with zout.open(filename, "w") as fout:
+                fout.write(RUSSIAN_SAMPLE.encode())
+
+        doc = CoNLL.conll2doc(input_file=filename, zip_file=zip_file)
+        check_russian_doc(doc)
