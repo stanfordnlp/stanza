@@ -31,6 +31,7 @@ from stanza.resources.prepare_resources import default_charlms, default_treebank
 
 # extra arguments specific to a particular dataset
 DATASET_EXTRA_ARGS = {
+    "da_ddt":   [ "--dropout", "0.6" ],
     "fa_arman": [ "--dropout", "0.6" ],
     "vi_vlsp":  [ "--dropout", "0.6",
                   "--word_dropout", "0.1",
