@@ -143,6 +143,19 @@ DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
     Christina Rosted, Lasse Malm Lidegaard, Anders Søgaard
   - place ddt.zip in $NERBASE/da_ddt/ddt.zip
     prepare_ner_dataset.py da_ddt
+
+NorNE is the Norwegian Dependency Treebank with NER labels
+  - LREC 2020
+    NorNE: Annotating Named Entities for Norwegian
+    Fredrik Jørgensen, Tobias Aasmoe, Anne-Stine Ruud Husevåg,
+    Lilja Øvrelid, and Erik Velldal
+  - both Bokmål and Nynorsk
+  - This dataset is in a git repo:
+    https://github.com/ltgoslo/norne
+    Clone it into $NERBASE
+    git clone git@github.com:ltgoslo/norne.git
+    prepare_ner_dataset.py nb_norne
+    prepare_ner_dataset.py nn_norne
 """
 
 import glob
@@ -549,6 +562,33 @@ def process_da_ddt(paths, short_name):
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 
+def process_norne(paths, short_name):
+    """
+    Processes Norwegian NorNE
+
+    Can handle either Bokmål or Nynorsk
+    """
+    language, name = short_name.split("_", 1)
+    assert language in ('nb', 'nn')
+    assert name == 'norne'
+
+    if language == 'nb':
+        IN_FILES = ("nob/no_bokmaal-ud-train.conllu", "nob/no_bokmaal-ud-dev.conllu", "nob/no_bokmaal-ud-test.conllu")
+    else:
+        IN_FILES = ("nno/no_nynorsk-ud-train.conllu", "nno/no_nynorsk-ud-dev.conllu", "nno/no_nynorsk-ud-test.conllu")
+
+    base_output_path = paths["NER_DATA_DIR"]
+    OUT_FILES = [os.path.join(base_output_path, "%s.%s.bio" % (short_name, shard)) for shard in SHARDS]
+
+    for in_filename, out_filename, shard in zip(IN_FILES, OUT_FILES, SHARDS):
+        in_filename = os.path.join(paths["NERBASE"], "norne", "ud", in_filename)
+        if not os.path.exists(in_filename):
+            raise FileNotFoundError("Could not find %s file in %s" % (shard, in_filename))
+
+        conll_to_iob.process_conll(in_filename, out_filename)
+
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -586,6 +626,8 @@ def main(dataset_name):
         process_sv_suc3shuffle(paths, dataset_name)
     elif dataset_name == "da_ddt":
         process_da_ddt(paths, dataset_name)
+    elif dataset_name in ("nb_norne", "nn_norne"):
+        process_norne(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
