@@ -226,7 +226,7 @@ class LSTMModel(BaseModel, nn.Module):
 
 
         # Integration of the Label Attention Layer
-        
+        '''
         lal_params = {
             "lal_d_kv": 64,
             "lal_d_proj": 64,
@@ -239,7 +239,7 @@ class LSTMModel(BaseModel, nn.Module):
         }
 
         d_l = 112
-        
+       
         self.label_attention = LabelAttention(lal_params, self.pattn_d_model, lal_params["lal_d_kv"],
                                               lal_params["lal_d_kv"], d_l, lal_params["lal_d_proj"], use_resdrop=lal_params["lal_resdrop"], q_as_matrix=lal_params["lal_q_as_matrix"],
                                               residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
@@ -256,6 +256,17 @@ class LSTMModel(BaseModel, nn.Module):
             self.lal_ff = PositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         else:
             self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
+        '''
+        self.label_attention = LabelAttention(self.args['lattn_d_model'],
+                                              self.args['lattn_d_kv'],
+                                              self.args['lattn_d_kv'],
+                                              self.args['lattn_d_l'],
+                                              self.args['lattn_d_proj'],
+                                              self.args['lattn_resdrop'],
+                                              self.args['lattn_q_as_matrix'],
+                                              self.args['lattn_residual_dropout'],
+                                              self.args['lattn_attention_dropout'],
+                                              self.args['lattn_d_positional'])
         # End of Label Attention Specs
             
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
