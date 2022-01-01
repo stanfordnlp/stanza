@@ -115,6 +115,7 @@ default_ners = {
   "af": "nchlt",
   "ar": "aqmar",
   "bg": "bsnlp19",
+  "da": "ddt",
   "de": "conll03",
   "en": "ontonotes",
   "es": "conll02",
@@ -124,7 +125,9 @@ default_ners = {
   "hu": "combined",
   "it": "fbk",
   "my": "ucsy",
+  "nb": "norne",
   "nl": "conll02",
+  "nn": "norne",
   "ru": "wikiner",
   "sv": "suc3",
   "uk": "languk",
@@ -145,6 +148,7 @@ default_charlms = {
   "fr": "newswiki",
   "it": "conll17",
   "my": "oscar",
+  "nb": "conll17",
   "nl": "ccwiki",
   "ru": "newswiki",
   "sv": "conll17",
@@ -170,8 +174,14 @@ ner_charlms = {
   "uk": {
     "languk": None,
   },
+  "da": {
+    "ddt": None,
+  },
   "hu": {
     "combined": None,
+  },
+  "nn": {
+    "norne": None,
   },
 }
 
