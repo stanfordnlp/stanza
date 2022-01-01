@@ -12,7 +12,7 @@ import zipfile
 from zipfile import ZipFile
 from stanza.utils.conll import CoNLL
 
-def process_conll(input_file, output_file, zip_file=None):
+def process_conll(input_file, output_file, zip_file=None, conversion=None):
     """
     Process a single file from DDT
 
@@ -32,6 +32,11 @@ def process_conll(input_file, output_file, zip_file=None):
                         break
                 else:
                     raise ValueError("Could not find ner tag in document {}, sentence {}, token {}".format(input_file, sentence_idx, token_idx))
+                if ner != "O" and conversion is not None:
+                    bio, label = ner.split("-", 1)
+                    if label in conversion:
+                        label = conversion[label]
+                    ner = "%s-%s" % (bio, label)
                 fout.write("%s\t%s\n" % (token.text, ner))
             fout.write("\n")
 

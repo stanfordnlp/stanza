@@ -567,6 +567,8 @@ def process_norne(paths, short_name):
     Processes Norwegian NorNE
 
     Can handle either Bokmål or Nynorsk
+
+    Converts GPE_LOC and GPE_ORG to GPE
     """
     language, name = short_name.split("_", 1)
     assert language in ('nb', 'nn')
@@ -580,12 +582,14 @@ def process_norne(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     OUT_FILES = [os.path.join(base_output_path, "%s.%s.bio" % (short_name, shard)) for shard in SHARDS]
 
+    CONVERSION = { "GPE_LOC": "GPE", "GPE_ORG": "GPE" }
+
     for in_filename, out_filename, shard in zip(IN_FILES, OUT_FILES, SHARDS):
         in_filename = os.path.join(paths["NERBASE"], "norne", "ud", in_filename)
         if not os.path.exists(in_filename):
             raise FileNotFoundError("Could not find %s file in %s" % (shard, in_filename))
 
-        conll_to_iob.process_conll(in_filename, out_filename)
+        conll_to_iob.process_conll(in_filename, out_filename, conversion=CONVERSION)
 
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
