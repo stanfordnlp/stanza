@@ -2,15 +2,14 @@
 Tests the conversion code for the SUC3 NER dataset
 """
 
-import unittest
-import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
-
 import os
 import tempfile
 from zipfile import ZipFile
 
 import pytest
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
+
+import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 
 TEST_CONLL = """
 1	Den	den	PN	PN	UTR|SIN|DEF|SUB/OBJ	_	_	_	_	O	_	ac01b-030:2328
