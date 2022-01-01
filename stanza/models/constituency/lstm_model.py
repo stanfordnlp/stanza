@@ -226,6 +226,7 @@ class LSTMModel(BaseModel, nn.Module):
 
 
         # Integration of the Label Attention Layer
+        
         lal_params = {
             "lal_d_kv": 64,
             "lal_d_proj": 64,
@@ -238,7 +239,7 @@ class LSTMModel(BaseModel, nn.Module):
         }
 
         d_l = 112
-
+        
         self.label_attention = LabelAttention(lal_params, self.pattn_d_model, lal_params["lal_d_kv"],
                                               lal_params["lal_d_kv"], d_l, lal_params["lal_d_proj"], use_resdrop=lal_params["lal_resdrop"], q_as_matrix=lal_params["lal_q_as_matrix"],
                                               residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
