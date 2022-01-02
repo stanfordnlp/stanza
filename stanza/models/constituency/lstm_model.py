@@ -226,37 +226,6 @@ class LSTMModel(BaseModel, nn.Module):
 
 
         # Integration of the Label Attention Layer
-        '''
-        lal_params = {
-            "lal_d_kv": 64,
-            "lal_d_proj": 64,
-            "lal_resdrop": True,
-            "lal_pwff": True,
-            "lal_q_as_matrix": False,
-            "lal_partitioned": True,
-            "lal_combine_as_self": False,
-            "lal_d_positional": self.pattn_d_model // 2
-        }
-
-        d_l = 112
-       
-        self.label_attention = LabelAttention(lal_params, self.pattn_d_model, lal_params["lal_d_kv"],
-                                              lal_params["lal_d_kv"], d_l, lal_params["lal_d_proj"], use_resdrop=lal_params["lal_resdrop"], q_as_matrix=lal_params["lal_q_as_matrix"],
-                                              residual_dropout=self.args['pattn_residual_dropout'], attention_dropout=self.args['pattn_attention_dropout'], d_positional=lal_params["lal_d_positional"])
-
-        ff_dim = lal_params["lal_d_proj"] * d_l
-        self.word_input_size = self.word_input_size + ff_dim
-        
-        d_ff = 2048
-        relu_dropout = 0.2
-        residual_dropout = 0.2
-        lal_partitioned = True
-        self.lal_ff = None
-        if not lal_partitioned:
-            self.lal_ff = PositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
-        else:
-            self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
-        '''
         #
         self.label_attention_module = LabelAttentionModule(self.args['lattn_d_model'],
                                               self.args['lattn_d_kv'],
@@ -272,20 +241,7 @@ class LSTMModel(BaseModel, nn.Module):
                                               self.args['lattn_d_ff'],
                                               self.args['lattn_relu_dropout'],
                                               self.args['lattn_partitioned'])
-        '''
-        if not self.args['lattn_partitioned']:
-            self.lal_ff = PositionwiseFeedForward(self.args['lattn_d_proj']*self.args['lattn_d_l'],
-                                                  self.args['lattn_d_ff'],
-                                                  self.args['lattn_d_positional'],
-                                                  self.args['lattn_relu_dropout'],
-                                                  self.args['lattn_residual_dropout'])
-        else:
-            self.lal_ff = PartitionedPositionwiseFeedForward(self.args['lattn_d_proj']*self.args['lattn_d_l'],
-                                                             self.args['lattn_d_ff'],
-                                                             self.args['lattn_d_positional'],
-                                                             self.args['lattn_relu_dropout'],
-                                                             self.args['lattn_residual_dropout'])
-        '''
+        
         self.word_input_size = self.word_input_size + self.args['lattn_d_proj']*self.args['lattn_d_l'] # ff_dim
         # End of Label Attention Specs
             
@@ -651,50 +607,6 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
-        '''
-        packed_len = sum([int(sentence.shape[0]) for sentence in all_word_inputs])
-        batch_idxs = np.zeros(packed_len, dtype=int)
-        
-        # Some processing
-        i = 0
-        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            sentence = [word.children[0].label for word in tagged_words]
-            if sentence_idx > i:
-                i = sentence_idx
-            #print(f"{sentence_idx}: {sentence}")
-
-        batch_size = i + 1
-        
-        i = 0
-        sentence_lengths = [0] * batch_size 
-        for sentence_idx, sentence in enumerate(all_word_inputs):
-            sentence_lengths[sentence_idx] = len(sentence)
-            for word in sentence:
-                batch_idxs[i] = sentence_idx
-                i += 1
-        
-        batch_indices = batch_idxs
-        batch_idxs = BatchIndices(batch_idxs)
-        
-        new_embeds = []
-        for sentence_idx, batch in enumerate(partitioned_embeddings):
-            for word_idx, embed in enumerate(batch):
-                if word_idx < sentence_lengths[sentence_idx]:
-                    new_embeds.append(embed)
-                
-        partitioned_embeddings = torch.stack(new_embeds)
-        
-        labeled_representations, _ = self.label_attention(partitioned_embeddings, batch_idxs)
-        labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
-        final_labeled_representations = [[] for i in range(batch_size)]
-        
-        for idx, embed in enumerate(labeled_representations):
-            final_labeled_representations[batch_indices[idx]].append(embed)
-
-        for idx, representation in enumerate(final_labeled_representations):
-            final_labeled_representations[idx]  = torch.stack(representation)
-        '''
-        
         labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
         all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
         
