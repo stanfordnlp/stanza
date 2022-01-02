@@ -625,4 +625,102 @@ class LabelAttention(nn.Module):
             outputs = outputs.view(len_inp, -1).contiguous() # len_inp x (d_l * d_proj)
         
         return outputs, attns_padded
-    
+
+
+#
+class LabelAttentionModule(nn.Module):
+    """
+    Label Attention Module for label-specific representations
+    The module can be used right after the Partitioned Attention, or it can be experimented with for the transition stack
+    """
+    #
+    def __init__(self,
+                 d_model,
+                 d_k,
+                 d_v,
+                 d_l,
+                 d_proj,
+                 combine_as_self,
+                 use_resdrop=True,
+                 q_as_matrix=False,
+                 residual_dropout=0.1,
+                 attention_dropout=0.1,
+                 d_positional=None,
+                 d_ff=2048,
+                 relu_dropout=0.2,
+                 lattn_partitioned=True):
+        super().__init__()
+        self.ff_dim = d_proj * d_l
+
+        self.label_attention = LabelAttention(d_model,
+                                              d_k,
+                                              d_v,
+                                              d_l,
+                                              d_proj,
+                                              combine_as_self,
+                                              use_resdrop,
+                                              q_as_matrix,
+                                              residual_dropout,
+                                              attention_dropout,
+                                              d_positional)
+
+        if not lattn_partitioned:
+            self.lal_ff = PositionwiseFeedForward(self.ff_dim,
+                                                  d_ff,
+                                                  d_positional,
+                                                  relu_dropout,
+                                                  residual_dropout)
+        else:
+            self.lal_ff = PartitionedPositionwiseFeedForward(self.ff_dim,
+                                                             d_ff,
+                                                             d_positional,
+                                                             relu_dropout,
+                                                             residual_dropout)
+
+    def forward(self, word_embeddings, tagged_word_lists):
+        # Extract Labeled Representation
+        packed_len = sum([int(sentence.shape[0]) for sentence in word_embeddings])
+        batch_idxs = np.zeros(packed_len, dtype=int)
+        
+        # Some processing
+        i = 0
+        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
+            sentence = [word.children[0].label for word in tagged_words]
+            if sentence_idx > i:
+                i = sentence_idx
+            #print(f"{sentence_idx}: {sentence}")
+
+        batch_size = i + 1 
+        i = 0
+        
+        sentence_lengths = [0] * batch_size 
+        for sentence_idx, sentence in enumerate(word_embeddings):
+            sentence_lengths[sentence_idx] = len(sentence)
+            for word in sentence:
+                batch_idxs[i] = sentence_idx
+                i += 1
+        
+        batch_indices = batch_idxs
+        batch_idxs = BatchIndices(batch_idxs)
+        
+        new_embeds = []
+        for sentence_idx, batch in enumerate(word_embeddings):
+            for word_idx, embed in enumerate(batch):
+                if word_idx < sentence_lengths[sentence_idx]:
+                    new_embeds.append(embed)
+                
+        new_word_embeddings = torch.stack(new_embeds)
+        
+        labeled_representations, _ = self.label_attention(new_word_embeddings, batch_idxs)
+        labeled_representations = self.lal_ff(labeled_representations, batch_idxs)
+        final_labeled_representations = [[] for i in range(batch_size)]
+        
+        for idx, embed in enumerate(labeled_representations):
+            final_labeled_representations[batch_indices[idx]].append(embed)
+
+        for idx, representation in enumerate(final_labeled_representations):
+            final_labeled_representations[idx]  = torch.stack(representation)
+
+        return final_labeled_representations
+        
+        

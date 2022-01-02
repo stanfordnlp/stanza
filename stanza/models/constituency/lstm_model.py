@@ -32,7 +32,7 @@ from stanza.models.constituency.partitioned_transformer import (
     FeatureDropout,
     PartitionedTransformerEncoder,
 )
-from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward, BatchIndices
+from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward, BatchIndices, LabelAttentionModule
 import numpy as np
 
 logger = logging.getLogger('stanza')
@@ -257,7 +257,8 @@ class LSTMModel(BaseModel, nn.Module):
         else:
             self.lal_ff = PartitionedPositionwiseFeedForward(ff_dim, d_ff, lal_params["lal_d_positional"], relu_dropout=relu_dropout, residual_dropout=residual_dropout)
         '''
-        self.label_attention = LabelAttention(self.args['lattn_d_model'],
+        #
+        self.label_attention_module = LabelAttentionModule(self.args['lattn_d_model'],
                                               self.args['lattn_d_kv'],
                                               self.args['lattn_d_kv'],
                                               self.args['lattn_d_l'],
@@ -267,8 +268,11 @@ class LSTMModel(BaseModel, nn.Module):
                                               self.args['lattn_q_as_matrix'],
                                               self.args['lattn_residual_dropout'],
                                               self.args['lattn_attention_dropout'],
-                                              self.args['lattn_d_positional'])
-
+                                              self.args['lattn_d_positional'],
+                                              self.args['lattn_d_ff'],
+                                              self.args['lattn_relu_dropout'],
+                                              self.args['lattn_partitioned'])
+        '''
         if not self.args['lattn_partitioned']:
             self.lal_ff = PositionwiseFeedForward(self.args['lattn_d_proj']*self.args['lattn_d_l'],
                                                   self.args['lattn_d_ff'],
@@ -281,7 +285,7 @@ class LSTMModel(BaseModel, nn.Module):
                                                              self.args['lattn_d_positional'],
                                                              self.args['lattn_relu_dropout'],
                                                              self.args['lattn_residual_dropout'])
-
+        '''
         self.word_input_size = self.word_input_size + self.args['lattn_d_proj']*self.args['lattn_d_l'] # ff_dim
         # End of Label Attention Specs
             
@@ -647,6 +651,7 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
+        '''
         packed_len = sum([int(sentence.shape[0]) for sentence in all_word_inputs])
         batch_idxs = np.zeros(packed_len, dtype=int)
         
@@ -688,8 +693,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         for idx, representation in enumerate(final_labeled_representations):
             final_labeled_representations[idx]  = torch.stack(representation)
+        '''
         
-        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, final_labeled_representations)]
+        labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
+        all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
         
         # End of Labeled Representation
         
