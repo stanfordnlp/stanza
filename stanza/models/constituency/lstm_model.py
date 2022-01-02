@@ -262,11 +262,27 @@ class LSTMModel(BaseModel, nn.Module):
                                               self.args['lattn_d_kv'],
                                               self.args['lattn_d_l'],
                                               self.args['lattn_d_proj'],
+                                              self.args['lattn_combine_as_self'],
                                               self.args['lattn_resdrop'],
                                               self.args['lattn_q_as_matrix'],
                                               self.args['lattn_residual_dropout'],
                                               self.args['lattn_attention_dropout'],
                                               self.args['lattn_d_positional'])
+
+        if not self.args['lattn_partitioned']:
+            self.lal_ff = PositionwiseFeedForward(self.args['lattn_d_proj']*self.args['lattn_d_l'],
+                                                  self.args['lattn_d_ff'],
+                                                  self.args['lattn_d_positional'],
+                                                  self.args['lattn_relu_dropout'],
+                                                  self.args['lattn_residual_dropout'])
+        else:
+            self.lal_ff = PartitionedPositionwiseFeedForward(self.args['lattn_d_proj']*self.args['lattn_d_l'],
+                                                             self.args['lattn_d_ff'],
+                                                             self.args['lattn_d_positional'],
+                                                             self.args['lattn_relu_dropout'],
+                                                             self.args['lattn_residual_dropout'])
+
+        self.word_input_size = self.word_input_size + self.args['lattn_d_proj']*self.args['lattn_d_l'] # ff_dim
         # End of Label Attention Specs
             
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
