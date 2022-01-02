@@ -330,7 +330,6 @@ def parse_args(args=None):
     parser.add_argument('--lattn_d_ff', default=2048, type=int, help='Dimension of the Feed-forward layer')
     parser.add_argument('--lattn_relu_dropout', default=0.2, type=float, help='Relu dropout for the label attention')
     parser.add_argument('--lattn_residual_dropout', default=0.2, type=float, help='Residual dropout for the label attention')
-    parser.add_argument('--lattn_partitioned', default=True, action='store_true', help='Whether or to partition the PositionwiseFeedForward layer')
     
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
