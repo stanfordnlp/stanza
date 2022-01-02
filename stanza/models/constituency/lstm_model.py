@@ -31,6 +31,7 @@ from stanza.models.constituency.partitioned_transformer import (
     ConcatSinusoidalEncoding,
     FeatureDropout,
     PartitionedTransformerEncoder,
+    PartitionedTransformerModule
 )
 from stanza.models.constituency.label_attention import LabelAttention, PositionwiseFeedForward, PartitionedPositionwiseFeedForward, BatchIndices, LabelAttentionModule
 import numpy as np
@@ -198,6 +199,7 @@ class LSTMModel(BaseModel, nn.Module):
 
             # Initializations for the Partitioned Attention
             # experiments suggest having a bias does not help here
+            '''
             self.project_pretrained = nn.Linear(
                 self.word_input_size, self.pattn_d_model // 2, bias=True
             )
@@ -218,6 +220,22 @@ class LSTMModel(BaseModel, nn.Module):
                 ff_dropout=self.args['pattn_relu_dropout'],
                 residual_dropout=self.args['pattn_residual_dropout'],
                 attention_dropout=self.args['pattn_attention_dropout'],
+            )
+            '''
+            self.partitioned_transformer_module = PartitionedTransformerModule(
+                self.args['pattn_num_layers'],
+                d_model=self.pattn_d_model,
+                n_head=self.args['pattn_num_heads'],
+                d_qkv=self.args['pattn_d_kv'],
+                d_ff=self.args['pattn_d_ff'],
+                ff_dropout=self.args['pattn_relu_dropout'],
+                residual_dropout=self.args['pattn_residual_dropout'],
+                attention_dropout=self.args['pattn_attention_dropout'],
+                word_input_size=self.word_input_size,
+                bias=self.args['pattn_bias'],
+                morpho_emb_dropout=self.args['pattn_morpho_emb_dropout'],
+                timing=self.args['pattn_timing'],
+                encoder_max_len=self.args['pattn_encoder_max_len']
             )
             self.word_input_size += self.pattn_d_model
         else:
@@ -603,7 +621,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Extract partitioned representation
         if self.pattn_encoder is not None:
-            partitioned_embeddings = self.partitioned_attention(None, all_word_inputs)
+            partitioned_embeddings = self.partitioned_transformer_module(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 
         # Extract Labeled Representation
