@@ -237,8 +237,8 @@ class LSTMModel(BaseModel, nn.Module):
             )
             self.word_input_size += self.pattn_d_model
         else:
+            self.partitioned_transformer_module = None
             self.pattn_d_model = None
-            self.pattn_encoder = None
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
@@ -597,7 +597,7 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
         # Extract partitioned representation
-        if self.pattn_encoder is not None:
+        if self.partitioned_transformer_module is not None:
             partitioned_embeddings = self.partitioned_transformer_module(None, all_word_inputs)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, partitioned_embeddings)]
 

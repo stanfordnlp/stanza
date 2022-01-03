@@ -271,12 +271,12 @@ class PartitionedTransformerModule(nn.Module):
         else:
             raise ValueError("Unhandled timing type: %s" % timing)
         self.pattn_encoder = PartitionedTransformerEncoder(
-            num_layers,
+            n_layers,
             d_model=d_model,
-            n_head=num_heads,
-            d_qkv=d_kv,
+            n_head=n_head,
+            d_qkv=d_qkv,
             d_ff=d_ff,
-            ff_dropout=relu_dropout,
+            ff_dropout=ff_dropout,
             residual_dropout=residual_dropout,
             attention_dropout=attention_dropout,
         )
