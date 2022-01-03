@@ -34,6 +34,7 @@ def main():
     parser.add_argument("src_root", default="src", help="Root directory with all source files.")
     parser.add_argument("tgt_root", default="tgt", help="Root directory with all target files.")
     parser.add_argument("--langs", default="", help="A list of language codes to process.")
+    parser.add_argument("--packages", default="", help="A list of packages to process.")
     parser.add_argument("--no_xz_output", default=True, dest="xz_output", action="store_false", help="Output compressed xz files")
     args = parser.parse_args()
 
@@ -46,6 +47,11 @@ def main():
     if len(args.langs) > 0:
         langs = args.langs.split(',')
         print("Only processing the following languages: " + str(langs))
+
+    packages = []
+    if len(args.packages) > 0:
+        packages = args.packages.split(',')
+        print("Only processing the following packages: " + str(packages))
 
     src_root = Path(args.src_root)
     tgt_root = Path(args.tgt_root)
@@ -61,7 +67,11 @@ def main():
     for lang in lang_dirs:
         lang_root = src_root / lang
         data_dirs = os.listdir(lang_root)
+        if len(packages) > 0:
+            data_dirs = [d for d in data_dirs if d in packages]
         print(f"{len(data_dirs)} total corpus found for language {lang}.")
+        print(data_dirs)
+        print("")
 
         for dataset_name in data_dirs:
             src_dir = lang_root / dataset_name
