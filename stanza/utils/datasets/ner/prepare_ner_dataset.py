@@ -526,10 +526,8 @@ def process_sv_suc3shuffle(paths, short_name):
         raise FileNotFoundError("Unable to find the SUC3 dataset in {}.bz2".format(train_input_file))
 
     base_output_path = paths["NER_DATA_DIR"]
-    train_output_file = os.path.join(base_output_path, "sv_suc3shuffle.iob")
-    # Here we use the <name> tags instead of the <ne> tags to get the NER types
-    # There are some obviously missed NEs in the <ne> tags, such as Moselle
-    suc_to_iob.main([train_input_file, train_output_file, "--ner_tag", "name"])
+    train_output_file = os.path.join(base_output_path, "sv_suc3shuffle.bio")
+    suc_to_iob.main([train_input_file, train_output_file])
     split_wikiner(base_output_path, train_output_file, prefix=short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)    
     
