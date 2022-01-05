@@ -183,6 +183,16 @@ def test_forward_sentence_boundaries(pt):
     model = build_model(pt, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
     
+def test_forward_constituency_composition(pt):
+    """
+    Test different constituency composition functions
+    """
+    model = build_model(pt, '--constituency_composition', 'max')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--constituency_composition', 'bilstm')
+    run_forward_checks(model)
+
 def test_forward_partitioned_attention(pt):
     """
     Test with & without partitioned attention layers

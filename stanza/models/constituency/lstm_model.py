@@ -51,6 +51,15 @@ class SentenceBoundary(Enum):
     WORDS              = 2
     EVERYTHING         = 3
 
+# How to compose constituent children into new constituents
+# MAX is simply take the max value of the children
+# this is surprisingly effective
+# for example, a Turkish dataset went from 81-81.5 dev, 75->75.5 test
+# BILSTM is the method described in the papers of making an lstm
+# out of the constituents
+class ConstituencyComposition(Enum):
+    BILSTM                = 1
+    MAX                   = 2
 
 class LSTMModel(BaseModel, nn.Module):
     def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
@@ -243,13 +252,22 @@ class LSTMModel(BaseModel, nn.Module):
                                                 embedding_dim = self.hidden_size)
         self.register_buffer('open_node_tensors', torch.tensor(range(len(open_nodes)), requires_grad=False))
 
-        # forward and backward pieces for crunching several
-        # constituents into one, combined into a bi-lstm
-        # TODO: make the hidden size here an option?
-        self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
-        # affine transformation from bi-lstm reduce to a new hidden layer
-        self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
+        self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
+        # TODO: refactor
+        if self.constituency_composition == ConstituencyComposition.BILSTM:
+            # forward and backward pieces for crunching several
+            # constituents into one, combined into a bi-lstm
+            # TODO: make the hidden size here an option?
+            self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
+            # affine transformation from bi-lstm reduce to a new hidden layer
+            self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
+            initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
+        elif self.constituency_composition == ConstituencyComposition.MAX:
+            # transformation to turn several constituents into one new constituent
+            self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
+            initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size)
+        else:
+            raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
 
         self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
 
@@ -629,28 +647,38 @@ class LSTMModel(BaseModel, nn.Module):
         children_lists is a list of children that go under each of the new nodes
         lists of each are used so that we can stack operations
         """
-        label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
-
-        max_length = max(len(children) for children in children_lists)
-        zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
         node_hx = [[child.output for child in children] for children in children_lists]
-        # weirdly, this is faster than using pack_sequence
-        unpacked_hx = [[lhx] + nhx + [lhx] + [zeros] * (max_length - len(nhx)) for lhx, nhx in zip(label_hx, node_hx)]
-        unpacked_hx = [self.lstm_input_dropout(torch.stack(nhx)) for nhx in unpacked_hx]
-        packed_hx = torch.stack(unpacked_hx, axis=1)
-        packed_hx = torch.nn.utils.rnn.pack_padded_sequence(packed_hx, [len(x)+2 for x in children_lists], enforce_sorted=False)
-        lstm_output = self.constituent_reduce_lstm(packed_hx)
-        # take just the output of the final layer
-        #   result of lstm is ouput, (hx, cx)
-        #   so [1][0] gets hx
-        #      [1][0][-1] is the final output
-        # will be shape len(children_lists) * 2, hidden_size for bidirectional
-        # where forward outputs are -2 and backwards are -1
-        lstm_output = lstm_output[1][0]
-        forward_hx = lstm_output[-2, :]
-        backward_hx = lstm_output[-1, :]
 
-        hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
+        if self.constituency_composition == ConstituencyComposition.BILSTM:
+            label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
+
+            max_length = max(len(children) for children in children_lists)
+            zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
+            node_hx = [[child.output for child in children] for children in children_lists]
+            # weirdly, this is faster than using pack_sequence
+            unpacked_hx = [[lhx] + nhx + [lhx] + [zeros] * (max_length - len(nhx)) for lhx, nhx in zip(label_hx, node_hx)]
+            unpacked_hx = [self.lstm_input_dropout(torch.stack(nhx)) for nhx in unpacked_hx]
+            packed_hx = torch.stack(unpacked_hx, axis=1)
+            packed_hx = torch.nn.utils.rnn.pack_padded_sequence(packed_hx, [len(x)+2 for x in children_lists], enforce_sorted=False)
+            lstm_output = self.constituent_reduce_lstm(packed_hx)
+            # take just the output of the final layer
+            #   result of lstm is ouput, (hx, cx)
+            #   so [1][0] gets hx
+            #      [1][0][-1] is the final output
+            # will be shape len(children_lists) * 2, hidden_size for bidirectional
+            # where forward outputs are -2 and backwards are -1
+            lstm_output = lstm_output[1][0]
+            forward_hx = lstm_output[-2, :]
+            backward_hx = lstm_output[-1, :]
+
+            hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
+        elif self.constituency_composition == ConstituencyComposition.MAX:
+            unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
+            packed_hx = torch.stack(unpacked_hx, axis=0)
+            hx = self.reduce_linear(packed_hx)
+        else:
+            raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
+
         hx = self.nonlinearity(hx)
 
         constituents = []
