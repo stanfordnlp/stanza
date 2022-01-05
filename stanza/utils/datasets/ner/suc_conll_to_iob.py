@@ -60,10 +60,10 @@ def extract_from_zip(zip_filename, in_filename, out_filename):
                 print("Processed %d sentences from %s:%s to %s" % (num, zip_filename, in_filename, out_filename))
                 return num
 
-def process_suc3(zip_filename, out_dir):
-    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-train.conll", "%s/sv_suc3.train.bio" % out_dir)
-    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-dev.conll", "%s/sv_suc3.dev.bio" % out_dir)
-    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-test.conll", "%s/sv_suc3.test.bio" % out_dir)
+def process_suc3(zip_filename, short_name, out_dir):
+    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-train.conll", "%s/%s.train.bio" % (out_dir, short_name))
+    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-dev.conll", "%s/%s.dev.bio" % (out_dir, short_name))
+    extract_from_zip(zip_filename, "SUC3.0/corpus/conll/suc-test.conll", "%s/%s.test.bio" % (out_dir, short_name))
 
 def main():
     process_suc3("extern_data/ner/sv_suc3/SUC3.0.zip", "data/ner")

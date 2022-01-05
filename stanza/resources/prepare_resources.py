@@ -129,7 +129,7 @@ default_ners = {
   "nl": "conll02",
   "nn": "norne",
   "ru": "wikiner",
-  "sv": "suc3",
+  "sv": "suc3shuffle",
   "uk": "languk",
   "vi": "vlsp",
   "zh-hans": "ontonotes",

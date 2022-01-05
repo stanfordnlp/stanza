@@ -131,8 +131,8 @@ SUC3 is a Swedish NER dataset provided by Språkbanken
     prepare_ner_dataset.py sv_suc3shuffle
   - If you fill out the license form and get the official data,
     you can get the official splits by putting the provided zip file
-    in $NERBASE/sv_suc3.  Again, not necessary to unzip it
-    prepare_ner_dataset.py sv_suc3
+    in $NERBASE/sv_suc3licensed.  Again, not necessary to unzip it
+    prepare_ner_dataset.py sv_suc3licensed
 
 DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
   - https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane
@@ -497,20 +497,20 @@ def process_fa_arman(paths, short_name):
     shutil.copy2(test_input_file, test_output_file)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
-def process_sv_suc3(paths, short_name):
+def process_sv_suc3licensed(paths, short_name):
     """
     The .zip provided for SUC3 includes train/dev/test splits already
 
     This extracts those splits without needing to unzip the original file
     """
-    assert short_name == "sv_suc3"
+    assert short_name == "sv_suc3licensed"
     language = "sv"
-    train_input_file = os.path.join(paths["NERBASE"], "sv_suc3", "SUC3.0.zip")
+    train_input_file = os.path.join(paths["NERBASE"], short_name, "SUC3.0.zip")
     if not os.path.exists(train_input_file):
         raise FileNotFoundError("Cannot find the officially licensed SUC3 dataset in %s" % train_input_file)
 
     base_output_path = paths["NER_DATA_DIR"]
-    suc_conll_to_iob.process_suc3(train_input_file, base_output_path)
+    suc_conll_to_iob.process_suc3(train_input_file, short_name, base_output_path)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def process_sv_suc3shuffle(paths, short_name):
@@ -519,7 +519,7 @@ def process_sv_suc3shuffle(paths, short_name):
     """
     assert short_name == "sv_suc3shuffle"
     language = "sv"
-    train_input_file = os.path.join(paths["NERBASE"], "sv_suc3shuffle", "suc3.xml.bz2")
+    train_input_file = os.path.join(paths["NERBASE"], short_name, "suc3.xml.bz2")
     if not os.path.exists(train_input_file):
         train_input_file = train_input_file[:-4]
     if not os.path.exists(train_input_file):
@@ -622,8 +622,8 @@ def main(dataset_name):
         process_nchlt(paths, dataset_name)
     elif dataset_name == "fa_arman":
         process_fa_arman(paths, dataset_name)
-    elif dataset_name == "sv_suc3":
-        process_sv_suc3(paths, dataset_name)
+    elif dataset_name == "sv_suc3licensed":
+        process_sv_suc3licensed(paths, dataset_name)
     elif dataset_name == "sv_suc3shuffle":
         process_sv_suc3shuffle(paths, dataset_name)
     elif dataset_name == "da_ddt":
