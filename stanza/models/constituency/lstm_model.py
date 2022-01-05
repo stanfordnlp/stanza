@@ -159,7 +159,7 @@ class LSTMModel(BaseModel, nn.Module):
         # as we want word_start and word_end to not have dimensions
         # for the bert embedding.  The bert model will add its own
         # start and end representation.
-        self.sentence_boundary_vectors = self.args.get('sentence_boundary_vectors', SentenceBoundary.NONE)
+        self.sentence_boundary_vectors = self.args['sentence_boundary_vectors']
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
             self.register_parameter('word_start', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
             self.register_parameter('word_end', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
@@ -183,8 +183,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.bert_tokenizer = None
             self.is_phobert = False
 
-        # TODO: remove this `get` once it's not needed
-        if self.args.get('pattn_num_heads', 0) > 0 and self.args.get('pattn_num_layers', 0) > 0:
+        if self.args['pattn_num_heads'] > 0 and self.args['pattn_num_layers'] > 0:
             # Initializations of parameters for the Partitioned Attention
             # round off the size of the model so that it divides in half evenly
             self.pattn_d_model = self.args['pattn_d_model'] // 2 * 2
@@ -237,8 +236,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.open_node_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
                                                 embedding_dim = self.hidden_size)
 
-        # TODO: remove this `get` once it's not needed
-        if args.get('combined_dummy_embedding', False):
+        if args['combined_dummy_embedding']:
             self.dummy_embedding = self.open_node_embedding
         else:
             self.dummy_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
@@ -263,7 +261,7 @@ class LSTMModel(BaseModel, nn.Module):
         # word size + constituency size + transition size
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
 
-        self.constituency_lstm = self.args['constituency_lstm']
+        self.use_constituency_lstm_hx = self.args['constituency_lstm']
 
         self._unary_limit = unary_limit
 
@@ -677,7 +675,7 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
         cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
-        if self.constituency_lstm:
+        if self.use_constituency_lstm_hx:
             new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
                           for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         else:
