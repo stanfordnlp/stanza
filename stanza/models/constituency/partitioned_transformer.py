@@ -250,7 +250,7 @@ class PartitionedTransformerModule(nn.Module):
                  d_ff,
                  ff_dropout,
                  residual_dropout,
-                 attention_dropout, #
+                 attention_dropout,
                  word_input_size,
                  bias,
                  morpho_emb_dropout,
