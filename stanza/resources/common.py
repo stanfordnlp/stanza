@@ -2,15 +2,17 @@
 Common utilities for Stanza resources.
 """
 
-import os
-import requests
-from tqdm.auto import tqdm
-from pathlib import Path
-import json
+from collections import defaultdict
 import hashlib
-import zipfile
-import shutil
+import json
 import logging
+import os
+from pathlib import Path
+import requests
+import shutil
+import zipfile
+
+from tqdm.auto import tqdm
 
 from stanza.utils.helper_func import make_table
 from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, \
@@ -317,19 +319,26 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
             f"but got {type(model_dir).__name__} instead."
         )
 
-    if isinstance(package, str):
-        package = package.strip().lower()
-    elif package is not None:
-        raise TypeError(
-            f"The parameter 'package' should be str, "
-            f"but got {type(package).__name__} instead."
-        )
-
-    if isinstance(processors, str):
+    if isinstance(processors, (str, list, tuple)):
         # Special case: processors is str, compatible with older version
+        # also allow for setting alternate packages for these processors
+        # via the package argument
+        if package is None:
+            package = defaultdict(lambda: 'default')
+        elif isinstance(package, str):
+            default = package
+            package = defaultdict(lambda: default)
+        elif isinstance(package, dict):
+            package = defaultdict(lambda: 'default', package)
+        else:
+            raise TypeError(
+                f"The parameter 'package' should be None, str, or dict, "
+                f"but got {type(package).__name__} instead."
+            )
+        if isinstance(processors, str):
+            processors = [x.strip().lower() for x in processors.split(",")]
         processors = {
-            processor.strip().lower(): package \
-                for processor in processors.split(',')
+            processor: package[processor] for processor in processors
         }
         package = None
     elif isinstance(processors, dict):
@@ -341,6 +350,14 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
         raise TypeError(
             f"The parameter 'processors' should be dict or str, "
             f"but got {type(processors).__name__} instead."
+        )
+
+    if isinstance(package, str):
+        package = package.strip().lower()
+    elif package is not None:
+        raise TypeError(
+            f"The parameter 'package' should be str, or a dict if 'processors' is a str, "
+            f"but got {type(package).__name__} instead."
         )
 
     return lang, model_dir, package, processors
