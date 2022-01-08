@@ -291,3 +291,15 @@ def test_str_bracket_labels():
     trees = tree_reader.read_trees(text)
     assert len(trees) == 1
     assert "{:L}".format(trees[0]) == expected
+
+def test_all_leaves_are_preterminals():
+    text = "((S (VP (VB Unban)) (NP (NNP Mox) (NNP Opal))))"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    assert trees[0].all_leaves_are_preterminals()
+
+    text = "((S (VP (VB Unban)) (NP (Mox) (NNP Opal))))"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    assert not trees[0].all_leaves_are_preterminals()
+
