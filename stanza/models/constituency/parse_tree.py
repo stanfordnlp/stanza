@@ -70,6 +70,18 @@ class Tree(StanzaObject):
         words = [x.children[0].label for x in self.yield_preterminals()]
         return words
 
+    def all_leaves_are_preterminals(self):
+        """
+        Returns True if all leaves are under preterminals, False otherwise
+        """
+        if self.is_leaf():
+            return False
+
+        if self.is_preterminal():
+            return True
+
+        return all(t.all_leaves_are_preterminals() for t in self.children)
+
     def __format__(self, spec):
         """
         Turn the tree into a string representing the tree
