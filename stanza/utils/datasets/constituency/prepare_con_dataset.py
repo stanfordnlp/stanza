@@ -12,6 +12,16 @@ vlsp09 is the 2009 constituency treebank:
     Proceedings of The Third Linguistic Annotation Workshop
     In conjunction with ACL-IJCNLP 2009, Suntec City, Singapore, 2009
   This can be obtained by contacting vlsp.resources@gmail.com
+
+da_arboretum
+  Ekhard Bick
+    Arboretum, a Hybrid Treebank for Danish
+    https://www.researchgate.net/publication/251202293_Arboretum_a_Hybrid_Treebank_for_Danish
+  Available here for a license fee:
+    http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/
+  Internal to Stanford, please contact Chris Manning and/or John Bauer
+  The file processed is the tiger xml, although there are some edits
+    needed in order to make it functional for our parser
 """
 
 import os
@@ -20,9 +30,12 @@ import sys
 import tempfile
 
 import stanza.utils.default_paths as default_paths
+from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
+
+SHARDS = ("train", "dev", "test")
 
 def process_it_turin(paths):
     """
@@ -59,6 +72,38 @@ def process_vlsp21(paths):
         # create an empty test file - currently we don't have actual test data for VLSP 21
         pass
 
+def split_treebank(treebank, train_size, dev_size):
+    train_end = int(len(treebank) * train_size)
+    dev_end = int(len(treebank) * (train_size + dev_size))
+    return treebank[:train_end], treebank[train_end:dev_end], treebank[dev_end:]
+
+def process_arboretum(paths, dataset_name):
+    """
+    Processes the Danish dataset, Arboretum
+    """
+    assert dataset_name == 'da_arboretum'
+
+    arboretum_file = os.path.join(paths["CONSTITUENCY_BASE"], "danish", "W0084", "arboretum.tiger", "arboretum.tiger")
+    if not os.path.exists(arboretum_file):
+        raise FileNotFoundError("Unable to find input file for Arboretum.  Expected in {}".format(arboretum_file))
+
+    treebank = convert_tiger_treebank(arboretum_file)
+    datasets = split_treebank(treebank, 0.8, 0.1)
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    output_filename = os.path.join(output_dir, "%s.mrg" % dataset_name)
+    print("Writing {} trees to {}".format(len(treebank), output_filename))
+    with open(output_filename, "w", encoding="utf-8") as fout:
+        for tree in treebank:
+            fout.write("{}".format(tree))
+            fout.write("\n")
+    for dataset, shard in zip(datasets, SHARDS):
+        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
+        with open(output_filename, "w", encoding="utf-8") as fout:
+            for tree in dataset:
+                fout.write("{}".format(tree))
+                fout.write("\n")
+
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -70,6 +115,8 @@ def main(dataset_name):
         process_vlsp09(paths)
     elif dataset_name == 'vi_vlsp21':
         process_vlsp21(paths)
+    elif dataset_name == 'da_arboretum':
+        process_arboretum(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
