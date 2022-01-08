@@ -323,7 +323,7 @@ class Tree(StanzaObject):
 
         new_tree = recursive_replace_words(self)
         if any(True for _ in word_iterator):
-            raise ValueError("Too many tags for the given tree")
+            raise ValueError("Too many words for the given tree")
         return new_tree
 
 
