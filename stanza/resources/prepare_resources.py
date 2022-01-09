@@ -152,6 +152,7 @@ default_charlms = {
   "nl": "ccwiki",
   "ru": "newswiki",
   "sv": "conll17",
+  "uk": "conll17",
   "vi": "conll17",
   "zh-hans": "gigaword"
 }
@@ -170,9 +171,6 @@ ner_charlms = {
     "ncbi_disease": "pubmed",
     "radiology": "mimic",
     "s800": "pubmed",
-  },
-  "uk": {
-    "languk": None,
   },
   "da": {
     "ddt": None,
