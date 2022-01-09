@@ -19,11 +19,17 @@ logger = logging.getLogger('stanza')
 # xpos tagger doesn't produce PP tag on the turin treebank,
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
+    "da": "upos",   # the DDT has no xpos tags anyway
     "it": "upos",
     "vi": "upos",
 }
 
 BERT = {
+    # https://huggingface.co/Maltehb/danish-bert-botxo
+    # contrary to normal expectations, this hurts F1
+    # on a dev split by about 1 F1
+    "da": "Maltehb/danish-bert-botxo",
+
     # from https://github.com/idb-ita/GilBERTo
     # annoyingly, it doesn't handle cased text
     # supposedly there is an argument "do_lower_case"
