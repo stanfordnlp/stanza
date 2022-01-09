@@ -140,6 +140,7 @@ default_charlms = {
   "af": "oscar",
   "ar": "ccwiki",
   "bg": "conll17",
+  "da": "oscar",
   "de": "newswiki",
   "en": "1billion",
   "es": "newswiki",
@@ -171,9 +172,6 @@ ner_charlms = {
     "ncbi_disease": "pubmed",
     "radiology": "mimic",
     "s800": "pubmed",
-  },
-  "da": {
-    "ddt": None,
   },
   "hu": {
     "combined": None,
