@@ -25,11 +25,11 @@ relative to the search if used many times on small documents.  Ideally
 larger texts would be processed, and all of the desired semgrex
 patterns would be run at once.  The worst thing to do would be to call
 this multiple times on a large document, one invocation per semgrex
-pattern, as that would serialize the document each time.  There are of
-course multiple ways of making this more efficient, such as including
-it as a separate call in the server or keeping the subprocess alive
-for multiple queries, but we didn't do any of those.  We do, however,
-accept pull requests...
+pattern, as that would serialize the document each time.
+Included here is a context manager which allows for keeping the same
+java process open for multiple requests.  This saves on the subprocess
+launching time.  It is still important not to wastefully serialize the
+same document over and over, though.
 """
 
 import stanza
