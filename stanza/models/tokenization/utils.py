@@ -363,7 +363,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                             partlen = len(part)
                         lstripped = part.lstrip()
                         if st < 0:
-                            st = char_offset + st0 + (len(part) - len(lstripped))
+                            st = char_offset + st0 + (partlen - len(lstripped))
                         char_offset += st0 + partlen
                     position_info = (st, char_offset)
                 else:
