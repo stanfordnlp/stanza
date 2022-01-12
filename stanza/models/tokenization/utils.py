@@ -358,10 +358,11 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                             match = part_pattern.search(text, char_offset)
                             st0 = match.start(0) - char_offset
                             partlen = match.end(0) - match.start(0)
+                            lstripped = match.group(0).lstrip()
                         else:
                             st0 = text.index(part, char_offset) - char_offset
                             partlen = len(part)
-                        lstripped = part.lstrip()
+                            lstripped = part.lstrip()
                         if st < 0:
                             st = char_offset + st0 + (partlen - len(lstripped))
                         char_offset += st0 + partlen
