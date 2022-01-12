@@ -25,6 +25,7 @@ The lemmatization module recovers the lemma form for each input word. For exampl
 | lemma_dict_only | bool | `False` | If set to `True`, only a dictionary-based lemmatizer will be used. For languages such as Chinese, a dictionary-based lemmatizer is enough. |
 | lemma_edit | bool | `True` | If set to `True`, use an edit classifier alongside the seq2seq lemmatizer. The edit classifier will predict "shortcut" operations such as "identical" or "lowercase", to make the lemmatization of long sequences more stable. |
 | lemma_beam_size | int | 1 | Control the beam size used during decoding in the seq2seq lemmatizer. |
+| lemma_pretagged | bool | `False` | Assume the document is tokenized and pretagged. Only run lemma analysis on the document. |
 | lemma_max_dec_len | int | 50 | Control the maximum decoding character length in the seq2seq lemmatizer. The decoder will stop if this length is achieved and the end-of-sequence character is still not seen. |
 
 ## Example Usage
