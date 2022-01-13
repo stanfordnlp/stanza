@@ -34,6 +34,7 @@ import random
 import sys
 import tempfile
 
+from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
@@ -97,17 +98,11 @@ def process_arboretum(paths, dataset_name):
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     output_filename = os.path.join(output_dir, "%s.mrg" % dataset_name)
     print("Writing {} trees to {}".format(len(treebank), output_filename))
-    with open(output_filename, "w", encoding="utf-8") as fout:
-        for tree in treebank:
-            fout.write("{}".format(tree))
-            fout.write("\n")
+    parse_tree.Tree.write_treebank(treebank, output_filename)
     for dataset, shard in zip(datasets, SHARDS):
         output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
-        with open(output_filename, "w", encoding="utf-8") as fout:
-            for tree in dataset:
-                fout.write("{}".format(tree))
-                fout.write("\n")
-
+        print("Writing {} trees to {}".format(len(dataset), output_filename))
+        parse_tree.Tree.write_treebank(dataset, output_filename)
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
