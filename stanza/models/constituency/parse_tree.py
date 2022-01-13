@@ -361,3 +361,10 @@ class Tree(StanzaObject):
             return score
         score = max(t.count_unary_depth() for t in self.children)
         return score
+
+    @staticmethod
+    def write_treebank(trees, out_file, fmt="{}"):
+        with open(out_file, "w", encoding="utf-8") as fout:
+            for tree in trees:
+                fout.write(fmt.format(tree))
+                fout.write("\n")
