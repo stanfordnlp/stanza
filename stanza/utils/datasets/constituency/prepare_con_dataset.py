@@ -24,7 +24,9 @@ da_arboretum
     needed in order to make it functional for our parser
   The treebank comes as a tar.gz file, W0084.tar.gz
   untar this file in $CONSTITUENCY_HOME/danish
-  becomes CONSTITUENCY_HOME/danish/W0084/...
+  then move the extracted folder to "arboretum"
+    $CONSTITUENCY_HOME/danish/W0084/... becomes
+    $CONSTITUENCY_HOME/danish/arboretum/...
 """
 
 import os
@@ -86,7 +88,7 @@ def process_arboretum(paths, dataset_name):
     """
     assert dataset_name == 'da_arboretum'
 
-    arboretum_file = os.path.join(paths["CONSTITUENCY_BASE"], "danish", "W0084", "arboretum.tiger", "arboretum.tiger")
+    arboretum_file = os.path.join(paths["CONSTITUENCY_BASE"], "danish", "arboretum", "arboretum.tiger", "arboretum.tiger")
     if not os.path.exists(arboretum_file):
         raise FileNotFoundError("Unable to find input file for Arboretum.  Expected in {}".format(arboretum_file))
 
