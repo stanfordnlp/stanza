@@ -22,6 +22,9 @@ da_arboretum
   Internal to Stanford, please contact Chris Manning and/or John Bauer
   The file processed is the tiger xml, although there are some edits
     needed in order to make it functional for our parser
+  The treebank comes as a tar.gz file, W0084.tar.gz
+  untar this file in $CONSTITUENCY_HOME/danish
+  becomes CONSTITUENCY_HOME/danish/W0084/...
 """
 
 import os
