@@ -27,6 +27,19 @@ da_arboretum
   then move the extracted folder to "arboretum"
     $CONSTITUENCY_HOME/danish/W0084/... becomes
     $CONSTITUENCY_HOME/danish/arboretum/...
+
+tr_starlang
+  A dataset in three parts from the Starlang group in Turkey:
+  Neslihan Kara, Büşra Marşan, et al
+    Creating A Syntactically Felicitous Constituency Treebank For Turkish
+    https://ieeexplore.ieee.org/document/9259873
+  git clone the following three repos
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
+  Put them in
+    $CONSTITUENCY_HOME/turkish
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset tr_starlang
 """
 
 import os
@@ -38,6 +51,7 @@ from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
+from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
 
@@ -83,6 +97,12 @@ def split_treebank(treebank, train_size, dev_size):
     dev_end = int(len(treebank) * (train_size + dev_size))
     return treebank[:train_end], treebank[train_end:dev_end], treebank[dev_end:]
 
+def write_dataset(datasets, output_dir, dataset_name):
+    for dataset, shard in zip(datasets, SHARDS):
+        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
+        print("Writing {} trees to {}".format(len(dataset), output_filename))
+        parse_tree.Tree.write_treebank(dataset, output_filename)
+
 def process_arboretum(paths, dataset_name):
     """
     Processes the Danish dataset, Arboretum
@@ -96,13 +116,28 @@ def process_arboretum(paths, dataset_name):
     treebank = convert_tiger_treebank(arboretum_file)
     datasets = split_treebank(treebank, 0.8, 0.1)
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
+
     output_filename = os.path.join(output_dir, "%s.mrg" % dataset_name)
     print("Writing {} trees to {}".format(len(treebank), output_filename))
     parse_tree.Tree.write_treebank(treebank, output_filename)
-    for dataset, shard in zip(datasets, SHARDS):
-        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
-        print("Writing {} trees to {}".format(len(dataset), output_filename))
-        parse_tree.Tree.write_treebank(dataset, output_filename)
+
+    write_dataset(datasets, output_dir, dataset_name)
+
+
+def process_starlang(paths, dataset_name):
+    """
+    Convert the Turkish Starlang dataset to brackets
+    """
+    PIECES = ["TurkishAnnotatedTreeBank-15",
+              "TurkishAnnotatedTreeBank2-15",
+              "TurkishAnnotatedTreeBank2-20"]
+
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    chunk_paths = [os.path.join(paths["CONSTITUENCY_BASE"], "turkish", piece) for piece in PIECES]
+    datasets = read_starlang(chunk_paths)
+
+    write_dataset(datasets, output_dir, dataset_name)
+
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -117,6 +152,8 @@ def main(dataset_name):
         process_vlsp21(paths)
     elif dataset_name == 'da_arboretum':
         process_arboretum(paths, dataset_name)
+    elif dataset_name == 'tr_starlang':
+        process_starlang(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
