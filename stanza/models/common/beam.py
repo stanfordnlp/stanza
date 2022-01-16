@@ -83,7 +83,7 @@ class Beam(object):
         # word and beam each score came from
         # bestScoreId is the integer ids, and numWords is the integer length.
         # Need to do integer division
-        prevK = bestScoresId // numWords
+        prevK = torch.div(bestScoresId, numWords, rounding_mode='trunc')
         self.prevKs.append(prevK)
         self.nextYs.append(bestScoresId - prevK * numWords)
         if copy_indices is not None:
