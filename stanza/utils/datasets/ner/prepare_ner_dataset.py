@@ -156,6 +156,21 @@ NorNE is the Norwegian Dependency Treebank with NER labels
     git clone git@github.com:ltgoslo/norne.git
     prepare_ner_dataset.py nb_norne
     prepare_ner_dataset.py nn_norne
+
+starlang is a set of constituency trees for Turkish
+  The words in this dataset (usually) have NER labels as well
+
+  A dataset in three parts from the Starlang group in Turkey:
+  Neslihan Kara, Büşra Marşan, et al
+    Creating A Syntactically Felicitous Constituency Treebank For Turkish
+    https://ieeexplore.ieee.org/document/9259873
+  git clone the following three repos
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
+  Put them in
+    $CONSTITUENCY_HOME/turkish    (yes, the constituency home)
+  prepare_ner_dataset.py tr_starlang
 """
 
 import glob
@@ -178,6 +193,7 @@ import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
+import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
@@ -204,6 +220,17 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
+
+def write_dataset(datasets, output_dir, short_name, suffix="bio"):
+    for shard, dataset in zip(SHARDS, datasets):
+        output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
+        with open(output_filename, "w", encoding="utf-8") as fout:
+            for sentence in dataset:
+                for word in sentence:
+                    fout.write("%s\t%s\n" % word)
+                fout.write("\n")
+
+    convert_bio_to_json(output_dir, output_dir, short_name, suffix)
 
 def process_turku(paths):
     short_name = 'fi_turku'
@@ -591,6 +618,22 @@ def process_norne(paths, short_name):
 
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_starlang(paths, short_name):
+    """
+    Process a Turkish dataset from Starlang
+    """
+    assert short_name == 'tr_starlang'
+
+    PIECES = ["TurkishAnnotatedTreeBank-15",
+              "TurkishAnnotatedTreeBank2-15",
+              "TurkishAnnotatedTreeBank2-20"]
+
+    chunk_paths = [os.path.join(paths["CONSTITUENCY_BASE"], "turkish", piece) for piece in PIECES]
+    datasets = convert_starlang_ner.read_starlang(chunk_paths)
+
+    write_dataset(datasets, paths["NER_DATA_DIR"], short_name)
+
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
@@ -630,6 +673,8 @@ def main(dataset_name):
         process_da_ddt(paths, dataset_name)
     elif dataset_name in ("nb_norne", "nn_norne"):
         process_norne(paths, dataset_name)
+    elif dataset_name == 'tr_starlang':
+        process_starlang(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
