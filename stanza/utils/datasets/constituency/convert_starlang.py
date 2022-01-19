@@ -38,20 +38,27 @@ def read_tree(text):
         raise ValueError("found an unexpected phrasal node {}".format(label))
     return tree
 
-def read_files(filenames):
+def read_files(filenames, conversion, log):
     trees = []
     for filename in filenames:
         with open(filename, encoding="utf-8") as fin:
             text = fin.read()
         try:
-            tree = read_tree(text)
+            tree = conversion(text)
             if tree is not None:
                 trees.append(tree)
         except ValueError as e:
-            print("-----------------\nFound an error in {}: {} Original text: {}".format(filename, e, text))
+            if log:
+                print("-----------------\nFound an error in {}: {} Original text: {}".format(filename, e, text))
     return trees
 
-def read_starlang(paths):
+def read_starlang(paths, conversion=read_tree, log=True):
+    """
+    Read the starlang trees, converting them using the given method.
+
+    read_tree or any other conversion turns one file at a time to a sentence.
+    log is whether or not to log a ValueError - the NER division has many missing labels
+    """
     if isinstance(paths, str):
         paths = (paths,)
 
@@ -65,22 +72,25 @@ def read_starlang(paths):
         dev_files.extend([x for x in tree_files if x.endswith(".dev")])
         test_files.extend([x for x in tree_files if x.endswith(".test")])
 
-    print("Reading %d total trees" % (len(train_files) + len(dev_files) + len(test_files)))
-    train_treebank = read_files(tqdm(train_files))
-    dev_treebank = read_files(tqdm(dev_files))
-    test_treebank = read_files(tqdm(test_files))
+    print("Reading %d total files" % (len(train_files) + len(dev_files) + len(test_files)))
+    train_treebank = read_files(tqdm(train_files), conversion=conversion, log=log)
+    dev_treebank = read_files(tqdm(dev_files), conversion=conversion, log=log)
+    test_treebank = read_files(tqdm(test_files), conversion=conversion, log=log)
 
     return train_treebank, dev_treebank, test_treebank
 
-def main():
+def main(conversion=read_tree, log=True):
     paths = ["extern_data/constituency/turkish/TurkishAnnotatedTreeBank-15",
              "extern_data/constituency/turkish/TurkishAnnotatedTreeBank2-15",
              "extern_data/constituency/turkish/TurkishAnnotatedTreeBank2-20"]
-    train_treebank, dev_treebank, test_treebank = read_starlang(paths)
+    train_treebank, dev_treebank, test_treebank = read_starlang(paths, conversion=conversion, log=log)
 
     print("Train: %d" % len(train_treebank))
     print("Dev: %d" % len(dev_treebank))
     print("Test: %d" % len(test_treebank))
+
+    print(train_treebank[0])
+    return train_treebank, dev_treebank, test_treebank
 
 if __name__ == '__main__':
     main()
