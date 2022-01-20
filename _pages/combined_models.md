@@ -3,7 +3,7 @@ layout: page
 title: Combined models
 keywords: combined models
 permalink: '/combined_models.html'
-nav_order: 3
+nav_order: 4
 parent: Models
 ---
 
