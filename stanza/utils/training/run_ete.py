@@ -37,6 +37,9 @@ from stanza.utils.training.run_pos import wordvec_args
 
 logger = logging.getLogger('stanza')
 
+# a constant so that the script which looks for these results knows what to look for
+RESULTS_STRING = "End to end results for"
+
 def add_args(parser):
     parser.add_argument('--test_data', default=None, type=str, help='Which data to test on, if not using the default data for this model')
 
@@ -150,7 +153,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     gold_file = f"{tokenize_dir}/{test_short_name}.{dataset}.gold.conllu"
     ete_file = depparse_output
     results = common.run_eval_script(gold_file, ete_file)
-    logger.info("End to end results for {} models on {} {} data:\n{}".format(short_name, test_short_name, dataset, results))
+    logger.info("{} {} models on {} {} data:\n{}".format(RESULTS_STRING, short_name, test_short_name, dataset, results))
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
