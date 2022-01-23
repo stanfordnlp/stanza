@@ -12,8 +12,6 @@ https://nlp.stanford.edu/nlp/javadoc/javanlp/edu/stanford/nlp/trees/tregex/tsurg
 This module accepts Tree objects as produced by the conparser and
 returns the modified trees that result from one or more tsurgeon
 operations.
-
-TODO: add a unit test once CoreNLP 4.3.3 is released
 """
 
 from stanza.models.constituency import tree_reader
