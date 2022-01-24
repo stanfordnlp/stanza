@@ -237,9 +237,10 @@ def resolve_classpath(classpath=None):
     elif classpath is None:
         classpath = os.getenv("CORENLP_HOME", os.path.join(str(Path.home()), 'stanza_corenlp'))
 
-        assert os.path.exists(classpath), \
-            "Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define " \
-            "$CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter."
+        if not os.path.exists(classpath):
+            raise FileNotFoundError("Please install CoreNLP by running `stanza.install_corenlp()`. If you have installed it, please define "
+                                    "$CORENLP_HOME to be location of your CoreNLP distribution or pass in a classpath parameter.  "
+                                    "$CORENLP_HOME={}".format(os.getenv("CORENLP_HOME")))
         classpath = os.path.join(classpath, "*")
     return classpath
 
