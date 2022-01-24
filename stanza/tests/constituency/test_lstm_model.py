@@ -203,6 +203,16 @@ def test_forward_partitioned_attention(pt):
     model = build_model(pt, '--pattn_num_heads', '0', '--pattn_num_layers', '0')
     run_forward_checks(model)
 
+def test_forward_labeled_attention(pt):
+    """
+    Test with & without labeled attention layers
+    """
+    model = build_model(pt, '--lattn_d_proj', '64', '--lattn_d_l', '16')
+    run_forward_checks(model)
+
+    model = build_model(pt, '--lattn_d_proj', '0', '--lattn_d_l', '0')
+    run_forward_checks(model)
+
 def test_forward_timing_choices(pt):
     """
     Test different timing / position encodings

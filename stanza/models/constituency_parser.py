@@ -323,7 +323,6 @@ def parse_args(args=None):
     parser.add_argument('--pattn_timing', default='sin', choices=['learned', 'sin'], help='Use a learned embedding or a sin embedding')
 
     # Label Attention
-    parser.add_argument('--lattn_d_model', default=1024, type=int, help='Label Attention Layer dimensionality')
     parser.add_argument('--lattn_d_kv', default=64, type=int, help='Dimension of the key/query vector')
     parser.add_argument('--lattn_d_proj', default=64, type=int, help='Dimension of the output vector from each label attention head')
     parser.add_argument('--lattn_resdrop', default=True, action='store_true', help='Whether or not to use Residual Dropout')
