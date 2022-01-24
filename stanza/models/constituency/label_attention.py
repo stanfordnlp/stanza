@@ -10,26 +10,13 @@ import torch.nn.init as init
 # but that is for older versions of torch anyway
 DTYPE = torch.bool
 
-use_cuda = torch.cuda.is_available()
-if use_cuda:
-    torch_t = torch.cuda
-    def from_numpy(ndarray):
-        if float(sys.version[:3]) <= 3.6:
-            return eval('torch.from_numpy(ndarray).pin_memory().cuda(async=True)')
-        else:
-            return torch.from_numpy(ndarray).pin_memory().cuda(non_blocking=True)
-else:
-    print("Not using CUDA!")
-    torch_t = torch
-    from torch import from_numpy
-
 class BatchIndices:
     """
     Batch indices container class (used to implement packed batches)
     """
-    def __init__(self, batch_idxs_np):
+    def __init__(self, batch_idxs_np, device):
         self.batch_idxs_np = batch_idxs_np
-        self.batch_idxs_torch = from_numpy(batch_idxs_np)
+        self.batch_idxs_torch = torch.as_tensor(batch_idxs_np, device=device)
 
         self.batch_size = int(1 + np.max(batch_idxs_np))
 
@@ -184,13 +171,13 @@ class MultiHeadAttention(nn.Module):
             self.d_content = d_model - d_positional
             self.d_positional = d_positional
 
-            self.w_qs1 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_content, d_k // 2))
-            self.w_ks1 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_content, d_k // 2))
-            self.w_vs1 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_content, d_v // 2))
+            self.w_qs1 = nn.Parameter(torch.FloatTensor(n_head, self.d_content, d_k // 2))
+            self.w_ks1 = nn.Parameter(torch.FloatTensor(n_head, self.d_content, d_k // 2))
+            self.w_vs1 = nn.Parameter(torch.FloatTensor(n_head, self.d_content, d_v // 2))
 
-            self.w_qs2 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_positional, d_k // 2))
-            self.w_ks2 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_positional, d_k // 2))
-            self.w_vs2 = nn.Parameter(torch_t.FloatTensor(n_head, self.d_positional, d_v // 2))
+            self.w_qs2 = nn.Parameter(torch.FloatTensor(n_head, self.d_positional, d_k // 2))
+            self.w_ks2 = nn.Parameter(torch.FloatTensor(n_head, self.d_positional, d_k // 2))
+            self.w_vs2 = nn.Parameter(torch.FloatTensor(n_head, self.d_positional, d_v // 2))
 
             init.xavier_normal_(self.w_qs1)
             init.xavier_normal_(self.w_ks1)
@@ -200,9 +187,9 @@ class MultiHeadAttention(nn.Module):
             init.xavier_normal_(self.w_ks2)
             init.xavier_normal_(self.w_vs2)
         else:
-            self.w_qs = nn.Parameter(torch_t.FloatTensor(n_head, d_model, d_k))
-            self.w_ks = nn.Parameter(torch_t.FloatTensor(n_head, d_model, d_k))
-            self.w_vs = nn.Parameter(torch_t.FloatTensor(n_head, d_model, d_v))
+            self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
+            self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
+            self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v))
 
             init.xavier_normal_(self.w_qs)
             init.xavier_normal_(self.w_ks)
@@ -412,18 +399,18 @@ class LabelAttention(nn.Module):
             self.d_positional = d_positional
 
             if self.q_as_matrix:
-                self.w_qs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
+                self.w_qs1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
             else:
-                self.w_qs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
-            self.w_ks1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
-            self.w_vs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_v // 2), requires_grad=True)
+                self.w_qs1 = nn.Parameter(torch.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
+            self.w_ks1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
+            self.w_vs1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_v // 2), requires_grad=True)
 
             if self.q_as_matrix:
-                self.w_qs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
+                self.w_qs2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
             else:
-                self.w_qs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
-            self.w_ks2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
-            self.w_vs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_v // 2), requires_grad=True)
+                self.w_qs2 = nn.Parameter(torch.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
+            self.w_ks2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
+            self.w_vs2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_v // 2), requires_grad=True)
 
             init.xavier_normal_(self.w_qs1)
             init.xavier_normal_(self.w_ks1)
@@ -434,11 +421,11 @@ class LabelAttention(nn.Module):
             init.xavier_normal_(self.w_vs2)
         else:
             if self.q_as_matrix:
-                self.w_qs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
+                self.w_qs = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
             else:
-                self.w_qs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k), requires_grad=True)
-            self.w_ks = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
-            self.w_vs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_v), requires_grad=True)
+                self.w_qs = nn.Parameter(torch.FloatTensor(self.d_l, d_k), requires_grad=True)
+            self.w_ks = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
+            self.w_vs = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_v), requires_grad=True)
 
             init.xavier_normal_(self.w_qs)
             init.xavier_normal_(self.w_ks)
@@ -701,7 +688,7 @@ class LabelAttentionModule(nn.Module):
                 i += 1
 
         batch_indices = batch_idxs
-        batch_idxs = BatchIndices(batch_idxs)
+        batch_idxs = BatchIndices(batch_idxs, word_embeddings[0].device)
 
         new_embeds = []
         for sentence_idx, batch in enumerate(word_embeddings):
