@@ -50,7 +50,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
         raise ValueError(
             "Both model and model version should be specified."
         )
-    logger.info(f"Downloading {model} models (version {version}) into directory {dir}...")
+    logger.info(f"Downloading {model} models (version {version}) into directory {dir}")
     model = model.strip().lower()
     if model not in AVAILABLE_MODELS:
         raise KeyError(
@@ -90,13 +90,13 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
     """
     dir = os.path.expanduser(dir)
     set_logging_level(logging_level=logging_level, verbose=None)
-    if os.path.exists(dir):
+    if os.path.exists(dir) and len(os.listdir(dir)) > 0:
         logger.warn(
             f"Directory {dir} already exists. "
             f"Please install CoreNLP to a new directory.")
         return
 
-    logger.info(f"Installing CoreNLP package into {dir}...")
+    logger.info(f"Installing CoreNLP package into {dir}")
     # First download the URL package
     logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
     tag = version if version == 'main' else 'v' + version
