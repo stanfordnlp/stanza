@@ -300,7 +300,7 @@ class PartitionedTransformerModule(nn.Module):
 
             valid_token_mask = padded_data != -100
 
-        valid_token_mask = valid_token_mask.to(device="cuda:0")
+        valid_token_mask = valid_token_mask.to(device=bert_embeddings[0].device)
         padded_embeddings = torch.nn.utils.rnn.pad_sequence(
             bert_embeddings,
             batch_first=True,
