@@ -28,7 +28,7 @@ DEFAULT_CORENLP_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_corenlp')
 )
 
-AVAILABLE_MODELS = set(['arabic', 'chinese', 'english-extra', 'english-kbp', 'french', 'german', 'spanish'])
+AVAILABLE_MODELS = set(['arabic', 'chinese', 'english-extra', 'english-kbp', 'french', 'german', 'hungarian', 'italian', 'spanish'])
 
 
 def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_MODEL_URL, logging_level='INFO', proxies=None):
@@ -37,7 +37,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
 
     Args:
         model: the name of the model, can be one of 'arabic', 'chinese', 'english',
-            'english-kbp', 'french', 'german', 'spanish'
+            'english-kbp', 'french', 'german', 'hungarian', 'italian', 'spanish'
         version: the version of the model
         dir: the directory to download CoreNLP model into; alternatively can be
             set up with environment variable $CORENLP_HOME
