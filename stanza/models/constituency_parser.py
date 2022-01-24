@@ -81,6 +81,8 @@ The code breakdown is as follows:
 
   constituency/partitioned_transformer.py: implementation of a transformer for self-attention.
      including attention noticeably improves model scores
+  constituency/label_attention: an even fancier form of transformer based on labeled attention:
+     https://arxiv.org/abs/1911.03875
 
   stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
 
