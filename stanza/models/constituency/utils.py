@@ -69,7 +69,13 @@ def retag_trees(trees, pipeline, xpos=True):
     else:
         tag_lists = [[x.upos for x in sentence.words] for sentence in doc.sentences]
 
-    new_trees = [replace_tags(tree, tags) for tree, tags in zip(trees, tag_lists)]
+    new_trees = []
+    for tree_idx, (tree, tags) in enumerate(zip(trees, tag_lists)):
+        try:
+            new_tree = replace_tags(tree, tags)
+            new_trees.append(new_tree)
+        except ValueError as e:
+            raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
     return new_trees
 
 def build_nonlinearity(nonlinearity):
