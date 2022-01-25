@@ -115,9 +115,13 @@ def train(args):
     gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
-    if len(train_batch) == 0 or len(dev_batch) == 0:
+    if len(train_batch) == 0:
         logger.warning("Skip training because no data available...")
         return
+    dev_mwt = dev_doc.get_mwt_expansions(False)
+    if len(dev_batch) == 0 and args.get('dict_only', False):
+        logger.warning("Training data available, but dev data has no MWTs.  Only training a dict based MWT")
+        args['dict_only'] = True
 
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])

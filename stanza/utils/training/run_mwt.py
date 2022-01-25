@@ -59,9 +59,9 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("No training MWTS found for %s.  Skipping" % treebank)
         return
     
-    if not check_mwt(dev_in_file):
-        logger.warning("No dev MWTS found for %s.  Skipping" % treebank)
-        return
+    if not check_mwt(dev_in_file) and mode == Mode.TRAIN:
+        logger.info("No dev MWTS found for %s.  Training only the deterministic MWT expander" % treebank)
+        extra_args.append('--dict_only')
 
     if mode == Mode.TRAIN:
         max_mwt_len = math.ceil(max_mwt_length([train_json, dev_json]) * 1.1 + 1)
