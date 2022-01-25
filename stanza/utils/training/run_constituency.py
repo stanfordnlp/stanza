@@ -25,6 +25,10 @@ RETAG_METHOD = {
 }
 
 BERT = {
+    # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
+    # helps the Turkish model quite a bit
+    "tr": "dbmdz/bert-base-turkish-128k-cased",
+
     # https://huggingface.co/Maltehb/danish-bert-botxo
     # contrary to normal expectations, this hurts F1
     # on a dev split by about 1 F1
