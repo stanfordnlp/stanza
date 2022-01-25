@@ -40,6 +40,26 @@ tr_starlang
   Put them in
     $CONSTITUENCY_HOME/turkish
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset tr_starlang
+
+ja_alt
+  Asian Language Treebank produced a treebank for Japanese:
+    Ye Kyaw Thu, Win Pa Pa, Masao Utiyama, Andrew Finch, Eiichiro Sumita
+    Introducing the Asian Language Treebank
+    http://www.lrec-conf.org/proceedings/lrec2016/pdf/435_Paper.pdf
+  Download
+    https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/Japanese-ALT-20210218.zip
+  unzip this in $CONSTITUENCY_HOME/japanese
+  this should create a directory $CONSTITUENCY_HOME/japanese/Japanese-ALT-20210218
+  In this directory, also download the following:
+    https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/URL-train.txt
+    https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/URL-dev.txt
+    https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/URL-test.txt
+  In particular, there are two files with a bunch of bracketed parses,
+    Japanese-ALT-Draft.txt and Japanese-ALT-Reviewed.txt
+  The first word of each of these lines is SNT.80188.1 or something like that
+  This correlates with the three URL-... files, telling us whether the
+    sentence belongs in train/dev/test
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset ja_alt
 """
 
 import os
@@ -49,6 +69,7 @@ import tempfile
 
 from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
+from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
@@ -138,6 +159,23 @@ def process_starlang(paths, dataset_name):
 
     write_dataset(datasets, output_dir, dataset_name)
 
+def process_ja_alt(paths, dataset_name):
+    """
+    Convert and split the ALT dataset
+
+    TODO: could theoretically extend this to MY or any other similar dataset from ALT
+    """
+    lang, source = dataset_name.split("_", 1)
+    assert source == 'alt'
+
+    PIECES = ["Japanese-ALT-Draft.txt", "Japanese-ALT-Reviewed.txt"]
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "japanese", "Japanese-ALT-20210218")
+    input_files = [os.path.join(input_dir, input_file) for input_file in PIECES]
+    split_files = [os.path.join(input_dir, "URL-%s.txt" % shard) for shard in SHARDS]
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    output_files = [os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard)) for shard in SHARDS]
+    convert_alt(input_files, split_files, output_files)
+
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -154,6 +192,8 @@ def main(dataset_name):
         process_arboretum(paths, dataset_name)
     elif dataset_name == 'tr_starlang':
         process_starlang(paths, dataset_name)
+    elif dataset_name == 'ja_alt':
+        process_ja_alt(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
