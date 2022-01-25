@@ -130,6 +130,7 @@ default_ners = {
   "nn": "norne",
   "ru": "wikiner",
   "sv": "suc3shuffle",
+  "tr": "starlang",
   "uk": "languk",
   "vi": "vlsp",
   "zh-hans": "ontonotes",
@@ -153,6 +154,7 @@ default_charlms = {
   "nl": "ccwiki",
   "ru": "newswiki",
   "sv": "conll17",
+  "tr": "conll17",
   "uk": "conll17",
   "vi": "conll17",
   "zh-hans": "gigaword"
