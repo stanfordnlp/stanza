@@ -155,7 +155,7 @@ To get your started, we also provide interactive Jupyter notebooks in the `demo`
 
 ### Trained Models for the Neural Pipeline
 
-We currently provide models for all of the [Universal Dependencies](https://universaldependencies.org/) treebanks v2.5, as well as NER models for a few widely-spoken languages. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanza/models.html).
+We currently provide models for all of the [Universal Dependencies](https://universaldependencies.org/) treebanks v2.8, as well as NER models for a few widely-spoken languages. You can find instructions for downloading and using these models [here](https://stanfordnlp.github.io/stanza/models.html).
 
 ### Batching To Maximize Pipeline Speed
 
