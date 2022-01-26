@@ -165,17 +165,22 @@ class JavaProtobufContext(object):
             extra_args = []
         self.extra_args = extra_args
 
-
-    def __enter__(self):
+    def open_pipe(self):
         self.pipe = subprocess.Popen(["java", "-cp", self.classpath, self.java_main, "-multiple"] + self.extra_args,
                                      stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE)
-        return self
 
-    def __exit__(self, type, value, traceback):
+    def close_pipe(self):
         if self.pipe.poll() is None:
             self.pipe.stdin.write((0).to_bytes(4, 'big'))
             self.pipe.stdin.flush()
+
+    def __enter__(self):
+        self.open_pipe()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close_pipe()
 
     def process_request(self, request):
         text = request.SerializeToString()
