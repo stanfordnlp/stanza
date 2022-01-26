@@ -22,3 +22,8 @@ params/*/*.json
 !params/*/default.json
 
 _site/
+
+.jekyll-metadata
+
+# emacs files
+*~
