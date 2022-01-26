@@ -270,6 +270,14 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
 
+    tags = parse_tree.Tree.get_unique_tags(train_trees)
+    logger.info("Unique tags in training set: %s", tags)
+    # no need to fail for missing tags between train/dev set
+    # the model has an unknown tag embedding
+    for tag in parse_tree.Tree.get_unique_tags(dev_trees):
+        if tag not in tags:
+            logger.info("Found tag in dev set which does not exist in train set: %s  Continuing...", tag)
+
     unary_limit = max(max(t.count_unary_depth() for t in train_trees),
                       max(t.count_unary_depth() for t in dev_trees)) + 1
     train_sequences, train_transitions = convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
@@ -287,12 +295,6 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     for root_state in parse_tree.Tree.get_root_labels(dev_trees):
         if root_state not in root_labels:
             raise RuntimeError("Found root state {} in the dev set which is not a ROOT state in the train set".format(root_state))
-
-    tags = parse_tree.Tree.get_unique_tags(train_trees)
-    logger.info("Unique tags in training set: %s", tags)
-    for tag in parse_tree.Tree.get_unique_tags(dev_trees):
-        if tag not in tags:
-            raise RuntimeError("Found tag {} in the dev set which is not a tag in the train set".format(tag))
 
     # we don't check against the words in the dev set as it is
     # expected there will be some UNK words
