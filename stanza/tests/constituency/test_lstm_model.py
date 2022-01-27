@@ -203,6 +203,12 @@ def test_forward_constituency_composition(pretrain_file):
     model = build_model(pretrain_file, '--constituency_composition', 'bilstm_max')
     run_forward_checks(model, num_states=2)
 
+    model = build_model(pretrain_file, '--constituency_composition', 'tree_lstm')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file, '--constituency_composition', 'tree_lstm_cx')
+    run_forward_checks(model)
+
     model = build_model(pretrain_file, '--constituency_composition', 'bigram')
     run_forward_checks(model, num_states=2)
 
@@ -350,6 +356,28 @@ def test_different_transition_sizes(pretrain_file):
                         '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
 
+
+def test_lstm_tree_forward(pretrain_file):
+    """
+    Test the LSTM_TREE forward pass
+    """
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '1', '--constituency_composition', 'tree_lstm')
+    run_forward_checks(model)
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '2', '--constituency_composition', 'tree_lstm')
+    run_forward_checks(model)
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '3', '--constituency_composition', 'tree_lstm')
+    run_forward_checks(model)
+
+def test_lstm_tree_cx_forward(pretrain_file):
+    """
+    Test the LSTM_TREE_CX forward pass
+    """
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '1', '--constituency_composition', 'tree_lstm_cx')
+    run_forward_checks(model)
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '2', '--constituency_composition', 'tree_lstm_cx')
+    run_forward_checks(model)
+    model = build_model(pretrain_file, '--num_tree_lstm_layers', '3', '--constituency_composition', 'tree_lstm_cx')
+    run_forward_checks(model)
 
 def check_structure_test(pretrain_file, args1, args2):
     """

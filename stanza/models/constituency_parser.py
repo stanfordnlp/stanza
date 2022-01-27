@@ -373,6 +373,7 @@ def parse_args(args=None):
     parser.add_argument('--tag_unknown_frequency', default=0.001, type=float, help='How often to replace a tag with UNK when training')
 
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
+    parser.add_argument('--num_tree_lstm_layers', default=None, type=int, help='How many layers to use in the TREE_LSTMs, if used.  This also increases the width of the word outputs to match the tree lstm inputs.  Default 2 if TREE_LSTM or TREE_LSTM_CX, 1 otherwise')
     parser.add_argument('--num_output_layers', default=3, type=int, help='How many layers to use at the prediction level')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
@@ -446,6 +447,12 @@ def parse_args(args=None):
         args.momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
     if args.weight_decay is None:
         args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if args.num_tree_lstm_layers is None:
+        if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):
+            args.num_tree_lstm_layers = 2
+        else:
+            args.num_tree_lstm_layers = 1
 
     if args.wandb_name or args.wandb_norm_regex:
         args.wandb = True
