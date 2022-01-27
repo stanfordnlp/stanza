@@ -96,10 +96,13 @@ class Trainer:
 
         saved_args = dict(checkpoint['args'])
         saved_args.update(args)
+        # TODO: remove when all models are updated
         if 'transition_stack' not in checkpoint['args']:
             saved_args['transition_stack'] = StackHistory.LSTM
         if 'constituent_stack' not in checkpoint['args']:
             saved_args['constituent_stack'] = StackHistory.LSTM
+        if 'num_tree_lstm_layers' not in saved_args:
+            saved_args['num_tree_lstm_layers'] = 1
         params = checkpoint['params']
 
         # TODO: can remove when all models have been rearranged to use the refactored lstm_stacks
