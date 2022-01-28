@@ -340,6 +340,13 @@ class LSTMModel(BaseModel, nn.Module):
     def get_root_labels(self):
         return self.root_labels
 
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+                lines.append("%s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
+
     def build_char_representation(self, all_word_labels, device, forward):
         CHARLM_START = "\n"
         CHARLM_END = " "
