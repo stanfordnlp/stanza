@@ -228,9 +228,9 @@ def get_open_nodes(trees, args):
     else:
         return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
 
-def print_args(args):
+def log_args(args):
     """
-    For record keeping purposes, print out the arguments when training
+    For record keeping purposes, log the arguments when training
     """
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
@@ -329,7 +329,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
     """
     Build a model, train it using the requested train & dev files
     """
-    print_args(args)
+    log_args(args)
 
     utils.ensure_dir(args['save_dir'])
 
