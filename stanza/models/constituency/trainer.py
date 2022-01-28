@@ -394,6 +394,8 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     for epoch in range(1, args['epochs']+1):
         model.train()
         logger.info("Starting epoch %d", epoch)
+        if args['log_norms']:
+            model.log_norms()
         epoch_data = leftover_training_data
         while len(epoch_data) < args['epoch_size']:
             random.shuffle(train_data)
