@@ -146,7 +146,7 @@ class ProcessorVariant(ABC):
         return [self.process(doc) for doc in docs]
 
 class UDProcessor(Processor):
-    """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment) """
+    """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment,constituency) """
 
     def __init__(self, config, pipeline, use_gpu):
         super().__init__(config, pipeline, use_gpu)
