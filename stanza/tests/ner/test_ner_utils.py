@@ -47,3 +47,40 @@ def test_check_basic():
     assert     utils.is_basic_scheme([x for y in BASIC_TAGS for x in y])
     assert not utils.is_basic_scheme([x for y in BASIC_BIOES for x in y])
 
+
+def test_merge_tags():
+    """
+    Check a few versions of the tag sequence merging
+    """
+    seq1     = [     "O",     "O",     "O", "B-FOO", "E-FOO",     "O"]
+    seq2     = [ "S-FOO",     "O", "B-FOO", "E-FOO",     "O",     "O"]
+    seq3     = [ "B-FOO", "E-FOO", "B-FOO", "E-FOO",     "O",     "O"]
+    seq_err  = [     "O", "B-FOO",     "O", "B-FOO", "E-FOO",     "O"]
+    seq_err2 = [     "O", "B-FOO",     "O", "B-FOO", "B-FOO",     "O"]
+    seq_err3 = [     "O", "B-FOO",     "O", "B-FOO", "I-FOO",     "O"]
+    seq_err4 = [     "O", "B-FOO",     "O", "B-FOO", "I-FOO", "I-FOO"]
+
+    result = utils.merge_tags(seq1, seq2)
+    expected = [ "S-FOO",     "O",     "O", "B-FOO", "E-FOO",     "O"]
+    assert result == expected
+
+    result = utils.merge_tags(seq2, seq1)
+    expected = [ "S-FOO",     "O", "B-FOO", "E-FOO",     "O",     "O"]
+    assert result == expected
+
+    result = utils.merge_tags(seq1, seq3)
+    expected = [ "B-FOO", "E-FOO",     "O", "B-FOO", "E-FOO",     "O"]
+    assert result == expected
+
+    with pytest.raises(ValueError):
+        result = utils.merge_tags(seq1, seq_err)
+
+    with pytest.raises(ValueError):
+        result = utils.merge_tags(seq1, seq_err2)
+
+    with pytest.raises(ValueError):
+        result = utils.merge_tags(seq1, seq_err3)
+
+    with pytest.raises(ValueError):
+        result = utils.merge_tags(seq1, seq_err4)
+
