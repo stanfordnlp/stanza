@@ -24,7 +24,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, maintain_processor_list, add_dependencies, add_mwt, set_logging_level, process_pipeline_parameters, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, maintain_processor_list, add_dependencies, add_mwt, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -74,7 +74,9 @@ class PipelineRequirementsException(Exception):
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for item in load_list:
-        processor, package, dependencies = item
+        processor, model_spec = item
+        package = model_spec.model
+        dependencies = model_spec.dependencies
 
         # handle case when processor variants are used
         if package in PROCESSOR_VARIANTS[processor]:
@@ -134,7 +136,7 @@ class Pipeline:
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
             raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
-        load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
+        load_table = make_table(['Processor', 'Package'], [(row[0], row[1].model) for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
         self.config = build_default_config(resources, lang, self.dir, self.load_list)
@@ -151,7 +153,7 @@ class Pipeline:
         # set up processors
         pipeline_reqs_exceptions = []
         for item in self.load_list:
-            processor_name, _, _ = item
+            processor_name, _ = item
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
@@ -206,7 +208,7 @@ class Pipeline:
 
     @staticmethod
     def update_kwargs(kwargs, processor_list):
-        processor_dict = {processor: {'package': package, 'dependencies': dependencies} for (processor, package, dependencies) in processor_list}
+        processor_dict = {processor: {'package': model_spec.model, 'dependencies': model_spec.dependencies} for (processor, model_spec) in processor_list}
         for key, value in kwargs.items():
             pieces = key.split('_', 1)
             if len(pieces) == 1:
@@ -216,7 +218,7 @@ class Pipeline:
                 package = value if len(value) < 25 else value[:10]+ '...' + value[-10:]
                 dependencies = processor_dict.get(k, {}).get('dependencies')
                 processor_dict[k] = {'package': package, 'dependencies': dependencies}
-        processor_list = [[processor, processor_dict[processor]['package'], processor_dict[processor]['dependencies']] for processor in processor_dict]
+        processor_list = [(processor, ModelSpecification(processor=processor, model=processor_dict[processor]['package'], dependencies=processor_dict[processor]['dependencies'])) for processor in processor_dict]
         processor_list = sort_processors(processor_list)
         return processor_list
 
