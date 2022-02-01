@@ -177,7 +177,10 @@ def maintain_processor_list(resources, lang, package, processors):
         if TOKENIZE in processors and MWT not in processors:
             add_mwt(processors, resources, lang)
         for key, value in processors.items():
-            assert(isinstance(key, str) and isinstance(value, str))
+            if not isinstance(key, str):
+                raise ValueError("Processor names must be strings")
+            if not isinstance(value, str):
+                raise ValueError("Processor values must be strings")
             if key not in PIPELINE_NAMES:
                 raise UnknownProcessorError(key)
             # check if keys and values can be found
