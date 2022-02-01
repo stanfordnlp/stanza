@@ -2,6 +2,7 @@
 Test various resource downloading functions from resources/common.py
 """
 
+import os
 import pytest
 import tempfile
 
@@ -18,6 +19,24 @@ def test_download_tokenize_mwt():
         assert isinstance(pipeline, stanza.Pipeline)
         # mwt should be added to the list
         assert len(pipeline.loaded_processors) == 2
+
+def test_download_non_default():
+    """
+    Test the download path for a single file rather than the default zip
+
+    The expectation is that an NER model will also download two charlm models.
+    If that layout changes on purpose, this test will fail and will need to be updated
+    """
+    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes", verbose=False)
+        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+        en_dir = os.path.join(test_dir, 'en')
+        en_dir_listing = sorted(os.listdir(en_dir))
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner']
+        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
+        for i in en_dir_listing:
+            assert len(os.listdir(os.path.join(en_dir, i))) == 1
+
 
 def test_process_pipeline_parameters():
     """
