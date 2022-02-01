@@ -42,32 +42,6 @@ class UnknownProcessorError(ValueError):
         super().__init__(f"Unknown processor type requested: {unknown}")
         self.unknown_processor = unknown
 
-# given a language and models path, build a default configuration
-def build_default_config(resources, lang, model_dir, load_list):
-    default_config = {}
-    for item in load_list:
-        processor, package, dependencies = item
-
-        # handle case when processor variants are used
-        if package in PROCESSOR_VARIANTS[processor]:
-            default_config[f"{processor}_with_{package}"] = True
-        # handle case when identity is specified as lemmatizer
-        elif processor == LEMMA and package == 'identity':
-            default_config[f"{LEMMA}_use_identity"] = True
-        else:
-            default_config[f"{processor}_model_path"] = os.path.join(
-                model_dir, lang, processor, package + '.pt'
-            )
-
-        if not dependencies: continue
-        for dependency in dependencies:
-            dep_processor, dep_model = dependency
-            default_config[f"{processor}_{dep_processor}_path"] = os.path.join(
-                model_dir, lang, dep_processor, dep_model + '.pt'
-            )
-
-    return default_config
-
 def ensure_dir(path):
     """
     Create dir in case it does not exist.
