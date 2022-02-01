@@ -14,7 +14,7 @@ from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
-from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES
+from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza.pipeline.langid_processor import LangIDProcessor
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
@@ -24,8 +24,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, \
-    maintain_processor_list, add_dependencies, add_mwt, build_default_config, set_logging_level, process_pipeline_parameters, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, maintain_processor_list, add_dependencies, add_mwt, set_logging_level, process_pipeline_parameters, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -69,6 +68,33 @@ class PipelineRequirementsException(Exception):
 
     def __str__(self):
         return self.message
+
+
+# given a language and models path, build a default configuration
+def build_default_config(resources, lang, model_dir, load_list):
+    default_config = {}
+    for item in load_list:
+        processor, package, dependencies = item
+
+        # handle case when processor variants are used
+        if package in PROCESSOR_VARIANTS[processor]:
+            default_config[f"{processor}_with_{package}"] = True
+        # handle case when identity is specified as lemmatizer
+        elif processor == LEMMA and package == 'identity':
+            default_config[f"{LEMMA}_use_identity"] = True
+        else:
+            default_config[f"{processor}_model_path"] = os.path.join(
+                model_dir, lang, processor, package + '.pt'
+            )
+
+        if not dependencies: continue
+        for dependency in dependencies:
+            dep_processor, dep_model = dependency
+            default_config[f"{processor}_{dep_processor}_path"] = os.path.join(
+                model_dir, lang, dep_processor, dep_model + '.pt'
+            )
+
+    return default_config
 
 
 class Pipeline:
