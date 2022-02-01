@@ -72,6 +72,10 @@ class FeatureDropout(nn.Dropout):
             return FeatureDropoutFunction.apply(x, self.p, self.training, self.inplace)
 
 
+# TODO: this module apparently is not treated the same the built-in
+# nonlinearity modules, as multiple uses of the same relu on different
+# tensors winds up mixing the gradients See if there is a way to
+# resolve that other than creating a new nonlinearity for each layer
 class PartitionedReLU(nn.ReLU):
     def forward(self, x):
         if isinstance(x, tuple):
@@ -188,7 +192,7 @@ class PartitionedTransformerEncoder(nn.Module):
                  ff_dropout,
                  residual_dropout,
                  attention_dropout,
-                 activation=PartitionedReLU(),
+                 activation=PartitionedReLU,
     ):
         super().__init__()
         self.layers = nn.ModuleList([PartitionedTransformerEncoderLayer(d_model=d_model,
@@ -198,7 +202,7 @@ class PartitionedTransformerEncoder(nn.Module):
                                                                         ff_dropout=ff_dropout,
                                                                         residual_dropout=residual_dropout,
                                                                         attention_dropout=attention_dropout,
-                                                                        activation=activation)
+                                                                        activation=activation())
                                      for i in range(n_layers)])
 
     def forward(self, x, mask=None):
