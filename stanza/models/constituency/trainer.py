@@ -373,6 +373,10 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     model = trainer.model
     optimizer = trainer.optimizer
 
+    # Somewhat unusual, but possibly related to the extreme variability in length of trees
+    # Various experiments generally show about 0.5 F1 loss on various
+    # datasets when using 'mean' instead of 'sum' for reduction
+    # (Remember to adjust the weight decay when rerunning that experiment)
     model_loss_function = nn.CrossEntropyLoss(reduction='sum')
     if args['cuda']:
         model_loss_function.cuda()
@@ -453,8 +457,17 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     return epoch_loss, total_correct, total_incorrect
 
 def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args):
-    # the batch will be empty when all trees from this epoch are trained
+    """
+    Train the model for one batch
+
+    The model itself will be updated, and a bunch of stats are returned
+    It is unclear if this refactoring is useful in any way.  Might not be
+
+    ... although the indentation does get pretty ridiculous if this is
+    merged into train_model_one_epoch and then iterate_training
+    """
     # now we add the state to the trees in the batch
+    # the state is build as a bulk operation
     initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
     batch = [state._replace(gold_sequence=sequence)
              for (tree, sequence), state in zip(batch, initial_states)]
@@ -467,6 +480,16 @@ def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, mo
     all_errors = []
     all_answers = []
 
+    # we iterate through the batch in the following sequence:
+    # predict the logits and the applied transition for each tree in the batch
+    # collect errors
+    #  - we always train to the desired one-hot vector
+    #    this was a noticeable improvement over training just the
+    #    incorrect transitions
+    # determine whether the training can continue using the "student" transition
+    #   or if we need to use teacher forcing
+    # update all states using either the gold or predicted transition
+    # any trees which are now finished are removed from the training cycle
     while len(batch) > 0:
         outputs, pred_transitions = model.predict(batch, is_legal=False)
         gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
