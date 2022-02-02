@@ -24,7 +24,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, maintain_processor_list, add_dependencies, add_mwt, set_logging_level, process_pipeline_parameters, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, add_dependencies, add_mwt, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -127,7 +127,6 @@ def build_default_config(resources, lang, model_dir, load_list):
             )
 
     return default_config
-
 
 class Pipeline:
 
