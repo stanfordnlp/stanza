@@ -20,11 +20,27 @@ class NERProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
+    def _get_dependencies(self, config, dep_name):
+        dependencies = config.get(dep_name, None)
+        if dependencies is not None:
+            dependencies = dependencies.split(";")
+            dependencies = [x if x else None for x in dependencies]
+        else:
+            dependencies = [x.get(dep_name) for x in config.get('dependencies', [])]
+        return dependencies
+
     def _set_up_model(self, config, use_gpu):
         # set up trainer
-        args = {'charlm_forward_file': config.get('forward_charlm_path', None),
-                'charlm_backward_file': config.get('backward_charlm_path', None)}
-        self._trainer = Trainer(args=args, model_file=config['model_path'], use_cuda=use_gpu)
+        model_paths = config.get('model_path')
+        if isinstance(model_paths, str):
+            model_paths = model_paths.split(";")
+
+        charlm_forward_files = self._get_dependencies(config, 'forward_charlm_path')
+        charlm_backward_files = self._get_dependencies(config, 'backward_charlm_path')
+
+        args = {'charlm_forward_file': charlm_forward_files[0],
+                'charlm_backward_file': charlm_backward_files[0]}
+        self._trainer = Trainer(args=args, model_file=model_paths[0], use_cuda=use_gpu)
 
     def process(self, document):
         # set up a eval-only data loader and skip tag preprocessing
