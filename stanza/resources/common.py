@@ -146,55 +146,58 @@ def add_mwt(processors, resources, lang):
         processors[MWT] = value
 
 def maintain_processor_list(resources, lang, package, processors):
-    processor_list = {}
+    processor_list = defaultdict(list)
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
         if TOKENIZE in processors and MWT not in processors:
             add_mwt(processors, resources, lang)
-        for key, value in processors.items():
+        for key, plist in processors.items():
             if not isinstance(key, str):
                 raise ValueError("Processor names must be strings")
-            if not isinstance(value, str):
+            if not isinstance(plist, (tuple, list, str)):
                 raise ValueError("Processor values must be strings")
+            if isinstance(plist, str):
+                plist = [plist]
             if key not in PIPELINE_NAMES:
                 raise UnknownProcessorError(key)
-            # check if keys and values can be found
-            if key in resources[lang] and value in resources[lang][key]:
-                logger.debug(f'Found {key}: {value}.')
-                processor_list[key] = value
-            # allow values to be default in some cases
-            elif key in resources[lang]['default_processors'] and value == 'default':
-                logger.debug(
-                    f'Found {key}: {resources[lang]["default_processors"][key]}.'
-                )
-                processor_list[key] = resources[lang]['default_processors'][key]
-            # allow processors to be set to variants that we didn't implement
-            elif value in PROCESSOR_VARIANTS[key]:
-                logger.debug(
-                    f'Found {key}: {value}. '
-                    f'Using external {value} variant for the {key} processor.'
-                )
-                processor_list[key] = value
-            # allow lemma to be set to "identity"
-            elif key == LEMMA and value == 'identity':
-                logger.debug(
-                    f'Found {key}: {value}. Using identity lemmatizer.'
-                )
-                processor_list[key] = value
-            # not a processor in the officially supported processor list
-            elif key not in resources[lang]:
-                logger.debug(
-                    f'{key}: {value} is not officially supported by Stanza, '
-                    f'loading it anyway.'
-                )
-                processor_list[key] = value
-            # cannot find the package for a processor and warn user
-            else:
-                logger.warning(
-                    f'Can not find {key}: {value} from official model list. '
-                    f'Ignoring it.'
-                )
+            for value in plist:
+                # check if keys and values can be found
+                if key in resources[lang] and value in resources[lang][key]:
+                    logger.debug(f'Found {key}: {value}.')
+                    processor_list[key].append(value)
+                # allow values to be default in some cases
+                elif key in resources[lang]['default_processors'] and value == 'default':
+                    logger.debug(
+                        f'Found {key}: {resources[lang]["default_processors"][key]}.'
+                    )
+                    processor_list[key].append(resources[lang]['default_processors'][key])
+                # allow processors to be set to variants that we didn't implement
+                elif value in PROCESSOR_VARIANTS[key]:
+                    logger.debug(
+                        f'Found {key}: {value}. '
+                        f'Using external {value} variant for the {key} processor.'
+                    )
+                    processor_list[key].append(value)
+                # allow lemma to be set to "identity"
+                elif key == LEMMA and value == 'identity':
+                    logger.debug(
+                        f'Found {key}: {value}. Using identity lemmatizer.'
+                    )
+                    processor_list[key].append(value)
+                # not a processor in the officially supported processor list
+                elif key not in resources[lang]:
+                    logger.debug(
+                        f'{key}: {value} is not officially supported by Stanza, '
+                        f'loading it anyway.'
+                    )
+                    processor_list[key].append(value)
+                # cannot find the package for a processor and warn user
+                else:
+                    logger.warning(
+                        f'Can not find {key}: {value} from official model list. '
+                        f'Ignoring it.'
+                    )
     # resolve package
     if package:
         logger.debug(f'Processing parameter "package"...')
@@ -202,7 +205,7 @@ def maintain_processor_list(resources, lang, package, processors):
             for key, value in resources[lang]['default_processors'].items():
                 if key not in processor_list:
                     logger.debug(f'Found {key}: {value}.')
-                    processor_list[key] = value
+                    processor_list[key].append(value)
         else:
             flag = False
             for key in PIPELINE_NAMES:
@@ -211,14 +214,14 @@ def maintain_processor_list(resources, lang, package, processors):
                     flag = True
                     if key not in processor_list:
                         logger.debug(f'Found {key}: {package}.')
-                        processor_list[key] = package
+                        processor_list[key].append(package)
                     else:
                         logger.debug(
                             f'{key}: {package} is overwritten by '
                             f'{key}: {processors[key]}.'
                         )
             if not flag: logger.warning((f'Can not find package: {package}.'))
-    processor_list = [[key, (ModelSpecification(processor=key, model=value, dependencies=None),)] for key, value in processor_list.items()]
+    processor_list = [[key, [ModelSpecification(processor=key, model=value, dependencies=None) for value in plist]] for key, plist in processor_list.items()]
     processor_list = sort_processors(processor_list)
     return processor_list
 
