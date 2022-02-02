@@ -211,6 +211,8 @@ class Pipeline:
                 # suggest the user try to download the models
                 if 'model_path' in curr_processor_config:
                     model_path = curr_processor_config['model_path']
+                    if e.filename == model_path or (isinstance(model_path, (tuple, list)) and e.filename in model_path):
+                        model_path = e.filename
                     model_dir, model_name = os.path.split(model_path)
                     lang_dir = os.path.dirname(model_dir)
                     if not os.path.exists(lang_dir):
