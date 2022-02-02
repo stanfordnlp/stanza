@@ -32,7 +32,10 @@ BERT = {
     # https://huggingface.co/Maltehb/danish-bert-botxo
     # contrary to normal expectations, this hurts F1
     # on a dev split by about 1 F1
-    "da": "Maltehb/danish-bert-botxo",
+    # "da": "Maltehb/danish-bert-botxo",
+
+    # the multilingual bert is a marginal improvement for conparse
+    "da": "bert-base-multilingual-cased",
 
     # from https://github.com/idb-ita/GilBERTo
     # annoyingly, it doesn't handle cased text
