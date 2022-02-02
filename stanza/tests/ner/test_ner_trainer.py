@@ -18,6 +18,9 @@ def test_fix_singleton_tags():
         (["B-PER", "I-ORG", "O", "B-PER"], ["S-PER", "I-ORG", "O", "S-PER"]),
         (["B-PER", "I-PER", "E-PER", "O", "B-PER", "E-PER"], ["B-PER", "I-PER", "E-PER", "O", "B-PER", "E-PER"]),
         (["S-PER", "B-PER", "E-PER"], ["S-PER", "B-PER", "E-PER"]),
+        (["E-PER"], ["S-PER"]),
+        (["E-PER", "O", "E-PER"], ["S-PER", "O", "S-PER"]),
+        (["B-PER", "E-ORG", "O", "B-PER"], ["S-PER", "S-ORG", "O", "S-PER"]),
     ]
              
     for unfixed, expected in TESTS:
