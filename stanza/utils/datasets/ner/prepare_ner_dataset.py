@@ -171,6 +171,10 @@ starlang is a set of constituency trees for Turkish
   Put them in
     $CONSTITUENCY_HOME/turkish    (yes, the constituency home)
   prepare_ner_dataset.py tr_starlang
+
+en_sample is the toy dataset included with stanza-train
+  https://github.com/stanfordnlp/stanza-train
+  this is not meant for any kind of actual NER use
 """
 
 import glob
@@ -633,6 +637,8 @@ def process_starlang(paths, short_name):
 
     write_dataset(datasets, paths["NER_DATA_DIR"], short_name)
 
+def process_toy_dataset(paths, short_name):
+    convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -675,6 +681,8 @@ def main(dataset_name):
         process_norne(paths, dataset_name)
     elif dataset_name == 'tr_starlang':
         process_starlang(paths, dataset_name)
+    elif dataset_name == 'en_sample':
+        process_toy_dataset(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
