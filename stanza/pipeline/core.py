@@ -79,18 +79,18 @@ def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for processor, model_specs in load_list:
         # handle case when processor variants are used
-        if any(model_spec.model in PROCESSOR_VARIANTS[processor] for model_spec in model_specs):
+        if any(model_spec.package in PROCESSOR_VARIANTS[processor] for model_spec in model_specs):
             if len(model_specs) > 1:
                 raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(processor))
-            package = model_specs[0].model
+            package = model_specs[0].package
             default_config[f"{processor}_with_{package}"] = True
             continue
         # handle case when identity is specified as lemmatizer
-        elif processor == LEMMA and any(model_spec.model == 'identity' for model_spec in model_specs):
+        elif processor == LEMMA and any(model_spec.package == 'identity' for model_spec in model_specs):
             default_config[f"{LEMMA}_use_identity"] = True
             continue
 
-        model_paths = [os.path.join(model_dir, lang, processor, model_spec.model + '.pt') for model_spec in model_specs]
+        model_paths = [os.path.join(model_dir, lang, processor, model_spec.package + '.pt') for model_spec in model_specs]
         dependencies = [model_spec.dependencies for model_spec in model_specs]
 
         # Special case for NER: load multiple models at once
@@ -165,7 +165,7 @@ class Pipeline:
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
             raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
-        load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.model for model_spec in row[1])) for row in self.load_list])
+        load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
         self.config = build_default_config(resources, lang, self.dir, self.load_list)
@@ -239,7 +239,7 @@ class Pipeline:
 
     @staticmethod
     def update_kwargs(kwargs, processor_list):
-        processor_dict = {processor: [{'package': model_spec.model, 'dependencies': model_spec.dependencies} for model_spec in model_specs]
+        processor_dict = {processor: [{'package': model_spec.package, 'dependencies': model_spec.dependencies} for model_spec in model_specs]
                           for (processor, model_specs) in processor_list}
         for key, value in kwargs.items():
             pieces = key.split('_', 1)
@@ -254,7 +254,7 @@ class Pipeline:
                 else:
                     dependencies = None
                 processor_dict[k] = [{'package': package, 'dependencies': dependencies}]
-        processor_list = [(processor, [ModelSpecification(processor=processor, model=model_spec['package'], dependencies=model_spec['dependencies']) for model_spec in processor_dict[processor]]) for processor in processor_dict]
+        processor_list = [(processor, [ModelSpecification(processor=processor, package=model_spec['package'], dependencies=model_spec['dependencies']) for model_spec in processor_dict[processor]]) for processor in processor_dict]
         processor_list = sort_processors(processor_list)
         return processor_list
 

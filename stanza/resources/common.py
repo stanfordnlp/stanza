@@ -42,7 +42,7 @@ class UnknownProcessorError(ValueError):
         super().__init__(f"Unknown processor type requested: {unknown}")
         self.unknown_processor = unknown
 
-ModelSpecification = namedtuple('ModelSpecification', ['processor', 'model', 'dependencies'])
+ModelSpecification = namedtuple('ModelSpecification', ['processor', 'package', 'dependencies'])
 
 def ensure_dir(path):
     """
@@ -221,7 +221,7 @@ def maintain_processor_list(resources, lang, package, processors):
                             f'{key}: {processors[key]}.'
                         )
             if not flag: logger.warning((f'Can not find package: {package}.'))
-    processor_list = [[key, [ModelSpecification(processor=key, model=value, dependencies=None) for value in plist]] for key, plist in processor_list.items()]
+    processor_list = [[key, [ModelSpecification(processor=key, package=value, dependencies=None) for value in plist]] for key, plist in processor_list.items()]
     processor_list = sort_processors(processor_list)
     return processor_list
 
@@ -234,10 +234,10 @@ def add_dependencies(resources, lang, processor_list):
             dependencies = default_dependencies.get(processor, None)
             # skip dependency checking for external variants of processors and identity lemmatizer
             if not any([
-                    model_spec.model in PROCESSOR_VARIANTS[processor],
-                    processor == LEMMA and model_spec.model == 'identity'
+                    model_spec.package in PROCESSOR_VARIANTS[processor],
+                    processor == LEMMA and model_spec.package == 'identity'
                 ]):
-                dependencies = resources[lang].get(processor, {}).get(model_spec.model, {}).get('dependencies', dependencies)
+                dependencies = resources[lang].get(processor, {}).get(model_spec.package, {}).get('dependencies', dependencies)
             if dependencies:
                 dependencies = [(dependency['model'], dependency['package']) for dependency in dependencies]
                 model_spec = model_spec._replace(dependencies=tuple(dependencies))
@@ -251,7 +251,7 @@ def flatten_processor_list(processor_list):
     for item in processor_list:
         processor, model_specs = item
         for model_spec in model_specs:
-            package = model_spec.model
+            package = model_spec.package
             dependencies = model_spec.dependencies
             flattened_processor_list.append([processor, package])
             if dependencies:
