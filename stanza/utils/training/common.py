@@ -47,6 +47,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
 
     It collects the arguments and runs the main method for each dataset provided.
     It also tries to look for an existing model and not overwrite it unless --force is provided
+
+    model_name can be a callable expecting the args
+      - the charlm, for example, needs this feature, since it makes
+        both forward and backward models
     """
     logger.info("Training program called with:\n" + " ".join(sys.argv))
 
@@ -65,6 +69,9 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
     # Pass this through to the underlying model as well as use it here
     if command_args.save_dir:
         extra_args.extend(["--save_dir", command_args.save_dir])
+
+    if callable(model_name):
+        model_name = model_name(command_args)
 
     mode = command_args.mode
     treebanks = []
