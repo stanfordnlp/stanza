@@ -96,7 +96,7 @@ def load_data(path, vocab, direction):
         data = load_file(path, vocab, direction)
         yield data
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
     parser.add_argument('--train_dir', type=str, help="If non-empty, load from directory with multiple training files")
@@ -134,11 +134,11 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
     return args
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args=args)
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
