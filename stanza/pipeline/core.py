@@ -87,6 +87,8 @@ def build_default_config(resources, lang, model_dir, load_list):
             continue
         # handle case when identity is specified as lemmatizer
         elif processor == LEMMA and any(model_spec.package == 'identity' for model_spec in model_specs):
+            if len(model_specs) > 1:
+                raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
             default_config[f"{LEMMA}_use_identity"] = True
             continue
 
