@@ -24,7 +24,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, maintain_processor_list, add_dependencies, add_mwt, set_logging_level, process_pipeline_parameters, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, add_dependencies, add_mwt, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -46,6 +46,10 @@ class UnsupportedProcessorError(FileNotFoundError):
         super().__init__(f'Processor {processor} is not known for language {lang}.  If you have created your own model, please specify the {processor}_model_path parameter when creating the pipeline.')
         self.processor = processor
         self.lang = lang
+
+class IllegalPackageError(ValueError):
+    def __init__(self, msg):
+        super().__init__(msg)
 
 class PipelineRequirementsException(Exception):
     """
@@ -73,29 +77,58 @@ class PipelineRequirementsException(Exception):
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
-    for item in load_list:
-        processor, package, dependencies = item
-
+    for processor, model_specs in load_list:
         # handle case when processor variants are used
-        if package in PROCESSOR_VARIANTS[processor]:
+        if any(model_spec.package in PROCESSOR_VARIANTS[processor] for model_spec in model_specs):
+            if len(model_specs) > 1:
+                raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(processor))
+            package = model_specs[0].package
             default_config[f"{processor}_with_{package}"] = True
+            continue
         # handle case when identity is specified as lemmatizer
-        elif processor == LEMMA and package == 'identity':
+        elif processor == LEMMA and any(model_spec.package == 'identity' for model_spec in model_specs):
+            if len(model_specs) > 1:
+                raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
             default_config[f"{LEMMA}_use_identity"] = True
-        else:
-            default_config[f"{processor}_model_path"] = os.path.join(
-                model_dir, lang, processor, package + '.pt'
-            )
+            continue
 
-        if not dependencies: continue
-        for dependency in dependencies:
+        model_paths = [os.path.join(model_dir, lang, processor, model_spec.package + '.pt') for model_spec in model_specs]
+        dependencies = [model_spec.dependencies for model_spec in model_specs]
+
+        # Special case for NER: load multiple models at once
+        # The pattern will be:
+        #   a list of ner_model_path
+        #   a list of ner_dependencies
+        #     where each item in ner_dependencies is a map
+        #     the map may contain forward_charlm_path, backward_charlm_path, or any other deps
+        # The user will be able to override the defaults using a semicolon separated string
+        # TODO: at least use the same config pattern for all other models
+        if processor == NER:
+            default_config[f"{processor}_model_path"] = model_paths
+            dependency_paths = []
+            for dependency_block in dependencies:
+                if not dependency_block:
+                    dependency_paths.append({})
+                    continue
+                dependency_paths.append({})
+                for dependency in dependency_block:
+                    dep_processor, dep_model = dependency
+                    dependency_paths[-1][f"{dep_processor}_path"] = os.path.join(model_dir, lang, dep_processor, dep_model + '.pt')
+            default_config[f"{processor}_dependencies"] = dependency_paths
+            continue
+
+        if len(model_specs) > 1:
+            raise IllegalPackageError("Specified multiple packages for {}, which currently only handles one package".format(processor))
+
+        default_config[f"{processor}_model_path"] = model_paths[0]
+        if not dependencies[0]: continue
+        for dependency in dependencies[0]:
             dep_processor, dep_model = dependency
             default_config[f"{processor}_{dep_processor}_path"] = os.path.join(
                 model_dir, lang, dep_processor, dep_model + '.pt'
             )
 
     return default_config
-
 
 class Pipeline:
 
@@ -134,7 +167,7 @@ class Pipeline:
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
             raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
-        load_table = make_table(['Processor', 'Package'], [row[:2] for row in self.load_list])
+        load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
         self.config = build_default_config(resources, lang, self.dir, self.load_list)
@@ -151,7 +184,7 @@ class Pipeline:
         # set up processors
         pipeline_reqs_exceptions = []
         for item in self.load_list:
-            processor_name, _, _ = item
+            processor_name, _ = item
             logger.info('Loading: ' + processor_name)
             curr_processor_config = self.filter_config(processor_name, self.config)
             curr_processor_config.update(pipeline_level_configs)
@@ -179,6 +212,8 @@ class Pipeline:
                 # suggest the user try to download the models
                 if 'model_path' in curr_processor_config:
                     model_path = curr_processor_config['model_path']
+                    if e.filename == model_path or (isinstance(model_path, (tuple, list)) and e.filename in model_path):
+                        model_path = e.filename
                     model_dir, model_name = os.path.split(model_path)
                     lang_dir = os.path.dirname(model_dir)
                     if not os.path.exists(lang_dir):
@@ -206,7 +241,8 @@ class Pipeline:
 
     @staticmethod
     def update_kwargs(kwargs, processor_list):
-        processor_dict = {processor: {'package': package, 'dependencies': dependencies} for (processor, package, dependencies) in processor_list}
+        processor_dict = {processor: [{'package': model_spec.package, 'dependencies': model_spec.dependencies} for model_spec in model_specs]
+                          for (processor, model_specs) in processor_list}
         for key, value in kwargs.items():
             pieces = key.split('_', 1)
             if len(pieces) == 1:
@@ -214,9 +250,13 @@ class Pipeline:
             k, v = pieces
             if v == 'model_path':
                 package = value if len(value) < 25 else value[:10]+ '...' + value[-10:]
-                dependencies = processor_dict.get(k, {}).get('dependencies')
-                processor_dict[k] = {'package': package, 'dependencies': dependencies}
-        processor_list = [[processor, processor_dict[processor]['package'], processor_dict[processor]['dependencies']] for processor in processor_dict]
+                original_spec = processor_dict.get(k, [])
+                if len(original_spec) > 0:
+                    dependencies = original_spec[0].get('dependencies')
+                else:
+                    dependencies = None
+                processor_dict[k] = [{'package': package, 'dependencies': dependencies}]
+        processor_list = [(processor, [ModelSpecification(processor=processor, package=model_spec['package'], dependencies=model_spec['dependencies']) for model_spec in processor_dict[processor]]) for processor in processor_dict]
         processor_list = sort_processors(processor_list)
         return processor_list
 

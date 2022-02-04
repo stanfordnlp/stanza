@@ -33,13 +33,17 @@ def unpack_batch(batch, use_cuda):
 
 def fix_singleton_tags(tags):
     """
-    If there are any singleton B- tags, convert them to S-
+    If there are any singleton B- or E- tags, convert them to S-
     """
     new_tags = list(tags)
     for idx, tag in enumerate(new_tags):
         if (tag.startswith("B-") and
             (idx == len(new_tags) - 1 or
              (new_tags[idx+1] != "I-" + tag[2:] and new_tags[idx+1] != "E-" + tag[2:]))):
+            new_tags[idx] = "S-" + tag[2:]
+        if (tag.startswith("E-") and
+            (idx == 0 or
+             (new_tags[idx-1] != "B-" + tag[2:] and new_tags[idx-1] != "I-" + tag[2:]))):
             new_tags[idx] = "S-" + tag[2:]
     return new_tags
 

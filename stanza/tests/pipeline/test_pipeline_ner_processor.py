@@ -79,3 +79,39 @@ class TestNERProcessor:
         assert len(processed_doc) == len(EXPECTED_ENTS)
         for doc, expected in zip(processed_doc, EXPECTED_ENTS):
             check_entities_equal(doc, expected)
+
+EXPECTED_MULTI_ENTS = [{
+  "text": "John Bauer",
+  "type": "PERSON",
+  "start_char": 0,
+  "end_char": 10
+}, {
+  "text": "Stanford",
+  "type": "ORG",
+  "start_char": 20,
+  "end_char": 28
+}, {
+  "text": "hip arthritis",
+  "type": "DISEASE",
+  "start_char": 37,
+  "end_char": 50
+}, {
+  "text": "Chris Manning",
+  "type": "PERSON",
+  "start_char": 66,
+  "end_char": 79
+}]
+
+
+
+class TestMultiNERProcessor:
+    @pytest.fixture(scope="class")
+    def pipeline(self):
+        """
+        A reusable pipeline with TWO ner models
+        """
+        return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner", package={"ner": ["ncbi_disease", "ontonotes"]})
+
+    def test_multi_example(self, pipeline):
+        doc = pipeline("John Bauer works at Stanford and has hip arthritis.  He works for Chris Manning")
+        check_entities_equal(doc, EXPECTED_MULTI_ENTS)

@@ -38,6 +38,30 @@ def test_download_non_default():
             assert len(os.listdir(os.path.join(en_dir, i))) == 1
 
 
+def test_download_two_models():
+    """
+    Test the download path for two NER models
+
+    The package system should now allow for multiple NER models to be
+    specified, and a consequence of that is it should be possible to
+    download two models at once
+
+    The expectation is that the two different NER models both download
+    a different forward & backward charlm.  If that changes, the test
+    will fail.  Best way to update it will be two different models
+    which download two different charlms
+    """
+    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes", "anatem"]}, verbose=False)
+        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+        en_dir = os.path.join(test_dir, 'en')
+        en_dir_listing = sorted(os.listdir(en_dir))
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner']
+        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes.pt']
+        for i in en_dir_listing:
+            assert len(os.listdir(os.path.join(en_dir, i))) == 2
+
+
 def test_process_pipeline_parameters():
     """
     Test a few options for specifying which processors to load
