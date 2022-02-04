@@ -73,23 +73,36 @@ class PipelineRequirementsException(Exception):
     def __str__(self):
         return self.message
 
+def build_default_config_option(resources, lang, model_dir, model_specs):
+    """
+    Build a config option for a couple situations: lemma=identity, processor is a variant
+
+    Returns the option name and value
+
+    Refactored from build_default_config so that we can reuse it when
+    downloading all models
+    """
+    # handle case when processor variants are used
+    if any(model_spec.package in PROCESSOR_VARIANTS[model_spec.processor] for model_spec in model_specs):
+        if len(model_specs) > 1:
+            raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(model_spec.processor))
+        return f"{model_specs[0].processor}_with_{model_specs[0].package}", True
+    # handle case when identity is specified as lemmatizer
+    elif any(model_spec.processor == LEMMA and model_spec.package == 'identity' for model_spec in model_specs):
+        if len(model_specs) > 1:
+            raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
+        return f"{LEMMA}_use_identity", True
+    return None
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for processor, model_specs in load_list:
-        # handle case when processor variants are used
-        if any(model_spec.package in PROCESSOR_VARIANTS[processor] for model_spec in model_specs):
-            if len(model_specs) > 1:
-                raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(processor))
-            package = model_specs[0].package
-            default_config[f"{processor}_with_{package}"] = True
-            continue
-        # handle case when identity is specified as lemmatizer
-        elif processor == LEMMA and any(model_spec.package == 'identity' for model_spec in model_specs):
-            if len(model_specs) > 1:
-                raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
-            default_config[f"{LEMMA}_use_identity"] = True
+        option = build_default_config_option(resources, lang, model_dir, model_specs)
+        if option is not None:
+            # if an option is set for the model_specs, keep that option and ignore
+            # the rest of the model spec
+            default_config[option[0]] = option[1]
             continue
 
         model_paths = [os.path.join(model_dir, lang, processor, model_spec.package + '.pt') for model_spec in model_specs]
