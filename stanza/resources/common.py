@@ -108,14 +108,17 @@ def download_file(url, path, proxies, raise_for_status=False):
         r.raise_for_status()
     return r.status_code
 
-def request_file(url, path, proxies=None, md5=None, raise_for_status=False):
+def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_info=True):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
     """
     ensure_dir(Path(path).parent)
     if file_exists(path, md5):
-        logger.info(f'File exists: {path}.')
+        if log_info:
+            logger.info(f'File exists: {path}')
+        else:
+            logger.debug(f'File exists: {path}')
         return
     download_file(url, path, proxies, raise_for_status)
     assert_file_exists(path, md5)
@@ -349,8 +352,11 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
 
     return lang, model_dir, package, processors
 
-def download_resources_json(model_dir, resources_url, resources_branch,
-                            resources_version, proxies=None):
+def download_resources_json(model_dir,
+                            resources_url=DEFAULT_RESOURCES_URL,
+                            resources_branch=None,
+                            resources_version=DEFAULT_RESOURCES_VERSION,
+                            proxies=None):
     """
     Downloads resources.json to obtain latest packages.
     """
@@ -401,10 +407,15 @@ def download_models(download_list,
                     model_dir=DEFAULT_MODEL_DIR,
                     resources_version=DEFAULT_RESOURCES_VERSION,
                     model_url=DEFAULT_MODEL_URL,
-                    proxies=None):
+                    proxies=None,
+                    log_info=True):
     lang_name = resources.get(lang, {}).get('lang_name', lang)
     download_table = make_table(['Processor', 'Package'], download_list)
-    logger.info(
+    if log_info:
+        log_msg = logger.info
+    else:
+        log_msg = logger.debug
+    log_msg(
         f'Downloading these customized packages for language: '
         f'{lang} ({lang_name})...\n{download_table}'
     )
@@ -418,7 +429,8 @@ def download_models(download_list,
                 url.format(resources_version=resources_version, lang=lang, filename=f"{key}/{value}.pt"),
                 os.path.join(model_dir, lang, key, f'{value}.pt'),
                 proxies,
-                md5=resources[lang][key][value]['md5']
+                md5=resources[lang][key][value]['md5'],
+                log_info=log_info
             )
         except KeyError as e:
             raise ValueError(
@@ -489,5 +501,6 @@ def download(
                         model_dir=model_dir,
                         resources_version=resources_version,
                         model_url=model_url,
-                        proxies=proxies)
+                        proxies=proxies,
+                        log_info=True)
     logger.info(f'Finished downloading models and saved to {model_dir}.')
