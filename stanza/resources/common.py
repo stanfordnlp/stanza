@@ -389,6 +389,43 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
     return languages
 
 
+def expand_model_url(resources, model_url):
+    """
+    Returns the url in the resources dict if model_url is default, or returns the model_url
+    """
+    return resources['url'] if model_url.lower() == 'default' else model_url
+
+def download_models(download_list,
+                    resources,
+                    lang,
+                    model_dir=DEFAULT_MODEL_DIR,
+                    resources_version=DEFAULT_RESOURCES_VERSION,
+                    model_url=DEFAULT_MODEL_URL,
+                    proxies=None):
+    lang_name = resources.get(lang, {}).get('lang_name', lang)
+    download_table = make_table(['Processor', 'Package'], download_list)
+    logger.info(
+        f'Downloading these customized packages for language: '
+        f'{lang} ({lang_name})...\n{download_table}'
+    )
+
+    url = expand_model_url(resources, model_url)
+
+    # Download packages
+    for key, value in download_list:
+        try:
+            request_file(
+                url.format(resources_version=resources_version, lang=lang, filename=f"{key}/{value}.pt"),
+                os.path.join(model_dir, lang, key, f'{value}.pt'),
+                proxies,
+                md5=resources[lang][key][value]['md5']
+            )
+        except KeyError as e:
+            raise ValueError(
+                f'Cannot find the following processor and model name combination: '
+                f'{key}, {value}. Please check if you have provided the correct model name.'
+            ) from e
+
 # main download function
 def download(
         lang='en',
@@ -420,8 +457,8 @@ def download(
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
-    lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
-    url = resources['url'] if model_url.lower() == 'default' else model_url
+    lang_name = resources.get(lang, {}).get('lang_name', lang)
+    url = expand_model_url(resources, model_url)
 
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
@@ -446,24 +483,11 @@ def download(
         )
         download_list = add_dependencies(resources, lang, download_list)
         download_list = flatten_processor_list(download_list)
-        download_table = make_table(['Processor', 'Package'], download_list)
-        logger.info(
-            f'Downloading these customized packages for language: '
-            f'{lang} ({lang_name})...\n{download_table}'
-        )
-
-        # Download packages
-        for key, value in download_list:
-            try:
-                request_file(
-                    url.format(resources_version=resources_version, lang=lang, filename=f"{key}/{value}.pt"),
-                    os.path.join(model_dir, lang, key, f'{value}.pt'),
-                    proxies,
-                    md5=resources[lang][key][value]['md5']
-                )
-            except KeyError as e:
-                raise ValueError(
-                    f'Cannot find the following processor and model name combination: '
-                    f'{key}, {value}. Please check if you have provided the correct model name.'
-                ) from e
+        download_models(download_list=download_list,
+                        resources=resources,
+                        lang=lang,
+                        model_dir=model_dir,
+                        resources_version=resources_version,
+                        model_url=model_url,
+                        proxies=proxies)
     logger.info(f'Finished downloading models and saved to {model_dir}.')
