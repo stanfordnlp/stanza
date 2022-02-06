@@ -2,6 +2,7 @@
 Pipeline that runs tokenize,mwt,pos,lemma,depparse
 """
 
+from enum import Enum
 import io
 import itertools
 import sys
@@ -24,10 +25,22 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, add_dependencies, add_mwt, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
+
+class DownloadMethod(Enum):
+    """
+    Determines a couple options on how to download resources for the pipeline.
+
+    NONE will not download anything, probably resulting in failure if the resources aren't already in place.
+    REUSE_RESOURCES will reuse the existing resources.json and models, but will download any missing models.
+    DOWNLOAD_RESOURCES will download a new resources.json and will overwrite any out of date models.
+    """
+    NONE = 1
+    REUSE_RESOURCES = 2
+    DOWNLOAD_RESOURCES = 3
 
 class ResourcesFileNotFoundError(FileNotFoundError):
     def __init__(self, resources_filepath):
@@ -73,23 +86,39 @@ class PipelineRequirementsException(Exception):
     def __str__(self):
         return self.message
 
+def build_default_config_option(model_specs):
+    """
+    Build a config option for a couple situations: lemma=identity, processor is a variant
+
+    Returns the option name and value
+
+    Refactored from build_default_config so that we can reuse it when
+    downloading all models
+    """
+    # handle case when processor variants are used
+    if any(model_spec.package in PROCESSOR_VARIANTS[model_spec.processor] for model_spec in model_specs):
+        if len(model_specs) > 1:
+            raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(model_spec.processor))
+        return f"{model_specs[0].processor}_with_{model_specs[0].package}", True
+    # handle case when identity is specified as lemmatizer
+    elif any(model_spec.processor == LEMMA and model_spec.package == 'identity' for model_spec in model_specs):
+        if len(model_specs) > 1:
+            raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
+        return f"{LEMMA}_use_identity", True
+    return None
+
+def filter_variants(model_specs):
+    return [(key, value) for (key, value) in model_specs if build_default_config_option(value) is None]
 
 # given a language and models path, build a default configuration
 def build_default_config(resources, lang, model_dir, load_list):
     default_config = {}
     for processor, model_specs in load_list:
-        # handle case when processor variants are used
-        if any(model_spec.package in PROCESSOR_VARIANTS[processor] for model_spec in model_specs):
-            if len(model_specs) > 1:
-                raise IllegalPackageError("Variant processor selected for {}, but multiple packages requested".format(processor))
-            package = model_specs[0].package
-            default_config[f"{processor}_with_{package}"] = True
-            continue
-        # handle case when identity is specified as lemmatizer
-        elif processor == LEMMA and any(model_spec.package == 'identity' for model_spec in model_specs):
-            if len(model_specs) > 1:
-                raise IllegalPackageError("Identity processor selected for lemma, but multiple packages requested")
-            default_config[f"{LEMMA}_use_identity"] = True
+        option = build_default_config_option(model_specs)
+        if option is not None:
+            # if an option is set for the model_specs, keep that option and ignore
+            # the rest of the model spec
+            default_config[option[0]] = option[1]
             continue
 
         model_paths = [os.path.join(model_dir, lang, processor, model_spec.package + '.pt') for model_spec in model_specs]
@@ -132,13 +161,36 @@ def build_default_config(resources, lang, model_dir, load_list):
 
 class Pipeline:
 
-    def __init__(self, lang='en', dir=DEFAULT_MODEL_DIR, package='default', processors={}, logging_level=None, verbose=None, use_gpu=True, model_dir=None, **kwargs):
+    def __init__(self,
+                 lang='en',
+                 dir=DEFAULT_MODEL_DIR,
+                 package='default',
+                 processors={},
+                 logging_level=None,
+                 verbose=None,
+                 use_gpu=True,
+                 model_dir=None,
+                 download_method=DownloadMethod.DOWNLOAD_RESOURCES,
+                 resources_url=DEFAULT_RESOURCES_URL,
+                 resources_branch=None,
+                 resources_version=DEFAULT_RESOURCES_VERSION,
+                 proxies=None,
+                 **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
             self.dir = model_dir
 
         # set global logging level
         set_logging_level(logging_level, verbose)
+
+        if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
+            (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
+            download_resources_json(self.dir,
+                                    resources_url=resources_url,
+                                    resources_branch=resources_branch,
+                                    resources_version=resources_version,
+                                    proxies=proxies)
+
         # process different pipeline parameters
         lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
 
@@ -164,6 +216,21 @@ class Pipeline:
             add_mwt(processors, resources, lang)
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
+        if download_method is not DownloadMethod.NONE:
+            # skip processors which aren't downloaded from our collection
+            download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
+            # skip variants
+            download_list = filter_variants(download_list)
+            # gather up the model list...
+            download_list = flatten_processor_list(download_list)
+            # download_models will skip models we already have
+            download_models(download_list,
+                            resources=resources,
+                            lang=lang,
+                            model_dir=self.dir,
+                            resources_version=resources_version,
+                            proxies=proxies,
+                            log_info=False)
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
             raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
