@@ -25,7 +25,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -171,6 +171,10 @@ class Pipeline:
                  use_gpu=True,
                  model_dir=None,
                  download_method=DownloadMethod.DOWNLOAD_RESOURCES,
+                 resources_url=DEFAULT_RESOURCES_URL,
+                 resources_branch=None,
+                 resources_version=DEFAULT_RESOURCES_VERSION,
+                 proxies=None,
                  **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
@@ -179,11 +183,13 @@ class Pipeline:
         # set global logging level
         set_logging_level(logging_level, verbose)
 
-        # TODO: add resources_url, resources_branch,
-        # resources_version, and proxies as possible options
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
             (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
-            download_resources_json(self.dir)
+            download_resources_json(self.dir,
+                                    resources_url=resources_url,
+                                    resources_branch=resources_branch,
+                                    resources_version=resources_version,
+                                    proxies=proxies)
 
         # process different pipeline parameters
         lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
@@ -222,6 +228,8 @@ class Pipeline:
                             resources=resources,
                             lang=lang,
                             model_dir=self.dir,
+                            resources_version=resources_version,
+                            proxies=proxies,
                             log_info=False)
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
