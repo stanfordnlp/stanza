@@ -235,7 +235,7 @@ def confusion_dataset(model, dataset, device=None):
 
     First key: gold
     Second key: predicted
-    so: confusion[gold][predicted]
+    so: confusion_matrix[gold][predicted]
     """
     model.eval()
     index_label_map = {x: y for (x, y) in enumerate(model.labels)}
@@ -244,9 +244,9 @@ def confusion_dataset(model, dataset, device=None):
 
     dataset_lengths = sort_dataset_by_len(dataset)
 
-    confusion = {}
+    confusion_matrix = {}
     for label in model.labels:
-        confusion[label] = {}
+        confusion_matrix[label] = {}
 
     for length in dataset_lengths.keys():
         batch = dataset_lengths[length]
@@ -257,33 +257,33 @@ def confusion_dataset(model, dataset, device=None):
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = index_label_map[predicted.item()]
-            confusion[expected_labels[i]][predicted_label] = confusion[expected_labels[i]].get(predicted_label, 0) + 1
+            confusion_matrix[expected_labels[i]][predicted_label] = confusion_matrix[expected_labels[i]].get(predicted_label, 0) + 1
 
-    return confusion
+    return confusion_matrix
 
 
-def confusion_to_accuracy(confusion):
+def confusion_to_accuracy(confusion_matrix):
     """
     Given a confusion dictionary returned by confusion_dataset, return correct, total
     """
     correct = 0
     total = 0
-    for l1 in confusion.keys():
-        for l2 in confusion[l1].keys():
+    for l1 in confusion_matrix.keys():
+        for l2 in confusion_matrix[l1].keys():
             if l1 == l2:
-                correct = correct + confusion[l1][l2]
+                correct = correct + confusion_matrix[l1][l2]
             else:
-                total = total + confusion[l1][l2]
+                total = total + confusion_matrix[l1][l2]
     return correct, (correct + total)
 
-def confusion_to_macro_f1(confusion):
+def confusion_to_macro_f1(confusion_matrix):
     """
     Return the macro f1 for a confusion matrix.
     """
     keys = set()
-    for k in confusion.keys():
+    for k in confusion_matrix.keys():
         keys.add(k)
-        for k2 in confusion.get(k).keys():
+        for k2 in confusion_matrix.get(k).keys():
             keys.add(k2)
 
     sum_f1 = 0
@@ -293,10 +293,10 @@ def confusion_to_macro_f1(confusion):
         fp = 0
         for k2 in keys:
             if k == k2:
-                tp = confusion.get(k, {}).get(k, 0)
+                tp = confusion_matrix.get(k, {}).get(k, 0)
             else:
-                fn = fn + confusion.get(k, {}).get(k2, 0)
-                fp = fp + confusion.get(k2, {}).get(k, 0)
+                fn = fn + confusion_matrix.get(k, {}).get(k2, 0)
+                fp = fp + confusion_matrix.get(k2, {}).get(k, 0)
         if tp + fp == 0:
             precision = 0.0
         else:
@@ -372,10 +372,10 @@ def score_dataset(model, dataset, label_map=None, device=None,
     return correct
 
 def score_dev_set(model, dev_set, dev_eval_scoring):
-    confusion = confusion_dataset(model, dev_set)
-    logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
-    correct, total = confusion_to_accuracy(confusion)
-    macro_f1 = confusion_to_macro_f1(confusion)
+    confusion_matrix = confusion_dataset(model, dev_set)
+    logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion_matrix, model.labels)))
+    correct, total = confusion_to_accuracy(confusion_matrix)
+    macro_f1 = confusion_to_macro_f1(confusion_matrix)
     logger.info("Dev set: %d correct of %d examples.  Accuracy: %f" %
                 (correct, len(dev_set), correct / len(dev_set)))
     logger.info("Macro f1: {}".format(macro_f1))
@@ -608,10 +608,10 @@ def main():
     check_labels(model.labels, test_set)
 
     if args.test_remap_labels is None:
-        confusion = confusion_dataset(model, test_set)
-        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))
-        correct, total = confusion_to_accuracy(confusion)
-        logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion)))
+        confusion_matrix = confusion_dataset(model, test_set)
+        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion_matrix, model.labels)))
+        correct, total = confusion_to_accuracy(confusion_matrix)
+        logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion_matrix)))
     else:
         correct = score_dataset(model, test_set,
                                 remap_labels=args.test_remap_labels,
