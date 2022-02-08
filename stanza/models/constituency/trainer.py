@@ -207,6 +207,8 @@ def evaluate(args, model_file, retag_pipeline):
         treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
         logger.info("Retagging finished")
 
+    if args['log_norms']:
+        trainer.model.log_norms()
     f1 = run_dev_set(trainer.model, treebank, args)
     logger.info("F1 score on %s: %f", args['eval_file'], f1)
 
