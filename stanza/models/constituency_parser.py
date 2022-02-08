@@ -43,8 +43,9 @@ A couple experiments which have been tried with little noticeable impact:
     0.8396 on it_turin with the original initialization
     0.8401 and 0.8427 on two runs with updated initialization
     (so maybe a small improvement...)
-  - Initializing LSTM layers with different gates, especially forget
-    gates of 1, didn't make any difference
+  - Initializing LSTM layers with different gates was slightly worse:
+    forget gates of 1.0
+    forget gates of 1.0, input gates of -1.0
   - Replacing the LSTMs that make up the Transition and Constituent
     LSTMs with Dynamic Skip LSTMs made no difference, but was slower
   - Highway LSTMs also made no difference
