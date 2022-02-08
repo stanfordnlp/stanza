@@ -175,7 +175,7 @@ def train(args):
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
-        sys.exit(0)
+        return
 
     logger.info("Training tagger...")
     if trainer is None: # init if model was not loaded previously from file
