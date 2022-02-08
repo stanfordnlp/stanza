@@ -36,7 +36,7 @@ class DepparseProcessor(UDProcessor):
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):
-        if all(word.upos is None and word.xpos is None for sentence in document.sentences for word in sentence.words):
+        if any(word.upos is None and word.xpos is None for sentence in document.sentences for word in sentence.words):
             raise ValueError("POS not run before depparse!")
         try:
             batch = DataLoader(document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
