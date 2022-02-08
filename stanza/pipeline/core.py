@@ -347,20 +347,45 @@ class Pipeline:
         """
         return [self.processors[processor_name] for processor_name in PIPELINE_NAMES if self.processors.get(processor_name)]
 
-    def process(self, doc):
-        # run the pipeline
+    def process(self, doc, processors=None):
+        """
+        Run the pipeline
+
+        processors: allow for a list of processors used by this pipeline action
+          can be list, tuple, set, or comma separated string
+          if None, use all the processors this pipeline knows about
+          MWT is added if necessary
+          otherwise, no care is taken to make sure prerequisites are followed...
+            some of the annotators, such as depparse, will check, but others
+            will fail in some unusual manner or just have really bad results
+        """
+        assert any([isinstance(doc, str), isinstance(doc, list),
+                    isinstance(doc, Document)]), 'input should be either str, list or Document'
 
         # determine whether we are in bulk processing mode for multiple documents
         bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document))
-        for processor_name in PIPELINE_NAMES:
+
+        # various options to limit the processors used by this pipeline action
+        if processors is None:
+            processors = PIPELINE_NAMES
+        elif not isinstance(processors, (str, list, tuple, set)):
+            raise ValueError("Cannot process {} as a list of processors to run".format(type(processors)))
+        else:
+            if isinstance(processors, str):
+                processors = {x for x in processors.split(",")}
+            else:
+                processors = set(processors)
+            if TOKENIZE in processors and MWT in self.processors and MWT not in processors:
+                logger.debug("Requested processors for pipeline did not have mwt, but pipeline needs mwt, so mwt is added")
+                processors.add(MWT)
+            processors = [x for x in PIPELINE_NAMES if x in processors]
+
+        for processor_name in processors:
             if self.processors.get(processor_name):
                 process = self.processors[processor_name].bulk_process if bulk else self.processors[processor_name].process
                 doc = process(doc)
         return doc
 
-    def __call__(self, doc):
-        assert any([isinstance(doc, str), isinstance(doc, list),
-                    isinstance(doc, Document)]), 'input should be either str, list or Document'
-        doc = self.process(doc)
-        return doc
+    def __call__(self, doc, processors=None):
+        return self.process(doc, processors)
 
