@@ -128,3 +128,28 @@ def test_download_fixed():
 
             pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"}, download_method=download_method)
             assert os.path.getmtime(tokenize_path) != mod_time
+
+def test_limited_pipeline():
+    """
+    Test loading a pipeline, but then only using a couple processors
+    """
+    pipe = stanza.Pipeline(processors="tokenize,pos,lemma,depparse,ner", dir=TEST_MODELS_DIR)
+    doc = pipe("John Bauer works at Stanford")
+    assert all(word.upos is not None for sentence in doc.sentences for word in sentence.words)
+    assert all(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
+
+    doc = pipe("John Bauer works at Stanford", processors=["tokenize","pos"])
+    assert all(word.upos is not None for sentence in doc.sentences for word in sentence.words)
+    assert not any(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
+
+    doc = pipe("John Bauer works at Stanford", processors="tokenize")
+    assert not any(word.upos is not None for sentence in doc.sentences for word in sentence.words)
+    assert not any(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
+
+    doc = pipe("John Bauer works at Stanford", processors="tokenize,ner")
+    assert not any(word.upos is not None for sentence in doc.sentences for word in sentence.words)
+    assert all(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
+
+    with pytest.raises(ValueError):
+        # this should fail
+        doc = pipe("John Bauer works at Stanford", processors="tokenize,depparse")
