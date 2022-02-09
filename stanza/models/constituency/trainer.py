@@ -14,6 +14,7 @@ from collections import Counter
 from collections import namedtuple
 import logging
 import random
+import re
 import os
 
 import torch
@@ -571,6 +572,16 @@ def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, mo
 
     tree_loss = model_loss_function(errors, answers)
     tree_loss.backward()
+    if args['watch_regex']:
+        matched = False
+        logger.info("Watching %s", args['watch_regex'])
+        watch_regex = re.compile(args['watch_regex'])
+        for n, p in model.named_parameters():
+            if watch_regex.search(n):
+                matched = True
+                logger.info("  %s norm: %f grad: %f", n, torch.linalg.norm(p), torch.linalg.norm(p.grad))
+        if not matched:
+            logger.info("  (none found!)")
     batch_loss = tree_loss.item()
 
     optimizer.step()
