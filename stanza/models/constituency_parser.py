@@ -339,6 +339,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_residual_dropout', default=0.2, type=float, help='Residual dropout for the label attention')
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
+    parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
