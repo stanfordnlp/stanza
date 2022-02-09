@@ -345,6 +345,18 @@ def remove_duplicates(trees, dataset):
         logger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), dataset)
     return new_trees
 
+def remove_no_tags(trees):
+    """
+    TODO: remove these trees in the conversion instead of here
+    """
+    new_trees = [x for x in trees if
+                 len(x.children) > 1 or
+                 (len(x.children) == 1 and len(x.children[0].children) > 1) or
+                 (len(x.children) == 1 and len(x.children[0].children) == 1 and len(x.children[0].children[0].children) >= 1)]
+    if len(trees) - len(new_trees) > 0:
+        logger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
+    return new_trees
+
 def train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
@@ -356,6 +368,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
     train_trees = tree_reader.read_treebank(args['train_file'])
     logger.info("Read %d trees for the training set", len(train_trees))
     train_trees = remove_duplicates(train_trees, "train")
+    train_trees = remove_no_tags(train_trees)
 
     dev_trees = tree_reader.read_treebank(args['eval_file'])
     logger.info("Read %d trees for the dev set", len(dev_trees))
