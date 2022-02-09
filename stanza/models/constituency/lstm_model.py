@@ -5,6 +5,25 @@ based on the current known state.
 The primary purpose of this class is to implement the prediction of the next
 transition, which is done by concatenating the output of an LSTM operated over
 previous transitions, the words, and the partially built constituents.
+
+A complete processing of a sentence is as follows:
+  1) Run the input words through an encoder.
+     The encoder includes some or all of the following:
+       pretrained word embedding
+       finetuned word embedding for training set words - "delta_embedding"
+       POS tag embedding
+       pretrained charlm representation
+       BERT or similar large language model representation
+       attention transformer over the previous inputs
+       labeled attention transformer over the first attention layer
+     The encoded input is then put through a bi-lstm, giving a word representation
+  2) Transitions are put in an embedding, and transitions already used are tracked
+     in an LSTM
+  3) Constituents already built are also processed in an LSTM
+  4) Every transition is chosen by taking the output of the current word position,
+     the transition LSTM, and the constituent LSTM, and classifying the next
+     transition
+  5) Transitions are repeated (with constraints) until the sentence is completed
 """
 
 from collections import namedtuple
