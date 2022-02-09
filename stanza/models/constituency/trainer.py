@@ -102,7 +102,7 @@ class Trainer:
                               words=params['words'],
                               rare_words=params['rare_words'],
                               root_labels=params['root_labels'],
-                              open_nodes=params['open_nodes'],
+                              constituent_opens=params['constituent_opens'],
                               unary_limit=unary_limit,
                               args=params['config'])
         else:

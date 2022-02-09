@@ -119,7 +119,7 @@ class ConstituencyComposition(Enum):
     BIGRAM                = 5
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -131,7 +131,7 @@ class LSTMModel(BaseModel, nn.Module):
           and tags by themselves may help UNK words
         rare_words: a list of rare words, used to occasionally replace with UNK
         root_labels: probably ROOT, although apparently some treebanks like TOP
-        open_nodes: a list of all possible open nodes which will go on the stack
+        constituent_opens: a list of all possible open nodes which will go on the stack
           - this might be different from constituents if there are nodes
             which represent multiple constituents at once
         args: hidden_size, transition_hidden_size, etc as gotten from
@@ -213,14 +213,6 @@ class LSTMModel(BaseModel, nn.Module):
             nn.init.normal_(self.tag_embedding.weight, std=0.25)
             self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
-        self.transitions = sorted(list(transitions))
-        self.transition_map = { t: i for i, t in enumerate(self.transitions) }
-        # precompute tensors for the transitions
-        self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
-        self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
-                                                 embedding_dim = self.transition_embedding_dim)
-        nn.init.normal_(self.transition_embedding.weight, std=0.25)
-
         self.num_lstm_layers = self.args['num_lstm_layers']
         self.lstm_layer_dropout = self.args['lstm_layer_dropout']
 
@@ -237,11 +229,8 @@ class LSTMModel(BaseModel, nn.Module):
         # start and end representation.
         self.sentence_boundary_vectors = self.args['sentence_boundary_vectors']
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-            self.register_parameter('word_start', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
-            self.register_parameter('word_end', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
-            if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-                self.register_parameter('transition_start', torch.nn.Parameter(0.2 * torch.randn(self.transition_hidden_size, requires_grad=True)))
-                self.register_parameter('constituent_start', torch.nn.Parameter(0.2 * torch.randn(self.hidden_size, requires_grad=True)))
+            self.register_parameter('word_start_embedding', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
+            self.register_parameter('word_end_embedding', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
 
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
@@ -316,26 +305,37 @@ class LSTMModel(BaseModel, nn.Module):
         self.word_to_constituent = nn.Linear(self.hidden_size * 2, self.hidden_size)
         initialize_linear(self.word_to_constituent, self.args['nonlinearity'], self.hidden_size * 2)
 
+        self.transitions = sorted(list(transitions))
+        self.transition_map = { t: i for i, t in enumerate(self.transitions) }
+        # precompute tensors for the transitions
+        self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
+        self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
+                                                 embedding_dim = self.transition_embedding_dim)
+        nn.init.normal_(self.transition_embedding.weight, std=0.25)
+        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
+            self.register_parameter('transition_start_embedding', torch.nn.Parameter(0.2 * torch.randn(self.transition_hidden_size, requires_grad=True)))
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
-        # input_size is hidden_size - could introduce a new constituent_size instead if we liked
-        self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
 
-        self.open_nodes = sorted(list(open_nodes))
+        self.constituent_opens = sorted(list(constituent_opens))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
         # the pattern when condensing constituents is embedding - con1 - con2 - con3 - embedding
         # TODO: try the two ends have different embeddings?
-        self.open_node_map = { x: i for (i, x) in enumerate(self.open_nodes) }
-        self.open_node_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
-                                                embedding_dim = self.hidden_size)
-        nn.init.normal_(self.open_node_embedding.weight, std=0.2)
+        self.constituent_open_map = { x: i for (i, x) in enumerate(self.constituent_opens) }
+        self.constituent_open_embedding = nn.Embedding(num_embeddings = len(self.constituent_open_map),
+                                                       embedding_dim = self.hidden_size)
+        nn.init.normal_(self.constituent_open_embedding.weight, std=0.2)
+        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
+            self.register_parameter('constituent_start_embedding', torch.nn.Parameter(0.2 * torch.randn(self.hidden_size, requires_grad=True)))
+        # input_size is hidden_size - could introduce a new constituent_size instead if we liked
+        self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
 
         if args['combined_dummy_embedding']:
-            self.dummy_embedding = self.open_node_embedding
+            self.dummy_embedding = self.constituent_open_embedding
         else:
-            self.dummy_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
+            self.dummy_embedding = nn.Embedding(num_embeddings = len(self.constituent_open_map),
                                                 embedding_dim = self.hidden_size)
             nn.init.normal_(self.dummy_embedding.weight, std=0.2)
-        self.register_buffer('open_node_tensors', torch.tensor(range(len(open_nodes)), requires_grad=False))
+        self.register_buffer('constituent_open_tensors', torch.tensor(range(len(constituent_opens)), requires_grad=False))
 
         self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
         # TODO: refactor
@@ -626,8 +626,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         all_word_inputs = [torch.cat(word_inputs, dim=1) for word_inputs in all_word_inputs]
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-            word_start = self.word_start.unsqueeze(0)
-            word_end = self.word_end.unsqueeze(0)
+            word_start = self.word_start_embedding.unsqueeze(0)
+            word_end = self.word_end_embedding.unsqueeze(0)
             all_word_inputs = [torch.cat([word_start, word_inputs, word_end], dim=0) for word_inputs in all_word_inputs]
 
         if self.bert_model is not None:
@@ -695,7 +695,7 @@ class LSTMModel(BaseModel, nn.Module):
         The subsequent batch built this way will be used for batch_size trees
         """
         if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-            transition_start = self.transition_start.unsqueeze(0).unsqueeze(0)
+            transition_start = self.transition_start_embedding.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.transition_lstm(transition_start)
             transition_start = output[0, 0, :]
         else:
@@ -709,7 +709,7 @@ class LSTMModel(BaseModel, nn.Module):
         Return an initial TreeStack with no constituents
         """
         if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-            constituent_start = self.constituent_start.unsqueeze(0).unsqueeze(0)
+            constituent_start = self.constituent_start_embedding.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.constituent_lstm(constituent_start)
             constituent_start = output[0, 0, :]
         else:
@@ -728,7 +728,7 @@ class LSTMModel(BaseModel, nn.Module):
 
     def dummy_constituent(self, dummy):
         label = dummy.label
-        open_index = self.open_node_tensors[self.open_node_map[label]]
+        open_index = self.constituent_open_tensors[self.constituent_open_map[label]]
         hx = self.dummy_embedding(open_index)
         return Constituent(value=dummy, tree_hx=hx)
 
@@ -753,8 +753,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         if (self.constituency_composition == ConstituencyComposition.BILSTM or
             self.constituency_composition == ConstituencyComposition.BILSTM_MAX):
-            label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
-
+            label_hx = [self.constituent_open_embedding(self.constituent_open_tensors[self.constituent_open_map[label]]) for label in labels]
             max_length = max(len(children) for children in children_lists)
             zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
             # weirdly, this is faster than using pack_sequence
@@ -958,7 +957,7 @@ class LSTMModel(BaseModel, nn.Module):
             'words': self.delta_words,
             'rare_words': self.rare_words,
             'root_labels': self.root_labels,
-            'open_nodes': self.open_nodes,
+            'constituent_opens': self.constituent_opens,
         }
 
         return params
