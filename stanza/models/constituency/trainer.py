@@ -286,6 +286,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     dev_sequences, dev_transitions = convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
+    logger.info("Unique transitions in training set: %s", train_transitions)
     for trans in dev_transitions:
         if trans not in train_transitions:
             raise RuntimeError("Found transition {} in the dev set which don't exist in the train set".format(trans))
