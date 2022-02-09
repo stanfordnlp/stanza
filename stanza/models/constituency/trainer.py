@@ -327,6 +327,22 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
 
     return trainer, train_sequences, train_transitions
 
+def remove_duplicates(trees, dataset):
+    """
+    Filter duplicates from the given dataset
+    """
+    new_trees = []
+    known_trees = set()
+    for tree in trees:
+        tree_str = "{}".format(tree)
+        if tree_str in known_trees:
+            continue
+        known_trees.add(tree_str)
+        new_trees.append(tree)
+    if len(new_trees) < len(trees):
+        logger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), dataset)
+    return new_trees
+
 def train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
@@ -337,9 +353,11 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
     train_trees = tree_reader.read_treebank(args['train_file'])
     logger.info("Read %d trees for the training set", len(train_trees))
+    train_trees = remove_duplicates(train_trees, "train")
 
     dev_trees = tree_reader.read_treebank(args['eval_file'])
     logger.info("Read %d trees for the dev set", len(dev_trees))
+    dev_trees = remove_duplicates(dev_trees, "dev")
 
     if retag_pipeline is not None:
         logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
