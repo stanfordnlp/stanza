@@ -31,6 +31,7 @@ from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
+from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.utils import retag_trees, build_optimizer
 from stanza.server.parser_eval import EvaluateParser
 
@@ -389,6 +390,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
     iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file)
 
+TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
 def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename):
     """
@@ -422,7 +424,10 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
 
     model.train()
 
-    train_data = list(zip(train_trees, train_sequences))
+    preterminal_lists = [[Tree(label=pt.label, children=Tree(label=pt.children[0].label))
+                          for pt in tree.yield_preterminals()]
+                         for tree in train_trees]
+    train_data = [TrainItem(*x) for x in zip(train_trees, train_sequences, preterminal_lists)]
 
     if not args['epoch_size']:
         args['epoch_size'] = len(train_data)
@@ -503,9 +508,9 @@ def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, mo
     """
     # now we add the state to the trees in the batch
     # the state is build as a bulk operation
-    initial_states = parse_transitions.initial_state_from_gold_trees([tree for tree, _ in batch], model)
+    initial_states = parse_transitions.initial_state_from_preterminals([x.preterminals for x in batch], model, [x.tree for x in batch])
     batch = [state._replace(gold_sequence=sequence)
-             for (tree, sequence), state in zip(batch, initial_states)]
+             for (tree, sequence, _), state in zip(batch, initial_states)]
 
     transitions_correct = Counter()
     transitions_incorrect = Counter()
