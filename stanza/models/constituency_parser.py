@@ -209,6 +209,7 @@ def parse_args(args=None):
     #           0.00005:  80.40
     #           0.00002:  80.02
     #           0.00001:  78.95
+    #
     # madgrad   0.005:    fails horribly
     #           0.001:    low scores
     #           0.0005:   still somewhat low
@@ -219,7 +220,18 @@ def parse_args(args=None):
     #           0.00001:  80.44
     #           0.000005: 80.34
     #           0.000002: 80.39
-    DEFAULT_LEARNING_RATES = { "adamw": 0.001, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
+    #
+    # adamw experiment on a TR dataset (not necessarily the best test case)
+    # note that at that time, the expected best for adadelta was 0.816
+    #
+    #           0.00005 - 0.7925
+    #           0.0001  - 0.7889
+    #           0.0002  - 0.8110
+    #           0.00025 - 0.8108
+    #           0.0003  - 0.8050
+    #           0.0005  - 0.8076
+    #           0.001   - 0.8069
+    DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6 }
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
