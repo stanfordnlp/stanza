@@ -31,3 +31,20 @@ class SinusoidalEncoding(nn.Module):
 
     def max_len(self):
         return self.pe.shape[0]
+
+
+class ConcatSinusoidalEncoding(nn.Module):
+    """
+    Uses sine & cosine to represent position
+    """
+    def __init__(self, d_model=256, max_len=512):
+        super().__init__()
+        self.encoding = SinusoidalEncoding(d_model // 2, max_len)
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, x):
+        timing = self.encoding(torch.arange(x.shape[1]))
+        x, timing = torch.broadcast_tensors(x, timing)
+        out = torch.cat([x, timing], dim=-1)
+        out = self.norm(out)
+        return out

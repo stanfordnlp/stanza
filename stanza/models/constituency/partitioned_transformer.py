@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from stanza.models.constituency.positional_encoding import SinusoidalEncoding
+from stanza.models.constituency.positional_encoding import ConcatSinusoidalEncoding
 
 class FeatureDropoutFunction(torch.autograd.function.InplaceFunction):
     @staticmethod
@@ -223,22 +223,6 @@ class ConcatPositionalEncoding(nn.Module):
 
     def forward(self, x):
         timing = self.timing_table[None, : x.shape[1], :]
-        x, timing = torch.broadcast_tensors(x, timing)
-        out = torch.cat([x, timing], dim=-1)
-        out = self.norm(out)
-        return out
-
-class ConcatSinusoidalEncoding(nn.Module):
-    """
-    Uses sine & cosine to represent position
-    """
-    def __init__(self, d_model=256, max_len=512):
-        super().__init__()
-        self.encoding = SinusoidalEncoding(d_model // 2, max_len)
-        self.norm = nn.LayerNorm(d_model)
-
-    def forward(self, x):
-        timing = self.encoding(torch.arange(x.shape[1]))
         x, timing = torch.broadcast_tensors(x, timing)
         out = torch.cat([x, timing], dim=-1)
         out = self.norm(out)
