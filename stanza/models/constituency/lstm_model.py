@@ -41,12 +41,12 @@ from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
+from stanza.models.constituency.label_attention import LabelAttentionModule
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
-from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
-from stanza.models.constituency.label_attention import LabelAttentionModule
 
 logger = logging.getLogger('stanza')
 
@@ -212,6 +212,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.bert_tokenizer = None
             self.is_phobert = False
 
+        self.partitioned_transformer_module = None
         if self.args['pattn_num_heads'] > 0 and self.args['pattn_num_layers'] > 0:
             # Initializations of parameters for the Partitioned Attention
             # round off the size of the model so that it divides in half evenly
@@ -235,8 +236,6 @@ class LSTMModel(BaseModel, nn.Module):
                 encoder_max_len=self.args['pattn_encoder_max_len']
             )
             self.word_input_size += self.pattn_d_model
-        else:
-            self.partitioned_transformer_module = None
 
         self.label_attention_module = None
         if self.args.get('lattn_d_proj', 0) > 0 and self.args.get('lattn_d_l', 0) > 0:
