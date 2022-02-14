@@ -51,7 +51,7 @@ def test_in_order_open(pt):
 def test_close(unary_model):
     test_parse_transitions.test_close(unary_model)
 
-def run_forward_checks(model):
+def run_forward_checks(model, num_states=1):
     """
     Run a couple small transitions and a forward pass on the given model
 
@@ -59,32 +59,35 @@ def run_forward_checks(model):
     testing that building models with various options results in a
     functional model.
     """
-    state = test_parse_transitions.build_initial_state(model)[0]
-    model((state,))
+    states = tuple([test_parse_transitions.build_initial_state(model)[0] for _ in range(num_states)])
+    model(states)
 
     shift = parse_transitions.Shift()
-    state = shift.apply(state, model)
-    model((state,))
+    shifts = [shift for _ in range(num_states)]
+    states = parse_transitions.bulk_apply(model, states, shifts)
+    model(states)
 
     open_transition = parse_transitions.OpenConstituent("NP")
-    assert open_transition.is_legal(state, model)
-    state = open_transition.apply(state, model)
-    assert state.num_opens == 1
-    model((state,))
+    open_transitions = [open_transition for _ in range(num_states)]
+    assert open_transition.is_legal(states[0], model)
+    states = parse_transitions.bulk_apply(model, states, open_transitions)
+    assert states[0].num_opens == 1
+    model(states)
 
-    state = shift.apply(state, model)
-    model((state,))
-    state = shift.apply(state, model)
-    model((state,))
-    assert state.num_opens == 1
+    states = parse_transitions.bulk_apply(model, states, shifts)
+    model(states)
+    states = parse_transitions.bulk_apply(model, states, shifts)
+    model(states)
+    assert states[0].num_opens == 1
     # now should have "mox", "opal" on the constituents
 
     close_transition = parse_transitions.CloseConstituent()
-    assert close_transition.is_legal(state, model)
-    state = close_transition.apply(state, model)
-    assert state.num_opens == 0
+    close_transitions = [close_transition for _ in range(num_states)]
+    assert close_transition.is_legal(states[0], model)
+    states = parse_transitions.bulk_apply(model, states, close_transitions)
+    assert states[0].num_opens == 0
 
-    model((state,))
+    model(states)
 
 def test_unary_forward(pt, unary_model):
     """
@@ -95,6 +98,11 @@ def test_unary_forward(pt, unary_model):
     run_forward_checks(unary_model)
 
 def test_lstm_forward(pt):
+    model = build_model(pt)
+    run_forward_checks(model, num_states=1)
+    run_forward_checks(model, num_states=2)
+
+def test_lstm_layers(pt):
     model = build_model(pt, '--num_lstm_layers', '1')
     run_forward_checks(model)
     model = build_model(pt, '--num_lstm_layers', '2')
