@@ -59,7 +59,7 @@ def run_forward_checks(model, num_states=1):
     testing that building models with various options results in a
     functional model.
     """
-    states = tuple([test_parse_transitions.build_initial_state(model)[0] for _ in range(num_states)])
+    states = test_parse_transitions.build_initial_state(model, num_states)
     model(states)
 
     shift = parse_transitions.Shift()
