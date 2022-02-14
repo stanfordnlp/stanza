@@ -8,14 +8,15 @@ from stanza.tests import *
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 
-def build_initial_state(model):
+def build_initial_state(model, num_states=1):
     words = ["Unban", "Mox", "Opal"]
     tags = ["VB", "NNP", "NNP"]
+    sentences = [list(zip(words, tags)) for _ in range(num_states)]
 
-    state = parse_transitions.initial_state_from_words([list(zip(words, tags))], model)
-    assert len(state) == 1
-    assert state[0].num_transitions() == 0
-    return state
+    states = parse_transitions.initial_state_from_words(sentences, model)
+    assert len(states) == num_states
+    assert all(state.num_transitions() == 0 for state in states)
+    return states
 
 def test_initial_state(model=None):
     if model is None:
