@@ -196,23 +196,33 @@ def evaluate(args, model_file, retag_pipeline):
     May retag the trees using retag_pipeline
     Uses a subprocess to run the Java EvalB code
     """
-    pt = load_pretrain(args)
-    forward_charlm = load_charlm(args['charlm_forward_file'])
-    backward_charlm = load_charlm(args['charlm_backward_file'])
-    trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
+    # we create the Evaluator here because otherwise the transformers
+    # library constantly complains about forking the process
+    # note that this won't help in the event of training multiple
+    # models in the same run, although since that would take hours
+    # or days, that's not a very common problem
+    if args['num_generate'] > 0:
+        kbest = args['num_generate'] + 1
+    else:
+        kbest = None
+    with EvaluateParser(kbest=kbest) as evaluator:
+        pt = load_pretrain(args)
+        forward_charlm = load_charlm(args['charlm_forward_file'])
+        backward_charlm = load_charlm(args['charlm_backward_file'])
+        trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
 
-    treebank = tree_reader.read_treebank(args['eval_file'])
-    logger.info("Read %d trees for evaluation", len(treebank))
+        treebank = tree_reader.read_treebank(args['eval_file'])
+        logger.info("Read %d trees for evaluation", len(treebank))
 
-    if retag_pipeline is not None:
-        logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-        treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
-        logger.info("Retagging finished")
+        if retag_pipeline is not None:
+            logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
+            treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+            logger.info("Retagging finished")
 
-    if args['log_norms']:
-        trainer.model.log_norms()
-    f1 = run_dev_set(trainer.model, treebank, args)
-    logger.info("F1 score on %s: %f", args['eval_file'], f1)
+        if args['log_norms']:
+            trainer.model.log_norms()
+        f1 = run_dev_set(trainer.model, treebank, args, evaluator)
+        logger.info("F1 score on %s: %f", args['eval_file'], f1)
 
 def build_treebank(trees, transition_scheme):
     """
@@ -364,35 +374,45 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
     """
     log_args(args)
 
-    utils.ensure_dir(args['save_dir'])
+    # we create the Evaluator here because otherwise the transformers
+    # library constantly complains about forking the process
+    # note that this won't help in the event of training multiple
+    # models in the same run, although since that would take hours
+    # or days, that's not a very common problem
+    if args['num_generate'] > 0:
+        kbest = args['num_generate'] + 1
+    else:
+        kbest = None
+    with EvaluateParser(kbest=kbest) as evaluator:
+        utils.ensure_dir(args['save_dir'])
 
-    train_trees = tree_reader.read_treebank(args['train_file'])
-    logger.info("Read %d trees for the training set", len(train_trees))
-    train_trees = remove_duplicates(train_trees, "train")
-    train_trees = remove_no_tags(train_trees)
+        train_trees = tree_reader.read_treebank(args['train_file'])
+        logger.info("Read %d trees for the training set", len(train_trees))
+        train_trees = remove_duplicates(train_trees, "train")
+        train_trees = remove_no_tags(train_trees)
 
-    dev_trees = tree_reader.read_treebank(args['eval_file'])
-    logger.info("Read %d trees for the dev set", len(dev_trees))
-    dev_trees = remove_duplicates(dev_trees, "dev")
+        dev_trees = tree_reader.read_treebank(args['eval_file'])
+        logger.info("Read %d trees for the dev set", len(dev_trees))
+        dev_trees = remove_duplicates(dev_trees, "dev")
 
-    if retag_pipeline is not None:
-        logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-        train_trees = retag_trees(train_trees, retag_pipeline, args['retag_xpos'])
-        dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
-        logger.info("Retagging finished")
+        if retag_pipeline is not None:
+            logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
+            train_trees = retag_trees(train_trees, retag_pipeline, args['retag_xpos'])
+            dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
+            logger.info("Retagging finished")
 
-    pt = load_pretrain(args)
-    forward_charlm = load_charlm(args['charlm_forward_file'])
-    backward_charlm = load_charlm(args['charlm_backward_file'])
-    bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        pt = load_pretrain(args)
+        forward_charlm = load_charlm(args['charlm_forward_file'])
+        backward_charlm = load_charlm(args['charlm_backward_file'])
+        bert_model, bert_tokenizer = load_bert(args['bert_model'])
 
-    trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer)
+        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer)
 
-    iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file)
+        iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, evaluator)
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
-def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename):
+def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -451,7 +471,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         epoch_loss, transitions_correct, transitions_incorrect = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
-        f1 = run_dev_set(model, dev_trees, args)
+        f1 = run_dev_set(model, dev_trees, args, evaluator)
         if f1 > best_f1:
             logger.info("New best dev score: %.5f > %.5f", f1, best_f1)
             best_f1 = f1
@@ -719,7 +739,7 @@ def parse_tagged_words(model, words, batch_size):
     results = [t.predictions[0].tree for t in treebank]
     return results
 
-def run_dev_set(model, dev_trees, args):
+def run_dev_set(model, dev_trees, args, evaluator=None):
     """
     This reparses a treebank and executes the CoreNLP Java EvalB code.
 
@@ -773,10 +793,14 @@ def run_dev_set(model, dev_trees, args):
 
     if len(full_results) == 0:
         return 0.0
-    if args['num_generate'] > 0:
-        kbest = max(len(fr.predictions) for fr in full_results)
+    if evaluator is None:
+        if args['num_generate'] > 0:
+            kbest = max(len(fr.predictions) for fr in full_results)
+        else:
+            kbest = None
+        with EvaluateParser(kbest=kbest) as evaluator:
+            response = evaluator.process(full_results)
     else:
-        kbest = None
-    with EvaluateParser(kbest=kbest) as evaluator:
         response = evaluator.process(full_results)
-        return response.f1
+
+    return response.f1
