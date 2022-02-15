@@ -217,15 +217,13 @@ class ConcatPositionalEncoding(nn.Module):
     """
     def __init__(self, d_model=256, max_len=512):
         super().__init__()
-        self.timing_table = nn.Parameter(torch.FloatTensor(max_len, d_model // 2))
+        self.timing_table = nn.Parameter(torch.FloatTensor(max_len, d_model))
         nn.init.normal_(self.timing_table)
-        self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x):
         timing = self.timing_table[:x.shape[1], :]
         timing = timing.expand(x.shape[0], -1, -1)
         out = torch.cat([x, timing], dim=-1)
-        out = self.norm(out)
         return out
 
 #
@@ -253,11 +251,12 @@ class PartitionedTransformerModule(nn.Module):
 
         self.pattention_morpho_emb_dropout = FeatureDropout(morpho_emb_dropout)
         if timing == 'sin':
-            self.add_timing = ConcatSinusoidalEncoding(d_model=d_model, max_len=encoder_max_len)
+            self.add_timing = ConcatSinusoidalEncoding(d_model=d_model // 2, max_len=encoder_max_len)
         elif timing == 'learned':
-            self.add_timing = ConcatPositionalEncoding(d_model=d_model, max_len=encoder_max_len)
+            self.add_timing = ConcatPositionalEncoding(d_model=d_model // 2, max_len=encoder_max_len)
         else:
             raise ValueError("Unhandled timing type: %s" % timing)
+        self.transformer_input_norm = nn.LayerNorm(d_model)
         self.pattn_encoder = PartitionedTransformerEncoder(
             n_layers,
             d_model=d_model,
@@ -301,6 +300,7 @@ class PartitionedTransformerModule(nn.Module):
 
         # Add positional information through the table
         encoder_in = self.add_timing(self.pattention_morpho_emb_dropout(extra_content_annotations))
+        encoder_in = self.transformer_input_norm(encoder_in)
         # Put the partitioned input through the partitioned attention
         annotations = self.pattn_encoder(encoder_in, valid_token_mask)
 

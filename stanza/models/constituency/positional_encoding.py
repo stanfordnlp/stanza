@@ -44,12 +44,11 @@ class ConcatSinusoidalEncoding(nn.Module):
     """
     def __init__(self, d_model=256, max_len=512):
         super().__init__()
-        self.encoding = SinusoidalEncoding(d_model // 2, max_len)
-        self.norm = nn.LayerNorm(d_model)
+        self.encoding = SinusoidalEncoding(d_model, max_len)
 
     def forward(self, x):
         timing = self.encoding(torch.arange(x.shape[1], device=x.device))
         timing = timing.expand(x.shape[0], -1, -1)
         out = torch.cat((x, timing), dim=-1)
-        out = self.norm(out)
         return out
+
