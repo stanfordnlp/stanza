@@ -222,8 +222,8 @@ class ConcatPositionalEncoding(nn.Module):
         self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x):
-        timing = self.timing_table[None, : x.shape[1], :]
-        x, timing = torch.broadcast_tensors(x, timing)
+        timing = self.timing_table[:x.shape[1], :]
+        timing = timing.expand(x.shape[0], -1, -1)
         out = torch.cat([x, timing], dim=-1)
         out = self.norm(out)
         return out
