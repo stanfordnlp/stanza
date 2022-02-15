@@ -73,6 +73,10 @@ def parse_args(args=None):
     parser.add_argument('--no_input_transform', dest='input_transform', action='store_false', help="Do not use input transformation layer before tagger lstm.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
 
+
+    parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
+    parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
@@ -265,7 +269,7 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(json.load(open(args['eval_file'])))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
+    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.bert_tokenizer)
     utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
 
     logger.info("Start evaluation...")
