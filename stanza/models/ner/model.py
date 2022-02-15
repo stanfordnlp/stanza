@@ -1,25 +1,37 @@
+import enum
+import math
 import os
+import logging
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor
+from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast, AutoModelForPreTraining, AutoModelForMaskedLM
 
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
 from stanza.models.common.vocab import PAD_ID
+from stanza.models.common.bert_embedding import extract_phobert_embeddings, extract_bert_embeddings
+logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None):
+    def __init__(self, args, vocab, emb_matrix=None, bert_model=None, bert_tokenizer=None, use_cuda=False):
         super().__init__()
 
+        self.use_cuda = use_cuda
         self.vocab = vocab
         self.args = args
         self.unsaved_modules = []
+        self.bert_model = bert_model
+        self.bert_tokenizer = bert_tokenizer
+        self.device = torch.device("cuda" if torch.cuda.is_available() and self.use_cuda else "cpu")
 
-        def add_unsaved_module(name, module):
+        def add_unsaved_module(name, module):    
             self.unsaved_modules += [name]
             setattr(self, name, module)
 
@@ -33,6 +45,8 @@ class NERTagger(nn.Module):
             if not self.args.get('emb_finetune', True):
                 self.word_emb.weight.detach_()
             input_size += self.args['word_emb_dim']
+            if self.args.get('bert_model', False):
+                input_size += self.bert_model.config.hidden_size
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
@@ -82,15 +96,31 @@ class NERTagger(nn.Module):
             "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
+    def forward(self, sentences, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
         
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
         
         inputs = []
+        batch_size = len(sentences)
+
+        #extract static embeddings
+        static_words, word_mask = self.extract_static_embeddings(self.args, sentences)
+
+        if self.use_cuda:
+            word_mask = word_mask.cuda()
+            static_words = static_words.cuda()
+
+        if self.args.get('bert_model', False):
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, self.device)
+            bert_words = get_float_tensor(processed_bert, len(processed_bert))
+            assert(bert_words[0].size(0)==tags[0].size(0))
+            if self.use_cuda:
+                bert_words = bert_words.cuda()
+
         if self.args['word_emb_dim'] > 0:
-            word_emb = self.word_emb(word)
-            word_emb = pack(word_emb)
+            word_static_emb = self.word_emb(static_words)
+            word_emb = pack(torch.cat((word_static_emb, torch.tensor(bert_words)), 2)) if self.args.get('bert_model', False) else pack(word_static_emb)
             inputs += [word_emb]
 
         def pad(x):
@@ -121,8 +151,8 @@ class NERTagger(nn.Module):
 
         lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
         lstm_outputs, _ = self.taggerlstm(lstm_inputs, sentlens, hx=(\
-                self.taggerlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), \
-                self.taggerlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
+                self.taggerlstm_h_init.expand(2 * self.args['num_layers'], batch_size, self.args['hidden_dim']).contiguous(), \
+                self.taggerlstm_c_init.expand(2 * self.args['num_layers'], batch_size, self.args['hidden_dim']).contiguous()))
         lstm_outputs = lstm_outputs.data
 
 
@@ -135,3 +165,23 @@ class NERTagger(nn.Module):
         loss, trans = self.crit(logits, word_mask, tags)
         
         return loss, logits, trans
+
+    def extract_static_embeddings(self, args, sents):
+        processed = []
+        if args.get('lowercase', True): # handle word case
+            case = lambda x: x.lower()
+        else:
+            case = lambda x: x
+        if args.get('char_lowercase', False): # handle character case
+            char_case = lambda x: x.lower()
+        else:
+            char_case = lambda x: x
+        for idx, sent in enumerate(sents):
+            processed_sent = [self.vocab['word'].map([case(w[0]) for w in sent])]
+            processed.append(processed_sent[0])
+        
+        words = get_long_tensor(processed, len(sents))
+        words_mask = torch.eq(words, PAD_ID)
+
+        return words, words_mask
+

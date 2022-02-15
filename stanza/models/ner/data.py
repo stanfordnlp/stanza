@@ -2,12 +2,18 @@ import random
 import logging
 import torch
 
+from stanza.models.common.bert_embedding import load_tokenizer
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
 from stanza.models.ner.vocab import TagVocab, MultiVocab
 from stanza.models.common.doc import *
 from stanza.models.ner.utils import process_tags
+
+#tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
+#tokenizer = AutoTokenizer.from_pretrained("Maltehb/danish-bert-botxo-ner-dane")
+#tokenizer = AutoTokenizer.from_pretrained("flax-community/roberta-base-danish")
+#tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
 
 logger = logging.getLogger('stanza')
 
@@ -21,8 +27,37 @@ class DataLoader:
         self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
-        self.tags = [[w[1] for w in sent] for sent in data]
+        max_len_data = []
+        self.tags = []
 
+        #check if bert_model is used
+        self.bert_tokenizer = load_tokenizer(self.args['bert_model']) if self.args.get('bert_model', False) else None
+        
+        if self.args.get('bert_model', False):
+            #eliminate all the sentences that are too long for bert model
+            for sent in data:
+                #check if the max tokenized length is less than maximum (256 for vi) and replace nbs with space
+                tokenized = [word[0].replace("\xa0","_").replace(" ", "_") for word in sent] if self.args['bert_model'].startswith("vinai/phobert") else [word[0].replace("\xa0"," ") for word in sent]
+                #concatenate to a sentence
+                sentence = ' '.join(tokenized)
+                
+                #tokenize using AutoTokenizer BERT
+                tokenized = self.bert_tokenizer.tokenize(sentence)
+                
+                #convert tokens to ids
+                sent_ids = self.bert_tokenizer.convert_tokens_to_ids(tokenized)
+                
+                #add start and end tokens to sent_ids
+                tokenized_sent = [self.bert_tokenizer.bos_token_id] + sent_ids + [self.bert_tokenizer.eos_token_id]
+                
+                if len(tokenized_sent) > self.bert_tokenizer.model_max_length:
+                    continue
+                max_len_data.append(sent)
+                self.tags.append([w[1] for w in sent])
+            logger.info("Eliminated {} datapoints because their length is over maximum size of BERT model. ".format(len(data)-len(max_len_data)))
+            data = max_len_data
+        else:
+            self.tags = [[w[1] for w in sent] for sent in data]
         # handle vocab
         self.pretrain = pretrain
         if vocab is None:
@@ -77,7 +112,7 @@ class DataLoader:
         else:
             char_case = lambda x: x
         for sent in data:
-            processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
+            processed_sent = [[w[0] for w in sent]]
             processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
             processed_sent += [vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
@@ -115,9 +150,8 @@ class DataLoader:
         batch_words = batch_words[0]
         wordlens = [len(x) for x in batch_words]
 
-        # convert to tensors
-        words = get_long_tensor(batch[0], batch_size)
-        words_mask = torch.eq(words, PAD_ID)
+        words = batch[0]
+        
         wordchars = get_long_tensor(batch_words, len(wordlens))
         wordchars_mask = torch.eq(wordchars, PAD_ID)
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=self.vocab['char'].unit2id(' '))
@@ -126,7 +160,7 @@ class DataLoader:
         charoffsets = [charoffsets_forward, charoffsets_backward] # idx for forward and backward lm to get word representation
         tags = get_long_tensor(batch[2], batch_size)
 
-        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
+        return words, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
     def __iter__(self):
         for i in range(self.__len__()):
