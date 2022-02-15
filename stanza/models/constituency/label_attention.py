@@ -666,18 +666,10 @@ class LabelAttentionModule(nn.Module):
 
     def forward(self, word_embeddings, tagged_word_lists):
         # Extract Labeled Representation
-        packed_len = sum([int(sentence.shape[0]) for sentence in word_embeddings])
+        packed_len = sum(sentence.shape[0] for sentence in word_embeddings)
         batch_idxs = np.zeros(packed_len, dtype=int)
 
-        # Some processing
-        i = 0
-        for sentence_idx, tagged_words in enumerate(tagged_word_lists):
-            sentence = [word.children[0].label for word in tagged_words]
-            if sentence_idx > i:
-                i = sentence_idx
-            #print(f"{sentence_idx}: {sentence}")
-
-        batch_size = i + 1
+        batch_size = len(word_embeddings)
         i = 0
 
         sentence_lengths = [0] * batch_size
