@@ -77,7 +77,7 @@ class NERProcessor(UDProcessor):
         all_preds = []
         for trainer, config in zip(self.trainers, self.configs):
             # set up a eval-only data loader and skip tag preprocessing
-            batch = DataLoader(document, config['batch_size'], config, vocab=trainer.vocab, evaluation=True, preprocess_tags=False)
+            batch = DataLoader(document, config['batch_size'], config, vocab=trainer.vocab, evaluation=True, preprocess_tags=False, bert_tokenizer=trainer.bert_tokenizer)
             preds = []
             for i, b in enumerate(batch):
                 preds += trainer.predict(b)

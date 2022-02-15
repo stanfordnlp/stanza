@@ -2,7 +2,8 @@ import random
 import logging
 import torch
 
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.bert_embedding import filter_data
+from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
 from stanza.models.ner.vocab import TagVocab, MultiVocab
@@ -12,7 +13,7 @@ from stanza.models.ner.utils import process_tags
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -21,8 +22,12 @@ class DataLoader:
         self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
+        
+        # filter out the long sentences if bert is used
+        if self.args.get('bert_model', False):
+            data = filter_data(self.args['bert_model'], data, bert_tokenizer)
+        
         self.tags = [[w[1] for w in sent] for sent in data]
-
         # handle vocab
         self.pretrain = pretrain
         if vocab is None:
@@ -68,16 +73,12 @@ class DataLoader:
 
     def preprocess(self, data, vocab, args):
         processed = []
-        if args.get('lowercase', True): # handle word case
-            case = lambda x: x.lower()
-        else:
-            case = lambda x: x
         if args.get('char_lowercase', False): # handle character case
             char_case = lambda x: x.lower()
         else:
             char_case = lambda x: x
         for sent in data:
-            processed_sent = [vocab['word'].map([case(w[0]) for w in sent])]
+            processed_sent = [[w[0] for w in sent]]
             processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
             processed_sent += [vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
@@ -115,9 +116,8 @@ class DataLoader:
         batch_words = batch_words[0]
         wordlens = [len(x) for x in batch_words]
 
-        # convert to tensors
-        words = get_long_tensor(batch[0], batch_size)
-        words_mask = torch.eq(words, PAD_ID)
+        words = batch[0]
+        
         wordchars = get_long_tensor(batch_words, len(wordlens))
         wordchars_mask = torch.eq(wordchars, PAD_ID)
         chars_forward = get_long_tensor(chars_forward, batch_size, pad_id=self.vocab['char'].unit2id(' '))
@@ -126,7 +126,7 @@ class DataLoader:
         charoffsets = [charoffsets_forward, charoffsets_backward] # idx for forward and backward lm to get word representation
         tags = get_long_tensor(batch[2], batch_size)
 
-        return words, words_mask, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
+        return words, wordchars, wordchars_mask, chars, tags, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets
 
     def __iter__(self):
         for i in range(self.__len__()):
