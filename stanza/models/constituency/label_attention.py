@@ -395,6 +395,8 @@ class LabelAttention(nn.Module):
             self.partitioned = True
 
         if self.partitioned:
+            if d_model <= d_positional:
+                raise ValueError("Unable to build LabelAttention.  d_model %d <= d_positional %d" % (d_model, d_positional))
             self.d_content = d_model - d_positional
             self.d_positional = d_positional
 
