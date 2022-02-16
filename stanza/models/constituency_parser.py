@@ -245,7 +245,7 @@ def parse_args(args=None):
     #    0.015:   0.81721
     #    0.010:   0.81474348
     #    0.005:   0.81503
-    DEFAULT_WEIGHT_DECAY = { "adamw": 0.01, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
+    DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
     parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief')
     parser.add_argument('--learning_rho', default=0.9, type=float, help='Rho parameter in Adadelta')
