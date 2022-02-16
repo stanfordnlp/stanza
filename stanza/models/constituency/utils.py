@@ -99,7 +99,7 @@ def build_optimizer(args, model):
     elif args['optim'].lower() == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
     elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], betas=(0.9, args['learning_beta2']), eps=args['learning_eps'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adabelief':
         try:
             from adabelief_pytorch import AdaBelief
