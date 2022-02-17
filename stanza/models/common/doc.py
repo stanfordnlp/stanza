@@ -23,6 +23,7 @@ DEPREL = 'deprel'
 DEPS = 'deps'
 MISC = 'misc'
 NER = 'ner'
+MULTI_NER = 'multi_ner'     # will represent tags from multiple NER models
 START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 TYPE = 'type'
@@ -637,6 +638,7 @@ class Token(StanzaObject):
         assert self._id and self._text, 'id and text should be included for the token'
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
+        self._multi_ner = token_entry.get(MULTI_NER, None)
         self._words = words if words is not None else []
         self._start_char = token_entry.get(START_CHAR, None)
         self._end_char = token_entry.get(END_CHAR, None)
@@ -708,6 +710,16 @@ class Token(StanzaObject):
         self._ner = value if self._is_null(value) == False else None
 
     @property
+    def multi_ner(self):
+        """ Access the MULTI_NER tag of this token. Example: '(B-ORG, B-DISEASE)'"""
+        return self._multi_ner
+
+    @multi_ner.setter
+    def multi_ner(self, value):
+        """ Set the token's MULTI_NER tag. Example: '(B-ORG, B-DISEASE)'"""
+        self._multi_ner = value if self._is_null(value) == False else None
+
+    @property
     def sent(self):
         """ Access the pointer to the sentence that this token belongs to. """
         return self._sent
@@ -720,7 +732,7 @@ class Token(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
-    def to_dict(self, fields=[ID, TEXT, NER, MISC, START_CHAR, END_CHAR]):
+    def to_dict(self, fields=[ID, TEXT, NER, MULTI_NER, MISC, START_CHAR, END_CHAR]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -735,6 +747,8 @@ class Token(StanzaObject):
             word_dict = word.to_dict()
             if len(self.id) == 1 and NER in fields and getattr(self, NER) is not None: # propagate NER label to Word if it is a single-word token
                 word_dict[NER] = getattr(self, NER)
+            if len(self.id) == 1 and MULTI_NER in fields and getattr(self, MULTI_NER) is not None: # propagate MULTI_NER label to Word if it is a single-word token
+                word_dict[MULTI_NER] = getattr(self, MULTI_NER)
             ret.append(word_dict)
         return ret
 
