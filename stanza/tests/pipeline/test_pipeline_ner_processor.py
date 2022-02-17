@@ -103,6 +103,24 @@ EXPECTED_MULTI_ENTS = [{
 }]
 
 
+EXPECTED_MULTI_NER = [
+    [('O', 'B-PERSON'),
+     ('O', 'E-PERSON'),
+     ('O', 'O'),
+     ('O', 'O'),
+     ('O', 'S-ORG'),
+     ('O', 'O'),
+     ('O', 'O'),
+     ('B-DISEASE', 'O'),
+     ('E-DISEASE', 'O'),
+     ('O', 'O')],
+    [('O', 'O'),
+     ('O', 'O'),
+     ('O', 'O'),
+     ('O', 'B-PERSON'),
+     ('O', 'E-PERSON'),]]
+
+
 
 class TestMultiNERProcessor:
     @pytest.fixture(scope="class")
@@ -115,3 +133,12 @@ class TestMultiNERProcessor:
     def test_multi_example(self, pipeline):
         doc = pipeline("John Bauer works at Stanford and has hip arthritis.  He works for Chris Manning")
         check_entities_equal(doc, EXPECTED_MULTI_ENTS)
+
+    def test_multi_ner(self, pipeline):
+        """
+        Test that multiple NER labels are correctly assigned in tuples
+        """
+        doc = pipeline("John Bauer works at Stanford and has hip arthritis.  He works for Chris Manning")
+        multi_ner = [[token.multi_ner for token in sentence.tokens] for sentence in doc.sentences]
+        assert multi_ner == EXPECTED_MULTI_NER
+

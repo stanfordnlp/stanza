@@ -87,6 +87,7 @@ class NERProcessor(UDProcessor):
         # earlier models will have precedence
         preds = [merge_tags(*x) for x in zip(*all_preds)]
         batch.doc.set([doc.NER], [y for x in preds for y in x], to_token=True)
+        batch.doc.set([doc.MULTI_NER], [tuple(y) for x in zip(*all_preds) for y in zip(*x)], to_token=True)
         # collect entities into document attribute
         total = len(batch.doc.build_ents())
         logger.debug(f'{total} entities found in document.')
