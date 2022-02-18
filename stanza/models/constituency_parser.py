@@ -31,6 +31,9 @@ There are a few minor differences in the model:
     speed without a noticeable effect on accuracy.
   - In fact, an even better (in terms of final model accuracy) method
     is to combine the constituents with torch.max, believe it or not
+  - Initializing the embeddings with smaller values than pytorch default
+    For example, on a ja_alt dataset, scores went from 0.8980 to 0.8985
+    at 200 iterations averaged over 5 trials
 
 A couple experiments which have been tried with little noticeable impact:
   - Combining constituents using the method in the paper (only a trained
