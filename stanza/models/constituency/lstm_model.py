@@ -156,6 +156,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.delta_embedding = nn.Embedding(num_embeddings = len(self.delta_words)+2,
                                             embedding_dim = self.delta_embedding_dim,
                                             padding_idx = 0)
+        nn.init.normal_(self.delta_embedding.weight, std=0.05)
         self.register_buffer('delta_tensors', torch.tensor(range(len(self.delta_words) + 2), requires_grad=False))
 
         self.rare_words = set(rare_words)
@@ -166,6 +167,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.tag_embedding = nn.Embedding(num_embeddings = len(tags)+2,
                                               embedding_dim = self.tag_embedding_dim,
                                               padding_idx = 0)
+            nn.init.normal_(self.tag_embedding.weight, std=0.25)
             self.register_buffer('tag_tensors', torch.tensor(range(len(self.tags) + 2), requires_grad=False))
 
         self.transitions = sorted(list(transitions))
@@ -174,6 +176,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
+        nn.init.normal_(self.transition_embedding.weight, std=0.25)
 
         self.num_lstm_layers = self.args['num_lstm_layers']
         self.lstm_layer_dropout = self.args['lstm_layer_dropout']
@@ -191,11 +194,11 @@ class LSTMModel(BaseModel, nn.Module):
         # start and end representation.
         self.sentence_boundary_vectors = self.args['sentence_boundary_vectors']
         if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-            self.register_parameter('word_start', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
-            self.register_parameter('word_end', torch.nn.Parameter(torch.randn(self.word_input_size, requires_grad=True)))
+            self.register_parameter('word_start', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
+            self.register_parameter('word_end', torch.nn.Parameter(0.2 * torch.randn(self.word_input_size, requires_grad=True)))
             if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-                self.register_parameter('transition_start', torch.nn.Parameter(torch.randn(self.transition_hidden_size, requires_grad=True)))
-                self.register_parameter('constituent_start', torch.nn.Parameter(torch.randn(self.hidden_size, requires_grad=True)))
+                self.register_parameter('transition_start', torch.nn.Parameter(0.2 * torch.randn(self.transition_hidden_size, requires_grad=True)))
+                self.register_parameter('constituent_start', torch.nn.Parameter(0.2 * torch.randn(self.hidden_size, requires_grad=True)))
 
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
@@ -287,12 +290,14 @@ class LSTMModel(BaseModel, nn.Module):
         self.open_node_map = { x: i for (i, x) in enumerate(self.open_nodes) }
         self.open_node_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
                                                 embedding_dim = self.hidden_size)
+        nn.init.normal_(self.open_node_embedding.weight, std=0.2)
 
         if args['combined_dummy_embedding']:
             self.dummy_embedding = self.open_node_embedding
         else:
             self.dummy_embedding = nn.Embedding(num_embeddings = len(self.open_node_map),
                                                 embedding_dim = self.hidden_size)
+            nn.init.normal_(self.dummy_embedding.weight, std=0.2)
         self.register_buffer('open_node_tensors', torch.tensor(range(len(open_nodes)), requires_grad=False))
 
         self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
