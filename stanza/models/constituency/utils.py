@@ -114,7 +114,7 @@ def build_optimizer(args, model):
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
         optimizer = madgrad.MADGRAD(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
     else:
-        raise ValueError("Unknown optimizer: %s" % args.optim)
+        raise ValueError("Unknown optimizer: %s" % args['optim'])
     return optimizer
 
 def initialize_linear(linear, nonlinearity, bias):
