@@ -108,9 +108,7 @@ def recursive_read_trees(token_iterator, broken_ok):
                 raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
             trees.append(next_tree)
             token = next(token_iterator, None)
-            continue
-
-        if token is CLOSE_PAREN:
+        elif token is CLOSE_PAREN:
             raise ValueError("Tree document had too many close parens!  Line number %d" % token_iterator.line_num)
         else:
             raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
