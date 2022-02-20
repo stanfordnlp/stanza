@@ -33,7 +33,7 @@ class Tree(StanzaObject):
         elif isinstance(children, Tree):
             self.children = (children,)
         else:
-            self.children = children
+            self.children = tuple(children)
 
         self.label = label
 
