@@ -66,15 +66,15 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
         elif token is CLOSE_PAREN:
             if len(text) == 0:
                 if at_root:
-                    return Tree(label="ROOT", children=children)
+                    return Tree("ROOT", children)
                 elif broken_ok:
-                    return Tree(label=None, children=children)
+                    return Tree(None, children)
                 else:
                     raise UnlabeledTreeError(token_iterator.line_num)
 
             pieces = " ".join(text).split()
             if len(pieces) == 1:
-                return Tree(label=pieces[0], children=children)
+                return Tree(pieces[0], children)
 
             # the assumption here is that a language such as VI may
             # have spaces in the words, but it still represents
@@ -83,10 +83,10 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
             child_label = " ".join(pieces[1:])
             if len(children) > 0:
                 if broken_ok:
-                    return Tree(label=label, children=children + [Tree(label=child_label)])
+                    return Tree(label, children + [Tree(normalize(child_label))])
                 else:
                     raise MixedTreeError(token_iterator.line_num)
-            return Tree(label=label, children=Tree(label=normalize(child_label)))
+            return Tree(label, Tree(normalize(child_label)))
         else:
             text.append(token)
         token = next(token_iterator, None)
