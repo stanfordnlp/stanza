@@ -36,6 +36,18 @@ def fix_singleton_tags(tags):
     If there are any singleton B- or E- tags, convert them to S-
     """
     new_tags = list(tags)
+    # first update all I- tags at the start or end of sequence to B- or E- as appropriate
+    for idx, tag in enumerate(new_tags):
+        if (tag.startswith("I-") and
+            (idx == len(new_tags) - 1 or
+             (new_tags[idx+1] != "I-" + tag[2:] and new_tags[idx+1] != "E-" + tag[2:]))):
+            new_tags[idx] = "E-" + tag[2:]
+        if (tag.startswith("I-") and
+            (idx == 0 or
+             (new_tags[idx-1] != "B-" + tag[2:] and new_tags[idx-1] != "I-" + tag[2:]))):
+            new_tags[idx] = "B-" + tag[2:]
+    # now make another pass through the data to update any singleton tags,
+    # including ones which were turned into singletons by the previous operation
     for idx, tag in enumerate(new_tags):
         if (tag.startswith("B-") and
             (idx == len(new_tags) - 1 or
