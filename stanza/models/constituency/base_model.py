@@ -121,29 +121,30 @@ class BaseModel(ABC):
         """
         return ("ROOT",)
 
-    @abstractmethod
     def unary_limit(self):
         """
         Limit on the number of consecutive unary transitions
         """
+        return self._unary_limit
 
-    @abstractmethod
+
     def transition_scheme(self):
         """
         Transition scheme used - see parse_transitions
         """
+        return self._transition_scheme
 
-    @abstractmethod
     def has_unary_transitions(self):
         """
         Whether or not this model uses unary transitions, based on transition_scheme
         """
+        return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
-    @abstractmethod
     def is_top_down(self):
         """
         Whether or not this model is TOP_DOWN
         """
+        return not self._transition_scheme is TransitionScheme.IN_ORDER
 
 class SimpleModel(BaseModel):
     """
@@ -203,15 +204,3 @@ class SimpleModel(BaseModel):
 
     def get_top_transition(self, transitions):
         return transitions.value
-
-    def unary_limit(self):
-        return self._unary_limit
-
-    def transition_scheme(self):
-        return self._transition_scheme
-
-    def has_unary_transitions(self):
-        return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
-
-    def is_top_down(self):
-        return self._transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)

@@ -106,6 +106,10 @@ class LSTMModel(BaseModel, nn.Module):
         pipeline time we will load the lists from the saved model.
         """
         super().__init__()
+
+        self._transition_scheme = args['transition_scheme']
+        self._unary_limit = unary_limit
+
         self.args = args
         self.unsaved_modules = []
 
@@ -273,7 +277,6 @@ class LSTMModel(BaseModel, nn.Module):
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
 
-        self._transition_scheme = args['transition_scheme']
         if self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
             unary_transforms = {}
             for constituent in self.constituent_map:
@@ -323,8 +326,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
 
         self.use_constituency_lstm_hx = self.args['constituency_lstm']
-
-        self._unary_limit = unary_limit
 
     def build_output_layers(self, num_output_layers, final_layer_size):
         """
@@ -800,18 +801,6 @@ class LSTMModel(BaseModel, nn.Module):
         """
         transition_node = transitions.value
         return transition_node.value
-
-    def unary_limit(self):
-        return self._unary_limit
-
-    def transition_scheme(self):
-        return self._transition_scheme
-
-    def has_unary_transitions(self):
-        return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
-
-    def is_top_down(self):
-        return self._transition_scheme in (TransitionScheme.TOP_DOWN, TransitionScheme.TOP_DOWN_UNARY, TransitionScheme.TOP_DOWN_COMPOUND)
 
     def forward(self, states):
         """
