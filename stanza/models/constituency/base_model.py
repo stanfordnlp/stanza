@@ -32,7 +32,16 @@ class BaseModel(ABC):
 
     Applying transitions may change important metadata about a State
     such as the vectors associated with LSTM hidden states, for example.
+
+    The constructor forwards all unused arguments to other classes in the
+    constructor sequence, so put this before other classes such as nn.Module
     """
+    def __init__(self, transition_scheme, unary_limit, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # forwards all unused arguments
+
+        self._transition_scheme = transition_scheme
+        self._unary_limit = unary_limit
+
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
         """
@@ -151,8 +160,7 @@ class SimpleModel(BaseModel):
     This model allows pushing and popping with no extra data
     """
     def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT):
-        self._transition_scheme = transition_scheme
-        self._unary_limit = unary_limit
+        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit)
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
