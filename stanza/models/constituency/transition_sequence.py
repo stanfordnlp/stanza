@@ -91,8 +91,7 @@ def all_transitions(transition_lists):
     """
     transitions = set()
     for trans_list in transition_lists:
-        for trans in trans_list:
-            transitions.add(trans)
+        transitions.update(trans_list)
     return sorted(transitions)
 
 def main():
