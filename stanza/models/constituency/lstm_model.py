@@ -105,10 +105,7 @@ class LSTMModel(BaseModel, nn.Module):
         However, that would only work at train time.  At eval or
         pipeline time we will load the lists from the saved model.
         """
-        super().__init__()
-
-        self._transition_scheme = args['transition_scheme']
-        self._unary_limit = unary_limit
+        super().__init__(transition_scheme=args['transition_scheme'], unary_limit=unary_limit)
 
         self.args = args
         self.unsaved_modules = []
