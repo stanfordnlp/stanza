@@ -148,11 +148,20 @@ class LSTMModel(BaseModel, nn.Module):
         else:
             self.backward_charlm = None
 
-        # TODO: add a max_norm?
         self.delta_words = sorted(set(words))
         self.delta_word_map = { word: i+2 for i, word in enumerate(self.delta_words) }
         assert PAD_ID == 0
         assert UNK_ID == 1
+        # initialization is chosen based on the observed values of the norms
+        # after several long training cycles
+        # (this is true for other embeddings and embedding-like vectors as well)
+        # the experiments show this slightly helps were done with
+        # Adadelta and the correct initialization may be slightly
+        # different for a different optimizer.
+        # in fact, it is likely a scheme other than normal_ would
+        # be better - the optimizer tends to learn the weights
+        # rather close to 0 before learning in the direction it
+        # actually wants to go
         self.delta_embedding = nn.Embedding(num_embeddings = len(self.delta_words)+2,
                                             embedding_dim = self.delta_embedding_dim,
                                             padding_idx = 0)
