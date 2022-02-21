@@ -480,7 +480,14 @@ class CloseConstituent(Transition):
 
     @staticmethod
     def build_constituents(model, data):
-        labels, children_lists = list(map(list, zip(*data)))
+        """
+        builds new constituents out of the incoming data
+
+        data is a list of tuples: (label, children)
+        the model will batch the build operation
+        again, the purpose of this batching is to do multiple deep learning operations at once
+        """
+        labels, children_lists = map(list, zip(*data))
         new_constituents = model.build_constituents(labels, children_lists)
         return new_constituents
 
