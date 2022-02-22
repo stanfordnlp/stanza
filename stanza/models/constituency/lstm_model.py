@@ -336,8 +336,6 @@ class LSTMModel(BaseModel, nn.Module):
         # word size + constituency size + transition size
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
 
-        self.use_constituency_lstm_hx = self.args['constituency_lstm']
-
     def build_output_layers(self, num_output_layers, final_layer_size):
         """
         Build a ModuleList of Linear transformations for the given num_output_layers
@@ -770,12 +768,15 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
         cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
-        if self.use_constituency_lstm_hx:
-            new_stacks = [stack.push(ConstituentNode(constituent.value, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
-                          for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
-        else:
-            new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
-                          for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
+        # Another possibility here would be to use output[0, i, :]
+        # from the constituency lstm for the value of the new node.
+        # This might theoretically make the new constituent include
+        # information from neighboring constituents.  However, this
+        # lowers the scores of various models.  For example, an
+        # experiment on ja_alt went from 0.8985 to 0.8964 when built
+        # that way.  (200 epochs, averaged over 5 trials)
+        new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
+                      for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         return new_stacks
 
     def get_top_constituent(self, constituents):
