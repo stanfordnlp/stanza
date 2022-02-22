@@ -133,13 +133,6 @@ def test_no_tag_embedding_forward(pt):
     model = build_model(pt, '--tag_embedding_dim', '0')
     run_forward_checks(model)
 
-def test_forward_con_lstm(pt):
-    """
-    Tests an older version of the model
-    """
-    model = build_model(pt, '--num_lstm_layers', '2', '--constituency_lstm')
-    run_forward_checks(model)
-
 def test_forward_combined_dummy(pt):
     """
     Tests combined dummy and open node embeddings
