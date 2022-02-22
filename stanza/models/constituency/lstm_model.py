@@ -772,9 +772,11 @@ class LSTMModel(BaseModel, nn.Module):
         # from the constituency lstm for the value of the new node.
         # This might theoretically make the new constituent include
         # information from neighboring constituents.  However, this
-        # lowers the scores of various models.  For example, an
-        # experiment on ja_alt went from 0.8985 to 0.8964 when built
-        # that way.  (200 epochs, averaged over 5 trials)
+        # lowers the scores of various models.
+        # For example, an experiment on ja_alt built this way,
+        # averaged over 5 trials, had the following loss in accuracy:
+        # 150 epochs: 0.8971 to 0.8953
+        # 200 epochs: 0.8985 to 0.8964
         new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
                       for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         return new_stacks
