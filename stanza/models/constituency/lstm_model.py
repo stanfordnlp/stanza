@@ -733,8 +733,8 @@ class LSTMModel(BaseModel, nn.Module):
             # will be shape len(children_lists) * 2, hidden_size for bidirectional
             # where forward outputs are -2 and backwards are -1
             lstm_output = lstm_output[1][0]
-            forward_hx = lstm_output[-2, :]
-            backward_hx = lstm_output[-1, :]
+            forward_hx = lstm_output[-2, :, :]
+            backward_hx = lstm_output[-1, :, :]
 
             hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
         elif self.constituency_composition == ConstituencyComposition.MAX:
