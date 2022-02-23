@@ -200,6 +200,22 @@ def test_forward_constituency_composition(pt):
     model = build_model(pt, '--constituency_composition', 'bigram')
     run_forward_checks(model, num_states=2)
 
+    model = build_model(pt, '--constituency_composition', 'attn')
+    run_forward_checks(model, num_states=2)
+
+def test_forward_attn_hidden_size(pt):
+    """
+    Test that when attn is used with hidden sizes not evenly divisible by reduce_heads, the model reconfigures the hidden_size
+    """
+    model = build_model(pt, '--constituency_composition', 'attn', '--hidden_size', '129')
+    assert model.hidden_size >= 129
+    assert model.hidden_size % model.reduce_heads == 0
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pt, '--constituency_composition', 'attn', '--hidden_size', '129', '--reduce_heads', '10')
+    assert model.hidden_size == 130
+    assert model.reduce_heads == 10
+
 def test_forward_partitioned_attention(pt):
     """
     Test with & without partitioned attention layers

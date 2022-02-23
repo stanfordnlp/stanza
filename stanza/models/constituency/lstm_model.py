@@ -80,6 +80,8 @@ class SentenceBoundary(Enum):
 # to reduce the outputs of the lstm, we first take the max
 # and then use a linear to reduce the max
 # BIGRAM combines pairs of children and then takes the max over those
+# ATTN means to put an attention layer over the children nodes
+# we then take the max of the children with their attention
 #
 # Experiments show that MAX is noticeably better than the other options
 # On ja_alt, here are a few results after 200 iterations,
@@ -111,11 +113,35 @@ class SentenceBoundary(Enum):
 #   expanded the embedding too much.  Switching it to
 #   scale the matrix by 0.5 didn't go to Nan, but only
 #   resulted in 0.8982
+#
+# A couple varieties of ATTN:
+# first an input linear, then attn, then an output linear
+#   the upside of this would be making the dimension of the attn
+#   independent from the rest of the model
+#   however, this caused an expansion in the magnitude of the vectors,
+#   resulting in NaN for deep enough trees
+# adding layernorm or tanh to balance this out resulted in
+#   disappointing performance
+#   tanh: 0.8972
+# another alternative not tested yet: lower initialization weights
+#   and enforce that the norms of the matrices are low enough that
+#   exponential explosion up the layers of the tree doesn't happen
+# just an attention layer means hidden_size % reduce_heads == 0
+#   that is simple enough to enforce by slightly changing hidden_size
+#   if needed
+# appending the embedding for the open state to the start of the
+#   sequence of children and taking only the content nodes
+#   was very disappointing: 0.8967
+# taking the entire sequence of children including the open state
+#   embedding resulted in 0.8973
+# long story short, this looks like an idea that should work, but it
+#   doesn't help.  suggestions welcome for improving these results
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
     BILSTM_MAX            = 4
     BIGRAM                = 5
+    ATTN                  = 6
 
 class LSTMModel(BaseModel, nn.Module):
     def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
@@ -161,6 +187,12 @@ class LSTMModel(BaseModel, nn.Module):
         self.constituents = sorted(list(constituents))
 
         self.hidden_size = self.args['hidden_size']
+        self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
+        if self.constituency_composition == ConstituencyComposition.ATTN:
+            self.reduce_heads = self.args['reduce_heads']
+            if self.hidden_size % self.reduce_heads != 0:
+                self.hidden_size = self.hidden_size + self.reduce_heads - (self.hidden_size % self.reduce_heads)
+
         self.transition_hidden_size = self.args['transition_hidden_size']
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
@@ -338,7 +370,6 @@ class LSTMModel(BaseModel, nn.Module):
             nn.init.normal_(self.dummy_embedding.weight, std=0.2)
         self.register_buffer('constituent_open_tensors', torch.tensor(range(len(constituent_opens)), requires_grad=False))
 
-        self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
         # TODO: refactor
         if (self.constituency_composition == ConstituencyComposition.BILSTM or
             self.constituency_composition == ConstituencyComposition.BILSTM_MAX):
@@ -364,6 +395,8 @@ class LSTMModel(BaseModel, nn.Module):
             self.reduce_bigram = nn.Linear(self.hidden_size * 2, self.hidden_size)
             initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size)
             initialize_linear(self.reduce_bigram, self.args['nonlinearity'], self.hidden_size)
+        elif self.constituency_composition == ConstituencyComposition.ATTN:
+            self.reduce_attn = nn.MultiheadAttention(self.hidden_size, self.reduce_heads)
         else:
             raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
 
@@ -636,6 +669,13 @@ class LSTMModel(BaseModel, nn.Module):
                 unpacked_hx.append(torch.max(stacked_nhx, 0).values)
             packed_hx = torch.stack(unpacked_hx, axis=0)
             hx = self.reduce_linear(packed_hx)
+        elif self.constituency_composition == ConstituencyComposition.ATTN:
+            label_hx = [self.constituent_open_embedding(self.constituent_open_tensors[self.constituent_open_map[label]]) for label in labels]
+            unpacked_hx = [torch.stack(nhx).unsqueeze(1) for nhx in node_hx]
+            unpacked_hx = [torch.cat((lhx.unsqueeze(0).unsqueeze(0), nhx), axis=0) for lhx, nhx in zip(label_hx, unpacked_hx)]
+            unpacked_hx = [self.reduce_attn(nhx, nhx, nhx)[0].squeeze(1) for nhx in unpacked_hx]
+            unpacked_hx = [self.lstm_input_dropout(torch.max(nhx, 0).values) for nhx in unpacked_hx]
+            hx = torch.stack(unpacked_hx, axis=0)
         else:
             raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
 

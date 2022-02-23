@@ -327,6 +327,7 @@ def parse_args(args=None):
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
                         help='How to build a new composition from its children.  {}'.format(", ".join(x.name for x in ConstituencyComposition)))
+    parser.add_argument('--reduce_heads', default=8, type=int, help='Number of attn heads to use when reducing children into a parent tree (constituency_composition == attn)')
 
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
     parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
