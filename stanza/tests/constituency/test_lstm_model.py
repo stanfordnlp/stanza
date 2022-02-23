@@ -188,11 +188,14 @@ def test_forward_constituency_composition(pt):
     """
     Test different constituency composition functions
     """
-    model = build_model(pt, '--constituency_composition', 'max')
-    run_forward_checks(model)
-
     model = build_model(pt, '--constituency_composition', 'bilstm')
-    run_forward_checks(model)
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pt, '--constituency_composition', 'max')
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pt, '--constituency_composition', 'bilstm_max')
+    run_forward_checks(model, num_states=2)
 
 def test_forward_partitioned_attention(pt):
     """
