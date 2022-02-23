@@ -61,10 +61,18 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     # https://huggingface.co/stanfordnlp/CoreNLP/resolve/v4.2.2/stanford-corenlp-models-french.jar
     tag = version if version == 'main' else 'v' + version
     download_url = url.format(tag=tag, model=model, version=version)
+    model_path = os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
+    
+    if os.path.exists(model_path):
+        logger.warn(
+            f"Model file {model_path} already exists. "
+            f"Please download this model to a new directory.")
+        return
+
     try:
         request_file(
-            download_url,
-            os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'),
+            download_url, 
+            model_path, 
             proxies
         )
     except (KeyboardInterrupt, SystemExit):
