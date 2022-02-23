@@ -77,9 +77,27 @@ class SentenceBoundary(Enum):
 # for example, a Turkish dataset went from 81-81.5 dev, 75->75.5 test
 # BILSTM is the method described in the papers of making an lstm
 # out of the constituents
+# BILSTM_MAX is the same as BILSTM, but instead of using a Linear
+# to reduce the outputs of the lstm, we first take the max
+# and then use a linear to reduce the max
+#
+# Experiments show that MAX is noticeably better than the other options
+# On ja_alt, here are a few results after 200 iterations,
+# averaged over 5 iterations:
+#   MAX:         0.8985
+#   BILSTM:      0.8964
+#   BILSTM_MAX:  0.8973
+# We tried a few varieties of BILSTM_MAX
+# In particular:
+# max over LSTM, combining forward & backward using the max: 0.8970
+# max over forward & backward separately, then reduce:       0.8970
+# max over forward & backward only over 1:-1
+#   (eg, leave out the node embedding):                      0.8969
+# same as previous, but split the reduce into 2 pieces:      0.8973
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
+    BILSTM_MAX            = 4
 
 class LSTMModel(BaseModel, nn.Module):
     def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
@@ -311,14 +329,21 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.constituency_composition = self.args.get("constituency_composition", ConstituencyComposition.BILSTM)
         # TODO: refactor
-        if self.constituency_composition == ConstituencyComposition.BILSTM:
+        if (self.constituency_composition == ConstituencyComposition.BILSTM or
+            self.constituency_composition == ConstituencyComposition.BILSTM_MAX):
             # forward and backward pieces for crunching several
             # constituents into one, combined into a bi-lstm
             # TODO: make the hidden size here an option?
             self.constituent_reduce_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
             # affine transformation from bi-lstm reduce to a new hidden layer
-            self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
-            initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
+            if self.constituency_composition == ConstituencyComposition.BILSTM:
+                self.reduce_linear = nn.Linear(self.hidden_size * 2, self.hidden_size)
+                initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size * 2)
+            else:
+                self.reduce_forward = nn.Linear(self.hidden_size, self.hidden_size)
+                self.reduce_backward = nn.Linear(self.hidden_size, self.hidden_size)
+                initialize_linear(self.reduce_forward, self.args['nonlinearity'], self.hidden_size)
+                initialize_linear(self.reduce_backward, self.args['nonlinearity'], self.hidden_size)
         elif self.constituency_composition == ConstituencyComposition.MAX:
             # transformation to turn several constituents into one new constituent
             self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
@@ -714,7 +739,8 @@ class LSTMModel(BaseModel, nn.Module):
         """
         node_hx = [[child.output for child in children] for children in children_lists]
 
-        if self.constituency_composition == ConstituencyComposition.BILSTM:
+        if (self.constituency_composition == ConstituencyComposition.BILSTM or
+            self.constituency_composition == ConstituencyComposition.BILSTM_MAX):
             label_hx = [self.open_node_embedding(self.open_node_tensors[self.open_node_map[label]]) for label in labels]
 
             max_length = max(len(children) for children in children_lists)
@@ -732,11 +758,16 @@ class LSTMModel(BaseModel, nn.Module):
             #      [1][0][-1] is the final output
             # will be shape len(children_lists) * 2, hidden_size for bidirectional
             # where forward outputs are -2 and backwards are -1
-            lstm_output = lstm_output[1][0]
-            forward_hx = lstm_output[-2, :, :]
-            backward_hx = lstm_output[-1, :, :]
-
-            hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
+            if self.constituency_composition == ConstituencyComposition.BILSTM:
+                lstm_output = lstm_output[1][0]
+                forward_hx = lstm_output[-2, :, :]
+                backward_hx = lstm_output[-1, :, :]
+                hx = self.reduce_linear(torch.cat((forward_hx, backward_hx), axis=1))
+            else:
+                lstm_output, lstm_lengths = torch.nn.utils.rnn.pad_packed_sequence(lstm_output[0])
+                lstm_output = [lstm_output[1:length-1, x, :] for x, length in zip(range(len(lstm_lengths)), lstm_lengths)]
+                lstm_output = torch.stack([torch.max(x, 0).values for x in lstm_output], axis=0)
+                hx = self.reduce_forward(lstm_output[:, :self.hidden_size]) + self.reduce_backward(lstm_output[:, self.hidden_size:])
         elif self.constituency_composition == ConstituencyComposition.MAX:
             unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
             packed_hx = torch.stack(unpacked_hx, axis=0)
