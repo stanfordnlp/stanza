@@ -31,7 +31,8 @@ DEFAULT_CORENLP_DIR = os.getenv(
 AVAILABLE_MODELS = set(['arabic', 'chinese', 'english-extra', 'english-kbp', 'french', 'german', 'hungarian', 'italian', 'spanish'])
 
 
-def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_MODEL_URL, logging_level='INFO', proxies=None):
+def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_MODEL_URL, logging_level='INFO', proxies=None, 
+                            force=True):
     """
     A automatic way to download the CoreNLP models.
 
@@ -43,7 +44,8 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
             set up with environment variable $CORENLP_HOME
         url: The link to download CoreNLP models.
              It will need {model} and either {version} or {tag} to properly format the URL
-        logging_level: logging level to use during installation
+        logging_level: logging level to use during installation 
+        force: Download model anyway, no matter model file exists or not
     """
     dir = os.path.expanduser(dir)
     if not model or not version:
@@ -61,10 +63,18 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     # https://huggingface.co/stanfordnlp/CoreNLP/resolve/v4.2.2/stanford-corenlp-models-french.jar
     tag = version if version == 'main' else 'v' + version
     download_url = url.format(tag=tag, model=model, version=version)
+    model_path = os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
+    
+    if os.path.exists(model_path) and not force:
+        logger.warn(
+            f"Model file {model_path} already exists. "
+            f"Please download this model to a new directory.")
+        return
+
     try:
         request_file(
-            download_url,
-            os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar'),
+            download_url, 
+            model_path, 
             proxies
         )
     except (KeyboardInterrupt, SystemExit):
