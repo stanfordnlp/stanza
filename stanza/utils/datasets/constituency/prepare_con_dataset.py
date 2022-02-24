@@ -60,6 +60,23 @@ ja_alt
   This correlates with the three URL-... files, telling us whether the
     sentence belongs in train/dev/test
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset ja_alt
+
+pt_cintil
+  CINTIL treebank for Portuguese, available at ELRA:
+    https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/
+  Produced at U Lisbon
+    António, Branco; João, Silva; Francisco, Costa; Sérgio, Castro
+    CINTIL TreeBank Handbook: Design options for the representation of syntactic constituency
+    https://hdl.handle.net/21.11129/0000-000B-D2FE-A
+    https://portulanclarin.net/repository/extradocs/CINTIL-Treebank.pdf
+    http://www.di.fc.ul.pt/~ahb/pubs/2011bBrancoSilvaCostaEtAl.pdf
+  If at Stanford, ask John Bauer or Chris Manning for the data
+  Otherwise, purchase it from ELRA or find it elsewhere if possible
+  Either way, unzip it in
+    $CONSTITUENCY_HOME/portuguese to the CINTIL directory
+    so for example, the final result might be
+    extern_data/constituency/portuguese/CINTIL/CINTIL-Treebank.xml
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset pt_cintil
 """
 
 import os
@@ -71,6 +88,7 @@ from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
+from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
@@ -176,6 +194,19 @@ def process_ja_alt(paths, dataset_name):
     output_files = [os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard)) for shard in SHARDS]
     convert_alt(input_files, split_files, output_files)
 
+def process_pt_cintil(paths, dataset_name):
+    """
+    Convert and split the PT Cintil dataset
+    """
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'pt'
+    assert source == 'cintil'
+
+    input_file = os.path.join(paths["CONSTITUENCY_BASE"], "portuguese", "CINTIL", "CINTIL-Treebank.xml")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    datasets = convert_cintil_treebank(input_file)
+
+    write_dataset(datasets, output_dir, dataset_name)
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
@@ -194,6 +225,8 @@ def main(dataset_name):
         process_starlang(paths, dataset_name)
     elif dataset_name == 'ja_alt':
         process_ja_alt(paths, dataset_name)
+    elif dataset_name == 'pt_cintil':
+        process_pt_cintil(paths, dataset_name)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 

@@ -22,6 +22,7 @@ RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
     "it": "upos",
     "vi": "upos",
+    "pt": "upos",   # default PT model has no xpos either
 }
 
 BERT = {
@@ -58,6 +59,18 @@ BERT = {
     # https://github.com/ymcui/Chinese-BERT-wwm
     # there's also hfl/chinese-roberta-wwm-ext-large
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
+
+    # experiments on the cintil dataset
+    # ran a variety of transformer settings
+    # found the following dev set scores after 400 iterations:
+    # Geotrend/distilbert-base-pt-cased : not plug & play
+    # no bert: 0.9082
+    # xlm-roberta-base: 0.9109
+    # xlm-roberta-large: 0.9254
+    # adalbertojunior/distilbert-portuguese-cased: 0.9300
+    # neuralmind/bert-base-portuguese-cased: 0.9307
+    # neuralmind/bert-large-portuguese-cased: 0.9343
+    "pt": "neuralmind/bert-large-portuguese-cased",
 }
 
 def add_constituency_args(parser):
