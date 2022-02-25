@@ -283,6 +283,8 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     for con in dev_constituents:
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
+    constituent_counts = parse_tree.Tree.get_constituent_counts(train_trees)
+    logger.info("Constituent node counts: %s", constituent_counts)
 
     tags = parse_tree.Tree.get_unique_tags(train_trees)
     logger.info("Unique tags in training set: %s", tags)
