@@ -191,13 +191,21 @@ class Tree(StanzaObject):
         """
         Walks over all of the trees and gets all of the unique constituent names from the trees
         """
+        constituents = Tree.get_constituent_counts(trees)
+        return sorted(set(constituents.keys()))
+
+    @staticmethod
+    def get_constituent_counts(trees):
+        """
+        Walks over all of the trees and gets the count of the unique constituent names from the trees
+        """
         if isinstance(trees, Tree):
             trees = [trees]
 
-        constituents = set()
+        constituents = Counter()
         for tree in trees:
-            tree.visit_preorder(internal = lambda x: constituents.add(x.label))
-        return sorted(constituents)
+            tree.visit_preorder(internal = lambda x: constituents.update([x.label]))
+        return constituents
 
     @staticmethod
     def get_unique_tags(trees):
