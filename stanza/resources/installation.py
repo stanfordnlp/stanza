@@ -43,7 +43,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
             set up with environment variable $CORENLP_HOME
         url: The link to download CoreNLP models.
              It will need {model} and either {version} or {tag} to properly format the URL
-        logging_level: logging level to use during installation 
+        logging_level: logging level to use during installation
         force: Download model anyway, no matter model file exists or not
     """
     dir = os.path.expanduser(dir)
@@ -63,7 +63,7 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
     tag = version if version == 'main' else 'v' + version
     download_url = url.format(tag=tag, model=model, version=version)
     model_path = os.path.join(dir, f'stanford-corenlp-{version}-models-{model}.jar')
-    
+
     if os.path.exists(model_path) and not force:
         logger.warn(
             f"Model file {model_path} already exists. "
@@ -72,8 +72,8 @@ def download_corenlp_models(model, version, dir=DEFAULT_CORENLP_DIR, url=DEFAULT
 
     try:
         request_file(
-            download_url, 
-            model_path, 
+            download_url,
+            model_path,
             proxies
         )
     except (KeyboardInterrupt, SystemExit):
