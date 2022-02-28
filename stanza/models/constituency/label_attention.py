@@ -16,7 +16,7 @@ class BatchIndices:
     """
     def __init__(self, batch_idxs_np, device):
         self.batch_idxs_np = batch_idxs_np
-        self.batch_idxs_torch = torch.as_tensor(batch_idxs_np, device=device)
+        self.batch_idxs_torch = torch.as_tensor(batch_idxs_np, dtype=torch.long, device=device)
 
         self.batch_size = int(1 + np.max(batch_idxs_np))
 
