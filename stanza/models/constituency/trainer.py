@@ -224,14 +224,6 @@ def evaluate(args, model_file, retag_pipeline):
         f1 = run_dev_set(trainer.model, treebank, args, evaluator)
         logger.info("F1 score on %s: %f", args['eval_file'], f1)
 
-def build_treebank(trees, transition_scheme):
-    """
-    Convert a set of trees into the corresponding treebank based on the args
-
-    Currently only supports top-down transitions, but more may be added in the future, especially bottom up
-    """
-    return transition_sequence.build_treebank(trees, transition_scheme=transition_scheme)
-
 def get_open_nodes(trees, args):
     """
     Return a list of all open nodes in the given dataset.
@@ -269,7 +261,7 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     logger.info("Building {} transition sequences".format(tree_type))
     if logger.getEffectiveLevel() <= logging.INFO:
         trees = tqdm(trees)
-    sequences = build_treebank(trees, transition_scheme)
+    sequences = transition_sequence.build_treebank(trees, transition_scheme)
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
