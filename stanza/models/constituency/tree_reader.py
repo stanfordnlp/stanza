@@ -64,7 +64,7 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
         if token is OPEN_PAREN:
             children.append(recursive_open_tree(token_iterator, at_root=False, broken_ok=broken_ok))
         elif token is CLOSE_PAREN:
-            if len(text) == 0:
+            if not text:
                 if at_root:
                     return Tree("ROOT", children)
                 elif broken_ok:
@@ -81,7 +81,7 @@ def recursive_open_tree(token_iterator, at_root, broken_ok):
             # just one child
             label = pieces[0]
             child_label = " ".join(pieces[1:])
-            if len(children) > 0:
+            if children:
                 if broken_ok:
                     return Tree(label, children + [Tree(normalize(child_label))])
                 else:
