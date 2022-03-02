@@ -5,7 +5,9 @@ Works by first splitting the input into (, ), and all other tokens,
 then recursively processing those tokens into trees.
 """
 
+from collections import deque
 import logging
+import re
 
 from stanza.models.common import utils
 from stanza.models.constituency.parse_tree import Tree
@@ -49,71 +51,59 @@ class MixedTreeError(ValueError):
 def normalize(text):
     return text.replace("-LRB-", "(").replace("-RRB-", ")")
 
-def recursive_open_tree(token_iterator, at_root, broken_ok):
+def read_single_tree(token_iterator, broken_ok):
     """
     Build a tree from the tokens in the token_iterator
     """
-    # TODO: unwind the recursion
-    text = []
-    children = []
+    # we were called here at a open paren, so start the stack of
+    # children with one empty list already on it
+    children_stack = deque()
+    children_stack.append([])
+    text_stack = deque()
+    text_stack.append([])
 
     token = next(token_iterator, None)
-    if at_root:
-        token_iterator.set_mark()
+    token_iterator.set_mark()
     while token is not None:
-        if token is OPEN_PAREN:
-            children.append(recursive_open_tree(token_iterator, at_root=False, broken_ok=broken_ok))
-        elif token is CLOSE_PAREN:
-            if not text:
-                if at_root:
+        if token == OPEN_PAREN:
+            children_stack.append([])
+            text_stack.append([])
+        elif token == CLOSE_PAREN:
+            text = text_stack.pop()
+            children = children_stack.pop()
+            if text:
+                pieces = " ".join(text).split()
+                if len(pieces) == 1:
+                    child = Tree(pieces[0], children)
+                else:
+                    # the assumption here is that a language such as VI may
+                    # have spaces in the words, but it still represents
+                    # just one child
+                    label = pieces[0]
+                    child_label = " ".join(pieces[1:])
+                    if children:
+                        if broken_ok:
+                            child = Tree(label, children + [Tree(normalize(child_label))])
+                        else:
+                            raise MixedTreeError(token_iterator.line_num)
+                    else:
+                        child = Tree(label, Tree(normalize(child_label)))
+                if not children_stack:
+                    return child
+            else:
+                if not children_stack:
                     return Tree("ROOT", children)
                 elif broken_ok:
-                    return Tree(None, children)
+                    child = Tree(None, children)
                 else:
                     raise UnlabeledTreeError(token_iterator.line_num)
-
-            pieces = " ".join(text).split()
-            if len(pieces) == 1:
-                return Tree(pieces[0], children)
-
-            # the assumption here is that a language such as VI may
-            # have spaces in the words, but it still represents
-            # just one child
-            label = pieces[0]
-            child_label = " ".join(pieces[1:])
-            if children:
-                if broken_ok:
-                    return Tree(label, children + [Tree(normalize(child_label))])
-                else:
-                    raise MixedTreeError(token_iterator.line_num)
-            return Tree(label, Tree(normalize(child_label)))
+            children_stack[-1].append(child)
         else:
-            text.append(token)
+            text_stack[-1].append(token)
         token = next(token_iterator, None)
     raise UnclosedTreeError(token_iterator.get_mark())
 
-def recursive_read_trees(token_iterator, broken_ok):
-    """
-    Read all of the trees from the token_iterator
-
-    TODO: some of the error cases we hit can be recovered from
-    also, just in general it would be good to unwind the recursion
-    """
-    trees = []
-    token = next(token_iterator, None)
-    while token:
-        if token is OPEN_PAREN:
-            next_tree = recursive_open_tree(token_iterator, at_root=True, broken_ok=broken_ok)
-            if next_tree is None:
-                raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
-            trees.append(next_tree)
-            token = next(token_iterator, None)
-        elif token is CLOSE_PAREN:
-            raise ValueError("Tree document had too many close parens!  Line number %d" % token_iterator.line_num)
-        else:
-            raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
-
-    return trees
+LINE_SPLIT_RE = re.compile(r"([()])")
 
 class TokenIterator:
     """
@@ -149,7 +139,7 @@ class TokenIterator:
         n = next(self.token_iterator, None)
         while n is None:
             self.line_num = self.line_num + 1
-            if self.line_num >= len(self.lines):
+            if self.line_num >= self.num_lines:
                 next(self.line_iterator, "")
                 raise StopIteration
 
@@ -157,19 +147,9 @@ class TokenIterator:
             if not line:
                 continue
 
-            pieces = []
-            open_pieces = line.split(OPEN_PAREN)
-            for o_idx, open_piece in enumerate(open_pieces):
-                if open_piece:
-                    close_pieces = open_piece.split(CLOSE_PAREN)
-                    for c_idx, close_piece in enumerate(close_pieces):
-                        close_piece = close_piece.strip()
-                        if close_piece:
-                            pieces.append(close_piece)
-                        if c_idx != len(close_pieces) - 1:
-                            pieces.append(CLOSE_PAREN)
-                if o_idx != len(open_pieces) - 1:
-                    pieces.append(OPEN_PAREN)
+            pieces = LINE_SPLIT_RE.split(line)
+            pieces = [x.strip() for x in pieces]
+            pieces = [x for x in pieces if x]
             self.token_iterator = iter(pieces)
             n = next(self.token_iterator, None)
 
@@ -178,9 +158,24 @@ class TokenIterator:
 def read_trees(text, broken_ok=False):
     """
     Reads multiple trees from the text
+
+    TODO: some of the error cases we hit can be recovered from
     """
+    trees = []
     token_iterator = TokenIterator(text)
-    trees = recursive_read_trees(token_iterator, broken_ok=broken_ok)
+    token = next(token_iterator, None)
+    while token:
+        if token == OPEN_PAREN:
+            next_tree = read_single_tree(token_iterator, broken_ok=broken_ok)
+            if next_tree is None:
+                raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
+            trees.append(next_tree)
+            token = next(token_iterator, None)
+        elif token == CLOSE_PAREN:
+            raise ValueError("Tree document had too many close parens!  Line number %d" % token_iterator.line_num)
+        else:
+            raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
+
     return trees
 
 def read_tree_file(filename):
