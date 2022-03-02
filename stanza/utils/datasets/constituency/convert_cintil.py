@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 from stanza.models.constituency import tree_reader
+from stanza.utils.datasets.constituency import utils
 
 def read_xml_file(input_filename):
     """
@@ -37,14 +38,14 @@ def read_xml_file(input_filename):
         trees.append((tree_id, tree_text))
     return trees
 
-def convert_cintil_treebank(input_filename, dev_size=0.1):
+def convert_cintil_treebank(input_filename, train_size=0.8, dev_size=0.1):
     """
     dev_size is the size for splitting train & dev
     """
     trees = read_xml_file(input_filename)
 
-    test_trees = []
-    train_trees = []
+    synthetic_trees = []
+    natural_trees = []
     for tree_id, tree_text in trees:
         if tree_text.find(" _") >= 0:
             raise ValueError("Unexpected underscore")
@@ -57,17 +58,18 @@ def convert_cintil_treebank(input_filename, dev_size=0.1):
             raise ValueError("Unexpectedly found %d trees in %s" % (len(trees), tree_id))
         tree = trees[0]
         if tree_id.startswith("aTSTS"):
-            test_trees.append(tree)
+            synthetic_trees.append(tree)
         elif tree_id.find("TSTS") >= 0:
             raise ValueError("Unexpected TSTS")
         else:
-            train_trees.append(tree)
+            natural_trees.append(tree)
 
-    print("Read %d test trees" % len(test_trees))
-    num_train = int(len(train_trees) * (1.0 - dev_size))
-    dev_trees = train_trees[num_train:]
-    train_trees = train_trees[:num_train]
-    print("Split %d trees into %d train and %d dev" % ((len(train_trees) + len(dev_trees)), len(train_trees), len(dev_trees)))
+    print("Read %d synthetic trees" % len(synthetic_trees))
+    print("Read %d natural trees" % len(natural_trees))
+    train_trees, dev_trees, test_trees = utils.split_treebank(natural_trees, train_size, dev_size)
+    print("Split %d trees into %d train %d dev %d test" % (len(natural_trees), len(train_trees), len(dev_trees), len(test_trees)))
+    train_trees = synthetic_trees + train_trees
+    print("Total lengths %d train %d dev %d test" % (len(train_trees), len(dev_trees), len(test_trees)))
     return train_trees, dev_trees, test_trees
 
 
