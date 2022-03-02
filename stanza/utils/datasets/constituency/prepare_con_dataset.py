@@ -86,6 +86,7 @@ import tempfile
 
 from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
+from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
@@ -95,6 +96,12 @@ import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
 
 SHARDS = ("train", "dev", "test")
+
+def write_dataset(datasets, output_dir, dataset_name):
+    for dataset, shard in zip(datasets, SHARDS):
+        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
+        print("Writing {} trees to {}".format(len(dataset), output_filename))
+        parse_tree.Tree.write_treebank(dataset, output_filename)
 
 def process_it_turin(paths):
     """
@@ -131,17 +138,6 @@ def process_vlsp21(paths):
         # create an empty test file - currently we don't have actual test data for VLSP 21
         pass
 
-def split_treebank(treebank, train_size, dev_size):
-    train_end = int(len(treebank) * train_size)
-    dev_end = int(len(treebank) * (train_size + dev_size))
-    return treebank[:train_end], treebank[train_end:dev_end], treebank[dev_end:]
-
-def write_dataset(datasets, output_dir, dataset_name):
-    for dataset, shard in zip(datasets, SHARDS):
-        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
-        print("Writing {} trees to {}".format(len(dataset), output_filename))
-        parse_tree.Tree.write_treebank(dataset, output_filename)
-
 def process_arboretum(paths, dataset_name):
     """
     Processes the Danish dataset, Arboretum
@@ -153,7 +149,7 @@ def process_arboretum(paths, dataset_name):
         raise FileNotFoundError("Unable to find input file for Arboretum.  Expected in {}".format(arboretum_file))
 
     treebank = convert_tiger_treebank(arboretum_file)
-    datasets = split_treebank(treebank, 0.8, 0.1)
+    datasets = utils.split_treebank(treebank, 0.8, 0.1)
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
 
     output_filename = os.path.join(output_dir, "%s.mrg" % dataset_name)
