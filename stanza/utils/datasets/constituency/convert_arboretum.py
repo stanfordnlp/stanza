@@ -264,6 +264,8 @@ def process_tree(sentence):
     # read the words.  the words have ids, text, and tags which we care about
     words = {}
     for word in terminals:
+        if word.tag == 'parentes-udeladt' or word.tag == 'note':
+            continue
         if word.tag != "t":
             raise ValueError("Unexpected tree structure in {} : word with tag other than t".format(sent_id))
         word_id = word.get("id")
