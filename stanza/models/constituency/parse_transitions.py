@@ -125,18 +125,12 @@ def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
     return states
 
 def initial_state_from_words(word_lists, model):
-    preterminal_lists = []
-    for words in word_lists:
-        preterminals = []
-        for word, tag in words:
-            word_node = Tree(label=word)
-            tag_node = Tree(label=tag, children=[word_node])
-            preterminals.append(tag_node)
-        preterminal_lists.append(preterminals)
+    preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
+                         for words in word_lists]
     return initial_state_from_preterminals(preterminal_lists, model, gold_trees=None)
 
 def initial_state_from_gold_trees(trees, model):
-    preterminal_lists = [[Tree(label=pt.label, children=Tree(label=pt.children[0].label))
+    preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
                           for pt in tree.yield_preterminals()]
                          for tree in trees]
     return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
