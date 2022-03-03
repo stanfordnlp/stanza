@@ -161,7 +161,7 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
-        self.bert_model, self.bert_tokenizer = load_bert(params['config'].get('bert_model', None))
+        self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None))
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = NERTagger(self.args, self.vocab, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
         self.model.load_state_dict(checkpoint['model'], strict=False)
