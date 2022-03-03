@@ -89,7 +89,7 @@ def extract_phobert_embeddings(tokenizer, model, data, device):
             # averaging the last four layers worked well for non-VI languages
             feature = feature[2]
             feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach().cpu()
+            features += feature.clone().detach()
 
     assert len(features)==size
     assert len(features)==len(processed)
@@ -137,7 +137,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
             feature = model(torch.tensor(tokenized['input_ids'][128*i:128*i+128]).to(device), output_hidden_states=True)
             feature = feature[2]
             feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach().cpu()
+            features += feature.clone().detach()
 
     processed = []
     #remove the bos and eos tokens

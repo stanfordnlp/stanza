@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast, AutoModelForPreTraining, AutoModelForMaskedLM
 
@@ -111,17 +111,15 @@ class NERTagger(nn.Module):
             word_mask = word_mask.cuda()
             static_words = static_words.cuda()
 
-        if self.args.get('bert_model', False):
-            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, self.device)
-            bert_words = get_float_tensor(processed_bert, len(processed_bert))
-            assert(bert_words[0].size(0)==tags[0].size(0))
-            if self.use_cuda:
-                bert_words = bert_words.cuda()
-
         if self.args['word_emb_dim'] > 0:
             word_static_emb = self.word_emb(static_words)
-            word_emb = pack(torch.cat((word_static_emb, torch.tensor(bert_words)), 2)) if self.args.get('bert_model', False) else pack(word_static_emb)
+            word_emb = pack(word_static_emb)
             inputs += [word_emb]
+
+        if self.args.get('bert_model', False):
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, self.device)
+            processed_bert = pad_sequence(processed_bert, batch_first=True)
+            inputs += [pack(processed_bert)]
 
         def pad(x):
             return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
