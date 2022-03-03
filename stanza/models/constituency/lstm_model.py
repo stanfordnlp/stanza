@@ -87,6 +87,10 @@ class SentenceBoundary(Enum):
 #   MAX:         0.8985
 #   BILSTM:      0.8964
 #   BILSTM_MAX:  0.8973
+#
+# The MAX method has a linear transform after the max.
+#   Removing that transform makes the score go down to 0.8982
+#
 # We tried a few varieties of BILSTM_MAX
 # In particular:
 # max over LSTM, combining forward & backward using the max: 0.8970
