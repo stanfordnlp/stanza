@@ -197,6 +197,9 @@ def test_forward_constituency_composition(pt):
     model = build_model(pt, '--constituency_composition', 'bilstm_max')
     run_forward_checks(model, num_states=2)
 
+    model = build_model(pt, '--constituency_composition', 'bigram')
+    run_forward_checks(model, num_states=2)
+
 def test_forward_partitioned_attention(pt):
     """
     Test with & without partitioned attention layers
