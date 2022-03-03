@@ -98,6 +98,10 @@ class SentenceBoundary(Enum):
 # max over forward & backward only over 1:-1
 #   (eg, leave out the node embedding):                      0.8969
 # same as previous, but split the reduce into 2 pieces:      0.8973
+# max over forward & backward separately, then reduce as
+#   1/2(F + B) + W(F,B)
+#   the idea being that this way F and B are guaranteed
+#   to be represented:                                       0.8971
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
