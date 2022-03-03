@@ -80,6 +80,7 @@ class SentenceBoundary(Enum):
 # BILSTM_MAX is the same as BILSTM, but instead of using a Linear
 # to reduce the outputs of the lstm, we first take the max
 # and then use a linear to reduce the max
+# BIGRAM combines pairs of children and then takes the max over those
 #
 # Experiments show that MAX is noticeably better than the other options
 # On ja_alt, here are a few results after 200 iterations,
@@ -87,6 +88,7 @@ class SentenceBoundary(Enum):
 #   MAX:         0.8985
 #   BILSTM:      0.8964
 #   BILSTM_MAX:  0.8973
+#   BIGRAM:      0.8982
 #
 # The MAX method has a linear transform after the max.
 #   Removing that transform makes the score go down to 0.8982
@@ -102,10 +104,19 @@ class SentenceBoundary(Enum):
 #   1/2(F + B) + W(F,B)
 #   the idea being that this way F and B are guaranteed
 #   to be represented:                                       0.8971
+#
+# BIGRAM is an attempt to mix information from nodes
+#   when building constituents, but it didn't help
+#   The first example, just taking pairs and learning
+#   a transform, went to NaN.  Likely the transform
+#   expanded the embedding too much.  Switching it to
+#   scale the matrix by 0.5 didn't go to Nan, but only
+#   resulted in 0.8982
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
     BILSTM_MAX            = 4
+    BIGRAM                = 5
 
 class LSTMModel(BaseModel, nn.Module):
     def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args):
@@ -356,6 +367,11 @@ class LSTMModel(BaseModel, nn.Module):
             # transformation to turn several constituents into one new constituent
             self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
             initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size)
+        elif self.constituency_composition == ConstituencyComposition.BIGRAM:
+            self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
+            self.reduce_bigram = nn.Linear(self.hidden_size * 2, self.hidden_size)
+            initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size)
+            initialize_linear(self.reduce_bigram, self.args['nonlinearity'], self.hidden_size)
         else:
             raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
 
@@ -778,6 +794,18 @@ class LSTMModel(BaseModel, nn.Module):
                 hx = self.reduce_forward(lstm_output[:, :self.hidden_size]) + self.reduce_backward(lstm_output[:, self.hidden_size:])
         elif self.constituency_composition == ConstituencyComposition.MAX:
             unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
+            packed_hx = torch.stack(unpacked_hx, axis=0)
+            hx = self.reduce_linear(packed_hx)
+        elif self.constituency_composition == ConstituencyComposition.BIGRAM:
+            unpacked_hx = []
+            for nhx in node_hx:
+                # tanh or otherwise limit the size of the output?
+                stacked_nhx = self.lstm_input_dropout(torch.stack(nhx))
+                if stacked_nhx.shape[0] > 1:
+                    bigram_hx = torch.cat((stacked_nhx[:-1, :], stacked_nhx[1:, :]), axis=1)
+                    bigram_hx = self.reduce_bigram(bigram_hx) / 2
+                    stacked_nhx = torch.cat((stacked_nhx, bigram_hx), axis=0)
+                unpacked_hx.append(torch.max(stacked_nhx, 0).values)
             packed_hx = torch.stack(unpacked_hx, axis=0)
             hx = self.reduce_linear(packed_hx)
         else:
