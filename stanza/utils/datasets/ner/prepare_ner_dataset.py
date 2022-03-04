@@ -345,21 +345,14 @@ def process_wikiner(paths, dataset):
     elif len(input_files) > 1:
         raise FileNotFoundError("Found too many raw wikiner files in %s: %s" % (raw_input_path, ", ".join(input_files)))
 
-    csv_file = os.path.join(raw_input_path, "csv_" + short_name)
+    csv_file = os.path.join(base_output_path, short_name + "_csv")
     print("Converting raw input %s to space separated file in %s" % (input_files[0], csv_file))
     preprocess_wikiner(input_files[0], csv_file)
 
     # this should create train.bio, dev.bio, and test.bio
-    print("Splitting %s to %s" % (csv_file, base_input_path))
-    split_wikiner(base_input_path, csv_file)
-
-    for shard in SHARDS:
-        input_filename = os.path.join(base_input_path, '%s.bio' % shard)
-        if not os.path.exists(input_filename):
-            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        print("Converting %s to %s" % (input_filename, output_filename))
-        prepare_ner_file.process_dataset(input_filename, output_filename)
+    print("Splitting %s to %s" % (csv_file, base_output_path))
+    split_wikiner(base_output_path, csv_file, prefix=short_name)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
 
 def get_rgai_input_path(paths):
     return os.path.join(paths["NERBASE"], "hu_rgai")
