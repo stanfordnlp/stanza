@@ -160,9 +160,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.root_labels = sorted(list(root_labels))
         self.constituents = sorted(list(constituents))
-        self.constituent_map = { x: i for (i, x) in enumerate(self.constituents) }
-        # precompute tensors for the constituents
-        self.register_buffer('constituent_tensors', torch.tensor(range(len(self.constituent_map)), requires_grad=False))
 
         self.hidden_size = self.args['hidden_size']
         self.transition_hidden_size = self.args['transition_hidden_size']
@@ -322,12 +319,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
         self.constituent_lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
-
-        if self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY:
-            unary_transforms = {}
-            for constituent in self.constituent_map:
-                unary_transforms[constituent] = nn.Linear(self.hidden_size, self.hidden_size)
-            self.unary_transforms = nn.ModuleDict(unary_transforms)
 
         self.open_nodes = sorted(list(open_nodes))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
@@ -742,15 +733,12 @@ class LSTMModel(BaseModel, nn.Module):
         return Constituent(value=dummy, tree_hx=hx)
 
     def unary_transform(self, constituents, labels):
+        # TODO: this can be faster by stacking things
         top_constituent = constituents.value
-        node = top_constituent.value
-        hx = top_constituent.tree_hx
         for label in reversed(labels):
-            node = Tree(label=label, children=[node])
-            hx = self.unary_transforms[label](hx)
-            # non-linearity after the unary transform
-            hx = self.nonlinearity(hx)
-        top_constituent = Constituent(value=node, tree_hx=hx)
+            # double nested: the Constituent is in a list of just one child
+            # and there is just one item in the list (hence the stacking comment)
+            top_constituent = self.build_constituents([(label,)], [[top_constituent]])[0]
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
