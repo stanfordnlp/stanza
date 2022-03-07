@@ -51,16 +51,16 @@ from stanza.models.constituency.utils import build_nonlinearity, initialize_line
 logger = logging.getLogger('stanza')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
-TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'hx', 'cx'])
+TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'lstm_hx', 'lstm_cx'])
 
-# Invariant: the output at the top of the constituency stack will have a
+# Invariant: the tree_hx at the top of the constituency stack will have a
 # single dimension
 # We do this to maintain consistency between the different operations,
 # which sometimes result in different shapes
 # This will be unsqueezed in order to put into the next layer if needed
-# hx & cx are the hidden & cell states of the LSTM going across constituents
-ConstituentNode = namedtuple("ConstituentNode", ['value', 'output', 'hx', 'cx'])
-Constituent = namedtuple("Constituent", ['value', 'hx'])
+# lstm_hx & lstm_cx are the hidden & cell states of the LSTM going across constituents
+ConstituentNode = namedtuple("ConstituentNode", ['value', 'tree_hx', 'lstm_hx', 'lstm_cx'])
+Constituent = namedtuple("Constituent", ['value', 'tree_hx'])
 
 # The sentence boundary vectors are marginally useful at best.
 # However, they make it much easier to use non-bert layers as input to
@@ -733,24 +733,24 @@ class LSTMModel(BaseModel, nn.Module):
     def transform_word_to_constituent(self, state):
         word_node = state.word_queue[state.word_position]
         word = word_node.value
-        return Constituent(value=word, hx=word_node.hx)
+        return Constituent(value=word, tree_hx=word_node.hx)
 
     def dummy_constituent(self, dummy):
         label = dummy.label
         open_index = self.open_node_tensors[self.open_node_map[label]]
         hx = self.dummy_embedding(open_index)
-        return Constituent(value=dummy, hx=hx)
+        return Constituent(value=dummy, tree_hx=hx)
 
     def unary_transform(self, constituents, labels):
         top_constituent = constituents.value
         node = top_constituent.value
-        hx = top_constituent.output
+        hx = top_constituent.tree_hx
         for label in reversed(labels):
             node = Tree(label=label, children=[node])
             hx = self.unary_transforms[label](hx)
             # non-linearity after the unary transform
             hx = self.nonlinearity(hx)
-        top_constituent = Constituent(value=node, hx=hx)
+        top_constituent = Constituent(value=node, tree_hx=hx)
         return top_constituent
 
     def build_constituents(self, labels, children_lists):
@@ -761,7 +761,7 @@ class LSTMModel(BaseModel, nn.Module):
         children_lists is a list of children that go under each of the new nodes
         lists of each are used so that we can stack operations
         """
-        node_hx = [[child.output for child in children] for children in children_lists]
+        node_hx = [[child.tree_hx for child in children] for children in children_lists]
 
         if (self.constituency_composition == ConstituencyComposition.BILSTM or
             self.constituency_composition == ConstituencyComposition.BILSTM_MAX):
@@ -769,7 +769,6 @@ class LSTMModel(BaseModel, nn.Module):
 
             max_length = max(len(children) for children in children_lists)
             zeros = torch.zeros(self.hidden_size, device=label_hx[0].device)
-            node_hx = [[child.output for child in children] for children in children_lists]
             # weirdly, this is faster than using pack_sequence
             unpacked_hx = [[lhx] + nhx + [lhx] + [zeros] * (max_length - len(nhx)) for lhx, nhx in zip(label_hx, node_hx)]
             unpacked_hx = [self.lstm_input_dropout(torch.stack(nhx)) for nhx in unpacked_hx]
@@ -822,18 +821,18 @@ class LSTMModel(BaseModel, nn.Module):
                 for value in reversed(label):
                     node = Tree(label=value, children=children)
                     children = node
-            constituents.append(Constituent(value=node, hx=hx[idx, :]))
+            constituents.append(Constituent(value=node, tree_hx=hx[idx, :]))
         return constituents
 
     def push_constituents(self, constituent_stacks, constituents):
         current_nodes = [stack.value for stack in constituent_stacks]
 
-        constituent_input = torch.stack([x.hx for x in constituents])
+        constituent_input = torch.stack([x.tree_hx for x in constituents])
         constituent_input = constituent_input.unsqueeze(0)
         constituent_input = self.lstm_input_dropout(constituent_input)
 
-        hx = torch.cat([current_node.hx for current_node in current_nodes], axis=1)
-        cx = torch.cat([current_node.cx for current_node in current_nodes], axis=1)
+        hx = torch.cat([current_node.lstm_hx for current_node in current_nodes], axis=1)
+        cx = torch.cat([current_node.lstm_cx for current_node in current_nodes], axis=1)
         output, (hx, cx) = self.constituent_lstm(constituent_input, (hx, cx))
         # Another possibility here would be to use output[0, i, :]
         # from the constituency lstm for the value of the new node.
@@ -844,7 +843,7 @@ class LSTMModel(BaseModel, nn.Module):
         # averaged over 5 trials, had the following loss in accuracy:
         # 150 epochs: 0.8971 to 0.8953
         # 200 epochs: 0.8985 to 0.8964
-        new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
+        new_stacks = [stack.push(ConstituentNode(constituent.value, constituents[i].tree_hx, hx[:, i:i+1, :], cx[:, i:i+1, :]))
                       for i, (stack, constituent) in enumerate(zip(constituent_stacks, constituents))]
         return new_stacks
 
@@ -867,8 +866,8 @@ class LSTMModel(BaseModel, nn.Module):
         transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
         transition_input = self.lstm_input_dropout(transition_input)
 
-        hx = torch.cat([t.value.hx for t in transition_stacks], axis=1)
-        cx = torch.cat([t.value.cx for t in transition_stacks], axis=1)
+        hx = torch.cat([t.value.lstm_hx for t in transition_stacks], axis=1)
+        cx = torch.cat([t.value.lstm_cx for t in transition_stacks], axis=1)
         output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
         new_stacks = [stack.push(TransitionNode(transition, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
                       for i, (stack, transition) in enumerate(zip(transition_stacks, transitions))]
@@ -896,7 +895,7 @@ class LSTMModel(BaseModel, nn.Module):
         # this way, we can, as an option, NOT include the constituents to the left
         # when building the current vector for a constituent
         # and the vector used for inference will still incorporate the entire LSTM
-        constituent_hx = torch.stack([state.constituents.value.hx[-1, 0, :] for state in states])
+        constituent_hx = torch.stack([state.constituents.value.lstm_hx[-1, 0, :] for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
