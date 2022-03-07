@@ -59,6 +59,14 @@ A couple experiments which have been tried with little noticeable impact:
     instead of the children constituents hurts scores
     For example, an experiment on ja_alt went from 0.8985 to 0.8964
     when built that way
+  - The initial transition scheme implemented was TOP_DOWN.  We tried
+    a compound unary option, since this worked so well in the CoreNLP
+    constituency parser.  Unfortunately, this is far less effective
+    than IN_ORDER.  Both specialized unary matrices and reusing the
+    n-ary constituency combination fell short.  On the ja_alt dataset:
+      IN_ORDER, max combination method:           0.8985
+      TOP_DOWN_UNARY, specialized matrices:       0.8501
+      TOP_DOWN_UNARY, max combination method:     0.8508
 
 The code breakdown is as follows:
 
