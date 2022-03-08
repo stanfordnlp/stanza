@@ -175,15 +175,15 @@ def test_forward_sentence_boundaries(pt):
     """
     Test start & stop boundary vectors
     """
-    model = build_model(pt, '--sentence_boundary_vectors', 'none')
+    model = build_model(pt, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
 
     model = build_model(pt, '--sentence_boundary_vectors', 'words')
     run_forward_checks(model)
 
-    model = build_model(pt, '--sentence_boundary_vectors', 'everything')
+    model = build_model(pt, '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
-    
+
 def test_forward_constituency_composition(pt):
     """
     Test different constituency composition functions
