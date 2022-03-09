@@ -1,5 +1,3 @@
-import enum
-import math
 import os
 import logging
 
@@ -8,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor
+from stanza.models.common.data import map_to_ids, get_long_tensor
 from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast, AutoModelForPreTraining, AutoModelForMaskedLM
 
 from stanza.models.common.packed_lstm import PackedLSTM
@@ -104,14 +102,14 @@ class NERTagger(nn.Module):
         inputs = []
         batch_size = len(sentences)
 
-        #extract static embeddings
-        static_words, word_mask = self.extract_static_embeddings(self.args, sentences)
-
-        if self.use_cuda:
-            word_mask = word_mask.cuda()
-            static_words = static_words.cuda()
-
         if self.args['word_emb_dim'] > 0:
+            #extract static embeddings
+            static_words, word_mask = self.extract_static_embeddings(self.args, sentences)
+
+            if self.use_cuda:
+                word_mask = word_mask.cuda()
+                static_words = static_words.cuda()
+                
             word_static_emb = self.word_emb(static_words)
             word_emb = pack(word_static_emb)
             inputs += [word_emb]

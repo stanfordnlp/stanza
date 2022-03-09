@@ -33,7 +33,49 @@ def load_bert(model_name):
         return bert_model, bert_tokenizer
     return None, None
 
-def extract_phobert_embeddings(tokenizer, model, data, device):
+def tokenize_manual(model_name, sent, tokenizer):
+    """
+    Tokenize a sentence manually, using for checking long sentences and PHOBert.
+    """
+    #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
+    tokenized = [word.replace("\xa0","_").replace(" ", "_") for word in sent] if model_name.startswith("vinai/phobert") else [word.replace("\xa0"," ") for word in sent]
+
+    #concatenate to a sentence
+    sentence = ' '.join(tokenized)
+
+    #tokenize using AutoTokenizer PhoBERT
+    tokenized = tokenizer.tokenize(sentence)
+
+    #convert tokens to ids
+    sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
+
+    #add start and end tokens to sent_ids
+    tokenized_sent = [tokenizer.bos_token_id] + sent_ids + [tokenizer.eos_token_id]
+
+    return tokenized, tokenized_sent
+
+def filter_data(model_name, data):
+    """
+    Filter out the (NER) data that is too long for BERT model.
+    """
+    tokenizer = load_tokenizer(model_name) 
+    filtered_data = []
+    #eliminate all the sentences that are too long for bert model
+    for sent in data:
+        sentence = [word[0] for word in sent]
+        _, tokenized_sent = tokenize_manual(model_name, sentence, tokenizer)
+        
+        if len(tokenized_sent) > tokenizer.model_max_length:
+            continue
+
+        filtered_data.append(sent)
+
+    logger.info("Eliminated {} datapoints because their length is over maximum size of BERT model. ".format(len(data)-len(filtered_data)))
+    
+    return filtered_data
+
+
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
     """
     Extract transformer embeddings using a method specifically for phobert
     Since phobert doesn't have the is_split_into_words / tokenized.word_ids(batch_index=0)
@@ -44,23 +86,11 @@ def extract_phobert_embeddings(tokenizer, model, data, device):
     tokenized_sents = [] # list of sentences, each is a torch tensor with start and end token
     list_tokenized = [] # list of tokenized sentences from phobert
     for idx, sent in enumerate(data):
-        #replace \xa0 or whatever the space character is by _ since PhoBERT expects _ between syllables
-        tokenized = [word.replace("\xa0","_").replace(" ", "_") for word in sent]
 
-        #concatenate to a sentence
-        sentence = ' '.join(tokenized)
-
-        #tokenize using AutoTokenizer PhoBERT
-        tokenized = tokenizer.tokenize(sentence)
+        tokenized, tokenized_sent = tokenize_manual(model_name, sent, tokenizer)
 
         #add tokenized to list_tokenzied for later checking
         list_tokenized.append(tokenized)
-
-        #convert tokens to ids
-        sent_ids = tokenizer.convert_tokens_to_ids(tokenized)
-
-        #add start and end tokens to sent_ids
-        tokenized_sent = [tokenizer.bos_token_id] + sent_ids + [tokenizer.eos_token_id]
 
         if len(tokenized_sent) > tokenizer.model_max_length:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), data[idx])
@@ -112,7 +142,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
     data: list of list of string (the text tokens)
     """
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(tokenizer, model, data, device)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)

@@ -2,7 +2,7 @@ import random
 import logging
 import torch
 
-from stanza.models.common.bert_embedding import load_tokenizer
+from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
@@ -27,37 +27,12 @@ class DataLoader:
         self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
-        max_len_data = []
-        self.tags = []
-
-        #check if bert_model is used
-        self.bert_tokenizer = load_tokenizer(self.args['bert_model']) if self.args.get('bert_model', False) else None
         
+        # filter out the long sentences if bert is used
         if self.args.get('bert_model', False):
-            #eliminate all the sentences that are too long for bert model
-            for sent in data:
-                #check if the max tokenized length is less than maximum (256 for vi) and replace nbs with space
-                tokenized = [word[0].replace("\xa0","_").replace(" ", "_") for word in sent] if self.args['bert_model'].startswith("vinai/phobert") else [word[0].replace("\xa0"," ") for word in sent]
-                #concatenate to a sentence
-                sentence = ' '.join(tokenized)
-                
-                #tokenize using AutoTokenizer BERT
-                tokenized = self.bert_tokenizer.tokenize(sentence)
-                
-                #convert tokens to ids
-                sent_ids = self.bert_tokenizer.convert_tokens_to_ids(tokenized)
-                
-                #add start and end tokens to sent_ids
-                tokenized_sent = [self.bert_tokenizer.bos_token_id] + sent_ids + [self.bert_tokenizer.eos_token_id]
-                
-                if len(tokenized_sent) > self.bert_tokenizer.model_max_length:
-                    continue
-                max_len_data.append(sent)
-                self.tags.append([w[1] for w in sent])
-            logger.info("Eliminated {} datapoints because their length is over maximum size of BERT model. ".format(len(data)-len(max_len_data)))
-            data = max_len_data
-        else:
-            self.tags = [[w[1] for w in sent] for sent in data]
+            data = filter_data(self.args['bert_model'], data)
+        
+        self.tags = [[w[1] for w in sent] for sent in data]
         # handle vocab
         self.pretrain = pretrain
         if vocab is None:
