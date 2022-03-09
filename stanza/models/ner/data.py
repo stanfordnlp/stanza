@@ -3,17 +3,12 @@ import logging
 import torch
 
 from stanza.models.common.bert_embedding import filter_data
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
 from stanza.models.ner.vocab import TagVocab, MultiVocab
 from stanza.models.common.doc import *
 from stanza.models.ner.utils import process_tags
-
-#tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=True)
-#tokenizer = AutoTokenizer.from_pretrained("Maltehb/danish-bert-botxo-ner-dane")
-#tokenizer = AutoTokenizer.from_pretrained("flax-community/roberta-base-danish")
-#tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
 
 logger = logging.getLogger('stanza')
 
