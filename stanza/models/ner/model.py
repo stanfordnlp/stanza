@@ -7,14 +7,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 from stanza.models.common.data import map_to_ids, get_long_tensor
-from transformers import AutoModel, AutoTokenizer, XLMRobertaModel, XLMRobertaTokenizerFast, AutoModelForPreTraining, AutoModelForMaskedLM
 
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
 from stanza.models.common.vocab import PAD_ID
-from stanza.models.common.bert_embedding import extract_phobert_embeddings, extract_bert_embeddings
+from stanza.models.common.bert_embedding import extract_bert_embeddings
 logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
@@ -168,10 +167,6 @@ class NERTagger(nn.Module):
             case = lambda x: x.lower()
         else:
             case = lambda x: x
-        if args.get('char_lowercase', False): # handle character case
-            char_case = lambda x: x.lower()
-        else:
-            char_case = lambda x: x
         for idx, sent in enumerate(sents):
             processed_sent = [self.vocab['word'].map([case(w) for w in sent])]
             processed.append(processed_sent[0])

@@ -78,10 +78,6 @@ class DataLoader:
 
     def preprocess(self, data, vocab, args):
         processed = []
-        if args.get('lowercase', True): # handle word case
-            case = lambda x: x.lower()
-        else:
-            case = lambda x: x
         if args.get('char_lowercase', False): # handle character case
             char_case = lambda x: x.lower()
         else:
