@@ -92,6 +92,18 @@ def test_rare_words():
     expected = ['Who', 'in', 'sits']
     assert words == expected
 
+def test_common_words():
+    """
+    Test getting the unique words from a tree
+    """
+    text="((SBARQ (WHNP (WP Who)) (SQ (VP (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))  ((SBARQ (NP (DT this) (NN seat)) (. ?)))"
+
+    trees = tree_reader.read_trees(text)
+
+    words = Tree.get_common_words(trees, 3)
+    expected = ['?', 'seat', 'this']
+    assert words == expected
+
 def test_root_labels():
     text="( (SBARQ-FOO (WHNP-BAR (WP Who)) (SQ#ASDF (VP=1 (VBZ sits) (PP (IN in) (NP (DT this) (NN seat))))) (. ?)))"
     trees = tree_reader.read_trees(text)

@@ -234,6 +234,22 @@ class Tree(StanzaObject):
         return sorted(words)
 
     @staticmethod
+    def get_common_words(trees, num_words):
+        """
+        Walks over all of the trees and gets the most frequently occurring words.
+        """
+        if num_words == 0:
+            return set()
+
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        words = Counter()
+        for tree in trees:
+            tree.visit_preorder(leaf = lambda x: words.update([x.label]))
+        return sorted(x[0] for x in words.most_common()[:num_words])
+
+    @staticmethod
     def get_rare_words(trees, threshold=0.05):
         """
         Walks over all of the trees and gets the least frequently occurring words.
