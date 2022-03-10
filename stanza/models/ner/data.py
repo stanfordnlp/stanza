@@ -13,7 +13,7 @@ from stanza.models.ner.utils import process_tags
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -25,7 +25,7 @@ class DataLoader:
         
         # filter out the long sentences if bert is used
         if self.args.get('bert_model', False):
-            data = filter_data(self.args['bert_model'], data)
+            data = filter_data(self.args['bert_model'], data, bert_tokenizer)
         
         self.tags = [[w[1] for w in sent] for sent in data]
         # handle vocab

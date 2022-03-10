@@ -269,7 +269,7 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = Document(json.load(open(args['eval_file'])))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True)
+    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.bert_tokenizer)
     utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
 
     logger.info("Start evaluation...")

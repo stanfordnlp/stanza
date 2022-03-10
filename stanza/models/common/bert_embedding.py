@@ -54,11 +54,12 @@ def tokenize_manual(model_name, sent, tokenizer):
 
     return tokenized, tokenized_sent
 
-def filter_data(model_name, data):
+def filter_data(model_name, data, tokenizer = None):
     """
     Filter out the (NER) data that is too long for BERT model.
     """
-    tokenizer = load_tokenizer(model_name) 
+    if tokenizer is None:
+        tokenizer = load_tokenizer(model_name) 
     filtered_data = []
     #eliminate all the sentences that are too long for bert model
     for sent in data:
