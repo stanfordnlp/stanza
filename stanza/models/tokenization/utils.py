@@ -312,22 +312,29 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                 all_preds[p[0]] = pred[j][:len1]
             all_raw[p[0]] = raw[j]
 
+    use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
+    oov_count, offset, doc = decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand)
+
+    if output_file: CoNLL.dict2conll(doc, output_file)
+    return oov_count, offset, all_preds, doc
+
+def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand):
+    """
+    Decode the predictions into a document of words
+
+    Once everything is fed through the tokenizer model, it's time to decode the predictions
+    into actual tokens and sentences that the rest of the pipeline uses
+    """
     offset = 0
     oov_count = 0
     doc = []
 
     text = SPACE_RE.sub(' ', orig_text) if orig_text is not None else None
     char_offset = 0
-    use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
 
     UNK_ID = vocab.unit2id('<UNK>')
 
-    # Once everything is fed through the tokenizer model, it's time to decode the predictions
-    # into actual tokens and sentences that the rest of the pipeline uses
-    for j in range(len(paragraphs)):
-        raw = all_raw[j]
-        pred = all_preds[j]
-
+    for raw, pred in zip(all_raw, all_preds):
         current_tok = ''
         current_sent = []
 
@@ -379,8 +386,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
         if len(current_sent):
             doc.append(process_sentence(current_sent, mwt_dict))
 
-    if output_file: CoNLL.dict2conll(doc, output_file)
-    return oov_count, offset, all_preds, doc
+    return oov_count, offset, doc
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
