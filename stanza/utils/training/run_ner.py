@@ -81,13 +81,17 @@ def run_treebank(mode, paths, treebank, short_name,
         #   --charlm --charlm_shorthand vi_conll17
         #   --dropout 0.6 --word_dropout 0.1 --locked_dropout 0.1 --char_dropout 0.1
         dataset_args = DATASET_EXTRA_ARGS.get(short_name, [])
+        if language in common.BERT:
+            bert_args = ['--bert_model', common.BERT.get(language)]
+        else:
+            bert_args = []
 
         train_args = ['--train_file', train_file,
                       '--eval_file', dev_file,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + charlm_args + dataset_args + extra_args
+        train_args = train_args + charlm_args + bert_args + dataset_args + extra_args
         if '--wordvec_pretrain_file' not in train_args:
             # will throw an error if the pretrain can't be found
             wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
