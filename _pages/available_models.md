@@ -172,7 +172,7 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 | German | de | GermEval2014 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
 | Hungarian | hu | Business, Criminal, NYTK | 4 | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Italian | it | FBK | 3 | [<i class="fas fa-file-alt"></i>](https://dh.fbk.eu/) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Myanmar | my | FBK | 7 | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Myanmar | my | UCSY | 7 | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
