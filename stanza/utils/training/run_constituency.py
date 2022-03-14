@@ -25,54 +25,6 @@ RETAG_METHOD = {
     "pt": "upos",   # default PT model has no xpos either
 }
 
-BERT = {
-    # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
-    # helps the Turkish model quite a bit
-    "tr": "dbmdz/bert-base-turkish-128k-cased",
-
-    # https://huggingface.co/Maltehb/danish-bert-botxo
-    # contrary to normal expectations, this hurts F1
-    # on a dev split by about 1 F1
-    # "da": "Maltehb/danish-bert-botxo",
-
-    # the multilingual bert is a marginal improvement for conparse
-    "da": "bert-base-multilingual-cased",
-
-    # from https://github.com/idb-ita/GilBERTo
-    # annoyingly, it doesn't handle cased text
-    # supposedly there is an argument "do_lower_case"
-    # but that still leaves a lot of unk tokens
-    # "it": "idb-ita/gilberto-uncased-from-camembert",
-
-    # from https://github.com/musixmatchresearch/umberto
-    "it": "Musixmatch/umberto-commoncrawl-cased-v1",
-
-    # from https://github.com/VinAIResearch/PhoBERT
-    # "vi": "vinai/phobert-base",
-    # another option is phobert-large, but that doesn't
-    # change the scores any
-    "vi": "vinai/phobert-large",
-
-    # https://huggingface.co/roberta-base
-    "en": "roberta-base",
-
-    # https://github.com/ymcui/Chinese-BERT-wwm
-    # there's also hfl/chinese-roberta-wwm-ext-large
-    "zh-hans": "hfl/chinese-roberta-wwm-ext",
-
-    # experiments on the cintil dataset
-    # ran a variety of transformer settings
-    # found the following dev set scores after 400 iterations:
-    # Geotrend/distilbert-base-pt-cased : not plug & play
-    # no bert: 0.9082
-    # xlm-roberta-base: 0.9109
-    # xlm-roberta-large: 0.9254
-    # adalbertojunior/distilbert-portuguese-cased: 0.9300
-    # neuralmind/bert-base-portuguese-cased: 0.9307
-    # neuralmind/bert-large-portuguese-cased: 0.9343
-    "pt": "neuralmind/bert-large-portuguese-cased",
-}
-
 def add_constituency_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
@@ -110,7 +62,7 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm_args = build_charlm_args(language, charlm, base_args=False)
 
     default_args = retag_args + wordvec_args + charlm_args
-    if language in BERT:
+    if language in common.BERT:
         default_args.extend(['--bert_model', BERT.get(language)])
 
     if mode == Mode.TRAIN:
