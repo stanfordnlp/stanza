@@ -6,6 +6,14 @@ The common result is that the data files go to data/constituency and are in PTB 
 it_turin
   A combination of Evalita competition from 2011 and the ParTUT trees
   More information is available in convert_it_turin
+
+it_vit
+  The original for the VIT UD Dataset
+  The UD version has a lot of corrections, so we try to apply those as much as possible
+  The constituency labels are generally not very understandable, unfortunately
+  Available from ELRA:
+    http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/
+
 vlsp09 is the 2009 constituency treebank:
   Nguyen Phuong Thai, Vu Xuan Luong, Nguyen Thi Minh Huyen, Nguyen Van Hiep, Le Hong Phuong
     Building a Large Syntactically-Annotated Corpus of Vietnamese
@@ -91,6 +99,7 @@ from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
+from stanza.utils.datasets.constituency.convert_it_vit import convert_it_vit
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
@@ -103,6 +112,13 @@ def process_it_turin(paths):
     input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "italian")
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     convert_it_turin(input_dir, output_dir)
+
+def process_it_vit(paths):
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "italian", "VIT")
+    # can't use UD yet until the updates are released
+    ud_dir = os.path.join(paths["EXTERN_DIR"], "ud2", "git", "UD_Italian-VIT")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_it_vit(input_dir, ud_dir, output_dir, "it_vit")
 
 def process_vlsp09(paths):
     """
@@ -204,6 +220,8 @@ def main(dataset_name):
 
     if dataset_name == 'it_turin':
         process_it_turin(paths)
+    elif dataset_name == 'it_vit':
+        process_it_vit(paths)
     elif dataset_name == 'vi_vlsp09':
         process_vlsp09(paths)
     elif dataset_name == 'vi_vlsp21':
