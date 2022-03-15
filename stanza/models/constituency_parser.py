@@ -67,6 +67,9 @@ A couple experiments which have been tried with little noticeable impact:
       IN_ORDER, max combination method:           0.8985
       TOP_DOWN_UNARY, specialized matrices:       0.8501
       TOP_DOWN_UNARY, max combination method:     0.8508
+  - Adding multiple layers of MLP to combine inputs for words made
+    no difference in the scores
+    Tried both before the LSTM and after
 
 The code breakdown is as follows:
 
