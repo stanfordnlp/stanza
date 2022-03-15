@@ -57,6 +57,20 @@ BERT = {
     # https://huggingface.co/roberta-base
     "en": "roberta-base",
 
+    # NER scores for a couple options:
+    # none:
+    # dev:  2022-03-04 INFO: fi_turku 83.45
+    # test: 2022-03-04 INFO: fi_turku 86.25
+    #
+    # bert-base-multilingual-cased
+    # dev:  2022-03-04 INFO: fi_turku 85.23
+    # test: 2022-03-04 INFO: fi_turku 89.00
+    #
+    # TurkuNLP/bert-base-finnish-cased-v1:
+    # dev:  2022-03-04 INFO: fi_turku 88.41
+    # test: 2022-03-04 INFO: fi_turku 91.36
+    "fi": "TurkuNLP/bert-base-finnish-cased-v1",
+
     # https://github.com/ymcui/Chinese-BERT-wwm
     # there's also hfl/chinese-roberta-wwm-ext-large
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
