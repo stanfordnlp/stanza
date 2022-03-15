@@ -43,6 +43,9 @@ BERT = {
     # "it": "idb-ita/gilberto-uncased-from-camembert",
 
     # from https://github.com/musixmatchresearch/umberto
+    # on NER, this gets 88.37 dev and 91.02 test
+    # another option is dbmdz/bert-base-italian-cased,
+    # which gets 87.27 dev and 90.32 test
     "it": "Musixmatch/umberto-commoncrawl-cased-v1",
 
     # from https://github.com/VinAIResearch/PhoBERT
