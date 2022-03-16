@@ -97,7 +97,8 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 prepare_ner_file.process_dataset(input_iob, output_json)
 ```
 
-The expectation is that the `.json` files will go in the `data/ner` directory, although you can change that with the `$NER_DATA_DIR` environment variable.
+The program will look for the `.json` files in the `data/ner` directory, which you may need to create if this is your first time training a Stanza NER model.
+You can change the expected path by setting the `$NER_DATA_DIR` environment variable.
 
 ## Training with Scripts
 
