@@ -575,6 +575,14 @@ class CoreNLPClient(RobustService):
         return matches
 
     def tregex(self, text, pattern, filter=False, annotators=None, properties=None):
+        # parse is not included by default in some of the pipelines,
+        # so we may need to manually override the annotators
+        # to include parse in order for tregex to do anything
+        if annotators is None and self.annotators is not None:
+            if "parse" not in self.annotators:
+                annotators = self.annotators + ",parse"
+        else:
+            annotators = "tokenize,ssplit,pos,parse"
         return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
