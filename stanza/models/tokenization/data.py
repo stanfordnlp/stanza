@@ -154,8 +154,8 @@ class DataLoader:
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
         current = []
+        use_dictionary = self.args['use_dictionary']
         for i, (unit, label) in enumerate(para):
-            label1 = label if not self.eval else 0
             feats = composite_func(unit)
             # position-dependent features
             if use_end_of_para:
@@ -166,12 +166,12 @@ class DataLoader:
                 feats.append(f)
 
             #if dictionary feature is selected
-            if self.args['use_dictionary']:
+            if use_dictionary:
                 dict_feats = extract_dict_feat(i)
                 feats = feats + dict_feats
 
             current += [(unit, label, feats)]
-            if label1 == 2 or label1 == 4: # end of sentence
+            if not self.eval and (label == 2 or label == 4): # end of sentence
                 if len(current) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
                     res.append(process_sentence(current))
