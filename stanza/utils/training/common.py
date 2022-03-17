@@ -11,7 +11,7 @@ import tempfile
 from enum import Enum
 
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.resources.common import DEFAULT_MODEL_DIR
+from stanza.resources.common import download, DEFAULT_MODEL_DIR
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
 from stanza.utils import conll18_ud_eval as ud_eval
@@ -208,10 +208,20 @@ def run_eval_script_depparse(eval_gold, eval_pred):
 
 
 def find_wordvec_pretrain(language, default_pretrain):
-    # TODO: try to extract/remember the specific pretrain for the given model
-    # That would be a good way to archive which pretrains are used for which NER models, anyway
     pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
     pretrains = glob.glob(pretrain_path)
+    if len(pretrains) == 0:
+        # TODO: try to extract/remember the specific pretrain for the given model
+        # That would be a good way to archive which pretrains are used for which NER models, anyway
+        # For now, just download the default and use that
+        pretrain_package = default_pretrain.get(language, None)
+        if pretrain_package is None:
+            logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
+            download(lang=language)
+        else:
+            logger.warning(f"Missing pretrain for '{language}'.  Will download the default pretrain '{pretrain_package}'")
+            download(lang=language, package=None, processors={"pretrain": pretrain_package})
+        pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
         raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_file to specify a .pt file to use")
     if len(pretrains) > 1:
@@ -243,7 +253,16 @@ def find_charlm(direction, language, charlm):
         logger.info(f'Using model {resource_path} for {direction} charlm')
         return resource_path
 
-    raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}")
+    try:
+        download(lang=language, package=None, processors={f"{direction}_charlm": charlm})
+        if os.path.exists(resource_path):
+            logger.info(f'Downloaded model, using model {resource_path} for {direction} charlm')
+            return resource_path
+    except ValueError as e:
+        # we're about to throw an error anyway
+        pass
+
+    raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work")
 
 def build_charlm_args(language, charlm, base_args=True):
     """
