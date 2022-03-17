@@ -149,6 +149,17 @@ def add_mwt(processors, resources, lang):
         processors[MWT] = value
 
 def maintain_processor_list(resources, lang, package, processors):
+    """
+    Given a parsed resources file, language, and possible package
+    and/or processors, expands the package to the list of processors
+
+    Returns a list of processors
+    Each item in the list of processors is a pair:
+      name, then a list of ModelSpecification
+    so, for example:
+      [['pos', [ModelSpecification(processor='pos', package='gsd', dependencies=None)]],
+       ['depparse', [ModelSpecification(processor='depparse', package='gsd', dependencies=None)]]]
+    """
     processor_list = defaultdict(list)
     # resolve processor models
     if processors:
@@ -229,6 +240,15 @@ def maintain_processor_list(resources, lang, package, processors):
     return processor_list
 
 def add_dependencies(resources, lang, processor_list):
+    """
+    Expand the processor_list as given in maintain_processor_list to have the dependencies
+
+    Still a list of model types to ModelSpecifications
+    the dependencies are tuples: name and package
+    for example:
+    [['pos', (ModelSpecification(processor='pos', package='gsd', dependencies=(('pretrain', 'gsd'),)),)],
+     ['depparse', (ModelSpecification(processor='depparse', package='gsd', dependencies=(('pretrain', 'gsd'),)),)]]
+    """
     default_dependencies = resources[lang]['default_dependencies']
     for item in processor_list:
         processor, model_specs = item
@@ -249,6 +269,12 @@ def add_dependencies(resources, lang, processor_list):
     return processor_list
 
 def flatten_processor_list(processor_list):
+    """
+    The flattened processor list is just a list of types & packages
+
+    For example:
+      [['pos', 'gsd'], ['depparse', 'gsd'], ['pretrain', 'gsd']]
+    """
     flattened_processor_list = []
     dependencies_list = []
     for item in processor_list:
@@ -490,9 +516,7 @@ def download(
         unzip(os.path.join(model_dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
-        download_list = maintain_processor_list(
-            resources, lang, package, processors
-        )
+        download_list = maintain_processor_list(resources, lang, package, processors)
         download_list = add_dependencies(resources, lang, download_list)
         download_list = flatten_processor_list(download_list)
         download_models(download_list=download_list,
