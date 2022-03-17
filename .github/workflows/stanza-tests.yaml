@@ -17,7 +17,7 @@ jobs:
           echo "Setting up environment..."
           bash
           . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
-          export STANZA_TEST_HOME=/home/stanzabuild/stanza-github-actions/actions-runner/_work/stanza/stanza/stanza_test
+          export STANZA_TEST_HOME=/scr/stanza_test
           export CORENLP_HOME=$STANZA_TEST_HOME/corenlp_dir
           export CLASSPATH=$CORENLP_HOME/*:
           echo CORENLP_HOME=$CORENLP_HOME
