@@ -37,6 +37,8 @@ DEFAULT_MODEL_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_resources')
 )
 
+PRETRAIN_NAMES = ("pretrain", "forward_charlm", "backward_charlm")
+
 class ResourcesFileNotFoundError(FileNotFoundError):
     def __init__(self, resources_filepath):
         super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
@@ -134,6 +136,16 @@ def sort_processors(processor_list):
         for item in processor_list:
             if item[0] == processor:
                 sorted_list.append(item)
+    # going just by processors in PIPELINE_NAMES, this drops any names
+    # which are not an official processor but might still be useful
+    # check the list and append them to the end
+    # this is especially useful when downloading pretrain or charlm models
+    for processor in processor_list:
+        for item in sorted_list:
+            if processor[0] == item[0]:
+                break
+        else:
+            sorted_list.append(item)
     return sorted_list
 
 def add_mwt(processors, resources, lang):
@@ -153,7 +165,7 @@ def add_mwt(processors, resources, lang):
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
         processors[MWT] = value
 
-def maintain_processor_list(resources, lang, package, processors):
+def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False):
     """
     Given a parsed resources file, language, and possible package
     and/or processors, expands the package to the list of processors
@@ -179,7 +191,8 @@ def maintain_processor_list(resources, lang, package, processors):
             if isinstance(plist, str):
                 plist = [plist]
             if key not in PIPELINE_NAMES:
-                raise UnknownProcessorError(key)
+                if not allow_pretrain or key not in PRETRAIN_NAMES:
+                    raise UnknownProcessorError(key)
             for value in plist:
                 # check if keys and values can be found
                 if key in resources[lang] and value in resources[lang][key]:
@@ -527,7 +540,7 @@ def download(
         unzip(os.path.join(model_dir, lang), 'default.zip')
     # Customize: maintain download list
     else:
-        download_list = maintain_processor_list(resources, lang, package, processors)
+        download_list = maintain_processor_list(resources, lang, package, processors, allow_pretrain=True)
         download_list = add_dependencies(resources, lang, download_list)
         download_list = flatten_processor_list(download_list)
         download_models(download_list=download_list,
