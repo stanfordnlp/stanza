@@ -37,6 +37,11 @@ DEFAULT_MODEL_DIR = os.getenv(
     os.path.join(HOME_DIR, 'stanza_resources')
 )
 
+class ResourcesFileNotFoundError(FileNotFoundError):
+    def __init__(self, resources_filepath):
+        super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
+        self.resources_filepath = resources_filepath
+
 class UnknownProcessorError(ValueError):
     def __init__(self, unknown):
         super().__init__(f"Unknown processor type requested: {unknown}")
@@ -378,7 +383,7 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
 
     return lang, model_dir, package, processors
 
-def download_resources_json(model_dir,
+def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
                             resources_url=DEFAULT_RESOURCES_URL,
                             resources_branch=None,
                             resources_version=DEFAULT_RESOURCES_VERSION,
@@ -401,6 +406,18 @@ def download_resources_json(model_dir,
     )
 
 
+def load_resources_json(model_dir=DEFAULT_MODEL_DIR):
+    """
+    Unpack the resources json file from the given model_dir
+    """
+    resources_filepath = os.path.join(model_dir, 'resources.json')
+    if not os.path.exists(resources_filepath):
+        raise ResourcesFileNotFoundError(resources_filepath)
+    with open(resources_filepath) as fin:
+        resources = json.load(fin)
+    return resources
+
+
 def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
                              resources_url=DEFAULT_RESOURCES_URL,
                              resources_branch=None,
@@ -409,17 +426,14 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
     """
     List the non-alias languages in the resources file
     """
-    download_resources_json(model_dir, resources_url, resources_branch,
-                            resources_version, proxies)
-    with open(os.path.join(model_dir, 'resources.json')) as fin:
-        resources = json.load(fin)
+    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    resources = load_resources_json(model_dir)
     # isinstance(str) is because of fields such as "url"
     # 'alias' is because we want to skip German, alias of de, for example
     languages = [lang for lang in resources
                  if not isinstance(resources[lang], str) and 'alias' not in resources[lang]]
     languages = sorted(languages)
     return languages
-
 
 def expand_model_url(resources, model_url):
     """
@@ -485,11 +499,8 @@ def download(
         lang, model_dir, package, processors
     )
 
-    download_resources_json(model_dir, resources_url, resources_branch,
-                            resources_version, proxies)
-    # unpack results
-    with open(os.path.join(model_dir, 'resources.json')) as fin:
-        resources = json.load(fin)
+    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    resources = load_resources_json(model_dir)
     if lang not in resources:
         raise ValueError(f'Unsupported language: {lang}.')
     if 'alias' in resources[lang]:

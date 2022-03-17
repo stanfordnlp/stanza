@@ -25,7 +25,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -41,11 +41,6 @@ class DownloadMethod(Enum):
     NONE = 1
     REUSE_RESOURCES = 2
     DOWNLOAD_RESOURCES = 3
-
-class ResourcesFileNotFoundError(FileNotFoundError):
-    def __init__(self, resources_filepath):
-        super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
-        self.resources_filepath = resources_filepath
 
 class LanguageNotDownloadedError(FileNotFoundError):
     def __init__(self, lang, lang_dir, model_path):
@@ -196,11 +191,7 @@ class Pipeline:
 
         # Load resources.json to obtain latest packages.
         logger.debug('Loading resource file...')
-        resources_filepath = os.path.join(self.dir, 'resources.json')
-        if not os.path.exists(resources_filepath):
-            raise ResourcesFileNotFoundError(resources_filepath)
-        with open(resources_filepath) as infile:
-            resources = json.load(infile)
+        resources = load_resources_json(self.dir)
         if lang in resources:
             if 'alias' in resources[lang]:
                 logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
