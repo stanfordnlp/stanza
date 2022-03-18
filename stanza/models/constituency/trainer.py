@@ -489,7 +489,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     repairs_used = Counter()
     fake_transitions_used = 0
 
-    for interval_start in tqdm(interval_starts, postfix="Batch"):
+    for interval_start in tqdm(interval_starts, postfix="Epoch %d" % epoch):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
         new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args)
 
