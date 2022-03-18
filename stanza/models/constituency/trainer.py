@@ -489,9 +489,9 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     repairs_used = Counter()
     fake_transitions_used = 0
 
-    for interval_start in tqdm(interval_starts, postfix="Epoch %d" % epoch):
+    for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args)
+        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, batch_idx, model, optimizer, batch, transition_tensors, model_loss_function, args)
 
         transitions_correct += new_tc
         transitions_incorrect += new_ti
@@ -510,7 +510,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_loss, total_correct, total_incorrect
 
-def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, model_loss_function, args):
+def train_model_one_batch(epoch, batch_idx, model, optimizer, batch, transition_tensors, model_loss_function, args):
     """
     Train the model for one batch
 
@@ -606,7 +606,7 @@ def train_model_one_batch(epoch, model, optimizer, batch, transition_tensors, mo
     tree_loss.backward()
     if args['watch_regex']:
         matched = False
-        logger.info("Watching %s", args['watch_regex'])
+        logger.info("Watching %s   ... epoch %d batch %d", args['watch_regex'], epoch, batch_idx)
         watch_regex = re.compile(args['watch_regex'])
         for n, p in model.named_parameters():
             if watch_regex.search(n):
