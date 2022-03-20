@@ -3,7 +3,6 @@ Processor for performing dependency parsing
 """
 
 from stanza.models.common import doc
-from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import unsort
 from stanza.models.depparse.data import DataLoader
 from stanza.models.depparse.trainer import Trainer
@@ -31,8 +30,8 @@ class DepparseProcessor(UDProcessor):
         else:
             self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_model(self, config, use_gpu):
-        self._pretrain = Pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
+    def _set_up_model(self, config, pipeline, use_gpu):
+        self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):

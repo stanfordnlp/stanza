@@ -3,7 +3,6 @@ Processor for performing part-of-speech tagging
 """
 
 from stanza.models.common import doc
-from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_tqdm, unsort
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
@@ -20,9 +19,9 @@ class POSProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         # get pretrained word vectors
-        self._pretrain = Pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
+        self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         # set up trainer
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
         self._tqdm = 'tqdm' in config and config['tqdm']

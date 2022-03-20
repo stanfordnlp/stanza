@@ -32,7 +32,7 @@ class TokenizeProcessor(UDProcessor):
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
