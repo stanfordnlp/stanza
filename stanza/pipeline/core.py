@@ -14,6 +14,7 @@ import os
 from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza.pipeline.langid_processor import LangIDProcessor
@@ -177,6 +178,10 @@ class Pipeline:
 
         # set global logging level
         set_logging_level(logging_level, verbose)
+
+        # processors can use this to save on the effort of loading
+        # large sub-models, such as pretrained embeddings, bert, etc
+        self.foundation_cache = FoundationCache()
 
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
             (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):

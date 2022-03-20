@@ -13,7 +13,6 @@ import stanza.models.classifiers.cnn_classifier as cnn_classifier
 
 from stanza.models.common import doc
 from stanza.models.common.char_model import CharacterLanguageModel
-from stanza.models.common.pretrain import Pretrain
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
@@ -27,10 +26,10 @@ class SentimentProcessor(UDProcessor):
     # default batch size, measured in words per batch
     DEFAULT_BATCH_SIZE = 5000
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         # get pretrained word vectors
         pretrain_path = config.get('pretrain_path', None)
-        self._pretrain = Pretrain(pretrain_path) if pretrain_path else None
+        self._pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
         forward_charlm_path = config.get('forward_charlm_path', None)
         charmodel_forward = CharacterLanguageModel.load(forward_charlm_path, finetune=False) if forward_charlm_path else None
         backward_charlm_path = config.get('backward_charlm_path', None)
