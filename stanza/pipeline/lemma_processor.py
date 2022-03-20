@@ -29,7 +29,7 @@ class LemmaProcessor(UDProcessor):
     def use_identity(self):
         return self._use_identity
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         if config.get('use_identity') in ['True', True]:
             self._use_identity = True
             self._config = config

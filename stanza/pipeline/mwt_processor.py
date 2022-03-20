@@ -17,7 +17,7 @@ class MWTProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
 
     def process(self, document):

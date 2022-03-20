@@ -23,6 +23,7 @@ from torch import nn
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.char_model import CharacterLanguageModel
+from stanza.models.common.foundation_cache import load_bert
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -68,7 +69,7 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False):
+    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False, foundation_cache=None):
         """
         Load back a model and possibly its optimizer.
 
@@ -89,7 +90,7 @@ class Trainer:
         unary_limit = params.get("unary_limit", UNARY_LIMIT)
 
         if model_type == 'LSTM':
-            bert_model, bert_tokenizer = load_bert(params['config'].get('bert_model', None))
+            bert_model, bert_tokenizer = load_bert(params['config'].get('bert_model', None), foundation_cache)
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -152,21 +153,6 @@ BERT_ARGS = {
     "vinai/phobert-base": { "use_fast": True },
     "vinai/phobert-large": { "use_fast": True },
 }
-
-def load_bert(model_name):
-    if model_name:
-        from transformers import AutoModel, AutoTokenizer
-        # such as: "vinai/phobert-base"
-        bert_model = AutoModel.from_pretrained(model_name)
-        # note that use_fast is the default
-        bert_args = BERT_ARGS.get(model_name, dict())
-        if not model_name.startswith("vinai/phobert"):
-            bert_args["add_prefix_space"] = True
-        bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
-        return bert_model, bert_tokenizer
-
-    return None, None
-
 
 def verify_transitions(trees, sequences, transition_scheme, unary_limit):
     """

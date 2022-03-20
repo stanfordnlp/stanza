@@ -156,13 +156,13 @@ class UDProcessor(Processor):
         self._trainer = None
         self._vocab = None
         if not hasattr(self, '_variant'):
-            self._set_up_model(config, use_gpu)
+            self._set_up_model(config, pipeline, use_gpu)
 
         # build the final config for the processor
         self._set_up_final_config(config)
 
     @abstractmethod
-    def _set_up_model(self, config, gpu):
+    def _set_up_model(self, config, pipeline, gpu):
         pass
 
     def _set_up_final_config(self, config):

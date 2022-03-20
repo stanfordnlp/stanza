@@ -28,7 +28,7 @@ class LangIDProcessor(UDProcessor):
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         batch_size = config.get("batch_size", 64)
         self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu,
                                         batch_size=batch_size, lang_subset=config.get("lang_subset"))

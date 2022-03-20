@@ -12,7 +12,6 @@ ClassifierProcessor and have "sentiment" be an option.
 import stanza.models.constituency.trainer as trainer
 
 from stanza.models.common import doc
-from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_tqdm
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -36,10 +35,10 @@ class ConstituencyProcessor(UDProcessor):
         else:
             self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         # get pretrained word vectors
         pretrain_path = config.get('pretrain_path', None)
-        self._pretrain = Pretrain(pretrain_path) if pretrain_path else None
+        self._pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
         # set up model
         charlm_forward_file = config.get('forward_charlm_path', None)
         charlm_backward_file = config.get('backward_charlm_path', None)
@@ -47,7 +46,8 @@ class ConstituencyProcessor(UDProcessor):
                                            pt=self._pretrain,
                                            forward_charlm=trainer.load_charlm(charlm_forward_file),
                                            backward_charlm=trainer.load_charlm(charlm_backward_file),
-                                           use_gpu=use_gpu)
+                                           use_gpu=use_gpu,
+                                           foundation_cache=pipeline.foundation_cache)
         self._model.model.eval()
         # batch size counted as sentences
         self._batch_size = int(config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE))

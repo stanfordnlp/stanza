@@ -7,14 +7,13 @@ import logging
 import torch
 from torch import nn
 
+from stanza.models.common.foundation_cache import load_bert
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common import utils, loss
 from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.crf import viterbi_decode
-from stanza.models.common.bert_embedding import load_bert 
-
 
 logger = logging.getLogger('stanza')
 
@@ -65,17 +64,17 @@ def fix_singleton_tags(tags):
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
-                 train_classifier_only=False):
+                 train_classifier_only=False, foundation_cache=None):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file, args)
+            self.load(model_file, args, foundation_cache)
         else:
             assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.bert_model, self.bert_tokenizer = load_bert(args['bert_model'])
+            self.bert_model, self.bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
             self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
 
         if train_classifier_only:
@@ -153,7 +152,7 @@ class Trainer(BaseTrainer):
         except:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, args=None):
+    def load(self, filename, args=None, foundation_cache=None):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -161,7 +160,7 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
-        self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None))
+        self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None), foundation_cache)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.model = NERTagger(self.args, self.vocab, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
         self.model.load_state_dict(checkpoint['model'], strict=False)

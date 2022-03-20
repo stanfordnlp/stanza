@@ -30,7 +30,7 @@ class NERProcessor(UDProcessor):
             dependencies = [x.get(dep_name) for x in config.get('dependencies', [])]
         return dependencies
 
-    def _set_up_model(self, config, use_gpu):
+    def _set_up_model(self, config, pipeline, use_gpu):
         # set up trainer
         model_paths = config.get('model_path')
         if isinstance(model_paths, str):
@@ -44,7 +44,7 @@ class NERProcessor(UDProcessor):
             logger.debug("Loading %s with forward charlm %s and backward charlm %s", model_path, charlm_forward, charlm_backward)
             args = {'charlm_forward_file': charlm_forward,
                     'charlm_backward_file': charlm_backward}
-            trainer = Trainer(args=args, model_file=model_path, use_cuda=use_gpu)
+            trainer = Trainer(args=args, model_file=model_path, use_cuda=use_gpu, foundation_cache=pipeline.foundation_cache)
             self.trainers.append(trainer)
 
         self._trainer = self.trainers[0]
