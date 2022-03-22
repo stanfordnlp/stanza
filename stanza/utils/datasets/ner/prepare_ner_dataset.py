@@ -220,7 +220,11 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
     for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, shard, suffix))
         if not os.path.exists(input_filename):
-            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+            alt_filename = os.path.join(base_input_path, '%s.%s' % (shard, suffix))
+            if os.path.exists(alt_filename):
+                input_filename = alt_filename
+            else:
+                raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
