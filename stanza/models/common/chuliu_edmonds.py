@@ -45,6 +45,44 @@ def tarjan(tree):
             strong_connect(i)
     return cycles
 
+def process_cycle(tree, cycle, scores):
+    """
+    Build a subproblem with one cycle broken
+    """
+    # indices of cycle in original tree; (c) in t
+    cycle_locs = np.where(cycle)[0]
+    # heads of cycle in original tree; (c) in t
+    cycle_subtree = tree[cycle]
+    # scores of cycle in original tree; (c) in R
+    cycle_scores = scores[cycle, cycle_subtree]
+    # total score of cycle; () in R
+    cycle_score = cycle_scores.sum()
+
+    # locations of noncycle; (t) in [0,1]
+    noncycle = np.logical_not(cycle)
+    # indices of noncycle in original tree; (n) in t
+    noncycle_locs = np.where(noncycle)[0]
+    #print(cycle_locs, noncycle_locs)
+
+    # scores of cycle's potential heads; (c x n) - (c) + () -> (n x c) in R
+    metanode_head_scores = scores[cycle][:,noncycle] - cycle_scores[:,None] + cycle_score
+    # scores of cycle's potential dependents; (n x c) in R
+    metanode_dep_scores = scores[noncycle][:,cycle]
+    # best noncycle head for each cycle dependent; (n) in c
+    metanode_heads = np.argmax(metanode_head_scores, axis=0)
+    # best cycle head for each noncycle dependent; (n) in c
+    metanode_deps = np.argmax(metanode_dep_scores, axis=1)
+
+    # scores of noncycle graph; (n x n) in R
+    subscores = scores[noncycle][:,noncycle]
+    # pad to contracted graph; (n+1 x n+1) in R
+    subscores = np.pad(subscores, ( (0,1) , (0,1) ), 'constant')
+    # set the contracted graph scores of cycle's potential heads; (c x n)[:, (n) in n] in R -> (n) in R
+    subscores[-1, :-1] = metanode_head_scores[metanode_heads, np.arange(len(noncycle_locs))]
+    # set the contracted graph scores of cycle's potential dependents; (n x c)[(n) in n] in R-> (n) in R
+    subscores[:-1,-1] = metanode_dep_scores[np.arange(len(noncycle_locs)), metanode_deps]
+    return subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps
+
 def chuliu_edmonds(scores):
     """"""
 
@@ -59,40 +97,8 @@ def chuliu_edmonds(scores):
         return tree
     else:
         # t = len(tree); c = len(cycle); n = len(noncycle)
-        # locations of cycle; (t) in [0,1]
-        cycle = cycles.pop()
-        # indices of cycle in original tree; (c) in t
-        cycle_locs = np.where(cycle)[0]
-        # heads of cycle in original tree; (c) in t
-        cycle_subtree = tree[cycle]
-        # scores of cycle in original tree; (c) in R
-        cycle_scores = scores[cycle, cycle_subtree]
-        # total score of cycle; () in R
-        cycle_score = cycle_scores.sum()
-
-        # locations of noncycle; (t) in [0,1]
-        noncycle = np.logical_not(cycle)
-        # indices of noncycle in original tree; (n) in t
-        noncycle_locs = np.where(noncycle)[0]
-        #print(cycle_locs, noncycle_locs)
-
-        # scores of cycle's potential heads; (c x n) - (c) + () -> (n x c) in R
-        metanode_head_scores = scores[cycle][:,noncycle] - cycle_scores[:,None] + cycle_score
-        # scores of cycle's potential dependents; (n x c) in R
-        metanode_dep_scores = scores[noncycle][:,cycle]
-        # best noncycle head for each cycle dependent; (n) in c
-        metanode_heads = np.argmax(metanode_head_scores, axis=0)
-        # best cycle head for each noncycle dependent; (n) in c
-        metanode_deps = np.argmax(metanode_dep_scores, axis=1)
-
-        # scores of noncycle graph; (n x n) in R
-        subscores = scores[noncycle][:,noncycle]
-        # pad to contracted graph; (n+1 x n+1) in R
-        subscores = np.pad(subscores, ( (0,1) , (0,1) ), 'constant')
-        # set the contracted graph scores of cycle's potential heads; (c x n)[:, (n) in n] in R -> (n) in R
-        subscores[-1, :-1] = metanode_head_scores[metanode_heads, np.arange(len(noncycle_locs))]
-        # set the contracted graph scores of cycle's potential dependents; (n x c)[(n) in n] in R-> (n) in R
-        subscores[:-1,-1] = metanode_dep_scores[np.arange(len(noncycle_locs)), metanode_deps]
+        # cycles.pop(): locations of cycle; (t) in [0,1]
+        subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps = process_cycle(tree, cycles.pop(), scores)
 
         # MST with contraction; (n+1) in n+1
         contracted_tree = chuliu_edmonds(subscores)
