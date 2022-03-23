@@ -127,7 +127,7 @@ def prepare_scores(scores):
     scores[0,0] = 0
 
 def chuliu_edmonds(scores):
-    #subtree_stack = deque()
+    subtree_stack = []
 
     prepare_scores(scores)
     tree = np.argmax(scores, axis=1)
@@ -137,23 +137,30 @@ def chuliu_edmonds(scores):
     #print(cycles)
 
     # recursive implementation:
-    if cycles:
-        # t = len(tree); c = len(cycle); n = len(noncycle)
-        # cycles.pop(): locations of cycle; (t) in [0,1]
-        subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps = process_cycle(tree, cycles.pop(), scores)
-        # MST with contraction; (n+1) in n+1
-        contracted_tree = chuliu_edmonds(subscores)
-        tree = expand_contracted_tree(tree, contracted_tree, cycle_locs, noncycle_locs, metanode_heads, metanode_deps)
+    #if cycles:
+    #    # t = len(tree); c = len(cycle); n = len(noncycle)
+    #    # cycles.pop(): locations of cycle; (t) in [0,1]
+    #    subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps = process_cycle(tree, cycles.pop(), scores)
+    #    # MST with contraction; (n+1) in n+1
+    #    contracted_tree = chuliu_edmonds(subscores)
+    #    tree = expand_contracted_tree(tree, contracted_tree, cycle_locs, noncycle_locs, metanode_heads, metanode_deps)
     # unfortunately, while the recursion is simpler to understand, it can get too deep for python's stack limit
+    # so instead we make our own recursion, with blackjack and (you know how it goes)
 
-    if cycles:
+    while cycles:
         # t = len(tree); c = len(cycle); n = len(noncycle)
         # cycles.pop(): locations of cycle; (t) in [0,1]
         subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps = process_cycle(tree, cycles.pop(), scores)
+        subtree_stack.append((tree, cycles, scores, subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps))
 
-        # MST with contraction; (n+1) in n+1
-        contracted_tree = chuliu_edmonds(subscores)
+        scores = subscores
+        prepare_scores(scores)
+        tree = np.argmax(scores, axis=1)
+        cycles = tarjan(tree)
 
+    while len(subtree_stack) > 0:
+        contracted_tree = tree
+        (tree, cycles, scores, subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps) = subtree_stack.pop()
         tree = expand_contracted_tree(tree, contracted_tree, cycle_locs, noncycle_locs, metanode_heads, metanode_deps)
 
     return tree
