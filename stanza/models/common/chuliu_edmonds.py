@@ -117,17 +117,35 @@ def expand_contracted_tree(tree, contracted_tree, cycle_locs, noncycle_locs, met
     #print(4, new_tree)
     return new_tree
 
-
-def chuliu_edmonds(scores):
-    """"""
-
+def prepare_scores(scores):
+    """
+    Alter the scores matrix to avoid self loops and handle the root
+    """
+    # prevent self-loops, set up the root location
     np.fill_diagonal(scores, -float('inf')) # prevent self-loops
     scores[0] = -float('inf')
     scores[0,0] = 0
+
+def chuliu_edmonds(scores):
+    #subtree_stack = deque()
+
+    prepare_scores(scores)
     tree = np.argmax(scores, axis=1)
     cycles = tarjan(tree)
+
     #print(scores)
     #print(cycles)
+
+    # recursive implementation:
+    if cycles:
+        # t = len(tree); c = len(cycle); n = len(noncycle)
+        # cycles.pop(): locations of cycle; (t) in [0,1]
+        subscores, cycle_locs, noncycle_locs, metanode_heads, metanode_deps = process_cycle(tree, cycles.pop(), scores)
+        # MST with contraction; (n+1) in n+1
+        contracted_tree = chuliu_edmonds(subscores)
+        tree = expand_contracted_tree(tree, contracted_tree, cycle_locs, noncycle_locs, metanode_heads, metanode_deps)
+    # unfortunately, while the recursion is simpler to understand, it can get too deep for python's stack limit
+
     if cycles:
         # t = len(tree); c = len(cycle); n = len(noncycle)
         # cycles.pop(): locations of cycle; (t) in [0,1]
