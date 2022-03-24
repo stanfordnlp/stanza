@@ -163,10 +163,17 @@ class Document(StanzaObject):
 
         self._count_words()
 
-        if comments:
-            for sentence, sentence_comments in zip(self.sentences, comments):
-                for comment in sentence_comments:
-                    sentence.add_comment(comment)
+        # Add a #text comment to each sentence in a doc if it doesn't already exist
+        if not comments:
+            comments = [[] for x in self.sentences]
+        else:
+            comments = [list(x) for x in comments]
+        for sentence, sentence_comments in zip(self.sentences, comments):
+            if sentence.text and not any(x.startswith("# text") or x.startswith("#text") for x in sentence_comments):
+                # split/join to handle weird whitespace, especially newlines
+                sentence_comments.append("# text = " + ' '.join(sentence.text.split()))
+            for comment in sentence_comments:
+                sentence.add_comment(comment)
 
     def _count_words(self):
         """
