@@ -172,6 +172,11 @@ class Document(StanzaObject):
             if sentence.text and not any(x.startswith("# text") or x.startswith("#text") for x in sentence_comments):
                 # split/join to handle weird whitespace, especially newlines
                 sentence_comments.append("# text = " + ' '.join(sentence.text.split()))
+            elif not sentence.text:
+                for comment in sentence_comments:
+                    if comment.startswith("# text ="):
+                        sentence.text = comment.split("=", 1)[-1].strip()
+                        break
             for comment in sentence_comments:
                 sentence.add_comment(comment)
 
