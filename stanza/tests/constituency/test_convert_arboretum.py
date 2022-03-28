@@ -9,6 +9,7 @@ import tempfile
 
 import pytest
 
+from stanza.server import tsurgeon
 from stanza.utils.datasets.constituency import convert_arboretum
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -174,7 +175,8 @@ def test_projective_example():
     assert str(tree) == expected_tree
     assert [w.word for w in words.values()] == ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', '.']
     assert not convert_arboretum.word_sequence_missing_words(tree)
-    assert tree == convert_arboretum.check_words(tree)
+    with tsurgeon.Tsurgeon() as tsurgeon_processor:
+        assert tree == convert_arboretum.check_words(tree, tsurgeon_processor)
 
     # check that the words can be replaced as expected
     replaced_tree = convert_arboretum.replace_words(tree, words)
@@ -204,7 +206,8 @@ def test_not_fix_example():
 
     tree, words = convert_arboretum.process_tree(sentences[0])
     assert not convert_arboretum.word_sequence_missing_words(tree)
-    assert convert_arboretum.check_words(tree) is None
+    with tsurgeon.Tsurgeon() as tsurgeon_processor:
+        assert convert_arboretum.check_words(tree, tsurgeon_processor) is None
 
 
 def test_fix_proj_example():
@@ -226,5 +229,6 @@ def test_fix_proj_example():
     expected_orig = "(s (fcl (advp (adv s9_1) (adv s9_2)) (vp (v-fin s9_3) (v-pcp2 s9_6)) (prop s9_4) (adv s9_5) (pp (prp s9_7) (np (num s9_8) (n s9_9))) (pu s9_10)))"
     expected_proj = "(s (fcl (advp (adv s9_1) (adv s9_2)) (vp (v-fin s9_3) (prop s9_4) (adv s9_5) (v-pcp2 s9_6)) (pp (prp s9_7) (np (num s9_8) (n s9_9))) (pu s9_10)))"
     assert str(tree) == expected_orig
-    assert str(convert_arboretum.check_words(tree)) == expected_proj
+    with tsurgeon.Tsurgeon() as tsurgeon_processor:
+        assert str(convert_arboretum.check_words(tree, tsurgeon_processor)) == expected_proj
 

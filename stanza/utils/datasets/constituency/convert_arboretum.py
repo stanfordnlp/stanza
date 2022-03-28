@@ -173,7 +173,7 @@ def process_nodes(root_id, words, nodes, visited):
     else:
         raise BrokenLinkError("Unknown id! {}".format(root_id))
 
-def check_words(tree, tsurgeon_processor=None):
+def check_words(tree, tsurgeon_processor):
     """
     Check that the words of a sentence are in order
 
@@ -214,10 +214,7 @@ def check_words(tree, tsurgeon_processor=None):
         #move_tregex = "%s > (__=home > (__=parent > __=grandparent)) . (%s > (__=move > =grandparent))" % (words[word_idx], "|".join(missing_words))
         move_tregex = "%s > (__=home > (__=parent << %s $+ (__=move <<, %s <<- %s)))" % (words[word_idx], words[prev_idx], missing_words, missing_words)
         move_tsurgeon = "move move $+ home"
-        if tsurgeon_processor is None:
-            modified = tsurgeon.process_trees(tree, move_tregex, move_tsurgeon)[0]
-        else:
-            modified = tsurgeon_processor.process(tree, move_tregex, move_tsurgeon)[0]
+        modified = tsurgeon_processor.process(tree, move_tregex, move_tsurgeon)[0]
         if modified == tree:
             # this only happens if the desired fix didn't happen
             #print("Failed to process:\n  {}\n  {} {}".format(tree, prev_label, word_label))
