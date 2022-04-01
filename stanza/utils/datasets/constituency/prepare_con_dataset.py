@@ -92,16 +92,9 @@ from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_t
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
+from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
-
-SHARDS = ("train", "dev", "test")
-
-def write_dataset(datasets, output_dir, dataset_name):
-    for dataset, shard in zip(datasets, SHARDS):
-        output_filename = os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard))
-        print("Writing {} trees to {}".format(len(dataset), output_filename))
-        parse_tree.Tree.write_treebank(dataset, output_filename)
 
 def process_it_turin(paths):
     """
