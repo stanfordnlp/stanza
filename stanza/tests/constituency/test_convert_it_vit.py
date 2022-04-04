@@ -1,7 +1,11 @@
 """
-Test a couple different classes of trees to check the output of the Arboretum conversion
+Test a couple different classes of trees to check the output of the VIT conversion
 
-Note that the text has been removed
+A couple representative trees are included, but hopefully not enough
+to be a problem in terms of our license.
+
+One of the tests is currently disabled as it relies on tregex & tsurgeon features
+not yet released
 """
 
 import io
