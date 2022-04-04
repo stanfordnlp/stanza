@@ -273,12 +273,13 @@ class PartitionedTransformerModule(nn.Module):
     #
     def forward(self, attention_mask, bert_embeddings):
         # Prepares attention mask for feeding into the self-attention
+        device = bert_embeddings[0].device
         if attention_mask:
             valid_token_mask = attention_mask
         else:
             valids = []
             for sent in bert_embeddings:
-                valids.append(torch.ones(len(sent)))
+                valids.append(torch.ones(len(sent), device=device))
 
             padded_data = torch.nn.utils.rnn.pad_sequence(
                 valids,
@@ -288,7 +289,7 @@ class PartitionedTransformerModule(nn.Module):
 
             valid_token_mask = padded_data != -100
 
-        valid_token_mask = valid_token_mask.to(device=bert_embeddings[0].device)
+        valid_token_mask = valid_token_mask.to(device=device)
         padded_embeddings = torch.nn.utils.rnn.pad_sequence(
             bert_embeddings,
             batch_first=True,

@@ -43,7 +43,7 @@ class ConcatSinusoidalEncoding(nn.Module):
         self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x):
-        timing = self.encoding(torch.arange(x.shape[1]))
+        timing = self.encoding(torch.arange(x.shape[1], device=x.device))
         x, timing = torch.broadcast_tensors(x, timing)
         out = torch.cat([x, timing], dim=-1)
         out = self.norm(out)
