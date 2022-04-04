@@ -13,6 +13,9 @@ Also, Finnish Turku dataset, available here:
   - prepare_ner_dataset.py fi_turku
 
 FBK in Italy produced an Italian dataset.
+  - KIND: an Italian Multi-Domain Dataset for Named Entity Recognition
+    Paccosi T. and Palmero Aprosio A.
+    LREC 2022
   The processing here is for a combined .tsv file they sent us.
   - prepare_ner_dataset.py it_fbk
 
