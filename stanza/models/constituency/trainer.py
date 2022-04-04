@@ -477,8 +477,11 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, batch_idx, model, optimizer, batch, transition_tensors, model_loss_function, args)
+        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args)
 
+        optimizer.step()
+        optimizer.zero_grad()
+        
         transitions_correct += new_tc
         transitions_incorrect += new_ti
         repairs_used += new_ru
@@ -496,7 +499,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_loss, total_correct, total_incorrect
 
-def train_model_one_batch(epoch, batch_idx, model, optimizer, batch, transition_tensors, model_loss_function, args):
+def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args):
     """
     Train the model for one batch
 
@@ -601,9 +604,6 @@ def train_model_one_batch(epoch, batch_idx, model, optimizer, batch, transition_
         if not matched:
             logger.info("  (none found!)")
     batch_loss = tree_loss.item()
-
-    optimizer.step()
-    optimizer.zero_grad()
 
     return transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, batch_loss
 
