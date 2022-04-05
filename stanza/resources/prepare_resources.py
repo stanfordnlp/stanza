@@ -263,12 +263,16 @@ def split_model_name(model):
 def get_con_dependencies(lang, package):
     # so far, this invariant is true:
     # constituency models use the default pretrain and charlm for the language
-    charlm_package = default_charlms[lang]
     pretrain_package = default_treebanks[lang]
+    dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
-    return [{'model': 'forward_charlm', 'package': charlm_package},
-            {'model': 'backward_charlm', 'package': charlm_package},
-            {'model': 'pretrain', 'package': pretrain_package}]
+    # sometimes there is no charlm for a language that has constituency, though
+    charlm_package = default_charlms.get(lang, None)
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
 
 
 def get_ner_dependencies(lang, package):
