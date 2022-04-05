@@ -195,8 +195,11 @@ default_sentiment = {
 default_constituency = {
   "da": "arboretum",
   "en": "wsj",
-  "it": "turin-inorder",
-  "zh-hans": "ctb7",
+  "it": "turin",
+  "ja": "alt",
+  "pt": "cintil",
+  "tr": "starlang",
+  "zh-hans": "ctb",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
