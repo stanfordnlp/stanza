@@ -392,6 +392,16 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
+class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used'])):
+    def __add__(self, other):
+        transitions_correct = self.transitions_correct + other.transitions_correct
+        transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
+        repairs_used = self.repairs_used + other.repairs_used
+        fake_transitions_used = self.fake_transitions_used + other.fake_transitions_used
+        epoch_loss = self.epoch_loss + other.epoch_loss
+        return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
+
+
 def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
@@ -448,7 +458,7 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         epoch_data = epoch_data[:args['epoch_size']]
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_loss, transitions_correct, transitions_incorrect = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
+        epoch_stats = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args, evaluator)
@@ -459,45 +469,37 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             trainer.save(model_filename, save_optimizer=True)
         if model_latest_filename:
             trainer.save(model_latest_filename, save_optimizer=True)
-        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, transitions_correct, transitions_incorrect, epoch_loss, epoch, f1, best_epoch, best_f1))
+        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1))
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
-    epoch_loss = 0.0
-
     model = trainer.model
     optimizer = trainer.optimizer
 
-    transitions_correct = Counter()
-    transitions_incorrect = Counter()
-    repairs_used = Counter()
-    fake_transitions_used = 0
+    epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0)
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        new_tc, new_ti, new_ru, ftu, batch_loss = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args)
 
         optimizer.step()
         optimizer.zero_grad()
-        
-        transitions_correct += new_tc
-        transitions_incorrect += new_ti
-        repairs_used += new_ru
-        fake_transitions_used += ftu
-        epoch_loss += batch_loss
 
-    total_correct = sum(v for _, v in transitions_correct.items())
-    total_incorrect = sum(v for _, v in transitions_incorrect.items())
-    logger.info("Transitions correct: %d\n  %s", total_correct, str(transitions_correct))
-    logger.info("Transitions incorrect: %d\n  %s", total_incorrect, str(transitions_incorrect))
-    if len(repairs_used) > 0:
-        logger.info("Oracle repairs:\n  %s", repairs_used)
-    if fake_transitions_used > 0:
-        logger.info("Fake transitions used: %d", fake_transitions_used)
+        epoch_stats = epoch_stats + batch_stats
 
-    return epoch_loss, total_correct, total_incorrect
+    # TODO: refactor the logging?
+    total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
+    total_incorrect = sum(v for _, v in epoch_stats.transitions_incorrect.items())
+    logger.info("Transitions correct: %d\n  %s", total_correct, str(epoch_stats.transitions_correct))
+    logger.info("Transitions incorrect: %d\n  %s", total_incorrect, str(epoch_stats.transitions_incorrect))
+    if len(epoch_stats.repairs_used) > 0:
+        logger.info("Oracle repairs:\n  %s", epoch_stats.repairs_used)
+    if epoch_stats.fake_transitions_used > 0:
+        logger.info("Fake transitions used: %d", epoch_stats.fake_transitions_used)
+
+    return epoch_stats
 
 def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args):
     """
@@ -605,7 +607,7 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
             logger.info("  (none found!)")
     batch_loss = tree_loss.item()
 
-    return transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, batch_loss
+    return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
 
 def build_batch_from_trees(batch_size, data_iterator, model):
     """
