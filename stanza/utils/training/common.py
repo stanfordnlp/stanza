@@ -239,9 +239,11 @@ def find_wordvec_pretrain(language, default_pretrain):
     logger.info(f"Using pretrain found in {pt}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pt
 
-def find_charlm(direction, language, charlm):
+def find_charlm_file(direction, language, charlm):
     """
     Return the path to the forward or backward charlm if it exists for the given package
+
+    If we can figure out the package, but can't find it anywhere, we try to download it
     """
     saved_path = 'saved_models/charlm/{}_{}_{}_charlm.pt'.format(language, charlm, direction)
     if os.path.exists(saved_path):
@@ -269,8 +271,8 @@ def build_charlm_args(language, charlm, base_args=True):
     If specified, return forward and backward charlm args
     """
     if charlm:
-        forward = find_charlm('forward', language, charlm)
-        backward = find_charlm('backward', language, charlm)
+        forward = find_charlm_file('forward', language, charlm)
+        backward = find_charlm_file('backward', language, charlm)
         char_args = ['--charlm_forward_file', forward,
                      '--charlm_backward_file', backward]
         if not base_args:
