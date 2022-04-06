@@ -51,6 +51,9 @@ class FoundationCache:
             return self.pretrains[filename]
 
 def load_bert(model_name, foundation_cache=None):
+    """
+    Load a bert, possibly using a foundation cache, ignoring it if not present
+    """
     if foundation_cache is None:
         return bert_embedding.load_bert(model_name)
     else:
