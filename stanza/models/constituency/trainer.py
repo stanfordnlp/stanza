@@ -46,12 +46,13 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, model, optimizer=None):
+    def __init__(self, args, model, optimizer=None):
+        self.args = args
         self.model = model
         self.optimizer = optimizer
 
     def uses_xpos(self):
-        return self.model.args['retag_package'] is not None and self.model.args['retag_method'] == 'xpos'
+        return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
 
     def save(self, filename, save_optimizer=True):
         """
@@ -89,8 +90,10 @@ class Trainer:
         params = checkpoint.get('params', checkpoint)
         unary_limit = params.get("unary_limit", UNARY_LIMIT)
 
+        saved_args = dict(params['config'])
+        saved_args.update(args)
         if model_type == 'LSTM':
-            bert_model, bert_tokenizer = load_bert(params['config'].get('bert_model', None), foundation_cache)
+            bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -104,7 +107,7 @@ class Trainer:
                               root_labels=params['root_labels'],
                               constituent_opens=params['constituent_opens'],
                               unary_limit=unary_limit,
-                              args=params['config'])
+                              args=saved_args)
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
@@ -113,9 +116,7 @@ class Trainer:
             model.cuda()
 
         if load_optimizer:
-            optimizer_args = dict(params['config'])
-            optimizer_args.update(args)
-            optimizer = build_optimizer(optimizer_args, model)
+            optimizer = build_optimizer(saved_args, model)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -128,7 +129,7 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(model=model, optimizer=optimizer)
+        return Trainer(args=saved_args, model=model, optimizer=optimizer)
 
 
 def load_pretrain(args):
@@ -316,7 +317,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
 
         optimizer = build_optimizer(args, model)
 
-        trainer = Trainer(model, optimizer)
+        trainer = Trainer(args, model, optimizer)
 
     return trainer, train_sequences, train_transitions
 
