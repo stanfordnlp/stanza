@@ -46,6 +46,12 @@ The processing goes as follows:
   - rearrange clitics which are occasionally non-projective
 - replace the words in the con tree with the dep tree's words
   this takes advantage of spelling & capitalization fixes
+
+NOTE: there is a small update to the dataset from Prof. Delmonte.
+Internally to Stanford, feel free to ask Chris or John for the updates.
+Otherwise, if this note is still here, that means the updates haven't
+reached ELRA yet.
+Look for the line below "original version with more errors"
 """
 
 from collections import defaultdict, deque
@@ -454,6 +460,7 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
     return updated_tree
 
 # train set:
+#  858: missing close parens in the UD conversion
 # 2388: the problem is inconsistent treatment of s_p_a_
 # 05071: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
@@ -464,7 +471,7 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
 # test set:
 # 04541: similar to another tree which is missed
 # 09785: da riempire inconsistency
-IGNORE_IDS = ["sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
+IGNORE_IDS = ["sent_00856", "sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
@@ -483,7 +490,9 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
     return trees
 
 def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
-    con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
+    # original version with more errors
+    #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
+    con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
@@ -510,8 +519,9 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
             # don't care about the raw text?
             con_tree_map[tree_id] = tree
         except ValueError as e:
+            if num_discarded < 10:
+                print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
             num_discarded = num_discarded + 1
-            #print("Error in {}: {}".format(sentence[0], e))
             #raise ValueError("Could not process line %d" % idx) from e
 
     print("Discarded %d trees.  Have %d trees left" % (num_discarded, len(con_tree_map)))
