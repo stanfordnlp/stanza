@@ -87,7 +87,7 @@ class Trainer:
         logger.debug("Loaded model from %s", filename)
 
         model_type = checkpoint['model_type']
-        params = checkpoint.get('params', checkpoint)
+        params = checkpoint['params']
         unary_limit = params.get("unary_limit", UNARY_LIMIT)
 
         saved_args = dict(params['config'])
