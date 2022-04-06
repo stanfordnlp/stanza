@@ -46,7 +46,7 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, model=None, optimizer=None):
+    def __init__(self, model, optimizer=None):
         self.model = model
         self.optimizer = optimizer
 
