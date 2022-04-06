@@ -30,6 +30,14 @@ class UnclosedTreeError(ValueError):
         super().__init__("Found an unfinished tree (missing close brackets).  Tree started on line %d" % line_num)
         self.line_num = line_num
 
+class ExtraCloseTreeError(ValueError):
+    """
+    A tree looked like (Foo))
+    """
+    def __init__(self, line_num):
+        super().__init__("Found a broken tree (extra close brackets).  Tree started on line %d" % line_num)
+        self.line_num = line_num
+
 class UnlabeledTreeError(ValueError):
     """
     A tree had no label, such as ((Foo) (Bar))
@@ -172,7 +180,7 @@ def read_trees(text, broken_ok=False):
             trees.append(next_tree)
             token = next(token_iterator, None)
         elif token == CLOSE_PAREN:
-            raise ValueError("Tree document had too many close parens!  Line number %d" % token_iterator.line_num)
+            raise ExtraCloseTreeError(token_iterator.line_num)
         else:
             raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
 

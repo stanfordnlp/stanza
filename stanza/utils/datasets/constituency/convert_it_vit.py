@@ -61,7 +61,7 @@ import re
 
 from tqdm import tqdm
 
-from stanza.models.constituency import tree_reader
+from stanza.models.constituency.tree_reader import read_trees, UnclosedTreeError, ExtraCloseTreeError
 from stanza.server import tsurgeon
 from stanza.utils.conll import CoNLL
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
@@ -217,7 +217,7 @@ def raw_tree(text):
     new_pieces.append(")")
 
     text = " ".join(new_pieces)
-    trees = tree_reader.read_trees(text)
+    trees = read_trees(text)
     if len(trees) > 1:
         raise ValueError("Unexpected number of trees!")
     return trees[0]
@@ -518,9 +518,15 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
             tree_id = sentence[0].split("=")[-1]
             # don't care about the raw text?
             con_tree_map[tree_id] = tree
+        except UnclosedTreeError as e:
+            num_discarded = num_discarded + 1
+            #print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+        except ExtraCloseTreeError as e:
+            num_discarded = num_discarded + 1
+            #print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
         except ValueError as e:
-            if num_discarded < 10:
-                print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            #if num_discarded < 10:
+            #    print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
             num_discarded = num_discarded + 1
             #raise ValueError("Could not process line %d" % idx) from e
 
