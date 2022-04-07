@@ -3,8 +3,6 @@ import argparse
 import glob
 import logging
 import os
-import re
-import subprocess
 import sys
 
 import stanza.utils.default_paths as default_paths
@@ -12,18 +10,13 @@ from stanza.models.common.constant import treebank_to_short_name
 
 logger = logging.getLogger('stanza')
 
-SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
-
 def project_to_short_name(treebank):
     """
     Project either a treebank or a short name to a short name
 
     TODO: see if treebank_to_short_name can incorporate this
     """
-    if SHORTNAME_RE.match(treebank):
-        return treebank
-    else:
-        return treebank_to_short_name(treebank)
+    return treebank_to_short_name(treebank)
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False):
     """
