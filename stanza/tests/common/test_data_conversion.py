@@ -63,6 +63,7 @@ def test_dict_to_doc_and_doc_to_dict():
     conll = CoNLL.convert_dict(DICT)
     assert conll == CONLL
 
+# sample is two sentences long so that the tests check multiple sentences
 RUSSIAN_SAMPLE="""
 # sent_id = yandex.reviews-f-8xh5zqnmwak3t6p68y4rhwd4e0-1969-9253
 # genre = review
@@ -78,22 +79,38 @@ RUSSIAN_SAMPLE="""
 9	после	после	ADP	_	_	10	case	_	_
 10	спектакля	спектакль	NOUN	_	Animacy=Inan|Case=Gen|Gender=Masc|Number=Sing	7	obl	_	SpaceAfter=No
 11	.	.	PUNCT	_	_	7	punct	_	_
+
+# sent_id = 4
+# genre = social
+# text = В женщине важна верность, а не красота.
+1	В	в	ADP	_	_	2	case	_	_
+2	женщине	женщина	NOUN	_	Animacy=Anim|Case=Loc|Gender=Fem|Number=Sing	3	obl	_	_
+3	важна	важный	ADJ	_	Degree=Pos|Gender=Fem|Number=Sing|Variant=Short	0	root	_	_
+4	верность	верность	NOUN	_	Animacy=Inan|Case=Nom|Gender=Fem|Number=Sing	3	nsubj	_	SpaceAfter=No
+5	,	,	PUNCT	_	_	8	punct	_	_
+6	а	а	CCONJ	_	_	8	cc	_	_
+7	не	не	PART	_	Polarity=Neg	8	advmod	_	_
+8	красота	красота	NOUN	_	Animacy=Inan|Case=Nom|Gender=Fem|Number=Sing	4	conj	_	SpaceAfter=No
+9	.	.	PUNCT	_	_	3	punct	_	_
 """.strip()
 
+RUSSIAN_TEXT = ["Как- то слишком мало цветов получают актёры после спектакля.", "В женщине важна верность, а не красота."]
 
 def check_russian_doc(doc):
     """
     Refactored the test for the Russian doc so we can use it to test various file methods
     """
     lines = RUSSIAN_SAMPLE.split("\n")
-    assert len(doc.sentences) == 1
-    assert len(doc.sentences[0].comments) == 3
+    assert len(doc.sentences) == 2
     assert lines[0] == doc.sentences[0].comments[0]
     assert lines[1] == doc.sentences[0].comments[1]
     assert lines[2] == doc.sentences[0].comments[2]
+    for expected_text, sentence in zip(RUSSIAN_TEXT, doc.sentences):
+        assert expected_text == sentence.text
+        assert len(sentence.comments) == 3
 
     sentences = CoNLL.doc2conll(doc)
-    assert len(sentences) == 1
+    assert len(sentences) == 2
 
     sentence = sentences[0]
     assert len(sentence) == 14
@@ -115,7 +132,7 @@ def test_unusual_misc():
     """
     doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
     sentences = CoNLL.doc2conll(doc)
-    assert len(sentences) == 1
+    assert len(sentences) == 2
     assert len(sentences[0]) == 14
 
     for word in sentences[0]:
