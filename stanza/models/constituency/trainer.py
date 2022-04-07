@@ -60,6 +60,7 @@ class Trainer:
         """
         params = self.model.get_params()
         checkpoint = {
+            'args': self.args,
             'params': params,
             'model_type': 'LSTM',
         }

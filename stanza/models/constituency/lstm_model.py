@@ -958,6 +958,7 @@ class LSTMModel(BaseModel, nn.Module):
             'rare_words': self.rare_words,
             'root_labels': self.root_labels,
             'constituent_opens': self.constituent_opens,
+            'unary_limit': self.unary_limit(),
         }
 
         return params
