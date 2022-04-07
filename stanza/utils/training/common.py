@@ -3,8 +3,6 @@ import glob
 import logging
 import os
 import pathlib
-import re
-import subprocess
 import sys
 import tempfile
 
@@ -104,8 +102,6 @@ def build_argparse():
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
-SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
-
 def main(run_treebank, model_dir, model_name, add_specific_args=None):
     """
     A main program for each of the run_xyz scripts
@@ -157,10 +153,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         if treebank_idx > 0:
             logger.info("=========================================")
 
-        if SHORTNAME_RE.match(treebank):
-            short_name = treebank
-        else:
-            short_name = treebank_to_short_name(treebank)
+        short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
 
         if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
