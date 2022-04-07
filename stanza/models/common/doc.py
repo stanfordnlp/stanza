@@ -6,6 +6,7 @@ import io
 import re
 import json
 import pickle
+import warnings
 
 from stanza.models.ner.utils import decode_from_bioes
 
@@ -159,7 +160,7 @@ class Document(StanzaObject):
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
-            sentence.id = sent_idx
+            sentence.index = sent_idx
 
         self._count_words()
 
@@ -177,6 +178,15 @@ class Document(StanzaObject):
                     if comment.startswith("# text ="):
                         sentence.text = comment.split("=", 1)[-1].strip()
                         break
+            # look for sent_id in the comments
+            # if it's there, overwrite the sent_idx id from above
+            for comment in sentence_comments:
+                if comment.startswith("# sent_id"):
+                    sentence.sent_id = comment.split("=", 1)[-1].strip()
+                    break
+            else: # no sent_id found.  add a comment with our enumerated id
+                sentence.sent_id = str(sentence.index)
+                sentence_comments.append("# sent_id = " + sentence.sent_id)
             for comment in sentence_comments:
                 sentence.add_comment(comment)
 
@@ -429,14 +439,46 @@ class Sentence(StanzaObject):
         self.rebuild_dependencies()
 
     @property
+    def index(self):
+        """
+        Access the index of this sentence within the doc.
+
+        If multiple docs were processed together,
+        the sentence index will continue counting across docs.
+        """
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        """ Set the sentence's index value. """
+        self._index = value
+
+    @property
     def id(self):
-        """ Access the index of this sentence.  Indexed from 1 to match tokens """
-        return self._id
+        """
+        Access the index of this sentence within the doc.
+
+        If multiple docs were processed together,
+        the sentence index will continue counting across docs.
+        """
+        warnings.warn("Use of sentence.id is deprecated.  Please use sentence.index instead", stacklevel=2)
+        return self._index
 
     @id.setter
     def id(self, value):
-        """ Set the sentence's id value. """
-        self._id = value
+        """ Set the sentence's index value. """
+        warnings.warn("Use of sentence.id is deprecated.  Please use sentence.index instead", stacklevel=2)
+        self._index = value
+
+    @property
+    def sent_id(self):
+        """ conll-style sent_id  Will be set from index if unknown """
+        return self._sent_id
+
+    @sent_id.setter
+    def sent_id(self, value):
+        """ Set the sentence's sent_id value. """
+        self._sent_id = value
 
     @property
     def doc(self):

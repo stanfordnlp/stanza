@@ -95,6 +95,7 @@ RUSSIAN_SAMPLE="""
 """.strip()
 
 RUSSIAN_TEXT = ["Как- то слишком мало цветов получают актёры после спектакля.", "В женщине важна верность, а не красота."]
+RUSSIAN_IDS = ["yandex.reviews-f-8xh5zqnmwak3t6p68y4rhwd4e0-1969-9253", "4"]
 
 def check_russian_doc(doc):
     """
@@ -105,8 +106,10 @@ def check_russian_doc(doc):
     assert lines[0] == doc.sentences[0].comments[0]
     assert lines[1] == doc.sentences[0].comments[1]
     assert lines[2] == doc.sentences[0].comments[2]
-    for expected_text, sentence in zip(RUSSIAN_TEXT, doc.sentences):
+    for sent_idx, (expected_text, expected_id, sentence) in enumerate(zip(RUSSIAN_TEXT, RUSSIAN_IDS, doc.sentences)):
         assert expected_text == sentence.text
+        assert expected_id == sentence.sent_id
+        assert sent_idx == sentence.index
         assert len(sentence.comments) == 3
 
     sentences = CoNLL.doc2conll(doc)
