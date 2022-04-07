@@ -87,12 +87,11 @@ class Trainer:
             raise
         logger.debug("Loaded model from %s", filename)
 
-        model_type = checkpoint['model_type']
-        params = checkpoint['params']
-        unary_limit = params.get("unary_limit", UNARY_LIMIT)
-
-        saved_args = dict(params['config'])
+        saved_args = dict(checkpoint['args'])
         saved_args.update(args)
+        params = checkpoint['params']
+
+        model_type = checkpoint['model_type']
         if model_type == 'LSTM':
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
             model = LSTMModel(pretrain=pt,
@@ -107,7 +106,7 @@ class Trainer:
                               rare_words=params['rare_words'],
                               root_labels=params['root_labels'],
                               constituent_opens=params['constituent_opens'],
-                              unary_limit=unary_limit,
+                              unary_limit=params['unary_limit'],
                               args=saved_args)
         else:
             raise ValueError("Unknown model type {}".format(model_type))
