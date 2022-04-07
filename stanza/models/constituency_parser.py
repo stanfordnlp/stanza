@@ -371,7 +371,7 @@ def parse_args(args=None):
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 
     args = parser.parse_args(args=args)
-    if not args.lang and args.shorthand and len(args.shorthand.split("_")) == 2:
+    if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
     if args.cpu:
         args.cuda = False
@@ -419,7 +419,7 @@ def main(args=None):
     elif args['mode'] == 'train' and args['save_latest_name']:
         model_load_file = model_save_latest_file
 
-    if args['retag_package'] is not None:
+    if args['retag_package'] is not None and args['mode'] != 'remove_optimizer':
         if '_' in args['retag_package']:
             lang, package = args['retag_package'].split('_', 1)
         else:
