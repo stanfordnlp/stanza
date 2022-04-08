@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import requests
 import shutil
+import tempfile
 import zipfile
 
 from tqdm.auto import tqdm
@@ -120,14 +121,18 @@ def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
     """
-    ensure_dir(Path(path).parent)
+    basedir = Path(path).parent
+    ensure_dir(basedir)
     if file_exists(path, md5):
         if log_info:
             logger.info(f'File exists: {path}')
         else:
             logger.debug(f'File exists: {path}')
         return
-    download_file(url, path, proxies, raise_for_status)
+    with tempfile.TemporaryDirectory(dir=basedir) as temp:
+        temppath = os.path.join(temp, os.path.split(path)[-1])
+        download_file(url, temppath, proxies, raise_for_status)
+        os.replace(temppath, path)
     assert_file_exists(path, md5)
 
 def sort_processors(processor_list):
