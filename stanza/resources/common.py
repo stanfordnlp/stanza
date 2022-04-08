@@ -129,6 +129,11 @@ def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_
         else:
             logger.debug(f'File exists: {path}')
         return
+    # We write data first to a temporary directory,
+    # then use os.replace() so that multiple processes
+    # running at the same time don't clobber each other
+    # with partially downloaded files
+    # This was especially common with resources.json
     with tempfile.TemporaryDirectory(dir=basedir) as temp:
         temppath = os.path.join(temp, os.path.split(path)[-1])
         download_file(url, temppath, proxies, raise_for_status)
