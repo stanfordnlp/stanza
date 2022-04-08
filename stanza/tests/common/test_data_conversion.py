@@ -168,3 +168,34 @@ def test_zip_file():
 
         doc = CoNLL.conll2doc(input_file=filename, zip_file=zip_file)
         check_russian_doc(doc)
+
+SIMPLE_NER = """
+# text = Teferi's best friend is Karn
+# sent_id = 0
+1	Teferi	_	_	_	_	0	_	_	start_char=0|end_char=6|ner=S-PERSON
+2	's	_	_	_	_	1	_	_	start_char=6|end_char=8|ner=O
+3	best	_	_	_	_	2	_	_	start_char=9|end_char=13|ner=O
+4	friend	_	_	_	_	3	_	_	start_char=14|end_char=20|ner=O
+5	is	_	_	_	_	4	_	_	start_char=21|end_char=23|ner=O
+6	Karn	_	_	_	_	5	_	_	start_char=24|end_char=28|ner=S-PERSON
+""".strip()
+
+def test_ner_conversion():
+    """
+    Test that tokens get properly created with NER tags
+    """
+    doc = CoNLL.conll2doc(input_str=SIMPLE_NER)
+    assert len(doc.sentences) == 1
+    sentence = doc.sentences[0]
+    EXPECTED_NER = ["S-PERSON", "O", "O", "O", "O", "S-PERSON"]
+    for token, ner in zip(sentence.tokens, EXPECTED_NER):
+        assert token.ner == ner
+        # check that the ner, start_char, end_char fields were not put on the token's misc
+        # those should all be set as specific fields on the token
+        assert not token.misc
+        assert len(token.words) == 1
+        # they should also not reach the word's misc field
+        assert not token.words[0].misc
+
+    conll = CoNLL.doc2conll(doc)
+    assert "\n".join(conll[0]) == SIMPLE_NER

@@ -88,60 +88,60 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 EN_DOC_CONLLU_GOLD = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
-1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6
-2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12
-3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16
-4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21
-5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24
-6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31
-7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32
+1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
+2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
+4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21|ner=O
+5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24|ner=O
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O
 
 # text = He was elected president in 2008.
 # sent_id = 1
-1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=34|end_char=36
-2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=37|end_char=40
-3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48
-4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=49|end_char=58
-5	in	in	ADP	IN	_	6	case	_	start_char=59|end_char=61
-6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=62|end_char=66
-7	.	.	PUNCT	.	_	3	punct	_	start_char=66|end_char=67
+1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=34|end_char=36|ner=O
+2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=37|end_char=40|ner=O
+3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48|ner=O
+4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=49|end_char=58|ner=O
+5	in	in	ADP	IN	_	6	case	_	start_char=59|end_char=61|ner=O
+6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=62|end_char=66|ner=S-DATE
+7	.	.	PUNCT	.	_	3	punct	_	start_char=66|end_char=67|ner=O
 
 # text = Obama attended Harvard.
 # sent_id = 2
-1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74
-2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83
-3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91
-4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92
+1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74|ner=S-PERSON
+2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
+4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O
 
 """.lstrip()
 
 EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
-1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6
-2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12
-3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16
-4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21
-5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24
-6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31
-7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32
+1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
+2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
+4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21|ner=O
+5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24|ner=O
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O
 
 # text = He was elected president in 2008.
 # sent_id = 1
-1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=0|end_char=2
-2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=3|end_char=6
-3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=7|end_char=14
-4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=15|end_char=24
-5	in	in	ADP	IN	_	6	case	_	start_char=25|end_char=27
-6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=28|end_char=32
-7	.	.	PUNCT	.	_	3	punct	_	start_char=32|end_char=33
+1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=0|end_char=2|ner=O
+2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=3|end_char=6|ner=O
+3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=7|end_char=14|ner=O
+4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=15|end_char=24|ner=O
+5	in	in	ADP	IN	_	6	case	_	start_char=25|end_char=27|ner=O
+6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=28|end_char=32|ner=S-DATE
+7	.	.	PUNCT	.	_	3	punct	_	start_char=32|end_char=33|ner=O
 
 # text = Obama attended Harvard.
 # sent_id = 2
-1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5
-2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14
-3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22
-4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23
+1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5|ner=S-PERSON
+2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
+4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O
 
 """.lstrip()
 
