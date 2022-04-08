@@ -7,23 +7,10 @@ from zipfile import ZipFile
 
 FIELD_NUM = 10
 
-# TODO: unify this list with the list in common/doc.py
-ID = 'id'
-TEXT = 'text'
-LEMMA = 'lemma'
-UPOS = 'upos'
-XPOS = 'xpos'
-FEATS = 'feats'
-HEAD = 'head'
-DEPREL = 'deprel'
-DEPS = 'deps'
-MISC = 'misc'
-NER = 'ner'
-START_CHAR = 'start_char'
-END_CHAR = 'end_char'
-FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
-
 from stanza.models.common.doc import Document
+from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
+
+FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 
 class CoNLL:
 
