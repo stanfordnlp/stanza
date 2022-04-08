@@ -139,9 +139,13 @@ class CoNLL:
         for key in token_dict:
             if key == START_CHAR or key == END_CHAR:
                 misc.append("{}={}".format(key, token_dict[key]))
+            elif key == NER:
+                # TODO: potentially need to escape =|\ in the NER
+                misc.append("{}={}".format(key, token_dict[key]))
             elif key == MISC:
                 # avoid appending a blank misc entry.
                 # otherwise the resulting misc field in the conll doc will wind up being blank text
+                # TODO: potentially need to escape =|\ in the MISC as well
                 if token_dict[key]:
                     misc.append(token_dict[key])
             elif key == ID:

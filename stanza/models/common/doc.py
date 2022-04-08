@@ -674,6 +674,9 @@ def init_from_misc(unit):
             if hasattr(unit, attr):
                 setattr(unit, attr, value)
                 continue
+            elif key == NER:
+                # special case skipping NER for Words, since there is no Word NER field
+                continue
         remaining_values.append(item)
     unit._misc = "|".join(remaining_values)
 
