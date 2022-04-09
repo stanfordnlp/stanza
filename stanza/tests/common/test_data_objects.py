@@ -1,5 +1,5 @@
 """
-Basic tests of the depparse processor boolean flags
+Basic tests of the stanza data objects, especially the setter/getter routines
 """
 import pytest
 
