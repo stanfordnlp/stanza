@@ -180,13 +180,14 @@ SIMPLE_NER = """
 6	Karn	_	_	_	_	5	_	_	start_char=24|end_char=28|ner=S-PERSON
 """.strip()
 
-def test_ner_conversion():
+def test_simple_ner_conversion():
     """
     Test that tokens get properly created with NER tags
     """
     doc = CoNLL.conll2doc(input_str=SIMPLE_NER)
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
+    assert len(sentence.tokens) == 6
     EXPECTED_NER = ["S-PERSON", "O", "O", "O", "O", "S-PERSON"]
     for token, ner in zip(sentence.tokens, EXPECTED_NER):
         assert token.ner == ner
@@ -199,3 +200,39 @@ def test_ner_conversion():
 
     conll = CoNLL.doc2conll(doc)
     assert "\n".join(conll[0]) == SIMPLE_NER
+
+MWT_NER = """
+# text = This makes John's headache worse
+# sent_id = 0
+1	This	_	_	_	_	0	_	_	start_char=0|end_char=4|ner=O
+2	makes	_	_	_	_	1	_	_	start_char=5|end_char=10|ner=O
+3-4	John's	_	_	_	_	_	_	_	start_char=11|end_char=17|ner=S-PERSON
+3	John	_	_	_	_	2	_	_	_
+4	's	_	_	_	_	3	_	_	_
+5	headache	_	_	_	_	4	_	_	start_char=18|end_char=26|ner=O
+6	worse	_	_	_	_	5	_	_	start_char=27|end_char=32|ner=O
+""".strip()
+
+def test_mwt_ner_conversion():
+    """
+    Test that tokens including MWT get properly created with NER tags
+
+    Note that this kind of thing happens with the EWT tokenizer for English, for example
+    """
+    doc = CoNLL.conll2doc(input_str=MWT_NER)
+    assert len(doc.sentences) == 1
+    sentence = doc.sentences[0]
+    assert len(sentence.tokens) == 5
+    EXPECTED_NER = ["O", "O", "S-PERSON", "O", "O"]
+    EXPECTED_WORDS = [1, 1, 2, 1, 1]
+    for token, ner, expected_words in zip(sentence.tokens, EXPECTED_NER, EXPECTED_WORDS):
+        assert token.ner == ner
+        # check that the ner, start_char, end_char fields were not put on the token's misc
+        # those should all be set as specific fields on the token
+        assert not token.misc
+        assert len(token.words) == expected_words
+        # they should also not reach the word's misc field
+        assert not token.words[0].misc
+
+    conll = CoNLL.doc2conll(doc)
+    assert "\n".join(conll[0]) == MWT_NER
