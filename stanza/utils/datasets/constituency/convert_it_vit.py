@@ -177,6 +177,7 @@ def raw_tree(text):
         "date-1992_1993":      "(date 1992/1993)",
         "abbr-d_p_r_":         "(abbr DPR)",
         "abbr-D_P_R_":         "(abbr DPR)",
+        "abbr-d_m_":           "(abbr dm)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
