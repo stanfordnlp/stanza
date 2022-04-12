@@ -132,52 +132,57 @@ def raw_tree(text):
     # this structure converts pretty well to reading using the tree reader
 
     PIECE_MAPPING = {
-        "agn-/ter'":           "(agn ter)",
-        "cong-'&'":            "(cong &)",
-        "da_riempire-'...'":   "(da_riempire ...)",
-        "dirs-':'":            "(dirs :)",
-        "dirs-'\"'":           "(dirs \")",
-        "mw-'&'":              "(mw &)",
-        "num-'2plus2'":        "(num 2+2)",
-        "num-/bis'":           "(num bis)",
-        "num-/ter'":           "(num ter)",
-        "np-'porto_Marghera'": "(np Porto) (np Marghera)",
-        "par-(-)":             "(par -)",
-        "par-','":             "(par ,)",
-        "par-'<'":             "(par <)",
-        "par-'>'":             "(par >)",
-        "par-'-'":             "(par -)",
-        "par-'\"'":            "(par \")",
-        "par-'('":             "(par -LRB-)",
-        "par-')'":             "(par -RRB-)",
-        "par-'&&'":            "(par &&)",
-        "punt-','":            "(punt ,)",
-        "punt-'-'":            "(punt -)",
-        "punt-';'":            "(punt ;)",
-        "punto-':'":           "(punto :)",
-        "punto-';'":           "(punto ;)",
-        "puntint-'!'":         "(puntint !)",
-        "puntint-'?'":         "(puntint !)",
-        "num-18_00/1_00":      "(num 18:00/1:00)",
-        "num-1/500_2/000":     "(num 1.500-2.000)",
-        "num-16_1":            "(num 16,1)",
-        "num-0_1":             "(num 0,1)",
-        "num-0_3":             "(num 0,3)",
-        "num-2_7":             "(num 2,7)",
-        "num-455_68":          "(num 455/68)",
-        "num-437_5":           "(num 437,5)",
-        "num-4708_82":         "(num 4708,82)",
-        "num-16EQ517_7":       "(num 16EQ517/7)",
-        "num-2=184_90":        "(num 2=184/90)",
-        "num-3EQ429_20":       "(num 3eq429/20)",
-        "num-0_39%minus":      "(num 0,39%-)",
-        "num-1_88/76":         "(num 1-88/76)",
-        "n-giga_flop/s":       "(n giga_flop/s)",
-        "abbr-d_o_a_":         "(abbr DOA)",
-        "date-1992_1993":      "(date 1992/1993)",
-        "abbr-d_p_r_":         "(abbr DPR)",
-        "abbr-D_P_R_":         "(abbr DPR)",
-        "abbr-d_m_":           "(abbr dm)",
+        "agn-/ter'":               "(agn ter)",
+        "cong-'&'":                "(cong &)",
+        "da_riempire-'...'":       "(da_riempire ...)",
+        "dirs-':'":                "(dirs :)",
+        "dirs-'\"'":               "(dirs \")",
+        "mw-'&'":                  "(mw &)",
+        "num-'2plus2'":            "(num 2+2)",
+        "num-/bis'":               "(num bis)",
+        "num-/ter'":               "(num ter)",
+        "nh-'Alain-Gauze'":        "(nh Alain-Gauze)",
+        "np-'porto_Marghera'":     "(np Porto) (np Marghera)",
+        "npro-'Viacom-Paramount'": "(npro Viacom-Paramount)",
+        "npro-'Rhone-Poulenc'":    "(npro Rhone-Poulenc)",
+        "par-(-)":                 "(par -)",
+        "par-','":                 "(par ,)",
+        "par-'<'":                 "(par <)",
+        "par-'>'":                 "(par >)",
+        "par-'-'":                 "(par -)",
+        "par-'\"'":                "(par \")",
+        "par-'('":                 "(par -LRB-)",
+        "par-')'":                 "(par -RRB-)",
+        "par-'&&'":                "(par &&)",
+        "punt-','":                "(punt ,)",
+        "punt-'-'":                "(punt -)",
+        "punt-';'":                "(punt ;)",
+        "punto-':'":               "(punto :)",
+        "punto-';'":               "(punto ;)",
+        "puntint-'!'":             "(puntint !)",
+        "puntint-'?'":             "(puntint !)",
+        "num-18_00/1_00":          "(num 18:00/1:00)",
+        "num-1/500_2/000":         "(num 1.500-2.000)",
+        "num-16_1":                "(num 16,1)",
+        "num-0_1":                 "(num 0,1)",
+        "num-0_3":                 "(num 0,3)",
+        "num-2_7":                 "(num 2,7)",
+        "num-455_68":              "(num 455/68)",
+        "num-437_5":               "(num 437,5)",
+        "num-4708_82":             "(num 4708,82)",
+        "num-16EQ517_7":           "(num 16EQ517/7)",
+        "num-2=184_90":            "(num 2=184/90)",
+        "num-3EQ429_20":           "(num 3eq429/20)",
+        "num-'1990-EQU-100'":      "(num 1990-EQU-100)",
+        "num-'500-EQU-250'":       "(num 500-EQU-250)",
+        "num-0_39%minus":          "(num 0,39%-)",
+        "num-1_88/76":             "(num 1-88/76)",
+        "n-giga_flop/s":           "(n giga_flop/s)",
+        "abbr-d_o_a_":             "(abbr DOA)",
+        "date-1992_1993":          "(date 1992/1993)",
+        "abbr-d_p_r_":             "(abbr DPR)",
+        "abbr-D_P_R_":             "(abbr DPR)",
+        "abbr-d_m_":               "(abbr dm)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
@@ -310,7 +315,7 @@ def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name):
     for sentence in dep_sentences:
         sentence_ngrams = extract_ngrams(sentence, DEP_PROCESS_FUNC)
         potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams)
-        #potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, DEP_ID_FUNC(sentence) == "VIT-38")
+        #potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, DEP_ID_FUNC(sentence) == "VIT-4096")
         if potential_match is None:
             if unmatched < 5:
                 print("Could not match the following sentence: {} {}".format(DEP_ID_FUNC(sentence), sentence.text))
@@ -521,13 +526,12 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
             con_tree_map[tree_id] = tree
         except UnclosedTreeError as e:
             num_discarded = num_discarded + 1
-            #print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
         except ExtraCloseTreeError as e:
             num_discarded = num_discarded + 1
-            #print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
         except ValueError as e:
-            #if num_discarded < 10:
-            #    print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
             num_discarded = num_discarded + 1
             #raise ValueError("Could not process line %d" % idx) from e
 
