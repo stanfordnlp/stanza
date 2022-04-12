@@ -553,6 +553,8 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
             #raise ValueError("Could not process line %d" % idx) from e
 
     print("Discarded %d trees.  Have %d trees left" % (num_discarded, len(con_tree_map)))
+    if num_discarded > 0:
+        raise ValueError("Oops!  We thought all of the VIT trees were properly bracketed now")
     con_vit_ngrams = build_ngrams(con_tree_map.items(), lambda x: CON_PROCESS_FUNC(x[1]), lambda x: x[0])
 
     # TODO: match more sentences.  some are probably missing because of MWT
