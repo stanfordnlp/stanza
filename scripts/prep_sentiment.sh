@@ -29,26 +29,26 @@ done
 
 if [ "$language" = "english" ]; then
     echo "PROCESSING ENGLISH"
-    echo "ArguAna"
+    echo "--- ArguAna ---"
     $PYTHON scripts/sentiment/process_arguana_xml.py $SENTIMENT_DATA_DIR/arguana/arguana-tripadvisor-annotated-v2/split/training $SENTIMENT_DATA_DIR/arguana/train.txt
 
-    echo "MELD"
+    echo "--- MELD ---"
     $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/train_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/train.txt
     $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/dev_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/dev.txt
     $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/test_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/test.txt
 
-    echo "SLSD"
+    echo "--- SLSD ---"
     $PYTHON scripts/sentiment/process_slsd.py $SENTIMENT_DATA_DIR/slsd/slsd $SENTIMENT_DATA_DIR/slsd/train.txt
 
-    echo "airline"
+    echo "--- AIRLINE ---"
     $PYTHON -m scripts.sentiment.process_airline $SENTIMENT_DATA_DIR/airline/Tweets.csv $SENTIMENT_DATA_DIR/airline/train.txt
 
-    echo "sst"
+    echo "--- SST ---"
     if [ -z "$SENTIMENT_SST_HOME" ]; then
         SENTIMENT_SST_HOME=$SENTIMENT_DATA_DIR/sentiment-treebank
         echo "  Assuming git download of SST is at " $SENTIMENT_SST_HOME
     fi
-    scripts/sentiment/process_sst.sh -i$SENTIMENT_SST_HOME -o$SENTIMENT_DATA_DIR/sst-processed
+    $PYTHON -m stanza.utils.datasets.sentiment.process_sst
 elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
