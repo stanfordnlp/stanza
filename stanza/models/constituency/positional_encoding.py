@@ -21,7 +21,7 @@ class SinusoidalEncoding(nn.Module):
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         if device is not None:
-            pe.to(device=device)
+            pe = pe.to(device=device)
         return pe
 
     def forward(self, x):
