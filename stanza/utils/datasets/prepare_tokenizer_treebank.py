@@ -829,9 +829,7 @@ def check_gum_ready(udbase_dir):
 
 def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
     """
-    en_combined is currently EWT, GUM, PUD, and Pronouns
-
-    TODO: use more of the handparsed data
+    en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
     check_gum_ready(udbase_dir)
 
@@ -854,6 +852,15 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         sents = read_sentences_from_conllu(ewt_conllu)
 
     sents = strip_mwt_from_sentences(sents)
+    return sents
+
+def build_extra_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    Extra sentences we don't want augmented
+    """
+    sents = []
+    if dataset == 'train':
+        sents.extend(read_sentences_from_conllu(os.path.join(handparsed_dir, "english-handparsed", "english.conll")))
     return sents
 
 def replace_semicolons(sentences):
@@ -919,14 +926,22 @@ COMBINED_FNS = {
     "it_combined": build_combined_italian_dataset,
 }
 
+# some extra data for the combined models without augmenting
+COMBINED_EXTRA_FNS = {
+    "en_combined": build_extra_combined_english_dataset,
+}
+
 def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
     random.seed(1234)
     build_fn = COMBINED_FNS[short_name]
+    extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
     for dataset in ("train", "dev", "test"):
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         sents = build_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset)
         if dataset == 'train' and augment:
             sents = augment_punct(sents)
+        if extra_fn is not None:
+            sents.extend(extra_fn(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset))
         write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
