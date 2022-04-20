@@ -58,6 +58,50 @@ word: Hawaii    lemma: Hawaii
 word: .         lemma: .
 ```
 
+### Lemmatizing pretagged text
+
+If you already have tokenized, tagged text, you can use the lemmatizer to add lemmas without retokenizing or tagging:
+
+```python
+import stanza
+from stanza.models.common.doc import Document
+
+nlp = stanza.Pipeline(lang='en', processors='tokenize,lemma', lemma_pretagged=True, tokenize_pretokenized=True)
+pp = Document([[{'id': 1, 'text': 'puppies', 'upos': 'NOUN'}]])
+print("BEFORE ADDING LEMMA")
+print(pp)
+doc = nlp(pp)
+print("AFTER ADDING LEMMA")
+print(doc)
+```
+
+The updated doc will have the lemmas attached to the words:
+
+```
+BEFORE ADDING LEMMA
+[
+  [
+    {
+      "id": 1,
+      "text": "puppies",
+      "upos": "NOUN"
+    }
+  ]
+]
+AFTER ADDING LEMMA
+[
+  [
+    {
+      "id": 1,
+      "text": "puppies",
+      "lemma": "puppy",
+      "upos": "NOUN"
+    }
+  ]
+]
+```
+
+
 ### Improving the Lemmatizer by Providing Key-Value Dictionary
 
 It is possible to improve the lemmatizer by providing a key-value dictionary. Lemmatizer will check it first and then use statistical model if the word is not in dictionary.
