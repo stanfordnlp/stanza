@@ -807,15 +807,6 @@ def build_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
-        extra_italian = os.path.join(handparsed_dir, "italian-mwt", "italian.mwt")
-        if not os.path.exists(extra_italian):
-            raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
-        extra_sents = read_sentences_from_conllu(extra_italian)
-        for sentence in extra_sents:
-            if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
-                raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
-            sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
-        sents = sents + extra_sents
     else:
         istd_conllu = common.find_treebank_dataset_file("UD_Italian-ISDT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(istd_conllu)
@@ -862,6 +853,23 @@ def build_extra_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_d
     if dataset == 'train':
         sents.extend(read_sentences_from_conllu(os.path.join(handparsed_dir, "english-handparsed", "english.conll")))
     return sents
+
+def build_extra_combined_italian_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
+    """
+    Extra data - the MWT data for Italian
+    """
+    if dataset != 'train':
+        return []
+
+    extra_italian = os.path.join(handparsed_dir, "italian-mwt", "italian.mwt")
+    if not os.path.exists(extra_italian):
+        raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+    extra_sents = read_sentences_from_conllu(extra_italian)
+    for sentence in extra_sents:
+        if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
+            raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
+        sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
+    return extra_sents
 
 def replace_semicolons(sentences):
     """
@@ -929,6 +937,7 @@ COMBINED_FNS = {
 # some extra data for the combined models without augmenting
 COMBINED_EXTRA_FNS = {
     "en_combined": build_extra_combined_english_dataset,
+    "it_combined": build_extra_combined_italian_dataset,
 }
 
 def build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
