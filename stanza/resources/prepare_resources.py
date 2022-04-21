@@ -149,6 +149,7 @@ default_charlms = {
   "fi": "conll17",
   "fr": "newswiki",
   "it": "conll17",
+  "ja": "conll17",
   "my": "oscar",
   "nb": "conll17",
   "nl": "ccwiki",
