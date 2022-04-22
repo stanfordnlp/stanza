@@ -212,7 +212,7 @@ class Pipeline:
             add_mwt(processors, resources, lang)
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
-        if download_method is not DownloadMethod.NONE:
+        if download_method is not None and download_method is not DownloadMethod.NONE:
             # skip processors which aren't downloaded from our collection
             download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
             # skip variants
