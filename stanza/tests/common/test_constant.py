@@ -7,7 +7,7 @@ import tempfile
 import pytest
 
 import stanza
-from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode
 from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -32,4 +32,11 @@ def test_treebank():
     assert "zh-hant_pud" == treebank_to_short_name("zh-hant-pud")
     assert "zh-hans_gsdsimp" == treebank_to_short_name("zh-hans_gsdsimp")
     
+
+def test_lang_to_langcode():
+    assert "hi" == lang_to_langcode("Hindi")
+    assert "hi" == lang_to_langcode("HINDI")
+    assert "hi" == lang_to_langcode("hindi")
+    assert "hi" == lang_to_langcode("HI")
+    assert "hi" == lang_to_langcode("hi")
 

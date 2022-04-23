@@ -158,6 +158,19 @@ treebank_special_cases = {
 
 SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 
+def lang_to_langcode(lang):
+    if lang in lang2lcode:
+        lcode = lang2lcode[lang]
+    elif lang.lower() in langlower2lcode:
+        lcode = langlower2lcode[lang.lower()]
+    elif lang in lcode2lang:
+        lcode = lang
+    elif lang.lower() in lcode2lang:
+        lcode = lang.lower()
+    else:
+        raise ValueError("Unable to find language code for %s" % lang)
+    return lcode
+
 def treebank_to_short_name(treebank):
     """ Convert treebank name to short code. """
     if treebank in treebank_special_cases:
@@ -177,16 +190,7 @@ def treebank_to_short_name(treebank):
     assert len(splits) == 2, "Unable to process %s" % treebank
     lang, corpus = splits
 
-    if lang in lang2lcode:
-        lcode = lang2lcode[lang]
-    elif lang in langlower2lcode:
-        lcode = langlower2lcode[lang]
-    elif lang in lcode2lang:
-        lcode = lang
-    elif lang.lower() in lcode2lang:
-        lcode = lang.lower()
-    else:
-        raise ValueError("Unable to find language code for %s" % lang)
+    lcode = lang_to_langcode(lang)
 
     short = "{}_{}".format(lcode, corpus.lower())
     return short
