@@ -7,9 +7,24 @@ import pytest
 import tempfile
 
 import stanza
-from stanza.resources.common import process_pipeline_parameters
+from stanza.resources import common
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
+
+def test_assert_file_exists():
+    with tempfile.TemporaryDirectory() as test_dir:
+        filename = os.path.join(test_dir, "test.txt")
+        with pytest.raises(FileNotFoundError):
+            common.assert_file_exists(filename)
+
+        with open(filename, "w", encoding="utf-8") as fout:
+            fout.write("Unban mox opal!")
+        EXPECTED_MD5 = "44dbf21b4e89cea5184615a72a825a36"
+        common.assert_file_exists(filename)
+        common.assert_file_exists(filename, md5=EXPECTED_MD5)
+
+        with pytest.raises(ValueError):
+            common.assert_file_exists(filename, md5="12345")
 
 
 def test_download_tokenize_mwt():
@@ -67,19 +82,19 @@ def test_process_pipeline_parameters():
     Test a few options for specifying which processors to load
     """
     with tempfile.TemporaryDirectory(dir=".") as test_dir:
-        lang, model_dir, package, processors = process_pipeline_parameters("en", test_dir, None, "tokenize,pos")
+        lang, model_dir, package, processors = common.process_pipeline_parameters("en", test_dir, None, "tokenize,pos")
         assert processors == {"tokenize": "default", "pos": "default"}
         assert package == None
 
-        lang, model_dir, package, processors = process_pipeline_parameters("en", test_dir, {"tokenize": "spacy"}, "tokenize,pos")
+        lang, model_dir, package, processors = common.process_pipeline_parameters("en", test_dir, {"tokenize": "spacy"}, "tokenize,pos")
         assert processors == {"tokenize": "spacy", "pos": "default"}
         assert package == None
 
-        lang, model_dir, package, processors = process_pipeline_parameters("en", test_dir, {"pos": "ewt"}, "tokenize,pos")
+        lang, model_dir, package, processors = common.process_pipeline_parameters("en", test_dir, {"pos": "ewt"}, "tokenize,pos")
         assert processors == {"tokenize": "default", "pos": "ewt"}
         assert package == None
 
-        lang, model_dir, package, processors = process_pipeline_parameters("en", test_dir, "ewt", "tokenize,pos")
+        lang, model_dir, package, processors = common.process_pipeline_parameters("en", test_dir, "ewt", "tokenize,pos")
         assert processors == {"tokenize": "ewt", "pos": "ewt"}
         assert package == None
 
