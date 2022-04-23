@@ -14,26 +14,26 @@ pytestmark = pytest.mark.pipeline
 EN_DOC = "Barack Obama was born in Hawaii.  He was elected president in 2008.  Obama attended Harvard."
 
 EN_DOC_CONLLU_PRETAGGED = """
-1	Barack	_	PROPN	NNP	Number=Sing	0	_	_	_
-2	Obama	_	PROPN	NNP	Number=Sing	1	_	_	_
-3	was	_	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	2	_	_	_
-4	born	_	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	3	_	_	_
-5	in	_	ADP	IN	_	4	_	_	_
-6	Hawaii	_	PROPN	NNP	Number=Sing	5	_	_	_
-7	.	_	PUNCT	.	_	6	_	_	_
+1	Barack	Barack	PROPN	NNP	Number=Sing	0	_	_	_
+2	Obama	Obama	PROPN	NNP	Number=Sing	1	_	_	_
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	2	_	_	_
+4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	3	_	_	_
+5	in	in	ADP	IN	_	4	_	_	_
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	5	_	_	_
+7	.	.	PUNCT	.	_	6	_	_	_
 
-1	He	_	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	0	_	_	_
-2	was	_	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	1	_	_	_
-3	elected	_	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	2	_	_	_
-4	president	_	PROPN	NNP	Number=Sing	3	_	_	_
-5	in	_	ADP	IN	_	4	_	_	_
-6	2008	_	NUM	CD	NumType=Card	5	_	_	_
-7	.	_	PUNCT	.	_	6	_	_	_
+1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	0	_	_	_
+2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	1	_	_	_
+3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	2	_	_	_
+4	president	president	PROPN	NNP	Number=Sing	3	_	_	_
+5	in	in	ADP	IN	_	4	_	_	_
+6	2008	2008	NUM	CD	NumType=Card	5	_	_	_
+7	.	.	PUNCT	.	_	6	_	_	_
 
-1	Obama	_	PROPN	NNP	Number=Sing	0	_	_	_
-2	attended	_	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	1	_	_	_
-3	Harvard	_	PROPN	NNP	Number=Sing	2	_	_	_
-4	.	_	PUNCT	.	_	3	_	_	_
+1	Obama	Obama	PROPN	NNP	Number=Sing	0	_	_	_
+2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	1	_	_	_
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	_	_	_
+4	.	.	PUNCT	.	_	3	_	_	_
 
 
 """.lstrip()
