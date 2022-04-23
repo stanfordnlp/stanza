@@ -90,13 +90,16 @@ def file_exists(path, md5):
     """
     return os.path.exists(path) and get_md5(path) == md5
 
-def assert_file_exists(path, md5=None):
+def assert_file_exists(path, md5=None, alternate_md5=None):
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, "Cannot find expected file", path)
     if md5:
         file_md5 = get_md5(path)
         if file_md5 != md5:
-            raise ValueError("md5 for %s is %s, expected %s" % (path, file_md5, md5))
+            if file_md5 == alternate_md5:
+                logger.debug("Found a possibly older version of file %s, md5 %s instead of %s", path, alternate_md5, md5)
+            else:
+                raise ValueError("md5 for %s is %s, expected %s" % (path, file_md5, md5))
 
 def download_file(url, path, proxies, raise_for_status=False):
     """
@@ -119,10 +122,12 @@ def download_file(url, path, proxies, raise_for_status=False):
         r.raise_for_status()
     return r.status_code
 
-def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_info=True):
+def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_info=True, alternate_md5=None):
     """
     A complete wrapper over download_file() that also make sure the directory of
     `path` exists, and that a file matching the md5 value does not exist.
+
+    alternate_md5 allows for an alternate md5 that is acceptable (such as if an older version of a file is okay)
     """
     basedir = Path(path).parent
     ensure_dir(basedir)
@@ -141,7 +146,7 @@ def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_
         temppath = os.path.join(temp, os.path.split(path)[-1])
         download_file(url, temppath, proxies, raise_for_status)
         os.replace(temppath, path)
-    assert_file_exists(path, md5)
+    assert_file_exists(path, md5, alternate_md5)
 
 def sort_processors(processor_list):
     sorted_list = []
@@ -496,7 +501,8 @@ def download_models(download_list,
                 os.path.join(model_dir, lang, key, f'{value}.pt'),
                 proxies,
                 md5=resources[lang][key][value]['md5'],
-                log_info=log_info
+                log_info=log_info,
+                alternate_md5=resources[lang][key][value].get('alternate_md5', None)
             )
         except KeyError as e:
             raise ValueError(

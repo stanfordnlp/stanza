@@ -26,6 +26,11 @@ def test_assert_file_exists():
         with pytest.raises(ValueError):
             common.assert_file_exists(filename, md5="12345")
 
+        with pytest.raises(ValueError):
+            common.assert_file_exists(filename, md5="12345", alternate_md5="12345")
+
+        common.assert_file_exists(filename, md5="12345", alternate_md5=EXPECTED_MD5)
+
 
 def test_download_tokenize_mwt():
     with tempfile.TemporaryDirectory(dir=".") as test_dir:
