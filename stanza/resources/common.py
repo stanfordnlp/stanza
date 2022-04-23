@@ -3,6 +3,7 @@ Common utilities for Stanza resources.
 """
 
 from collections import defaultdict, namedtuple
+import errno
 import hashlib
 import json
 import logging
@@ -90,10 +91,12 @@ def file_exists(path, md5):
     return os.path.exists(path) and get_md5(path) == md5
 
 def assert_file_exists(path, md5=None):
-    assert os.path.exists(path), "Could not find file at %s" % path
+    if not os.path.exists(path):
+        raise FileNotFoundError(errno.ENOENT, "Cannot find expected file", path)
     if md5:
         file_md5 = get_md5(path)
-        assert file_md5 == md5, "md5 for %s is %s, expected %s" % (path, file_md5, md5)
+        if file_md5 != md5:
+            raise ValueError("md5 for %s is %s, expected %s" % (path, file_md5, md5))
 
 def download_file(url, path, proxies, raise_for_status=False):
     """
