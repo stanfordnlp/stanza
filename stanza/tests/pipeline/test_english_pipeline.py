@@ -34,7 +34,7 @@ EN_DOC_TOKENS_GOLD = """
 <Token id=7;words=[<Word id=7;text=.;lemma=.;upos=PUNCT;xpos=.;head=3;deprel=punct>]>
 
 <Token id=1;words=[<Word id=1;text=Obama;lemma=Obama;upos=PROPN;xpos=NNP;feats=Number=Sing;head=2;deprel=nsubj>]>
-<Token id=2;words=[<Word id=2;text=attended;lemma=attend;upos=VERB;xpos=VBD;feats=Mood=Ind|Tense=Past|VerbForm=Fin;head=0;deprel=root>]>
+<Token id=2;words=[<Word id=2;text=attended;lemma=attend;upos=VERB;xpos=VBD;feats=Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin;head=0;deprel=root>]>
 <Token id=3;words=[<Word id=3;text=Harvard;lemma=Harvard;upos=PROPN;xpos=NNP;feats=Number=Sing;head=2;deprel=obj>]>
 <Token id=4;words=[<Word id=4;text=.;lemma=.;upos=PUNCT;xpos=.;head=2;deprel=punct>]>
 """.strip()
@@ -57,7 +57,7 @@ EN_DOC_WORDS_GOLD = """
 <Word id=7;text=.;lemma=.;upos=PUNCT;xpos=.;head=3;deprel=punct>
 
 <Word id=1;text=Obama;lemma=Obama;upos=PROPN;xpos=NNP;feats=Number=Sing;head=2;deprel=nsubj>
-<Word id=2;text=attended;lemma=attend;upos=VERB;xpos=VBD;feats=Mood=Ind|Tense=Past|VerbForm=Fin;head=0;deprel=root>
+<Word id=2;text=attended;lemma=attend;upos=VERB;xpos=VBD;feats=Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin;head=0;deprel=root>
 <Word id=3;text=Harvard;lemma=Harvard;upos=PROPN;xpos=NNP;feats=Number=Sing;head=2;deprel=obj>
 <Word id=4;text=.;lemma=.;upos=PUNCT;xpos=.;head=2;deprel=punct>
 """.strip()
@@ -109,7 +109,7 @@ EN_DOC_CONLLU_GOLD = """
 # text = Obama attended Harvard.
 # sent_id = 2
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74|ner=S-PERSON
-2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
+2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O
 
@@ -139,7 +139,7 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # text = Obama attended Harvard.
 # sent_id = 2
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5|ner=S-PERSON
-2	attended	attend	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
+2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O
 
