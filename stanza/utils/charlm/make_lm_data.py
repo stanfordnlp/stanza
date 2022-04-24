@@ -81,7 +81,7 @@ def main():
                 os.makedirs(tgt_dir)
             print(f"-> Processing {lang}-{dataset_name}")
             prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output)
-        
+
         print("")
 
 def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
@@ -94,15 +94,19 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         tgt_tmp = os.path.join(tempdir, f"{lang}-{dataset_name}.tmp")
         print(f"--> Copying files into {tgt_tmp}...")
         # TODO: we can do this without the shell commands
-        for src_fn in glob.glob(str(src_dir) + '/*.txt'):
-            cmd = f"cat {src_fn} >> {tgt_tmp}"
-            subprocess.run(cmd, shell=True)
-        for src_fn in glob.glob(str(src_dir) + '/*.txt.xz'):
-            cmd = f"xzcat {src_fn} >> {tgt_tmp}"
-            subprocess.run(cmd, shell=True)
-        for src_fn in glob.glob(str(src_dir) + '/*.txt.gz'):
-            cmd = f"zcat {src_fn} >> {tgt_tmp}"
-            subprocess.run(cmd, shell=True)
+        input_files = glob.glob(str(src_dir) + '/*.txt') + glob.glob(str(src_dir) + '/*.txt.xz') + glob.glob(str(src_dir) + '/*.txt.gz')
+        for src_fn in tqdm(input_files):
+            if src_fn.endswith(".txt"):
+                cmd = f"cat {src_fn} >> {tgt_tmp}"
+                subprocess.run(cmd, shell=True)
+            elif src_fn.endswith(".txt.xz"):
+                cmd = f"xzcat {src_fn} >> {tgt_tmp}"
+                subprocess.run(cmd, shell=True)
+            elif src_fn.endswith(".txt.gz"):
+                cmd = f"zcat {src_fn} >> {tgt_tmp}"
+                subprocess.run(cmd, shell=True)
+            else:
+                raise AssertionError("should not have found %s" % src_fn)
         tgt_tmp_shuffled = os.path.join(tempdir, f"{lang}-{dataset_name}.tmp.shuffled")
 
         print(f"--> Shuffling files into {tgt_tmp_shuffled}...")
