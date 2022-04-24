@@ -33,6 +33,20 @@ BERT = {
     # https://huggingface.co/roberta-base
     "en": "roberta-base",
 
+    # NER scores for a couple Persian options:
+    # none:
+    # dev:  2022-04-23 01:44:53 INFO: fa_arman 79.46
+    # test: 2022-04-23 01:45:03 INFO: fa_arman 80.06
+    #
+    # HooshvareLab/bert-fa-zwnj-base
+    # dev:  2022-04-23 02:43:44 INFO: fa_arman 80.87
+    # test: 2022-04-23 02:44:07 INFO: fa_arman 80.81
+    #
+    # HooshvareLab/roberta-fa-zwnj-base
+    # dev:  2022-04-23 16:23:25 INFO: fa_arman 81.23
+    # test: 2022-04-23 16:23:48 INFO: fa_arman 81.11
+    "fa": 'HooshvareLab/roberta-fa-zwnj-base',
+
     # NER scores for a couple options:
     # none:
     # dev:  2022-03-04 INFO: fi_turku 83.45
