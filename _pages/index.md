@@ -36,7 +36,7 @@ To summarize, Stanza features:
 
 * Native Python implementation requiring minimal efforts to set up;
 * Full neural network pipeline for robust text analytics, including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging, dependency parsing, and named entity recognition;
-* Pretrained neural models supporting [66 (human) languages](models.md#human-languages-supported-by-stanza);
+* Pretrained neural models supporting [70 (human) languages](models.md#human-languages-supported-by-stanza);
 * A stable, officially maintained Python interface to CoreNLP.
 
 Below is an overview of Stanza's neural network NLP pipeline:

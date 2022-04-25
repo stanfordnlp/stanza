@@ -8,7 +8,7 @@ parent: Usage
 toc: false
 ---
 
-Stanza provides pretrained NLP models for a total 66 human languages. On this page we provide detailed information on how to download these models to process text in a language of your choosing.
+Stanza provides pretrained NLP models for a total 70 human languages. On this page we provide detailed information on how to download these models to process text in a language of your choosing.
 
 Pretrained models in Stanza can be divided into two categories, based on the datasets they were trained on:
 1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
