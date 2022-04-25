@@ -140,8 +140,8 @@ def parse_args():
     parser.add_argument('--max_epochs', type=int, default=100)
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
-    parser.add_argument('--filter_channels', default=100, type=int, help='Number of channels for layers after the word vectors')
-    parser.add_argument('--fc_shapes', default="100", type=convert_fc_shapes, help='Extra fully connected layers to put after the initial filters.  If set to blank, will FC directly from the max pooling to the output layer.')
+    parser.add_argument('--filter_channels', default=1000, type=int, help='Number of channels for layers after the word vectors')
+    parser.add_argument('--fc_shapes', default="400,100", type=convert_fc_shapes, help='Extra fully connected layers to put after the initial filters.  If set to blank, will FC directly from the max pooling to the output layer.')
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
