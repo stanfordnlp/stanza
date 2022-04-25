@@ -53,19 +53,16 @@ Stanza provides simple, flexible, and unified interfaces for downloading and run
 Downloading models and building a pipeline of models shares roughly the same interface. Additionally, when building a pipeline, you can add customized options that control devices (CPU or GPU), allow pretokenized text, or specify model path, etc. Here we aim to provide examples that cover common use cases. For all available options in the download and pipeline interface, please refer to the [Downloading Models](models#downloading-and-using-models) and [Pipeline](pipeline.md#pipeline) pages.
 
 <br />
-The following minimal example shows how to download and load default processors into a pipeline for English:
+The following minimal example will download and load default processors into a pipeline for English:
 ```python
->>> stanza.download('en')
+>>> import stanza
 >>> nlp = stanza.Pipeline('en')
 ```
-
-Note that you only need to call `download` once for a fresh install or to check for model updates.
 
 ### Specifying Processors
 
 You can specify the processors to download or load, by listing the processor names in a comma-separated string. For example, here we only download and load the default `tokenize` ([TokenizeProcessor](tokenize.md)) and `pos` ([POSProcessor](pos.md)) processors for Chinese:
 ```python
-stanza.download('zh', processors='tokenize,pos')
 nlp = stanza.Pipeline('zh', processors='tokenize,pos')
 ```
 
@@ -80,19 +77,16 @@ Note that the model of a processor has to be downloaded before it can be loaded 
 
 By default, all languages are shipped with a `default` package, which will be downloaded and loaded when no package name is specified. However, you can tell Stanza to download or load a specific package with the optional `package` option. For example, we can download and load the [TokenizeProcessor](tokenize.md) and [MWTProcessor](mwt.md) trained on the `GSD` dataset for German with:
 ```python
-stanza.download('de', processors='tokenize,mwt', package='gsd')
 nlp = stanza.Pipeline('de', processors='tokenize,mwt', package='gsd')
 ```
 
 In some cases, you may want to use a specific package for one processor, but remain `default` for the rest of the processors. This can be done with a dictionary-based `processors` argument. This example shows how to download and load the [NERProcessor](ner.md) trained on the Dutch `CoNLL02` dataset, but use `default` package for all other processors for Dutch:
 ```python
-stanza.download('nl', processors={'ner': 'conll02'})
 nlp = stanza.Pipeline('nl', processors={'ner': 'conll02'})
 ```
 
 Similarly, the following example shows how to use the [NERProcessor](ner.md) trained on the `WikiNER` dataset, while use models trained on the `lassysmall` dataset for all other processors for Dutch:
 ```python
-stanza.download('nl', processors={'ner': 'wikiner'}, package='lassysmall')
 nlp = stanza.Pipeline('nl', processors={'ner': 'wikiner'}, package='lassysmall')
 ```
 
@@ -104,13 +98,51 @@ processor_dict = {
     'ner': 'conll03', 
     'lemma': 'default'
 }
-stanza.download('de', processors=processor_dict, package=None)
 nlp = stanza.Pipeline('de', processors=processor_dict, package=None)
 ```
 
 {{ note }}
 {{ "For the list of all available packages for different languages, please refer to the [Models](models.md) page." | markdownify }}
 {{ end }}
+
+### Downloading models for offline usage
+
+In each of the examples above, it is possible to download the models ahead of time and request that the Pipeline not download anything.  `stanza.download()` will download individual models or entire packages using the same interface as `Pipeline`, and then the `Pipeline` has a flag to turn off downloads.
+
+A couple examples:
+
+```python
+import stanza
+nlp = stanza.Pipeline('en')
+```
+
+```python
+import stanza
+stanza.download('zh', processors='tokenize,pos')
+nlp = stanza.Pipeline('zh', processors='tokenize,pos', download_method=None)
+```
+
+```python
+processor_dict = {
+    'tokenize': 'gsd', 
+    'pos': 'hdt', 
+    'ner': 'conll03', 
+    'lemma': 'default'
+}
+stanza.download('de', processors=processor_dict, package=None)
+nlp = stanza.Pipeline('de', processors=processor_dict, package=None)
+```
+
+There is also a mechanism for only attempting to download models when
+a particular package is missing.  It will reuse an existing
+`resources.json` file rather than trying to download it, though.
+
+```
+from stanza.pipeline.core import DownloadMethod
+nlp = stanza.Pipeline('zh', processors='tokenize,pos', download_method=DownloadMethod.REUSE_RESOURCES)
+```
+
+This feature is new as of 1.4.0.  Prior versions required an initial call to `download` before building the `Pipeline`.
 
 ### Controlling Logging from the Pipeline
 

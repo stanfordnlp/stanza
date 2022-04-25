@@ -41,3 +41,8 @@ Downloading Stanza models is as simple as calling the `stanza.download()` method
 {{ "Offline installation of models is possible by copying the models from an existing `~/stanza_resources` installation.  This may be useful for docker installation or machines with no internet connection." | markdownify }}
 {{ end }}
 
+{% include alerts.html %}
+{{ note }}
+{{ "As of v1.4.0, creating a `Pipeline` will automatically try to download missing models.  You can turn off this behavior with `download_method=None` when creating a pipeline." | markdownify }}
+{{ end }}
+
