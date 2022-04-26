@@ -1,6 +1,7 @@
 import csv
 import glob
 import os
+import tempfile
 
 from collections import namedtuple
 
@@ -50,3 +51,30 @@ def clean_tokenized_tweet(line):
         if line[i].startswith("http:") or line[i].startswith("https:"):
             line[i] = ' '
     return line
+
+def get_ptb_tokenized_phrases(fragments):
+    """
+    Use the PTB tokenizer to retokenize the phrases
+
+    Not clear which is better, "Nov." or "Nov ."
+    strictAcronym=true makes it do the latter
+    tokenizePerLine=true should make it only pay attention to one line at a time
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        phrase_filename = os.path.join(tempdir, "phrases.txt")
+        #phrase_filename = "asdf.txt"
+        with open(phrase_filename, "w", encoding="utf-8") as fout:
+            for fragment in fragments:
+                # extra newlines are so the tokenizer treats the lines
+                # as separate sentences
+                fout.write("%s\n\n\n" % (fragment.text))
+        tok_filename = os.path.join(tempdir, "tokenized.txt")
+        os.system('java edu.stanford.nlp.process.PTBTokenizer -options "strictAcronym=true,tokenizePerLine=true" -preserveLines %s > %s' % (phrase_filename, tok_filename))
+        with open(tok_filename, encoding="utf-8") as fin:
+            tokenized = fin.readlines()
+
+    tokenized = [x.strip() for x in tokenized]
+    tokenized = [x for x in tokenized if x]
+    phrases = [Fragment(x.sentiment, y) for x, y in zip(fragments, tokenized)]
+    return phrases
+

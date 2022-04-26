@@ -21,37 +21,44 @@ process_slsd.py <directory> <outputfile>
 
 import os
 import sys
-import tempfile
 
-def main(in_directory, out_directory, short_name):
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
+
+def get_phrases(in_directory):
     in_filenames = [os.path.join(in_directory, 'amazon_cells_labelled.txt'),
                     os.path.join(in_directory, 'imdb_labelled.txt'),
                     os.path.join(in_directory, 'yelp_labelled.txt')]
-    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
-    os.makedirs(out_directory, exist_ok=True)
 
     lines = []
     for filename in in_filenames:
         lines.extend(open(filename, newline=''))
 
-    tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
-    with open(tmp_filename, "w") as fout:
-        for line in lines:
-            line = line.strip()
-            sentiment = line[-1]
-            utterance = line[:-1]
-            utterance = utterance.replace("!.", "!")
-            utterance = utterance.replace("?.", "?")
-            if sentiment == '0':
-                sentiment = '0'
-            elif sentiment == '1':
-                sentiment = '2'
-            else:
-                raise ValueError("Unknown sentiment: {}".format(sentiment))
-            fout.write("%s %s\n" % (sentiment, utterance))
+    phrases = []
+    for line in lines:
+        line = line.strip()
+        sentiment = line[-1]
+        utterance = line[:-1]
+        utterance = utterance.replace("!.", "!")
+        utterance = utterance.replace("?.", "?")
+        if sentiment == '0':
+            sentiment = '0'
+        elif sentiment == '1':
+            sentiment = '2'
+        else:
+            raise ValueError("Unknown sentiment: {}".format(sentiment))
+        phrases.append(Fragment(sentiment, utterance))
 
-    os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
-    os.unlink(tmp_filename)
+    return phrases
+
+def main(in_directory, out_directory, short_name):
+    phrases = get_phrases(in_directory)
+    phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+
+    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
+    os.makedirs(out_directory, exist_ok=True)
+    process_utils.write_list(out_filename, phrases)
+
 
 if __name__ == '__main__':
     in_directory = sys.argv[1]
