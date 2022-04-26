@@ -27,47 +27,49 @@ import tempfile
 
 import scripts.sentiment.process_utils as process_utils
 
-in_filename = sys.argv[1]
-out_filename = sys.argv[2]
+def main(in_filename, out_filename):
+    with open(in_filename, newline='') as fin:
+        cin = csv.reader(fin, delimiter=',', quotechar='"')
+        lines = list(cin)
 
-with open(in_filename, newline='') as fin:
-    cin = csv.reader(fin, delimiter=',', quotechar='"')
-    lines = list(cin)
+    tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
+    with open(tmp_filename, "w") as fout:
+        for line in lines[1:]:
+            sentiment = line[1]
+            if sentiment == 'negative':
+                sentiment = '0'
+            elif sentiment == 'neutral':
+                sentiment = '1'
+            elif sentiment == 'positive':
+                sentiment = '2'
+            else:
+                raise ValueError("Unknown sentiment: {}".format(sentiment))
+            # some of the tweets have \n in them
+            utterance = line[10].replace("\n", " ")
+            fout.write("%s %s\n" % (sentiment, utterance))
 
-tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
-with open(tmp_filename, "w") as fout:
-    for line in lines[1:]:        
-        sentiment = line[1]
-        if sentiment == 'negative':
-            sentiment = '0'
-        elif sentiment == 'neutral':
-            sentiment = '1'
-        elif sentiment == 'positive':
-            sentiment = '2'
-        else:
-            raise ValueError("Unknown sentiment: {}".format(sentiment))
-        # some of the tweets have \n in them
-        utterance = line[10].replace("\n", " ")
-        fout.write("%s %s\n" % (sentiment, utterance))
+    tmp2_filename = tempfile.NamedTemporaryFile(delete=False).name
+    os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, tmp2_filename))
+    os.unlink(tmp_filename)
 
-tmp2_filename = tempfile.NamedTemporaryFile(delete=False).name
-os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, tmp2_filename))
-os.unlink(tmp_filename)
+    # filter leading @United, @American, etc from the tweets
+    lines = open(tmp2_filename).readlines()
+    lines = [x.strip().split() for x in lines if x.strip()]
+    lines = [[line[0]] + process_utils.clean_tokenized_tweet(line[1:]) for line in lines]
 
-# filter leading @United, @American, etc from the tweets
-lines = open(tmp2_filename).readlines()
-lines = [x.strip().split() for x in lines if x.strip()]
-lines = [[line[0]] + process_utils.clean_tokenized_tweet(line[1:]) for line in lines]
+    lines = [' '.join(x) for x in lines]
 
-lines = [' '.join(x) for x in lines]
+    # this would count @s if you cared enough to count
+    #ats = Counter()
+    #for line in lines:
+    #    ats.update([x for x in line.split() if x[0] == '@'])
 
-# this would count @s if you cared enough to count
-#ats = Counter()
-#for line in lines:
-#    ats.update([x for x in line.split() if x[0] == '@'])
+    with open(out_filename, "w") as fout:
+        for line in lines:
+            fout.write(line)
+            fout.write("\n")
 
-with open(out_filename, "w") as fout:
-    for line in lines:
-        fout.write(line)
-        fout.write("\n")
-
+if __name__ == '__main__':
+    in_filename = sys.argv[1]
+    out_filename = sys.argv[2]
+    main(in_filename, out_filename)

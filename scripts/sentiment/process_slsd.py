@@ -23,32 +23,35 @@ import os
 import sys
 import tempfile
 
-directory = sys.argv[1]
-in_filenames = [os.path.join(directory, 'amazon_cells_labelled.txt'),
-                os.path.join(directory, 'imdb_labelled.txt'),
-                os.path.join(directory, 'yelp_labelled.txt')]
-out_filename = sys.argv[2]
+def main(directory, out_filename):
+    in_filenames = [os.path.join(directory, 'amazon_cells_labelled.txt'),
+                    os.path.join(directory, 'imdb_labelled.txt'),
+                    os.path.join(directory, 'yelp_labelled.txt')]
 
-lines = []
-for filename in in_filenames:
-    lines.extend(open(filename, newline=''))
+    lines = []
+    for filename in in_filenames:
+        lines.extend(open(filename, newline=''))
 
-tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
-with open(tmp_filename, "w") as fout:
-    for line in lines:
-        line = line.strip()
-        sentiment = line[-1]
-        utterance = line[:-1]
-        utterance = utterance.replace("!.", "!")
-        utterance = utterance.replace("?.", "?")
-        if sentiment == '0':
-            sentiment = '0'
-        elif sentiment == '1':
-            sentiment = '2'
-        else:
-            raise ValueError("Unknown sentiment: {}".format(sentiment))
-        fout.write("%s %s\n" % (sentiment, utterance))
+    tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
+    with open(tmp_filename, "w") as fout:
+        for line in lines:
+            line = line.strip()
+            sentiment = line[-1]
+            utterance = line[:-1]
+            utterance = utterance.replace("!.", "!")
+            utterance = utterance.replace("?.", "?")
+            if sentiment == '0':
+                sentiment = '0'
+            elif sentiment == '1':
+                sentiment = '2'
+            else:
+                raise ValueError("Unknown sentiment: {}".format(sentiment))
+            fout.write("%s %s\n" % (sentiment, utterance))
 
+    os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
+    os.unlink(tmp_filename)
 
-os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
-os.unlink(tmp_filename)
+if __name__ == '__main__':
+    directory = sys.argv[1]
+    out_filename = sys.argv[2]
+    main(directory, out_filename)

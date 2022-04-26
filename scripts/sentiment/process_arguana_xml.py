@@ -49,12 +49,14 @@ def get_phrases(filename):
     #phrases = [phrase.replace("\n", " ") for phrase in phrases]
     return phrases
 
-def main():
-    directory = sys.argv[1]
-    out_filename = sys.argv[2]
+def get_phrases_from_directory(directory):
     phrases = []
     for filename in glob.glob(directory + '/*/*xmi'):
         phrases.extend(get_phrases(filename))
+    return phrases
+
+def main(directory, out_filename):
+    phrases = get_phrases_from_directory(directory)
     print("Found {} phrases".format(len(phrases)))
     tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
     with open(tmp_filename, "w") as fout:
@@ -65,4 +67,6 @@ def main():
     os.unlink(tmp_filename)    
     
 if __name__ == "__main__":
-    main()
+    directory = sys.argv[1]
+    out_filename = sys.argv[2]
+    main(directory, out_filename)

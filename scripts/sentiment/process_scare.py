@@ -24,26 +24,29 @@ import stanza
 
 import scripts.sentiment.process_utils as process_utils
 
-basedir = sys.argv[1]
-nlp = stanza.Pipeline('de', processors='tokenize')
+def main(basedir):
+    nlp = stanza.Pipeline('de', processors='tokenize')
 
-text_files = glob.glob(os.path.join(basedir, "scare_v1.0.0_text/annotations/*txt"))
-text_id_map = {}
-for filename in text_files:
-    with open(filename) as fin:
-        for line in fin.readlines():
-            line = line.strip()
-            if not line:
-                continue
-            key, value = line.split(maxsplit=1)
-            if key in text_id_map:
-                raise ValueError("Duplicate key {}".format(key))
-            text_id_map[key] = value
+    text_files = glob.glob(os.path.join(basedir, "scare_v1.0.0_text", "annotations", "*txt"))
+    text_id_map = {}
+    for filename in text_files:
+        with open(filename) as fin:
+            for line in fin.readlines():
+                line = line.strip()
+                if not line:
+                    continue
+                key, value = line.split(maxsplit=1)
+                if key in text_id_map:
+                    raise ValueError("Duplicate key {}".format(key))
+                text_id_map[key] = value
 
-print(len(text_id_map))
+    print(len(text_id_map))
 
-snippets = process_utils.get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
+    snippets = process_utils.get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
 
-print(len(snippets))
-process_utils.write_list(os.path.join(basedir, "train.txt"), snippets)
+    print(len(snippets))
+    process_utils.write_list(os.path.join(basedir, "train.txt"), snippets)
 
+if __name__ == '__main__':
+    basedir = sys.argv[1]
+    main(basedir)

@@ -58,9 +58,7 @@ def get_phrases(filename):
 
     return fragments
 
-def main():
-    xml_directory = sys.argv[1]
-    out_directory = sys.argv[2]
+def main(xml_directory, out_directory):
     sentences = []
     for filename in glob.glob(xml_directory + '/xml/cet_*xml'):
         sentences.extend(get_phrases(filename))
@@ -83,4 +81,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    xml_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    main(xml_directory, out_directory)
+
