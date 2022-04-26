@@ -18,8 +18,8 @@ import sys
 
 import stanza
 
-from scripts.sentiment.process_utils import Fragment
-import scripts.sentiment.process_utils as process_utils
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def main(in_directory, out_directory, short_name):
     os.makedirs(out_directory, exist_ok=True)

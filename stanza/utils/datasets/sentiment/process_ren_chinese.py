@@ -9,8 +9,8 @@ from collections import namedtuple
 
 import stanza
 
-from scripts.sentiment.process_utils import Fragment
-import scripts.sentiment.process_utils as process_utils
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 """
 This processes a Chinese corpus, hosted here:

@@ -22,8 +22,8 @@ import sys
 
 import stanza
 
-from scripts.sentiment.process_utils import Fragment
-import scripts.sentiment.process_utils as process_utils
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv"):
     """

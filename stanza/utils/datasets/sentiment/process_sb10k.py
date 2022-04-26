@@ -28,8 +28,8 @@ from enum import Enum
 
 import stanza
 
-from scripts.sentiment.process_utils import Fragment
-import scripts.sentiment.process_utils as process_utils
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 class Split(Enum):
     TRAIN_DEV_TEST = 1
