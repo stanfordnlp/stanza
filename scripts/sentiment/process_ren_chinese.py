@@ -9,6 +9,7 @@ from collections import namedtuple
 
 import stanza
 
+from scripts.sentiment.process_utils import Fragment
 import scripts.sentiment.process_utils as process_utils
 
 """
@@ -24,8 +25,6 @@ The corpus format is a bunch of .xml files, with sentences labeled with various 
 中性: neutral
 积极: positive
 """
-
-Fragment = namedtuple('Fragment', ['sentiment', 'text'])
 
 def get_phrases(filename):
     tree = ET.parse(filename)
@@ -59,8 +58,7 @@ def get_phrases(filename):
 
     return fragments
 
-def main(xml_directory, out_directory, short_name):
-    os.makedirs(out_directory, exist_ok=True)
+def read_snippets(xml_directory):
     sentences = []
     for filename in glob.glob(xml_directory + '/xml/cet_*xml'):
         sentences.extend(get_phrases(filename))
@@ -70,11 +68,15 @@ def main(xml_directory, out_directory, short_name):
     for sentence in sentences:
         doc = nlp(sentence.text)
         text = " ".join(" ".join(token.text for token in sentence.tokens) for sentence in doc.sentences)
-        snippets.append(sentence.sentiment + " " + text)
+        snippets.append(Fragment(sentence.sentiment, text))
+    random.shuffle(snippets)
+    return snippets
+
+def main(xml_directory, out_directory, short_name):
+    snippets = read_snippets(xml_directory)
 
     print("Found {} phrases".format(len(snippets)))
-    random.seed(1000)
-    random.shuffle(snippets)
+    os.makedirs(out_directory, exist_ok=True)
     process_utils.write_splits(out_directory,
                                snippets,
                                (process_utils.Split("%s.train.txt" % short_name, 0.8),
@@ -83,6 +85,7 @@ def main(xml_directory, out_directory, short_name):
 
 
 if __name__ == "__main__":
+    random.seed(1000)
     xml_directory = sys.argv[1]
     out_directory = sys.argv[2]
     short_name = sys.argv[3]

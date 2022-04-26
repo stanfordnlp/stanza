@@ -18,6 +18,7 @@ import sys
 
 import stanza
 
+from scripts.sentiment.process_utils import Fragment
 import scripts.sentiment.process_utils as process_utils
 
 def main(in_directory, out_directory, short_name):
@@ -53,8 +54,7 @@ def main(in_directory, out_directory, short_name):
                 num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
                 if num_tokens < 4:
                     num_short_items = num_short_items + 1
-                snippets.append("%d %s" % (sentiment, text))
-
+                snippets.append(Fragment(sentiment, text))
 
     print("Total snippets found for USAGE: %d" % len(snippets))
 

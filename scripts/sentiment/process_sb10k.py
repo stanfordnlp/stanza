@@ -28,6 +28,7 @@ from enum import Enum
 
 import stanza
 
+from scripts.sentiment.process_utils import Fragment
 import scripts.sentiment.process_utils as process_utils
 
 class Split(Enum):
@@ -35,31 +36,18 @@ class Split(Enum):
     TRAIN_DEV = 2
     TEST = 3
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--csv_filename', type=str, default=None, help='CSV file to read in')
-    parser.add_argument('--out_dir', type=str, default=None, help='Where to write the output files')
-    parser.add_argument('--sentiment_column', type=int, default=2, help='Column with the sentiment')
-    parser.add_argument('--text_column', type=int, default=3, help='Column with the text')
-    parser.add_argument('--short_name', type=str, default="sb10k", help='short name to use when writing files')
-
-    parser.add_argument('--split', type=lambda x: Split[x.upper()], default=Split.TRAIN_DEV_TEST,
-                        help="How to split the resulting data")
-
-    args = parser.parse_args()
-
-
+def read_snippets(csv_filename, sentiment_column, text_column):
     nlp = stanza.Pipeline('de', processors='tokenize')
 
-    with open(args.csv_filename, newline='') as fin:
+    with open(csv_filename, newline='') as fin:
         cin = csv.reader(fin, delimiter='\t', quotechar=None)
         lines = list(cin)
 
     # Read in the data and parse it
     snippets = []
     for line in lines:
-        sentiment = line[args.sentiment_column]
-        text = line[args.text_column]
+        sentiment = line[sentiment_column]
+        text = line[text_column]
         doc = nlp(text)
 
         #if sentiment.lower() == 'unknown':
@@ -78,10 +66,25 @@ def main():
         for sentence in doc.sentences:
             text.extend(token.text for token in sentence.tokens)
         text = process_utils.clean_tokenized_tweet(text)
-        snippets.append(sentiment + " " + " ".join(text))
+        snippets.append(Fragment(sentiment, " ".join(text)))
+    return snippets
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--csv_filename', type=str, default=None, help='CSV file to read in')
+    parser.add_argument('--out_dir', type=str, default=None, help='Where to write the output files')
+    parser.add_argument('--sentiment_column', type=int, default=2, help='Column with the sentiment')
+    parser.add_argument('--text_column', type=int, default=3, help='Column with the text')
+    parser.add_argument('--short_name', type=str, default="sb10k", help='short name to use when writing files')
+
+    parser.add_argument('--split', type=lambda x: Split[x.upper()], default=Split.TRAIN_DEV_TEST,
+                        help="How to split the resulting data")
+
+    args = parser.parse_args()
+
+    snippets = read_snippets(args.csv_filename, args.sentiment_column, args.text_column)
 
     print(len(snippets))
-    random.seed(1000)
     random.shuffle(snippets)
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -102,5 +105,6 @@ def main():
         raise ValueError("Unknown split method {}".format(args.split))
 
 if __name__ == '__main__':
+    random.seed(1000)
     main()
 
