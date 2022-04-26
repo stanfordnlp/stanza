@@ -41,6 +41,7 @@ def main():
     parser.add_argument('--out_dir', type=str, default=None, help='Where to write the output files')
     parser.add_argument('--sentiment_column', type=int, default=2, help='Column with the sentiment')
     parser.add_argument('--text_column', type=int, default=3, help='Column with the text')
+    parser.add_argument('--short_name', type=str, default="sb10k", help='short name to use when writing files')
 
     parser.add_argument('--split', type=lambda x: Split[x.upper()], default=Split.TRAIN_DEV_TEST,
                         help="How to split the resulting data")
@@ -49,7 +50,6 @@ def main():
 
 
     nlp = stanza.Pipeline('de', processors='tokenize')
-
 
     with open(args.csv_filename, newline='') as fin:
         cin = csv.reader(fin, delimiter='\t', quotechar=None)
@@ -84,19 +84,20 @@ def main():
     random.seed(1000)
     random.shuffle(snippets)
 
+    os.makedirs(args.out_dir, exist_ok=True)
     if args.split is Split.TRAIN_DEV_TEST:
         process_utils.write_splits(args.out_dir,
                                    snippets,
-                                   (process_utils.Split("train.txt", 0.8),
-                                    process_utils.Split("dev.txt", 0.1),
-                                    process_utils.Split("test.txt", 0.1)))
+                                   (process_utils.Split("%s.train.txt" % args.short_name, 0.8),
+                                    process_utils.Split("%s.dev.txt" % args.short_name, 0.1),
+                                    process_utils.Split("%s.test.txt" % args.short_name, 0.1)))
     elif args.split is Split.TRAIN_DEV:
         process_utils.write_splits(args.out_dir,
                                    snippets,
-                                   (process_utils.Split("train.txt", 0.9),
-                                    process_utils.Split("dev.txt", 0.1)))
+                                   (process_utils.Split("%s.train.txt" % args.short_name, 0.9),
+                                    process_utils.Split("%s.dev.txt" % args.short_name, 0.1)))
     elif args.split is Split.TEST:
-        process_utils.write_list(os.path.join(args.out_dir, "test.txt"), snippets)
+        process_utils.write_list(os.path.join(args.out_dir, "%s.test.txt" % args.short_name), snippets)
     else:
         raise ValueError("Unknown split method {}".format(args.split))
 

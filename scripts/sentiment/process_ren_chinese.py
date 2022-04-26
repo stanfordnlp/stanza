@@ -1,4 +1,5 @@
 import glob
+import os
 import random
 import sys
 
@@ -58,7 +59,8 @@ def get_phrases(filename):
 
     return fragments
 
-def main(xml_directory, out_directory):
+def main(xml_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
     sentences = []
     for filename in glob.glob(xml_directory + '/xml/cet_*xml'):
         sentences.extend(get_phrases(filename))
@@ -75,13 +77,14 @@ def main(xml_directory, out_directory):
     random.shuffle(snippets)
     process_utils.write_splits(out_directory,
                                snippets,
-                               (process_utils.Split("train.txt", 0.8),
-                                process_utils.Split("dev.txt", 0.1),
-                                process_utils.Split("test.txt", 0.1)))
+                               (process_utils.Split("%s.train.txt" % short_name, 0.8),
+                                process_utils.Split("%s.dev.txt" % short_name, 0.1),
+                                process_utils.Split("%s.test.txt" % short_name, 0.1)))
 
 
 if __name__ == "__main__":
     xml_directory = sys.argv[1]
     out_directory = sys.argv[2]
-    main(xml_directory, out_directory)
+    short_name = sys.argv[3]
+    main(xml_directory, out_directory, short_name)
 

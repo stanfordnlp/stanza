@@ -29,32 +29,37 @@ import os
 import sys
 import tempfile
 
-def main(in_filename, out_filename):
-    with open(in_filename, newline='', encoding='windows-1252') as fin:
-        cin = csv.reader(fin, delimiter=',', quotechar='"')
-        lines = list(cin)
+def main(in_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
+    for split in ("train", "dev", "test"):
+        in_filename  = os.path.join(in_directory, "%s_sent_emo.csv" % split)
+        out_filename = os.path.join(out_directory, "%s.%s.txt" % (short_name, split))
 
-    tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
-    with open(tmp_filename, "w") as fout:
-        for line in lines[1:]:
-            sentiment = line[4]
-            if sentiment == 'negative':
-                sentiment = '0'
-            elif sentiment == 'neutral':
-                sentiment = '1'
-            elif sentiment == 'positive':
-                sentiment = '2'
-            else:
-                raise ValueError("Unknown sentiment: {}".format(sentiment))
-            utterance = line[1].replace("Â", "")
-            fout.write("%s %s\n" % (sentiment, utterance))
+        with open(in_filename, newline='', encoding='windows-1252') as fin:
+            cin = csv.reader(fin, delimiter=',', quotechar='"')
+            lines = list(cin)
 
+        tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
+        with open(tmp_filename, "w") as fout:
+            for line in lines[1:]:
+                sentiment = line[4]
+                if sentiment == 'negative':
+                    sentiment = '0'
+                elif sentiment == 'neutral':
+                    sentiment = '1'
+                elif sentiment == 'positive':
+                    sentiment = '2'
+                else:
+                    raise ValueError("Unknown sentiment: {}".format(sentiment))
+                utterance = line[1].replace("Â", "")
+                fout.write("%s %s\n" % (sentiment, utterance))
 
-    os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
-    os.unlink(tmp_filename)
+        os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
+        os.unlink(tmp_filename)
 
 if __name__ == '__main__':
-    in_filename = sys.argv[1]
-    out_filename = sys.argv[2]
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
 
-    main(in_filename, out_filename)
+    main(in_directory, out_directory, short_name)

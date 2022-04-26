@@ -20,12 +20,13 @@ import stanza
 
 import scripts.sentiment.process_utils as process_utils
 
-def main(basedir):
+def main(in_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
     nlp = stanza.Pipeline('de', processors='tokenize')
 
     num_short_items = 0
     snippets = []
-    csv_files = glob.glob(os.path.join(basedir, "files/de*csv"))
+    csv_files = glob.glob(os.path.join(in_directory, "files/de*csv"))
     for csv_filename in csv_files:
         with open(csv_filename, newline='') as fin:
             cin = csv.reader(fin, delimiter='\t', quotechar=None)
@@ -57,8 +58,11 @@ def main(basedir):
 
     print("Total snippets found for USAGE: %d" % len(snippets))
 
-    process_utils.write_list(os.path.join(basedir, "de-train.txt"), snippets)
+    process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), snippets)
 
 if __name__ == '__main__':
-    basedir = sys.argv[1]
-    main(basedir)
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+
+    main(in_directory, out_directory, short_name)

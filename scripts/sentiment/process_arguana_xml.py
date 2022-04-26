@@ -55,18 +55,21 @@ def get_phrases_from_directory(directory):
         phrases.extend(get_phrases(filename))
     return phrases
 
-def main(directory, out_filename):
-    phrases = get_phrases_from_directory(directory)
+def main(in_directory, out_directory, short_name):
+    phrases = get_phrases_from_directory(in_directory)
     print("Found {} phrases".format(len(phrases)))
     tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
     with open(tmp_filename, "w") as fout:
         for phrase in phrases:
             fout.write("%s\n" % (phrase))
 
+    os.makedirs(out_directory, exist_ok=True)
+    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
     os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
     os.unlink(tmp_filename)    
     
 if __name__ == "__main__":
-    directory = sys.argv[1]
-    out_filename = sys.argv[2]
-    main(directory, out_filename)
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+    main(in_directory, out_directory, short_name)

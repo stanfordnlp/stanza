@@ -27,7 +27,11 @@ import tempfile
 
 import scripts.sentiment.process_utils as process_utils
 
-def main(in_filename, out_filename):
+def main(in_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
+    in_filename = os.path.join(in_directory, "Tweets.csv")
+    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
+
     with open(in_filename, newline='') as fin:
         cin = csv.reader(fin, delimiter=',', quotechar='"')
         lines = list(cin)
@@ -70,6 +74,7 @@ def main(in_filename, out_filename):
             fout.write("\n")
 
 if __name__ == '__main__':
-    in_filename = sys.argv[1]
-    out_filename = sys.argv[2]
-    main(in_filename, out_filename)
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+    main(in_directory, out_directory, short_name)

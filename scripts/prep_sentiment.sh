@@ -30,39 +30,33 @@ done
 if [ "$language" = "english" ]; then
     echo "PROCESSING ENGLISH"
     echo "--- ArguAna ---"
-    $PYTHON scripts/sentiment/process_arguana_xml.py $SENTIMENT_DATA_DIR/arguana/arguana-tripadvisor-annotated-v2/split/training $SENTIMENT_DATA_DIR/arguana/train.txt
+    $PYTHON scripts/sentiment/process_arguana_xml.py extern_data/sentiment/arguana/arguana-tripadvisor-annotated-v2/split/training $SENTIMENT_DATA_DIR en_arguana
 
     echo "--- MELD ---"
-    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/train_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/train.txt
-    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/dev_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/dev.txt
-    $PYTHON scripts/sentiment/process_MELD.py $SENTIMENT_DATA_DIR/MELD/MELD/test_sent_emo.csv $SENTIMENT_DATA_DIR/MELD/test.txt
+    $PYTHON scripts/sentiment/process_MELD.py extern_data/sentiment/MELD $SENTIMENT_DATA_DIR en_meld
 
     echo "--- SLSD ---"
-    $PYTHON scripts/sentiment/process_slsd.py $SENTIMENT_DATA_DIR/slsd/slsd $SENTIMENT_DATA_DIR/slsd/train.txt
+    $PYTHON scripts/sentiment/process_slsd.py extern_data/sentiment/slsd $SENTIMENT_DATA_DIR en_slsd
 
     echo "--- AIRLINE ---"
-    $PYTHON -m scripts.sentiment.process_airline $SENTIMENT_DATA_DIR/airline/Tweets.csv $SENTIMENT_DATA_DIR/airline/train.txt
+    $PYTHON -m scripts.sentiment.process_airline extern_data/sentiment/airline $SENTIMENT_DATA_DIR en_airline
 
     echo "--- SST ---"
-    if [ -z "$SENTIMENT_SST_HOME" ]; then
-        SENTIMENT_SST_HOME=$SENTIMENT_DATA_DIR/sentiment-treebank
-        echo "  Assuming git download of SST is at " $SENTIMENT_SST_HOME
-    fi
     $PYTHON -m stanza.utils.datasets.sentiment.process_sst
 elif [ "$language" = "german" ]; then
     echo "PROCESSING GERMAN"
     echo "Scare"
-    $PYTHON -m scripts.sentiment.process_scare $SENTIMENT_DATA_DIR/german/scare
+    $PYTHON -m scripts.sentiment.process_scare extern_data/sentiment/german/scare $SENTIMENT_DATA_DIR de_scare
     echo "Usage"
-    $PYTHON -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE
+    $PYTHON -m scripts.sentiment.process_usage_german extern_data/sentiment/USAGE $SENTIMENT_DATA_DIR de_usage
     echo "SB-10k"
-    $PYTHON  -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_test.tsv --out_dir extern_data/sentiment/german/sb-10k --split test --sentiment_column 2 --text_column 3
-    $PYTHON  -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_train.tsv --out_dir extern_data/sentiment/german/sb-10k --split train_dev --sentiment_column 2 --text_column 3
+    $PYTHON -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_test.tsv --out_dir $SENTIMENT_DATA_DIR --short_name de_sb10k --split test --sentiment_column 2 --text_column 3
+    $PYTHON -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/de_full/de_train.tsv --out_dir $SENTIMENT_DATA_DIR --short_name de_sb10k --split train_dev --sentiment_column 2 --text_column 3
     #$PYTHON -m scripts.sentiment.process_sb10k --csv_filename extern_data/sentiment/german/sb-10k/sb_10k.tsv --out_dir extern_data/sentiment/german/sb-10k
 elif [ "$language" = "chinese" ]; then
     echo "PROCESSING CHINESE"
     echo "Ren-CECps"
-    $PYTHON -m scripts.sentiment.process_ren_chinese extern_data/sentiment/chinese/RenCECps extern_data/sentiment/chinese/RenCECps
+    $PYTHON -m scripts.sentiment.process_ren_chinese extern_data/sentiment/chinese/RenCECps $SENTIMENT_DATA_DIR zh_ren
 else
     echo "Unknown language $language"
 fi

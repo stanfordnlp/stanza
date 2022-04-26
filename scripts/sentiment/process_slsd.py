@@ -23,10 +23,12 @@ import os
 import sys
 import tempfile
 
-def main(directory, out_filename):
-    in_filenames = [os.path.join(directory, 'amazon_cells_labelled.txt'),
-                    os.path.join(directory, 'imdb_labelled.txt'),
-                    os.path.join(directory, 'yelp_labelled.txt')]
+def main(in_directory, out_directory, short_name):
+    in_filenames = [os.path.join(in_directory, 'amazon_cells_labelled.txt'),
+                    os.path.join(in_directory, 'imdb_labelled.txt'),
+                    os.path.join(in_directory, 'yelp_labelled.txt')]
+    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
+    os.makedirs(out_directory, exist_ok=True)
 
     lines = []
     for filename in in_filenames:
@@ -52,6 +54,7 @@ def main(directory, out_filename):
     os.unlink(tmp_filename)
 
 if __name__ == '__main__':
-    directory = sys.argv[1]
-    out_filename = sys.argv[2]
-    main(directory, out_filename)
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+    main(in_directory, out_directory, short_name)

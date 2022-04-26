@@ -24,10 +24,15 @@ import stanza
 
 import scripts.sentiment.process_utils as process_utils
 
-def main(basedir):
-    nlp = stanza.Pipeline('de', processors='tokenize')
+def main(in_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
 
-    text_files = glob.glob(os.path.join(basedir, "scare_v1.0.0_text", "annotations", "*txt"))
+    input_path = os.path.join(in_directory, "scare_v1.0.0_text", "annotations", "*txt")
+    text_files = glob.glob(input_path)
+    if len(text_files) == 0:
+        raise FileNotFoundError("Did not find any input files in %s" % input_path)
+    else:
+        print("Found %d input files in %s" % (len(text_files), input_path))
     text_id_map = {}
     for filename in text_files:
         with open(filename) as fin:
@@ -40,13 +45,16 @@ def main(basedir):
                     raise ValueError("Duplicate key {}".format(key))
                 text_id_map[key] = value
 
-    print(len(text_id_map))
-
-    snippets = process_utils.get_scare_snippets(nlp, os.path.join(basedir, "scare_v1.0.0/annotations"), text_id_map)
+    print("Found %d total sentiment ratings" % len(text_id_map))
+    nlp = stanza.Pipeline('de', processors='tokenize')
+    snippets = process_utils.get_scare_snippets(nlp, os.path.join(in_directory, "scare_v1.0.0", "annotations"), text_id_map)
 
     print(len(snippets))
-    process_utils.write_list(os.path.join(basedir, "train.txt"), snippets)
+    process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), snippets)
 
 if __name__ == '__main__':
-    basedir = sys.argv[1]
-    main(basedir)
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+
+    main(in_directory, out_directory, short_name)
