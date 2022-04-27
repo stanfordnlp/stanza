@@ -520,9 +520,8 @@ class LSTMModel(BaseModel, nn.Module):
             # BERT embedding extraction
             # result will be len+2 for each sentence
             # we will take 1:-1 if we don't care about the endpoints
-            bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device)
-            if self.sentence_boundary_vectors is SentenceBoundary.NONE:
-                bert_embeddings = [be[1:-1] for be in bert_embeddings]
+            bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
+                                                      keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE)
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
         # Extract partitioned representation

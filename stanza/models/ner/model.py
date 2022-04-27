@@ -115,9 +115,7 @@ class NERTagger(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device)
-            #remove the bos and eos tokens
-            processed_bert = [sent[1:-1] for sent in processed_bert]
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False)
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 

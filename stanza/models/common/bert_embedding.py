@@ -76,7 +76,7 @@ def filter_data(model_name, data, tokenizer = None):
     return filtered_data
 
 
-def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
     Extract transformer embeddings using a method specifically for phobert
 
@@ -129,22 +129,24 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
     #process the output
     #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
     # idx2+1 compensates for the start token at the start of a sentence
-    # [0] and [-1] grab the start and end representations as well
-    offsets = [[0] + [idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)] + [-1]
+    offsets = [[idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
                 for idx, sent in enumerate(processed)]
+    if keep_endpoints:
+        # [0] and [-1] grab the start and end representations as well
+        offsets = [[0] + off + [-1] for off in offsets]
     processed = [feature[offset] for feature, offset in zip(features, offsets)]
 
     # This is a list of ltensors
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device):
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
     Extract transformer embeddings using a generic roberta extraction
     data: list of list of string (the text tokens)
     """
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
@@ -173,6 +175,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
 
     processed = []
     #process the output
+    if not keep_endpoints:
+        #remove the bos and eos tokens
+        list_offsets = [sent[1:-1] for sent in list_offsets]
     for feature, offsets in zip(features, list_offsets):
         new_sent = feature[offsets]
         processed.append(new_sent)
