@@ -175,6 +175,16 @@ tr_starlang is a set of constituency trees for Turkish
     $CONSTITUENCY_HOME/turkish    (yes, the constituency home)
   prepare_ner_dataset.py tr_starlang
 
+GermEval2014 is a German NER dataset
+  https://sites.google.com/site/germeval2014ner/data
+  https://drive.google.com/drive/folders/1kC0I2UGl2ltrluI9NqDjaQJGw5iliw_J
+  Download the files in that directory
+    NER-de-train.tsv NER-de-dev.tsv NER-de-test.tsv
+  put them in
+    $NERBASE/germeval2014
+  then run
+    prepare_ner_dataset.py de_germeval2014
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -232,7 +242,27 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
+def get_tags(datasets):
+    """
+    return the set of tags used in these datasets
+
+    datasets is expected to be train, dev, test but could be any list
+    """
+    tags = set()
+    for dataset in datasets:
+        for sentence in dataset:
+            for word, tag in sentence:
+                tags.add(tag)
+    return tags
+
 def write_dataset(datasets, output_dir, short_name, suffix="bio"):
+    """
+    write all three pieces of a dataset to output_dir
+
+    datasets should be 3 lists: train, dev, test
+    each list should be a list of sentences
+    each sentence is a list of pairs: word, tag
+    """
     for shard, dataset in zip(SHARDS, datasets):
         output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
         with open(output_filename, "w", encoding="utf-8") as fout:
@@ -242,6 +272,43 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio"):
                 fout.write("\n")
 
     convert_bio_to_json(output_dir, output_dir, short_name, suffix)
+
+
+def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True):
+    """
+    Read sentences from a TSV file
+
+    Returns a list of list of (word, tag)
+    """
+    with open(filename, encoding="utf-8") as fin:
+        lines = fin.readlines()
+
+    lines = [x.strip() for x in lines]
+
+    sentences = []
+    current_sentence = []
+    for line in lines:
+        if not line:
+            if current_sentence:
+                sentences.append(current_sentence)
+                current_sentence = []
+            continue
+        if skip_comments and line.startswith("#"):
+            continue
+
+        pieces = line.split("\t")
+        word = pieces[text_column]
+        tag = pieces[annotation_column]
+        if remap_fn:
+            tag = remap_fn(tag)
+
+        current_sentence.append((word, tag))
+
+    if current_sentence:
+        sentences.append(current_sentence)
+
+    return sentences
+
 
 def process_turku(paths):
     short_name = 'fi_turku'
@@ -637,6 +704,41 @@ def process_starlang(paths, short_name):
 
     write_dataset(datasets, paths["NER_DATA_DIR"], short_name)
 
+def remap_germeval_tag(tag):
+    """
+    Simplify tags for GermEval2014 using a simple rubric
+
+    all tags become their parent tag
+    OTH becomes MISC
+    """
+    if tag == "O":
+        return tag
+    if tag[1:5] == "-LOC":
+        return tag[:5]
+    if tag[1:5] == "-PER":
+        return tag[:5]
+    if tag[1:5] == "-ORG":
+        return tag[:5]
+    if tag[1:5] == "-OTH":
+        return tag[0] + "-MISC"
+    raise ValueError("Unexpected tag: %s" % tag)
+
+def process_de_germeval2014(paths, short_name):
+    """
+    Process the TSV of the GermEval2014 dataset
+    """
+    in_directory = os.path.join(paths["NERBASE"], "germeval2014")
+    base_output_path = paths["NER_DATA_DIR"]
+    datasets = []
+    for shard in SHARDS:
+        in_file = os.path.join(in_directory, "NER-de-%s.tsv" % shard)
+        sentences = read_tsv(in_file, 1, 2, remap_fn=remap_germeval_tag)
+        datasets.append(sentences)
+    tags = get_tags(datasets)
+    print("Found the following tags: {}".format(sorted(tags)))
+    write_dataset(datasets, base_output_path, short_name)
+
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -681,6 +783,8 @@ def main(dataset_name):
         process_norne(paths, dataset_name)
     elif dataset_name == 'tr_starlang':
         process_starlang(paths, dataset_name)
+    elif dataset_name == 'de_germeval2014':
+        process_de_germeval2014(paths, dataset_name)
     elif dataset_name == 'en_sample':
         process_toy_dataset(paths, dataset_name)
     else:
