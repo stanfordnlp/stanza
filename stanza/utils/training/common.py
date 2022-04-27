@@ -45,7 +45,11 @@ BERT = {
     # HooshvareLab/roberta-fa-zwnj-base
     # dev:  2022-04-23 16:23:25 INFO: fa_arman 81.23
     # test: 2022-04-23 16:23:48 INFO: fa_arman 81.11
-    "fa": 'HooshvareLab/roberta-fa-zwnj-base',
+    #
+    # HooshvareLab/bert-base-parsbert-uncased
+    # dev:  2022-04-26 10:42:09 INFO: fa_arman 82.49
+    # test: 2022-04-26 10:42:31 INFO: fa_arman 83.16
+    "fa": 'HooshvareLab/bert-base-parsbert-uncased',
 
     # NER scores for a couple options:
     # none:
