@@ -54,14 +54,20 @@ def get_phrases(in_filename):
         phrases.append(Fragment(sentiment, utterance))
     return phrases
 
+def get_tokenized_phrases(split, in_directory):
+    """
+    split in train,dev,test
+    """
+    in_filename  = os.path.join(in_directory, "%s_sent_emo.csv" % split)
+    phrases = get_phrases(in_filename)
+
+    phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+    return phrases
 
 def main(in_directory, out_directory, short_name):
     os.makedirs(out_directory, exist_ok=True)
     for split in ("train", "dev", "test"):
-        in_filename  = os.path.join(in_directory, "%s_sent_emo.csv" % split)
-        phrases = get_phrases(in_filename)
-
-        phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+        phrases = get_tokenized_phrases(split, in_directory)
         process_utils.write_list(os.path.join(out_directory, "%s.%s.txt" % (short_name, split)), phrases)
 
 if __name__ == '__main__':
