@@ -30,6 +30,7 @@ def get_default_paths():
 
         "NERBASE": "extern_data/ner",
         "CONSTITUENCY_BASE": "extern_data/constituency",
+        "SENTIMENT_BASE": "extern_data/sentiment",
 
         # there's a stanford github, stanfordnlp/handparsed-treebank,
         # with some data for different languages

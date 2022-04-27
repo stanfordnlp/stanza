@@ -27,17 +27,19 @@ etc
 import csv
 import os
 import sys
-import tempfile
 
-in_filename = sys.argv[1]
-out_filename = sys.argv[2]
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
 
-with open(in_filename, newline='', encoding='windows-1252') as fin:
-    cin = csv.reader(fin, delimiter=',', quotechar='"')
-    lines = list(cin)
+def get_phrases(in_filename):
+    """
+    Get the phrases from a single CSV filename
+    """
+    with open(in_filename, newline='', encoding='windows-1252') as fin:
+        cin = csv.reader(fin, delimiter=',', quotechar='"')
+        lines = list(cin)
 
-tmp_filename = tempfile.NamedTemporaryFile(delete=False).name
-with open(tmp_filename, "w") as fout:
+    phrases = []
     for line in lines[1:]:
         sentiment = line[4]
         if sentiment == 'negative':
@@ -49,8 +51,22 @@ with open(tmp_filename, "w") as fout:
         else:
             raise ValueError("Unknown sentiment: {}".format(sentiment))
         utterance = line[1].replace("Â", "")
-        fout.write("%s %s\n" % (sentiment, utterance))
+        phrases.append(Fragment(sentiment, utterance))
+    return phrases
 
 
-os.system("java edu.stanford.nlp.process.PTBTokenizer -preserveLines %s > %s" % (tmp_filename, out_filename))
-os.unlink(tmp_filename)
+def main(in_directory, out_directory, short_name):
+    os.makedirs(out_directory, exist_ok=True)
+    for split in ("train", "dev", "test"):
+        in_filename  = os.path.join(in_directory, "%s_sent_emo.csv" % split)
+        phrases = get_phrases(in_filename)
+
+        phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+        process_utils.write_list(os.path.join(out_directory, "%s.%s.txt" % (short_name, split)), phrases)
+
+if __name__ == '__main__':
+    in_directory = sys.argv[1]
+    out_directory = sys.argv[2]
+    short_name = sys.argv[3]
+
+    main(in_directory, out_directory, short_name)
