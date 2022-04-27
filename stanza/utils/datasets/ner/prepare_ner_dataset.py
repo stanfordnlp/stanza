@@ -160,7 +160,7 @@ NorNE is the Norwegian Dependency Treebank with NER labels
     prepare_ner_dataset.py nb_norne
     prepare_ner_dataset.py nn_norne
 
-starlang is a set of constituency trees for Turkish
+tr_starlang is a set of constituency trees for Turkish
   The words in this dataset (usually) have NER labels as well
 
   A dataset in three parts from the Starlang group in Turkey:
