@@ -310,8 +310,8 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
     return sentences
 
 
-def process_turku(paths):
-    short_name = 'fi_turku'
+def process_turku(paths, short_name):
+    assert short_name == 'fi_turku'
     base_input_path = os.path.join(paths["NERBASE"], short_name)
     base_output_path = paths["NER_DATA_DIR"]
     for shard in SHARDS:
@@ -321,8 +321,8 @@ def process_turku(paths):
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
-def process_it_fbk(paths):
-    short_name = "it_fbk"
+def process_it_fbk(paths, short_name):
+    assert short_name == "it_fbk"
     base_input_path = os.path.join(paths["NERBASE"], short_name)
     csv_file = os.path.join(base_input_path, "all-wiki-split.tsv")
     if not os.path.exists(csv_file):
@@ -332,8 +332,8 @@ def process_it_fbk(paths):
     convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
 
 
-def process_languk(paths):
-    short_name = 'uk_languk'
+def process_languk(paths, short_name):
+    assert short_name == 'uk_languk'
     base_input_path = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'data')
     base_output_path = paths["NER_DATA_DIR"]
     train_test_split_fname = os.path.join(paths["NERBASE"], 'lang-uk', 'ner-uk', 'doc', 'dev-test-split.txt')
@@ -453,13 +453,13 @@ def process_rgai(paths, short_name):
 def get_nytk_input_path(paths):
     return os.path.join(paths["NERBASE"], "NYTK-NerKor")
 
-def process_nytk(paths):
+def process_nytk(paths, dataset_name):
     """
     Process the NYTK dataset
     """
+    assert short_name == "hu_nytk"
     base_output_path = paths["NER_DATA_DIR"]
     base_input_path = get_nytk_input_path(paths)
-    short_name = "hu_nytk"
 
     convert_nytk.convert_nytk(base_input_path, base_output_path, short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
@@ -482,11 +482,12 @@ def concat_files(output_file, *input_files):
                 fout.write(line)
 
 
-def process_hu_combined(paths):
+def process_hu_combined(paths, short_name):
+    assert short_name == "hu_combined"
+
     base_output_path = paths["NER_DATA_DIR"]
     rgai_input_path = get_rgai_input_path(paths)
     nytk_input_path = get_nytk_input_path(paths)
-    short_name = "hu_combined"
 
     with tempfile.TemporaryDirectory() as tmp_output_path:
         convert_rgai.convert_rgai(rgai_input_path, tmp_output_path, "hu_rgai", True, True)
@@ -561,9 +562,9 @@ def process_nchlt(paths, short_name):
     split_wikiner(base_output_path, input_files[0], prefix=short_name, remap={"OUT": "O"})
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
-def process_my_ucsy(paths):
+def process_my_ucsy(paths, short_name):
+    assert short_name == "my_ucsy"
     language = "my"
-    short_name = "my_ucsy"
 
     base_input_path = os.path.join(paths["NERBASE"], short_name)
     base_output_path = paths["NER_DATA_DIR"]
@@ -748,11 +749,11 @@ def main(dataset_name):
     random.seed(1234)
 
     if dataset_name == 'fi_turku':
-        process_turku(paths)
+        process_turku(paths, dataset_name)
     elif dataset_name == 'it_fbk':
-        process_it_fbk(paths)
+        process_it_fbk(paths, dataset_name)
     elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
-        process_languk(paths)
+        process_languk(paths, dataset_name)
     elif dataset_name == 'hi_ijc':
         process_ijc(paths, dataset_name)
     elif dataset_name.endswith("FIRE2013") or dataset_name.endswith("fire2013"):
@@ -762,13 +763,13 @@ def main(dataset_name):
     elif dataset_name.startswith('hu_rgai'):
         process_rgai(paths, dataset_name)
     elif dataset_name == 'hu_nytk':
-        process_nytk(paths)
+        process_nytk(paths, dataset_name)
     elif dataset_name == 'hu_combined':
-        process_hu_combined(paths)
+        process_hu_combined(paths, dataset_name)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
     elif dataset_name == 'my_ucsy':
-        process_my_ucsy(paths)
+        process_my_ucsy(paths, dataset_name)
     elif dataset_name.endswith("_nchlt"):
         process_nchlt(paths, dataset_name)
     elif dataset_name == "fa_arman":
