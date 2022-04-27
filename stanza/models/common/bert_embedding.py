@@ -79,6 +79,7 @@ def filter_data(model_name, data, tokenizer = None):
 def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
     """
     Extract transformer embeddings using a method specifically for phobert
+
     Since phobert doesn't have the is_split_into_words / tokenized.word_ids(batch_index=0)
     capability, we instead look for @@ to denote a continued token.
     data: list of list of string (the text tokens)
@@ -129,7 +130,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
     #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
     # idx2+1 compensates for the start token at the start of a sentence
     # [0] and [-1] grab the start and end representations as well
-    offsets = [[idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)] 
+    offsets = [[0] + [idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)] + [-1]
                 for idx, sent in enumerate(processed)]
     processed = [feature[offset] for feature, offset in zip(features, offsets)]
 
@@ -171,8 +172,6 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
             features += feature.clone().detach()
 
     processed = []
-    #remove the bos and eos tokens
-    list_offsets = [ sent[1:-1] for sent in list_offsets]
     #process the output
     for feature, offsets in zip(features, list_offsets):
         new_sent = feature[offsets]
