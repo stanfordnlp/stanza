@@ -40,7 +40,6 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
     correct_by_type = Counter()
     guessed_by_type = Counter()
     gold_by_type = Counter()
-
     for p in pred_ents:
         guessed_by_type[p['type']] += 1
         if p in gold_ents:
@@ -87,6 +86,10 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
         assert(len(gold_tags) == len(pred_tags)), \
             "Number of predicted tags does not match gold."
         for g, p in zip(gold_tags, pred_tags):
+            if "-" in g:
+                g = g.split("-")[1]
+            if "-" in p:
+                p = p.split("-")[1]
             confusion[g][p] = confusion[g][p] + 1
             if g == 'O' and p == 'O':
                 continue

@@ -321,6 +321,13 @@ def evaluate(args):
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
+    write_preds(preds)
+
+def write_preds(preds):
+    preds = "\n".join(["\t".join(s) for s in preds])
+    os.makedirs("./error_analysis/", exist_ok=True)
+    with open("./error_analysis/ner_predicts", "w") as file:
+        file.write(preds)
 
 
 def load_model(args, model_file):

@@ -847,7 +847,7 @@ def build_combined_english_dataset(udbase_dir, tokenizer_dir, handparsed_dir, sh
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             sents.extend(read_sentences_from_conllu(conllu_file))
     else:
-        ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
+        ewt_conllu = common.find_treebank_dataset_file("en_tweet", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
 
     sents = strip_mwt_from_sentences(sents)
@@ -906,6 +906,23 @@ def replace_semicolons(sentences):
         new_sents.append(new_sent)
     print("Updated %d sentences to replace sentence-final ; with ." % count)
     return new_sents
+
+def build_combined_tweet_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu):
+    ewt_conllu = common.find_treebank_dataset_file("en_ewt", udbase_dir, dataset, "conllu")
+    tweet_conllu = common.find_treebank_dataset_file("en_tweet", udbase_dir, dataset, "conllu")
+    sents = read_sentences_from_conllu(ewt_conllu) + read_sentences_from_conllu(tweet_conllu)
+
+    segmenter = short_name.endswith("_seg")
+    if segmenter:
+        sents = remove_spaces_from_sentences(sents)
+
+    write_sentences_to_conllu(output_conllu, sents)
+
+def build_combined_tweet(udbase_dir, tokenizer_dir, short_name):
+    for dataset in ("train", "dev", "test"):
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        build_combined_tweet_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
+
 
 def build_combined_spanish_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, dataset):
     """
@@ -1121,6 +1138,8 @@ def process_treebank(treebank, paths, args):
         convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
+    elif short_name.startswith("en_tweetewt"):
+        build_combined_tweet(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
         build_combined_dataset(udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
     elif short_name in BIO_DATASETS:

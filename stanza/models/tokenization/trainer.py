@@ -94,10 +94,10 @@ class Trainer(BaseTrainer):
             # Default to True as many currently saved models
             # were built with mwt layers
             self.args['use_mwt'] = True
-        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
+        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=0.05)
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
-        self.lexicon = checkpoint['lexicon']
+        self.lexicon = checkpoint['lexicon'] if 'lexicon' in checkpoint else None
 
         if self.lexicon is not None:
             self.dictionary = create_dictionary(self.lexicon)

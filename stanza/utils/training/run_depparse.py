@@ -82,9 +82,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
         parser.main(test_args)
 
-        results = common.run_eval_script_depparse(test_gold_file, test_pred_file)
-        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
-
+        # results = common.run_eval_script_depparse(test_gold_file, test_pred_file)
 
 def main():
     common.main(run_treebank, "depparse", "parser")

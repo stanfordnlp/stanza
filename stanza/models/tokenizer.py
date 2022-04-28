@@ -237,12 +237,11 @@ def evaluate(args):
             'label': args['label_file']
             }
 
-
     batches = TokenizationDataset(args, input_files=eval_input_files, vocab=vocab, evaluation=True, dictionary=trainer.dictionary)
 
-    oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    F1 = eval_model(args, trainer, batches, vocab, mwt_dict)
 
-    logger.info("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
+    logger.info("F1: %f"%F1)
 
 
 if __name__ == '__main__':

@@ -54,6 +54,7 @@ def run_treebank(mode, paths, treebank, short_name,
     train_file = os.path.join(ner_dir, f"{short_name}.train.json")
     dev_file   = os.path.join(ner_dir, f"{short_name}.dev.json")
     test_file  = os.path.join(ner_dir, f"{short_name}.test.json")
+    print(train_file)
 
     missing_file = [x for x in (train_file, dev_file, test_file) if not os.path.exists(x)]
     if len(missing_file) > 0:

@@ -106,10 +106,7 @@ def run_treebank(mode, paths, treebank, short_name,
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
-
-        results = common.run_eval_script_pos(test_gold_file, test_pred_file)
-        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
-
+        
 
 def main():
     common.main(run_treebank, "pos", "tagger", add_charlm_args)

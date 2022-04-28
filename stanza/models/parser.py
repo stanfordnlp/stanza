@@ -160,6 +160,9 @@ def train(args):
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
+    print(args['eval_file'])
+    print(args['gold_file'])
+
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
@@ -267,6 +270,7 @@ def evaluate(args):
     model_file = model_file_name(args)
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
+    # pretrain = "../../stanza_resources/en/depparse/combined.pt"
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
@@ -282,6 +286,7 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
+    print('Using eval file %s'%args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     if len(batch) > 0:

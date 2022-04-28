@@ -67,6 +67,8 @@ XPOS_DESCRIPTIONS = {
     'en_gumreddit'   : XPOSDescription(XPOSType.WORD, None),
     'en_mimic'       : XPOSDescription(XPOSType.WORD, None),
     'en_test'        : XPOSDescription(XPOSType.WORD, None),
+    'en_tweetewt'    : XPOSDescription(XPOSType.WORD, None),
+    'en_tweet'       : XPOSDescription(XPOSType.WORD, None),
     'es_gsd'         : XPOSDescription(XPOSType.WORD, None),
     'et_edt'         : XPOSDescription(XPOSType.WORD, None),
     'et_ewt'         : XPOSDescription(XPOSType.WORD, None),
@@ -166,4 +168,3 @@ def xpos_vocab_factory(data, shorthand):
             # otherwise, updating datasets would be unpleasant
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
     return build_xpos_vocab(desc, data, shorthand)
-

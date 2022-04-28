@@ -86,9 +86,6 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
-        results = common.run_eval_script_tokens(test_gold, test_pred)
-        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
-
 def main():
     common.main(run_treebank, "tokenize", "tokenizer")
         

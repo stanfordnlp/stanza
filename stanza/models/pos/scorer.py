@@ -15,8 +15,14 @@ def score(system_conllu_file, gold_conllu_file, verbose=True):
     r = el.recall
     f = el.f1
     if verbose:
-        scores = [evaluation[k].f1 * 100 for k in ['UPOS', 'XPOS', 'UFeats', 'AllTags']]
         logger.info("UPOS\tXPOS\tUFeats\tAllTags")
-        logger.info("{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}".format(*scores))
-    return p, r, f
+
+        scores = [evaluation[k].aligned_accuracy * 100 for k in ['UPOS', 'XPOS', 'UFeats', 'AllTags']]
+        logger.info("acc {:.2f}\t{:.2f}\t{:.2f}\t{:.2f}".format(*scores))   
+
+
+        scores = [evaluation[k].f1 * 100 for k in ['UPOS', 'XPOS', 'UFeats', 'AllTags']]
+        logger.info("f1 {:.2f}\t{:.2f}\t{:.2f}\t{:.2f}".format(*scores))
+
+    return p, r, f, scores[0]
 

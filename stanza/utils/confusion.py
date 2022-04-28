@@ -88,6 +88,9 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
                 cell = cell if confusion_cell else empty_cell
             row = row + cell + " "
         text.append(row)
+
+    with open("ner_confusion.tbl","w") as file:
+        file.write("\n".join(text))
     return "\n".join(text)
 
 

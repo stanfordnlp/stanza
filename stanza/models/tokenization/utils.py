@@ -429,6 +429,7 @@ def match_tokens_with_text(sentences, orig_text):
 
 def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    logger.info("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 
     all_preds = np.concatenate(all_preds, 0)
     labels = np.concatenate(batches.labels())
@@ -467,5 +468,7 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     f1sent = f1(all_preds, labels, {0:0, 1:0, 2:1, 3:0, 4:1})
     f1mwt = f1(all_preds, labels, {0:0, 1:1, 2:1, 3:2, 4:2})
     logger.info(f"{args['shorthand']}: token F1 = {f1tok*100:.2f}, sentence F1 = {f1sent*100:.2f}, mwt F1 = {f1mwt*100:.2f}")
-    return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
-
+    if "twee" in args["shorthand"]:
+        return f1tok
+    else:
+        return harmonic_mean([f1tok, f1sent, f1mwt], [1, 1, .01])
