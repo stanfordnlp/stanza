@@ -298,6 +298,9 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
 
         pieces = line.split("\t")
         word = pieces[text_column]
+        if word == '\x96':
+            # this happens in GermEval2014 for some reason
+            continue
         tag = pieces[annotation_column]
         if remap_fn:
             tag = remap_fn(tag)
