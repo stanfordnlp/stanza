@@ -30,6 +30,18 @@ BERT = {
     # the multilingual bert is a marginal improvement for conparse
     "da": "bert-base-multilingual-cased",
 
+    # As of April 2022, the bert models available have a weird
+    # tokenizer issue where soft hyphen causes it to crash.
+    # We attempt to compensate for that in the dev branch
+    # bert-base-german-cased
+    # dev:  2022-04-27 21:21:31 INFO: de_germeval2014 87.59
+    # test: 2022-04-27 21:21:59 INFO: de_germeval2014 86.95
+    #
+    # dbmdz/bert-base-german-cased
+    # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.22
+    # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.80
+    "de": "dbmdz/bert-base-german-cased",
+
     # https://huggingface.co/roberta-base
     "en": "roberta-base",
 
@@ -45,7 +57,11 @@ BERT = {
     # HooshvareLab/roberta-fa-zwnj-base
     # dev:  2022-04-23 16:23:25 INFO: fa_arman 81.23
     # test: 2022-04-23 16:23:48 INFO: fa_arman 81.11
-    "fa": 'HooshvareLab/roberta-fa-zwnj-base',
+    #
+    # HooshvareLab/bert-base-parsbert-uncased
+    # dev:  2022-04-26 10:42:09 INFO: fa_arman 82.49
+    # test: 2022-04-26 10:42:31 INFO: fa_arman 83.16
+    "fa": 'HooshvareLab/bert-base-parsbert-uncased',
 
     # NER scores for a couple options:
     # none:

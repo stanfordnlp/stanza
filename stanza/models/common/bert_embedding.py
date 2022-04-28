@@ -76,9 +76,10 @@ def filter_data(model_name, data, tokenizer = None):
     return filtered_data
 
 
-def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
     Extract transformer embeddings using a method specifically for phobert
+
     Since phobert doesn't have the is_split_into_words / tokenized.word_ids(batch_index=0)
     capability, we instead look for @@ to denote a continued token.
     data: list of list of string (the text tokens)
@@ -128,22 +129,50 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device):
     #process the output
     #only take the vector of the last word piece of a word/ you can do other methods such as first word piece or averaging.
     # idx2+1 compensates for the start token at the start of a sentence
-    # [0] and [-1] grab the start and end representations as well
-    offsets = [[idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)] 
+    offsets = [[idx2+1 for idx2, _ in enumerate(list_tokenized[idx]) if (idx2 > 0 and not list_tokenized[idx][idx2-1].endswith("@@")) or (idx2==0)]
                 for idx, sent in enumerate(processed)]
+    if keep_endpoints:
+        # [0] and [-1] grab the start and end representations as well
+        offsets = [[0] + off + [-1] for off in offsets]
     processed = [feature[offset] for feature, offset in zip(features, offsets)]
 
     # This is a list of ltensors
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device):
+BAD_GERMAN_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased')
+
+def fix_german_tokens(tokenizer, data):
+    """
+    Patch German bert tokenizers
+
+    There is an issue that some tokenizers (so far the German ones identified above)
+    tokenize soft hyphens or other unknown characters into nothing
+    If an entire word is tokenized as a soft hyphen, this means the tokenizer
+    simply vaporizes that word.  The result is we're missing an embedding for
+    an entire word we wanted to use.
+
+    The solution we take here is to look for any words which get vaporized
+    in such a manner, eg `len(token) == 2`, and replace it with a regular "-"
+    """
+    new_data = []
+    for sentence in data:
+        tokenized = tokenizer(sentence, is_split_into_words=False).input_ids
+        new_sentence = [word if len(token) > 2 else "-" for word, token in zip(sentence, tokenized)]
+        #print(new_sentence)
+        new_data.append(new_sentence)
+    return new_data
+
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
     Extract transformer embeddings using a generic roberta extraction
     data: list of list of string (the text tokens)
     """
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+
+    if model_name in BAD_GERMAN_TOKENIZERS:
+        data = fix_german_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
@@ -157,6 +186,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
             list_offsets[idx][offset+1] = pos
         list_offsets[idx][0] = 0
         list_offsets[idx][-1] = -1
+        if any(x is None for x in list_offsets[idx]):
+            raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
         if len(offsets) > tokenizer.model_max_length:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
@@ -171,9 +202,10 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device):
             features += feature.clone().detach()
 
     processed = []
-    #remove the bos and eos tokens
-    list_offsets = [ sent[1:-1] for sent in list_offsets]
     #process the output
+    if not keep_endpoints:
+        #remove the bos and eos tokens
+        list_offsets = [sent[1:-1] for sent in list_offsets]
     for feature, offsets in zip(features, list_offsets):
         new_sent = feature[offsets]
         processed.append(new_sent)
