@@ -140,6 +140,29 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
+BAD_GERMAN_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased')
+
+def fix_german_tokens(tokenizer, data):
+    """
+    Patch German bert tokenizers
+
+    There is an issue that some tokenizers (so far the German ones identified above)
+    tokenize soft hyphens or other unknown characters into nothing
+    If an entire word is tokenized as a soft hyphen, this means the tokenizer
+    simply vaporizes that word.  The result is we're missing an embedding for
+    an entire word we wanted to use.
+
+    The solution we take here is to look for any words which get vaporized
+    in such a manner, eg `len(token) == 2`, and replace it with a regular "-"
+    """
+    new_data = []
+    for sentence in data:
+        tokenized = tokenizer(sentence, is_split_into_words=False).input_ids
+        new_sentence = [word if len(token) > 2 else "-" for word, token in zip(sentence, tokenized)]
+        #print(new_sentence)
+        new_data.append(new_sentence)
+    return new_data
+
 def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
     Extract transformer embeddings using a generic roberta extraction
@@ -147,6 +170,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     """
     if model_name.startswith("vinai/phobert"):
         return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+
+    if model_name in BAD_GERMAN_TOKENIZERS:
+        data = fix_german_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
