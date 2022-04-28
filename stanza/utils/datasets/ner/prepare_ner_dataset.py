@@ -456,7 +456,7 @@ def process_rgai(paths, short_name):
 def get_nytk_input_path(paths):
     return os.path.join(paths["NERBASE"], "NYTK-NerKor")
 
-def process_nytk(paths, dataset_name):
+def process_nytk(paths, short_name):
     """
     Process the NYTK dataset
     """
@@ -746,49 +746,42 @@ def process_de_germeval2014(paths, short_name):
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
+DATASET_MAPPING = {
+    "da_ddt":          process_da_ddt,
+    "de_germeval2014": process_de_germeval2014,
+    "fa_arman":        process_fa_arman,
+    "fi_turku":        process_turku,
+    "hi_ijc":          process_ijc,
+    "hu_nytk":         process_nytk,
+    "hu_combined":     process_hu_combined,
+    "it_fbk":          process_it_fbk,
+    "my_ucsy":         process_my_ucsy,
+    "sv_suc3licensed": process_sv_suc3licensed,
+    "sv_suc3shuffle":  process_sv_suc3shuffle,
+    "tr_starlang":     process_starlang,
+}
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
 
     random.seed(1234)
 
-    if dataset_name == 'fi_turku':
-        process_turku(paths, dataset_name)
-    elif dataset_name == 'it_fbk':
-        process_it_fbk(paths, dataset_name)
+    if dataset_name in DATASET_MAPPING:
+        DATASET_MAPPING[dataset_name](paths, dataset_name)
     elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
         process_languk(paths, dataset_name)
-    elif dataset_name == 'hi_ijc':
-        process_ijc(paths, dataset_name)
     elif dataset_name.endswith("FIRE2013") or dataset_name.endswith("fire2013"):
         process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
         process_wikiner(paths, dataset_name)
     elif dataset_name.startswith('hu_rgai'):
         process_rgai(paths, dataset_name)
-    elif dataset_name == 'hu_nytk':
-        process_nytk(paths, dataset_name)
-    elif dataset_name == 'hu_combined':
-        process_hu_combined(paths, dataset_name)
     elif dataset_name.endswith("_bsnlp19"):
         process_bsnlp(paths, dataset_name)
-    elif dataset_name == 'my_ucsy':
-        process_my_ucsy(paths, dataset_name)
     elif dataset_name.endswith("_nchlt"):
         process_nchlt(paths, dataset_name)
-    elif dataset_name == "fa_arman":
-        process_fa_arman(paths, dataset_name)
-    elif dataset_name == "sv_suc3licensed":
-        process_sv_suc3licensed(paths, dataset_name)
-    elif dataset_name == "sv_suc3shuffle":
-        process_sv_suc3shuffle(paths, dataset_name)
-    elif dataset_name == "da_ddt":
-        process_da_ddt(paths, dataset_name)
     elif dataset_name in ("nb_norne", "nn_norne"):
         process_norne(paths, dataset_name)
-    elif dataset_name == 'tr_starlang':
-        process_starlang(paths, dataset_name)
-    elif dataset_name == 'de_germeval2014':
-        process_de_germeval2014(paths, dataset_name)
     elif dataset_name == 'en_sample':
         process_toy_dataset(paths, dataset_name)
     else:
