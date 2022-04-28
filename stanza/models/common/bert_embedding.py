@@ -160,6 +160,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             list_offsets[idx][offset+1] = pos
         list_offsets[idx][0] = 0
         list_offsets[idx][-1] = -1
+        if any(x is None for x in list_offsets[idx]):
+            raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
         if len(offsets) > tokenizer.model_max_length:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
