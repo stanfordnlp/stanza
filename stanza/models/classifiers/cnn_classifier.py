@@ -13,8 +13,6 @@ import stanza.models.classifiers.data as data
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.utils import split_into_batches, sort_with_indices, unsort
-# TODO: move CharVocab to common
-from stanza.models.pos.vocab import CharVocab
 
 """
 The CNN classifier is based on Yoon Kim's work:
