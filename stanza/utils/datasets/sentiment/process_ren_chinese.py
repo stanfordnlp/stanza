@@ -67,7 +67,7 @@ def read_snippets(xml_directory):
     snippets = []
     for sentence in sentences:
         doc = nlp(sentence.text)
-        text = " ".join(" ".join(token.text for token in sentence.tokens) for sentence in doc.sentences)
+        text = [token.text for sentence in doc.sentences for token in sentence.tokens]
         snippets.append(Fragment(sentence.sentiment, text))
     random.shuffle(snippets)
     return snippets

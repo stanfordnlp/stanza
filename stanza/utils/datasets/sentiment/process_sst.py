@@ -33,7 +33,7 @@ def get_subtrees(input_file, *args):
     lines = [x.strip() for x in lines]
     lines = [x for x in lines if x]
     lines = [x.split(maxsplit=1) for x in lines]
-    phrases = [Fragment(*x) for x in lines]
+    phrases = [Fragment(x[0], x[1].split()) for x in lines]
     return phrases
 
 def get_phrases(dataset, treebank_file, input_dir):

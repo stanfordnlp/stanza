@@ -66,7 +66,7 @@ def read_snippets(csv_filename, sentiment_column, text_column):
         for sentence in doc.sentences:
             text.extend(token.text for token in sentence.tokens)
         text = process_utils.clean_tokenized_tweet(text)
-        snippets.append(Fragment(sentiment, " ".join(text)))
+        snippets.append(Fragment(sentiment, text))
     return snippets
 
 def main(args=None):
