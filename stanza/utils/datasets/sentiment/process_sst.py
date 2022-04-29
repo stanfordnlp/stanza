@@ -36,20 +36,25 @@ def get_subtrees(input_file, *args):
     phrases = [Fragment(*x) for x in lines]
     return phrases
 
-def convert_version(dataset, input_dir, output_dir):
+def get_phrases(dataset, treebank_file, input_dir):
+    extra_args = ARGUMENTS[dataset]
+
+    input_file = os.path.join(input_dir, "fiveclass", treebank_file)
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(input_file)
+    phrases = get_subtrees(input_file, *extra_args)
+    print("Found {} phrases in SST {} {}".format(len(phrases), treebank_file, dataset))
+    return phrases
+
+def convert_version(dataset, treebank_file, input_dir, output_dir):
     """
     Convert the fiveclass files to a specific format
 
     Uses the ARGUMENTS specific for the format wanted
     """
-    extra_args = ARGUMENTS[dataset]
-    for treebank_file in TREEBANK_FILES:
-        input_file = os.path.join(input_dir, "fiveclass", treebank_file)
-        if not os.path.exists(input_file):
-            raise FileNotFoundError(input_file)
-        phrases = get_subtrees(input_file, *extra_args)
-        output_file = os.path.join(output_dir, "en_sst.%s.%s" % (dataset, treebank_file))
-        process_utils.write_list(output_file, phrases)
+    phrases = get_phrases(dataset, treebank_file, input_dir)
+    output_file = os.path.join(output_dir, "en_sst.%s.%s" % (dataset, treebank_file))
+    process_utils.write_list(output_file, phrases)
 
 def parse_args():
     """
@@ -70,7 +75,8 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
     for section in args.sections:
-        convert_version(section, input_dir, output_dir)
+        for treebank_file in TREEBANK_FILES:
+            convert_version(section, treebank_file, input_dir, output_dir)
 
 if __name__ == '__main__':
     main()
