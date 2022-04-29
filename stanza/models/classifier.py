@@ -553,7 +553,9 @@ def main():
         print_args(args)
 
         dev_set = data.read_dataset(args.dev_file, args.wordvec_type, min_len=None)
-        logger.info("Using dev set: %s" % args.dev_file)
+        logger.info("Using dev set: %s", args.dev_file)
+        logger.info("Training set has %d items", len(train_set))
+        logger.info("Dev set has %d items", len(dev_set))
         check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)
