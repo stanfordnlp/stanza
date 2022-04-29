@@ -47,6 +47,12 @@ def convert_sst_general(paths, dataset_name, version):
     dataset = [train_phrases, dev_phrases, test_phrases]
     write_dataset(dataset, out_directory, dataset_name)
 
+def convert_sst2(paths, dataset_name):
+    """
+    Create a 2 class SST dataset (neutral items are dropped)
+    """
+    convert_sst_general(paths, dataset_name, "binary")
+
 def convert_sst2roots(paths, dataset_name):
     """
     Create a 2 class SST dataset using only the roots
@@ -131,6 +137,7 @@ DATASET_MAPPING = {
     "de_scare":     convert_scare,
     "de_usage":     convert_de_usage,
 
+    "en_sst2":      convert_sst2,
     "en_sst2roots": convert_sst2roots,
     "en_sst3roots": convert_sst3roots,
     "en_sstplus":   convert_sstplus,
