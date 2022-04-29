@@ -69,7 +69,7 @@ def read_snippets(csv_filename, sentiment_column, text_column):
         snippets.append(Fragment(sentiment, " ".join(text)))
     return snippets
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv_filename', type=str, default=None, help='CSV file to read in')
     parser.add_argument('--out_dir', type=str, default=None, help='Where to write the output files')
@@ -80,7 +80,7 @@ def main():
     parser.add_argument('--split', type=lambda x: Split[x.upper()], default=Split.TRAIN_DEV_TEST,
                         help="How to split the resulting data")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
     snippets = read_snippets(args.csv_filename, args.sentiment_column, args.text_column)
 
@@ -105,6 +105,6 @@ def main():
         raise ValueError("Unknown split method {}".format(args.split))
 
 if __name__ == '__main__':
-    random.seed(1000)
+    random.seed(1234)
     main()
 

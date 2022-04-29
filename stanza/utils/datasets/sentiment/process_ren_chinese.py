@@ -85,7 +85,7 @@ def main(xml_directory, out_directory, short_name):
 
 
 if __name__ == "__main__":
-    random.seed(1000)
+    random.seed(1234)
     xml_directory = sys.argv[1]
     out_directory = sys.argv[2]
     short_name = sys.argv[3]

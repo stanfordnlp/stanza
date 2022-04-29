@@ -17,7 +17,6 @@ short items.  Not sure the long items will be enough
 import csv
 import glob
 import os
-import random
 import sys
 
 import stanza
