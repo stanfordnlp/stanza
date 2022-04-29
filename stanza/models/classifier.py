@@ -22,7 +22,7 @@ import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 
-from stanza.utils.confusion import format_confusion
+from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
 
 class Loss(Enum):
@@ -36,9 +36,9 @@ class DevScoring(Enum):
 
 logger = logging.getLogger('stanza')
 
-DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
-DEFAULT_DEV='extern_data/sentiment/sst-processed/fiveclass/dev-roots.txt'
-DEFAULT_TEST='extern_data/sentiment/sst-processed/fiveclass/test-roots.txt'
+DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
+DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
+DEFAULT_TEST='data/sentiment/en_sst3roots.test.txt'
 
 """A script for training and testing classifier models, especially on the SST.
 
@@ -70,28 +70,35 @@ You can train models with word vectors other than the default word2vec.  For exa
 
 A model trained on the 5 class dataset can be tested on the 2 class dataset with a command line like this:
 
-python3 -u -m stanza.models.classifier  --no_train --load_name saved_models/classifier/sst_en_ewt_FS_3_4_5_C_1000_FC_400_100_classifier.E0165-ACC41.87.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
+python3 -u -m stanza.models.classifier  --no_train --load_name saved_models/classifier/sst_en_ewt_FS_3_4_5_C_1000_FC_400_100_classifier.E0165-ACC41.87.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
 
-python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0189-ACC45.87.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
+python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0189-ACC45.87.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
 
 A model trained on the 3 class dataset can be tested on the 2 class dataset with a command line like this:
 
-python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 2:1}"
+python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 2:1}"
 
 To train models on combined 3 class datasets:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt,extern_data/sentiment/sst-processed/threeclass/extra-train-threeclass-phrases.txt,extern_data/sentiment/sst-processed/threeclass/checked-extra-train-threeclass-phrases.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file data/sentiment/en_sstplus.train.txt --dev_file data/sentiment/en_sst3roots.dev.txt --test_file data/sentiment/en_sst3roots.test.txt > FC41_3class.out 2>&1 &
 
 This tests that model:
 
-python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt
+python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file data/sentiment/en_sst3roots.test.txt
 
 Here is an example for training a model in a different language:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file data/sentiment/de_sb10k.train.txt --dev_file data/sentiment/de_sb10k.dev.txt --test_file data/sentiment/de_sb10k.test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+This uses more data, although that wound up being worse for the German model:
 
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file data/sentiment/de_sb10k.train.txt,data/sentiment/de_scare.train.txt,data/sentiment/de_usage.train.txt --dev_file data/sentiment/de_sb10k.dev.txt --test_file data/sentiment/de_sb10k.test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file data/sentiment/zh_ren.train.txt --dev_file data/sentiment/zh_ren.dev.txt --test_file data/sentiment/zh_ren.test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+
+# TODO: this needs some work, as the words will currently be split into syllables instead of left as complete words
+# One solution would be to write out json files instead of text files
+# Internally we need to pass around words instead of concat strings as well
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
 
 python3 -u -m stanza.models.classifier --no_train --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --load_name vi_vsfc.pt
@@ -260,58 +267,6 @@ def confusion_dataset(model, dataset, device=None):
             confusion_matrix[expected_labels[i]][predicted_label] = confusion_matrix[expected_labels[i]].get(predicted_label, 0) + 1
 
     return confusion_matrix
-
-
-def confusion_to_accuracy(confusion_matrix):
-    """
-    Given a confusion dictionary returned by confusion_dataset, return correct, total
-    """
-    correct = 0
-    total = 0
-    for l1 in confusion_matrix.keys():
-        for l2 in confusion_matrix[l1].keys():
-            if l1 == l2:
-                correct = correct + confusion_matrix[l1][l2]
-            else:
-                total = total + confusion_matrix[l1][l2]
-    return correct, (correct + total)
-
-def confusion_to_macro_f1(confusion_matrix):
-    """
-    Return the macro f1 for a confusion matrix.
-    """
-    keys = set()
-    for k in confusion_matrix.keys():
-        keys.add(k)
-        for k2 in confusion_matrix.get(k).keys():
-            keys.add(k2)
-
-    sum_f1 = 0
-    for k in keys:
-        tp = 0
-        fn = 0
-        fp = 0
-        for k2 in keys:
-            if k == k2:
-                tp = confusion_matrix.get(k, {}).get(k, 0)
-            else:
-                fn = fn + confusion_matrix.get(k, {}).get(k2, 0)
-                fp = fp + confusion_matrix.get(k2, {}).get(k, 0)
-        if tp + fp == 0:
-            precision = 0.0
-        else:
-            precision = tp / (tp + fp)
-        if tp + fn == 0:
-            recall = 0.0
-        else:
-            recall = tp / (tp + fn)
-        if precision + recall == 0.0:
-            f1 = 0.0
-        else:
-            f1 = 2 * (precision * recall) / (precision + recall)
-        sum_f1 = sum_f1 + f1
-
-    return sum_f1 / len(keys)
 
 
 def score_dataset(model, dataset, label_map=None, device=None,
@@ -598,7 +553,9 @@ def main():
         print_args(args)
 
         dev_set = data.read_dataset(args.dev_file, args.wordvec_type, min_len=None)
-        logger.info("Using dev set: %s" % args.dev_file)
+        logger.info("Using dev set: %s", args.dev_file)
+        logger.info("Training set has %d items", len(train_set))
+        logger.info("Dev set has %d items", len(dev_set))
         check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)

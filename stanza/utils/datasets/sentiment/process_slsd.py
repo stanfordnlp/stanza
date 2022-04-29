@@ -51,10 +51,14 @@ def get_phrases(in_directory):
 
     return phrases
 
-def main(in_directory, out_directory, short_name):
+def get_tokenized_phrases(in_directory):
     phrases = get_phrases(in_directory)
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+    print("Found %d phrases in slsd" % len(phrases))
+    return phrases
 
+def main(in_directory, out_directory, short_name):
+    phrases = get_tokenized_phrases(in_directory)
     out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
     os.makedirs(out_directory, exist_ok=True)
     process_utils.write_list(out_filename, phrases)

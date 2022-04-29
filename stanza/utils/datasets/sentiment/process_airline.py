@@ -50,15 +50,19 @@ def get_phrases(in_directory):
 
     return phrases
 
-def main(in_directory, out_directory, short_name):
+def get_tokenized_phrases(in_directory):
     phrases = get_phrases(in_directory)
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+    phrases = [Fragment(x.sentiment, process_utils.clean_tokenized_tweet(x.text)) for x in phrases]
+    print("Found {} phrases in the airline corpus".format(len(phrases)))
+    return phrases
+
+def main(in_directory, out_directory, short_name):
+    phrases = get_tokenized_phrases(in_directory)
 
     os.makedirs(out_directory, exist_ok=True)
     out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
-
     # filter leading @United, @American, etc from the tweets
-    phrases = [Fragment(x.sentiment, " ".join(process_utils.clean_tokenized_tweet(x.text.split()))) for x in phrases]
     process_utils.write_list(out_filename, phrases)
 
     # something like this would count @s if you cared enough to count

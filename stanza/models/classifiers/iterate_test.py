@@ -8,6 +8,8 @@ import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 from stanza.models.common import utils
 
+from stanza.utils.confusion import format_confusion, confusion_to_accuracy
+
 """
 A script for running the same test file on several different classifiers.
 
@@ -63,6 +65,6 @@ for load_name in model_files:
     classifier.check_labels(labels, test_set)
 
     confusion = classifier.confusion_dataset(model, test_set, device=device)
-    correct, total = classifier.confusion_to_accuracy(confusion)
+    correct, total = confusion_to_accuracy(confusion)
     logger.info("  Results: %d correct of %d examples.  Accuracy: %f" % (correct, total, correct / total))
-    logger.info("Confusion matrix:\n{}".format(classifier.format_confusion(confusion, model.labels)))
+    logger.info("Confusion matrix:\n{}".format(format_confusion(confusion, model.labels)))

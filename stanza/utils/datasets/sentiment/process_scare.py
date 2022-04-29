@@ -17,7 +17,6 @@ short items.  Not sure the long items will be enough
 import csv
 import glob
 import os
-import random
 import sys
 
 import stanza
@@ -57,7 +56,7 @@ def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv")
                     continue
                 snippet = text_id_map[ann_id][begin:end]
                 doc = nlp(snippet)
-                text = " ".join(" ".join(token.text for token in sentence.tokens) for sentence in doc.sentences)
+                text = [token.text for sentence in doc.sentences for token in sentence.tokens]
                 num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
                 if num_tokens < 4:
                     num_short_items = num_short_items + 1

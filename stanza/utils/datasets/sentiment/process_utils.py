@@ -11,13 +11,16 @@ Split = namedtuple('Split', ['filename', 'weight'])
 def write_list(out_filename, dataset):
     """
     Write a list of items to the given output file
+
+    Expected: list(Fragment)
     """
     with open(out_filename, 'w') as fout:
         for line in dataset:
-            if isinstance(line, Fragment):
-                line = "{} {}".format(line.sentiment, line.text)
-            fout.write(line)
-            fout.write("\n")
+            sentiment = line.sentiment
+            text = line.text
+            if isinstance(text, list):
+                text = " ".join(text)
+            fout.write("{} {}\n".format(sentiment, text))
 
 def write_splits(out_directory, snippets, splits):
     """
@@ -59,6 +62,8 @@ def get_ptb_tokenized_phrases(fragments):
     Not clear which is better, "Nov." or "Nov ."
     strictAcronym=true makes it do the latter
     tokenizePerLine=true should make it only pay attention to one line at a time
+
+    Phrases will be returned as lists of words rather than one string
     """
     with tempfile.TemporaryDirectory() as tempdir:
         phrase_filename = os.path.join(tempdir, "phrases.txt")
@@ -75,6 +80,6 @@ def get_ptb_tokenized_phrases(fragments):
 
     tokenized = [x.strip() for x in tokenized]
     tokenized = [x for x in tokenized if x]
-    phrases = [Fragment(x.sentiment, y) for x, y in zip(fragments, tokenized)]
+    phrases = [Fragment(x.sentiment, y.split()) for x, y in zip(fragments, tokenized)]
     return phrases
 
