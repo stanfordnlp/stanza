@@ -432,13 +432,11 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
     return model
 
 
-def label_text(model, text, batch_size=None, reverse_label_map=None, device=None):
+def label_text(model, text, batch_size=None, device=None):
     """
     Given a list of sentences, return the model's results on that text.
     """
     model.eval()
-    if reverse_label_map is None:
-        reverse_label_map = {x: y for (x, y) in enumerate(model.labels)}
     if device is None:
         device = next(model.parameters()).device
 
