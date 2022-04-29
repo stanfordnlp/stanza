@@ -15,13 +15,14 @@ def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> Li
     into a list of strings.
     """
     # stanford sentiment dataset has a lot of random - and /
-    sentence = sentence.replace("-", " ")
-    sentence = sentence.replace("/", " ")
-    sentence = sentence.strip()
-    if sentence == "":
+    # remove those characters and flatten the newly created sublists into one list each time
+    sentence = [y for x in sentence for y in x.split("-") if y]
+    sentence = [y for x in sentence for y in x.split("/") if y]
+    sentence = [x.strip() for x in sentence]
+    sentence = [x for x in sentence if x]
+    if sentence == []:
         # removed too much
-        sentence = "-"
-    sentence = sentence.split()
+        sentence = ["-"]
     # our current word vectors are all entirely lowercased
     sentence = [word.lower() for word in sentence]
     if wordvec_type == classifier_args.WVType.WORD2VEC:
@@ -60,7 +61,7 @@ def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) ->
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
     # overloading to potentially make future model types
-    lines = [(x[0], update_text(x[1], wordvec_type)) for x in lines]
+    lines = [(x[0], update_text(x[1].split(), wordvec_type)) for x in lines]
     if min_len:
         lines = [x for x in lines if len(x[1]) >= min_len]
     return lines
