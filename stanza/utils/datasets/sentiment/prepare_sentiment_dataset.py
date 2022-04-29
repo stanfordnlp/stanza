@@ -28,6 +28,31 @@ from stanza.utils.datasets.sentiment import process_utils
 
 SHARDS = ["train", "dev", "test"]
 
+def write_dataset(dataset, out_directory, dataset_name):
+    """
+    Write train, dev, test for a given dataset
+    """
+    for shard, phrases in zip(SHARDS, dataset):
+        output_file = os.path.join(out_directory, "%s.%s.txt" % (dataset_name, shard))
+        process_utils.write_list(output_file, phrases)
+
+def convert_sst_general(paths, dataset_name, version):
+    in_directory = paths['SENTIMENT_BASE']
+    sst_dir = os.path.join(in_directory, "sentiment-treebank")
+    train_phrases = process_sst.get_phrases(version, "train.txt", sst_dir)
+    dev_phrases = process_sst.get_phrases(version, "dev.txt", sst_dir)
+    test_phrases = process_sst.get_phrases(version, "test.txt", sst_dir)
+
+    out_directory = paths['SENTIMENT_DATA_DIR']
+    dataset = [train_phrases, dev_phrases, test_phrases]
+    write_dataset(dataset, out_directory, dataset_name)
+
+def convert_sst2roots(paths, dataset_name):
+    """
+    Create a 2 class SST dataset using only the roots
+    """
+    convert_sst_general(paths, dataset_name, "rootbinary")
+
 def convert_sstplus(paths, dataset_name):
     """
     Create a 3 class SST dataset with a few other small datasets added
@@ -49,9 +74,7 @@ def convert_sstplus(paths, dataset_name):
 
     out_directory = paths['SENTIMENT_DATA_DIR']
     dataset = [train_phrases, dev_phrases, test_phrases]
-    for shard, phrases in zip(SHARDS, dataset):
-        output_file = os.path.join(out_directory, "%s.%s.txt" % (dataset_name, shard))
-        process_utils.write_list(output_file, phrases)    
+    write_dataset(dataset, out_directory, dataset_name)
 
 def convert_meld(paths, dataset_name):
     """
@@ -98,14 +121,15 @@ def convert_ren(paths, dataset_name):
     process_ren_chinese.main(in_directory, out_directory, dataset_name)
 
 DATASET_MAPPING = {
-    "de_sb10k":   convert_sb10k,
-    "de_scare":   convert_scare,
-    "de_usage":   convert_de_usage,
+    "de_sb10k":     convert_sb10k,
+    "de_scare":     convert_scare,
+    "de_usage":     convert_de_usage,
 
-    "en_sstplus": convert_sstplus,
-    "en_meld":    convert_meld,
+    "en_sst2roots": convert_sst2roots,
+    "en_sstplus":   convert_sstplus,
+    "en_meld":      convert_meld,
 
-    "zh_ren":     convert_ren,
+    "zh_ren":       convert_ren,
 }
 
 def main(dataset_name):

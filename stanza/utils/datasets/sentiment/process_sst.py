@@ -13,6 +13,7 @@ ARGUMENTS = {
     "fiveclass":  [],
     "root":       ["-root_only"],
     "binary":     ["-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
+    "rootbinary": ["-root_only", "-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
     "threeclass": ["-remap_labels", "0=0,1=0,2=1,3=2,4=2"],
 }
 
