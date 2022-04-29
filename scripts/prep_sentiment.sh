@@ -30,7 +30,7 @@ done
 if [ "$language" = "english" ]; then
     echo "PROCESSING ENGLISH"
     echo "--- ArguAna ---"
-    $PYTHON -m stanza.utils.datasets.sentiment.process_arguana_xml extern_data/sentiment/arguana/arguana-tripadvisor-annotated-v2/split/training $SENTIMENT_DATA_DIR en_arguana
+    $PYTHON -m stanza.utils.datasets.sentiment.process_arguana_xml extern_data/sentiment/arguana $SENTIMENT_DATA_DIR en_arguana
 
     echo "--- MELD ---"
     $PYTHON -m stanza.utils.datasets.sentiment.process_MELD extern_data/sentiment/MELD $SENTIMENT_DATA_DIR en_meld

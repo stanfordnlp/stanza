@@ -53,7 +53,8 @@ def get_phrases(filename):
 
 def get_phrases_from_directory(directory):
     phrases = []
-    for filename in glob.glob(directory + '/*/*xmi'):
+    inpath = os.path.join(directory, "arguana-tripadvisor-annotated-v2", "split", "training", "*", "*xmi")
+    for filename in glob.glob(inpath):
         phrases.extend(get_phrases(filename))
     return phrases
 
