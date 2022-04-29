@@ -62,6 +62,7 @@ def get_tokenized_phrases(split, in_directory):
     phrases = get_phrases(in_filename)
 
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+    print("Found {} phrases in MELD {}".format(len(phrases), split))
     return phrases
 
 def main(in_directory, out_directory, short_name):

@@ -54,6 +54,7 @@ def get_tokenized_phrases(in_directory):
     phrases = get_phrases(in_directory)
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
     phrases = [Fragment(x.sentiment, " ".join(process_utils.clean_tokenized_tweet(x.text.split()))) for x in phrases]
+    print("Found {} phrases in the airline corpus".format(len(phrases)))
     return phrases
 
 def main(in_directory, out_directory, short_name):

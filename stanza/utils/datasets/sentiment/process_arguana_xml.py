@@ -61,11 +61,11 @@ def get_phrases_from_directory(directory):
 def get_tokenized_phrases(in_directory):
     phrases = get_phrases_from_directory(in_directory)
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
+    print("Found {} phrases in arguana".format(len(phrases)))
     return phrases
 
 def main(in_directory, out_directory, short_name):
     phrases = get_tokenized_phrases(in_directory)
-    print("Found {} phrases".format(len(phrases)))
     process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), phrases)
 
 
