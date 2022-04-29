@@ -36,9 +36,9 @@ class DevScoring(Enum):
 
 logger = logging.getLogger('stanza')
 
-DEFAULT_TRAIN='extern_data/sentiment/sst-processed/fiveclass/train-phrases.txt'
-DEFAULT_DEV='extern_data/sentiment/sst-processed/fiveclass/dev-roots.txt'
-DEFAULT_TEST='extern_data/sentiment/sst-processed/fiveclass/test-roots.txt'
+DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
+DEFAULT_DEV='data/sentiment/en_sstplus.dev.txt'
+DEFAULT_TEST='data/sentiment/en_sstplus.test.txt'
 
 """A script for training and testing classifier models, especially on the SST.
 
@@ -70,28 +70,36 @@ You can train models with word vectors other than the default word2vec.  For exa
 
 A model trained on the 5 class dataset can be tested on the 2 class dataset with a command line like this:
 
-python3 -u -m stanza.models.classifier  --no_train --load_name saved_models/classifier/sst_en_ewt_FS_3_4_5_C_1000_FC_400_100_classifier.E0165-ACC41.87.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
+python3 -u -m stanza.models.classifier  --no_train --load_name saved_models/classifier/sst_en_ewt_FS_3_4_5_C_1000_FC_400_100_classifier.E0165-ACC41.87.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
 
-python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0189-ACC45.87.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
+python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0189-ACC45.87.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 1:0, 3:1, 4:1}"
 
 A model trained on the 3 class dataset can be tested on the 2 class dataset with a command line like this:
 
-python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file extern_data/sentiment/sst-processed/binary/test-binary-roots.txt --test_remap_labels "{0:0, 2:1}"
+python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir extern_data/google --no_train --load_name saved_models/classifier/FC21_3C_google_en_ewt_FS_3_4_5_C_1000_FC_200_100_classifier.E0101-ACC68.94.pt --test_file data/sentiment/en_sst2roots.test.txt --test_remap_labels "{0:0, 2:1}"
 
 To train models on combined 3 class datasets:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file extern_data/sentiment/sst-processed/threeclass/train-threeclass-phrases.txt,extern_data/sentiment/MELD/train.txt,extern_data/sentiment/slsd/train.txt,extern_data/sentiment/arguana/train.txt,extern_data/sentiment/airline/train.txt,extern_data/sentiment/sst-processed/threeclass/extra-train-threeclass-phrases.txt,extern_data/sentiment/sst-processed/threeclass/checked-extra-train-threeclass-phrases.txt --dev_file extern_data/sentiment/sst-processed/threeclass/dev-threeclass-roots.txt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt > FC41_3class.out 2>&1 &
+# TODO: go back to dev & test on just roots
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file data/sentiment/en_sstplus.train.txt --dev_file data/sentiment/en_sstplus.dev.txt --test_file data/sentiment/en_sstplus.test.txt > FC41_3class.out 2>&1 &
 
 This tests that model:
 
-python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file extern_data/sentiment/sst-processed/threeclass/test-threeclass-roots.txt
+python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file data/sentiment/en_sstplus.test.txt
 
 Here is an example for training a model in a different language:
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file extern_data/sentiment/german/sb-10k/train.txt,extern_data/sentiment/german/scare/train.txt,extern_data/sentiment/USAGE/de-train.txt --dev_file extern_data/sentiment/german/sb-10k/dev.txt --test_file extern_data/sentiment/german/sb-10k/test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file data/sentiment/de_sb10k.train.txt --dev_file data/sentiment/de_sb10k.dev.txt --test_file data/sentiment/de_sb10k.test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file extern_data/sentiment/chinese/RenCECps/train.txt --dev_file extern_data/sentiment/chinese/RenCECps/dev.txt --test_file extern_data/sentiment/chinese/RenCECps/test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+This uses more data, although that wound up being worse for the German model:
 
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file data/sentiment/de_sb10k.train.txt,data/sentiment/de_scare.train.txt,data/sentiment/de_usage.train.txt --dev_file data/sentiment/de_sb10k.dev.txt --test_file data/sentiment/de_sb10k.test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
+
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file data/sentiment/zh_ren.train.txt --dev_file data/sentiment/zh_ren.dev.txt --test_file data/sentiment/zh_ren.test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+
+# TODO: this needs some work, as the words will currently be split into syllables instead of left as complete words
+# One solution would be to write out json files instead of text files
+# Internally we need to pass around words instead of concat strings as well
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
 
 python3 -u -m stanza.models.classifier --no_train --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --load_name vi_vsfc.pt
