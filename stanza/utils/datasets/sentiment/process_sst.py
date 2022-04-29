@@ -10,11 +10,12 @@ import stanza.utils.default_paths as default_paths
 TREEBANK_FILES = ["train.txt", "dev.txt", "test.txt", "extra-train.txt", "checked-extra-train.txt"]
 
 ARGUMENTS = {
-    "fiveclass":  [],
-    "root":       ["-root_only"],
-    "binary":     ["-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
-    "rootbinary": ["-root_only", "-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
-    "threeclass": ["-remap_labels", "0=0,1=0,2=1,3=2,4=2"],
+    "fiveclass":      [],
+    "root":           ["-root_only"],
+    "binary":         ["-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
+    "binaryroot":     ["-root_only", "-ignore_labels", "2", "-remap_labels", "1=0,2=-1,3=1,4=1"],
+    "threeclass":     ["-remap_labels", "0=0,1=0,2=1,3=2,4=2"],
+    "threeclassroot": ["-root_only", "-remap_labels", "0=0,1=0,2=1,3=2,4=2"],
 }
 
 

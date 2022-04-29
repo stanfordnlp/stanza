@@ -37,8 +37,8 @@ class DevScoring(Enum):
 logger = logging.getLogger('stanza')
 
 DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
-DEFAULT_DEV='data/sentiment/en_sstplus.dev.txt'
-DEFAULT_TEST='data/sentiment/en_sstplus.test.txt'
+DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
+DEFAULT_TEST='data/sentiment/en_sst3roots.test.txt'
 
 """A script for training and testing classifier models, especially on the SST.
 
@@ -80,12 +80,11 @@ python3 -u -m stanza.models.classifier  --wordvec_type google --wordvec_dir exte
 
 To train models on combined 3 class datasets:
 
-# TODO: go back to dev & test on just roots
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file data/sentiment/en_sstplus.train.txt --dev_file data/sentiment/en_sstplus.dev.txt --test_file data/sentiment/en_sstplus.test.txt > FC41_3class.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_3class  --extra_wordvec_method CONCAT --extra_wordvec_dim 200  --train_file data/sentiment/en_sstplus.train.txt --dev_file data/sentiment/en_sst3roots.dev.txt --test_file data/sentiment/en_sst3roots.test.txt > FC41_3class.out 2>&1 &
 
 This tests that model:
 
-python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file data/sentiment/en_sstplus.test.txt
+python3 -u -m stanza.models.classifier --no_train --load_name en_sstplus.pt --test_file data/sentiment/en_sst3roots.test.txt
 
 Here is an example for training a model in a different language:
 

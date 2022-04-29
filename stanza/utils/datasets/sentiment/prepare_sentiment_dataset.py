@@ -51,7 +51,13 @@ def convert_sst2roots(paths, dataset_name):
     """
     Create a 2 class SST dataset using only the roots
     """
-    convert_sst_general(paths, dataset_name, "rootbinary")
+    convert_sst_general(paths, dataset_name, "binaryroot")
+
+def convert_sst3roots(paths, dataset_name):
+    """
+    Create a 3 class SST dataset using only the roots
+    """
+    convert_sst_general(paths, dataset_name, "threeclassroot")
 
 def convert_sstplus(paths, dataset_name):
     """
@@ -126,6 +132,7 @@ DATASET_MAPPING = {
     "de_usage":     convert_de_usage,
 
     "en_sst2roots": convert_sst2roots,
+    "en_sst3roots": convert_sst3roots,
     "en_sstplus":   convert_sstplus,
     "en_meld":      convert_meld,
 
