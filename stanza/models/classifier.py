@@ -22,7 +22,7 @@ import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 
-from stanza.utils.confusion import format_confusion
+from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
 
 class Loss(Enum):
@@ -267,58 +267,6 @@ def confusion_dataset(model, dataset, device=None):
             confusion_matrix[expected_labels[i]][predicted_label] = confusion_matrix[expected_labels[i]].get(predicted_label, 0) + 1
 
     return confusion_matrix
-
-
-def confusion_to_accuracy(confusion_matrix):
-    """
-    Given a confusion dictionary returned by confusion_dataset, return correct, total
-    """
-    correct = 0
-    total = 0
-    for l1 in confusion_matrix.keys():
-        for l2 in confusion_matrix[l1].keys():
-            if l1 == l2:
-                correct = correct + confusion_matrix[l1][l2]
-            else:
-                total = total + confusion_matrix[l1][l2]
-    return correct, (correct + total)
-
-def confusion_to_macro_f1(confusion_matrix):
-    """
-    Return the macro f1 for a confusion matrix.
-    """
-    keys = set()
-    for k in confusion_matrix.keys():
-        keys.add(k)
-        for k2 in confusion_matrix.get(k).keys():
-            keys.add(k2)
-
-    sum_f1 = 0
-    for k in keys:
-        tp = 0
-        fn = 0
-        fp = 0
-        for k2 in keys:
-            if k == k2:
-                tp = confusion_matrix.get(k, {}).get(k, 0)
-            else:
-                fn = fn + confusion_matrix.get(k, {}).get(k2, 0)
-                fp = fp + confusion_matrix.get(k2, {}).get(k, 0)
-        if tp + fp == 0:
-            precision = 0.0
-        else:
-            precision = tp / (tp + fp)
-        if tp + fn == 0:
-            recall = 0.0
-        else:
-            recall = tp / (tp + fn)
-        if precision + recall == 0.0:
-            f1 = 0.0
-        else:
-            f1 = 2 * (precision * recall) / (precision + recall)
-        sum_f1 = sum_f1 + f1
-
-    return sum_f1 / len(keys)
 
 
 def score_dataset(model, dataset, label_map=None, device=None,

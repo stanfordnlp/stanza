@@ -91,3 +91,56 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
     return "\n".join(text)
 
 
+def confusion_to_accuracy(confusion_matrix):
+    """
+    Given a confusion dictionary, return correct, total
+    """
+    correct = 0
+    total = 0
+    for l1 in confusion_matrix.keys():
+        for l2 in confusion_matrix[l1].keys():
+            if l1 == l2:
+                correct = correct + confusion_matrix[l1][l2]
+            else:
+                total = total + confusion_matrix[l1][l2]
+    return correct, (correct + total)
+
+
+def confusion_to_macro_f1(confusion_matrix):
+    """
+    Return the macro f1 for a confusion matrix.
+    """
+    keys = set()
+    for k in confusion_matrix.keys():
+        keys.add(k)
+        for k2 in confusion_matrix.get(k).keys():
+            keys.add(k2)
+
+    sum_f1 = 0
+    for k in keys:
+        tp = 0
+        fn = 0
+        fp = 0
+        for k2 in keys:
+            if k == k2:
+                tp = confusion_matrix.get(k, {}).get(k, 0)
+            else:
+                fn = fn + confusion_matrix.get(k, {}).get(k2, 0)
+                fp = fp + confusion_matrix.get(k2, {}).get(k, 0)
+        if tp + fp == 0:
+            precision = 0.0
+        else:
+            precision = tp / (tp + fp)
+        if tp + fn == 0:
+            recall = 0.0
+        else:
+            recall = tp / (tp + fn)
+        if precision + recall == 0.0:
+            f1 = 0.0
+        else:
+            f1 = 2 * (precision * recall) / (precision + recall)
+        sum_f1 = sum_f1 + f1
+
+    return sum_f1 / len(keys)
+
+
