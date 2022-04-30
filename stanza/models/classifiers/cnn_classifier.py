@@ -96,7 +96,8 @@ class CNNClassifier(nn.Module):
         # you want to spend a long time debugging this
         self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
 
-        self.vocab_map = { word: i for i, word in enumerate(pretrain.vocab) }
+        # replacing NBSP picks up a whole bunch of words for VI
+        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
 
         if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
             if not extra_vocab:
@@ -205,6 +206,17 @@ class CNNClassifier(nn.Module):
             # assume all pieces are on the same device
             device = next(self.parameters()).device
 
+        vocab_map = self.vocab_map
+        def map_word(word):
+            idx = vocab_map.get(word, None)
+            if idx is not None:
+                return idx
+            if word[-1] == "'":
+                idx = vocab_map.get(word[:-1], None)
+                if idx is not None:
+                    return idx
+            return vocab_map.get(word.lower(), UNK_ID)
+
         # we will pad each phrase so either it matches the longest
         # conv or the longest phrase in the input, whichever is longer
         max_phrase_len = max(len(x) for x in inputs)
@@ -230,33 +242,14 @@ class CNNClassifier(nn.Module):
 
             # the initial lists are the length of the begin padding
             sentence_indices = [PAD_ID] * begin_pad_width
+            sentence_indices.extend([map_word(x) for x in phrase])
+            sentence_indices.extend([PAD_ID] * end_pad_width)
+
             # the "unknowns" will be the locations of the unknown words.
             # these locations will get the specially trained unknown vector
-            sentence_unknowns = []
+            # TODO: split UNK based on part of speech?  might be an interesting experiment
+            sentence_unknowns = [idx for idx, word in enumerate(sentence_indices) if word == UNK_ID]
 
-            for word in phrase:
-                if word in self.vocab_map:
-                    sentence_indices.append(self.vocab_map[word])
-                    continue
-                new_word = word.replace("-", "")
-                # google vectors have words which are all dashes
-                if len(new_word) == 0:
-                    new_word = word
-                if new_word in self.vocab_map:
-                    sentence_indices.append(self.vocab_map[new_word])
-                    continue
-
-                if new_word[-1] == "'":
-                    new_word = new_word[:-1]
-                    if new_word in self.vocab_map:
-                        sentence_indices.append(self.vocab_map[new_word])
-                        continue
-
-                # TODO: split UNK based on part of speech?  might be an interesting experiment
-                sentence_unknowns.append(len(sentence_indices))
-                sentence_indices.append(PAD_ID)
-
-            sentence_indices.extend([PAD_ID] * end_pad_width)
             batch_indices.append(sentence_indices)
             batch_unknowns.append(sentence_unknowns)
 
@@ -327,8 +320,7 @@ class CNNClassifier(nn.Module):
         # we use the random unk so that we are not necessarily
         # learning to match 0s for unk
         for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
-            for unknown in sentence_unknowns:
-                input_vectors[phrase_num, unknown, :] = self.unk
+            input_vectors[phrase_num][sentence_unknowns] = self.unk
 
         if self.extra_vocab:
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
