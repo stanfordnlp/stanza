@@ -94,12 +94,9 @@ This uses more data, although that wound up being worse for the German model:
 
 nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_german  --train_file data/sentiment/de_sb10k.train.txt,data/sentiment/de_scare.train.txt,data/sentiment/de_usage.train.txt --dev_file data/sentiment/de_sb10k.dev.txt --test_file data/sentiment/de_sb10k.test.txt --shorthand de_sb10k --min_train_len 3 --extra_wordvec_method CONCAT --extra_wordvec_dim 100 > de_sb10k.out 2>&1 &
 
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese  --train_file data/sentiment/zh_ren.train.txt --dev_file data/sentiment/zh_ren.dev.txt --test_file data/sentiment/zh_ren.test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM > zh_ren.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --base_name FC41_chinese --train_file data/sentiment/zh_ren.train.txt --dev_file data/sentiment/zh_ren.dev.txt --test_file data/sentiment/zh_ren.test.txt --shorthand zh_ren --wordvec_type fasttext --extra_wordvec_method SUM --wordvec_pretrain_file ../stanza_resources/zh-hans/pretrain/gsdsimp.pt > zh_ren.out 2>&1 &
 
-# TODO: this needs some work, as the words will currently be split into syllables instead of left as complete words
-# One solution would be to write out json files instead of text files
-# Internally we need to pass around words instead of concat strings as well
-nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file extern_data/sentiment/vietnamese/_UIT-VSFC/train.txt --dev_file extern_data/sentiment/vietnamese/_UIT-VSFC/dev.txt --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
+nohup python3 -u -m stanza.models.classifier --max_epochs 400 --filter_channels 1000 --fc_shapes 400,100 --save_name vi_vsfc.pt  --train_file data/sentiment/vi_vsfc.train.json --dev_file data/sentiment/vi_vsfc.dev.json --test_file data/sentiment/vi_vsfc.test.json --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --extra_wordvec_method SUM --dev_eval_scoring WEIGHTED_F1 > vi_vsfc.out 2>&1 &
 
 python3 -u -m stanza.models.classifier --no_train --test_file extern_data/sentiment/vietnamese/_UIT-VSFC/test.txt --shorthand vi_vsfc --wordvec_pretrain_file ../stanza_resources/vi/pretrain/vtb.pt --wordvec_type word2vec --load_name vi_vsfc.pt
 """
@@ -236,7 +233,7 @@ def shuffle_dataset(sorted_dataset):
         dataset.extend(items)
     return dataset
 
-def confusion_dataset(model, dataset, device=None):
+def confusion_dataset(model, dataset):
     """
     Returns a confusion matrix
 
@@ -246,8 +243,6 @@ def confusion_dataset(model, dataset, device=None):
     """
     model.eval()
     index_label_map = {x: y for (x, y) in enumerate(model.labels)}
-    if device is None:
-        device = next(model.parameters()).device
 
     dataset_lengths = sort_dataset_by_len(dataset)
 
@@ -260,7 +255,7 @@ def confusion_dataset(model, dataset, device=None):
         text = [x[1] for x in batch]
         expected_labels = [x[0] for x in batch]
 
-        output = model(text, device)
+        output = model(text)
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = index_label_map[predicted.item()]
@@ -269,7 +264,7 @@ def confusion_dataset(model, dataset, device=None):
     return confusion_matrix
 
 
-def score_dataset(model, dataset, label_map=None, device=None,
+def score_dataset(model, dataset, label_map=None,
                   remap_labels=None, forgive_unmapped_labels=False):
     """
     remap_labels: a dict from old label to new label to use when
@@ -285,8 +280,6 @@ def score_dataset(model, dataset, label_map=None, device=None,
     model.eval()
     if label_map is None:
         label_map = {x: y for (y, x) in enumerate(model.labels)}
-    if device is None:
-        device = next(model.parameters()).device
     correct = 0
     dataset_lengths = sort_dataset_by_len(dataset)
 
@@ -296,7 +289,7 @@ def score_dataset(model, dataset, label_map=None, device=None,
         text = [x[1] for x in batch]
         expected_labels = [label_map[x[0]] for x in batch]
 
-        output = model(text, device)
+        output = model(text)
 
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
@@ -359,6 +352,15 @@ def checkpoint_name(filename, epoch, dev_scoring, score):
     root, ext = os.path.splitext(filename)
     return root + ".E{epoch:04d}-{score_type}{acc:05.2f}".format(**{"epoch": epoch, "score_type": dev_scoring.value, "acc": score * 100}) + ext
 
+def log_param_sizes(model):
+    logger.debug("--- Model parameter sizes ---")
+    total_size = 0
+    for name, param in model.named_parameters():
+        param_size = param.element_size() * param.nelement()
+        total_size += param_size
+        logger.debug("  %s %d %d %d", name, param.element_size(), param.nelement(), param_size)
+    logger.debug("  Total size: %d", total_size)
+
 def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
@@ -394,15 +396,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
     train_set_by_len = sort_dataset_by_len(train_set)
 
+    best_score = 0
     if args.load_name:
         # We reloaded the model, so let's report its current dev set score
-        correct = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        best_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
 
-    best_score = 0
+    log_param_sizes(model)
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
+
     for epoch in range(args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
@@ -418,7 +422,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            outputs = model(text, device)
+            outputs = model(text)
             batch_loss = loss_function(outputs, label)
             batch_loss.backward()
             optimizer.step()
@@ -452,7 +456,6 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             best_score = dev_score
             cnn_classifier.save(model_file, model)
             logger.info("Saved new best score model!")
-
 
 
 def load_pretrain(args):

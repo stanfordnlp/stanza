@@ -1,6 +1,7 @@
 """Stanza models classifier data functions."""
 
 import logging
+import json
 import re
 from typing import List
 
@@ -15,13 +16,14 @@ def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> Li
     into a list of strings.
     """
     # stanford sentiment dataset has a lot of random - and /
-    sentence = sentence.replace("-", " ")
-    sentence = sentence.replace("/", " ")
-    sentence = sentence.strip()
-    if sentence == "":
+    # remove those characters and flatten the newly created sublists into one list each time
+    sentence = [y for x in sentence for y in x.split("-") if y]
+    sentence = [y for x in sentence for y in x.split("/") if y]
+    sentence = [x.strip() for x in sentence]
+    sentence = [x for x in sentence if x]
+    if sentence == []:
         # removed too much
-        sentence = "-"
-    sentence = sentence.split()
+        sentence = ["-"]
     # our current word vectors are all entirely lowercased
     sentence = [word.lower() for word in sentence]
     if wordvec_type == classifier_args.WVType.WORD2VEC:
@@ -48,15 +50,10 @@ def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) ->
     """
     lines = []
     for filename in dataset.split(","):
-        try:
-            new_lines = open(filename, encoding="utf-8").readlines()
-        except UnicodeDecodeError:
-            logger.error("Could not read {}".format(filename))
-            raise
+        with open(filename, encoding="utf-8") as fin:
+            new_lines = json.load(fin)
+        new_lines = [(x['sentiment'], x['text']) for x in new_lines]
         lines.extend(new_lines)
-    lines = [x.strip() for x in lines]
-    lines = [x.split(maxsplit=1) for x in lines if x]
-    lines = [x for x in lines if len(x) > 1]
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
     # overloading to potentially make future model types

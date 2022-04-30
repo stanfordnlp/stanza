@@ -2,17 +2,24 @@
 VSFC sentiment dataset is available at
   https://drive.google.com/drive/folders/1xclbjHHK58zk2X6iqbvMPS2rcy9y9E0X
 
-The format is extremely similar to ours - labels are 0,1,2 and the
-text is pretokenized.  The big difference is that the files are split
-into two pieces, labels and text.
+The format is extremely similar to ours - labels are 0,1,2.
+Text needs to be tokenized, though.
+Also, the files are split into two pieces, labels and text.
 """
 
 import os
+import sys
 
-BASE_DIR = "extern_data/sentiment/vietnamese/_UIT-VSFC"
+from tqdm import tqdm
 
-def combine_columns(dataset):
-    directory = os.path.join(BASE_DIR, dataset)
+import stanza
+from stanza.utils.datasets.sentiment.process_utils import Fragment
+import stanza.utils.datasets.sentiment.process_utils as process_utils
+
+import stanza.utils.default_paths as default_paths
+
+def combine_columns(in_directory, dataset, nlp):
+    directory = os.path.join(in_directory, dataset)
 
     sentiment_file = os.path.join(directory, "sentiments.txt")
     with open(sentiment_file) as fin:
@@ -22,11 +29,36 @@ def combine_columns(dataset):
     with open(text_file) as fin:
         text = fin.readlines()
 
-    output_file = os.path.join(BASE_DIR, dataset + ".txt")
-    with open(output_file, "w") as fout:
-        for s, t in zip(sentiment, text):
-            fout.write("%s %s" % (s.strip(), t))
+    text = [[token.text for sentence in nlp(line.strip()).sentences for token in sentence.tokens]
+            for line in tqdm(text)]
 
-combine_columns("train")
-combine_columns("dev")
-combine_columns("test")
+    phrases = [Fragment(s.strip(), t) for s, t in zip(sentiment, text)]
+    return phrases
+
+def main(in_directory, out_directory, short_name):
+    nlp = stanza.Pipeline('vi', processors='tokenize')
+    for shard in ("train", "dev", "test"):
+        phrases = combine_columns(in_directory, shard, nlp)
+        output_file = os.path.join(out_directory, "%s.%s.json" % (short_name, shard))
+        process_utils.write_list(output_file, phrases)
+
+
+if __name__ == '__main__':
+    paths = default_paths.get_default_paths()
+
+    if len(sys.argv) <= 1:
+        in_directory = os.path.join(paths['SENTIMENT_BASE'], "vietnamese", "_UIT-VSFC")
+    else:
+        in_directory = sys.argv[1]
+
+    if len(sys.argv) <= 2:
+        out_directory = paths['SENTIMENT_DATA_DIR']
+    else:
+        out_directory = sys.argv[2]
+
+    if len(sys.argv) <= 3:
+        short_name = 'vi_vsfc'
+    else:
+        short_name = sys.argv[3]
+
+    main(in_directory, out_directory, short_name)

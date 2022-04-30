@@ -48,7 +48,8 @@ class SentimentProcessor(UDProcessor):
 
     def process(self, document):
         sentences = document.sentences
-        text = [" ".join(token.text for token in sentence.tokens) for sentence in sentences]
+        # TODO: tokens or words better here?
+        text = [[token.text for token in sentence.tokens] for sentence in sentences]
         labels = cnn_classifier.label_text(self._model, text, batch_size=self._batch_size)
         # TODO: allow a classifier processor for any attribute, not just sentiment
         document.set(SENTIMENT, labels, to_sentence=True)

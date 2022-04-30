@@ -1,5 +1,6 @@
 import csv
 import glob
+import json
 import os
 import tempfile
 
@@ -14,13 +15,22 @@ def write_list(out_filename, dataset):
 
     Expected: list(Fragment)
     """
+    formatted_dataset = [{'sentiment': line.sentiment, 'text': line.text} for line in dataset]
+    # Rather than write the dataset at once, we write one line at a time
+    # Using `indent` puts each word on a separate line, which is rather noisy,
+    # but not formatting at all makes one long line out of an entire dataset,
+    # which is impossible to read
+    #json.dump(formatted_dataset, fout, indent=2, ensure_ascii=False)
+
     with open(out_filename, 'w') as fout:
-        for line in dataset:
-            sentiment = line.sentiment
-            text = line.text
-            if isinstance(text, list):
-                text = " ".join(text)
-            fout.write("{} {}\n".format(sentiment, text))
+        fout.write("[\n")
+        for idx, line in enumerate(formatted_dataset):
+            fout.write("  ")
+            json.dump(line, fout, ensure_ascii=False)
+            if idx < len(formatted_dataset) - 1:
+                fout.write(",")
+            fout.write("\n")
+        fout.write("]\n")
 
 def write_splits(out_directory, snippets, splits):
     """

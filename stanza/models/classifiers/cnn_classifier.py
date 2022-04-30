@@ -13,8 +13,6 @@ import stanza.models.classifiers.data as data
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.utils import split_into_batches, sort_with_indices, unsort
-# TODO: move CharVocab to common
-from stanza.models.pos.vocab import CharVocab
 
 """
 The CNN classifier is based on Yoon Kim's work:
@@ -98,7 +96,8 @@ class CNNClassifier(nn.Module):
         # you want to spend a long time debugging this
         self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
 
-        self.vocab_map = { word: i for i, word in enumerate(pretrain.vocab) }
+        # replacing NBSP picks up a whole bunch of words for VI
+        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
 
         if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
             if not extra_vocab:
@@ -202,10 +201,20 @@ class CNNClassifier(nn.Module):
     def char_case(self, x: str) -> str:
         return x.lower() if self.char_lowercase else x
 
-    def forward(self, inputs, device=None):
-        if not device:
-            # assume all pieces are on the same device
-            device = next(self.parameters()).device
+    def forward(self, inputs):
+        # assume all pieces are on the same device
+        device = next(self.parameters()).device
+
+        vocab_map = self.vocab_map
+        def map_word(word):
+            idx = vocab_map.get(word, None)
+            if idx is not None:
+                return idx
+            if word[-1] == "'":
+                idx = vocab_map.get(word[:-1], None)
+                if idx is not None:
+                    return idx
+            return vocab_map.get(word.lower(), UNK_ID)
 
         # we will pad each phrase so either it matches the longest
         # conv or the longest phrase in the input, whichever is longer
@@ -232,33 +241,14 @@ class CNNClassifier(nn.Module):
 
             # the initial lists are the length of the begin padding
             sentence_indices = [PAD_ID] * begin_pad_width
+            sentence_indices.extend([map_word(x) for x in phrase])
+            sentence_indices.extend([PAD_ID] * end_pad_width)
+
             # the "unknowns" will be the locations of the unknown words.
             # these locations will get the specially trained unknown vector
-            sentence_unknowns = []
+            # TODO: split UNK based on part of speech?  might be an interesting experiment
+            sentence_unknowns = [idx for idx, word in enumerate(sentence_indices) if word == UNK_ID]
 
-            for word in phrase:
-                if word in self.vocab_map:
-                    sentence_indices.append(self.vocab_map[word])
-                    continue
-                new_word = word.replace("-", "")
-                # google vectors have words which are all dashes
-                if len(new_word) == 0:
-                    new_word = word
-                if new_word in self.vocab_map:
-                    sentence_indices.append(self.vocab_map[new_word])
-                    continue
-
-                if new_word[-1] == "'":
-                    new_word = new_word[:-1]
-                    if new_word in self.vocab_map:
-                        sentence_indices.append(self.vocab_map[new_word])
-                        continue
-
-                # TODO: split UNK based on part of speech?  might be an interesting experiment
-                sentence_unknowns.append(len(sentence_indices))
-                sentence_indices.append(PAD_ID)
-
-            sentence_indices.extend([PAD_ID] * end_pad_width)
             batch_indices.append(sentence_indices)
             batch_unknowns.append(sentence_unknowns)
 
@@ -329,8 +319,7 @@ class CNNClassifier(nn.Module):
         # we use the random unk so that we are not necessarily
         # learning to match 0s for unk
         for phrase_num, sentence_unknowns in enumerate(batch_unknowns):
-            for unknown in sentence_unknowns:
-                input_vectors[phrase_num, unknown, :] = self.unk
+            input_vectors[phrase_num][sentence_unknowns] = self.unk
 
         if self.extra_vocab:
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
@@ -434,15 +423,11 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
     return model
 
 
-def label_text(model, text, batch_size=None, reverse_label_map=None, device=None):
+def label_text(model, text, batch_size=None):
     """
     Given a list of sentences, return the model's results on that text.
     """
     model.eval()
-    if reverse_label_map is None:
-        reverse_label_map = {x: y for (x, y) in enumerate(model.labels)}
-    if device is None:
-        device = next(model.parameters()).device
 
     text = [data.update_text(s, model.config.wordvec_type) for s in text]
 
@@ -457,7 +442,7 @@ def label_text(model, text, batch_size=None, reverse_label_map=None, device=None
         if interval[1] - interval[0] == 0:
             # this can happen for empty text
             continue
-        output = model(text[interval[0]:interval[1]], device)
+        output = model(text[interval[0]:interval[1]])
         predicted = torch.argmax(output, dim=1)
         labels.extend(predicted.tolist())
 
