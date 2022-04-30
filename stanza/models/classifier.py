@@ -391,12 +391,11 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
     train_set_by_len = sort_dataset_by_len(train_set)
 
+    best_score = 0
     if args.load_name:
         # We reloaded the model, so let's report its current dev set score
-        correct = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        best_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
-
-    best_score = 0
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
