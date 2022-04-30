@@ -233,7 +233,7 @@ def shuffle_dataset(sorted_dataset):
         dataset.extend(items)
     return dataset
 
-def confusion_dataset(model, dataset, device=None):
+def confusion_dataset(model, dataset):
     """
     Returns a confusion matrix
 
@@ -243,8 +243,6 @@ def confusion_dataset(model, dataset, device=None):
     """
     model.eval()
     index_label_map = {x: y for (x, y) in enumerate(model.labels)}
-    if device is None:
-        device = next(model.parameters()).device
 
     dataset_lengths = sort_dataset_by_len(dataset)
 
@@ -257,7 +255,7 @@ def confusion_dataset(model, dataset, device=None):
         text = [x[1] for x in batch]
         expected_labels = [x[0] for x in batch]
 
-        output = model(text, device)
+        output = model(text)
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = index_label_map[predicted.item()]
@@ -266,7 +264,7 @@ def confusion_dataset(model, dataset, device=None):
     return confusion_matrix
 
 
-def score_dataset(model, dataset, label_map=None, device=None,
+def score_dataset(model, dataset, label_map=None,
                   remap_labels=None, forgive_unmapped_labels=False):
     """
     remap_labels: a dict from old label to new label to use when
@@ -282,8 +280,6 @@ def score_dataset(model, dataset, label_map=None, device=None,
     model.eval()
     if label_map is None:
         label_map = {x: y for (y, x) in enumerate(model.labels)}
-    if device is None:
-        device = next(model.parameters()).device
     correct = 0
     dataset_lengths = sort_dataset_by_len(dataset)
 
@@ -293,7 +289,7 @@ def score_dataset(model, dataset, label_map=None, device=None,
         text = [x[1] for x in batch]
         expected_labels = [label_map[x[0]] for x in batch]
 
-        output = model(text, device)
+        output = model(text)
 
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
@@ -410,6 +406,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
+
     for epoch in range(args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
@@ -425,7 +422,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            outputs = model(text, device)
+            outputs = model(text)
             batch_loss = loss_function(outputs, label)
             batch_loss.backward()
             optimizer.step()
@@ -459,7 +456,6 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             best_score = dev_score
             cnn_classifier.save(model_file, model)
             logger.info("Saved new best score model!")
-
 
 
 def load_pretrain(args):

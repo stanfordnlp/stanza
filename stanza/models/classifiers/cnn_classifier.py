@@ -201,10 +201,9 @@ class CNNClassifier(nn.Module):
     def char_case(self, x: str) -> str:
         return x.lower() if self.char_lowercase else x
 
-    def forward(self, inputs, device=None):
-        if not device:
-            # assume all pieces are on the same device
-            device = next(self.parameters()).device
+    def forward(self, inputs):
+        # assume all pieces are on the same device
+        device = next(self.parameters()).device
 
         vocab_map = self.vocab_map
         def map_word(word):
@@ -424,13 +423,11 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
     return model
 
 
-def label_text(model, text, batch_size=None, device=None):
+def label_text(model, text, batch_size=None):
     """
     Given a list of sentences, return the model's results on that text.
     """
     model.eval()
-    if device is None:
-        device = next(model.parameters()).device
 
     text = [data.update_text(s, model.config.wordvec_type) for s in text]
 
@@ -445,7 +442,7 @@ def label_text(model, text, batch_size=None, device=None):
         if interval[1] - interval[0] == 0:
             # this can happen for empty text
             continue
-        output = model(text[interval[0]:interval[1]], device)
+        output = model(text[interval[0]:interval[1]])
         predicted = torch.argmax(output, dim=1)
         labels.extend(predicted.tolist())
 
