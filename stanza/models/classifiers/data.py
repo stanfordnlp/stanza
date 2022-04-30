@@ -1,6 +1,7 @@
 """Stanza models classifier data functions."""
 
 import logging
+import json
 import re
 from typing import List
 
@@ -49,19 +50,14 @@ def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) ->
     """
     lines = []
     for filename in dataset.split(","):
-        try:
-            new_lines = open(filename, encoding="utf-8").readlines()
-        except UnicodeDecodeError:
-            logger.error("Could not read {}".format(filename))
-            raise
+        with open(filename, encoding="utf-8") as fin:
+            new_lines = json.load(fin)
+        new_lines = [(x['sentiment'], x['text']) for x in new_lines]
         lines.extend(new_lines)
-    lines = [x.strip() for x in lines]
-    lines = [x.split(maxsplit=1) for x in lines if x]
-    lines = [x for x in lines if len(x) > 1]
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
     # overloading to potentially make future model types
-    lines = [(x[0], update_text(x[1].split(), wordvec_type)) for x in lines]
+    lines = [(x[0], update_text(x[1], wordvec_type)) for x in lines]
     if min_len:
         lines = [x for x in lines if len(x[1]) >= min_len]
     return lines
