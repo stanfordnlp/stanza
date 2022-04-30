@@ -174,12 +174,16 @@ class LSTMModel(BaseModel, nn.Module):
             self.add_unsaved_module('forward_charlm', forward_charlm)
             self.add_unsaved_module('forward_charlm_vocab', forward_charlm.char_vocab())
             self.word_input_size += self.forward_charlm.hidden_dim()
+            if not forward_charlm.is_forward_lm:
+                raise ValueError("Got a backward charlm as a forward charlm!")
         else:
             self.forward_charlm = None
         if backward_charlm is not None:
             self.add_unsaved_module('backward_charlm', backward_charlm)
             self.add_unsaved_module('backward_charlm_vocab', backward_charlm.char_vocab())
             self.word_input_size += self.backward_charlm.hidden_dim()
+            if backward_charlm.is_forward_lm:
+                raise ValueError("Got a forward charlm as a backward charlm!")
         else:
             self.backward_charlm = None
 
