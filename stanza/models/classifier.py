@@ -356,6 +356,15 @@ def checkpoint_name(filename, epoch, dev_scoring, score):
     root, ext = os.path.splitext(filename)
     return root + ".E{epoch:04d}-{score_type}{acc:05.2f}".format(**{"epoch": epoch, "score_type": dev_scoring.value, "acc": score * 100}) + ext
 
+def log_param_sizes(model):
+    logger.debug("--- Model parameter sizes ---")
+    total_size = 0
+    for name, param in model.named_parameters():
+        param_size = param.element_size() * param.nelement()
+        total_size += param_size
+        logger.debug("  %s %d %d %d", name, param.element_size(), param.nelement(), param_size)
+    logger.debug("  Total size: %d", total_size)
+
 def train_model(model, model_file, args, train_set, dev_set, labels):
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
@@ -396,6 +405,8 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         # We reloaded the model, so let's report its current dev set score
         best_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
+
+    log_param_sizes(model)
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
