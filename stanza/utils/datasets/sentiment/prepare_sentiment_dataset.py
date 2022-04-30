@@ -23,6 +23,7 @@ from stanza.utils.datasets.sentiment import process_scare
 from stanza.utils.datasets.sentiment import process_slsd
 from stanza.utils.datasets.sentiment import process_sst
 from stanza.utils.datasets.sentiment import process_usage_german
+from stanza.utils.datasets.sentiment import process_vsfc_vietnamese
 
 from stanza.utils.datasets.sentiment import process_utils
 
@@ -127,6 +128,11 @@ def convert_sb10k(paths, dataset_name):
                         "--split", "train_dev",
                         *column_args])
 
+def convert_vi_vsfc(paths, dataset_name):
+    in_directory = os.path.join(paths['SENTIMENT_BASE'], "vietnamese", "_UIT-VSFC")
+    out_directory = paths['SENTIMENT_DATA_DIR']
+    process_vsfc_vietnamese.main(in_directory, out_directory, dataset_name)
+
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
     out_directory = paths['SENTIMENT_DATA_DIR']
@@ -142,6 +148,8 @@ DATASET_MAPPING = {
     "en_sst3roots": convert_sst3roots,
     "en_sstplus":   convert_sstplus,
     "en_meld":      convert_meld,
+
+    "vi_vsfc":      convert_vi_vsfc,
 
     "zh_ren":       convert_ren,
 }
