@@ -29,7 +29,6 @@ A complete processing of a sentence is as follows:
 from collections import namedtuple
 from enum import Enum
 import logging
-from operator import itemgetter
 import math
 import random
 
@@ -38,7 +37,6 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
-from stanza.models.common.data import get_long_tensor
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
@@ -418,43 +416,6 @@ class LSTMModel(BaseModel, nn.Module):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
-    @staticmethod
-    def build_char_representation(all_word_labels, charlm):
-        CHARLM_START = "\n"
-        CHARLM_END = " "
-
-        forward = charlm.is_forward_lm
-        vocab = charlm.char_vocab()
-        device = next(charlm.parameters()).device
-
-        all_data = []
-        for idx, word_labels in enumerate(all_word_labels):
-            if not forward:
-                word_labels = [x[::-1] for x in reversed(word_labels)]
-
-            chars = [CHARLM_START]
-            offsets = []
-            for w in word_labels:
-                chars.extend(w)
-                chars.append(CHARLM_END)
-                offsets.append(len(chars) - 1)
-            if not forward:
-                offsets.reverse()
-            chars = vocab.map(chars)
-            all_data.append((chars, offsets, len(chars), len(all_data)))
-
-        all_data.sort(key=itemgetter(2), reverse=True)
-        chars, char_offsets, char_lens, orig_idx = tuple(zip(*all_data))
-        chars = get_long_tensor(chars, len(all_data), pad_id=vocab.unit2id(' ')).to(device=device)
-
-        # TODO: surely this should be stuffed in the charlm model itself rather than done here
-        with torch.no_grad():
-            output, _, _ = charlm.forward(chars, char_lens)
-            res = [output[i, offsets] for i, offsets in enumerate(char_offsets)]
-            res = unsort(res, orig_idx)
-
-        return res
-
     def initial_word_queues(self, tagged_word_lists):
         """
         Produce initial word queues out of the model's LSTMs for use in the tagged word lists.
@@ -502,11 +463,11 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs.append(word_inputs)
 
         if self.forward_charlm is not None:
-            all_forward_chars = self.build_char_representation(all_word_labels, self.forward_charlm)
+            all_forward_chars = self.forward_charlm.build_char_representation(all_word_labels)
             for word_inputs, forward_chars in zip(all_word_inputs, all_forward_chars):
                 word_inputs.append(forward_chars)
         if self.backward_charlm is not None:
-            all_backward_chars = self.build_char_representation(all_word_labels, self.backward_charlm)
+            all_backward_chars = self.backward_charlm.build_char_representation(all_word_labels)
             for word_inputs, backward_chars in zip(all_word_inputs, all_backward_chars):
                 word_inputs.append(backward_chars)
 
