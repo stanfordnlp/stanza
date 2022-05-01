@@ -141,7 +141,6 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
-    # for whatever reason, this feature was not helpful
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     # BERT helps a lot and actually doesn't slow things down too much
