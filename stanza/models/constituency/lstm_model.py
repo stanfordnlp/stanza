@@ -172,7 +172,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         if forward_charlm is not None:
             self.add_unsaved_module('forward_charlm', forward_charlm)
-            self.add_unsaved_module('forward_charlm_vocab', forward_charlm.char_vocab())
             self.word_input_size += self.forward_charlm.hidden_dim()
             if not forward_charlm.is_forward_lm:
                 raise ValueError("Got a backward charlm as a forward charlm!")
@@ -180,7 +179,6 @@ class LSTMModel(BaseModel, nn.Module):
             self.forward_charlm = None
         if backward_charlm is not None:
             self.add_unsaved_module('backward_charlm', backward_charlm)
-            self.add_unsaved_module('backward_charlm_vocab', backward_charlm.char_vocab())
             self.word_input_size += self.backward_charlm.hidden_dim()
             if backward_charlm.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
@@ -420,16 +418,14 @@ class LSTMModel(BaseModel, nn.Module):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
-    def build_char_representation(self, all_word_labels, device, forward):
+    @staticmethod
+    def build_char_representation(all_word_labels, charlm):
         CHARLM_START = "\n"
         CHARLM_END = " "
 
-        if forward:
-            charlm = self.forward_charlm
-            vocab = self.forward_charlm_vocab
-        else:
-            charlm = self.backward_charlm
-            vocab = self.backward_charlm_vocab
+        forward = charlm.is_forward_lm
+        vocab = charlm.char_vocab()
+        device = next(charlm.parameters()).device
 
         all_data = []
         for idx, word_labels in enumerate(all_word_labels):
@@ -506,11 +502,11 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs.append(word_inputs)
 
         if self.forward_charlm is not None:
-            all_forward_chars = self.build_char_representation(all_word_labels, device, forward=True)
+            all_forward_chars = self.build_char_representation(all_word_labels, self.forward_charlm)
             for word_inputs, forward_chars in zip(all_word_inputs, all_forward_chars):
                 word_inputs.append(forward_chars)
         if self.backward_charlm is not None:
-            all_backward_chars = self.build_char_representation(all_word_labels, device, forward=False)
+            all_backward_chars = self.build_char_representation(all_word_labels, self.backward_charlm)
             for word_inputs, backward_chars in zip(all_word_inputs, all_backward_chars):
                 word_inputs.append(backward_chars)
 
