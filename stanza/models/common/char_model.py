@@ -1,7 +1,10 @@
+from operator import itemgetter
+
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_sequence, PackedSequence
 
+from stanza.models.common.data import get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.utils import tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
@@ -101,6 +104,44 @@ class CharacterLanguageModel(nn.Module):
             res = pack_sequence(res)
             if self.pad:
                 res = pad_packed_sequence(res, batch_first=True)[0]
+        return res
+
+    def build_char_representation(self, sentences):
+        """
+        Return values from this charlm for a list of list of words
+        """
+        CHARLM_START = "\n"
+        CHARLM_END = " "
+
+        forward = self.is_forward_lm
+        vocab = self.char_vocab()
+        device = next(self.parameters()).device
+
+        all_data = []
+        for idx, words in enumerate(sentences):
+            if not forward:
+                words = [x[::-1] for x in reversed(words)]
+
+            chars = [CHARLM_START]
+            offsets = []
+            for w in words:
+                chars.extend(w)
+                chars.append(CHARLM_END)
+                offsets.append(len(chars) - 1)
+            if not forward:
+                offsets.reverse()
+            chars = vocab.map(chars)
+            all_data.append((chars, offsets, len(chars), len(all_data)))
+
+        all_data.sort(key=itemgetter(2), reverse=True)
+        chars, char_offsets, char_lens, orig_idx = tuple(zip(*all_data))
+        chars = get_long_tensor(chars, len(all_data), pad_id=vocab.unit2id(CHARLM_END)).to(device=device)
+
+        with torch.no_grad():
+            output, _, _ = self.forward(chars, char_lens)
+            res = [output[i, offsets] for i, offsets in enumerate(char_offsets)]
+            res = unsort(res, orig_idx)
+
         return res
 
     def hidden_dim(self):
