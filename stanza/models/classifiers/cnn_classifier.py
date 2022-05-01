@@ -81,14 +81,16 @@ class CNNClassifier(nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
-        self.add_unsaved_module('charmodel_forward', charmodel_forward)
+        self.add_unsaved_module('forward_charlm', charmodel_forward)
         if charmodel_forward is not None:
-            self.add_unsaved_module('charmodel_forward_vocab', charmodel_forward.char_vocab())
             logger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
-        self.add_unsaved_module('charmodel_backward', charmodel_backward)
+            if not charmodel_forward.is_forward_lm:
+                raise ValueError("Got a backward charlm as a forward charlm!")
+        self.add_unsaved_module('backward_charlm', charmodel_backward)
         if charmodel_backward is not None:
-            self.add_unsaved_module('charmodel_backward_vocab', charmodel_backward.char_vocab())
             logger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
+            if charmodel_backward.is_forward_lm:
+                raise ValueError("Got a forward charlm as a backward charlm!")
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
         # possibly want to train UNK while freezing the rest of the embedding
@@ -172,34 +174,16 @@ class CNNClassifier(nn.Module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
-    def build_char_reps(self, batch_chars, batch_offsets, device, forward=True):
-        if forward:
-            model = self.charmodel_forward
-            vocab = self.charmodel_forward_vocab
-            projection = self.charmodel_forward_projection
-        else:
-            model = self.charmodel_backward
-            vocab = self.charmodel_backward_vocab
-            projection = self.charmodel_backward_projection
-
-        batch_charlens = [len(x) for x in batch_chars]
-        chars_sorted, char_orig_idx = sort_all([batch_chars, batch_offsets], batch_charlens)
-        batch_chars, batch_offsets = chars_sorted
-        batch_charlens = [len(x) for x in batch_chars]
-        chars = get_long_tensor(batch_chars, len(batch_chars),
-                                pad_id=vocab.unit2id(' ')).to(device=device)
-        char_reps = model.get_representation(chars, batch_offsets,
-                                             batch_charlens, char_orig_idx)
-        char_reps = char_reps.data
+    def build_char_reps(self, inputs, max_phrase_len, charlm, projection, begin_paddings, device):
+        char_reps = charlm.build_char_representation(inputs)
         if projection is not None:
-            char_reps = projection(char_reps)
-        char_reps = torch.reshape(char_reps, [max(len(x) for x in batch_offsets), len(batch_chars), char_reps.shape[-1]])
-        char_reps = torch.transpose(char_reps, 0, 1)
-
-        return char_reps
-
-    def char_case(self, x: str) -> str:
-        return x.lower() if self.char_lowercase else x
+            char_reps = [projection(x) for x in char_reps]
+        char_inputs = torch.zeros((len(inputs), max_phrase_len, char_reps[0].shape[-1]), device=device)
+        for idx, rep in enumerate(char_reps):
+            start = begin_paddings[idx]
+            end = start + rep.shape[0]
+            char_inputs[idx, start:end, :] = rep
+        return char_inputs
 
     def forward(self, inputs):
         # assume all pieces are on the same device
@@ -225,10 +209,8 @@ class CNNClassifier(nn.Module):
         batch_indices = []
         batch_unknowns = []
         extra_batch_indices = []
-        batch_forward_chars = []
-        batch_forward_offsets = []
-        batch_backward_chars = []
-        batch_backward_offsets = []
+        begin_paddings = []
+        end_paddings = []
         for phrase in inputs:
             # we use random at training time to try to learn different
             # positions of padding.  at test time, though, we want to
@@ -238,6 +220,9 @@ class CNNClassifier(nn.Module):
             else:
                 begin_pad_width = 0
             end_pad_width = max_phrase_len - begin_pad_width - len(phrase)
+
+            begin_paddings.append(begin_pad_width)
+            end_paddings.append(end_pad_width)
 
             # the initial lists are the length of the begin padding
             sentence_indices = [PAD_ID] * begin_pad_width
@@ -274,35 +259,6 @@ class CNNClassifier(nn.Module):
                 extra_sentence_indices.extend([PAD_ID] * end_pad_width)
                 extra_batch_indices.append(extra_sentence_indices)
 
-            if self.charmodel_forward is not None:
-                start_id, end_id = self.charmodel_forward_vocab.unit2id('\n'), self.charmodel_forward_vocab.unit2id(' ') # special token
-                processed_phrase = ([[end_id]] * begin_pad_width +
-                                    [self.charmodel_forward_vocab.map([self.char_case(x) for x in w]) + [end_id] for w in phrase] +
-                                    [[end_id]] * end_pad_width)
-                chars = [start_id]
-                offsets = []
-                for word in processed_phrase:
-                    # -1 because we want the position of the last character
-                    chars.extend(word)
-                    offsets.append(len(chars)-1)
-                batch_forward_chars.append(chars)
-                batch_forward_offsets.append(offsets)
-
-            if self.charmodel_backward is not None:
-                start_id, end_id = self.charmodel_backward_vocab.unit2id('\n'), self.charmodel_backward_vocab.unit2id(' ') # special token
-                processed_phrase = ([[end_id]] * begin_pad_width +
-                                    [self.charmodel_backward_vocab.map([self.char_case(x) for x in w[::-1]]) + [end_id] for w in phrase[::-1]] +
-                                    [[end_id]] * end_pad_width)
-                chars = [start_id]
-                offsets = []
-                for word in processed_phrase:
-                    # -1 because we want the position of the last character
-                    chars.extend(word)
-                    # backwards because that seems to be what get_representation wants
-                    offsets = [len(chars)-1] + offsets
-                batch_backward_chars.append(chars)
-                batch_backward_offsets.append(offsets)
-
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
         # many tiny tensors
@@ -333,12 +289,12 @@ class CNNClassifier(nn.Module):
         else:
             all_inputs = [input_vectors]
 
-        if self.charmodel_forward is not None:
-            char_reps_forward = self.build_char_reps(batch_forward_chars, batch_forward_offsets, device, forward=True)
+        if self.forward_charlm is not None:
+            char_reps_forward = self.build_char_reps(inputs, max_phrase_len, self.forward_charlm, self.charmodel_forward_projection, begin_paddings, device)
             all_inputs.append(char_reps_forward)
 
-        if self.charmodel_backward is not None:
-            char_reps_backward = self.build_char_reps(batch_backward_chars, batch_backward_offsets, device, forward=False)
+        if self.backward_charlm is not None:
+            char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
 
         if len(all_inputs) > 1:
