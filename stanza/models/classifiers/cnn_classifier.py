@@ -297,10 +297,8 @@ class CNNClassifier(nn.Module):
             char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
 
-        if len(all_inputs) > 1:
-            input_vectors = torch.cat(all_inputs, dim=2)
-        else:
-            input_vectors = all_inputs[0]
+        # still works even if there's just one item
+        input_vectors = torch.cat(all_inputs, dim=2)
 
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
