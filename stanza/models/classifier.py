@@ -170,16 +170,12 @@ def parse_args():
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
-    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
-    parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
-    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
 
     args = parser.parse_args()
-
-    if args.charlm_shorthand is not None:
-        args.charlm = True
 
     return args
 
@@ -509,16 +505,15 @@ def main():
 
     pretrain = load_pretrain(args)
 
-    if args.charlm:
-        if args.charlm_shorthand is None:
-            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
-        logger.info('Using pretrained contextualized char embedding')
-        charlm_forward_file = '{}/{}_forward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
-        charlm_backward_file = '{}/{}_backward_charlm.pt'.format(args.charlm_save_dir, args.charlm_shorthand)
-        charmodel_forward = CharacterLanguageModel.load(charlm_forward_file, finetune=False)
-        charmodel_backward = CharacterLanguageModel.load(charlm_backward_file, finetune=False)
+    if args.charlm_forward_file:
+        logger.info('Using forward charlm from %s', args.charlm_forward_file)
+        charmodel_forward = CharacterLanguageModel.load(args.charlm_forward_file, finetune=False)
     else:
         charmodel_forward = None
+    if args.charlm_backward_file:
+        logger.info('Using backward charlm from %s', args.charlm_backward_file)
+        charmodel_backward = CharacterLanguageModel.load(args.charlm_backward_file, finetune=False)
+    else:
         charmodel_backward = None
 
     if args.load_name:
