@@ -118,7 +118,7 @@ def convert_fc_shapes(arg):
         return arg
     return tuple(arg)
 
-def parse_args():
+def parse_args(args=None):
     """
     Add arguments for building the classifier.
     Parses command line args and returns the result.
@@ -175,7 +175,7 @@ def parse_args():
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     return args
 
@@ -485,8 +485,8 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args)
     seed = utils.set_random_seed(args.seed, args.cuda)
     logger.info("Using random seed: %d" % seed)
 
