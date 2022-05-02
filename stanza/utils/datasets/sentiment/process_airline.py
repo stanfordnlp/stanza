@@ -10,7 +10,7 @@ Accordingly, we use the csv module to read the files and output them in the form
 
 Run using 
 
-python3 convert_airline.py Tweets.csv train.txt
+python3 convert_airline.py Tweets.csv train.json
 
 If the first word is an @, it is removed, and after that, leading @ or # are removed.
 For example:
@@ -61,7 +61,7 @@ def main(in_directory, out_directory, short_name):
     phrases = get_tokenized_phrases(in_directory)
 
     os.makedirs(out_directory, exist_ok=True)
-    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
+    out_filename = os.path.join(out_directory, "%s.train.json" % short_name)
     # filter leading @United, @American, etc from the tweets
     process_utils.write_list(out_filename, phrases)
 

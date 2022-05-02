@@ -14,7 +14,7 @@ Extracts positive, neutral, and negative phrases from the ArguAna hotel review c
 
 Run as follows:
 
-python3 parse_arguana_xml.py split/training arguana_train.txt
+python3 parse_arguana_xml.py split/training data/sentiment
 
 ArguAna can be downloaded here:
 
@@ -66,7 +66,7 @@ def get_tokenized_phrases(in_directory):
 
 def main(in_directory, out_directory, short_name):
     phrases = get_tokenized_phrases(in_directory)
-    process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), phrases)
+    process_utils.write_list(os.path.join(out_directory, "%s.train.json" % short_name), phrases)
 
 
 if __name__ == "__main__":
