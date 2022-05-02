@@ -79,9 +79,9 @@ def main(xml_directory, out_directory, short_name):
     os.makedirs(out_directory, exist_ok=True)
     process_utils.write_splits(out_directory,
                                snippets,
-                               (process_utils.Split("%s.train.txt" % short_name, 0.8),
-                                process_utils.Split("%s.dev.txt" % short_name, 0.1),
-                                process_utils.Split("%s.test.txt" % short_name, 0.1)))
+                               (process_utils.Split("%s.train.json" % short_name, 0.8),
+                                process_utils.Split("%s.dev.json" % short_name, 0.1),
+                                process_utils.Split("%s.test.json" % short_name, 0.1)))
 
 
 if __name__ == "__main__":

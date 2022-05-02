@@ -69,7 +69,7 @@ def main(in_directory, out_directory, short_name):
     os.makedirs(out_directory, exist_ok=True)
     for split in ("train", "dev", "test"):
         phrases = get_tokenized_phrases(split, in_directory)
-        process_utils.write_list(os.path.join(out_directory, "%s.%s.txt" % (short_name, split)), phrases)
+        process_utils.write_list(os.path.join(out_directory, "%s.%s.json" % (short_name, split)), phrases)
 
 if __name__ == '__main__':
     in_directory = sys.argv[1]

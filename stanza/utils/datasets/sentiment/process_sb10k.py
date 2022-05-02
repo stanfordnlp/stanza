@@ -91,16 +91,16 @@ def main(args=None):
     if args.split is Split.TRAIN_DEV_TEST:
         process_utils.write_splits(args.out_dir,
                                    snippets,
-                                   (process_utils.Split("%s.train.txt" % args.short_name, 0.8),
-                                    process_utils.Split("%s.dev.txt" % args.short_name, 0.1),
-                                    process_utils.Split("%s.test.txt" % args.short_name, 0.1)))
+                                   (process_utils.Split("%s.train.json" % args.short_name, 0.8),
+                                    process_utils.Split("%s.dev.json" % args.short_name, 0.1),
+                                    process_utils.Split("%s.test.json" % args.short_name, 0.1)))
     elif args.split is Split.TRAIN_DEV:
         process_utils.write_splits(args.out_dir,
                                    snippets,
-                                   (process_utils.Split("%s.train.txt" % args.short_name, 0.9),
-                                    process_utils.Split("%s.dev.txt" % args.short_name, 0.1)))
+                                   (process_utils.Split("%s.train.json" % args.short_name, 0.9),
+                                    process_utils.Split("%s.dev.json" % args.short_name, 0.1)))
     elif args.split is Split.TEST:
-        process_utils.write_list(os.path.join(args.out_dir, "%s.test.txt" % args.short_name), snippets)
+        process_utils.write_list(os.path.join(args.out_dir, "%s.test.json" % args.short_name), snippets)
     else:
         raise ValueError("Unknown split method {}".format(args.split))
 

@@ -34,7 +34,7 @@ def write_dataset(dataset, out_directory, dataset_name):
     Write train, dev, test for a given dataset
     """
     for shard, phrases in zip(SHARDS, dataset):
-        output_file = os.path.join(out_directory, "%s.%s.txt" % (dataset_name, shard))
+        output_file = os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard))
         process_utils.write_list(output_file, phrases)
 
 def convert_sst_general(paths, dataset_name, version):

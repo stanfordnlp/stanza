@@ -91,7 +91,7 @@ def main(in_directory, out_directory, short_name):
     snippets = get_scare_snippets(nlp, os.path.join(in_directory, "scare_v1.0.0", "annotations"), text_id_map)
 
     print(len(snippets))
-    process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), snippets)
+    process_utils.write_list(os.path.join(out_directory, "%s.train.json" % short_name), snippets)
 
 if __name__ == '__main__':
     in_directory = sys.argv[1]

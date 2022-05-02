@@ -58,7 +58,7 @@ def main(in_directory, out_directory, short_name):
 
     print("Total snippets found for USAGE: %d" % len(snippets))
 
-    process_utils.write_list(os.path.join(out_directory, "%s.train.txt" % short_name), snippets)
+    process_utils.write_list(os.path.join(out_directory, "%s.train.json" % short_name), snippets)
 
 if __name__ == '__main__':
     in_directory = sys.argv[1]

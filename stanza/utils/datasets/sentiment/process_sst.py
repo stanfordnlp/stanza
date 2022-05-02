@@ -55,7 +55,7 @@ def convert_version(dataset, treebank_file, input_dir, output_dir):
     Uses the ARGUMENTS specific for the format wanted
     """
     phrases = get_phrases(dataset, treebank_file, input_dir)
-    output_file = os.path.join(output_dir, "en_sst.%s.%s" % (dataset, treebank_file))
+    output_file = os.path.join(output_dir, "en_sst.%s.%s.json" % (dataset, treebank_file.split(".")[0]))
     process_utils.write_list(output_file, phrases)
 
 def parse_args():

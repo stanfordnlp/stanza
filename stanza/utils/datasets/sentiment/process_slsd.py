@@ -59,7 +59,7 @@ def get_tokenized_phrases(in_directory):
 
 def main(in_directory, out_directory, short_name):
     phrases = get_tokenized_phrases(in_directory)
-    out_filename = os.path.join(out_directory, "%s.train.txt" % short_name)
+    out_filename = os.path.join(out_directory, "%s.train.json" % short_name)
     os.makedirs(out_directory, exist_ok=True)
     process_utils.write_list(out_filename, phrases)
 
