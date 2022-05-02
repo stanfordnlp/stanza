@@ -1,9 +1,6 @@
 """
 Global constants.
 
-Please keep synced with
-  scripts/treebank_to_shorthand.sh
-
 These language codes mirror UD language codes when possible
 """
 
