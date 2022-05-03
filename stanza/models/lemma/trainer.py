@@ -2,6 +2,7 @@
 A trainer class to handle training and testing of models.
 """
 
+import os
 import sys
 import numpy as np
 from collections import Counter
@@ -190,6 +191,7 @@ class Trainer(object):
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
+        os.makedirs(os.path.split(filename)[0], exist_ok=True)
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
