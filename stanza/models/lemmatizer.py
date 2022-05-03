@@ -125,6 +125,7 @@ def train(args):
 
     # start training
     # train a dictionary-based lemmatizer
+    logger.info("Building lemmatizer in %s", model_file)
     trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
     logger.info("[Training dictionary-based lemmatizer...]")
     trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
