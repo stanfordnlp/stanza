@@ -4,7 +4,6 @@ Utils for seq2seq models.
 from collections import Counter
 import random
 import json
-import unicodedata
 import torch
 
 import stanza.models.common.seq2seq_constant as constant
@@ -60,9 +59,6 @@ def load_config(path, verbose=True):
     if verbose:
         print("Config loaded from file {}".format(path))
     return config
-
-def normalize_text(text):
-    return unicodedata.normalize('NFD', text)
 
 def unmap_with_copy(indices, src_tokens, vocab):
     """
