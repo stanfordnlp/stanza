@@ -39,7 +39,7 @@ def parse_args(args=None):
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', type=str, help='Language')
+    parser.add_argument('--lang', type=str, help='Language - actually, lang_dataset is better')
 
     parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
@@ -71,6 +71,7 @@ def parse_args(args=None):
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
+    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -110,7 +111,10 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
-    model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    if args['save_name']:
+        model_file = os.path.join(args['save_dir'], args['save_name'])
+    else:
+        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -209,7 +213,10 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    if args['save_name']:
+        model_file = os.path.join(args['save_dir'], args['save_name'])
+    else:
+        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
 
     # load model
     use_cuda = args['cuda'] and not args['cpu']
