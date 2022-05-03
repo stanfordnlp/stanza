@@ -83,7 +83,7 @@ def test_whitespace():
         pt = pretrain.Pretrain(vec_filename=test_txt_file.name, save_to_file=False)
         check_embedding(pt.emb)
         assert "unban\xa0mox" in pt.vocab
-        # this one also works because of the normalize_text in vocab.py
+        # this one also works because of the normalize_unit in vocab.py
         assert "unban mox" in pt.vocab
     finally:
         os.unlink(test_txt_file.name)
