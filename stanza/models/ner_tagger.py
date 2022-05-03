@@ -117,7 +117,7 @@ def main(args=None):
 
 def train(args):
     utils.ensure_dir(args['save_dir'])
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
         else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     pretrain = None
@@ -261,10 +261,11 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] is not None \
+    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
         else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
 
     loaded_args, trainer, vocab = load_model(args, model_file)
+    logger.debug("Loaded model for eval from %s", model_file)
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
