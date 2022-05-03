@@ -192,11 +192,8 @@ class Trainer(object):
                 'config': self.args
                 }
         os.makedirs(os.path.split(filename)[0], exist_ok=True)
-        try:
-            torch.save(params, filename, _use_new_zipfile_serialization=False)
-            logger.info("Model saved to {}".format(filename))
-        except BaseException:
-            logger.warning("Saving failed... continuing anyway.")
+        torch.save(params, filename, _use_new_zipfile_serialization=False)
+        logger.info("Model saved to {}".format(filename))
 
     def load(self, filename, use_cuda=False):
         try:
