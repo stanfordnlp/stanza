@@ -1,8 +1,11 @@
 """
 Currently tests a few configurations of files for creating a charlm vocab
+
+Also has a skeleton test of loading & saving a charlm
 """
 
 from collections import Counter
+import glob
 import lzma
 import os
 import tempfile
@@ -10,7 +13,7 @@ import tempfile
 import pytest
 
 from stanza.models.common import char_model
-from stanza.tests import *
+from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -89,3 +92,42 @@ def test_cutoff_vocab():
             assert letter not in vocab
         else:
             assert letter in vocab
+
+
+@pytest.fixture
+def english_forward():
+    # eg, stanza_test/models/en/forward_charlm/1billion.pt
+    models_path = os.path.join(TEST_MODELS_DIR, "en", "forward_charlm", "*")
+    models = glob.glob(models_path)
+    # we expect at least one English model downloaded for the tests
+    assert len(models) >= 1
+    model_file = models[0]
+    return char_model.CharacterLanguageModel.load(model_file)
+
+@pytest.fixture
+def english_backward():
+    # eg, stanza_test/models/en/forward_charlm/1billion.pt
+    models_path = os.path.join(TEST_MODELS_DIR, "en", "backward_charlm", "*")
+    models = glob.glob(models_path)
+    # we expect at least one English model downloaded for the tests
+    assert len(models) >= 1
+    model_file = models[0]
+    return char_model.CharacterLanguageModel.load(model_file)
+
+def test_load_model(english_forward, english_backward):
+    """
+    Check that basic loading functions work
+    """
+    assert english_forward.is_forward_lm
+    assert not english_backward.is_forward_lm
+
+def test_save_load_model(english_forward, english_backward):
+    """
+    Load, save, and load again
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        for charlm in (english_forward, english_backward):
+            save_file = os.path.join(tempdir, "resaved", "charlm.pt")
+            charlm.save(save_file)
+            reloaded = char_model.CharacterLanguageModel.load(save_file)
+            assert charlm.is_forward_lm == reloaded.is_forward_lm

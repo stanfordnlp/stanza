@@ -202,6 +202,7 @@ class CharacterLanguageModel(nn.Module):
                 super().train(mode)
 
     def save(self, filename):
+        os.makedirs(os.path.split(filename)[0], exist_ok=True)
         state = {
             'vocab': self.vocab['char'].state_dict(),
             'args': self.args,
