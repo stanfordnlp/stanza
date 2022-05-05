@@ -200,7 +200,7 @@ def print_config(config):
     logger.info("\n" + info + "\n")
 
 def normalize_text(text):
-    return unicodedata.normalize('NFD', text)
+    return unicodedata.normalize('NFC', text)
 
 def unmap_with_copy(indices, src_tokens, vocab):
     """
