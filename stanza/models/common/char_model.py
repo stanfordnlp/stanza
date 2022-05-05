@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
-from stanza.models.common.utils import open_read_text, tensor_unsort, unsort
+from stanza.models.common.utils import normalize_text, open_read_text, tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
 from stanza.models.common.vocab import UNK_ID, CharVocab
 
@@ -82,7 +82,7 @@ def build_charlm_vocab(path, cutoff=0):
         filename = os.path.join(path, filename)
         with open_read_text(filename) as fin:
             for line in fin:
-                counter.update(list(line))
+                counter.update(list(normalize_text(line)))
 
     if len(counter) == 0:
         raise ValueError("Training data was empty!")
@@ -99,13 +99,14 @@ def build_charlm_vocab(path, cutoff=0):
 
 class CharacterLanguageModel(nn.Module):
 
-    def __init__(self, args, vocab, pad=False, is_forward_lm=True):
+    def __init__(self, args, vocab, pad=False, is_forward_lm=True, normalized=True):
         super().__init__()
         self.args = args
         self.vocab = vocab
         self.is_forward_lm = is_forward_lm
         self.pad = pad
         self.finetune = True # always finetune unless otherwise specified
+        self.normalized = normalized
 
         # char embeddings
         self.char_emb = nn.Embedding(len(self.vocab['char']), self.args['char_emb_dim'], padding_idx=None) # we use space as padding, so padding_idx is not necessary
@@ -153,12 +154,15 @@ class CharacterLanguageModel(nn.Module):
 
         forward = self.is_forward_lm
         vocab = self.char_vocab()
+        normalized = self.normalized
         device = next(self.parameters()).device
 
         all_data = []
         for idx, words in enumerate(sentences):
             if not forward:
                 words = [x[::-1] for x in reversed(words)]
+            if normalized:
+                words = [normalize_text(x) for x in words]
 
             chars = [CHARLM_START]
             offsets = []
@@ -205,7 +209,8 @@ class CharacterLanguageModel(nn.Module):
             'args': self.args,
             'state_dict': self.state_dict(),
             'pad': self.pad,
-            'is_forward_lm': self.is_forward_lm
+            'is_forward_lm': self.is_forward_lm,
+            'normalized': self.normalized,
         }
         return state
 
@@ -217,7 +222,8 @@ class CharacterLanguageModel(nn.Module):
     @classmethod
     def from_full_state(cls, state, finetune=False):
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
-        model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
+        normalized = state.get('normalized', False)  # most models are saved without this
+        model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'], normalized)
         model.load_state_dict(state['state_dict'])
         model.eval()
         model.finetune = finetune # set finetune status
