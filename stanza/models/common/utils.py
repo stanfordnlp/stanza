@@ -1,11 +1,14 @@
 """
 Utility functions.
 """
-import logging
-import os
+
 from collections import Counter
-import random
+from contextlib import contextmanager
 import json
+import logging
+import lzma
+import os
+import random
 import sys
 import unicodedata
 
@@ -45,6 +48,26 @@ def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
     elif os.path.exists(filename + ".txt"):
         filename = filename + ".txt"
     return filename
+
+@contextmanager
+def open_read_text(filename, encoding="utf-8"):
+    """
+    Opens a file as an .xz file if ends with .xz, or regular text otherwise.
+
+    Use as a context
+
+    eg:
+    with open_read_text(filename) as fin:
+        do stuff
+
+    File will be closed once the context exits
+    """
+    if filename.endswith(".xz"):
+        with lzma.open(filename, mode='rt', encoding=encoding) as fin:
+            yield fin
+    else:
+        with open(filename, encoding=encoding) as fin:
+            yield fin
 
 # training schedule
 def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):

@@ -45,12 +45,8 @@ def get_batch(source, i, seq_len):
     return data, target
 
 def load_file(filename, vocab, direction):
-    if filename.endswith(".xz"):
-        with lzma.open(filename, mode='rt') as fin:
-            data = fin.read()
-    else:
-        with open(filename) as fin:
-            data = fin.read()
+    with utils.open_read_text(filename) as fin:
+        data = fin.read()
 
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]

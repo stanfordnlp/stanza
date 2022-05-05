@@ -1,5 +1,4 @@
 from collections import Counter
-import lzma
 from operator import itemgetter
 import os
 
@@ -9,7 +8,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
-from stanza.models.common.utils import tensor_unsort, unsort
+from stanza.models.common.utils import open_read_text, tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
 from stanza.models.common.vocab import UNK_ID, CharVocab
 
@@ -81,14 +80,9 @@ def build_charlm_vocab(path, cutoff=0):
 
     for filename in filenames:
         filename = os.path.join(path, filename)
-        if filename.endswith(".xz"):
-            with lzma.open(filename, mode='rt') as fin:
-                for line in fin:
-                    counter.update(list(line))
-        else:
-            with open(filename) as fin:
-                for line in fin:
-                    counter.update(list(line))
+        with open_read_text(filename) as fin:
+            for line in fin:
+                counter.update(list(line))
 
     # remove infrequent characters from vocab
     for k in list(counter.keys()):
