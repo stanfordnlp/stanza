@@ -4,6 +4,7 @@ import torch
 
 from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
+from stanza.models.common.utils import normalize_text
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, WordVocab
 from stanza.models.ner.vocab import TagVocab, MultiVocab
@@ -91,9 +92,10 @@ class DataLoader:
         else:
             char_case = lambda x: x
         for sent in data:
-            processed_sent = [[w[0] for w in sent]]
-            processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
-            processed_sent += [vocab['tag'].map([w[1] for w in sent])]
+            words = [normalize_text(w[0]) for w in sent]
+            processed_sent = [words,
+                              [vocab['char'].map([char_case(x) for x in w]) for w in words],
+                              vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
         return processed
 
