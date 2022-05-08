@@ -110,6 +110,14 @@ default_treebanks = {
   "multilingual": "ud"
 }
 
+no_pretrain_languages = set([
+    "cop",
+    "orv",
+    "pcm",
+    "qtd",
+    "swl",
+])
+
 # default ner for languages
 default_ners = {
   "af": "nchlt",
@@ -309,8 +317,10 @@ def process_dirs(args):
             # maintain md5
             md5 = get_md5(output_path)
             # maintain dependencies
+            dependencies = None
             if processor == 'pos' or processor == 'depparse':
-                dependencies = [{'model': 'pretrain', 'package': package}]
+                if lang not in no_pretrain_languages:
+                    dependencies = [{'model': 'pretrain', 'package': package}]
             elif processor == 'ner':
                 dependencies = get_ner_dependencies(lang, package)
             elif processor == 'sentiment':
@@ -320,8 +330,6 @@ def process_dirs(args):
                 dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
             elif processor == 'constituency':
                 dependencies = get_con_dependencies(lang, package)
-            else:
-                dependencies = None
             # maintain resources
             if lang not in resources: resources[lang] = {}
             if processor not in resources[lang]: resources[lang][processor] = {}
@@ -343,7 +351,7 @@ def process_defaults(args):
         ud_package = default_treebanks[lang]
         os.chdir(os.path.join(args.output_dir, lang))
         default_processors = {}
-        if lang in allowed_empty_languages:
+        if lang in allowed_empty_languages or lang in no_pretrain_languages:
             default_dependencies = {}
         else:
             default_dependencies = {'pos': [{'model': 'pretrain', 'package': ud_package}],

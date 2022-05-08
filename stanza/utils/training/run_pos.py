@@ -5,6 +5,7 @@ import os
 
 from stanza.models import tagger
 
+from stanza.resources.prepare_resources import no_pretrain_languages
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode
 
@@ -12,7 +13,7 @@ logger = logging.getLogger('stanza')
 
 # TODO: move this somewhere common
 def wordvec_args(short_language):
-    if short_language in ("cop", "orv", "pcm", "qtd", "swl"):
+    if short_language in no_pretrain_languages:
         # we couldn't find word vectors for these languages:
         # coptic, naija, old russian, turkish german, swedish sign language
         logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
