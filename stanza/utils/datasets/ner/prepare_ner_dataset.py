@@ -16,8 +16,12 @@ FBK in Italy produced an Italian dataset.
   - KIND: an Italian Multi-Domain Dataset for Named Entity Recognition
     Paccosi T. and Palmero Aprosio A.
     LREC 2022
+  - https://arxiv.org/abs/2112.15099
   The processing here is for a combined .tsv file they sent us.
   - prepare_ner_dataset.py it_fbk
+  There is a newer version of the data available here:
+    https://github.com/dhfbk/KIND
+  TODO: update to the newer version of the data
 
 IJCNLP 2008 produced a few Indian language NER datasets.
   description:
