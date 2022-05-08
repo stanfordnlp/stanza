@@ -70,6 +70,13 @@ A couple experiments which have been tried with little noticeable impact:
   - Adding multiple layers of MLP to combine inputs for words made
     no difference in the scores
     Tried both before the LSTM and after
+    A simple single layer tensor multiply after the LSTM works well.
+    Replacing that with a two layer MLP on the English PTB
+    with roberta-base causes a notable drop in scores
+      260 training iterations on en_wsj dev, roberta-base
+      model as of bb983fd5e912f6706ad484bf819486971742c3d1
+      single layer:       0.9467
+      two layer MLP:      0.9409
 
 The code breakdown is as follows:
 
