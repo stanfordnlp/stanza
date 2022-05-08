@@ -73,10 +73,13 @@ A couple experiments which have been tried with little noticeable impact:
     A simple single layer tensor multiply after the LSTM works well.
     Replacing that with a two layer MLP on the English PTB
     with roberta-base causes a notable drop in scores
+    First experiment didn't use the fancy Linear weight init,
+    but adding that barely made a difference
       260 training iterations on en_wsj dev, roberta-base
       model as of bb983fd5e912f6706ad484bf819486971742c3d1
-      single layer:       0.9467
-      two layer MLP:      0.9409
+      two layer MLP:                    0.9409
+      two layer MLP, init weights:      0.9413
+      single layer:                     0.9467
 
 The code breakdown is as follows:
 
