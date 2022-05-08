@@ -33,9 +33,9 @@ set of labels as long as you have training data.
 
 ### Simple code example
 
+```python
 import stanza
 
-```
 nlp = stanza.Pipeline(lang='en', processors='tokenize,pos,constituency')
 doc = nlp('This is a test')
 for sentence in doc.sentences:
@@ -63,18 +63,35 @@ The tree can be programmatically accessed.  Note that the layer under the root h
 
 ## Available models
 
-There is currently one model available for constituency parsing.
+As of Stanza 1.4.0, charlm has been added by default to each of the
+conparse models.  This improves accuracy around 1.0 F1 when trained
+for a long time.  The currently released models were trained on 250
+iterations of 5000 trees each, so for languages with large datasets
+such as English, there may have been room to improve further.
 
-As of Stanza 1.3.0, there is an English model trained on PTB.  It achieves a test score of 91.5 using the inorder transition scheme.
+We also release a set of models which incorporate HuggingFace
+transformer models such as Bert or Roberta.  This significantly
+increases the scores for the constituency parser.
 
-Unfortunately, there is a bug in the model where, if trees with `)` in
-the tokens are converted to text, the resulting trees will not be
-properly bracketed.  This has been fixed in the dev branch.  A new
-release with updated models should be available in mid-November.
+Bert models can be used by setting the package parameter when creating
+a pipeline:
 
-Also coming soon in 1.3.1 are the following improvements:
+```python
+pipe = stanza.Pipeline(lang='en', processors='tokenize,pos,constituency', package={'constituency': 'wsj_bert'})
+```
 
-- Italian model trained on the [Turin treebank](http://www.di.unito.it/~tutreeb/treebanks.html)
-- Integration with the pretrained charlm.  This improves the PTB test score to 92.3
-- More languages dependending on treebank availability and interest.  (Vietnamese, for example.)
+Note that the following scores are slight underestimates.  They use the CoreNLP scorer, which gives scores slightly lower than the evalb script.
+
+| Language | Dataset | Base score | Transformer score | Notes |
+| --- | --- | --- | --- |
+| Chinese | CTB7 | 84.7 | 89.08 | Future work: update to later versions of CTB |
+| Danish | [Arboretum](http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/) | 82.38 | 83.10 | [Non-projective constituents are rearranged](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/datasets/constituency/convert_arboretum.py) |
+| English | PTB | 91.96 | 93.79 | |
+| Italian | [Turin](http://www.di.unito.it/~tutreeb/treebanks.html) | 88.07 | 91.34 | Test scores are on [Evalita](http://www.di.unito.it/~tutreeb/evalita-parsingtask-11.html) |
+| Japanese | [ALT](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/) | 90.34 | --- | Transformers were not used - required a separate tokenizer |
+| Portuguese | [Cintil](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/) | 90.09 | 93.28 | |
+| Turkish | Starlang | 72.46 | 75.39 | |
+
+As of Stanza 1.3.0, there was an English model trained on PTB.
+It achieved a test score of 91.5 using the inorder transition scheme.
 
