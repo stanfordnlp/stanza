@@ -315,3 +315,38 @@ def test_all_leaves_are_preterminals():
     assert len(trees) == 1
     assert not trees[0].all_leaves_are_preterminals()
 
+def test_pretty_print():
+    """
+    Pretty print a couple trees - newlines & indentation
+    """
+    text = "(ROOT (S (VP (VB Unban)) (NP (NNP Mox) (NNP Opal)))) (ROOT (S (NP (DT The) (NNP Arizona) (NNPS Corporations) (NNP Commission)) (VP (VBD authorized) (NP (NP (DT an) (ADJP (CD 11.5)) (NN %) (NN rate) (NN increase)) (PP (IN at) (NP (NNP Tucson) (NNP Electric)))))))"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 2
+
+    expected = """(ROOT
+  (S
+    (VP (VB Unban))
+    (NP (NNP Mox) (NNP Opal))))
+"""
+
+    assert "{:P}".format(trees[0]) == expected
+
+    expected = """(ROOT
+  (S
+    (NP (DT The) (NNP Arizona) (NNPS Corporations) (NNP Commission))
+    (VP
+      (VBD authorized)
+      (NP
+        (NP
+          (DT an)
+          (ADJP (CD 11.5))
+          (NN %)
+          (NN rate)
+          (NN increase))
+        (PP
+          (IN at)
+          (NP (NNP Tucson) (NNP Electric)))))))
+"""
+    assert "{:P}".format(trees[1]) == expected
+
+    assert text == "{:O} {:O}".format(*trees)

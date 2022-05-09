@@ -3,9 +3,11 @@ Tree datastructure
 """
 
 from collections import deque, Counter
+from enum import Enum
 from io import StringIO
 import itertools
 import re
+import warnings
 
 from stanza.models.common.doc import StanzaObject
 
@@ -22,6 +24,17 @@ CONSTITUENT_SPLIT = re.compile("[-=#]")
 # The documentation claims there might be *O*, although those don't
 # seem to exist in practice
 WORDS_TO_PRUNE = ('*E*', '*T*', '*O*')
+
+class TreePrintMethod(Enum):
+    """
+    Describes a few options for printing trees.
+
+    This probably doesn't need to be used directly.  See __format__
+    """
+    ONE_LINE          = 1  # (ROOT (S ...  ))
+    LABELED_PARENS    = 2  # (_ROOT (_S ... )_S )_ROOT
+    PRETTY            = 3  # multiple lines
+
 
 class Tree(StanzaObject):
     """
@@ -82,6 +95,64 @@ class Tree(StanzaObject):
 
         return all(t.all_leaves_are_preterminals() for t in self.children)
 
+    def pretty_print(self, normalize=None):
+        """
+        Print with newlines & indentation on each line
+
+        Preterminals and nodes with all preterminal children go on their own line
+
+        You can pass in your own normalize() function.  If you do,
+        make sure the function updates the parens to be something
+        other than () or the brackets will be broken
+        """
+        if normalize is None:
+            normalize = lambda x: x.replace("(", "-LRB-").replace(")", "-RRB-")
+
+        indent = 0
+        with StringIO() as buf:
+            stack = deque()
+            stack.append(self)
+            while len(stack) > 0:
+                node = stack.pop()
+
+                if node is CLOSE_PAREN:
+                    # if we're trying to pretty print trees, pop all off close parens
+                    # then write a newline
+                    while node is CLOSE_PAREN:
+                        indent -= 1
+                        buf.write(CLOSE_PAREN)
+                        if len(stack) == 0:
+                            node = None
+                            break
+                        node = stack.pop()
+                    buf.write("\n")
+                    if node is None:
+                        break
+                    stack.append(node)
+                elif node.is_preterminal():
+                    buf.write("  " * indent)
+                    buf.write("%s%s %s%s" % (OPEN_PAREN, normalize(node.label), normalize(node.children[0].label), CLOSE_PAREN))
+                    if len(stack) == 0 or stack[-1] is not CLOSE_PAREN:
+                        buf.write("\n")
+                elif all(x.is_preterminal() for x in node.children):
+                    buf.write("  " * indent)
+                    buf.write("%s%s" % (OPEN_PAREN, normalize(node.label)))
+                    for child in node.children:
+                        buf.write(" %s%s %s%s" % (OPEN_PAREN, normalize(child.label), normalize(child.children[0].label), CLOSE_PAREN))
+                    buf.write(CLOSE_PAREN)
+                    if len(stack) == 0 or stack[-1] is not CLOSE_PAREN:
+                        buf.write("\n")
+                else:
+                    buf.write("  " * indent)
+                    buf.write("%s%s\n" % (OPEN_PAREN, normalize(node.label)))
+                    stack.append(CLOSE_PAREN)
+                    for child in reversed(node.children):
+                        stack.append(child)
+                    indent += 1
+
+            buf.seek(0)
+            return buf.read()
+
     def __format__(self, spec):
         """
         Turn the tree into a string representing the tree
@@ -90,29 +161,47 @@ class Tree(StanzaObject):
         Otherwise, a tree too deep might blow up the call stack
 
         There is a type specific format:
-          L  -> open and close brackets are labeled, spaces in the tokens are replaced with _
-          ?  -> spaces in the tokens are replaced with ? for any non-L value of ?
-          ?L -> bracket labels AND a custom space replacement
+          O      -> one line PTB format, which is the default anyway
+          L      -> open and close brackets are labeled, spaces in the tokens are replaced with _
+          P      -> pretty print over multiple lines
+          ?      -> spaces in the tokens are replaced with ? for any value of ? other than OLP
+                    warning: this may be removed in the future
+          ?{OLP} -> specific format AND a custom space replacement
         """
         space_replacement = " "
-        bracket_labels = False
+        print_format = TreePrintMethod.ONE_LINE
         if spec == 'L':
-            bracket_labels = True
+            print_format = TreePrintMethod.LABELED_PARENS
             space_replacement = "_"
         elif spec and spec[-1] == 'L':
-            bracket_labels = True
+            print_format = TreePrintMethod.LABELED_PARENS
+            space_replacement = spec[0]
+        elif spec == 'O':
+            print_format = TreePrintMethod.ONE_LINE
+        elif spec and spec[-1] == 'O':
+            print_format = TreePrintMethod.ONE_LINE
+            space_replacement = spec[0]
+        elif spec == 'P':
+            print_format = TreePrintMethod.PRETTY
+        elif spec and spec[-1] == 'P':
+            print_format = TreePrintMethod.PRETTY
             space_replacement = spec[0]
         elif spec:
             space_replacement = spec[0]
+            warnings.warn("Use of a custom replacement without a format specifier is deprecated.  Please use {}O instead".format(space_replacement), stacklevel=2)
 
         def normalize(text):
             return text.replace(" ", space_replacement).replace("(", "-LRB-").replace(")", "-RRB-")
+
+        if print_format is TreePrintMethod.PRETTY:
+            return self.pretty_print(normalize)
 
         with StringIO() as buf:
             stack = deque()
             stack.append(self)
             while len(stack) > 0:
                 node = stack.pop()
+
                 if isinstance(node, str):
                     buf.write(node)
                     continue
@@ -121,18 +210,15 @@ class Tree(StanzaObject):
                         buf.write(normalize(node.label))
                     continue
 
-                if bracket_labels:
-                    buf.write("%s_%s" % (OPEN_PAREN, normalize(node.label)))
-                else:
+                if print_format is TreePrintMethod.ONE_LINE:
                     buf.write(OPEN_PAREN)
                     if node.label is not None:
                         buf.write(normalize(node.label))
-
-                if bracket_labels:
+                    stack.append(CLOSE_PAREN)
+                elif print_format is TreePrintMethod.LABELED_PARENS:
+                    buf.write("%s_%s" % (OPEN_PAREN, normalize(node.label)))
                     stack.append(CLOSE_PAREN + "_" + normalize(node.label))
                     stack.append(SPACE_SEPARATOR)
-                else:
-                    stack.append(CLOSE_PAREN)
 
                 for child in reversed(node.children):
                     stack.append(child)
