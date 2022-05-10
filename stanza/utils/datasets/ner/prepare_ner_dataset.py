@@ -38,6 +38,18 @@ FIRE 2013 also produced NER datasets for Indian languages.
   For external users, please contact the organizers for more information.
   - prepare_ner_dataset.py hi-fire2013
 
+HiNER is another Hindi dataset option
+  https://github.com/cfiltnlp/HiNER
+  - HiNER: A Large Hindi Named Entity Recognition Dataset
+    Murthy, Rudra and Bhattacharjee, Pallab and Sharnagat, Rahul and
+    Khatri, Jyotsana and Kanojia, Diptesh and Bhattacharyya, Pushpak
+  There are two versions:
+    hi_hinercollapsed and hi_hiner
+  The collapsed version has just PER, LOC, ORG
+  - git clone git@github.com:cfiltnlp/HiNER.git
+  - prepare_ner_dataset.py hi_hiner
+  - prepare_ner_dataset.py hi_hinercollapsed
+
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
   git clone the repo to $NERBASE/lang-uk
@@ -226,7 +238,7 @@ class UnknownDatasetError(ValueError):
         super().__init__(text)
         self.dataset = dataset
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio"):
+def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS):
     """
     Convert BIO files to json
 
@@ -234,15 +246,15 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
     the same directory as the output files, in which case you can pass
     in same path for both base_input_path and base_output_path.
     """
-    for shard in SHARDS:
-        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, shard, suffix))
+    for input_shard, output_shard in zip(shard_names, SHARDS):
+        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix))
         if not os.path.exists(input_filename):
-            alt_filename = os.path.join(base_input_path, '%s.%s' % (shard, suffix))
+            alt_filename = os.path.join(base_input_path, '%s.%s' % (input_shard, suffix))
             if os.path.exists(alt_filename):
                 input_filename = alt_filename
             else:
-                raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+                raise FileNotFoundError('Cannot find %s component of %s in %s or %s' % (output_shard, short_name, input_filename, alt_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, output_shard))
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
 
@@ -746,23 +758,32 @@ def process_de_germeval2014(paths, short_name):
     print("Found the following tags: {}".format(sorted(tags)))
     write_dataset(datasets, base_output_path, short_name)
 
+def process_hiner(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "original")
+    convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
+
+def process_hinercollapsed(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
+    convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
 DATASET_MAPPING = {
-    "da_ddt":          process_da_ddt,
-    "de_germeval2014": process_de_germeval2014,
-    "fa_arman":        process_fa_arman,
-    "fi_turku":        process_turku,
-    "hi_ijc":          process_ijc,
-    "hu_nytk":         process_nytk,
-    "hu_combined":     process_hu_combined,
-    "it_fbk":          process_it_fbk,
-    "my_ucsy":         process_my_ucsy,
-    "sv_suc3licensed": process_sv_suc3licensed,
-    "sv_suc3shuffle":  process_sv_suc3shuffle,
-    "tr_starlang":     process_starlang,
+    "da_ddt":            process_da_ddt,
+    "de_germeval2014":   process_de_germeval2014,
+    "fa_arman":          process_fa_arman,
+    "fi_turku":          process_turku,
+    "hi_hiner":          process_hiner,
+    "hi_hinercollapsed": process_hinercollapsed,
+    "hi_ijc":            process_ijc,
+    "hu_nytk":           process_nytk,
+    "hu_combined":       process_hu_combined,
+    "it_fbk":            process_it_fbk,
+    "my_ucsy":           process_my_ucsy,
+    "sv_suc3licensed":   process_sv_suc3licensed,
+    "sv_suc3shuffle":    process_sv_suc3shuffle,
+    "tr_starlang":       process_starlang,
 }
 
 def main(dataset_name):
