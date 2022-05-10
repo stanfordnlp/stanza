@@ -68,7 +68,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file, args, foundation_cache)
+            self.load(model_file, pretrain, args, foundation_cache)
         else:
             assert all(var is not None for var in [args, vocab, pretrain])
             # build model from scratch
@@ -152,7 +152,7 @@ class Trainer(BaseTrainer):
         except:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, args=None, foundation_cache=None):
+    def load(self, filename, pretrain=None, args=None, foundation_cache=None):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -162,8 +162,24 @@ class Trainer(BaseTrainer):
         if args: self.args.update(args)
         self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None), foundation_cache)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        self.model = NERTagger(self.args, self.vocab, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
+
+        emb_matrix=None
+        if pretrain is not None:
+            emb_matrix = pretrain.emb
+
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
         self.model.load_state_dict(checkpoint['model'], strict=False)
+
+        # there is a possible issue with the delta embeddings.
+        # specifically, with older models trained without the delta
+        # embedding matrix
+        # if those models have been trained with the embedding
+        # modifications saved as part of the base embedding,
+        # we need to resave the model with the updated embedding
+        # otherwise the resulting model will be broken
+        if 'delta' not in self.model.vocab and 'word_emb.weight' in checkpoint['model'].keys() and 'word_emb' in self.model.unsaved_modules:
+            logger.debug("Removing word_emb from unsaved_modules so that resaving %s will keep the saved embedding", filename)
+            self.model.unsaved_modules.remove('word_emb')
 
     def get_known_tags(self):
         """

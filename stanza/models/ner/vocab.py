@@ -3,6 +3,7 @@ from collections import Counter, OrderedDict
 from stanza.models.common.vocab import BaseVocab, BaseMultiVocab, CharVocab
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common.pretrain import PretrainedWordVocab
+from stanza.models.pos.vocab import WordVocab
 
 class TagVocab(BaseVocab):
     """ A vocab for the output tag sequence. """
@@ -26,8 +27,9 @@ class MultiVocab(BaseMultiVocab):
     @classmethod
     def load_state_dict(cls, state_dict):
         class_dict = {'CharVocab': CharVocab,
-                'PretrainedWordVocab': PretrainedWordVocab,
-                'TagVocab': TagVocab}
+                      'PretrainedWordVocab': PretrainedWordVocab,
+                      'TagVocab': TagVocab,
+                      'WordVocab': WordVocab}
         new = cls()
         assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
         key2class = state_dict.pop('_key2class')

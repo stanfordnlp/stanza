@@ -70,6 +70,12 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, ner_charlms)
     charlm_args = build_charlm_args(language, charlm)
 
+    wordvec_args = []
+    if '--wordvec_pretrain_file' not in extra_args:
+        # will throw an error if the pretrain can't be found
+        wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
+        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+
     if mode == Mode.TRAIN:
         # VI example arguments:
         #   --wordvec_pretrain_file ~/stanza_resources/vi/pretrain/vtb.pt
@@ -91,11 +97,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + charlm_args + bert_args + dataset_args + extra_args
-        if '--wordvec_pretrain_file' not in train_args:
-            # will throw an error if the pretrain can't be found
-            wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
-            train_args = train_args + ['--wordvec_pretrain_file', wordvec_pretrain]
+        train_args = train_args + charlm_args + bert_args + dataset_args + wordvec_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         ner_tagger.main(train_args)
 
@@ -104,7 +106,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        dev_args = dev_args + charlm_args + extra_args
+        dev_args = dev_args + charlm_args + wordvec_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         ner_tagger.main(dev_args)
 
@@ -113,7 +115,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        test_args = test_args + charlm_args + extra_args
+        test_args = test_args + charlm_args + wordvec_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         ner_tagger.main(test_args)
 
