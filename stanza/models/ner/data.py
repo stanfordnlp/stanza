@@ -66,8 +66,10 @@ class DataLoader:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
+        deltavocab = WordVocab(data, self.args['shorthand'], cutoff=1, lower=self.args['lowercase'])
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
+                            'delta': deltavocab,
                             'tag': tagvocab})
         return vocab
 

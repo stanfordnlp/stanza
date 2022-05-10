@@ -12,7 +12,7 @@ from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
-from stanza.models.common.vocab import PAD_ID
+from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 logger = logging.getLogger('stanza')
 
@@ -36,12 +36,36 @@ class NERTagger(nn.Module):
         # input layers
         input_size = 0
         if self.args['word_emb_dim'] > 0:
-            self.word_emb = nn.Embedding(len(self.vocab['word']), self.args['word_emb_dim'], PAD_ID)
+            emb_finetune = self.args.get('emb_finetune', True)
+
             # load pretrained embeddings if specified
+            word_emb = nn.Embedding(len(self.vocab['word']), self.args['word_emb_dim'], PAD_ID)
+            # if a model trained with no 'delta' vocab is loaded, and
+            # emb_finetune is off, any resaving of the model will need
+            # the updated vectors.  this is accounted for in load()
+            if not emb_finetune or 'delta' in self.vocab:
+                # if emb_finetune is off
+                # or if the delta embedding is present
+                # then we won't fine tune the original embedding
+                add_unsaved_module('word_emb', word_emb)
+                self.word_emb.weight.detach_()
+            else:
+                self.word_emb = word_emb
             if emb_matrix is not None:
                 self.init_emb(emb_matrix)
-            if not self.args.get('emb_finetune', True):
-                self.word_emb.weight.detach_()
+
+            self.delta_emb = None
+            if 'delta' in self.vocab:
+                # zero inits seems to work better
+                # note that the gradient will flow to the bottom and then adjust the 0 weights
+                # as opposed to a 0 matrix cutting off the gradient if higher up in the model
+                self.delta_emb = nn.Embedding(len(self.vocab['delta']), self.args['word_emb_dim'], PAD_ID)
+                nn.init.zeros_(self.delta_emb.weight)
+                # if the model was trained with a delta embedding, but emb_finetune is off now,
+                # then we will detach the delta embedding
+                if not emb_finetune:
+                    self.delta_emb.weight.detach_()
+
             input_size += self.args['word_emb_dim']
 
         if self.bert_model is not None:
@@ -112,6 +136,28 @@ class NERTagger(nn.Module):
                 static_words = static_words.cuda()
                 
             word_static_emb = self.word_emb(static_words)
+
+            if 'delta' in self.vocab and self.delta_emb is not None:
+                # masks should be the same
+                delta_words, _ = self.extract_static_embeddings(self.args, sentences, self.vocab['delta'])
+                if self.use_cuda:
+                    delta_words = delta_words.cuda()
+                # unclear whether to treat words in the main embedding
+                # but not in delta as unknown
+                # simple heuristic though - treating them as not
+                # unknown keeps existing models the same when
+                # separating models into the base WV and delta WV
+                # also, note that at training time, words like this
+                # did not show up in the training data, but are
+                # not exactly UNK, so it makes sense
+                delta_unk_mask = torch.eq(delta_words, UNK_ID)
+                static_unk_mask = torch.not_equal(static_words, UNK_ID)
+                unk_mask = delta_unk_mask * static_unk_mask
+                delta_words[unk_mask] = PAD_ID
+
+                delta_emb = self.delta_emb(delta_words)
+                word_static_emb = word_static_emb + delta_emb
+
             word_emb = pack(word_static_emb)
             inputs += [word_emb]
 

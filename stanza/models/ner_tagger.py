@@ -55,7 +55,7 @@ def parse_args(args=None):
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--pretrain_max_vocab', type=int, default=100000)
-    parser.add_argument('--word_dropout', type=float, default=0)
+    parser.add_argument('--word_dropout', type=float, default=0.01, help="How often to remove a word at training time.  Set to a small value to train unk when finetuning word embeddings")
     parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Word recurrent dropout")
@@ -115,6 +115,20 @@ def main(args=None):
     else:
         evaluate(args)
 
+def load_pretrain(args):
+    # load pretrained vectors
+    if args['wordvec_pretrain_file']:
+        pretrain_file = args['wordvec_pretrain_file']
+        pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
+    else:
+        if len(args['wordvec_file']) == 0:
+            vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        else:
+            vec_file = args['wordvec_file']
+        # do not save pretrained embeddings individually
+        pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+    return pretrain
+
 def train(args):
     utils.ensure_dir(args['save_dir'])
     model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
@@ -134,17 +148,7 @@ def train(args):
         if args['finetune']:
             raise FileNotFoundError('Finetune is set to true but model file is not found: {}'.format(model_file))
 
-        # load pretrained vectors
-        if args['wordvec_pretrain_file']:
-            pretrain_file = args['wordvec_pretrain_file']
-            pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
-        else:
-            if len(args['wordvec_file']) == 0:
-                vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-            else:
-                vec_file = args['wordvec_file']
-            # do not save pretrained embeddings individually
-            pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
+        pretrain = load_pretrain(args)
 
         if pretrain is not None:
             word_emb_dim = pretrain.emb.shape[1]
@@ -295,7 +299,8 @@ def load_model(args, model_file):
         charlm_args['charlm_forward_file'] = args['charlm_forward_file']
     if 'charlm_backward_file' in args:
         charlm_args['charlm_backward_file'] = args['charlm_backward_file']
-    trainer = Trainer(args=charlm_args, model_file=model_file, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    pretrain = load_pretrain(args)
+    trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

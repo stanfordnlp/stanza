@@ -38,13 +38,15 @@ class NERProcessor(UDProcessor):
 
         charlm_forward_files = self._get_dependencies(config, 'forward_charlm_path')
         charlm_backward_files = self._get_dependencies(config, 'backward_charlm_path')
+        pretrain_files = self._get_dependencies(config, 'pretrain_path')
 
         self.trainers = []
-        for (model_path, charlm_forward, charlm_backward) in zip(model_paths, charlm_forward_files, charlm_backward_files):
-            logger.debug("Loading %s with forward charlm %s and backward charlm %s", model_path, charlm_forward, charlm_backward)
+        for (model_path, pretrain_path, charlm_forward, charlm_backward) in zip(model_paths, pretrain_files, charlm_forward_files, charlm_backward_files):
+            logger.debug("Loading %s with pretrain %s, forward charlm %s, backward charlm %s", model_path, pretrain_path, charlm_forward, charlm_backward)
+            pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
             args = {'charlm_forward_file': charlm_forward,
                     'charlm_backward_file': charlm_backward}
-            trainer = Trainer(args=args, model_file=model_path, use_cuda=use_gpu, foundation_cache=pipeline.foundation_cache)
+            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, use_cuda=use_gpu, foundation_cache=pipeline.foundation_cache)
             self.trainers.append(trainer)
 
         self._trainer = self.trainers[0]
