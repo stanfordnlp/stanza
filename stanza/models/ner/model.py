@@ -103,7 +103,7 @@ class NERTagger(nn.Module):
 
         if self.args['word_emb_dim'] > 0:
             #extract static embeddings
-            static_words, word_mask = self.extract_static_embeddings(self.args, sentences)
+            static_words, word_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['word'])
 
             if self.use_cuda:
                 word_mask = word_mask.cuda()
@@ -162,14 +162,15 @@ class NERTagger(nn.Module):
         
         return loss, logits, trans
 
-    def extract_static_embeddings(self, args, sents):
+    @staticmethod
+    def extract_static_embeddings(args, sents, vocab):
         processed = []
         if args.get('lowercase', True): # handle word case
             case = lambda x: x.lower()
         else:
             case = lambda x: x
         for idx, sent in enumerate(sents):
-            processed_sent = [self.vocab['word'].map([case(w) for w in sent])]
+            processed_sent = [vocab.map([case(w) for w in sent])]
             processed.append(processed_sent[0])
 
         words = get_long_tensor(processed, len(sents))
