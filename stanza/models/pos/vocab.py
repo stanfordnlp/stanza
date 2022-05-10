@@ -4,8 +4,8 @@ from stanza.models.common.vocab import BaseVocab, BaseMultiVocab, CharVocab
 from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
 
 class WordVocab(BaseVocab):
-    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, ignore=[]):
-        self.ignore = ignore
+    def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, ignore=None):
+        self.ignore = ignore if ignore is not None else []
         super().__init__(data, lang=lang, idx=idx, cutoff=cutoff, lower=lower)
         self.state_attrs += ['ignore']
 
