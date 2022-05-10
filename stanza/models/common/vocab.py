@@ -209,6 +209,12 @@ class BaseMultiVocab:
     def __getitem__(self, key):
         return self._vocabs[key]
 
+    def __str__(self):
+        return "<{}: [{}]>".format(type(self), ", ".join(self._vocabs.keys()))
+
+    def __contains__(self, key):
+        return key in self._vocabs
+
     def state_dict(self):
         """ Build a state dict by iteratively calling state_dict() of all vocabs. """
         state = OrderedDict()
