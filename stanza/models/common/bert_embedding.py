@@ -14,6 +14,9 @@ BERT_ARGS = {
     "vinai/phobert-large": { "use_fast": True },
 }
 
+def update_max_length(model_name, tokenizer):
+    if model_name == 'google/muril-base-cased':
+        tokenizer.model_max_length = 512
 
 def load_tokenizer(model_name):
     if model_name:
@@ -22,6 +25,7 @@ def load_tokenizer(model_name):
         if not model_name.startswith("vinai/phobert"):
             bert_args["add_prefix_space"] = True
         bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
+        update_max_length(model_name, bert_tokenizer)
         return bert_tokenizer
     return None
 
