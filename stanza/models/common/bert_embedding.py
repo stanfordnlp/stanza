@@ -200,7 +200,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     features = []
     for i in range(int(math.ceil(len(data)/128))):
         with torch.no_grad():
-            feature = model(torch.tensor(tokenized['input_ids'][128*i:128*i+128]).to(device), output_hidden_states=True)
+            id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
+            feature = model(id_tensor, output_hidden_states=True)
             feature = feature[2]
             feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
             features += feature.clone().detach()
