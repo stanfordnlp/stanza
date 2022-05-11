@@ -140,11 +140,11 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
-BAD_GERMAN_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased')
+BAD_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased', 'google/muril-base-cased')
 
 def fix_german_tokens(tokenizer, data):
     """
-    Patch German bert tokenizers
+    Patch bert tokenizers with missing characters
 
     There is an issue that some tokenizers (so far the German ones identified above)
     tokenize soft hyphens or other unknown characters into nothing
@@ -171,7 +171,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if model_name.startswith("vinai/phobert"):
         return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
 
-    if model_name in BAD_GERMAN_TOKENIZERS:
+    if model_name in BAD_TOKENIZERS:
         data = fix_german_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
