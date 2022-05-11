@@ -268,18 +268,13 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
+        self.add_unsaved_module('bert_model', bert_model)
+        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
-            self.add_unsaved_module('bert_model', bert_model)
-            self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
             self.bert_dim = self.bert_model.config.hidden_size
             self.word_input_size = self.word_input_size + self.bert_dim
-            self.is_phobert = self.bert_tokenizer.name_or_path.startswith("vinai/phobert")
-        else:
-            self.bert_model = None
-            self.bert_tokenizer = None
-            self.is_phobert = False
 
         self.partitioned_transformer_module = None
         if self.args['pattn_num_heads'] > 0 and self.args['pattn_num_layers'] > 0:
