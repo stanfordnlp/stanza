@@ -2,20 +2,19 @@
 Entry point for training and evaluating a character-level neural language model.
 """
 
-import random
 import argparse
 from copy import copy
-from collections import Counter
+import logging
+import lzma
+import math
+import os
+import random
+import time
 from types import GeneratorType
 import numpy as np
 import torch
-import math
-import logging
-import time
-import os
-import lzma
 
-from stanza.models.common.char_model import CharacterLanguageModel
+from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel
 from stanza.models.common.vocab import CharVocab
 from stanza.models.common import utils
 from stanza.models import _training_logging
@@ -45,42 +44,10 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def readlines(path):
-    if path.endswith(".xz"):
-        with lzma.open(path, mode='rt') as fin:
-            lines = fin.readlines()
-    else:
-        with open(path) as fin:
-            lines = fin.readlines()  # preserve '\n'
-    return lines
+def load_file(filename, vocab, direction):
+    with utils.open_read_text(filename) as fin:
+        data = fin.read()
 
-def build_vocab(path, cutoff=0):
-    # Requires a large amount of memory, but only need to build once
-
-    # here we need some trick to deal with excessively large files
-    # for each file we accumulate the counter of characters, and
-    # at the end we simply pass a list of chars to the vocab builder
-    counter = Counter()
-    if os.path.isdir(path):
-        filenames = sorted(os.listdir(path))
-    else:
-        filenames = [path]
-    for filename in filenames:
-        lines = readlines(path + '/' + filename)
-        for line in lines:
-            counter.update(list(line))
-    # remove infrequent characters from vocab
-    for k in list(counter.keys()):
-        if counter[k] < cutoff:
-            del counter[k]
-    # a singleton list of all characters
-    data = [sorted([x[0] for x in counter.most_common()])]
-    vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
-    return vocab
-
-def load_file(path, vocab, direction):
-    lines = readlines(path)
-    data = list(''.join(lines))
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]
     return torch.tensor(idx)
@@ -90,7 +57,7 @@ def load_data(path, vocab, direction):
         filenames = sorted(os.listdir(path))
         for filename in filenames:
             logger.info('Loading data from {}'.format(filename))
-            data = load_file(path + '/' + filename, vocab, direction)
+            data = load_file(os.path.join(path, filename), vocab, direction)
             yield data
     else:
         data = load_file(path, vocab, direction)
@@ -222,7 +189,7 @@ def train(args):
         vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
     else:
         logger.info('Building and saving vocab')
-        vocab = {'char': build_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
+        vocab = {'char': build_charlm_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
     logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
 

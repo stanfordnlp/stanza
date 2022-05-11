@@ -1,3 +1,4 @@
+import lzma
 import tempfile
 
 import pytest
@@ -129,3 +130,50 @@ def test_find_missing_tags():
     assert utils.find_missing_tags(["O", "PER", "LOC"], ["O", "PER", "LOC"]) == []
     assert utils.find_missing_tags(["O", "PER", "LOC"], ["O", "PER", "LOC", "ORG"]) == ['ORG']
     assert utils.find_missing_tags([["O", "PER"], ["O", "LOC"]], [["O", "PER"], ["LOC", "ORG"]]) == ['ORG']
+
+
+def test_open_read_text():
+    """
+    test that we can read either .xz or regular txt
+    """
+    TEXT = "this is a test"
+    with tempfile.TemporaryDirectory() as tempdir:
+        # test text file
+        filename = os.path.join(tempdir, "foo.txt")
+        with open(filename, "w") as fout:
+            fout.write(TEXT)
+        with utils.open_read_text(filename) as fin:
+            in_text = fin.read()
+            assert TEXT == in_text
+
+        assert fin.closed
+
+        # the context should close the file when we throw an exception!
+        try:
+            with utils.open_read_text(filename) as finex:
+                assert not finex.closed
+                raise ValueError("unban mox opal!")
+        except ValueError:
+            pass
+        assert finex.closed
+
+        # test xz file
+        filename = os.path.join(tempdir, "foo.txt.xz")
+        with lzma.open(filename, "wt") as fout:
+            fout.write(TEXT)
+        with utils.open_read_text(filename) as finxz:
+            in_text = finxz.read()
+            assert TEXT == in_text
+
+        assert finxz.closed
+
+        # the context should close the file when we throw an exception!
+        try:
+            with utils.open_read_text(filename) as finexxz:
+                assert not finexxz.closed
+                raise ValueError("unban mox opal!")
+        except ValueError:
+            pass
+        assert finexxz.closed
+
+

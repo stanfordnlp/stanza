@@ -1,4 +1,6 @@
+from collections import Counter
 from operator import itemgetter
+import os
 
 import torch
 import torch.nn as nn
@@ -6,7 +8,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 
 from stanza.models.common.data import get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
-from stanza.models.common.utils import tensor_unsort, unsort
+from stanza.models.common.utils import open_read_text, tensor_unsort, unsort
 from stanza.models.common.dropout import SequenceUnitDropout
 from stanza.models.common.vocab import UNK_ID, CharVocab
 
@@ -58,6 +60,38 @@ class CharacterModel(nn.Module):
             res = pad_packed_sequence(res, batch_first=True)[0]
 
         return res
+
+def build_charlm_vocab(path, cutoff=0):
+    """
+    Build a vocab for a CharacterLanguageModel
+
+    Requires a large amount of memory, but only need to build once
+
+    here we need some trick to deal with excessively large files
+    for each file we accumulate the counter of characters, and
+    at the end we simply pass a list of chars to the vocab builder
+    """
+    counter = Counter()
+    if os.path.isdir(path):
+        filenames = sorted(os.listdir(path))
+    else:
+        filenames = [os.path.split(path)[1]]
+        path = os.path.split(path)[0]
+
+    for filename in filenames:
+        filename = os.path.join(path, filename)
+        with open_read_text(filename) as fin:
+            for line in fin:
+                counter.update(list(line))
+
+    # remove infrequent characters from vocab
+    for k in list(counter.keys()):
+        if counter[k] < cutoff:
+            del counter[k]
+    # a singleton list of all characters
+    data = [sorted([x[0] for x in counter.most_common()])]
+    vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
+    return vocab
 
 class CharacterLanguageModel(nn.Module):
 
@@ -162,6 +196,7 @@ class CharacterLanguageModel(nn.Module):
                 super().train(mode)
 
     def save(self, filename):
+        os.makedirs(os.path.split(filename)[0], exist_ok=True)
         state = {
             'vocab': self.vocab['char'].state_dict(),
             'args': self.args,
