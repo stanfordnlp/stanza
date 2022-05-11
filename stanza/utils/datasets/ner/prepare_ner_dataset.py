@@ -46,9 +46,10 @@ HiNER is another Hindi dataset option
   There are two versions:
     hi_hinercollapsed and hi_hiner
   The collapsed version has just PER, LOC, ORG
-  - git clone git@github.com:cfiltnlp/HiNER.git
-  - prepare_ner_dataset.py hi_hiner
-  - prepare_ner_dataset.py hi_hinercollapsed
+  - convert data as follows:
+    git clone git@github.com:cfiltnlp/HiNER.git
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hiner
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hinercollapsed
 
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
