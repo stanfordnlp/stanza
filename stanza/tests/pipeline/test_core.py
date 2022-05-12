@@ -25,7 +25,7 @@ def test_download_missing_ner_model():
     """
     Test that the pipeline will automatically download missing models
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined", verbose=False)
         pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"ner": ("ontonotes")})
 
@@ -40,7 +40,7 @@ def test_download_missing_resources():
     """
     Test that the pipeline will automatically download missing models
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"tokenize": "combined", "ner": "ontonotes"})
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
@@ -54,7 +54,7 @@ def test_download_resources_overwrites():
     """
     Test that the DOWNLOAD_RESOURCES method overwrites an existing resources.json
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"})
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
@@ -69,7 +69,7 @@ def test_reuse_resources_overwrites():
     """
     Test that the REUSE_RESOURCES method does *not* overwrite an existing resources.json
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         pipe = stanza.Pipeline("en",
                                download_method=core.DownloadMethod.REUSE_RESOURCES,
                                model_dir=test_dir,
@@ -93,7 +93,7 @@ def test_download_not_repeated():
     """
     Test that a model is only downloaded once if it already matches the expected model from the resources file
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined")
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
@@ -113,7 +113,7 @@ def test_download_fixed():
     Test that a model is fixed if the existing model doesn't match the md5sum
     """
     for download_method in (core.DownloadMethod.REUSE_RESOURCES, core.DownloadMethod.DOWNLOAD_RESOURCES):
-        with tempfile.TemporaryDirectory(dir=".") as test_dir:
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
             stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined")
 
             assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
