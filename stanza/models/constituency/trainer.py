@@ -71,7 +71,7 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, forward_charlm, backward_charlm, use_gpu, args=None, load_optimizer=False, foundation_cache=None):
+    def load(filename, pt, args=None, load_optimizer=False, foundation_cache=None):
         """
         Load back a model and possibly its optimizer.
 
@@ -94,6 +94,8 @@ class Trainer:
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
+            forward_charlm = load_charlm(saved_args["charlm_forward_file"])
+            backward_charlm = load_charlm(saved_args["charlm_backward_file"])
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -112,7 +114,7 @@ class Trainer:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
 
-        if use_gpu:
+        if saved_args['cuda']:
             model.cuda()
 
         if load_optimizer:
@@ -194,9 +196,12 @@ def evaluate(args, model_file, retag_pipeline):
         kbest = None
     with EvaluateParser(kbest=kbest) as evaluator:
         pt = load_pretrain(args)
-        forward_charlm = load_charlm(args['charlm_forward_file'])
-        backward_charlm = load_charlm(args['charlm_backward_file'])
-        trainer = Trainer.load(model_file, pt, forward_charlm, backward_charlm, args['cuda'])
+        load_args = {
+            'charlm_forward_file': args['charlm_forward_file'],
+            'charlm_backward_file': args['charlm_backward_file'],
+            'cuda': args['cuda'],
+        }
+        trainer = Trainer.load(model_file, pt, args=load_args)
 
         treebank = tree_reader.read_treebank(args['eval_file'])
         logger.info("Read %d trees for evaluation", len(treebank))
@@ -239,9 +244,12 @@ def remove_optimizer(args, model_save_file, model_load_file):
     # change the load/save to work without it, but probably this
     # functionality isn't used that often anyway
     pt = load_pretrain(args)
-    forward_charlm = load_charlm(args['charlm_forward_file'])
-    backward_charlm = load_charlm(args['charlm_backward_file'])
-    trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, use_gpu=False, load_optimizer=False)
+    load_args = {
+        'charlm_forward_file': args['charlm_forward_file'],
+        'charlm_backward_file': args['charlm_backward_file'],
+        'cuda': False,
+    }
+    trainer = Trainer.load(model_load_file, pt, args=load_args, load_optimizer=False)
     trainer.save(model_save_file)
 
 def convert_trees_to_sequences(trees, tree_type, transition_scheme):
@@ -308,7 +316,7 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
 
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
         logger.info("Loading model to continue training from %s", model_load_file)
-        trainer = Trainer.load(model_load_file, pt, forward_charlm, backward_charlm, args['cuda'], args, load_optimizer=True)
+        trainer = Trainer.load(model_load_file, pt, args, load_optimizer=True)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
