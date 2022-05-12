@@ -16,7 +16,8 @@ jobs:
           # set up environment
           echo "Setting up environment..."
           bash
-          . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
+          . $CONDA_PREFIX/etc/profile.d/conda.sh
+          conda activate stanza
           export STANZA_TEST_HOME=/scr/stanza_test
           export CORENLP_HOME=$STANZA_TEST_HOME/corenlp_dir
           export CLASSPATH=$CORENLP_HOME/*:
