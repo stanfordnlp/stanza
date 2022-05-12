@@ -149,7 +149,7 @@ def parse_args(args=None):
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
-    parser.add_argument('--dev_eval_steps', default=None, type=int, help='Run the dev set after this many train steps')
+    parser.add_argument('--dev_eval_steps', default=100000, type=int, help='Run the dev set after this many train steps.  Set to 0 to only do it once per epoch')
     parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.ACCURACY,
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
@@ -426,7 +426,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # print statistics
             running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
-                if (args.dev_eval_steps and
+                if (args.dev_eval_steps > 0 and
                     ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
                     logger.info('[%d, %5d] Interim analysis' % (epoch + 1, ((batch_num + 1) * args.batch_size)))
                     dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
@@ -517,8 +517,13 @@ def main(args=None):
         charmodel_backward = None
 
     if args.load_name:
-        model = cnn_classifier.load(args.load_name, pretrain,
-                                    charmodel_forward, charmodel_backward)
+        if os.path.exists(args.load_name):
+            load_name = args.load_name
+        else:
+            load_name = os.path.join(args.save_dir, args.load_name)
+            if not os.path.exists(load_name):
+                raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
+        model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
     else:
         assert train_set is not None
         labels = dataset_labels(train_set)
