@@ -179,6 +179,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
         data = fix_german_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
+    if isinstance(data, tuple):
+        data = list(data)
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
     list_offsets = [[None] * (len(sentence)+2) for sentence in data]
     for idx in range(len(data)):

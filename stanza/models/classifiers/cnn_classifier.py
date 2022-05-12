@@ -10,9 +10,11 @@ import torch.nn.functional as F
 
 import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.data as data
-from stanza.models.common.vocab import PAD_ID, UNK_ID
+from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
+from stanza.models.common.foundation_cache import load_bert
 from stanza.models.common.utils import split_into_batches, sort_with_indices, unsort
+from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
 The CNN classifier is based on Yoon Kim's work:
@@ -40,7 +42,7 @@ logger = logging.getLogger('stanza')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward,
+                 charmodel_forward, charmodel_backward, bert_model, bert_tokenizer,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -70,6 +72,7 @@ class CNNClassifier(nn.Module):
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
+                                      bert_model = args.bert_model,
                                       model_type = 'CNNClassifier')
 
         self.char_lowercase = args.char_lowercase
@@ -91,6 +94,9 @@ class CNNClassifier(nn.Module):
             logger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
+
+        self.add_unsaved_module('bert_model', bert_model)
+        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
         # possibly want to train UNK while freezing the rest of the embedding
@@ -153,6 +159,12 @@ class CNNClassifier(nn.Module):
                 self.charmodel_backward_projection = None
                 total_embedding_dim += charmodel_backward.hidden_dim()
 
+        if bert_model is not None:
+            if bert_tokenizer is None:
+                raise ValueError("Cannot have a bert model without a tokenizer")
+            self.bert_dim = self.bert_model.config.hidden_size
+            total_embedding_dim += self.bert_dim
+
         self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
                                                     out_channels=self.config.filter_channels,
                                                     kernel_size=(filter_size, total_embedding_dim))
@@ -184,6 +196,15 @@ class CNNClassifier(nn.Module):
             end = start + rep.shape[0]
             char_inputs[idx, start:end, :] = rep
         return char_inputs
+
+    def extract_bert_embeddings(self, inputs, max_phrase_len, begin_paddings, device):
+        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device, keep_endpoints=False)
+        bert_inputs = torch.zeros((len(inputs), max_phrase_len, bert_embeddings[0].shape[-1]), device=device)
+        for idx, rep in enumerate(bert_embeddings):
+            start = begin_paddings[idx]
+            end = start + rep.shape[0]
+            bert_inputs[idx, start:end, :] = rep
+        return bert_inputs
 
     def forward(self, inputs):
         # assume all pieces are on the same device
@@ -297,6 +318,10 @@ class CNNClassifier(nn.Module):
             char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
 
+        if self.bert_model is not None:
+            bert_embeddings = self.extract_bert_embeddings(inputs, max_phrase_len, begin_paddings, device)
+            all_inputs.append(bert_embeddings)
+
         # still works even if there's just one item
         input_vectors = torch.cat(all_inputs, dim=2)
 
@@ -341,7 +366,7 @@ def save(filename, model, skip_modules=True):
     except BaseException as e:
         logger.warning("Saving failed to {}... continuing anyway.  Error: {}".format(filename, e))
 
-def load(filename, pretrain, charmodel_forward, charmodel_backward):
+def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
     try:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
     except BaseException:
@@ -352,9 +377,13 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
     # TODO: should not be needed when all models have this value set
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
     setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
+    setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
+
+    bert_model = checkpoint['config'].bert_model
+    bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
     if model_type == 'CNNClassifier':
         extra_vocab = checkpoint.get('extra_vocab', None)
         model = CNNClassifier(pretrain=pretrain,
@@ -362,6 +391,8 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward):
                               labels=checkpoint['labels'],
                               charmodel_forward=charmodel_forward,
                               charmodel_backward=charmodel_backward,
+                              bert_model=bert_model,
+                              bert_tokenizer=bert_tokenizer,
                               args=checkpoint['config'])
     else:
         raise ValueError("Unknown model type {}".format(model_type))
