@@ -13,9 +13,9 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
-from stanza.models.common.char_model import CharacterLanguageModel
-from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
+from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.pos.vocab import CharVocab
 
 import stanza.models.classifiers.classifier_args as classifier_args
@@ -505,16 +505,8 @@ def main(args=None):
 
     pretrain = load_pretrain(args)
 
-    if args.charlm_forward_file:
-        logger.info('Using forward charlm from %s', args.charlm_forward_file)
-        charmodel_forward = CharacterLanguageModel.load(args.charlm_forward_file, finetune=False)
-    else:
-        charmodel_forward = None
-    if args.charlm_backward_file:
-        logger.info('Using backward charlm from %s', args.charlm_backward_file)
-        charmodel_backward = CharacterLanguageModel.load(args.charlm_backward_file, finetune=False)
-    else:
-        charmodel_backward = None
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
 
     if args.load_name:
         if os.path.exists(args.load_name):
