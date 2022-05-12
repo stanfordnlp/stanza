@@ -40,13 +40,15 @@ class ConstituencyProcessor(UDProcessor):
         pretrain_path = config.get('pretrain_path', None)
         self._pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
         # set up model
-        charlm_forward_file = config.get('forward_charlm_path', None)
-        charlm_backward_file = config.get('backward_charlm_path', None)
+
+        args = {
+            "charlm_forward_file": config.get('forward_charlm_path', None),
+            "charlm_backward_file": config.get('backward_charlm_path', None),
+            "cuda": use_gpu,
+        }
         self._model = trainer.Trainer.load(filename=config['model_path'],
                                            pt=self._pretrain,
-                                           forward_charlm=trainer.load_charlm(charlm_forward_file),
-                                           backward_charlm=trainer.load_charlm(charlm_backward_file),
-                                           use_gpu=use_gpu,
+                                           args=args,
                                            foundation_cache=pipeline.foundation_cache)
         self._model.model.eval()
         # batch size counted as sentences
