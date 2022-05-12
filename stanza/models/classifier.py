@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_charlm
+from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.pos.vocab import CharVocab
@@ -174,6 +174,9 @@ def parse_args(args=None):
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
+
+    parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
+    parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
 
     args = parser.parse_args(args)
 
@@ -519,11 +522,16 @@ def main(args=None):
         assert train_set is not None
         labels = dataset_labels(train_set)
         extra_vocab = dataset_vocab(train_set)
+
+        bert_model, bert_tokenizer = load_bert(args.bert_model)
+
         model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                              extra_vocab=extra_vocab,
                                              labels=labels,
                                              charmodel_forward=charmodel_forward,
                                              charmodel_backward=charmodel_backward,
+                                             bert_model=bert_model,
+                                             bert_tokenizer=bert_tokenizer,
                                              args=args)
 
     if args.cuda:

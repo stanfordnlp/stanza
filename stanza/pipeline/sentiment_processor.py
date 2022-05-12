@@ -37,7 +37,8 @@ class SentimentProcessor(UDProcessor):
         self._model = cnn_classifier.load(filename=config['model_path'],
                                           pretrain=self._pretrain,
                                           charmodel_forward=charmodel_forward,
-                                          charmodel_backward=charmodel_backward)
+                                          charmodel_backward=charmodel_backward,
+                                          foundation_cache=pipeline.foundation_cache)
         # batch size counted as words
         self._batch_size = config.get('batch_size', SentimentProcessor.DEFAULT_BATCH_SIZE)
 
