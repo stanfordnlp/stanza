@@ -145,11 +145,6 @@ def load_pretrain(args):
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
-BERT_ARGS = {
-    "vinai/phobert-base": { "use_fast": True },
-    "vinai/phobert-large": { "use_fast": True },
-}
-
 def verify_transitions(trees, sequences, transition_scheme, unary_limit):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
