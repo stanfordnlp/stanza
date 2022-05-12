@@ -426,18 +426,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # print statistics
             running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
+                logger.info('[%d, %5d] Average loss: %.3f' %
+                            (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
                 if (args.dev_eval_steps > 0 and
                     ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
-                    logger.info('[%d, %5d] Interim analysis' % (epoch + 1, ((batch_num + 1) * args.batch_size)))
+                    logger.info('---- Interim analysis ----')
                     dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if best_score is None or dev_score > best_score:
                         best_score = dev_score
                         cnn_classifier.save(model_file, model)
                         logger.info("Saved new best score model!")
                     model.train()
-                else:
-                    logger.info('[%d, %5d] Average loss: %.3f' %
-                                (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
