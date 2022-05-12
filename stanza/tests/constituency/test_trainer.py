@@ -87,4 +87,4 @@ class TestTrainer:
             assert os.path.exists(filename)
 
             # load it back in
-            tr.load(filename, pt, None, None, None, None, False)
+            tr.load(filename, pt)

@@ -22,8 +22,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.char_model import CharacterLanguageModel
-from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -94,8 +93,8 @@ class Trainer:
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
-            forward_charlm = load_charlm(saved_args["charlm_forward_file"])
-            backward_charlm = load_charlm(saved_args["charlm_backward_file"])
+            forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
+            backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -145,12 +144,6 @@ def load_pretrain(args):
         vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
-
-def load_charlm(charlm_file):
-    if charlm_file:
-        logger.debug("Loading charlm from %s", charlm_file)
-        return CharacterLanguageModel.load(charlm_file, finetune=False)
-    return None
 
 BERT_ARGS = {
     "vinai/phobert-base": { "use_fast": True },
