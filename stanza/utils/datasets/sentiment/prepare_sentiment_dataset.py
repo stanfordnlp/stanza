@@ -151,7 +151,7 @@ DATASET_MAPPING = {
 
     "vi_vsfc":      convert_vi_vsfc,
 
-    "zh_ren":       convert_ren,
+    "zh-hans_ren":  convert_ren,
 }
 
 def main(dataset_name):
