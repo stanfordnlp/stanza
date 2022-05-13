@@ -38,7 +38,7 @@ def run_dataset(mode, paths, treebank, short_name,
 
     other_name = ALTERNATE_DATASET.get(short_name, short_name)
     dev_file   = os.path.join(sentiment_dir, f"{other_name}.dev.json")
-    test_file  = os.path.join(sentiment_dir, f"{other_name}.train.json")
+    test_file  = os.path.join(sentiment_dir, f"{other_name}.test.json")
 
     for filename in (train_file, dev_file, test_file):
         if not os.path.exists(filename):
