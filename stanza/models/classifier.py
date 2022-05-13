@@ -150,7 +150,7 @@ def parse_args(args=None):
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
     parser.add_argument('--dev_eval_steps', default=100000, type=int, help='Run the dev set after this many train steps.  Set to 0 to only do it once per epoch')
-    parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.ACCURACY,
+    parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.WEIGHTED_F1,
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
 
