@@ -69,7 +69,7 @@ def run_dataset(mode, paths, treebank, short_name,
         classifier.main(train_args)
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-        dev_args = ['--load_name', "%s_classifier.pt" % short_name,
+        dev_args = ['--save_name', "%s_classifier.pt" % short_name,
                     '--no_train',
                     '--test_file', dev_file,
                     '--shorthand', short_name,
@@ -79,7 +79,7 @@ def run_dataset(mode, paths, treebank, short_name,
         classifier.main(dev_args)
 
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
-        test_args = ['--load_name', "%s_classifier.pt" % short_name,
+        test_args = ['--save_name', "%s_classifier.pt" % short_name,
                      '--no_train',
                      '--test_file', test_file,
                      '--shorthand', short_name,
