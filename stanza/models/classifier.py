@@ -501,7 +501,10 @@ def main(args=None):
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
     elif not args.load_name:
-        raise ValueError("No model provided and not asked to train a model.  This makes no sense")
+        if args.save_name:
+            args.load_name = args.save_name
+        else:
+            raise ValueError("No model provided and not asked to train a model.  This makes no sense")
     else:
         train_set = None
 
