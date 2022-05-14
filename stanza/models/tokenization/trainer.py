@@ -73,11 +73,11 @@ class Trainer(BaseTrainer):
 
     def save(self, filename):
         params = {
-                'model': self.model.state_dict() if self.model is not None else None,
-                'vocab': self.vocab.state_dict(),
-                'lexicon': self.lexicon,
-                'config': self.args
-                }
+            'model': self.model.state_dict() if self.model is not None else None,
+            'vocab': self.vocab.state_dict(),
+            'lexicon': self.lexicon,
+            'config': self.args
+        }
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
