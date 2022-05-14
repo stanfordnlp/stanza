@@ -191,38 +191,46 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None, feat_unit_dropout=0.0):
-        ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
+    def advance_old_batch(self, eval_offsets, old_batch):
+        """
+        Advance to a new position in a batch where we have partially processed the batch
+
+        If we have previously built a batch of data and made predictions on them, then when we are trying to make
+        prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
+        and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
+        In this case, eval_offsets index within the old_batch to advance the strings to process.
+        """
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
 
-        if old_batch is not None:
-            # If we have previously built a batch of data and made predictions on them, then when we are trying to make
-            # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
-            # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
-            # In this case, eval_offsets index within the old_batch to advance the strings to process.
-            ounits, olabels, ofeatures, oraw = old_batch
-            lens = (ounits != padid).sum(1).tolist()
-            pad_len = max(l-i for i, l in zip(eval_offsets, lens))
+        ounits, olabels, ofeatures, oraw = old_batch
+        lens = (ounits != padid).sum(1).tolist()
+        pad_len = max(l-i for i, l in zip(eval_offsets, lens))
 
-            units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
-            labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
-            features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
-            raw_units = []
+        units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
+        labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
+        features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
+        raw_units = []
 
-            for i in range(len(ounits)):
-                eval_offsets[i] = min(eval_offsets[i], lens[i])
-                units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
-                labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
-                features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
-                raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
+        for i in range(len(ounits)):
+            eval_offsets[i] = min(eval_offsets[i], lens[i])
+            units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
+            labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
+            features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
+            raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
 
-            units = torch.from_numpy(units)
-            labels = torch.from_numpy(labels)
-            features = torch.from_numpy(features)
+        units = torch.from_numpy(units)
+        labels = torch.from_numpy(labels)
+        features = torch.from_numpy(features)
 
-            return units, labels, features, raw_units
+        return units, labels, features, raw_units
+
+    def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
+        ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
+        feat_size = len(self.sentences[0][0][2][0])
+        unkid = self.vocab.unit2id('<UNK>')
+        padid = self.vocab.unit2id('<PAD>')
 
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
             # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed 
