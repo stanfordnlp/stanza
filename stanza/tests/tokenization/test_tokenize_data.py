@@ -6,8 +6,10 @@ the data from a temp file, for example
 """
 
 import pytest
+import tempfile
 import stanza
 
+from stanza import Pipeline
 from stanza.tests import *
 from stanza.models.tokenization.data import DataLoader
 
@@ -35,4 +37,70 @@ def test_has_mwt():
 
     data = DataLoader(args=FAKE_PROPERTIES, input_data=MWT_DATA)
     assert data.has_mwt()
+
+@pytest.fixture(scope="module")
+def tokenizer():
+    pipeline = Pipeline("en", dir=TEST_MODELS_DIR, download_method=None, processors="tokenize")
+    tokenizer = pipeline.processors['tokenize']
+    return tokenizer
+
+EXPECTED_TWO_NL_RAW = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0)], [('f', 0), ('o', 0), ('o', 0)]]
+# in this test, the newline after test becomes a space labeled 0
+EXPECTED_ONE_NL_RAW = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), (' ', 0), ('f', 0), ('o', 0), ('o', 0)]]
+EXPECTED_SKIP_NL_RAW = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('f', 0), ('o', 0), ('o', 0)]]
+
+def test_convert_units_raw_text(tokenizer):
+    """
+    Tests converting a couple small segments to units
+    """
+    raw_text = "This is a      test\n\nfoo"
+    batches = DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    assert batches.data == EXPECTED_TWO_NL_RAW
+
+    raw_text = "This is a      test\nfoo"
+    batches = DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    assert batches.data == EXPECTED_ONE_NL_RAW
+
+    skip_newline_config = dict(tokenizer.config)
+    skip_newline_config['skip_newline'] = True
+    batches = DataLoader(skip_newline_config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    assert batches.data == EXPECTED_SKIP_NL_RAW
+
+
+EXPECTED_TWO_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1)], [('f', 0), ('o', 0), ('o', 0)]]
+# in this test, the newline after test becomes a space labeled 0
+EXPECTED_ONE_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1), (' ', 0), ('f', 0), ('o', 0), ('o', 0)]]
+
+def test_convert_units_file(tokenizer):
+    """
+    Tests reading some text from a file and converting that to units
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        # two nl test case, read from file
+        labels   = "00000000000000000001\n\n000\n\n"
+        raw_text = "This is a      test.\n\nfoo\n\n"
+
+        txt_file = os.path.join(test_dir, "testfile.txt")
+        label_file = os.path.join(test_dir, "labelfile.txt")
+        with open(txt_file, "w") as fout:
+            fout.write(raw_text)
+        with open(label_file, "w") as fout:
+            fout.write(labels)
+
+        batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+        assert batches.data == EXPECTED_TWO_NL_FILE
+
+        # one nl test case, read from file
+        labels   = "000000000000000000010000\n\n"
+        raw_text = "This is a      test.\nfoo\n\n"
+
+        txt_file = os.path.join(test_dir, "testfile.txt")
+        label_file = os.path.join(test_dir, "labelfile.txt")
+        with open(txt_file, "w") as fout:
+            fout.write(raw_text)
+        with open(label_file, "w") as fout:
+            fout.write(labels)
+
+        batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+        assert batches.data == EXPECTED_ONE_NL_FILE
 
