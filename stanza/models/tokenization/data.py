@@ -6,6 +6,7 @@ import logging
 import re
 import torch
 from .vocab import Vocab
+
 logger = logging.getLogger('stanza')
 
 def filter_consecutive_whitespaces(para):
@@ -155,7 +156,7 @@ class DataLoader:
             return dict_forward_feats + dict_backward_feats
 
         def process_sentence(sent):
-            return [self.vocab.unit2id(y[0]) for y in sent], [y[1] for y in sent], [y[2] for y in sent], [y[0] for y in sent]
+            return torch.IntTensor([self.vocab.unit2id(y[0]) for y in sent]), torch.IntTensor([y[1] for y in sent]), torch.IntTensor([y[2] for y in sent]), [y[0] for y in sent]
 
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
@@ -273,10 +274,10 @@ class DataLoader:
                     cutoff = random.choices(list(range(len(sentences))), weights=list(reversed(p)))[0]
                     sentences = sentences[:cutoff+1]
 
-            units = [val for s in sentences for val in s[0]]
-            labels = [val for s in sentences for val in s[1]]
-            feats = [val for s in sentences for val in s[2]]
-            raw_units = [val for s in sentences for val in s[3]]
+            units = torch.cat([s[0] for s in sentences])
+            labels = torch.cat([s[1] for s in sentences])
+            feats = torch.cat([s[2] for s in sentences])
+            raw_units = [x for s in sentences for x in s[3]]
 
             if not self.eval:
                 cutoff = self.args['max_seqlen']
@@ -313,7 +314,7 @@ class DataLoader:
             u_, l_, f_, r_ = strings_starting(pair, offset=offset, pad_len=pad_len)
             units[i, :len(u_)] = u_
             labels[i, :len(l_)] = l_
-            features[i, :len(f_)] = f_
+            features[i, :len(f_), :] = f_
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         if unit_dropout > 0 and not self.eval:
