@@ -45,16 +45,22 @@ class DataLoader:
             else:
                 text = input_text
 
+            text_chunks = NEWLINE_WHITESPACE_RE.split(text)
+            text_chunks = [pt.rstrip() for pt in text_chunks]
+            text_chunks = [pt for pt in text_chunks if pt]
             if label_file is not None:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
+                    labels = NEWLINE_WHITESPACE_RE.split(labels)
+                    labels = [pt.rstrip() for pt in labels]
+                    labels = [map(int, pt) for pt in labels if pt]
             else:
-                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
+                labels = [[0 for _ in pt] for pt in text_chunks]
 
             skip_newline = args.get('skip_newline', False)
-            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
-                          for char, label in zip(pt.rstrip(), pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
-                         for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
+            self.data = [[(WHITESPACE_RE.sub(' ', char), label) # substitute special whitespaces
+                          for char, label in zip(pt, pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
+                         for pt, pc in zip(text_chunks, labels)]
 
         # remove consecutive whitespaces
         self.data = [filter_consecutive_whitespaces(x) for x in self.data]
