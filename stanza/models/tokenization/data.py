@@ -6,6 +6,7 @@ import logging
 import re
 import torch
 from .vocab import Vocab
+
 logger = logging.getLogger('stanza')
 
 def filter_consecutive_whitespaces(para):
@@ -45,16 +46,22 @@ class DataLoader:
             else:
                 text = input_text
 
+            text_chunks = NEWLINE_WHITESPACE_RE.split(text)
+            text_chunks = [pt.rstrip() for pt in text_chunks]
+            text_chunks = [pt for pt in text_chunks if pt]
             if label_file is not None:
                 with open(label_file) as f:
                     labels = ''.join(f.readlines()).rstrip()
+                    labels = NEWLINE_WHITESPACE_RE.split(labels)
+                    labels = [pt.rstrip() for pt in labels]
+                    labels = [map(int, pt) for pt in labels if pt]
             else:
-                labels = '\n\n'.join(['0' * len(pt.rstrip()) for pt in NEWLINE_WHITESPACE_RE.split(text)])
+                labels = [[0 for _ in pt] for pt in text_chunks]
 
             skip_newline = args.get('skip_newline', False)
-            self.data = [[(WHITESPACE_RE.sub(' ', char), int(label)) # substitute special whitespaces
-                          for char, label in zip(pt.rstrip(), pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
-                         for pt, pc in zip(NEWLINE_WHITESPACE_RE.split(text), NEWLINE_WHITESPACE_RE.split(labels)) if len(pt.rstrip()) > 0]
+            self.data = [[(WHITESPACE_RE.sub(' ', char), label) # substitute special whitespaces
+                          for char, label in zip(pt, pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
+                         for pt, pc in zip(text_chunks, labels)]
 
         # remove consecutive whitespaces
         self.data = [filter_consecutive_whitespaces(x) for x in self.data]
@@ -92,6 +99,43 @@ class DataLoader:
                 self.sentence_ids += [(i, j)]
                 self.cumlen += [self.cumlen[-1] + len(self.sentences[i][j][0])]
 
+    def extract_dict_feat(self, para, idx):
+        """
+        This function is to extract dictionary features for each character
+        """
+        length = len(para)
+
+        dict_forward_feats = [0 for i in range(self.args['num_dict_feat'])]
+        dict_backward_feats = [0 for i in range(self.args['num_dict_feat'])]
+        forward_word = para[idx][0]
+        backward_word = para[idx][0]
+        prefix = True
+        suffix = True
+        for window in range(1,self.args['num_dict_feat']+1):
+            # concatenate each character and check if words found in dict not, stop if prefix not found
+            #check if idx+t is out of bound and if the prefix is already not found
+            if (idx + window) <= length-1 and prefix:
+                forward_word += para[idx+window][0].lower()
+                #check in json file if the word is present as prefix or word or None.
+                feat = 1 if forward_word in self.dictionary["words"] else 0
+                #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
+                dict_forward_feats[window-1] = feat
+                #if the dict return 0 means no prefixes found, thus, stop looking for forward.
+                if forward_word not in self.dictionary["prefixes"]:
+                    prefix = False
+            #backward check: similar to forward
+            if (idx - window) >= 0 and suffix:
+                backward_word = para[idx-window][0].lower() + backward_word
+                feat = 1 if backward_word in self.dictionary["words"] else 0
+                dict_backward_feats[window-1] = feat
+                if backward_word not in self.dictionary["suffixes"]:
+                    suffix = False
+            #if cannot find both prefix and suffix, then exit the loop
+            if not prefix and not suffix:
+                break
+
+        return dict_forward_feats + dict_backward_feats
+
     def para_to_sentences(self, para):
         """ Convert a paragraph to a list of processed sentences. """
         res = []
@@ -114,42 +158,8 @@ class DataLoader:
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
 
-        length = len(para)
-        #This function is to extract dictionary features for each character
-        def extract_dict_feat(idx):
-            dict_forward_feats = [0 for i in range(self.args['num_dict_feat'])]
-            dict_backward_feats = [0 for i in range(self.args['num_dict_feat'])]
-            forward_word = para[idx][0]
-            backward_word = para[idx][0]
-            prefix = True
-            suffix = True
-            for window in range(1,self.args['num_dict_feat']+1):
-                # concatenate each character and check if words found in dict not, stop if prefix not found
-                #check if idx+t is out of bound and if the prefix is already not found
-                if (idx + window) <= length-1 and prefix:
-                    forward_word += para[idx+window][0].lower()
-                    #check in json file if the word is present as prefix or word or None.
-                    feat = 1 if forward_word in self.dictionary["words"] else 0
-                    #if the return value is not 2 or 3 then the checking word is not a valid word in dict.
-                    dict_forward_feats[window-1] = feat
-                    #if the dict return 0 means no prefixes found, thus, stop looking for forward.
-                    if forward_word not in self.dictionary["prefixes"]:
-                        prefix = False
-                #backward check: similar to forward
-                if (idx - window) >= 0 and suffix:
-                    backward_word = para[idx-window][0].lower() + backward_word
-                    feat = 1 if backward_word in self.dictionary["words"] else 0
-                    dict_backward_feats[window-1] = feat
-                    if backward_word not in self.dictionary["suffixes"]:
-                        suffix = False
-                #if cannot find both prefix and suffix, then exit the loop
-                if not prefix and not suffix:
-                    break
-
-            return dict_forward_feats + dict_backward_feats
-
         def process_sentence(sent):
-            return [self.vocab.unit2id(y[0]) for y in sent], [y[1] for y in sent], [y[2] for y in sent], [y[0] for y in sent]
+            return torch.IntTensor([self.vocab.unit2id(y[0]) for y in sent]), torch.IntTensor([y[1] for y in sent]), torch.IntTensor([y[2] for y in sent]), [y[0] for y in sent]
 
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
@@ -167,7 +177,7 @@ class DataLoader:
 
             #if dictionary feature is selected
             if use_dictionary:
-                dict_feats = extract_dict_feat(i)
+                dict_feats = self.extract_dict_feat(para, i)
                 feats = feats + dict_feats
 
             current += [(unit, label, feats)]
@@ -191,38 +201,46 @@ class DataLoader:
             random.shuffle(para)
         self.init_sent_ids()
 
-    def next(self, eval_offsets=None, unit_dropout=0.0, old_batch=None, feat_unit_dropout=0.0):
-        ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
+    def advance_old_batch(self, eval_offsets, old_batch):
+        """
+        Advance to a new position in a batch where we have partially processed the batch
+
+        If we have previously built a batch of data and made predictions on them, then when we are trying to make
+        prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
+        and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
+        In this case, eval_offsets index within the old_batch to advance the strings to process.
+        """
         feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
 
-        if old_batch is not None:
-            # If we have previously built a batch of data and made predictions on them, then when we are trying to make
-            # prediction on later characters in those paragraphs, we can avoid rebuilding the converted data from scratch
-            # and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
-            # In this case, eval_offsets index within the old_batch to advance the strings to process.
-            ounits, olabels, ofeatures, oraw = old_batch
-            lens = (ounits != padid).sum(1).tolist()
-            pad_len = max(l-i for i, l in zip(eval_offsets, lens))
+        ounits, olabels, ofeatures, oraw = old_batch
+        lens = (ounits != padid).sum(1).tolist()
+        pad_len = max(l-i for i, l in zip(eval_offsets, lens))
 
-            units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
-            labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
-            features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
-            raw_units = []
+        units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
+        labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
+        features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
+        raw_units = []
 
-            for i in range(len(ounits)):
-                eval_offsets[i] = min(eval_offsets[i], lens[i])
-                units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
-                labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
-                features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
-                raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
+        for i in range(len(ounits)):
+            eval_offsets[i] = min(eval_offsets[i], lens[i])
+            units[i, :(lens[i] - eval_offsets[i])] = ounits[i, eval_offsets[i]:lens[i]]
+            labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
+            features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
+            raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
 
-            units = torch.from_numpy(units)
-            labels = torch.from_numpy(labels)
-            features = torch.from_numpy(features)
+        units = torch.from_numpy(units)
+        labels = torch.from_numpy(labels)
+        features = torch.from_numpy(features)
 
-            return units, labels, features, raw_units
+        return units, labels, features, raw_units
+
+    def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
+        ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
+        feat_size = len(self.sentences[0][0][2][0])
+        unkid = self.vocab.unit2id('<UNK>')
+        padid = self.vocab.unit2id('<PAD>')
 
         def strings_starting(id_pair, offset=0, pad_len=self.args['max_seqlen']):
             # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed 
@@ -259,10 +277,10 @@ class DataLoader:
                     cutoff = random.choices(list(range(len(sentences))), weights=list(reversed(p)))[0]
                     sentences = sentences[:cutoff+1]
 
-            units = [val for s in sentences for val in s[0]]
-            labels = [val for s in sentences for val in s[1]]
-            feats = [val for s in sentences for val in s[2]]
-            raw_units = [val for s in sentences for val in s[3]]
+            units = torch.cat([s[0] for s in sentences])
+            labels = torch.cat([s[1] for s in sentences])
+            feats = torch.cat([s[2] for s in sentences])
+            raw_units = [x for s in sentences for x in s[3]]
 
             if not self.eval:
                 cutoff = self.args['max_seqlen']
@@ -299,7 +317,7 @@ class DataLoader:
             u_, l_, f_, r_ = strings_starting(pair, offset=offset, pad_len=pad_len)
             units[i, :len(u_)] = u_
             labels[i, :len(l_)] = l_
-            features[i, :len(f_)] = f_
+            features[i, :len(f_), :] = f_
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         if unit_dropout > 0 and not self.eval:

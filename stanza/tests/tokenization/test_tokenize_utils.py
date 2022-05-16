@@ -7,7 +7,10 @@ TODO: could add a bunch more simple tests for the tokenization utils
 import pytest
 import stanza
 
+from stanza import Pipeline
 from stanza.tests import *
+from stanza.models.common import doc
+from stanza.models.tokenization import data
 from stanza.models.tokenization import utils
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -63,3 +66,30 @@ def test_match_tokens_with_text():
 
     with pytest.raises(ValueError):
         doc = utils.match_tokens_with_text([["This", "iz", "a", "test"]], "Thisisatest")
+
+def test_long_paragraph():
+    """
+    Test the tokenizer's capacity to break text up into smaller chunks
+    """
+    pipeline = Pipeline("en", dir=TEST_MODELS_DIR, processors="tokenize")
+    tokenizer = pipeline.processors['tokenize']
+
+    raw_text = "TIL not to ask a date to dress up as Smurfette on a first date.  " * 100
+
+    # run a test to make sure the chunk operation is called
+    # if not, the test isn't actually testing what we need to test
+    batches = data.DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    batches.advance_old_batch = None
+    with pytest.raises(TypeError):
+        _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
+                                                     orig_text=raw_text,
+                                                     no_ssplit=tokenizer.config.get('no_ssplit', False))
+
+    # a new DataLoader should not be crippled as the above one was
+    batches = data.DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
+                                                 orig_text=raw_text,
+                                                 no_ssplit=tokenizer.config.get('no_ssplit', False))
+
+    document = doc.Document(document, raw_text)
+    assert len(document.sentences) == 100

@@ -45,6 +45,7 @@ def create_dictionary(lexicon=None):
             add_word(word)
 
     return dictionary
+
 def create_lexicon(shorthand=None, train_path=None, external_path=None):
     """
     This function is to create a lexicon to store all the words from the training set and external dictionary.
@@ -297,7 +298,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     break
                 # once we've made predictions on a certain number of characters for each paragraph (recorded in `adv`),
                 # we skip the first `adv` characters to make the updated batch
-                batch = data_generator.next(eval_offsets=adv, old_batch=batch)
+                batch = data_generator.advance_old_batch(adv, batch)
 
             pred = [np.concatenate(p, 0) for p in pred]
 
