@@ -148,7 +148,7 @@ class DataLoader:
             elif feat_func == 'numeric':
                 func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
             else:
-                raise Exception('Feature function "{}" is undefined.'.format(feat_func))
+                raise ValueError('Feature function "{}" is undefined.'.format(feat_func))
 
             funcs.append(func)
 
