@@ -7,6 +7,8 @@ the data from a temp file, for example
 
 import pytest
 import tempfile
+import numpy as np
+
 import stanza
 
 from stanza import Pipeline
@@ -96,8 +98,17 @@ def test_convert_units_raw_text(tokenizer):
 
 
 EXPECTED_TWO_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1)], [('f', 0), ('o', 0), ('o', 0)]]
+EXPECTED_TWO_NL_FILE_LABELS = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], dtype=np.int32),
+                               np.array([0, 0, 0], dtype=np.int32)]
+
 # in this test, the newline after test becomes a space labeled 0
 EXPECTED_ONE_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1), (' ', 0), ('f', 0), ('o', 0), ('o', 0)]]
+EXPECTED_ONE_NL_FILE_LABELS = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], dtype=np.int32)]
+
+def check_labels(labels, expected_labels):
+    assert len(labels) == len(expected_labels)
+    for label, expected in zip(labels, expected_labels):
+        assert np.array_equiv(label, expected)
 
 def test_convert_units_file(tokenizer):
     """
@@ -111,6 +122,7 @@ def test_convert_units_file(tokenizer):
 
         batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
         assert batches.data == EXPECTED_TWO_NL_FILE
+        check_labels(batches.labels(), EXPECTED_TWO_NL_FILE_LABELS)
 
         # one nl test case, read from file
         labels   = "000000000000000000010000\n\n"
@@ -119,6 +131,7 @@ def test_convert_units_file(tokenizer):
 
         batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
         assert batches.data == EXPECTED_ONE_NL_FILE
+        check_labels(batches.labels(), EXPECTED_ONE_NL_FILE_LABELS)
 
 def test_dictionary(zhtok):
     """

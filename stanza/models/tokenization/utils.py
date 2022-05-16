@@ -430,7 +430,7 @@ def eval_model(args, trainer, batches, vocab, mwt_dict):
     oov_count, N, all_preds, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     all_preds = np.concatenate(all_preds, 0)
-    labels = [y[1] for x in batches.data for y in x]
+    labels = np.concatenate(batches.labels())
     counter = Counter(zip(all_preds, labels))
 
     def f1(pred, gold, mapping):

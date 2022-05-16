@@ -96,6 +96,14 @@ class DataLoader:
                 self.sentence_ids += [(i, j)]
                 self.cumlen += [self.cumlen[-1] + len(self.sentences[i][j][0])]
 
+    def labels(self):
+        """
+        Returns a list of the labels for all of the sentences in this DataLoader
+
+        Used at eval time to compare to the results, for example
+        """
+        return [np.array(list(x[1] for x in sent)) for sent in self.data]
+
     def extract_dict_feat(self, para, idx):
         """
         This function is to extract dictionary features for each character
