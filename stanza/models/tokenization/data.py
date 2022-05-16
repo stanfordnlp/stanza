@@ -25,7 +25,7 @@ NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
 class DataLoader:
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, input_data=None, vocab=None, evaluation=False, dictionary=None):
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None):
         self.args = args
         self.eval = evaluation
         self.dictionary = dictionary
@@ -35,33 +35,30 @@ class DataLoader:
         label_file = input_files['label']
 
         # Load data and process it
-        if input_data is not None:
-            self.data = input_data
+        # set up text from file or input string
+        assert txt_file is not None or input_text is not None
+        if input_text is None:
+            with open(txt_file) as f:
+                text = ''.join(f.readlines()).rstrip()
         else:
-            # set up text from file or input string
-            assert txt_file is not None or input_text is not None
-            if input_text is None:
-                with open(txt_file) as f:
-                    text = ''.join(f.readlines()).rstrip()
-            else:
-                text = input_text
+            text = input_text
 
-            text_chunks = NEWLINE_WHITESPACE_RE.split(text)
-            text_chunks = [pt.rstrip() for pt in text_chunks]
-            text_chunks = [pt for pt in text_chunks if pt]
-            if label_file is not None:
-                with open(label_file) as f:
-                    labels = ''.join(f.readlines()).rstrip()
-                    labels = NEWLINE_WHITESPACE_RE.split(labels)
-                    labels = [pt.rstrip() for pt in labels]
-                    labels = [map(int, pt) for pt in labels if pt]
-            else:
-                labels = [[0 for _ in pt] for pt in text_chunks]
+        text_chunks = NEWLINE_WHITESPACE_RE.split(text)
+        text_chunks = [pt.rstrip() for pt in text_chunks]
+        text_chunks = [pt for pt in text_chunks if pt]
+        if label_file is not None:
+            with open(label_file) as f:
+                labels = ''.join(f.readlines()).rstrip()
+                labels = NEWLINE_WHITESPACE_RE.split(labels)
+                labels = [pt.rstrip() for pt in labels]
+                labels = [map(int, pt) for pt in labels if pt]
+        else:
+            labels = [[0 for _ in pt] for pt in text_chunks]
 
-            skip_newline = args.get('skip_newline', False)
-            self.data = [[(WHITESPACE_RE.sub(' ', char), label) # substitute special whitespaces
-                          for char, label in zip(pt, pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
-                         for pt, pc in zip(text_chunks, labels)]
+        skip_newline = args.get('skip_newline', False)
+        self.data = [[(WHITESPACE_RE.sub(' ', char), label) # substitute special whitespaces
+                      for char, label in zip(pt, pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
+                     for pt, pc in zip(text_chunks, labels)]
 
         # remove consecutive whitespaces
         self.data = [filter_consecutive_whitespaces(x) for x in self.data]
