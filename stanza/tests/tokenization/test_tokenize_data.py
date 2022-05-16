@@ -33,10 +33,12 @@ def write_tokenizer_input(test_dir, raw_text, labels):
     return txt_file, label_file
 
 # A single slice of the German tokenization data with no MWT in it
-NO_MWT_DATA = [[('S', 0), ('e', 0), ('h', 0), ('r', 1), (' ', 0), ('g', 0), ('u', 0), ('t', 0), ('e', 1), (' ', 0), ('B', 0), ('e', 0), ('r', 0), ('a', 0), ('t', 0), ('u', 0), ('n', 0), ('g', 1), (',', 1), (' ', 0), ('s', 0), ('c', 0), ('h', 0), ('n', 0), ('e', 0), ('l', 0), ('l', 0), ('e', 1), (' ', 0), ('B', 0), ('e', 0), ('h', 0), ('e', 0), ('b', 0), ('u', 0), ('n', 0), ('g', 1), (' ', 0), ('d', 0), ('e', 0), ('r', 1), (' ', 0), ('P', 0), ('r', 0), ('o', 0), ('b', 0), ('l', 0), ('e', 0), ('m', 0), ('e', 2)]]
+NO_MWT_TEXT   = "Sehr gute Beratung, schnelle Behebung der Probleme"
+NO_MWT_LABELS = "00010000100000000110000000010000000010001000000002"
 
 # A single slice of the German tokenization data with an MWT in it
-MWT_DATA = [[(' ', 0), ('D', 0), ('i', 0), ('e', 1), (' ', 0), ('K', 0), ('o', 0), ('s', 0), ('t', 0), ('e', 0), ('n', 1), (' ', 0), ('s', 0), ('i', 0), ('n', 0), ('d', 1), (' ', 0), ('d', 0), ('e', 0), ('f', 0), ('i', 0), ('n', 0), ('i', 0), ('t', 0), ('i', 0), ('v', 1), (' ', 0), ('a', 0), ('u', 0), ('c', 0), ('h', 1), (' ', 0), ('i', 0), ('m', 3), (' ', 0), ('R', 0), ('a', 0), ('h', 0), ('m', 0), ('e', 0), ('n', 1), ('.', 2)]]
+MWT_TEXT =   " Die Kosten sind definitiv auch im Rahmen."
+MWT_LABELS = "000100000010000100000000010000100300000012"
 
 FAKE_PROPERTIES = {
     "lang":"de",
@@ -49,11 +51,14 @@ def test_has_mwt():
     """
     One dataset has no mwt, the other does
     """
-    data = DataLoader(args=FAKE_PROPERTIES, input_data=NO_MWT_DATA)
-    assert not data.has_mwt()
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        txt_file, label_file = write_tokenizer_input(test_dir, NO_MWT_TEXT, NO_MWT_LABELS)
+        data = DataLoader(args=FAKE_PROPERTIES, input_files={'txt': txt_file, 'label': label_file})
+        assert not data.has_mwt()
 
-    data = DataLoader(args=FAKE_PROPERTIES, input_data=MWT_DATA)
-    assert data.has_mwt()
+        txt_file, label_file = write_tokenizer_input(test_dir, MWT_TEXT, MWT_LABELS)
+        data = DataLoader(args=FAKE_PROPERTIES, input_files={'txt': txt_file, 'label': label_file})
+        assert data.has_mwt()
 
 @pytest.fixture(scope="module")
 def tokenizer():
