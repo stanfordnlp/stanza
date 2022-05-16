@@ -105,6 +105,9 @@ EXPECTED_TWO_NL_FILE_LABELS = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 EXPECTED_ONE_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1), (' ', 0), ('f', 0), ('o', 0), ('o', 0)]]
 EXPECTED_ONE_NL_FILE_LABELS = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], dtype=np.int32)]
 
+EXPECTED_SKIP_NL_FILE = [[('T', 0), ('h', 0), ('i', 0), ('s', 0), (' ', 0), ('i', 0), ('s', 0), (' ', 0), ('a', 0), (' ', 0), ('t', 0), ('e', 0), ('s', 0), ('t', 0), ('.', 1), ('f', 0), ('o', 0), ('o', 0)]]
+EXPECTED_SKIP_NL_FILE_LABELS = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=np.int32)]
+
 def check_labels(labels, expected_labels):
     assert len(labels) == len(expected_labels)
     for label, expected in zip(labels, expected_labels):
@@ -132,6 +135,17 @@ def test_convert_units_file(tokenizer):
         batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
         assert batches.data == EXPECTED_ONE_NL_FILE
         check_labels(batches.labels(), EXPECTED_ONE_NL_FILE_LABELS)
+
+        skip_newline_config = dict(tokenizer.config)
+        skip_newline_config['skip_newline'] = True
+        labels   = "000000000000000000010000\n\n"
+        raw_text = "This is a      test.\nfoo\n\n"
+        txt_file, label_file = write_tokenizer_input(test_dir, raw_text, labels)
+
+        batches = DataLoader(skip_newline_config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+        assert batches.data == EXPECTED_SKIP_NL_FILE
+        check_labels(batches.labels(), EXPECTED_SKIP_NL_FILE_LABELS)
+
 
 def test_dictionary(zhtok):
     """
