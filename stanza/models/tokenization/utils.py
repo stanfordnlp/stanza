@@ -45,6 +45,7 @@ def create_dictionary(lexicon=None):
             add_word(word)
 
     return dictionary
+
 def create_lexicon(shorthand=None, train_path=None, external_path=None):
     """
     This function is to create a lexicon to store all the words from the training set and external dictionary.
