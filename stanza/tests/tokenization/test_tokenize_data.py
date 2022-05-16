@@ -15,6 +15,23 @@ from stanza.models.tokenization.data import DataLoader
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
+def write_tokenizer_input(test_dir, raw_text, labels):
+    """
+    Writes raw_text and labels to randomly named files in test_dir
+
+    Note that the tempfiles are not set to automatically clean up.
+    This will not be a problem if you put them in a tempdir.
+    """
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=test_dir, delete=False) as fout:
+        txt_file = fout.name
+        fout.write(raw_text)
+
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=test_dir, delete=False) as fout:
+        label_file = fout.name
+        fout.write(labels)
+
+    return txt_file, label_file
+
 # A single slice of the German tokenization data with no MWT in it
 NO_MWT_DATA = [[('S', 0), ('e', 0), ('h', 0), ('r', 1), (' ', 0), ('g', 0), ('u', 0), ('t', 0), ('e', 1), (' ', 0), ('B', 0), ('e', 0), ('r', 0), ('a', 0), ('t', 0), ('u', 0), ('n', 0), ('g', 1), (',', 1), (' ', 0), ('s', 0), ('c', 0), ('h', 0), ('n', 0), ('e', 0), ('l', 0), ('l', 0), ('e', 1), (' ', 0), ('B', 0), ('e', 0), ('h', 0), ('e', 0), ('b', 0), ('u', 0), ('n', 0), ('g', 1), (' ', 0), ('d', 0), ('e', 0), ('r', 1), (' ', 0), ('P', 0), ('r', 0), ('o', 0), ('b', 0), ('l', 0), ('e', 0), ('m', 0), ('e', 2)]]
 
@@ -85,13 +102,7 @@ def test_convert_units_file(tokenizer):
         # two nl test case, read from file
         labels   = "00000000000000000001\n\n000\n\n"
         raw_text = "This is a      test.\n\nfoo\n\n"
-
-        txt_file = os.path.join(test_dir, "testfile.txt")
-        label_file = os.path.join(test_dir, "labelfile.txt")
-        with open(txt_file, "w") as fout:
-            fout.write(raw_text)
-        with open(label_file, "w") as fout:
-            fout.write(labels)
+        txt_file, label_file = write_tokenizer_input(test_dir, raw_text, labels)
 
         batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
         assert batches.data == EXPECTED_TWO_NL_FILE
@@ -99,13 +110,7 @@ def test_convert_units_file(tokenizer):
         # one nl test case, read from file
         labels   = "000000000000000000010000\n\n"
         raw_text = "This is a      test.\nfoo\n\n"
-
-        txt_file = os.path.join(test_dir, "testfile.txt")
-        label_file = os.path.join(test_dir, "labelfile.txt")
-        with open(txt_file, "w") as fout:
-            fout.write(raw_text)
-        with open(label_file, "w") as fout:
-            fout.write(labels)
+        txt_file, label_file = write_tokenizer_input(test_dir, raw_text, labels)
 
         batches = DataLoader(tokenizer.config, input_files={'txt': txt_file, 'label': label_file}, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
         assert batches.data == EXPECTED_ONE_NL_FILE
