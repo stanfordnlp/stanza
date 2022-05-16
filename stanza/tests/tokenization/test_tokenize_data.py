@@ -113,6 +113,9 @@ def test_convert_units_file(tokenizer):
 def test_dictionary(zhtok):
     """
     Tests some features of the zh tokenizer dictionary
+
+    The expectation is that the Chinese tokenizer will be serialized with a dictionary
+    (if it ever gets serialized without, this test will warn us!)
     """
     assert zhtok.trainer.lexicon is not None
     assert zhtok.trainer.dictionary is not None
