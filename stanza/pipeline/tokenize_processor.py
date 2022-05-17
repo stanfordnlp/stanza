@@ -5,7 +5,7 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenization.data import DataLoader, NEWLINE_WHITESPACE_RE
+from stanza.models.tokenization.data import DataLoader
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
