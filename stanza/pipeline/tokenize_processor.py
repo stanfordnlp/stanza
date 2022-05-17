@@ -5,7 +5,7 @@ Processor for performing tokenization
 import io
 import logging
 
-from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline._constants import *
@@ -82,12 +82,13 @@ class TokenizeProcessor(UDProcessor):
 
         raw_text = '\n\n'.join(document) if isinstance(document, list) else document
         # set up batches
-        batches = DataLoader(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
+        batches = TokenizationDataset(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
         # get dict data
         _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
                                                self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT),
                                                orig_text=raw_text,
-                                               no_ssplit=self.config.get('no_ssplit', False))
+                                               no_ssplit=self.config.get('no_ssplit', False),
+                                               num_workers = self.config.get('num_workers', 0))
         return doc.Document(document, raw_text)
 
     def bulk_process(self, docs):

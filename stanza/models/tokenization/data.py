@@ -5,7 +5,10 @@ import random
 import logging
 import re
 import torch
+from torch.utils.data import Dataset
 from .vocab import Vocab
+
+from stanza.models.common.utils import sort_with_indices, unsort
 
 logger = logging.getLogger('stanza')
 
@@ -30,6 +33,7 @@ class TokenizationDataset:
         self.args = tokenizer_args
         self.eval = evaluation
         self.dictionary = dictionary
+        self.vocab = vocab
 
         # get input files
         txt_file = input_files['txt']
@@ -166,9 +170,6 @@ class TokenizationDataset:
 
         return res
 
-    def __len__(self):
-        return len(self.sentence_ids)
-
     def advance_old_batch(self, eval_offsets, old_batch):
         """
         Advance to a new position in a batch where we have partially processed the batch
@@ -221,6 +222,9 @@ class DataLoader(TokenizationDataset):
 
         self.init_sent_ids()
         logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
+
+    def __len__(self):
+        return len(self.sentence_ids)
 
     def init_vocab(self):
         vocab = Vocab(self.data, self.args['lang'])
@@ -358,6 +362,53 @@ class DataLoader(TokenizationDataset):
         units = torch.from_numpy(units)
         labels = torch.from_numpy(labels)
         features = torch.from_numpy(features)
+
+        return units, labels, features, raw_units
+
+class SortedDataset(Dataset):
+    """
+    Holds a TokenizationDataset for use in a torch DataLoader
+
+    The torch DataLoader is different from the DataLoader defined here
+    and allows for cpu & gpu parallelism.  Updating output_predictions
+    to use this class as a wrapper to a TokenizationDataset means the
+    calculation of features can happen in parallel, saving quite a
+    bit of time.
+    """
+    def __init__(self, dataset):
+        super().__init__()
+
+        self.dataset = dataset
+        self.data, self.indices = sort_with_indices(self.dataset.data, key=len)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.dataset.para_to_sentences(self.data[index])
+
+    def unsort(self, arr):
+        return unsort(arr, self.indices)
+
+    def collate(self, samples):
+        if any(len(x) > 1 for x in samples):
+            raise ValueError("Expected all paragraphs to have no preset sentence splits!")
+        feat_size = samples[0][0][2].shape[-1]
+        padid = self.dataset.vocab.unit2id('<PAD>')
+
+        # +1 so that all samples end with at least one pad
+        pad_len = max(len(x[0][3]) for x in samples) + 1
+
+        units = torch.full((len(samples), pad_len), padid, dtype=torch.int32)
+        labels = torch.full((len(samples), pad_len), -1, dtype=torch.int32)
+        features = torch.zeros((len(samples), pad_len, feat_size), dtype=torch.float32)
+        raw_units = []
+        for i, sample in enumerate(samples):
+            u_, l_, f_, r_ = sample[0]
+            units[i, :len(u_)] = torch.from_numpy(u_)
+            labels[i, :len(l_)] = torch.from_numpy(l_)
+            features[i, :len(f_), :] = torch.from_numpy(f_)
+            raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
         return units, labels, features, raw_units
 
