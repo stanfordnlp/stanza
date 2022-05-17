@@ -60,11 +60,10 @@ class Trainer(BaseTrainer):
 
     def predict(self, inputs):
         self.model.eval()
-        units, labels, features, _ = inputs
+        units, _, features, _ = inputs
 
         if self.use_cuda:
             units = units.cuda()
-            labels = labels.cuda()
             features = features.cuda()
 
         pred = self.model(units, features)
