@@ -24,9 +24,10 @@ NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
 NUMERIC_RE = re.compile(r'^([\d]+[,\.]*)+$')
 WHITESPACE_RE = re.compile(r'\s')
 
-class DataLoader:
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None):
-        self.args = args
+class TokenizationDataset:
+    def __init__(self, tokenizer_args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # forwards all unused arguments
+        self.args = tokenizer_args
         self.eval = evaluation
         self.dictionary = dictionary
 
@@ -55,46 +56,13 @@ class DataLoader:
         else:
             labels = [[0 for _ in pt] for pt in text_chunks]
 
-        skip_newline = args.get('skip_newline', False)
+        skip_newline = self.args.get('skip_newline', False)
         self.data = [[(WHITESPACE_RE.sub(' ', char), label) # substitute special whitespaces
                       for char, label in zip(pt, pc) if not (skip_newline and char == '\n')] # check if newline needs to be eaten
                      for pt, pc in zip(text_chunks, labels)]
 
         # remove consecutive whitespaces
         self.data = [filter_consecutive_whitespaces(x) for x in self.data]
-
-        self.vocab = vocab if vocab is not None else self.init_vocab()
-
-        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels.
-        # At evaluation time, each paragraph is treated as single "sentence" as we don't know a priori where
-        # sentence breaks occur. We make prediction from left to right for each paragraph and move forward to
-        # the last predicted sentence break to start afresh.
-        self.sentences = [self.para_to_sentences(para) for para in self.data]
-
-        self.init_sent_ids()
-        logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
-
-    def has_mwt(self):
-        # presumably this only needs to be called either 0 or 1 times,
-        # 1 when training and 0 any other time, so no effort is put
-        # into caching the result
-        for sentence in self.data:
-            for word in sentence:
-                if word[1] > 2:
-                    return True
-        return False
-
-    def init_vocab(self):
-        vocab = Vocab(self.data, self.args['lang'])
-        return vocab
-
-    def init_sent_ids(self):
-        self.sentence_ids = []
-        self.cumlen = [0]
-        for i, para in enumerate(self.sentences):
-            for j in range(len(para)):
-                self.sentence_ids += [(i, j)]
-                self.cumlen += [self.cumlen[-1] + len(self.sentences[i][j][0])]
 
     def labels(self):
         """
@@ -201,11 +169,6 @@ class DataLoader:
     def __len__(self):
         return len(self.sentence_ids)
 
-    def shuffle(self):
-        for para in self.sentences:
-            random.shuffle(para)
-        self.init_sent_ids()
-
     def advance_old_batch(self, eval_offsets, old_batch):
         """
         Advance to a new position in a batch where we have partially processed the batch
@@ -215,11 +178,11 @@ class DataLoader:
         and just (essentially) advance the indices/offsets from where we read converted data in this old batch.
         In this case, eval_offsets index within the old_batch to advance the strings to process.
         """
-        feat_size = len(self.sentences[0][0][2][0])
         unkid = self.vocab.unit2id('<UNK>')
         padid = self.vocab.unit2id('<PAD>')
 
         ounits, olabels, ofeatures, oraw = old_batch
+        feat_size = ofeatures.shape[-1]
         lens = (ounits != padid).sum(1).tolist()
         pad_len = max(l-i for i, l in zip(eval_offsets, lens))
 
@@ -240,6 +203,51 @@ class DataLoader:
         features = torch.from_numpy(features)
 
         return units, labels, features, raw_units
+
+class DataLoader(TokenizationDataset):
+    """
+    This is the training version of the dataset.
+    """
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None):
+        super().__init__(args, input_files, input_text, vocab, evaluation, dictionary)
+
+        self.vocab = vocab if vocab is not None else self.init_vocab()
+
+        # data comes in a list of paragraphs, where each paragraph is a list of units with unit-level labels.
+        # At evaluation time, each paragraph is treated as single "sentence" as we don't know a priori where
+        # sentence breaks occur. We make prediction from left to right for each paragraph and move forward to
+        # the last predicted sentence break to start afresh.
+        self.sentences = [self.para_to_sentences(para) for para in self.data]
+
+        self.init_sent_ids()
+        logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
+
+    def init_vocab(self):
+        vocab = Vocab(self.data, self.args['lang'])
+        return vocab
+
+    def init_sent_ids(self):
+        self.sentence_ids = []
+        self.cumlen = [0]
+        for i, para in enumerate(self.sentences):
+            for j in range(len(para)):
+                self.sentence_ids += [(i, j)]
+                self.cumlen += [self.cumlen[-1] + len(self.sentences[i][j][0])]
+
+    def has_mwt(self):
+        # presumably this only needs to be called either 0 or 1 times,
+        # 1 when training and 0 any other time, so no effort is put
+        # into caching the result
+        for sentence in self.data:
+            for word in sentence:
+                if word[1] > 2:
+                    return True
+        return False
+
+    def shuffle(self):
+        for para in self.sentences:
+            random.shuffle(para)
+        self.init_sent_ids()
 
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
