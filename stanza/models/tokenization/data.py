@@ -187,9 +187,9 @@ class TokenizationDataset:
         lens = (ounits != padid).sum(1).tolist()
         pad_len = max(l-i for i, l in zip(eval_offsets, lens))
 
-        units = np.full((len(ounits), pad_len), padid, dtype=np.int64)
-        labels = np.full((len(ounits), pad_len), -1, dtype=np.int64)
-        features = np.zeros((len(ounits), pad_len, feat_size), dtype=np.float32)
+        units = torch.full((len(ounits), pad_len), padid, dtype=torch.int32)
+        labels = torch.full((len(ounits), pad_len), -1, dtype=torch.int32)
+        features = torch.zeros((len(ounits), pad_len, feat_size), dtype=torch.float32)
         raw_units = []
 
         for i in range(len(ounits)):
@@ -198,10 +198,6 @@ class TokenizationDataset:
             labels[i, :(lens[i] - eval_offsets[i])] = olabels[i, eval_offsets[i]:lens[i]]
             features[i, :(lens[i] - eval_offsets[i])] = ofeatures[i, eval_offsets[i]:lens[i]]
             raw_units.append(oraw[i][eval_offsets[i]:lens[i]] + ['<PAD>'] * (pad_len - lens[i] + eval_offsets[i]))
-
-        units = torch.from_numpy(units)
-        labels = torch.from_numpy(labels)
-        features = torch.from_numpy(features)
 
         return units, labels, features, raw_units
 
