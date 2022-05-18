@@ -164,7 +164,7 @@ class DataLoader:
         composite_func = lambda x: [f(x) for f in funcs]
 
         def process_sentence(sent):
-            return torch.IntTensor([self.vocab.unit2id(y[0]) for y in sent]), torch.IntTensor([y[1] for y in sent]), torch.IntTensor([y[2] for y in sent]), [y[0] for y in sent]
+            return np.array([self.vocab.unit2id(y[0]) for y in sent]), np.array([y[1] for y in sent]), np.array([y[2] for y in sent]), [y[0] for y in sent]
 
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
@@ -282,9 +282,9 @@ class DataLoader:
                     cutoff = random.choices(list(range(len(sentences))), weights=list(reversed(p)))[0]
                     sentences = sentences[:cutoff+1]
 
-            units = torch.cat([s[0] for s in sentences])
-            labels = torch.cat([s[1] for s in sentences])
-            feats = torch.cat([s[2] for s in sentences])
+            units = np.concatenate([s[0] for s in sentences])
+            labels = np.concatenate([s[1] for s in sentences])
+            feats = np.concatenate([s[2] for s in sentences])
             raw_units = [x for s in sentences for x in s[3]]
 
             if not self.eval:
