@@ -124,7 +124,7 @@ default_ners = {
   "ar": "aqmar",
   "bg": "bsnlp19",
   "da": "ddt",
-  "de": "conll03",
+  "de": "germeval2014",
   "en": "ontonotes",
   "es": "conll02",
   "fa": "arman",
