@@ -183,6 +183,10 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 
 A description of the sentiment tool and the models available for that tool can be found [here](sentiment.md).
 
+## Available Conparse Models
+
+A description of the constituency parser and the models available for that tool can be found [here](constituency.md).
+
 ## Training New Models
 
 To train new models, please see the documents on [training](training.md) and [adding a new language](new_language.md).
