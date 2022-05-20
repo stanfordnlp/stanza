@@ -156,7 +156,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | German | GermEval2014 | 4 | 85.2 |
 | Hungarian *New in 1.2.1* | Combined | 4 | - |
 | Italian *New in 1.2.3* | FBK | 3 | 87.92 |
-| Myanmar *New in 1.3.1* | UCSY | 7 | 95.86 |
+| Myanmar *New in 1.4.0* | UCSY | 7 | 95.86 |
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
