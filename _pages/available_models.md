@@ -152,7 +152,7 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 2. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous)
 2b. The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
 3. For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
-4. The BSNLP dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
+4. The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
 5. The Italian FBK dataset uses `LOC`, `ORG`, `PER`
 6. The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
 
@@ -160,7 +160,7 @@ The following table lists all NER models supported by Stanza, pretrained on vari
 | :------- | :----- | :-------- | :---- | :---- | :---- |
 | Afrikaans | af | NCHLT | 4 | [<i class="fas fa-file-alt"></i>](https://hdl.handle.net/20.500.12185/299) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Arabic | ar | AQMAR | 4 | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Bulgarian | bg | BSNLP | 5 | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Bulgarian | bg | BSNLP19 | 5 | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Chinese | zh | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Dutch | nl | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
 | Dutch | nl | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | |
