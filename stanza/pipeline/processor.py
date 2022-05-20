@@ -69,6 +69,20 @@ class Processor(ABC):
         if hasattr(self, '_variant') and self._variant.OVERRIDE:
             self.process = self._variant.process
 
+    def __str__(self):
+        """
+        Simple description of the processor: name(model)
+        """
+        name = self.__class__.__name__
+        model = None
+        if self._config is not None:
+            model = self._config.get('model_path')
+        if model is None:
+            return name
+        else:
+            return "{}({})".format(name, model)
+
+
     @abstractmethod
     def process(self, doc):
         """ Process a Document.  This is the main method of a processor. """

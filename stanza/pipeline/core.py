@@ -382,6 +382,13 @@ class Pipeline:
                 doc = process(doc)
         return doc
 
+    def __str__(self):
+        """
+        Assemble the processors in order to make a simple description of the pipeline
+        """
+        processors = ["%s=%s" % (x, str(self.processors[x])) for x in PIPELINE_NAMES if x in self.processors]
+        return "<Pipeline: %s>" % ", ".join(processors)
+
     def __call__(self, doc, processors=None):
         return self.process(doc, processors)
 
