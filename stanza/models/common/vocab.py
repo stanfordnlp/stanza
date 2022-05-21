@@ -215,6 +215,9 @@ class BaseMultiVocab:
     def __contains__(self, key):
         return key in self._vocabs
 
+    def keys(self):
+        return self._vocabs.keys()
+
     def state_dict(self):
         """ Build a state dict by iteratively calling state_dict() of all vocabs. """
         state = OrderedDict()
