@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
-from transformers import AutoModel, AutoTokenizer
 
 logger = logging.getLogger('stanza')
 
@@ -21,6 +20,10 @@ def update_max_length(model_name, tokenizer):
 def load_tokenizer(model_name):
     if model_name:
         # note that use_fast is the default
+        try:
+            from transformers import AutoTokenizer
+        except ImportError:
+            raise ImportError("Please install transformers library for BERT support! Try `pip install transformers`.")
         bert_args = BERT_ARGS.get(model_name, dict())
         if not model_name.startswith("vinai/phobert"):
             bert_args["add_prefix_space"] = True
@@ -32,6 +35,10 @@ def load_tokenizer(model_name):
 def load_bert(model_name):
     if model_name:
         # such as: "vinai/phobert-base"
+        try:
+            from transformers import AutoModel
+        except ImportError:
+            raise ImportError("Please install transformers library for BERT support! Try `pip install transformers`.")
         bert_model = AutoModel.from_pretrained(model_name)
         bert_tokenizer = load_tokenizer(model_name)
         return bert_model, bert_tokenizer
