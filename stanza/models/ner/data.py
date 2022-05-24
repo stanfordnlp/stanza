@@ -66,7 +66,15 @@ class DataLoader:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
-        deltavocab = WordVocab(data, self.args['shorthand'], cutoff=1, lower=self.args['lowercase'])
+        ignore = None
+        if self.args['emb_finetune_known_only']:
+            if self.args['lowercase']:
+                ignore = set([w[0] for sent in data for w in sent if w[0] in wordvocab or w[0].lower() in wordvocab])
+            else:
+                ignore = set([w[0] for sent in data for w in sent if w[0] in wordvocab])
+            logger.debug("Ignoring %d in the delta vocab as they did not appear in the original embedding", len(ignore))
+        deltavocab = WordVocab(data, self.args['shorthand'], cutoff=1, lower=self.args['lowercase'], ignore=ignore)
+        logger.debug("Creating delta vocab of size %s", len(deltavocab))
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
                             'delta': deltavocab,
