@@ -52,7 +52,7 @@ def test_download_non_default():
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner']
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
         assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 1
@@ -76,7 +76,7 @@ def test_download_two_models():
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner']
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
         assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 2
