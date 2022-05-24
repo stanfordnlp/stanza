@@ -54,6 +54,8 @@ class NERTagger(nn.Module):
             if emb_matrix is not None:
                 self.init_emb(emb_matrix)
 
+            # TODO: allow for expansion of delta embedding if new
+            # training data has new words in it?
             self.delta_emb = None
             if 'delta' in self.vocab:
                 # zero inits seems to work better
