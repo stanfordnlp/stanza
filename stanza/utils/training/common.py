@@ -248,34 +248,35 @@ def run_eval_script_depparse(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["UAS", "LAS", "CLAS", "MLAS", "BLEX"])
 
 
-def find_wordvec_pretrain(language, default_pretrain):
+def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, dataset=None):
+    # try to get the default pretrain for the language,
+    # but allow the package specific value to override it if that is set
+    default_pt = default_pretrains.get(language, None)
+    if dataset is not None and dataset_pretrains is not None:
+        default_pt = dataset_pretrains.get(language, {}).get(dataset, default_pt)
+
+    if default_pt is not None:
+        default_pt_path = '{}/{}/pretrain/{}.pt'.format(DEFAULT_MODEL_DIR, language, default_pt)
+        if not os.path.exists(default_pt_path):
+            logger.info("Default pretrain should be {}  Attempting to download".format(default_pt_path))
+            download(lang=language, package=None, processors={"pretrain": default_pt})
+        if os.path.exists(default_pt_path):
+            logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+            return default_pt_path
+
     pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
     pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
-        # TODO: try to extract/remember the specific pretrain for the given model
-        # That would be a good way to archive which pretrains are used for which NER models, anyway
-        # For now, just download the default and use that
-        pretrain_package = default_pretrain.get(language, None)
-        if pretrain_package is None:
-            logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
-            download(lang=language)
-        else:
-            logger.warning(f"Missing pretrain for '{language}'.  Will download the default pretrain '{pretrain_package}'")
-            download(lang=language, package=None, processors={"pretrain": pretrain_package})
+        # we already tried to download the default pretrain once
+        # and it didn't work.  maybe the default language package
+        # will have something?
+        logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
+        download(lang=language)
         pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
         raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_file to specify a .pt file to use")
     if len(pretrains) > 1:
-        default_pt = default_pretrain.get(language, None)
-        if default_pt is None:
-            raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  No default pretrain is specified for language {language}  Must specify an exact path to a --wordvec_pretrain_file")
-        for pt_file in pretrains:
-            pt_name = os.path.split(pt_file)[1]
-            pt_name = os.path.splitext(pt_name)[0]
-            if pt_name == default_pt:
-                logger.info(f"Using default pretrain for language, found in {pt_file}  To use a different pretrain, specify --wordvec_pretrain_file")
-                return pt_file
-        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Could not find default pt {default_pt} for language {language}  Must specify an exact path to a --wordvec_pretrain_file")
+        raise FileNotFoundError(f"Too many pretrains to choose from in {pretrain_path}  Must specify an exact path to a --wordvec_pretrain_file")
     pt = pretrains[0]
     logger.info(f"Using pretrain found in {pt}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pt

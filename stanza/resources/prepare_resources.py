@@ -193,6 +193,50 @@ ner_charlms = {
     },
 }
 
+# the None are embeddings which aren't present elsewhere in stanza
+ner_pretrains = {
+    "ar": {
+        "aqmar": "fasttextwiki",
+    },
+    "de": {
+        "conll03": "fasttextwiki",
+    },
+    "en": {
+        "anatem":       "craft",
+        "bc4chemd":     "craft",
+        "bc5cdr":       "craft",
+        "bionlp13cg":   "craft",
+        "jnlpba":       "craft",
+        "linnaeus":     "craft",
+        "ncbi_disease": "craft",
+        "s800":         "craft",
+
+        "ontonotes":    "fasttextcrawl",
+
+        "conll03":      "glove",
+
+        "i2b2":         "mimic",
+        "radiology":    "mimic",
+    },
+    "es": {
+        "ancora":  "fasttextwiki",
+        "conll02": "fasttextwiki",
+    },
+    "fr": {
+        "wikiner": "fasttextwiki",
+    },
+    "nl": {
+        "conll02": "fasttextwiki",
+        "wikiner": "fasttextwiki",
+    },
+    "ru": {
+        "wikiner": "fasttextwiki",
+    },
+    "zh-hans": {
+        "ontonotes": "fasttextwiki",
+    }
+}
+
 # a few languages have sentiment classifier models
 default_sentiment = {
     "en": "sstplus",
@@ -289,16 +333,24 @@ def get_con_dependencies(lang, package):
 
 
 def get_ner_dependencies(lang, package):
+    dependencies = []
+
+    if lang not in ner_pretrains or package not in ner_pretrains[lang]:
+        pretrain_package = default_treebanks[lang]
+    else:
+        pretrain_package = ner_pretrains[lang][package]
+    if pretrain_package is not None:
+        dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+
     if lang not in ner_charlms or package not in ner_charlms[lang]:
         charlm_package = default_charlms[lang]
     else:
         charlm_package = ner_charlms[lang][package]
 
-    if charlm_package is None:
-        return None
-    else:
-        return [{'model': 'forward_charlm', 'package': charlm_package},
-                {'model': 'backward_charlm', 'package': charlm_package}]
+    if charlm_package is not None:
+        dependencies = dependencies + [{'model': 'forward_charlm', 'package': charlm_package},
+                                       {'model': 'backward_charlm', 'package': charlm_package}]
+    return dependencies
 
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
