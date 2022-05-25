@@ -12,6 +12,7 @@ import os
 import random
 import sys
 import unicodedata
+import zipfile
 
 import torch
 import numpy as np
@@ -78,6 +79,8 @@ def open_read_binary(filename):
     """
     Opens a file as an .xz file or .gz if it ends with .xz or .gz, or regular binary file otherwise.
 
+    If a .zip file is given, it can be read if there is a single file in there
+
     Use as a context
 
     eg:
@@ -92,6 +95,15 @@ def open_read_binary(filename):
     elif filename.endswith(".gz"):
         with gzip.open(filename, mode='rb') as fin:
             yield fin
+    elif filename.endswith(".zip"):
+        with zipfile.ZipFile(filename) as zin:
+            input_names = zin.namelist()
+            if len(input_names) == 0:
+                raise ValueError("Empty zip archive")
+            if len(input_names) > 1:
+                raise ValueError("zip file %s has more than one file in it")
+            with zin.open(input_names[0]) as fin:
+                yield fin
     else:
         with open(filename, mode='rb') as fin:
             yield fin
