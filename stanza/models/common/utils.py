@@ -4,6 +4,7 @@ Utility functions.
 
 from collections import Counter
 from contextlib import contextmanager
+import gzip
 import json
 import logging
 import lzma
@@ -52,7 +53,7 @@ def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
 @contextmanager
 def open_read_text(filename, encoding="utf-8"):
     """
-    Opens a file as an .xz file if ends with .xz, or regular text otherwise.
+    Opens a file as an .xz file or .gz if it ends with .xz or .gz, or regular text otherwise.
 
     Use as a context
 
@@ -65,8 +66,34 @@ def open_read_text(filename, encoding="utf-8"):
     if filename.endswith(".xz"):
         with lzma.open(filename, mode='rt', encoding=encoding) as fin:
             yield fin
+    elif filename.endswith(".gz"):
+        with gzip.open(filename, mode='rt', encoding=encoding) as fin:
+            yield fin
     else:
         with open(filename, encoding=encoding) as fin:
+            yield fin
+
+@contextmanager
+def open_read_binary(filename):
+    """
+    Opens a file as an .xz file or .gz if it ends with .xz or .gz, or regular binary file otherwise.
+
+    Use as a context
+
+    eg:
+    with open_read_binary(filename) as fin:
+        do stuff
+
+    File will be closed once the context exits
+    """
+    if filename.endswith(".xz"):
+        with lzma.open(filename, mode='rb') as fin:
+            yield fin
+    elif filename.endswith(".gz"):
+        with gzip.open(filename, mode='rb') as fin:
+            yield fin
+    else:
+        with open(filename, mode='rb') as fin:
             yield fin
 
 # training schedule

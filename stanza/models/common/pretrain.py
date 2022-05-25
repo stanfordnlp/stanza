@@ -11,6 +11,7 @@ import torch
 
 from .vocab import BaseVocab, VOCAB_PREFIX
 
+from stanza.models.common.utils import open_read_binary
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
@@ -109,18 +110,13 @@ class Pretrain:
             raise RuntimeError("Vector file is not provided.")
         logger.info("Reading pretrained vectors from {}...".format(self._vec_filename))
 
-        # first try reading as xz file, if failed retry as text file
-        try:
-            words, emb, failed = self.read_from_file(self._vec_filename, open_func=lzma.open)
-        except lzma.LZMAError as err:
-            logger.warning("Cannot decode vector file %s as xz file. Retrying as text file..." % self._vec_filename)
-            words, emb, failed = self.read_from_file(self._vec_filename, open_func=open)
+        words, emb, failed = self.read_from_file(self._vec_filename)
 
         if failed > 0: # recover failure
             emb = emb[:-failed]
         if len(emb) - len(VOCAB_PREFIX) != len(words):
             raise RuntimeError("Loaded number of vectors does not match number of words.")
-        
+
         # Use a fixed vocab size
         if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words):
             words = words[:self._max_vocab - len(VOCAB_PREFIX)]
@@ -139,7 +135,7 @@ class Pretrain:
         first = True
         words = []
         failed = 0
-        with open_func(filename, 'rb') as f:
+        with open_read_binary(filename) as f:
             for i, line in enumerate(f):
                 try:
                     line = line.decode()
