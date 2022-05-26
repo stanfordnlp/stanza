@@ -118,7 +118,7 @@ class Pretrain:
             raise RuntimeError("Loaded number of vectors does not match number of words.")
 
         # Use a fixed vocab size
-        if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words):
+        if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words) + len(VOCAB_PREFIX):
             words = words[:self._max_vocab - len(VOCAB_PREFIX)]
             emb = emb[:self._max_vocab]
 
