@@ -10,6 +10,11 @@ from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
+DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
+DEFAULT_LEARNING_RHO = 0.9
+
 class TextTooLongError(ValueError):
     """
     A text was too long for the underlying model (possibly BERT)
