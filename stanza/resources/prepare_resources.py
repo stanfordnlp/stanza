@@ -132,6 +132,7 @@ default_ners = {
     "fr": "wikiner",
     "hu": "combined",
     "it": "fbk",
+    "ja": "gsd",
     "my": "ucsy",
     "nb": "norne",
     "nl": "conll02",
