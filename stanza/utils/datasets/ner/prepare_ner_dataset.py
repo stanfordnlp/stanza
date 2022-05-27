@@ -202,6 +202,18 @@ GermEval2014 is a German NER dataset
   then run
     prepare_ner_dataset.py de_germeval2014
 
+The UD Japanese GSD dataset has a conversion by Megagon Labs
+  https://github.com/megagonlabs/UD_Japanese-GSD
+  https://github.com/megagonlabs/UD_Japanese-GSD/tags
+  - r2.9-NE has the NE tagged files inside a "spacy"
+    folder in the download
+  - expected directory for this data:
+    unzip the .zip of the release into
+      $NERBASE/ja_gsd
+    so it should wind up in
+      $NERBASE/ja_gsd/UD_Japanese-GSD-r2.9-NE
+    prepare_ner_dataset.py ja_gsd
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -210,6 +222,7 @@ en_sample is the toy dataset included with stanza-train
 import glob
 import os
 import random
+import re
 import shutil
 import sys
 import tempfile
@@ -710,6 +723,60 @@ def process_norne(paths, short_name):
 
     convert_bio_to_json(base_output_path, base_output_path, short_name)
 
+def process_ja_gsd(paths, short_name):
+    """
+    Convert ja_gsd from MegagonLabs
+
+    for example, can download from https://github.com/megagonlabs/UD_Japanese-GSD/releases/tag/r2.9-NE
+    """
+    language, name = short_name.split("_", 1)
+    assert language == 'ja'
+    assert name == 'gsd'
+
+    base_output_path = paths["NER_DATA_DIR"]
+    output_files = [os.path.join(base_output_path, "%s.%s.bio" % (short_name, shard)) for shard in SHARDS]
+
+    search_path = os.path.join(paths["NERBASE"], "ja_gsd", "UD_Japanese-GSD-r2.*-NE")
+    versions = glob.glob(search_path)
+    max_version = None
+    base_input_path = None
+    version_re = re.compile("GSD-r2.([0-9]+)-NE$")
+
+    for ver in versions:
+        match = version_re.search(ver)
+        if not match:
+            continue
+        ver_num = int(match.groups(1)[0])
+        if max_version is None or ver_num > max_version:
+            max_version = ver_num
+            base_input_path = ver
+
+    if base_input_path is None:
+        raise FileNotFoundError("Could not find any copies of the NE conversion of ja_gsd here: {}".format(search_path))
+    print("Most recent version found: {}".format(base_input_path))
+
+    input_files = ["ja_gsd-ud-train.ne.conllu", "ja_gsd-ud-dev.ne.conllu", "ja_gsd-ud-test.ne.conllu"]
+
+    def conversion(x):
+        if x[0] == 'L':
+            return 'E' + x[1:]
+        if x[0] == 'U':
+            return 'S' + x[1:]
+        # B, I unchanged
+        return x
+
+    for in_filename, out_filename, shard in zip(input_files, output_files, SHARDS):
+        in_path = os.path.join(base_input_path, in_filename)
+        if not os.path.exists(in_path):
+            in_spacy = os.path.join(base_input_path, "spacy", in_filename)
+            if not os.path.exists(in_spacy):
+                raise FileNotFoundError("Could not find %s file in %s or %s" % (shard, in_path, in_spacy))
+            in_path = in_spacy
+
+        conll_to_iob.process_conll(in_path, out_filename, conversion=conversion, allow_empty=True, attr_prefix="NE")
+
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
 def process_starlang(paths, short_name):
     """
     Process a Turkish dataset from Starlang
@@ -781,6 +848,7 @@ DATASET_MAPPING = {
     "hu_nytk":           process_nytk,
     "hu_combined":       process_hu_combined,
     "it_fbk":            process_it_fbk,
+    "ja_gsd":            process_ja_gsd,
     "my_ucsy":           process_my_ucsy,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
