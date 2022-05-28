@@ -6,11 +6,14 @@ import re
 import logging
 import os
 
+from torch.utils.data import DataLoader as TorchDataLoader
+
 import stanza.utils.default_paths as default_paths
 from stanza.models.common.utils import ud_scores, harmonic_mean
 from stanza.models.common.doc import Document
 from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
+from stanza.models.tokenization.data import SortedDataset
 
 logger = logging.getLogger('stanza')
 paths = default_paths.get_default_paths()
@@ -241,51 +244,40 @@ def update_pred_regex(raw, pred):
 SPACE_RE = re.compile(r'\s')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True):
-    paragraphs = []
-    for i, p in enumerate(data_generator.sentences):
-        start = 0 if i == 0 else paragraphs[-1][2]
-        length = sum([len(x[0]) for x in p])
-        paragraphs += [(i, start, start+length, length)] # para idx, start idx, end idx, length
-
-    paragraphs = list(sorted(paragraphs, key=lambda x: x[3], reverse=True))
-
-    all_preds = [None] * len(paragraphs)
-    all_raw = [None] * len(paragraphs)
-
-    eval_limit = max(3000, max_seqlen)
-
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0):
     batch_size = trainer.args['batch_size']
-    skip_newline = trainer.args['skip_newline']
-    batches = int((len(paragraphs) + batch_size - 1) / batch_size)
 
-    for i in range(batches):
-        # At evaluation time, each paragraph is treated as a single "sentence", and a batch of `batch_size` paragraphs 
-        # are tokenized together. `offsets` here are used by the data generator to identify which paragraphs to use
-        # for the next batch of evaluation.
-        batchparas = paragraphs[i * batch_size : (i + 1) * batch_size]
-        offsets = [x[1] for x in batchparas]
+    all_preds = []
+    all_raw = []
 
-        batch = data_generator.next(eval_offsets=offsets)
-        raw = batch[3]
+    max_seqlen = max(1000, max_seqlen)
 
+    sorted_data = SortedDataset(data_generator)
+    dataloader = TorchDataLoader(sorted_data, batch_size=batch_size, collate_fn=sorted_data.collate, num_workers=num_workers)
+    for batch_idx, batch in enumerate(dataloader):
+        num_sentences = len(batch[3])
         N = len(batch[3][0])
-        if N <= eval_limit:
+        for paragraph in batch[3]:
+            all_raw.append(list(paragraph))
+
+        if N <= max_seqlen:
             pred = np.argmax(trainer.predict(batch), axis=2)
         else:
-            idx = [0] * len(batchparas)
-            adv = [0] * len(batchparas)
-            Ns = [p[3] for p in batchparas]
-            pred = [[] for _ in batchparas]
+            # TODO: we could shortcircuit some processing of
+            # long strings of PAD by tracking which rows are finished
+            idx = [0] * num_sentences
+            adv = [0] * num_sentences
+            para_lengths = [x.index('<PAD>') for x in batch[3]]
+            pred = [[] for _ in range(num_sentences)]
             while True:
-                ens = [min(N - idx1, eval_limit) for idx1, N in zip(idx, Ns)]
+                ens = [min(N - idx1, max_seqlen) for idx1, N in zip(idx, para_lengths)]
                 en = max(ens)
                 batch1 = batch[0][:, :en], batch[1][:, :en], batch[2][:, :en], [x[:en] for x in batch[3]]
                 pred1 = np.argmax(trainer.predict(batch1), axis=2)
 
-                for j in range(len(batchparas)):
+                for j in range(num_sentences):
                     sentbreaks = np.where((pred1[j] == 2) + (pred1[j] == 4))[0]
-                    if len(sentbreaks) <= 0 or idx[j] >= Ns[j] - eval_limit:
+                    if len(sentbreaks) <= 0 or idx[j] >= para_lengths[j] - max_seqlen:
                         advance = ens[j]
                     else:
                         advance = np.max(sentbreaks) + 1
@@ -294,7 +286,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
                     idx[j] += advance
                     adv[j] = advance
 
-                if all([idx1 >= N for idx1, N in zip(idx, Ns)]):
+                if all([idx1 >= N for idx1, N in zip(idx, para_lengths)]):
                     break
                 # once we've made predictions on a certain number of characters for each paragraph (recorded in `adv`),
                 # we skip the first `adv` characters to make the updated batch
@@ -302,23 +294,32 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
             pred = [np.concatenate(p, 0) for p in pred]
 
-        for j, p in enumerate(batchparas):
-            len1 = len([1 for x in raw[j] if x != '<PAD>'])
-            if pred[j][len1-1] < 2:
-                pred[j][len1-1] = 2
-            elif pred[j][len1-1] > 2:
-                pred[j][len1-1] = 4
+        for par_idx in range(num_sentences):
+            offset = batch_idx * batch_size + par_idx
+
+            raw = all_raw[offset]
+            par_len = raw.index('<PAD>')
+            raw = raw[:par_len]
+            all_raw[offset] = raw
+            if pred[par_idx][par_len-1] < 2:
+                pred[par_idx][par_len-1] = 2
+            elif pred[par_idx][par_len-1] > 2:
+                pred[par_idx][par_len-1] = 4
             if use_regex_tokens:
-                all_preds[p[0]] = update_pred_regex(raw[j], pred[j][:len1])
+                all_preds.append(update_pred_regex(raw, pred[par_idx][:par_len]))
             else:
-                all_preds[p[0]] = pred[j][:len1]
-            all_raw[p[0]] = raw[j]
+                all_preds.append(pred[par_idx][:par_len])
+
+    all_raw = sorted_data.unsort(all_raw)
+    all_preds = sorted_data.unsort(all_preds)
 
     use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
+    skip_newline = trainer.args['skip_newline']
     oov_count, offset, doc = decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand)
 
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
+
 
 def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand):
     """

@@ -25,7 +25,7 @@ import torch
 import json
 from stanza.models.common import utils
 from stanza.models.tokenization.trainer import Trainer
-from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.data import DataLoader, TokenizationDataset
 from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
 from stanza.models import _training_logging
 
@@ -141,7 +141,7 @@ def train(args):
             'txt': args['dev_txt_file'],
             'label': args['dev_label_file']
             }
-    dev_batches = DataLoader(args, input_files=dev_input_files, vocab=vocab, evaluation=True,  dictionary=dictionary)
+    dev_batches = TokenizationDataset(args, input_files=dev_input_files, vocab=vocab, evaluation=True, dictionary=dictionary)
 
     if args['use_mwt'] is None:
         args['use_mwt'] = train_batches.has_mwt()
@@ -216,7 +216,7 @@ def evaluate(args):
             }
 
 
-    batches = DataLoader(args, input_files=eval_input_files, vocab=vocab, evaluation=True,  dictionary=trainer.dictionary)
+    batches = TokenizationDataset(args, input_files=eval_input_files, vocab=vocab, evaluation=True, dictionary=trainer.dictionary)
 
     oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
