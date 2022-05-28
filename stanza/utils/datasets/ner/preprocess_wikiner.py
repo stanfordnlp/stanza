@@ -6,9 +6,9 @@ python preprocess_wikiner input output
 
 import sys
 
-def preprocess_wikiner(input_file, output_file):
-    with open(input_file) as fin:
-        with open(output_file, "w") as fout:
+def preprocess_wikiner(input_file, output_file, encoding="utf-8"):
+    with open(input_file, encoding=encoding) as fin:
+        with open(output_file, "w", encoding="utf-8") as fout:
             for line in fin:
                 line = line.strip()
                 if not line:

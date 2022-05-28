@@ -445,16 +445,25 @@ def process_wikiner(paths, dataset):
     base_input_path = os.path.join(paths["NERBASE"], dataset)
     base_output_path = paths["NER_DATA_DIR"]
 
-    raw_input_path = os.path.join(base_input_path, "raw")
-    input_files = glob.glob(os.path.join(raw_input_path, "aij-wikiner*"))
+    expected_filename = "aij*wikiner*"
+    input_files = [x for x in glob.glob(os.path.join(base_input_path, expected_filename)) if not x.endswith("bz2")]
     if len(input_files) == 0:
-        raise FileNotFoundError("Could not find any raw wikiner files in %s" % raw_input_path)
+        raw_input_path = os.path.join(base_input_path, "raw")
+        input_files = [x for x in glob.glob(os.path.join(raw_input_path, expected_filename)) if not x.endswith("bz2")]
+        if len(input_files) > 1:
+            raise FileNotFoundError("Found too many raw wikiner files in %s: %s" % (raw_input_path, ", ".join(input_files)))
     elif len(input_files) > 1:
-        raise FileNotFoundError("Found too many raw wikiner files in %s: %s" % (raw_input_path, ", ".join(input_files)))
+        raise FileNotFoundError("Found too many raw wikiner files in %s: %s" % (base_input_path, ", ".join(input_files)))
+
+    if len(input_files) == 0:
+        raise FileNotFoundError("Could not find any raw wikiner files in %s or %s" % (base_input_path, raw_input_path))
 
     csv_file = os.path.join(base_output_path, short_name + "_csv")
     print("Converting raw input %s to space separated file in %s" % (input_files[0], csv_file))
-    preprocess_wikiner(input_files[0], csv_file)
+    try:
+        preprocess_wikiner(input_files[0], csv_file)
+    except UnicodeDecodeError:
+        preprocess_wikiner(input_files[0], csv_file, encoding="iso8859-1")
 
     # this should create train.bio, dev.bio, and test.bio
     print("Splitting %s to %s" % (csv_file, base_output_path))
