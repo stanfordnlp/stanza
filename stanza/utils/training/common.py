@@ -126,8 +126,9 @@ def build_argparse():
     parser.add_argument('--score_dev', dest='mode', action='store_const', const=Mode.SCORE_DEV, help='Score the dev set')
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
 
-    # This argument needs to be here so we can identify if the model already exists in the user-specified home
+    # These arguments need to be here so we can identify if the model already exists in the user-specified home
     parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
+    parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
 
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
@@ -158,6 +159,8 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         command_args, extra_args = parser.parse_known_args()
 
     # Pass this through to the underlying model as well as use it here
+    # we don't put --save_name here for the awkward situation of
+    # --save_name being specified for an invocation with multiple treebanks
     if command_args.save_dir:
         extra_args.extend(["--save_dir", command_args.save_dir])
 
@@ -186,11 +189,26 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
 
+        if command_args.save_name:
+            save_name = command_args.save_name
+            if len(treebanks) > 1:
+                save_name_dir, save_name_filename = os.path.split(save_name)
+                save_name_filename = "%s_%s" % (short_name, save_name_filename)
+                save_name = os.path.join(save_name_dir, save_name_filename)
+                logger.info("Save file for %s model for %s: %s", short_name, save_name)
+        else:
+            save_name = "%s_%s.pt" % (short_name, model_name)
+            logger.info("Save file for %s model: %s", short_name, save_name)
+        save_name_args = ['--save_name', save_name]
+
         if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
             if command_args.save_dir:
-                model_path = "%s/%s_%s.pt" % (command_args.save_dir, short_name, model_name)
+                model_path = os.path.join(command_args.save_dir, save_name)
             else:
-                model_path = "saved_models/%s/%s_%s.pt" % (model_dir, short_name, model_name)
+                save_dir = os.path.join("saved_models", model_dir)
+                save_name_args.extend(["--save_dir", save_dir])
+                model_path = os.path.join(save_dir, save_name)
+
             if os.path.exists(model_path):
                 logger.info("%s: %s exists, skipping!" % (treebank, model_path))
                 continue
@@ -200,10 +218,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         if command_args.temp_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
                 run_treebank(mode, paths, treebank, short_name,
-                             temp_output_file.name, command_args, extra_args)
+                             temp_output_file.name, command_args, extra_args + save_name_args)
         else:
             run_treebank(mode, paths, treebank, short_name,
-                         None, command_args, extra_args)
+                         None, command_args, extra_args + save_name_args)
 
 def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
     """ Wrapper for lemma scorer. """
