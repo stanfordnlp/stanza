@@ -89,7 +89,14 @@ def parse_args(args=None):
     parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
     parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
 
+    parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
+    parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
     args = parser.parse_args(args=args)
+
+    if args.wandb_name:
+        args.wandb = True
+
     return args
 
 def main(args=None):
@@ -162,18 +169,30 @@ def train(args):
     best_dev_score = -1
     best_dev_step = -1
 
+    if args['wandb']:
+        import wandb
+        wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_tokenizer" % args['shorthand']
+        wandb.init(name=wandb_name)
+        wandb.run.define_metric('train_loss', summary='min')
+        wandb.run.define_metric('dev_score', summary='max')
+
+
     for step in range(1, steps+1):
         batch = train_batches.next(unit_dropout=args['unit_dropout'], feat_unit_dropout = args['feat_unit_dropout'])
 
         loss = trainer.update(batch)
         if step % args['report_steps'] == 0:
             logger.info("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
+            if args['wandb']:
+                wandb.log({'train_loss': loss}, step=step)
 
         if args['shuffle_steps'] > 0 and step % args['shuffle_steps'] == 0:
             train_batches.shuffle()
 
         if step % args['eval_steps'] == 0:
             dev_score = eval_model(args, trainer, dev_batches, vocab, mwt_dict)
+            if args['wandb']:
+                wandb.log({'dev_score': dev_score}, step=step)
             reports = ['Dev score: {:6.3f}'.format(dev_score * 100)]
             if step >= args['anneal_after'] and dev_score < prev_dev_score:
                 reports += ['lr: {:.6f} -> {:.6f}'.format(lr, lr * args['anneal'])]
@@ -193,6 +212,9 @@ def train(args):
                 break
 
             logger.info('\t'.join(reports))
+
+    if args['wandb']:
+        wandb.finish()
 
     if best_dev_step > -1:
         logger.info('Best dev score={} at step {}'.format(best_dev_score, best_dev_step))

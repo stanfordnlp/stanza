@@ -77,7 +77,14 @@ def parse_args(args=None):
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
+    parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
+    parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
     args = parser.parse_args(args=args)
+
+    if args.wandb_name:
+        args.wandb = True
+
     return args
 
 def main(args=None):
@@ -144,6 +151,13 @@ def train(args):
         # save dictionaries
         trainer.save(model_file)
     else:
+        if args['wandb']:
+            import wandb
+            wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_lemmatizer" % args['lang']
+            wandb.init(name=wandb_name)
+            wandb.run.define_metric('train_loss', summary='min')
+            wandb.run.define_metric('dev_score', summary='max')
+
         # train a seq2seq model
         logger.info("[Training seq2seq-based lemmatizer...]")
         global_step = 0
@@ -189,6 +203,9 @@ def train(args):
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
             logger.info("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
+            if args['wandb']:
+                wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
+
             # save best model
             if epoch == 1 or dev_score > max(dev_score_history):
                 trainer.save(model_file)
@@ -205,6 +222,9 @@ def train(args):
             logger.info("")
 
         logger.info("Training ended with {} epochs.".format(epoch))
+
+        if args['wandb']:
+            wandb.finish()
 
         best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         logger.info("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))

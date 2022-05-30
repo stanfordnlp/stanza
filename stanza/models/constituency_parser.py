@@ -381,6 +381,10 @@ def parse_args(args=None):
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 
+    parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
+    parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    parser.add_argument('--wandb_norm_regex', default=None, help='Log on wandb any tensor whose norm matches this matrix.  Might get cluttered?')
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
@@ -392,6 +396,9 @@ def parse_args(args=None):
         args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
     if args.weight_decay is None:
         args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if args.wandb_name or args.wandb_norm_regex:
+        args.wandb = True
 
     args = vars(args)
 
