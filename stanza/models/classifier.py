@@ -178,7 +178,13 @@ def parse_args(args=None):
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
 
+    parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
+    parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
     args = parser.parse_args(args)
+
+    if args.wandb_name:
+        args.wandb = True
 
     return args
 
@@ -326,10 +332,12 @@ def score_dev_set(model, dev_set, dev_eval_scoring):
     logger.info("Dev set: %d correct of %d examples.  Accuracy: %f" %
                 (correct, len(dev_set), correct / len(dev_set)))
     logger.info("Macro f1: {}".format(macro_f1))
+
+    accuracy = correct / total
     if dev_eval_scoring is DevScoring.ACCURACY:
-        return correct / total
+        return accuracy, accuracy, macro_f1
     elif dev_eval_scoring is DevScoring.WEIGHTED_F1:
-        return macro_f1
+        return macro_f1, accuracy, macro_f1
     else:
         raise ValueError("Unknown scoring method {}".format(dev_eval_scoring))
 
@@ -398,13 +406,23 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     best_score = 0
     if args.load_name:
         # We reloaded the model, so let's report its current dev set score
-        best_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        best_score, _, _ = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
 
     log_param_sizes(model)
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
     batch_starts = list(range(0, len(train_set), args.batch_size))
+
+    if args.wandb:
+        import wandb
+        wandb_name = args.wandb_name if args.wandb_name else "%s_classifier" % args.shorthand
+        wandb.init(name=wandb_name)
+        wandb.run.define_metric('accuracy', summary='max')
+        wandb.run.define_metric('macro_f1', summary='max')
+        wandb.run.define_metric('epoch_loss', summary='min')
+
+    global_step = 0
 
     for epoch in range(args.max_epochs):
         running_loss = 0.0
@@ -413,7 +431,9 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         model.train()
         random.shuffle(batch_starts)
         for batch_num, start_batch in enumerate(batch_starts):
-            logger.debug("Starting batch: %d" % start_batch)
+            global_step += 1
+            logger.debug("Starting batch: %d step %d", start_batch, global_step)
+
             batch = shuffled[start_batch:start_batch+args.batch_size]
             text = [x[1] for x in batch]
             label = torch.stack([label_tensors[x[0]] for x in batch])
@@ -429,12 +449,17 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             # print statistics
             running_loss += batch_loss.item()
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
+                train_loss = running_loss / 2000
                 logger.info('[%d, %5d] Average loss: %.3f' %
-                            (epoch + 1, ((batch_num + 1) * args.batch_size), running_loss / 2000))
+                            (epoch + 1, ((batch_num + 1) * args.batch_size), train_loss))
+                if args.wandb:
+                    wandb.log({'train_loss': train_loss}, step=global_step)
                 if (args.dev_eval_steps > 0 and
                     ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
                     logger.info('---- Interim analysis ----')
-                    dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+                    dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
+                    if args.wandb:
+                        wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1}, step=global_step)
                     if best_score is None or dev_score > best_score:
                         best_score = dev_score
                         cnn_classifier.save(model_file, model)
@@ -446,7 +471,9 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         epoch_loss += running_loss
 
         logger.info("Finished epoch %d  Total loss %.3f" % (epoch + 1, epoch_loss))
-        dev_score = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        if args.wandb:
+            wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1, 'epoch_loss': epoch_loss}, step=global_step)
         if args.save_intermediate_models:
             checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
             cnn_classifier.save(checkpoint_file, model)
@@ -455,6 +482,8 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             cnn_classifier.save(model_file, model)
             logger.info("Saved new best score model!")
 
+    if args.wandb:
+        wandb.finish()
 
 def load_pretrain(args):
     if args.wordvec_pretrain_file:

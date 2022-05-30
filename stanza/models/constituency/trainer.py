@@ -360,6 +360,14 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
         kbest = args['num_generate'] + 1
     else:
         kbest = None
+
+    if args['wandb']:
+        global wandb
+        import wandb
+        wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_constituency" % args['shorthand']
+        wandb.init(name=wandb_name)
+        wandb.run.define_metric('dev_score', summary='max')
+
     with EvaluateParser(kbest=kbest) as evaluator:
         utils.ensure_dir(args['save_dir'])
 
@@ -386,6 +394,9 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
         trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer)
 
         iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, evaluator)
+
+    if args['wandb']:
+        wandb.finish()
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
@@ -467,6 +478,15 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
         if model_latest_filename:
             trainer.save(model_latest_filename, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1))
+
+        if args['wandb']:
+            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=epoch)
+            if args['wandb_norm_regex']:
+                watch_regex = re.compile(args['wandb_norm_regex'])
+                for n, p in model.named_parameters():
+                    if watch_regex.search(n):
+                        wandb.log({n: torch.linalg.norm(p)})
+
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))

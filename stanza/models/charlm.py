@@ -101,7 +101,15 @@ def parse_args(args=None):
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
     parser.add_argument('--seed', type=int, default=1234)
+
+    parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
+    parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
     args = parser.parse_args(args=args)
+
+    if args.wandb_name:
+        args.wandb = True
+
     return args
 
 def main(args=None):
@@ -212,6 +220,13 @@ def train(args):
     if args['eval_steps'] > 0:
         eval_within_epoch = True
 
+    if args['wandb']:
+        import wandb
+        wandb_name = args['wandb_name'] if args['wandb_name'] else '%s_%s_charlm' % (args['shorthand'], args['direction'])
+        wandb.init(name=wandb_name)
+        wandb.run.define_metric('best_loss', summary='min')
+        wandb.run.define_metric('ppl', summary='min')
+
     best_loss = None
     global_step = 0
     for epoch in range(1,args['epochs']+1):
@@ -270,6 +285,8 @@ def train(args):
                             math.exp(cur_loss),
                         )
                     )
+                    if args['wandb']:
+                        wandb.log({'train_loss': cur_loss}, step=global_step)
                     total_loss = 0.0
 
                 iteration += 1
@@ -277,16 +294,22 @@ def train(args):
 
                 # evaluate if necessary
                 if eval_within_epoch and global_step % args['eval_steps'] == 0:
-                    _, _, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
-                        global_step, model_file, writer)
+                    _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
+                                                          global_step, model_file, writer)
+                    if args['wandb']:
+                        wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
 
         # if eval_interval isn't provided, run evaluation after each epoch
         if not eval_within_epoch:
-            _, _, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
-                        epoch, model_file, writer) # use epoch in place of global_step for logging
+            _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
+                                                  epoch, model_file, writer) # use epoch in place of global_step for logging
+            if args['wandb']:
+                wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
 
     if writer:
         writer.close()
+    if args['wandb']:
+        wandb.finish()
     return
 
 def evaluate(args):
