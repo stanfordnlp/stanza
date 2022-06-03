@@ -151,7 +151,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
-BAD_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased', 'google/muril-base-cased')
+BAD_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased', 'google/muril-base-cased', 'l3cube-pune/marathi-roberta')
 
 def fix_german_tokens(tokenizer, data):
     """
