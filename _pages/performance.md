@@ -146,6 +146,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Arabic | AQMAR | 4 | 74.3 |
 | Bulgarian *New in 1.2.1* | BSNLP 2019 | 5 | 83.21 |
 | Chinese | OntoNotes | 18 | 79.2 |
+| Danish *New in 1.4.0* | DDT | 4 | 80.95 |
 | Dutch | CoNLL02 | 4 | 89.2 |
 | Dutch | WikiNER | 4 | 94.8 |
 | English | CoNLL03 | 4 | 92.1 |
@@ -156,10 +157,17 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | German | GermEval2014 | 4 | 85.2 |
 | Hungarian *New in 1.2.1* | Combined | 4 | - |
 | Italian *New in 1.2.3* | FBK | 3 | 87.92 |
+| Japanese *New in 1.4.0* | GSD | 22 | 81.01 |
 | Myanmar *New in 1.4.0* | UCSY | 7 | 95.86 |
+| Norwegian-Bokmaal *New in 1.4.0* | Norne | 8 | 84.79 |
+| Norwegian-Nynorsk *New in 1.4.0* | Norne | 8 | 80.16 |
+| Persian *New in 1.4.0* | Arman | 6 | 80.07 |
 | Russian | WikiNER | 4 | 92.9 |
 | Spanish | CoNLL02 | 4 | 88.1 |
 | Spanish | AnCora | 4 | 88.6 |
+| Swedish *New in 1.4.0* | SUC3 (shuffled) | 8 | 85.66 |
+| Swedish *New in 1.4.0* | SUC3 (licensed) | 8 | 82.54 |
+| Turkish *New in 1.4.0* | Starlang | 5 | 81.65 |
 | Ukrainian | languk | 4 | 86.05 |
 | Vietnamese *New in 1.2.1* | VLSP | 4 | 82.44 |
 
@@ -179,6 +187,8 @@ We have provided links to all NER datasets used to train the released models on 
 - **Italian**: The Italian FBK dataset was licensed to us from [FBK](https://dh.fbk.eu/).  Paccosi T. and Palmero Aprosio A.  KIND: an Italian Multi-Domain Dataset for Named Entity Recognition.  LREC 2022
 
 - **Myanmar**: The Myanmar dataset is by special request from [UCSY](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf).
+
+- **Swedish**: The [SUC3 dataset] has two versions, one with the entries shuffled and another using the original ordering of the data.  We make the shuffled version the default in order to expand the coverage of the model.
 
 - **Vietnamese**: The Vietnamese VLSP dataset is available by [request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
 
