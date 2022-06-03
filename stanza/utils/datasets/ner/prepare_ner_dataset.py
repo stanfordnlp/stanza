@@ -214,6 +214,18 @@ The UD Japanese GSD dataset has a conversion by Megagon Labs
       $NERBASE/ja_gsd/UD_Japanese-GSD-r2.9-NE
     prepare_ner_dataset.py ja_gsd
 
+L3Cube is a Marathi dataset
+  - https://arxiv.org/abs/2204.06029
+    https://arxiv.org/pdf/2204.06029.pdf
+    https://github.com/l3cube-pune/MarathiNLP
+  - L3Cube-MahaNER: A Marathi Named Entity Recognition Dataset and BERT models
+    Parth Patil, Aparna Ranade, Maithili Sabane, Onkar Litake, Raviraj Joshi
+
+  Clone the repo into $NERBASE
+    git clone git@github.com:l3cube-pune/MarathiNLP.git
+  Then run
+    prepare_ner_dataset.py mr_l3cube
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -237,6 +249,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
@@ -843,6 +856,18 @@ def process_hinercollapsed(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
+def process_mr_l3cube(paths, short_name):
+    base_output_path = paths["NER_DATA_DIR"]
+    in_directory = os.path.join(paths["NERBASE"], "MarathiNLP", "L3Cube-MahaNER", "IOB")
+    input_files = ["train_iob.txt", "valid_iob.txt", "test_iob.txt"]
+    input_files = [os.path.join(in_directory, x) for x in input_files]
+    for input_file in input_files:
+        if not os.path.exists(input_file):
+            raise FileNotFoundError("Could not find the expected piece of the l3cube dataset %s" % input_file)
+
+    datasets = [convert_mr_l3cube.convert(input_file) for input_file in input_files]
+    write_dataset(datasets, base_output_path, short_name)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -862,6 +887,7 @@ DATASET_MAPPING = {
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
+    "mr_l3cube":         process_mr_l3cube,
 }
 
 def main(dataset_name):
