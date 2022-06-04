@@ -96,14 +96,16 @@ def get_ptb_tokenized_phrases(fragments):
     phrases = [Fragment(x.sentiment, y.split()) for x, y in zip(fragments, tokenized)]
     return phrases
 
-def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping):
+def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False):
     """
     Read in a single CSV file and return a list of fragments
     """
     nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
 
     with open(csv_filename, newline='') as fin:
-        cin = csv.reader(fin, delimiter='\t', quotechar=None)
+        if skip_first_line:
+            next(fin)
+        cin = csv.reader(fin, delimiter=delimiter, quotechar=quotechar)
         lines = list(cin)
 
     # Read in the data and parse it
@@ -111,7 +113,7 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
     for idx, line in enumerate(tqdm(lines)):
         sentiment = line[sentiment_column]
         text = line[text_column]
-        doc = nlp(text)
+        doc = nlp(text.strip())
 
         sentiment = mapping.get(sentiment.lower(), None)
         if sentiment is None:
