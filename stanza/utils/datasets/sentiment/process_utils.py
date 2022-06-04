@@ -61,8 +61,7 @@ def clean_tokenized_tweet(line):
     for i in range(len(line)):
         if line[i][0] == '@' or line[i][0] == '#':
             line[i] = line[i][1:]
-        if line[i].startswith("http:") or line[i].startswith("https:"):
-            line[i] = ' '
+    line = [x for x in line if x and not x.startswith("http:") and not x.startswith("https:")]
     return line
 
 def get_ptb_tokenized_phrases(fragments):
