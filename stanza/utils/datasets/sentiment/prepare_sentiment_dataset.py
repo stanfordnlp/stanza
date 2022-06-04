@@ -133,6 +133,23 @@ def convert_vi_vsfc(paths, dataset_name):
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_vsfc_vietnamese.main(in_directory, out_directory, dataset_name)
 
+def convert_mr_l3cube(paths, dataset_name):
+    # csv_filename = 'extern_data/sentiment/MarathiNLP/L3CubeMahaSent Dataset/tweets-train.csv'
+    MAPPING = {"-1": "0", "0": "1", "1": "2"}
+
+    out_directory = paths['SENTIMENT_DATA_DIR']
+    os.makedirs(out_directory, exist_ok=True)
+
+    in_directory = os.path.join(paths['SENTIMENT_BASE'], "MarathiNLP", "L3CubeMahaSent Dataset")
+    input_files = ['tweets-train.csv', 'tweets-valid.csv', 'tweets-test.csv']
+    input_files = [os.path.join(in_directory, x) for x in input_files]
+    datasets = [process_utils.read_snippets(csv_filename, sentiment_column=1, text_column=0, tokenizer_language="mr", mapping=MAPPING, delimiter=',', quotechar='"', skip_first_line=True)
+                for csv_filename in input_files]
+
+    for snippets, shard in zip(datasets, SHARDS):
+        process_utils.write_list(os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard)), snippets)
+
+
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
     out_directory = paths['SENTIMENT_DATA_DIR']
@@ -148,6 +165,8 @@ DATASET_MAPPING = {
     "en_sst3roots": convert_sst3roots,
     "en_sstplus":   convert_sstplus,
     "en_meld":      convert_meld,
+
+    "mr_l3cube":    convert_mr_l3cube,
 
     "vi_vsfc":      convert_vi_vsfc,
 
