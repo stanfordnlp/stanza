@@ -25,6 +25,7 @@ import random
 import sys
 
 from enum import Enum
+from tqdm import tqdm
 
 import stanza
 
@@ -45,14 +46,11 @@ def read_snippets(csv_filename, sentiment_column, text_column):
 
     # Read in the data and parse it
     snippets = []
-    for line in lines:
+    for line in tqdm(lines):
         sentiment = line[sentiment_column]
         text = line[text_column]
         doc = nlp(text)
 
-        #if sentiment.lower() == 'unknown':
-        #    continue
-        #el
         if sentiment.lower() == 'positive':
             sentiment = "2"
         elif sentiment.lower() == 'neutral':
