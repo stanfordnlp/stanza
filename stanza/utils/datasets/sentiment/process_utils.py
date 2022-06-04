@@ -6,6 +6,10 @@ import tempfile
 
 from collections import namedtuple
 
+from tqdm import tqdm
+
+import stanza
+
 Fragment = namedtuple('Fragment', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
@@ -91,4 +95,32 @@ def get_ptb_tokenized_phrases(fragments):
     tokenized = [x for x in tokenized if x]
     phrases = [Fragment(x.sentiment, y.split()) for x, y in zip(fragments, tokenized)]
     return phrases
+
+def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping):
+    """
+    Read in a single CSV file and return a list of fragments
+    """
+    nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
+
+    with open(csv_filename, newline='') as fin:
+        cin = csv.reader(fin, delimiter='\t', quotechar=None)
+        lines = list(cin)
+
+    # Read in the data and parse it
+    snippets = []
+    for idx, line in enumerate(tqdm(lines)):
+        sentiment = line[sentiment_column]
+        text = line[text_column]
+        doc = nlp(text)
+
+        sentiment = mapping.get(sentiment.lower(), None)
+        if sentiment is None:
+            raise ValueError("Value {} not in mapping at line {} of {}".format(line[sentiment_column], idx, csv_filename))
+
+        text = []
+        for sentence in doc.sentences:
+            text.extend(token.text for token in sentence.tokens)
+        text = clean_tokenized_tweet(text)
+        snippets.append(Fragment(sentiment, text))
+    return snippets
 

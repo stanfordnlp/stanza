@@ -19,17 +19,11 @@ https://dl.acm.org/doi/pdf/10.1145/3038912.3052611
 """
 
 import argparse
-import csv
 import os
 import random
-import sys
 
 from enum import Enum
-from tqdm import tqdm
 
-import stanza
-
-from stanza.utils.datasets.sentiment.process_utils import Fragment
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 class Split(Enum):
@@ -37,35 +31,9 @@ class Split(Enum):
     TRAIN_DEV = 2
     TEST = 3
 
-def read_snippets(csv_filename, sentiment_column, text_column):
-    nlp = stanza.Pipeline('de', processors='tokenize')
-
-    with open(csv_filename, newline='') as fin:
-        cin = csv.reader(fin, delimiter='\t', quotechar=None)
-        lines = list(cin)
-
-    # Read in the data and parse it
-    snippets = []
-    for line in tqdm(lines):
-        sentiment = line[sentiment_column]
-        text = line[text_column]
-        doc = nlp(text)
-
-        if sentiment.lower() == 'positive':
-            sentiment = "2"
-        elif sentiment.lower() == 'neutral':
-            sentiment = "1"
-        elif sentiment.lower() == 'negative':
-            sentiment = "0"
-        else:
-            raise ValueError("Tell John he screwed up and this is why he can't have Mox Opal: {}".format(sentiment))
-
-        text = []
-        for sentence in doc.sentences:
-            text.extend(token.text for token in sentence.tokens)
-        text = process_utils.clean_tokenized_tweet(text)
-        snippets.append(Fragment(sentiment, text))
-    return snippets
+MAPPING = {'positive': "2",
+           'neutral': "1",
+           'negative': "0"}
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -80,7 +48,7 @@ def main(args=None):
 
     args = parser.parse_args(args=args)
 
-    snippets = read_snippets(args.csv_filename, args.sentiment_column, args.text_column)
+    snippets = process_utils.read_snippets(args.csv_filename, args.sentiment_column, args.text_column, 'de', MAPPING)
 
     print(len(snippets))
     random.shuffle(snippets)
