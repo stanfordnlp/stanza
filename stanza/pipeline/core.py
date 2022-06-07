@@ -185,6 +185,7 @@ class Pipeline:
 
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
             (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
+            logger.info("Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES")
             download_resources_json(self.dir,
                                     resources_url=resources_url,
                                     resources_branch=resources_branch,
