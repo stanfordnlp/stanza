@@ -1,11 +1,193 @@
-"""
-Prepare a single dataset or a combination dataset for the sentiment project
+"""Prepare a single dataset or a combination dataset for the sentiment project
 
 Manipulates various downloads from their original form to a form
 usable by the classifier model
 
-Notes on the individual datasets can be found in the relevant
-process_dataset script
+Explanations for the existing datasets are below.
+After processing the dataset, you can train with
+the run_sentiment script
+
+python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset <dataset>
+python3 -m stanza.utils.training.run_sentiment <dataset>
+
+English
+-------
+
+SST (Stanford Sentiment Treebank)
+  https://nlp.stanford.edu/sentiment/
+  https://github.com/stanfordnlp/sentiment-treebank
+  The git repo includes fixed tokenization and sentence splits, along
+    with a partial conversion to updated PTB tokenization standards.
+
+  The first step is to git clone the SST to here:
+    $SENTIMENT_BASE/sentiment-treebank
+  eg:
+    cd $SENTIMENT_BASE
+    git clone git@github.com:stanfordnlp/sentiment-treebank.git
+
+  There are a few different usages of SST.
+
+  The scores most commonly reported are for SST-2,
+    positive and negative only.
+  To get a version of this:
+
+    python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_sst2
+    python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_sst2roots
+
+  The model we distribute is a three class model (+, 0, -)
+    with some smaller datasets added for better coverage.
+    See "sstplus" below.
+
+MELD
+  https://github.com/SenticNet/MELD/tree/master/data/MELD
+  https://github.com/SenticNet/MELD
+  https://arxiv.org/pdf/1810.02508.pdf
+
+  MELD: A Multimodal Multi-Party Dataset for Emotion Recognition in Conversation. ACL 2019.
+  S. Poria, D. Hazarika, N. Majumder, G. Naik, E. Cambria, R. Mihalcea.
+
+  An Emotion Corpus of Multi-Party Conversations.
+  Chen, S.Y., Hsu, C.C., Kuo, C.C. and Ku, L.W.
+
+  Copy the three files in the repo into
+    $SENTIMENT_BASE/MELD
+  TODO: make it so you git clone the repo instead
+
+  There are train/dev/test splits, so you can build a model
+    out of just this corpus.  The first step is to convert
+    to the classifier data format:
+
+    python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_meld
+
+  However, in general we simply include this in the sstplus model
+    rather than releasing a separate model.
+
+Arguana
+  http://argumentation.bplaced.net/arguana/data
+  http://argumentation.bplaced.net/arguana-data/arguana-tripadvisor-annotated-v2.zip
+
+  http://argumentation.bplaced.net/arguana-publications/papers/wachsmuth14a-cicling.pdf
+  A Review Corpus for Argumentation Analysis.  CICLing 2014
+  Henning Wachsmuth, Martin Trenkmann, Benno Stein, Gregor Engels, Tsvetomira Palarkarska
+
+  Download the zip file and unzip it in
+    $SENTIMENT_BASE/arguana
+
+  This is included in the sstplus model.
+
+airline
+  A Kaggle corpus for sentiment detection on airline tweets.
+  We include this in sstplus as well.
+
+  https://www.kaggle.com/datasets/crowdflower/twitter-airline-sentiment
+
+  Download Tweets.csv and put it in
+    $SENTIMENT_BASE/airline
+
+SLSD
+  https://archive.ics.uci.edu/ml/datasets/Sentiment+Labelled+Sentences
+
+  From Group to Individual Labels using Deep Features.  KDD 2015
+  Kotzias et. al
+
+  Put the contents of the zip file in
+    $SENTIMENT_BASE/slsd
+
+  The sstplus model includes this as training data
+
+en_sstplus
+  This is a three class model built from SST, along with the additional
+    English data sources above for coverage of additional domains.
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_sstplus
+
+German
+------
+
+de_sb10k
+  This used to be here:
+    https://www.spinningbytes.com/resources/germansentiment/
+  Now it appears to have moved here?
+    https://github.com/oliverguhr/german-sentiment
+
+  https://dl.acm.org/doi/pdf/10.1145/3038912.3052611
+  Leveraging Large Amounts of Weakly Supervised Data for Multi-Language Sentiment Classification
+  WWW '17: Proceedings of the 26th International Conference on World Wide Web
+  Jan Deriu, Aurelien Lucchi, Valeria De Luca, Aliaksei Severyn,
+    Simon Müller, Mark Cieliebak, Thomas Hofmann, Martin Jaggi
+
+  The current prep script works on the old version of the data.
+  TODO: update to work on the git repo
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset de_sb10k
+
+de_scare
+  http://romanklinger.de/scare/
+
+  The Sentiment Corpus of App Reviews with Fine-grained Annotations in German
+  LREC 2016
+  Mario Sänger, Ulf Leser, Steffen Kemmerer, Peter Adolphs, and Roman Klinger
+
+  Download the data and put it in
+    $SENTIMENT_BASE/german/scare
+  There should be two subdirectories once you are done:
+    scare_v1.0.0
+    scare_v1.0.0_text
+
+  We wound up not including this in the default German model.
+  It might be worth revisiting in the future.
+
+de_usage
+  https://www.romanklinger.de/usagecorpus/
+
+  http://www.lrec-conf.org/proceedings/lrec2014/summaries/85.html
+  The USAGE Review Corpus for Fine Grained Multi Lingual Opinion Analysis
+  Roman Klinger and Philipp Cimiano
+
+  Again, not included in the default German model
+
+Chinese
+-------
+
+zh-hans_ren
+  This used to be here:
+  http://a1-www.is.tokushima-u.ac.jp/member/ren/Ren-CECps1.0/Ren-CECps1.0.html
+
+  That page doesn't seem to respond as of 2022, and I can't find it elsewhere.
+
+The following will be available starting in 1.4.1:
+
+Vietnamese
+----------
+
+vi_vsfc
+  I found a corpus labeled VSFC here:
+  https://drive.google.com/drive/folders/1xclbjHHK58zk2X6iqbvMPS2rcy9y9E0X
+  It doesn't seem to have a license or paper associated with it,
+  but happy to put those details here if relevant.
+
+  Download the files to
+    $SENTIMENT_BASE/vietnamese/_UIT-VSFC
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset vi_vsfc
+
+Marathi
+-------
+
+mr_l3cube
+  https://github.com/l3cube-pune/MarathiNLP
+
+  https://arxiv.org/abs/2103.11408
+  L3CubeMahaSent: A Marathi Tweet-based Sentiment Analysis Dataset
+  Atharva Kulkarni, Meet Mandhane, Manali Likhitkar, Gayatri Kshirsagar, Raviraj Joshi
+
+  git clone the repo in
+    $SENTIMENT_BASE
+
+  cd $SENTIMENT_BASE
+  git clone git@github.com:l3cube-pune/MarathiNLP.git
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset mr_l3cube
 """
 
 import os
