@@ -130,6 +130,7 @@ import torch
 
 from stanza import Pipeline
 from stanza.models.common import utils
+from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
 from stanza.models.constituency.parse_transitions import TransitionScheme
@@ -444,6 +445,10 @@ def main(args=None):
             lang = args['lang']
             package = args['retag_package']
         retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
+        if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
+            logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
+            args['retag_xpos'] = False
+            args['retag_method'] = 'upos'
     else:
         retag_pipeline = None
 
