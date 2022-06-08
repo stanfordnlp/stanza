@@ -52,9 +52,11 @@ class MixedTreeError(ValueError):
     """
     Leaf and constituent children are mixed in the same node
     """
-    def __init__(self, line_num):
-        super().__init__("Found a tree with both text children and bracketed children!  Line number %d" % line_num)
+    def __init__(self, line_num, child_label, children):
+        super().__init__("Found a tree with both text children and bracketed children!  Line number {}  Child label {}  Children {}".format(line_num, child_label, children))
         self.line_num = line_num
+        self.child_label = child_label
+        self.children = children
 
 def normalize(text):
     return text.replace("-LRB-", "(").replace("-RRB-", ")")
@@ -93,7 +95,7 @@ def read_single_tree(token_iterator, broken_ok):
                         if broken_ok:
                             child = Tree(label, children + [Tree(normalize(child_label))])
                         else:
-                            raise MixedTreeError(token_iterator.line_num)
+                            raise MixedTreeError(token_iterator.line_num, child_label, children)
                     else:
                         child = Tree(label, Tree(normalize(child_label)))
                 if not children_stack:
