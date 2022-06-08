@@ -262,6 +262,8 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     logger.info("Constituent node counts: %s", constituent_counts)
 
     tags = parse_tree.Tree.get_unique_tags(train_trees)
+    if None in tags:
+        raise RuntimeError("Fatal problem: the tagger put None on some of the nodes!")
     logger.info("Unique tags in training set: %s", tags)
     # no need to fail for missing tags between train/dev set
     # the model has an unknown tag embedding
