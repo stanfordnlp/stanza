@@ -75,7 +75,7 @@ Aside from the neural pipeline, Stanza also provides the official Python wrapper
 
 {% include alerts.html %}
 {{ note }}
-{{ "If you run into issues or bugs during installation or when you run Stanza, please check out [the FAQ page](faq.md). If you cannot find your issue there, please report it to us via [GitHub Issues](https://github.com/stanfordnlp/stanza/issues). For general questions on using Stanza, please ask on [Stack Overflow with the \[stanford-nlp\] tag](https://stackoverflow.com/questions/tagged/stanford-nlp)." | markdownify }}
+{{ "If you run into issues or bugs during installation or when you run Stanza, please check out [the FAQ page](faq.md). If you cannot find your issue there, please report it to us via [GitHub Issues](https://github.com/stanfordnlp/stanza/issues). A GitHub issue is also appropriate for asking general questions about using Stanza - please search the closed issues first!" | markdownify }}
 {{ end }}
 
 ## License
