@@ -26,6 +26,9 @@ class POSProcessor(UDProcessor):
         self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
         self._tqdm = 'tqdm' in config and config['tqdm']
 
+    def __str__(self):
+        return "POSProcessor(%s)" % self.config['model_path']
+
     def process(self, document):
         batch = DataLoader(
             document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
