@@ -251,6 +251,7 @@ default_sentiment = {
 default_constituency = {
     "da": "arboretum",
     "en": "wsj",
+    "es": "combined",
     "it": "turin",
     "ja": "alt",
     "pt": "cintil",
