@@ -139,7 +139,7 @@ def main():
                     print("  Setting model vocab to match the pretrain")
                     word_vocab = pt.vocab
                     vocab['word'] = word_vocab
-                    trainer.args['word_emb_dim'] = pt.emb.shape[0]
+                    trainer.args['word_emb_dim'] = pt.emb.shape[1]
                 break
             else:
                 print("  %d of %d vectors matched for %s - SKIPPING" % (num_matching, N, pt_path))
