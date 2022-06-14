@@ -307,6 +307,20 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
         logger.info("Loading model to continue training from %s", model_load_file)
         trainer = Trainer.load(model_load_file, pt, args, load_optimizer=True)
+    elif args['relearn_structure']:
+        logger.info("Loading model to continue training with new structure from %s", model_load_file)
+        temp_args = dict(args)
+        # remove the pattn & lattn layers unless the saved model had them
+        temp_args.pop('pattn_num_layers', None)
+        temp_args.pop('lattn_d_proj', None)
+        trainer = Trainer.load(model_load_file, pt, temp_args, load_optimizer=False)
+
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        if args['cuda']:
+            model.cuda()
+        model.copy_non_pattn_params(trainer.model)
+        optimizer = build_optimizer(args, model)
+        trainer = Trainer(args, model, optimizer)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:

@@ -2,9 +2,11 @@ import logging
 import tempfile
 
 import pytest
+import torch
 
 from stanza.models import constituency_parser
 from stanza.models.common import pretrain
+from stanza.models.common.utils import set_random_seed
 from stanza.models.constituency import lstm_model
 from stanza.models.constituency import trainer
 from stanza.models.constituency import tree_reader
@@ -54,8 +56,9 @@ def build_trainer(pt, *args, treebank=TREEBANK):
     args = constituency_parser.parse_args(args)
     forward_charlm = trainer.load_charlm(args['charlm_forward_file'])
     backward_charlm = trainer.load_charlm(args['charlm_backward_file'])
+    model_load_name = args['load_name']
 
-    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, None, None, None)
+    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, None, None, model_load_name)
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
@@ -88,3 +91,27 @@ class TestTrainer:
 
             # load it back in
             tr.load(filename, pt)
+
+    def test_relearn_structure(self, pt):
+        """
+        Test that starting a trainer with --relearn_structure copies the old model
+        """
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            set_random_seed(1000, False)
+            args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
+            tr = build_trainer(pt, *args)
+
+            # attempt saving
+            filename = os.path.join(tmpdirname, "parser.pt")
+            tr.save(filename)
+
+            set_random_seed(1001, False)
+            args = ['--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--relearn_structure', '--load_name', filename]
+            tr2 = build_trainer(pt, *args)
+
+            assert torch.allclose(tr.model.delta_embedding.weight, tr2.model.delta_embedding.weight)
+            assert torch.allclose(tr.model.output_layers[0].weight, tr2.model.output_layers[0].weight)
+            # the norms will be the same, as the non-zero values are all the same
+            assert torch.allclose(torch.linalg.norm(tr.model.word_lstm.weight_ih_l0), torch.linalg.norm(tr2.model.word_lstm.weight_ih_l0))
+            
