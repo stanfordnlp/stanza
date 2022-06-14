@@ -405,6 +405,24 @@ class LSTMModel(BaseModel, nn.Module):
         # word size + constituency size + transition size
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
 
+    def copy_non_pattn_params(self, other):
+        """
+        Copy parameters from the other model to this model
+
+        word_lstm can change size if the other model didn't use pattn / lattn and this one does
+        """
+        for name, other_parameter in other.named_parameters():
+            # bottom layer shape has changed because of the additional pattn
+            if not name.startswith('word_lstm.weight_ih_l0'):
+                self.get_parameter(name).data.copy_(other_parameter.data)
+            else:
+                my_parameter = self.get_parameter(name)
+                copy_size = min(other_parameter.data.shape[1], my_parameter.data.shape[1])
+                #new_values = my_parameter.data.clone().detach()
+                new_values = torch.zeros_like(my_parameter.data)
+                new_values[:, :copy_size] = other_parameter.data[:, :copy_size]
+                my_parameter.data.copy_(new_values)
+
     def build_output_layers(self, num_output_layers, final_layer_size):
         """
         Build a ModuleList of Linear transformations for the given num_output_layers

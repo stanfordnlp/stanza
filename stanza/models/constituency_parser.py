@@ -341,6 +341,7 @@ def parse_args(args=None):
                         help='How to build a new composition from its children.  {}'.format(", ".join(x.name for x in ConstituencyComposition)))
     parser.add_argument('--reduce_heads', default=8, type=int, help='Number of attn heads to use when reducing children into a parent tree (constituency_composition == attn)')
 
+    parser.add_argument('--relearn_structure', action='store_true', help='Starting from an existing checkpoint, add or remove pattn / lattn.  One thing that works well is to train an initial model using adadelta with no pattn, then add pattn with adamw')
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
     parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
