@@ -434,7 +434,10 @@ def main(args=None):
 
     model_load_file = model_save_file
     if args['load_name']:
-        model_load_file = os.path.join(args['save_dir'], args['load_name'])
+        if os.path.exists(args['load_name']):
+            model_load_file = args['load_name']
+        else:
+            model_load_file = os.path.join(args['save_dir'], args['load_name'])
     elif args['mode'] == 'train' and args['save_latest_name']:
         model_load_file = model_save_latest_file
 

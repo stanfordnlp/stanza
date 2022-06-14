@@ -248,7 +248,7 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
-def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer):
+def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
@@ -393,7 +393,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
         backward_charlm = load_charlm(args['charlm_backward_file'])
         bert_model, bert_tokenizer = load_bert(args['bert_model'])
 
-        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer)
+        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model_load_file)
 
         iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, evaluator)
 
