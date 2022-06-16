@@ -117,6 +117,20 @@ def build_optimizer(args, model):
         raise ValueError("Unknown optimizer: %s" % args['optim'])
     return optimizer
 
+def build_scheduler(args, optimizer):
+    if args.get('learning_rate_warmup', 0) <= 0:
+        # TODO: is there an easier way to make an empty scheduler?
+        lr_lambda = lambda x: 1.0
+    else:
+        warmup_end = args['learning_rate_warmup']
+        def lr_lambda(x):
+            if x >= warmup_end:
+                return 1.0
+            return x / warmup_end
+
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    return scheduler
+
 def initialize_linear(linear, nonlinearity, bias):
     """
     Initializes the bias to a positive value, hopefully preventing dead neurons
