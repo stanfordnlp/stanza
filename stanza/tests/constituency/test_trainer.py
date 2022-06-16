@@ -4,6 +4,8 @@ import tempfile
 import pytest
 import torch
 
+from stanza import Pipeline
+
 from stanza.models import constituency_parser
 from stanza.models.common import pretrain
 from stanza.models.common.utils import set_random_seed
@@ -56,6 +58,7 @@ def build_trainer(pt, *args, treebank=TREEBANK):
     args = constituency_parser.parse_args(args)
     forward_charlm = trainer.load_charlm(args['charlm_forward_file'])
     backward_charlm = trainer.load_charlm(args['charlm_backward_file'])
+    # might be None, unless we're testing loading an existing model
     model_load_name = args['load_name']
 
     model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, None, None, model_load_name)
@@ -64,8 +67,12 @@ def build_trainer(pt, *args, treebank=TREEBANK):
 
 class TestTrainer:
     @pytest.fixture(scope="class")
-    def pt(self):
-        return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+    def wordvec_file(self):
+        return f'{TEST_WORKING_DIR}/in/tiny_emb.xz'
+
+    @pytest.fixture(scope="class")
+    def pt(self, wordvec_file):
+        return pretrain.Pretrain(vec_filename=wordvec_file, save_to_file=False)
 
     def test_initial_model(self, pt):
         """
@@ -115,3 +122,39 @@ class TestTrainer:
             # the norms will be the same, as the non-zero values are all the same
             assert torch.allclose(torch.linalg.norm(tr.model.word_lstm.weight_ih_l0), torch.linalg.norm(tr2.model.word_lstm.weight_ih_l0))
             
+    def test_train(self, wordvec_file, pt):
+        """
+        Test the whole thing for a few iterations on the fake data
+
+        TODO: dir=TEST_WORKING_DIR
+        """
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            train_treebank_file = os.path.join(tmpdirname, "train.mrg")
+            with open(train_treebank_file, 'w', encoding='utf-8') as fout:
+                fout.write(TREEBANK)
+                fout.write(TREEBANK)
+
+            eval_treebank_file = os.path.join(tmpdirname, "eval.mrg")
+            with open(eval_treebank_file, 'w', encoding='utf-8') as fout:
+                fout.write(TREEBANK)
+
+            # let's not make the model huge...
+            args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10',
+                    '--wordvec_file', wordvec_file, '--data_dir', tmpdirname, '--save_dir', tmpdirname, '--save_name', 'test.pt',
+                    '--train_file', train_treebank_file, '--eval_file', eval_treebank_file,
+                    '--epochs', '5', '--epoch_size', '6', '--train_batch_size', '3',
+                    '--shorthand', 'en_test']
+            args = constituency_parser.parse_args(args)
+            # just in case we change the defaults in the future
+            args['wandb'] = None
+
+            save_name = os.path.join(args['save_dir'], args['save_name'])
+            assert not os.path.exists(save_name)
+            retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
+            trainer.train(args, save_name, None, None, retag_pipeline)
+
+            # check that the model can be loaded back
+            assert os.path.exists(save_name)
+            tr = trainer.Trainer.load(save_name, pt, load_optimizer=True)
+            assert tr.optimizer is not None
+            assert tr.scheduler is not None
