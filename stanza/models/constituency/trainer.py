@@ -32,7 +32,7 @@ from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
-from stanza.models.constituency.utils import retag_trees, build_optimizer
+from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -45,10 +45,11 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None):
+    def __init__(self, args, model, optimizer=None, scheduler=None):
         self.args = args
         self.model = model
         self.optimizer = optimizer
+        self.scheduler = scheduler
 
     def uses_xpos(self):
         return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
@@ -65,6 +66,7 @@ class Trainer:
         }
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
+            checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to %s", filename)
 
@@ -123,14 +125,19 @@ class Trainer:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
+
+            scheduler = build_scheduler(saved_args, optimizer)
+            if 'scheduler_state_dict' in checkpoint:
+                scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
             optimizer = None
+            scheduler = None
 
         logger.debug("-- MODEL CONFIG --")
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(args=saved_args, model=model, optimizer=optimizer)
+        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler)
 
 
 def load_pretrain(args):
@@ -320,7 +327,8 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
             model.cuda()
         model.copy_non_pattn_params(trainer.model)
         optimizer = build_optimizer(args, model)
-        trainer = Trainer(args, model, optimizer)
+        scheduler = build_scheduler(args, optimizer)
+        trainer = Trainer(args, model, optimizer, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
@@ -328,8 +336,9 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
 
         optimizer = build_optimizer(args, model)
+        scheduler = build_scheduler(args, optimizer)
 
-        trainer = Trainer(args, model, optimizer)
+        trainer = Trainer(args, model, optimizer, scheduler)
 
     return trainer, train_sequences, train_transitions
 
@@ -442,7 +451,6 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
     is to use the gold transition.
     """
     model = trainer.model
-    optimizer = trainer.optimizer
 
     # Somewhat unusual, but possibly related to the extreme variability in length of trees
     # Various experiments generally show about 0.5 F1 loss on various
@@ -510,6 +518,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     model = trainer.model
     optimizer = trainer.optimizer
+    scheduler = trainer.scheduler
 
     epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0)
 
@@ -521,6 +530,12 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
         optimizer.zero_grad()
 
         epoch_stats = epoch_stats + batch_stats
+
+    old_lr = scheduler.get_last_lr()[0]
+    scheduler.step()
+    new_lr = scheduler.get_last_lr()[0]
+    if old_lr != new_lr:
+        logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())

@@ -280,6 +280,8 @@ def parse_args(args=None):
     parser.add_argument('--learning_rho', default=0.9, type=float, help='Rho parameter in Adadelta')
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
 
+    parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
+
     # When using word_dropout and predict_dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:
     # 0.0: 0.9085
     # 0.2: 0.9165
