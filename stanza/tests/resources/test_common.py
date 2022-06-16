@@ -8,11 +8,12 @@ import tempfile
 
 import stanza
 from stanza.resources import common
+from stanza.tests import TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 def test_assert_file_exists():
-    with tempfile.TemporaryDirectory() as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         filename = os.path.join(test_dir, "test.txt")
         with pytest.raises(FileNotFoundError):
             common.assert_file_exists(filename)
@@ -33,7 +34,7 @@ def test_assert_file_exists():
 
 
 def test_download_tokenize_mwt():
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="ewt", verbose=False)
         pipeline = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package="ewt")
         assert isinstance(pipeline, stanza.Pipeline)
@@ -47,7 +48,7 @@ def test_download_non_default():
     The expectation is that an NER model will also download two charlm models.
     If that layout changes on purpose, this test will fail and will need to be updated
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes", verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
@@ -71,7 +72,7 @@ def test_download_two_models():
     will fail.  Best way to update it will be two different models
     which download two different charlms
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes", "anatem"]}, verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
@@ -86,7 +87,7 @@ def test_process_pipeline_parameters():
     """
     Test a few options for specifying which processors to load
     """
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         lang, model_dir, package, processors = common.process_pipeline_parameters("en", test_dir, None, "tokenize,pos")
         assert processors == {"tokenize": "default", "pos": "default"}
         assert package == None

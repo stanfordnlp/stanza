@@ -8,13 +8,14 @@ import shutil
 import tempfile
 
 import stanza
+from stanza.tests import TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
 def test_install_corenlp():
     # we do not reset the CORENLP_HOME variable since this may impact the 
     # client tests
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
 
         # the download method doesn't install over existing directories
         shutil.rmtree(test_dir)
@@ -32,14 +33,14 @@ def test_download_corenlp_models():
     model_name = "arabic"
     version = "4.2.2"
 
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download_corenlp_models(model=model_name, version=version, dir=test_dir)
 
         dest_file = os.path.join(test_dir, f"stanford-corenlp-{version}-models-{model_name}.jar")
         assert os.path.isfile(dest_file), "Downloaded model file not found."
 
 def test_download_tokenize_mwt():
-    with tempfile.TemporaryDirectory(dir=".") as test_dir:
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="ewt", verbose=False)
         pipeline = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package="ewt")
         assert isinstance(pipeline, stanza.Pipeline)
