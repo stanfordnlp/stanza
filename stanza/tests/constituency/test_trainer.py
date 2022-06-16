@@ -121,7 +121,7 @@ class TestTrainer:
             assert torch.allclose(tr.model.output_layers[0].weight, tr2.model.output_layers[0].weight)
             # the norms will be the same, as the non-zero values are all the same
             assert torch.allclose(torch.linalg.norm(tr.model.word_lstm.weight_ih_l0), torch.linalg.norm(tr2.model.word_lstm.weight_ih_l0))
-            
+
     def test_train(self, wordvec_file, pt):
         """
         Test the whole thing for a few iterations on the fake data
