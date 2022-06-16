@@ -87,7 +87,7 @@ class TestTrainer:
 
         Currently no test of the values themselves
         """
-        with tempfile.TemporaryDirectory() as tmpdirname:
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             tr = build_trainer(pt)
 
             # attempt saving
@@ -104,7 +104,7 @@ class TestTrainer:
         Test that starting a trainer with --relearn_structure copies the old model
         """
 
-        with tempfile.TemporaryDirectory() as tmpdirname:
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             set_random_seed(1000, False)
             args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
             tr = build_trainer(pt, *args)
@@ -125,10 +125,8 @@ class TestTrainer:
     def test_train(self, wordvec_file, pt):
         """
         Test the whole thing for a few iterations on the fake data
-
-        TODO: dir=TEST_WORKING_DIR
         """
-        with tempfile.TemporaryDirectory() as tmpdirname:
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             train_treebank_file = os.path.join(tmpdirname, "train.mrg")
             with open(train_treebank_file, 'w', encoding='utf-8') as fout:
                 fout.write(TREEBANK)
