@@ -45,11 +45,14 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None, scheduler=None):
+    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0):
         self.args = args
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
+        # keeping track of the epochs trained will be useful
+        # for adjusting the learning scheme
+        self.epochs_trained = epochs_trained
 
     def uses_xpos(self):
         return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
@@ -63,6 +66,7 @@ class Trainer:
             'args': self.args,
             'params': params,
             'model_type': 'LSTM',
+            'epochs_trained': self.epochs_trained,
         }
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
@@ -137,7 +141,9 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler)
+        epochs_trained = checkpoint.get('epochs_trained', -1)
+
+        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained)
 
 
 def load_pretrain(args):
@@ -536,6 +542,8 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     new_lr = scheduler.get_last_lr()[0]
     if old_lr != new_lr:
         logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
+
+    trainer.epochs_trained += 1
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
