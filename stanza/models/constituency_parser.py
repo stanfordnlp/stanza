@@ -186,8 +186,27 @@ def parse_args(args=None):
     # larger was more effective, up to a point
     parser.add_argument('--hidden_size', type=int, default=128, help="Size of the output layers for constituency stack and word queue")
 
-    parser.add_argument('--epochs', type=int, default=2000)
+    parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
+
+    # AdaDelta warmup for the conparser.  Motivation: AdaDelta results in
+    # higher scores overall, but learns 0s for the weights of the pattn and
+    # lattn layers.  AdamW learns weights for pattn, and the models are more
+    # accurate than models trained without pattn using AdamW, but the models
+    # are lower scores overall than the AdaDelta models.
+    #
+    # This improves that by first running AdaDelta, then switching.
+    #
+    # Now, if --multistage is set, run AdaDelta for half the epochs with no
+    # pattn or lattn.  Then start the specified optimizer for the rest of
+    # the time with the full model.  If pattn and lattn are both present,
+    # the model is 1/2 no attn, 1/4 pattn, 1/4 pattn and lattn
+    #
+    # Improvement on the WSJ dev set can be seen from 94.8 to 95.3
+    # when 4 layers of pattn are trained this way.
+    # More experiments to follow.
+    parser.add_argument('--multistage', action='store_true', help='1/2 epochs with adadelta no pattn or lattn, 1/4 with no lattn, 1/4 full model')
+    parser.add_argument('--no_multistage', dest='multistage', action='store_false', help="don't do the multistage learning")
 
     # 1 seems to be the most effective, but we should cross-validate
     parser.add_argument('--oracle_initial_epoch', type=int, default=1, help="Epoch where we start using the dynamic oracle to let the parser keep going with wrong decisions")
@@ -412,6 +431,9 @@ def parse_args(args=None):
         args['retag_xpos'] = False
     else:
         raise ValueError("Unknown retag method {}".format(xpos))
+
+    if args['multistage'] and (args['finetune'] or args['maybe_finetune'] or args['relearn_structure']):
+        raise ValueError('Learning multistage from a previously started model is not yet implemented.  TODO')
 
     return args
 

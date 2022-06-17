@@ -22,7 +22,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
+from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -33,6 +33,7 @@ from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser
 
 tqdm = utils.get_tqdm()
@@ -73,7 +74,6 @@ class Trainer:
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to %s", filename)
-
 
     @staticmethod
     def load(filename, args=None, load_optimizer=False, foundation_cache=None):
@@ -148,6 +148,10 @@ class Trainer:
 def load_pretrain_or_wordvec(args):
     """
     Loads a pretrain based on the paths in the arguments
+
+    TODO: put this functionality in the foundation_cache?
+    or maybe do this conversion before trying to load the pretrain?
+    currently this function is not used anywhere
     """
     pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
     if os.path.exists(pretrain_file):
@@ -260,7 +264,7 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
-def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model_load_file):
+def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
@@ -316,9 +320,15 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
+    # in the 'finetune' case, this will preload the models into foundation_cache
+    pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
+    forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
+    backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
+    bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
+
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
         logger.info("Loading model to continue training from %s", model_load_file)
-        trainer = Trainer.load(model_load_file, args, load_optimizer=True)
+        trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=foundation_cache)
     elif args['relearn_structure']:
         logger.info("Loading model to continue training with new structure from %s", model_load_file)
         temp_args = dict(args)
@@ -334,6 +344,29 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
         optimizer = build_optimizer(args, model)
         scheduler = build_scheduler(args, optimizer)
         trainer = Trainer(args, model, optimizer, scheduler)
+    elif args['multistage']:
+        # run adadelta over the model for half the time with no pattn or lattn
+        # training then switches to a different optimizer for the rest
+        # this works surprisingly well
+        logger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
+        temp_args = dict(args)
+        temp_args['optim'] = 'adadelta'
+        temp_args['learning_rate'] = DEFAULT_LEARNING_RATES['adadelta']
+        temp_args['learning_eps'] = DEFAULT_LEARNING_EPS['adadelta']
+        temp_args['learning_rho'] = DEFAULT_LEARNING_RHO
+        temp_args['weight_decay'] = DEFAULT_WEIGHT_DECAY['adadelta']
+        temp_args['epochs'] = args['epochs'] // 2
+        temp_args['learning_rate_warmup'] = 0
+        # remove the attention layers for the temporary model
+        temp_args['pattn_num_layers'] = 0
+        temp_args['lattn_d_proj'] = 0
+
+        temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
+        if args['cuda']:
+            temp_model.cuda()
+        temp_optim = build_optimizer(temp_args, temp_model)
+        scheduler = build_scheduler(args, temp_optim)
+        trainer = Trainer(temp_args, temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
@@ -416,14 +449,10 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
             dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        pt = load_pretrain_or_wordvec(args)
-        forward_charlm = load_charlm(args['charlm_forward_file'])
-        backward_charlm = load_charlm(args['charlm_backward_file'])
-        bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        foundation_cache = FoundationCache()
+        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file)
 
-        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model_load_file)
-
-        iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
+        iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
 
     if args['wandb']:
         wandb.finish()
@@ -440,7 +469,7 @@ class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 
         return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
 
 
-def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename, model_save_each_filename, evaluator):
+def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, foundation_cache, model_filename, model_latest_filename, model_save_each_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -521,6 +550,47 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
                     if watch_regex.search(n):
                         wandb.log({n: torch.linalg.norm(p)})
 
+        # don't redo the optimizer a second time if we're not changing the structure
+        if args['multistage'] and (epoch == args['epochs'] // 2 or
+                                   (epoch == args['epochs'] * 3 // 4 and LSTMModel.uses_lattn(args))):
+            # TODO: start counting epoch from trainer.epochs_trained for a previously trained model?
+
+            # we may be loading a save model from an earlier epoch if the scores stopped increasing
+            epochs_trained = trainer.epochs_trained
+
+            # when loading the model, let the saved model determine whether it has pattn or lattn
+            temp_args = dict(trainer.args)
+            temp_args.pop('pattn_num_layers', None)
+            temp_args.pop('lattn_d_proj', None)
+            trainer = Trainer.load(model_filename, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
+            logger.info("Previous best model was at epoch %d", trainer.epochs_trained)
+            # overwriting the old trainer & model will hopefully free memory
+            model = trainer.model
+
+            temp_args = dict(args)
+            # if we're halfway, only do pattn.  save lattn for next time
+            if epoch != args['epochs'] * 3 // 4:
+                logger.info("Switching from adadelta with the partial model to %s", args['optim'])
+                temp_args['lattn_d_proj'] = 0
+            pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
+            forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
+            backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
+            bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
+            new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
+            if args['cuda']:
+                new_model.cuda()
+            new_model.copy_non_pattn_params(model)
+
+            optimizer = build_optimizer(temp_args, new_model)
+            scheduler = build_scheduler(temp_args, optimizer)
+            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
+            model = new_model
+            if epoch == args['epochs'] * 3 // 4:
+                if model.label_attention_module is not None:
+                    logger.info("Model now includes lattn!")
+            else:
+                if model.partitioned_transformer_module is not None:
+                    logger.info("Model now includes pattn!")
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
