@@ -159,7 +159,7 @@ class TestTrainer:
             assert tr.scheduler is not None
             assert tr.epochs_trained >= 1
 
-            tr = trainer.Trainer.load(save_name, pt, load_optimizer=True)
+            tr = trainer.Trainer.load(latest_name, pt, load_optimizer=True)
             assert tr.optimizer is not None
             assert tr.scheduler is not None
             assert tr.epochs_trained == 5
