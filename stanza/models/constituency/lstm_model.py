@@ -277,7 +277,8 @@ class LSTMModel(BaseModel, nn.Module):
             self.word_input_size = self.word_input_size + self.bert_dim
 
         self.partitioned_transformer_module = None
-        if self.args['pattn_num_heads'] > 0 and self.args['pattn_num_layers'] > 0:
+        self.pattn_d_model = 0
+        if LSTMModel.uses_pattn(self.args):
             # Initializations of parameters for the Partitioned Attention
             # round off the size of the model so that it divides in half evenly
             self.pattn_d_model = self.args['pattn_d_model'] // 2 * 2
@@ -302,7 +303,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.word_input_size += self.pattn_d_model
 
         self.label_attention_module = None
-        if self.args.get('lattn_d_proj', 0) > 0 and self.args.get('lattn_d_l', 0) > 0:
+        if LSTMModel.uses_lattn(self.args):
             if self.partitioned_transformer_module is None:
                 logger.error("Not using Labeled Attention, as the Partitioned Attention module is not used")
             else:
@@ -404,6 +405,14 @@ class LSTMModel(BaseModel, nn.Module):
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
+
+    @staticmethod
+    def uses_lattn(args):
+        return args.get('lattn_d_proj', 0) > 0 and args.get('lattn_d_l', 0) > 0
+
+    @staticmethod
+    def uses_pattn(args):
+        return args['pattn_num_heads'] > 0 and args['pattn_num_layers'] > 0
 
     def copy_non_pattn_params(self, other):
         """
