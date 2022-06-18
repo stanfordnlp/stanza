@@ -13,24 +13,24 @@ from stanza.tests.constituency.test_trainer import build_trainer
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 @pytest.fixture(scope="module")
-def pt():
-    return pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+def pretrain_file():
+    return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-def build_model(pt, *args):
-    trainer = build_trainer(pt, *args)
+def build_model(pretrain_file, *args):
+    trainer = build_trainer(pretrain_file, *args)
     return trainer.model
 
 @pytest.fixture(scope="module")
-def unary_model(pt):
-    return build_model(pt, "--transition_scheme", "TOP_DOWN_UNARY")
+def unary_model(pretrain_file):
+    return build_model(pretrain_file, "--transition_scheme", "TOP_DOWN_UNARY")
 
 def test_initial_state(unary_model):
     test_parse_transitions.test_initial_state(unary_model)
 
-def test_shift(pt):
+def test_shift(pretrain_file):
     # TODO: might be good to include some tests specifically for shift
     # in the context of a model with unaries
-    model = build_model(pt)
+    model = build_model(pretrain_file)
     test_parse_transitions.test_shift(model)
 
 def test_unary(unary_model):
@@ -42,12 +42,12 @@ def test_unary_requires_root(unary_model):
 def test_open(unary_model):
     test_parse_transitions.test_open(unary_model)
 
-def test_compound_open(pt):
-    model = build_model(pt, '--transition_scheme', "TOP_DOWN_COMPOUND")
+def test_compound_open(pretrain_file):
+    model = build_model(pretrain_file, '--transition_scheme', "TOP_DOWN_COMPOUND")
     test_parse_transitions.test_compound_open(model)
 
-def test_in_order_open(pt):
-    model = build_model(pt, '--transition_scheme', "IN_ORDER")
+def test_in_order_open(pretrain_file):
+    model = build_model(pretrain_file, '--transition_scheme', "IN_ORDER")
     test_parse_transitions.test_in_order_open(model)
 
 def test_close(unary_model):
@@ -91,7 +91,7 @@ def run_forward_checks(model, num_states=1):
 
     model(states)
 
-def test_unary_forward(pt, unary_model):
+def test_unary_forward(unary_model):
     """
     Checks that the forward pass doesn't crash when run after various operations
 
@@ -99,63 +99,63 @@ def test_unary_forward(pt, unary_model):
     """
     run_forward_checks(unary_model)
 
-def test_lstm_forward(pt):
-    model = build_model(pt)
+def test_lstm_forward(pretrain_file):
+    model = build_model(pretrain_file)
     run_forward_checks(model, num_states=1)
     run_forward_checks(model, num_states=2)
 
-def test_lstm_layers(pt):
-    model = build_model(pt, '--num_lstm_layers', '1')
+def test_lstm_layers(pretrain_file):
+    model = build_model(pretrain_file, '--num_lstm_layers', '1')
     run_forward_checks(model)
-    model = build_model(pt, '--num_lstm_layers', '2')
+    model = build_model(pretrain_file, '--num_lstm_layers', '2')
     run_forward_checks(model)
-    model = build_model(pt, '--num_lstm_layers', '3')
+    model = build_model(pretrain_file, '--num_lstm_layers', '3')
     run_forward_checks(model)
 
-def test_multiple_output_forward(pt):
+def test_multiple_output_forward(pretrain_file):
     """
     Test a couple different sizes of output layers
     """
-    model = build_model(pt, '--num_output_layers', '1', '--num_lstm_layers', '2')
+    model = build_model(pretrain_file, '--num_output_layers', '1', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
-    model = build_model(pt, '--num_output_layers', '2', '--num_lstm_layers', '2')
+    model = build_model(pretrain_file, '--num_output_layers', '2', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
-    model = build_model(pt, '--num_output_layers', '3', '--num_lstm_layers', '2')
+    model = build_model(pretrain_file, '--num_output_layers', '3', '--num_lstm_layers', '2')
     run_forward_checks(model)
 
-def test_no_tag_embedding_forward(pt):
+def test_no_tag_embedding_forward(pretrain_file):
     """
     Test that the model continues to work if the tag embedding is turned on or off
     """
-    model = build_model(pt, '--tag_embedding_dim', '20')
+    model = build_model(pretrain_file, '--tag_embedding_dim', '20')
     run_forward_checks(model)
 
-    model = build_model(pt, '--tag_embedding_dim', '0')
+    model = build_model(pretrain_file, '--tag_embedding_dim', '0')
     run_forward_checks(model)
 
-def test_forward_combined_dummy(pt):
+def test_forward_combined_dummy(pretrain_file):
     """
     Tests combined dummy and open node embeddings
     """
-    model = build_model(pt, '--combined_dummy_embedding')
+    model = build_model(pretrain_file, '--combined_dummy_embedding')
     run_forward_checks(model)
 
-    model = build_model(pt, '--no_combined_dummy_embedding')
+    model = build_model(pretrain_file, '--no_combined_dummy_embedding')
     run_forward_checks(model)
 
-def test_nonlinearity_init(pt):
+def test_nonlinearity_init(pretrain_file):
     """
     Tests that different initialization methods of the nonlinearities result in valid tensors
     """
-    model = build_model(pt, '--nonlinearity', 'relu')
+    model = build_model(pretrain_file, '--nonlinearity', 'relu')
     run_forward_checks(model)
 
-    model = build_model(pt, '--nonlinearity', 'tanh')
+    model = build_model(pretrain_file, '--nonlinearity', 'tanh')
     run_forward_checks(model)
 
-def test_forward_charlm(pt):
+def test_forward_charlm(pretrain_file):
     """
     Tests loading and running a charlm
 
@@ -167,99 +167,99 @@ def test_forward_charlm(pt):
     assert os.path.exists(forward_charlm_path), "Need to download en test models (or update path to the forward charlm)"
     assert os.path.exists(backward_charlm_path), "Need to download en test models (or update path to the backward charlm)"
 
-    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'none')
+    model = build_model(pretrain_file, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
 
-    model = build_model(pt, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'words')
+    model = build_model(pretrain_file, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'words')
     run_forward_checks(model)
 
-def test_forward_sentence_boundaries(pt):
+def test_forward_sentence_boundaries(pretrain_file):
     """
     Test start & stop boundary vectors
     """
-    model = build_model(pt, '--sentence_boundary_vectors', 'everything')
+    model = build_model(pretrain_file, '--sentence_boundary_vectors', 'everything')
     run_forward_checks(model)
 
-    model = build_model(pt, '--sentence_boundary_vectors', 'words')
+    model = build_model(pretrain_file, '--sentence_boundary_vectors', 'words')
     run_forward_checks(model)
 
-    model = build_model(pt, '--sentence_boundary_vectors', 'none')
+    model = build_model(pretrain_file, '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
 
-def test_forward_constituency_composition(pt):
+def test_forward_constituency_composition(pretrain_file):
     """
     Test different constituency composition functions
     """
-    model = build_model(pt, '--constituency_composition', 'bilstm')
+    model = build_model(pretrain_file, '--constituency_composition', 'bilstm')
     run_forward_checks(model, num_states=2)
 
-    model = build_model(pt, '--constituency_composition', 'max')
+    model = build_model(pretrain_file, '--constituency_composition', 'max')
     run_forward_checks(model, num_states=2)
 
-    model = build_model(pt, '--constituency_composition', 'bilstm_max')
+    model = build_model(pretrain_file, '--constituency_composition', 'bilstm_max')
     run_forward_checks(model, num_states=2)
 
-    model = build_model(pt, '--constituency_composition', 'bigram')
+    model = build_model(pretrain_file, '--constituency_composition', 'bigram')
     run_forward_checks(model, num_states=2)
 
-    model = build_model(pt, '--constituency_composition', 'attn')
+    model = build_model(pretrain_file, '--constituency_composition', 'attn')
     run_forward_checks(model, num_states=2)
 
-def test_forward_attn_hidden_size(pt):
+def test_forward_attn_hidden_size(pretrain_file):
     """
     Test that when attn is used with hidden sizes not evenly divisible by reduce_heads, the model reconfigures the hidden_size
     """
-    model = build_model(pt, '--constituency_composition', 'attn', '--hidden_size', '129')
+    model = build_model(pretrain_file, '--constituency_composition', 'attn', '--hidden_size', '129')
     assert model.hidden_size >= 129
     assert model.hidden_size % model.reduce_heads == 0
     run_forward_checks(model, num_states=2)
 
-    model = build_model(pt, '--constituency_composition', 'attn', '--hidden_size', '129', '--reduce_heads', '10')
+    model = build_model(pretrain_file, '--constituency_composition', 'attn', '--hidden_size', '129', '--reduce_heads', '10')
     assert model.hidden_size == 130
     assert model.reduce_heads == 10
 
-def test_forward_partitioned_attention(pt):
+def test_forward_partitioned_attention(pretrain_file):
     """
     Test with & without partitioned attention layers
     """
-    model = build_model(pt, '--pattn_num_heads', '8', '--pattn_num_layers', '8')
+    model = build_model(pretrain_file, '--pattn_num_heads', '8', '--pattn_num_layers', '8')
     run_forward_checks(model)
 
-    model = build_model(pt, '--pattn_num_heads', '0', '--pattn_num_layers', '0')
+    model = build_model(pretrain_file, '--pattn_num_heads', '0', '--pattn_num_layers', '0')
     run_forward_checks(model)
 
-def test_forward_labeled_attention(pt):
+def test_forward_labeled_attention(pretrain_file):
     """
     Test with & without labeled attention layers
     """
-    model = build_model(pt, '--lattn_d_proj', '64', '--lattn_d_l', '16')
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16')
     run_forward_checks(model)
 
-    model = build_model(pt, '--lattn_d_proj', '0', '--lattn_d_l', '0')
+    model = build_model(pretrain_file, '--lattn_d_proj', '0', '--lattn_d_l', '0')
     run_forward_checks(model)
 
-def test_forward_timing_choices(pt):
+def test_forward_timing_choices(pretrain_file):
     """
     Test different timing / position encodings
     """
-    model = build_model(pt, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'sin')
+    model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'sin')
     run_forward_checks(model)
 
-    model = build_model(pt, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
+    model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
     run_forward_checks(model)
 
-def test_copy_non_pattn_params(pt):
+def test_copy_non_pattn_params(pretrain_file):
     """
     Test that the "copy" method copies the parameters from one model to another
 
     Also check that the copied models produce the same results
     """
     set_random_seed(1000, False)
-    other = build_model(pt, '--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10')
+    other = build_model(pretrain_file, '--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10')
     other.eval()
 
     set_random_seed(1001, False)
-    model = build_model(pt, '--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2')
+    model = build_model(pretrain_file, '--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2')
     model.eval()
 
     assert not torch.allclose(model.delta_embedding.weight, other.delta_embedding.weight)

@@ -50,12 +50,15 @@ TREEBANK = """
     (. .)))
 """
 
-def build_trainer(pt, *args, treebank=TREEBANK):
+def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # TODO: build a fake embedding some other way?
     train_trees = tree_reader.read_trees(treebank)
     dev_trees = train_trees[-1:]
 
+    args = ['--wordvec_pretrain_file', wordvec_pretrain_file] + list(args)
     args = constituency_parser.parse_args(args)
+
+    pt = trainer.load_pretrain(args['wordvec_pretrain_file'])
     forward_charlm = trainer.load_charlm(args['charlm_forward_file'])
     backward_charlm = trainer.load_charlm(args['charlm_backward_file'])
     # might be None, unless we're testing loading an existing model
@@ -67,28 +70,25 @@ def build_trainer(pt, *args, treebank=TREEBANK):
 
 class TestTrainer:
     @pytest.fixture(scope="class")
-    def wordvec_file(self):
-        return f'{TEST_WORKING_DIR}/in/tiny_emb.xz'
+    def wordvec_pretrain_file(self):
+        return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    @pytest.fixture(scope="class")
-    def pt(self, wordvec_file):
-        return pretrain.Pretrain(vec_filename=wordvec_file, save_to_file=False)
-
-    def test_initial_model(self, pt):
+    def test_initial_model(self, wordvec_pretrain_file):
         """
         does nothing, just tests that the construction went okay
         """
-        build_trainer(pt)
+        args = ['wordvec_pretrain_file', wordvec_pretrain_file]
+        build_trainer(wordvec_pretrain_file)
 
 
-    def test_save_load_model(self, pt):
+    def test_save_load_model(self, wordvec_pretrain_file):
         """
         Just tests that saving and loading works without crashs.
 
         Currently no test of the values themselves
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-            tr = build_trainer(pt)
+            tr = build_trainer(wordvec_pretrain_file)
 
             # attempt saving
             filename = os.path.join(tmpdirname, "parser.pt")
@@ -97,9 +97,9 @@ class TestTrainer:
             assert os.path.exists(filename)
 
             # load it back in
-            tr.load(filename, pt)
+            tr.load(filename)
 
-    def test_relearn_structure(self, pt):
+    def test_relearn_structure(self, wordvec_pretrain_file):
         """
         Test that starting a trainer with --relearn_structure copies the old model
         """
@@ -107,7 +107,7 @@ class TestTrainer:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             set_random_seed(1000, False)
             args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
-            tr = build_trainer(pt, *args)
+            tr = build_trainer(wordvec_pretrain_file, *args)
 
             # attempt saving
             filename = os.path.join(tmpdirname, "parser.pt")
@@ -115,14 +115,14 @@ class TestTrainer:
 
             set_random_seed(1001, False)
             args = ['--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--relearn_structure', '--load_name', filename]
-            tr2 = build_trainer(pt, *args)
+            tr2 = build_trainer(wordvec_pretrain_file, *args)
 
             assert torch.allclose(tr.model.delta_embedding.weight, tr2.model.delta_embedding.weight)
             assert torch.allclose(tr.model.output_layers[0].weight, tr2.model.output_layers[0].weight)
             # the norms will be the same, as the non-zero values are all the same
             assert torch.allclose(torch.linalg.norm(tr.model.word_lstm.weight_ih_l0), torch.linalg.norm(tr2.model.word_lstm.weight_ih_l0))
 
-    def test_train(self, wordvec_file, pt):
+    def test_train(self, wordvec_pretrain_file):
         """
         Test the whole thing for a few iterations on the fake data
         """
@@ -138,7 +138,7 @@ class TestTrainer:
 
             # let's not make the model huge...
             args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10',
-                    '--wordvec_file', wordvec_file, '--data_dir', tmpdirname, '--save_dir', tmpdirname, '--save_name', 'test.pt',
+                    '--wordvec_pretrain_file', wordvec_pretrain_file, '--data_dir', tmpdirname, '--save_dir', tmpdirname, '--save_name', 'test.pt',
                     '--train_file', train_treebank_file, '--eval_file', eval_treebank_file,
                     '--epochs', '5', '--epoch_size', '6', '--train_batch_size', '3',
                     '--shorthand', 'en_test']
@@ -154,12 +154,12 @@ class TestTrainer:
 
             # check that the model can be loaded back
             assert os.path.exists(save_name)
-            tr = trainer.Trainer.load(save_name, pt, load_optimizer=True)
+            tr = trainer.Trainer.load(save_name, load_optimizer=True)
             assert tr.optimizer is not None
             assert tr.scheduler is not None
             assert tr.epochs_trained >= 1
 
-            tr = trainer.Trainer.load(latest_name, pt, load_optimizer=True)
+            tr = trainer.Trainer.load(latest_name, load_optimizer=True)
             assert tr.optimizer is not None
             assert tr.scheduler is not None
             assert tr.epochs_trained == 5

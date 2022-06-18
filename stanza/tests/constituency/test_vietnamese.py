@@ -60,9 +60,10 @@ def test_vi_embedding():
         pt_filename = os.path.join(tempdir, "emb.pt")
         with open(emb_filename, "w", encoding="utf-8") as fout:
             fout.write(VI_EMBEDDING)
-        pt = pretrain.Pretrain(vec_filename=emb_filename, save_to_file=False)
+        pt = pretrain.Pretrain(filename=pt_filename, vec_filename=emb_filename, save_to_file=True)
+        pt.load()
 
-        trainer = build_trainer(pt)
+        trainer = build_trainer(pt_filename)
         model = trainer.model
 
     assert model.num_words_known(words) == 4

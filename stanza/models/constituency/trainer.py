@@ -22,7 +22,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_charlm
+from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -76,11 +76,9 @@ class Trainer:
 
 
     @staticmethod
-    def load(filename, pt, args=None, load_optimizer=False, foundation_cache=None):
+    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
         """
         Load back a model and possibly its optimizer.
-
-        pt: a Pretrain word embedding
         """
         if args is None:
             args = {}
@@ -98,6 +96,7 @@ class Trainer:
 
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
+            pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
             forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
             backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
@@ -146,7 +145,7 @@ class Trainer:
         return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained)
 
 
-def load_pretrain(args):
+def load_pretrain_or_wordvec(args):
     """
     Loads a pretrain based on the paths in the arguments
     """
@@ -196,13 +195,13 @@ def evaluate(args, model_file, retag_pipeline):
     else:
         kbest = None
     with EvaluateParser(kbest=kbest) as evaluator:
-        pt = load_pretrain(args)
         load_args = {
+            'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
             'charlm_backward_file': args['charlm_backward_file'],
             'cuda': args['cuda'],
         }
-        trainer = Trainer.load(model_file, pt, args=load_args)
+        trainer = Trainer.load(model_file, args=load_args)
 
         treebank = tree_reader.read_treebank(args['eval_file'])
         logger.info("Read %d trees for evaluation", len(treebank))
@@ -244,13 +243,13 @@ def remove_optimizer(args, model_save_file, model_load_file):
     # TODO: kind of overkill to load in the pretrain rather than
     # change the load/save to work without it, but probably this
     # functionality isn't used that often anyway
-    pt = load_pretrain(args)
     load_args = {
+        'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
         'charlm_backward_file': args['charlm_backward_file'],
         'cuda': False,
     }
-    trainer = Trainer.load(model_load_file, pt, args=load_args, load_optimizer=False)
+    trainer = Trainer.load(model_load_file, args=load_args, load_optimizer=False)
     trainer.save(model_save_file)
 
 def convert_trees_to_sequences(trees, tree_type, transition_scheme):
@@ -319,14 +318,14 @@ def build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_cha
 
     if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
         logger.info("Loading model to continue training from %s", model_load_file)
-        trainer = Trainer.load(model_load_file, pt, args, load_optimizer=True)
+        trainer = Trainer.load(model_load_file, args, load_optimizer=True)
     elif args['relearn_structure']:
         logger.info("Loading model to continue training with new structure from %s", model_load_file)
         temp_args = dict(args)
         # remove the pattn & lattn layers unless the saved model had them
         temp_args.pop('pattn_num_layers', None)
         temp_args.pop('lattn_d_proj', None)
-        trainer = Trainer.load(model_load_file, pt, temp_args, load_optimizer=False)
+        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False)
 
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
@@ -417,7 +416,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
             dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        pt = load_pretrain(args)
+        pt = load_pretrain_or_wordvec(args)
         forward_charlm = load_charlm(args['charlm_forward_file'])
         backward_charlm = load_charlm(args['charlm_backward_file'])
         bert_model, bert_tokenizer = load_bert(args['bert_model'])
