@@ -471,8 +471,8 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
 
     model.train()
 
-    preterminal_lists = [[Tree(label=pt.label, children=Tree(label=pt.children[0].label))
-                          for pt in tree.yield_preterminals()]
+    preterminal_lists = [[Tree(label=preterminal.label, children=Tree(label=preterminal.children[0].label))
+                          for preterminal in tree.yield_preterminals()]
                          for tree in train_trees]
     train_data = [TrainItem(*x) for x in zip(train_trees, train_sequences, preterminal_lists)]
 
