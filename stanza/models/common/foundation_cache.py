@@ -85,3 +85,13 @@ def load_charlm(charlm_file, foundation_cache=None):
 
     logger.debug("Loading charlm from %s", charlm_file)
     return CharacterLanguageModel.load(charlm_file, finetune=False)
+
+def load_pretrain(filename, foundation_cache=None):
+    if not filename:
+        return None
+
+    if foundation_cache is not None:
+        return foundation_cache.load_pretrain(filename)
+
+    logger.debug("Loading pretrain from %s", filename)
+    return Pretrain(filename)

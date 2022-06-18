@@ -36,18 +36,16 @@ class ConstituencyProcessor(UDProcessor):
             self._requires = self.__class__.REQUIRES_DEFAULT
 
     def _set_up_model(self, config, pipeline, use_gpu):
-        # get pretrained word vectors
-        pretrain_path = config.get('pretrain_path', None)
-        self._pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
         # set up model
-
+        # pretrain and charlm paths are args from the config
+        # bert (if used) will be chosen from the model save file
         args = {
+            "wordvec_pretrain_file": config.get('pretrain_path', None),
             "charlm_forward_file": config.get('forward_charlm_path', None),
             "charlm_backward_file": config.get('backward_charlm_path', None),
             "cuda": use_gpu,
         }
         self._model = trainer.Trainer.load(filename=config['model_path'],
-                                           pt=self._pretrain,
                                            args=args,
                                            foundation_cache=pipeline.foundation_cache)
         self._model.model.eval()
