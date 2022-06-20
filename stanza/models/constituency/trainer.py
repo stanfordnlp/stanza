@@ -375,7 +375,7 @@ def remove_no_tags(trees):
         logger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
     return new_trees
 
-def train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline):
+def train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
     """
@@ -423,7 +423,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, retag_
 
         trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model_load_file)
 
-        iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, evaluator)
+        iterate_training(trainer, train_trees, train_sequences, train_transitions, dev_trees, args, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
 
     if args['wandb']:
         wandb.finish()
@@ -440,7 +440,7 @@ class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 
         return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
 
 
-def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename, evaluator):
+def iterate_training(trainer, train_trees, train_sequences, transitions, dev_trees, args, model_filename, model_latest_filename, model_save_each_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -506,6 +506,8 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
             trainer.save(model_filename, save_optimizer=True)
         if model_latest_filename:
             trainer.save(model_latest_filename, save_optimizer=True)
+        if model_save_each_filename:
+            trainer.save(model_save_each_filename % epoch, save_optimizer=True)
         logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1))
 
         if args['wandb']:

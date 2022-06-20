@@ -148,9 +148,10 @@ class TestTrainer:
 
             save_name = os.path.join(args['save_dir'], args['save_name'])
             latest_name = os.path.join(args['save_dir'], 'latest.pt')
+            each_name = os.path.join(args['save_dir'], 'each_%1d.pt')
             assert not os.path.exists(save_name)
             retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
-            trainer.train(args, save_name, None, latest_name, retag_pipeline)
+            trainer.train(args, save_name, None, latest_name, each_name, retag_pipeline)
 
             # check that the model can be loaded back
             assert os.path.exists(save_name)
@@ -163,3 +164,9 @@ class TestTrainer:
             assert tr.optimizer is not None
             assert tr.scheduler is not None
             assert tr.epochs_trained == 5
+
+            for i in range(1, 6):
+                model_name = each_name % i
+                assert os.path.exists(model_name)
+                tr = trainer.Trainer.load(model_name, load_optimizer=True)
+                assert tr.epochs_trained == i

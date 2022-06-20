@@ -219,6 +219,7 @@ def parse_args(args=None):
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--save_latest_name', type=str, default=None, help="Save the latest model here regardless of score.  Useful for restarting training")
+    parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -435,6 +436,16 @@ def main(args=None):
     if args['save_latest_name']:
         model_save_latest_file = os.path.join(args['save_dir'], args['save_latest_name'])
 
+    model_save_each_file = None
+    if args['save_each_name']:
+        model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
+        try:
+            model_save_each_file % 1
+        except TypeError:
+            # so models.pt -> models_0001.pt, etc
+            pieces = os.path.splitext(model_save_each_file)
+            model_save_each_file = pieces[0] + "_%4d" + pieces[1]
+
     model_load_file = model_save_file
     if args['load_name']:
         if os.path.exists(args['load_name']):
@@ -459,7 +470,7 @@ def main(args=None):
         retag_pipeline = None
 
     if args['mode'] == 'train':
-        trainer.train(args, model_save_file, model_load_file, model_save_latest_file, retag_pipeline)
+        trainer.train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
