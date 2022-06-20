@@ -319,7 +319,7 @@ class LSTMModel(BaseModel, nn.Module):
                                                                    self.args['lattn_q_as_matrix'],
                                                                    self.args['lattn_residual_dropout'],
                                                                    self.args['lattn_attention_dropout'],
-                                                                   self.args['lattn_d_positional'],
+                                                                   self.pattn_d_model // 2,
                                                                    self.args['lattn_d_ff'],
                                                                    self.args['lattn_relu_dropout'],
                                                                    self.args['lattn_partitioned'])
