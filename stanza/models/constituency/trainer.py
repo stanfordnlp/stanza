@@ -499,7 +499,10 @@ def iterate_training(trainer, train_trees, train_sequences, transitions, dev_tre
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args, evaluator)
-        if f1 > best_f1:
+        if f1 > best_f1 or best_epoch == 0:
+            # best_epoch == 0 to force a save of an initial model
+            # useful for tests which expect something, even when a
+            # very simple model didn't learn anything
             logger.info("New best dev score: %.5f > %.5f", f1, best_f1)
             best_f1 = f1
             best_epoch = epoch
