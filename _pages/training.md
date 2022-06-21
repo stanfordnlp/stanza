@@ -114,6 +114,35 @@ prepare_ner_file.process_dataset(input_iob, output_json)
 The program will look for the `.json` files in the `data/ner` directory, which you may need to create if this is your first time training a Stanza NER model.
 You can change the expected path by setting the `$NER_DATA_DIR` environment variable.
 
+At least one of the datasets is based on a raw constituency dataset,
+and the `prepare_ner_dataset` script will look in
+[`$CONSTITUENCY_HOME`](training.md#constituency-data) for that data.
+
+### Constituency Data
+
+The constituency data is also in a different organizational model than the UD datasets.  There is a script for the constituencies:
+
+```bash
+python3 -m stanza.utils.datasets.constituency.prepare_con_dataset
+python3 -m stanza.utils.datasets.constituency.prepare_con_dataset ja_alt
+```
+
+This script expects the raw constituency datasets to be in `$CONSTITUENCY_HOME`
+
+```bash
+export CONSTITUENCY_HOME=/home/john/constituency
+```
+
+The expected end result is bracketed trees such as PTB brackets:
+
+```
+(ROOT (S (NP (NN Stuff)) (VP (VBZ goes) (ADVP (RB here)))))
+```
+
+The final data will go to `$CONSTITUENCY_DATA_DIR`, which defaults to
+`data/constituency`, but can be set to something else via
+environmental variables.
+
 ## Training with Scripts
 
 We provide various scripts to ease the training process in the `scripts` and `stanza/utils/training` directories. To train a model, you can run the following command from the code root directory:
@@ -144,7 +173,7 @@ python3 -m stanza.models.ner_tagger --wordvec_pretrain_file saved_models/pos/fi_
 
 To get the prediction scores of an existing NER model when running `ner_tagger.py`, use `--mode eval` instead of `--mode train`.
 
-If you are training NER for a new language, you may want to use a [charlm](new_language.md#character-lm).  You can also leave out the charlm arguments in the above command line and train without the charlm.
+If you are training NER or constituency for a new language, you may want to use a [charlm](new_language.md#character-lm).  You can also leave out the charlm arguments in the above command line and train without the charlm.
 
 For a full list of available training arguments, please refer to the specific entry point of that module. By default model files will be saved to the `saved_models` directory during training (which can also be changed with the `save_dir` argument).
 
