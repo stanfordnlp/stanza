@@ -31,10 +31,10 @@ da_arboretum
   The file processed is the tiger xml, although there are some edits
     needed in order to make it functional for our parser
   The treebank comes as a tar.gz file, W0084.tar.gz
-  untar this file in $CONSTITUENCY_HOME/danish
+  untar this file in $CONSTITUENCY_BASE/danish
   then move the extracted folder to "arboretum"
-    $CONSTITUENCY_HOME/danish/W0084/... becomes
-    $CONSTITUENCY_HOME/danish/arboretum/...
+    $CONSTITUENCY_BASE/danish/W0084/... becomes
+    $CONSTITUENCY_BASE/danish/arboretum/...
 
 tr_starlang
   A dataset in three parts from the Starlang group in Turkey:
@@ -46,7 +46,7 @@ tr_starlang
     https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-15
     https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
   Put them in
-    $CONSTITUENCY_HOME/turkish
+    $CONSTITUENCY_BASE/turkish
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset tr_starlang
 
 ja_alt
@@ -56,8 +56,8 @@ ja_alt
     http://www.lrec-conf.org/proceedings/lrec2016/pdf/435_Paper.pdf
   Download
     https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/Japanese-ALT-20210218.zip
-  unzip this in $CONSTITUENCY_HOME/japanese
-  this should create a directory $CONSTITUENCY_HOME/japanese/Japanese-ALT-20210218
+  unzip this in $CONSTITUENCY_BASE/japanese
+  this should create a directory $CONSTITUENCY_BASE/japanese/Japanese-ALT-20210218
   In this directory, also download the following:
     https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/URL-train.txt
     https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/URL-dev.txt
@@ -81,7 +81,7 @@ pt_cintil
   If at Stanford, ask John Bauer or Chris Manning for the data
   Otherwise, purchase it from ELRA or find it elsewhere if possible
   Either way, unzip it in
-    $CONSTITUENCY_HOME/portuguese to the CINTIL directory
+    $CONSTITUENCY_BASE/portuguese to the CINTIL directory
     so for example, the final result might be
     extern_data/constituency/portuguese/CINTIL/CINTIL-Treebank.xml
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset pt_cintil
