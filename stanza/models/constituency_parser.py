@@ -400,6 +400,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_d_ff', default=2048, type=int, help='Dimension of the Feed-forward layer')
     parser.add_argument('--lattn_relu_dropout', default=0.2, type=float, help='Relu dropout for the label attention')
     parser.add_argument('--lattn_residual_dropout', default=0.2, type=float, help='Residual dropout for the label attention')
+    parser.add_argument('--lattn_combined_input', action='store_true', help='Combine all inputs for the lattn, not just the pattn')
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')

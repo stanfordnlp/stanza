@@ -238,6 +238,9 @@ def test_forward_labeled_attention(pretrain_file):
     model = build_model(pretrain_file, '--lattn_d_proj', '0', '--lattn_d_l', '0')
     run_forward_checks(model)
 
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_combined_input')
+    run_forward_checks(model)
+
 def test_forward_timing_choices(pretrain_file):
     """
     Test different timing / position encodings
