@@ -92,6 +92,9 @@ class Trainer:
 
         saved_args = dict(checkpoint['args'])
         saved_args.update(args)
+        # TODO: remove when all models are rebuilt
+        if 'lattn_combined_input' not in saved_args:
+            saved_args['lattn_combined_input'] = False
         params = checkpoint['params']
 
         model_type = checkpoint['model_type']

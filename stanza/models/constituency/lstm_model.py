@@ -310,7 +310,11 @@ class LSTMModel(BaseModel, nn.Module):
                 # TODO: think of a couple ways to use alternate inputs
                 # for example, could pass in the word inputs with a positional embedding
                 # that would also allow it to work in the case of no partitioned module
-                self.label_attention_module = LabelAttentionModule(self.pattn_d_model,
+                if self.args['lattn_combined_input']:
+                    self.lattn_d_input = self.word_input_size
+                else:
+                    self.lattn_d_input = self.pattn_d_model
+                self.label_attention_module = LabelAttentionModule(self.lattn_d_input,
                                                                    self.args['lattn_d_kv'],
                                                                    self.args['lattn_d_kv'],
                                                                    self.args['lattn_d_l'],
@@ -547,7 +551,10 @@ class LSTMModel(BaseModel, nn.Module):
 
         # Extract Labeled Representation
         if self.label_attention_module is not None:
-            labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
+            if self.args['lattn_combined_input']:
+                labeled_representations = self.label_attention_module(all_word_inputs, tagged_word_lists)
+            else:
+                labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
 
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
