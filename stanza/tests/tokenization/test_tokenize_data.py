@@ -203,12 +203,12 @@ def test_numeric_re():
     """
     # the last one is Thai
     matches = ["57", "135245345", "12535.", "852358.458345", "435345...345345", "111,,,111,,,111,,,111", "5318008", "５", "๕"]
-    # this takes forever: need to fix "catastrophic backtracking"
-    #"11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111a"]
 
     # note that we might want to consider .4 a numeric token after all
     # however, changing that means retraining all the models
-    not_matches = [".4", "54353a", "5453 35345", "aaa143234", "a,a,a,a", "sh'reyan", "asdaf786876asdfasdf", ""]
+    # the really long one only works if NUMERIC_RE avoids catastrophic backtracking
+    not_matches = [".4", "54353a", "5453 35345", "aaa143234", "a,a,a,a", "sh'reyan", "asdaf786876asdfasdf", "",
+                   "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111a"]
 
     for x in matches:
         assert NUMERIC_RE.match(x) is not None
