@@ -53,8 +53,16 @@ More information on using word vectors [here](word_vectors.md).
 
 ## Character LM
 
+The pretrained Character LM is useful for certain annotators,
+currently NER, Sentiment, and Conparse.  It gives a noticeable
+improvement to the scores for those models for a small increase in the
+computational complexity.
+
 Character LMs are included for a few languages.  You can look in
 resources.json for `forward_charlm` and `backward_charlm`
+
+It is not necessary to train a new charlm in order to build models,
+but the accuracy will improve on the models listed above if you do.
 
 For adding a new languages, we provide scripts to automate large parts of the process.  Scripts for converting raw text to conllu and conllu to a charlm dataset can be found in [stanza/utils/charlm/conll17_to_text.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/conll17_to_text.py) and [stanza/utils/charlm/make_lm_data.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/make_lm_data.py)
 
