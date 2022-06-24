@@ -251,18 +251,18 @@ def test_forward_timing_choices(pretrain_file):
     model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
     run_forward_checks(model)
 
-def test_copy_with_new_structure(pretrain_file):
+def check_structure_test(pretrain_file, args1, args2):
     """
     Test that the "copy" method copies the parameters from one model to another
 
     Also check that the copied models produce the same results
     """
     set_random_seed(1000, False)
-    other = build_model(pretrain_file, '--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10')
+    other = build_model(pretrain_file, *args1)
     other.eval()
 
     set_random_seed(1001, False)
-    model = build_model(pretrain_file, '--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2')
+    model = build_model(pretrain_file, *args2)
     model.eval()
 
     assert not torch.allclose(model.delta_embedding.weight, other.delta_embedding.weight)
@@ -295,3 +295,18 @@ def test_copy_with_new_structure(pretrain_file):
         assert torch.allclose(i.tree_hx, j.tree_hx)
         assert torch.allclose(i.lstm_hx, j.lstm_hx)
         assert torch.allclose(i.lstm_cx, j.lstm_cx)
+
+def test_copy_with_new_structure_pattn(pretrain_file):
+    check_structure_test(pretrain_file,
+                         ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10'],
+                         ['--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'])
+
+def test_copy_with_new_structure_both(pretrain_file):
+    check_structure_test(pretrain_file,
+                         ['--pattn_num_layers', '0', '--lattn_d_proj',  '0', '--hidden_size', '20', '--delta_embedding_dim', '10'],
+                         ['--pattn_num_layers', '1', '--lattn_d_proj', '32', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'])
+
+def test_copy_with_new_structure_lattn(pretrain_file):
+    check_structure_test(pretrain_file,
+                         ['--pattn_num_layers', '1', '--lattn_d_proj',  '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'],
+                         ['--pattn_num_layers', '1', '--lattn_d_proj', '32', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'])
