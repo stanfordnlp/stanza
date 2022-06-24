@@ -13,7 +13,7 @@ import stanza
 
 from stanza import Pipeline
 from stanza.tests import *
-from stanza.models.tokenization.data import DataLoader
+from stanza.models.tokenization.data import DataLoader, NUMERIC_RE
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -193,3 +193,24 @@ def test_dictionary_feats(zhtok):
     for i, expected in enumerate(expected_features):
         dict_features = batches.extract_dict_feat(data[0], i)
         assert dict_features == expected
+
+
+def test_numeric_re():
+    """
+    Test the "is numeric" function
+
+    This function is entirely based on an RE in data.py
+    """
+    # the last one is Thai
+    matches = ["57", "135245345", "12535.", "852358.458345", "435345...345345", "111,,,111,,,111,,,111", "5318008", "５", "๕"]
+    # this takes forever: need to fix "catastrophic backtracking"
+    #"11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111a"]
+
+    # note that we might want to consider .4 a numeric token after all
+    # however, changing that means retraining all the models
+    not_matches = [".4", "54353a", "5453 35345", "aaa143234", "a,a,a,a", "sh'reyan", "asdaf786876asdfasdf", ""]
+
+    for x in matches:
+        assert NUMERIC_RE.match(x) is not None
+    for x in not_matches:
+        assert NUMERIC_RE.match(x) is None
