@@ -31,10 +31,10 @@ EXCLUDED_FOLDERS = ['raw_corpus']
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("src_root", default="src", help="Root directory with all source files.")
+    parser.add_argument("src_root", default="src", help="Root directory with all source files.  Expected structure is root dir -> language dirs -> package dirs -> text files to process")
     parser.add_argument("tgt_root", default="tgt", help="Root directory with all target files.")
-    parser.add_argument("--langs", default="", help="A list of language codes to process.")
-    parser.add_argument("--packages", default="", help="A list of packages to process.")
+    parser.add_argument("--langs", default="", help="A list of language codes to process.  If not set, all languages under src_root will be processed.")
+    parser.add_argument("--packages", default="", help="A list of packages to process.  If not set, all packages under the languages found will be processed.")
     parser.add_argument("--no_xz_output", default=True, dest="xz_output", action="store_false", help="Output compressed xz files")
     args = parser.parse_args()
 
@@ -57,7 +57,8 @@ def main():
     tgt_root = Path(args.tgt_root)
 
     lang_dirs = os.listdir(src_root)
-    lang_dirs = [l for l in lang_dirs if l not in EXCLUDED_FOLDERS] # skip excluded
+    lang_dirs = [l for l in lang_dirs if l not in EXCLUDED_FOLDERS]    # skip excluded
+    lang_dirs = [l for l in lang_dirs if os.path.isdir(src_root / l)]  # skip non-directory
     if len(langs) > 0: # filter languages if specified
         lang_dirs = [l for l in lang_dirs if l in langs]
     print(f"{len(lang_dirs)} total languages found:")
@@ -69,6 +70,7 @@ def main():
         data_dirs = os.listdir(lang_root)
         if len(packages) > 0:
             data_dirs = [d for d in data_dirs if d in packages]
+        data_dirs = [d for d in data_dirs if os.path.isdir(lang_root / d)]
         print(f"{len(data_dirs)} total corpus found for language {lang}.")
         print(data_dirs)
         print("")
