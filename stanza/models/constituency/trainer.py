@@ -343,7 +343,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
             model.cuda()
-        model.copy_non_pattn_params(trainer.model)
+        model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model)
         scheduler = build_scheduler(args, optimizer)
         trainer = Trainer(args, model, optimizer, scheduler)
@@ -582,7 +582,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
             if args['cuda']:
                 new_model.cuda()
-            new_model.copy_non_pattn_params(model)
+            new_model.copy_with_new_structure(model)
 
             optimizer = build_optimizer(temp_args, new_model)
             scheduler = build_scheduler(temp_args, optimizer)

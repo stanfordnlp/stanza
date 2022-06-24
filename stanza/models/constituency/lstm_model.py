@@ -418,23 +418,26 @@ class LSTMModel(BaseModel, nn.Module):
     def uses_pattn(args):
         return args['pattn_num_heads'] > 0 and args['pattn_num_layers'] > 0
 
-    def copy_non_pattn_params(self, other):
+    def copy_with_new_structure(self, other):
         """
         Copy parameters from the other model to this model
 
-        word_lstm can change size if the other model didn't use pattn / lattn and this one does
+        word_lstm can change size if the other model didn't use pattn / lattn and this one does.
+        In that case, the new values are initialized to 0.
+        This will rebuild the model in such a way that the outputs will be
+        exactly the same as the previous model.
         """
         for name, other_parameter in other.named_parameters():
-            # bottom layer shape has changed because of the additional pattn
-            if not name.startswith('word_lstm.weight_ih_l0'):
-                self.get_parameter(name).data.copy_(other_parameter.data)
-            else:
+            if name.startswith('word_lstm.weight_ih_l0'):
+                # bottom layer shape may have changed from adding a new pattn / lattn block
                 my_parameter = self.get_parameter(name)
                 copy_size = min(other_parameter.data.shape[1], my_parameter.data.shape[1])
                 #new_values = my_parameter.data.clone().detach()
                 new_values = torch.zeros_like(my_parameter.data)
                 new_values[:, :copy_size] = other_parameter.data[:, :copy_size]
                 my_parameter.data.copy_(new_values)
+            else:
+                self.get_parameter(name).data.copy_(other_parameter.data)
 
     def build_output_layers(self, num_output_layers, final_layer_size):
         """

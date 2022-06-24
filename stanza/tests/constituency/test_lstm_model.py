@@ -251,7 +251,7 @@ def test_forward_timing_choices(pretrain_file):
     model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
     run_forward_checks(model)
 
-def test_copy_non_pattn_params(pretrain_file):
+def test_copy_with_new_structure(pretrain_file):
     """
     Test that the "copy" method copies the parameters from one model to another
 
@@ -268,7 +268,7 @@ def test_copy_non_pattn_params(pretrain_file):
     assert not torch.allclose(model.delta_embedding.weight, other.delta_embedding.weight)
     assert not torch.allclose(model.output_layers[0].weight, other.output_layers[0].weight)
 
-    model.copy_non_pattn_params(other)
+    model.copy_with_new_structure(other)
 
     assert torch.allclose(model.delta_embedding.weight, other.delta_embedding.weight)
     assert torch.allclose(model.output_layers[0].weight, other.output_layers[0].weight)
