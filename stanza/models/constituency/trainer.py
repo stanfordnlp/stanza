@@ -511,6 +511,13 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     if not args['epoch_size']:
         args['epoch_size'] = len(train_data)
 
+    if args['multistage']:
+        multistage_splits = {}
+        # if we're halfway, only do pattn.  save lattn for next time
+        multistage_splits[args['epochs'] // 2] = (args['pattn_num_layers'], False)
+        if LSTMModel.uses_lattn(args):
+            multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
+
     leftover_training_data = []
     best_f1 = 0.0
     best_epoch = 0
@@ -554,26 +561,28 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                         wandb.log({n: torch.linalg.norm(p)})
 
         # don't redo the optimizer a second time if we're not changing the structure
-        if args['multistage'] and (epoch == args['epochs'] // 2 or
-                                   (epoch == args['epochs'] * 3 // 4 and LSTMModel.uses_lattn(args))):
+        if args['multistage'] and epoch in multistage_splits:
             # TODO: start counting epoch from trainer.epochs_trained for a previously trained model?
 
             # we may be loading a save model from an earlier epoch if the scores stopped increasing
             epochs_trained = trainer.epochs_trained
 
+            stage_pattn_layers, stage_uses_lattn = multistage_splits[epoch]
+
             # when loading the model, let the saved model determine whether it has pattn or lattn
             temp_args = dict(trainer.args)
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
-            trainer = Trainer.load(model_filename, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
-            logger.info("Previous best model was at epoch %d", trainer.epochs_trained)
             # overwriting the old trainer & model will hopefully free memory
+            trainer = Trainer.load(model_filename, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
             model = trainer.model
+            logger.info("Finished stage at epoch %d.  Restarting optimizer", epoch)
+            logger.info("Previous best model was at epoch %d", trainer.epochs_trained)
 
             temp_args = dict(args)
-            # if we're halfway, only do pattn.  save lattn for next time
-            if epoch != args['epochs'] * 3 // 4:
-                logger.info("Switching from adadelta with the partial model to %s", args['optim'])
+            logger.info("Switching to a model with %d pattn layers and %slattn", stage_pattn_layers, "" if stage_uses_lattn else "NO ")
+            temp_args['pattn_num_layers'] = stage_pattn_layers
+            if not stage_uses_lattn:
                 temp_args['lattn_d_proj'] = 0
             pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
             forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
@@ -588,12 +597,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             scheduler = build_scheduler(temp_args, optimizer)
             trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
             model = new_model
-            if epoch == args['epochs'] * 3 // 4:
-                if model.label_attention_module is not None:
-                    logger.info("Model now includes lattn!")
-            else:
-                if model.partitioned_transformer_module is not None:
-                    logger.info("Model now includes pattn!")
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
