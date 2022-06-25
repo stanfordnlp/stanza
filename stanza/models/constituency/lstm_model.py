@@ -448,6 +448,9 @@ class LSTMModel(BaseModel, nn.Module):
         Middle layer sizes are self.hidden_size
         """
         middle_layers = num_output_layers - 1
+        # word_lstm:        hidden_size
+        # transition_lstm:  transition_hidden_size
+        # constituent_lstm: hidden_size
         predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
         predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
         output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
