@@ -201,7 +201,9 @@ ner_pretrains = {
         "aqmar": "fasttextwiki",
     },
     "de": {
-        "conll03": "fasttextwiki",
+        "conll03":      "fasttextwiki",
+        # the bert version of germeval uses the smaller vector file
+        "germeval2014": "fasttextwiki",
     },
     "en": {
         "anatem":       "craft",
