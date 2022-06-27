@@ -55,6 +55,32 @@ python -m stanza.utils.datasets.prepare_${module}_treebank ${corpus} ${other_arg
 ```
 where `${module}` is one of `tokenize`, `mwt`, `pos`, `lemma`, or `depparse`; `${corpus}` is the full name of the corpus; `${other_args}` are other arguments allowed by the training script.
 
+### Train, dev, test splits
+
+The larger datasets on UD have data for each of `train`, `dev`, and `test`, with the corresponding words in the name of the files.  For example, from EWT:
+
+```
+en_ewt-ud-train.conllu
+en_ewt-ud-dev.conllu
+en_ewt-ud-test.conllu
+en_ewt-ud-train.txt
+en_ewt-ud-dev.txt
+en_ewt-ud-test.txt
+```
+
+Some smaller datasets only have `train` and `test`, but the `train`
+dataset is reasonably large.  The preparation scripts for those
+languages will automatically randomly split the `train` files into
+`train` and `dev`.
+
+Some datasets are quite small and only have `test` data.  In general,
+we skip those datasets and do not build models for them.
+
+In general, each of the processors need all three splits to function.
+For NER datasets with one large contiguous dataset, for example, you
+will need to split that yourself into three pieces.
+
+
 ### Dependency Parser Data
 
 By default, the `prepare_depparse_treebank.py` script uses the POS tagger to retag the training data.  You can turn this off with the `--gold` flag.
