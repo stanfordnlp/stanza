@@ -41,7 +41,7 @@ Tokens:
 """.strip()
 
 class HTTPMockServerTimeoutContext:
-    """ For lunching an HTTP server on certain port with an specified delay at responses """
+    """ For launching an HTTP server on certain port with an specified delay at responses """
     def __init__(self, port, timeout_secs):
         self.port = port
         self.timeout_secs = timeout_secs
