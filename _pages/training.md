@@ -142,7 +142,7 @@ You can change the expected path by setting the `$NER_DATA_DIR` environment vari
 
 At least one of the datasets is based on a raw constituency dataset,
 and the `prepare_ner_dataset` script will look in
-[`$CONSTITUENCY_HOME`](training.md#constituency-data) for that data.
+[`$CONSTITUENCY_BASE`](training.md#constituency-data) for that data.
 
 ### Constituency Data
 
@@ -153,10 +153,10 @@ python3 -m stanza.utils.datasets.constituency.prepare_con_dataset
 python3 -m stanza.utils.datasets.constituency.prepare_con_dataset ja_alt
 ```
 
-This script expects the raw constituency datasets to be in `$CONSTITUENCY_HOME`
+This script expects the raw constituency datasets to be in `$CONSTITUENCY_BASE`
 
 ```bash
-export CONSTITUENCY_HOME=/home/john/constituency
+export CONSTITUENCY_BASE=/home/john/constituency
 ```
 
 The expected end result is bracketed trees such as PTB brackets:
