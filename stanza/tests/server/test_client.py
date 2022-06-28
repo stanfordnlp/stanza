@@ -2,7 +2,10 @@
 Tests that call a running CoreNLPClient.
 """
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import multiprocessing
 import pytest
+import requests
 import stanza.server as corenlp
 import stanza.server.client as client
 import shlex
@@ -36,6 +39,30 @@ Tokens:
 [Text=CoreNLP CharacterOffsetBegin=59 CharacterOffsetEnd=66 PartOfSpeech=NNP]
 [Text=. CharacterOffsetBegin=66 CharacterOffsetEnd=67 PartOfSpeech=.]
 """.strip()
+
+class HTTPMockServerTimeoutContext:
+    """ For launching an HTTP server on certain port with an specified delay at responses """
+    def __init__(self, port, timeout_secs):
+        self.port = port
+        self.timeout_secs = timeout_secs
+
+    def __enter__(self):
+        class HTTPTimeoutHandler(BaseHTTPRequestHandler):
+            def do_POST(self_inner):
+                time.sleep(self.timeout_secs)
+                self_inner.send_response(200)
+                self_inner.send_header('Content-type', 'text/plain; charset=utf-8')
+                self_inner.end_headers()
+                self_inner.wfile.write("HTTPMockServerTimeout")
+        def run_webserver():
+            HTTPServer(('127.0.0.1',self.port), HTTPTimeoutHandler).serve_forever()
+
+        self.p = multiprocessing.Process(target=run_webserver, args=())
+        self.p.daemon = True
+        self.p.start()
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.p.terminate()
 
 class TestCoreNLPClient:
     @pytest.fixture(scope="class")
@@ -131,19 +158,34 @@ class TestCoreNLPClient:
         external_server_process.wait(5)
         assert ann.strip() == EN_GOLD
 
-    def test_external_server(self):
-        """ Test starting up an external server and accessing with a client with start_server=StartServer.DONT_START """
+    def test_external_server_available(self):
+        """ Test starting up an external available server and accessing with a client with start_server=StartServer.DONT_START """
         corenlp_home = os.getenv('CORENLP_HOME')
         start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
                     f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
         start_cmd = start_cmd and shlex.split(start_cmd)
         external_server_process = subprocess.Popen(start_cmd)
+        time.sleep(5) # wait and make sure the external CoreNLP server is up and running
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
         assert external_server_process
         external_server_process.terminate()
         external_server_process.wait(5)
         assert ann.strip() == EN_GOLD
+
+    def test_external_server_unavailable(self):
+        """ Test accessing with a client with start_server=StartServer.DONT_START to an external unavailable server """
+        with pytest.raises(corenlp.AnnotationException):
+            with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
+                ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+
+    def test_external_server_timeout(self):
+        """ Test starting up an external server with long response time (20 seconds) and accessing with a client with start_server=StartServer.DONT_START and timeout=5000"""
+        with HTTPMockServerTimeoutContext(9001, 20):
+            time.sleep(5) # wait and make sure the external HTTPMockServer server is up and running
+            with pytest.raises(corenlp.TimeoutException):
+                with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001", timeout=5000) as external_server_client:
+                    ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
 
     def test_external_server_try_start_with_external(self):
         """ Test starting up an external server and accessing with a client with start_server=StartServer.TRY_START """

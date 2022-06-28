@@ -32,7 +32,7 @@ logger = logging.getLogger('stanza')
 SERVER_PROPS_TMP_FILE_PATTERN = re.compile('corenlp_server-(.*).props')
 
 # Check if str is CoreNLP supported language
-CORENLP_LANGS = ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'hu', 'hungarian', 
+CORENLP_LANGS = ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'hu', 'hungarian',
                  'it', 'italian', 'es', 'spanish']
 
 # map shorthands to full language names
@@ -443,7 +443,8 @@ class CoreNLPClient(RobustService):
         :param (dict) properties: properties that the server expects
         :return: request result
         """
-        self.ensure_alive()
+        if self.start_server is not StartServer.DONT_START:
+            self.ensure_alive()
 
         try:
             input_format = properties.get("inputFormat", "text")
@@ -464,11 +465,10 @@ class CoreNLPClient(RobustService):
                               timeout=(self.timeout*2)/1000, **kwargs)
             r.raise_for_status()
             return r
-        except requests.HTTPError as e:
-            if r.text == "CoreNLP request timed out. Your document may be too long.":
-                raise TimeoutException(r.text)
-            else:
-                raise AnnotationException(r.text)
+        except requests.exceptions.Timeout as e:
+            raise TimeoutException("Timeout requesting to CoreNLPServer. Maybe server is unavailable or your document is too long")
+        except requests.exceptions.RequestException as e:
+            raise AnnotationException(e)
 
     def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=None, **kwargs):
         """
@@ -595,7 +595,8 @@ class CoreNLPClient(RobustService):
         :param properties: option to filter sentences that contain matches, if false returns matches
         :return: request result
         """
-        self.ensure_alive()
+        if self.start_server is not StartServer.DONT_START:
+            self.ensure_alive()
         if properties is None:
             properties = {}
             properties.update({
