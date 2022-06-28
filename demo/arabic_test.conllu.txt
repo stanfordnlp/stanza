@@ -1,0 +1,127 @@
+# newdoc id = assabah.20041005.0017
+# newpar id = assabah.20041005.0017:p1
+# sent_id = assabah.20041005.0017:p1u1
+# text = سوريا: تعديل وزاري واسع يشمل 8 حقائب
+# orig_file_sentence ASB_ARB_20041005.0017#1
+1	سوريا	سُورِيَا	X	X---------	Foreign=Yes	0	root	0:root	SpaceAfter=No|Vform=سُورِيَا|Gloss=Syria|Root=sUr|Translit=sūriyā|LTranslit=sūriyā
+2	:	:	PUNCT	G---------	_	1	punct	1:punct	Vform=:|Translit=:
+3	تعديل	تَعدِيل	NOUN	N------S1I	Case=Nom|Definite=Ind|Number=Sing	6	nsubj	6:nsubj	Vform=تَعدِيلٌ|Gloss=adjustment,change,modification,amendment|Root=`_d_l|Translit=taʿdīlun|LTranslit=taʿdīl
+4	وزاري	وِزَارِيّ	ADJ	A-----MS1I	Case=Nom|Definite=Ind|Gender=Masc|Number=Sing	3	amod	3:amod	Vform=وِزَارِيٌّ|Gloss=ministry,ministerial|Root=w_z_r|Translit=wizārīyun|LTranslit=wizārīy
+5	واسع	وَاسِع	ADJ	A-----MS1I	Case=Nom|Definite=Ind|Gender=Masc|Number=Sing	3	amod	3:amod	Vform=وَاسِعٌ|Gloss=wide,extensive,broad|Root=w_s_`|Translit=wāsiʿun|LTranslit=wāsiʿ
+6	يشمل	شَمِل	VERB	VIIA-3MS--	Aspect=Imp|Gender=Masc|Mood=Ind|Number=Sing|Person=3|VerbForm=Fin|Voice=Act	1	parataxis	1:parataxis	Vform=يَشمَلُ|Gloss=comprise,include,contain|Root=^s_m_l|Translit=yašmalu|LTranslit=šamil
+7	8	8	NUM	Q---------	NumForm=Digit	6	obj	6:obj	Vform=٨|Translit=8
+8	حقائب	حَقِيبَة	NOUN	N------P2I	Case=Gen|Definite=Ind|Number=Plur	7	nmod	7:nmod:gen	Vform=حَقَائِبَ|Gloss=briefcase,suitcase,portfolio,luggage|Root=.h_q_b|Translit=ḥaqāʾiba|LTranslit=ḥaqībat
+
+# newpar id = assabah.20041005.0017:p2
+# sent_id = assabah.20041005.0017:p2u1
+# text = دمشق (وكالات الانباء) - اجرى الرئيس السوري بشار الاسد تعديلا حكومياً واسعا تم بموجبه إقالة وزيري الداخلية والاعلام عن منصبيها في حين ظل محمد ناجي العطري رئيساً للحكومة.
+# orig_file_sentence ASB_ARB_20041005.0017#2
+1	دمشق	دمشق	X	U---------	_	0	root	0:root	Vform=دمشق|Root=OOV|Translit=dmšq
+2	(	(	PUNCT	G---------	_	3	punct	3:punct	SpaceAfter=No|Vform=(|Translit=(
+3	وكالات	وِكَالَة	NOUN	N------P1R	Case=Nom|Definite=Cons|Number=Plur	1	dep	1:dep	Vform=وِكَالَاتُ|Gloss=agency|Root=w_k_l|Translit=wikālātu|LTranslit=wikālat
+4	الانباء	نَبَأ	NOUN	N------P2D	Case=Gen|Definite=Def|Number=Plur	3	nmod	3:nmod:gen	SpaceAfter=No|Vform=اَلأَنبَاءِ|Gloss=news_item,report|Root=n_b_'|Translit=al-ʾanbāʾi|LTranslit=nabaʾ
+5	)	)	PUNCT	G---------	_	3	punct	3:punct	Vform=)|Translit=)
+6	-	-	PUNCT	G---------	_	1	punct	1:punct	Vform=-|Translit=-
+7	اجرى	أَجرَى	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	1	advcl	1:advcl:فِي_حِينَ	Vform=أَجرَى|Gloss=conduct,carry_out,perform|Root=^g_r_y|Translit=ʾaǧrā|LTranslit=ʾaǧrā
+8	الرئيس	رَئِيس	NOUN	N------S1D	Case=Nom|Definite=Def|Number=Sing	7	nsubj	7:nsubj	Vform=اَلرَّئِيسُ|Gloss=president,head,chairman|Root=r_'_s|Translit=ar-raʾīsu|LTranslit=raʾīs
+9	السوري	سُورِيّ	ADJ	A-----MS1D	Case=Nom|Definite=Def|Gender=Masc|Number=Sing	8	amod	8:amod	Vform=اَلسُّورِيُّ|Gloss=Syrian|Root=sUr|Translit=as-sūrīyu|LTranslit=sūrīy
+10	بشار	بشار	X	U---------	_	11	nmod	11:nmod	Vform=بشار|Root=OOV|Translit=bšār
+11	الاسد	الاسد	X	U---------	_	8	nmod	8:nmod	Vform=الاسد|Root=OOV|Translit=ālāsd
+12	تعديلا	تَعدِيل	NOUN	N------S4I	Case=Acc|Definite=Ind|Number=Sing	7	obj	7:obj	Vform=تَعدِيلًا|Gloss=adjustment,change,modification,amendment|Root=`_d_l|Translit=taʿdīlan|LTranslit=taʿdīl
+13	حكومياً	حُكُومِيّ	ADJ	A-----MS4I	Case=Acc|Definite=Ind|Gender=Masc|Number=Sing	12	amod	12:amod	Vform=حُكُومِيًّا|Gloss=governmental,state,official|Root=.h_k_m|Translit=ḥukūmīyan|LTranslit=ḥukūmīy
+14	واسعا	وَاسِع	ADJ	A-----MS4I	Case=Acc|Definite=Ind|Gender=Masc|Number=Sing	12	amod	12:amod	Vform=وَاسِعًا|Gloss=wide,extensive,broad|Root=w_s_`|Translit=wāsiʿan|LTranslit=wāsiʿ
+15	تم	تَمّ	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	12	acl	12:acl	Vform=تَمَّ|Gloss=conclude,take_place|Root=t_m_m|Translit=tamma|LTranslit=tamm
+16-18	بموجبه	_	_	_	_	_	_	_	_
+16	ب	بِ	ADP	P---------	AdpType=Prep	18	case	18:case	Vform=بِ|Gloss=by,with|Root=bi|Translit=bi|LTranslit=bi
+17	موجب	مُوجِب	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	16	fixed	16:fixed	Vform=مُوجِبِ|Gloss=reason,motive|Root=w_^g_b|Translit=mūǧibi|LTranslit=mūǧib
+18	ه	هُوَ	PRON	SP---3MS2-	Case=Gen|Gender=Masc|Number=Sing|Person=3|PronType=Prs	15	nmod	15:nmod:بِ_مُوجِب:gen	Vform=هِ|Gloss=he,she,it|Translit=hi|LTranslit=huwa
+19	إقالة	إِقَالَة	NOUN	N------S1R	Case=Nom|Definite=Cons|Number=Sing	15	nsubj	15:nsubj	Vform=إِقَالَةُ|Gloss=dismissal,discharge|Root=q_y_l|Translit=ʾiqālatu|LTranslit=ʾiqālat
+20	وزيري	وَزِير	NOUN	N------D2R	Case=Gen|Definite=Cons|Number=Dual	19	nmod	19:nmod:gen	Vform=وَزِيرَي|Gloss=minister|Root=w_z_r|Translit=wazīray|LTranslit=wazīr
+21	الداخلية	دَاخِلِيّ	ADJ	A-----FS2D	Case=Gen|Definite=Def|Gender=Fem|Number=Sing	20	amod	20:amod	Vform=اَلدَّاخِلِيَّةِ|Gloss=internal,domestic,interior,of_state|Root=d__h_l|Translit=ad-dāḫilīyati|LTranslit=dāḫilīy
+22-23	والاعلام	_	_	_	_	_	_	_	_
+22	و	وَ	CCONJ	C---------	_	23	cc	23:cc	Vform=وَ|Gloss=and|Root=wa|Translit=wa|LTranslit=wa
+23	الإعلام	إِعلَام	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	21	conj	20:amod|21:conj	Vform=اَلإِعلَامِ|Gloss=information,media|Root=`_l_m|Translit=al-ʾiʿlāmi|LTranslit=ʾiʿlām
+24	عن	عَن	ADP	P---------	AdpType=Prep	25	case	25:case	Vform=عَن|Gloss=about,from|Root=`an|Translit=ʿan|LTranslit=ʿan
+25-26	منصبيها	_	_	_	_	_	_	_	_
+25	منصبي	مَنصِب	NOUN	N------D2R	Case=Gen|Definite=Cons|Number=Dual	19	nmod	19:nmod:عَن:gen	Vform=مَنصِبَي|Gloss=post,position,office|Root=n_.s_b|Translit=manṣibay|LTranslit=manṣib
+26	ها	هُوَ	PRON	SP---3FS2-	Case=Gen|Gender=Fem|Number=Sing|Person=3|PronType=Prs	25	nmod	25:nmod:gen	Vform=هَا|Gloss=he,she,it|Translit=hā|LTranslit=huwa
+27	في	فِي	ADP	P---------	AdpType=Prep	7	mark	7:mark	Vform=فِي|Gloss=in|Root=fI|Translit=fī|LTranslit=fī
+28	حين	حِينَ	ADP	PI------2-	AdpType=Prep|Case=Gen	7	mark	7:mark	Vform=حِينِ|Gloss=when|Root=.h_y_n|Translit=ḥīni|LTranslit=ḥīna
+29	ظل	ظَلّ	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	7	parataxis	7:parataxis	Vform=ظَلَّ|Gloss=remain,continue|Root=.z_l_l|Translit=ẓalla|LTranslit=ẓall
+30	محمد	محمد	X	U---------	_	32	nmod	32:nmod	Vform=محمد|Root=OOV|Translit=mḥmd
+31	ناجي	ناجي	X	U---------	_	32	nmod	32:nmod	Vform=ناجي|Root=OOV|Translit=nāǧy
+32	العطري	العطري	X	U---------	_	29	nsubj	29:nsubj	Vform=العطري|Root=OOV|Translit=ālʿṭry
+33	رئيساً	رَئِيس	NOUN	N------S4I	Case=Acc|Definite=Ind|Number=Sing	29	xcomp	29:xcomp	Vform=رَئِيسًا|Gloss=president,head,chairman|Root=r_'_s|Translit=raʾīsan|LTranslit=raʾīs
+34-35	للحكومة	_	_	_	_	_	_	_	SpaceAfter=No
+34	ل	لِ	ADP	P---------	AdpType=Prep	35	case	35:case	Vform=لِ|Gloss=for,to|Root=l|Translit=li|LTranslit=li
+35	الحكومة	حُكُومَة	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	33	nmod	33:nmod:لِ:gen	Vform=اَلحُكُومَةِ|Gloss=government,administration|Root=.h_k_m|Translit=al-ḥukūmati|LTranslit=ḥukūmat
+36	.	.	PUNCT	G---------	_	1	punct	1:punct	Vform=.|Translit=.
+
+# newpar id = assabah.20041005.0017:p3
+# sent_id = assabah.20041005.0017:p3u1
+# text = واضافت المصادر ان مهدي دخل الله رئيس تحرير صحيفة الحزب الحاكم والليبرالي التوجهات تسلم منصب وزير الاعلام خلفا لاحمد الحسن فيما تسلم اللواء غازي كنعان رئيس شعبة الامن السياسي منصب وزير الداخلية.
+# orig_file_sentence ASB_ARB_20041005.0017#3
+1-2	واضافت	_	_	_	_	_	_	_	_
+1	و	وَ	CCONJ	C---------	_	0	root	0:root	Vform=وَ|Gloss=and|Root=wa|Translit=wa|LTranslit=wa
+2	أضافت	أَضَاف	VERB	VP-A-3FS--	Aspect=Perf|Gender=Fem|Number=Sing|Person=3|Voice=Act	1	parataxis	1:parataxis	Vform=أَضَافَت|Gloss=add,attach,receive_as_guest|Root=.d_y_f|Translit=ʾaḍāfat|LTranslit=ʾaḍāf
+3	المصادر	مَصدَر	NOUN	N------P1D	Case=Nom|Definite=Def|Number=Plur	2	nsubj	2:nsubj	Vform=اَلمَصَادِرُ|Gloss=source|Root=.s_d_r|Translit=al-maṣādiru|LTranslit=maṣdar
+4	ان	أَنَّ	SCONJ	C---------	_	16	mark	16:mark	Vform=أَنَّ|Gloss=that|Root='_n|Translit=ʾanna|LTranslit=ʾanna
+5	مهدي	مهدي	X	U---------	_	6	nmod	6:nmod	Vform=مهدي|Root=OOV|Translit=mhdy
+6	دخل	دخل	X	U---------	_	16	nsubj	16:nsubj	Vform=دخل|Root=OOV|Translit=dḫl
+7	الله	الله	X	U---------	_	6	nmod	6:nmod	Vform=الله|Root=OOV|Translit=āllh
+8	رئيس	رَئِيس	NOUN	N------S4R	Case=Acc|Definite=Cons|Number=Sing	6	nmod	6:nmod:acc	Vform=رَئِيسَ|Gloss=president,head,chairman|Root=r_'_s|Translit=raʾīsa|LTranslit=raʾīs
+9	تحرير	تَحرِير	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	8	nmod	8:nmod:gen	Vform=تَحرِيرِ|Gloss=liberation,liberating,editorship,editing|Root=.h_r_r|Translit=taḥrīri|LTranslit=taḥrīr
+10	صحيفة	صَحِيفَة	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	9	nmod	9:nmod:gen	Vform=صَحِيفَةِ|Gloss=newspaper,sheet,leaf|Root=.s_.h_f|Translit=ṣaḥīfati|LTranslit=ṣaḥīfat
+11	الحزب	حِزب	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	10	nmod	10:nmod:gen	Vform=اَلحِزبِ|Gloss=party,band|Root=.h_z_b|Translit=al-ḥizbi|LTranslit=ḥizb
+12	الحاكم	حَاكِم	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	11	nmod	11:nmod:gen	Vform=اَلحَاكِمِ|Gloss=ruler,governor|Root=.h_k_m|Translit=al-ḥākimi|LTranslit=ḥākim
+13-14	والليبرالي	_	_	_	_	_	_	_	_
+13	و	وَ	CCONJ	C---------	_	6	cc	6:cc	Vform=وَ|Gloss=and|Root=wa|Translit=wa|LTranslit=wa
+14	الليبرالي	لِيبِرَالِيّ	ADJ	A-----MS4D	Case=Acc|Definite=Def|Gender=Masc|Number=Sing	6	amod	6:amod	Vform=اَللِّيبِرَالِيَّ|Gloss=liberal|Root=lIbirAl|Translit=al-lībirālīya|LTranslit=lībirālīy
+15	التوجهات	تَوَجُّه	NOUN	N------P2D	Case=Gen|Definite=Def|Number=Plur	14	nmod	14:nmod:gen	Vform=اَلتَّوَجُّهَاتِ|Gloss=attitude,approach|Root=w_^g_h|Translit=at-tawaǧǧuhāti|LTranslit=tawaǧǧuh
+16	تسلم	تَسَلَّم	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	2	ccomp	2:ccomp	Vform=تَسَلَّمَ|Gloss=receive,assume|Root=s_l_m|Translit=tasallama|LTranslit=tasallam
+17	منصب	مَنصِب	NOUN	N------S4R	Case=Acc|Definite=Cons|Number=Sing	16	obj	16:obj	Vform=مَنصِبَ|Gloss=post,position,office|Root=n_.s_b|Translit=manṣiba|LTranslit=manṣib
+18	وزير	وَزِير	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	17	nmod	17:nmod:gen	Vform=وَزِيرِ|Gloss=minister|Root=w_z_r|Translit=wazīri|LTranslit=wazīr
+19	الاعلام	عَلَم	NOUN	N------P2D	Case=Gen|Definite=Def|Number=Plur	18	nmod	18:nmod:gen	Vform=اَلأَعلَامِ|Gloss=flag,banner,badge|Root=`_l_m|Translit=al-ʾaʿlāmi|LTranslit=ʿalam
+20	خلفا	خَلَف	NOUN	N------S4I	Case=Acc|Definite=Ind|Number=Sing	16	obl	16:obl:acc	Vform=خَلَفًا|Gloss=substitute,scion|Root=_h_l_f|Translit=ḫalafan|LTranslit=ḫalaf
+21-22	لاحمد	_	_	_	_	_	_	_	_
+21	ل	لِ	ADP	P---------	AdpType=Prep	23	case	23:case	Vform=لِ|Gloss=for,to|Root=l|Translit=li|LTranslit=li
+22	أحمد	أَحمَد	NOUN	N------S2I	Case=Gen|Definite=Ind|Number=Sing	23	nmod	23:nmod:gen	Vform=أَحمَدَ|Gloss=Ahmad|Root=.h_m_d|Translit=ʾaḥmada|LTranslit=ʾaḥmad
+23	الحسن	الحسن	X	U---------	_	20	nmod	20:nmod:لِ	Vform=الحسن|Root=OOV|Translit=ālḥsn
+24	فيما	فِيمَا	CCONJ	C---------	_	25	cc	25:cc	Vform=فِيمَا|Gloss=while,during_which|Root=fI|Translit=fīmā|LTranslit=fīmā
+25	تسلم	تَسَلَّم	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	16	conj	2:ccomp|16:conj	Vform=تَسَلَّمَ|Gloss=receive,assume|Root=s_l_m|Translit=tasallama|LTranslit=tasallam
+26	اللواء	لِوَاء	NOUN	N------S1D	Case=Nom|Definite=Def|Number=Sing	25	nsubj	25:nsubj	Vform=اَللِّوَاءُ|Gloss=banner,flag|Root=l_w_y|Translit=al-liwāʾu|LTranslit=liwāʾ
+27	غازي	غازي	X	U---------	_	28	nmod	28:nmod	Vform=غازي|Root=OOV|Translit=ġāzy
+28	كنعان	كنعان	X	U---------	_	26	nmod	26:nmod	Vform=كنعان|Root=OOV|Translit=knʿān
+29	رئيس	رَئِيس	NOUN	N------S1R	Case=Nom|Definite=Cons|Number=Sing	26	nmod	26:nmod:nom	Vform=رَئِيسُ|Gloss=president,head,chairman|Root=r_'_s|Translit=raʾīsu|LTranslit=raʾīs
+30	شعبة	شُعبَة	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	29	nmod	29:nmod:gen	Vform=شُعبَةِ|Gloss=branch,subdivision|Root=^s_`_b|Translit=šuʿbati|LTranslit=šuʿbat
+31	الامن	أَمن	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	30	nmod	30:nmod:gen	Vform=اَلأَمنِ|Gloss=security,safety|Root='_m_n|Translit=al-ʾamni|LTranslit=ʾamn
+32	السياسي	سِيَاسِيّ	ADJ	A-----MS2D	Case=Gen|Definite=Def|Gender=Masc|Number=Sing	31	amod	31:amod	Vform=اَلسِّيَاسِيِّ|Gloss=political|Root=s_w_s|Translit=as-siyāsīyi|LTranslit=siyāsīy
+33	منصب	مَنصِب	NOUN	N------S4R	Case=Acc|Definite=Cons|Number=Sing	25	obj	25:obj	Vform=مَنصِبَ|Gloss=post,position,office|Root=n_.s_b|Translit=manṣiba|LTranslit=manṣib
+34	وزير	وَزِير	NOUN	N------S2R	Case=Gen|Definite=Cons|Number=Sing	33	nmod	33:nmod:gen	Vform=وَزِيرِ|Gloss=minister|Root=w_z_r|Translit=wazīri|LTranslit=wazīr
+35	الداخلية	دَاخِلِيّ	ADJ	A-----FS2D	Case=Gen|Definite=Def|Gender=Fem|Number=Sing	34	amod	34:amod	SpaceAfter=No|Vform=اَلدَّاخِلِيَّةِ|Gloss=internal,domestic,interior,of_state|Root=d__h_l|Translit=ad-dāḫilīyati|LTranslit=dāḫilīy
+36	.	.	PUNCT	G---------	_	1	punct	1:punct	Vform=.|Translit=.
+
+# newpar id = assabah.20041005.0017:p4
+# sent_id = assabah.20041005.0017:p4u1
+# text = وذكرت وكالة الانباء السورية ان التعديل شمل ثماني حقائب بينها وزارتا الداخلية والاقتصاد.
+# orig_file_sentence ASB_ARB_20041005.0017#4
+1-2	وذكرت	_	_	_	_	_	_	_	_
+1	و	وَ	CCONJ	C---------	_	0	root	0:root	Vform=وَ|Gloss=and|Root=wa|Translit=wa|LTranslit=wa
+2	ذكرت	ذَكَر	VERB	VP-A-3FS--	Aspect=Perf|Gender=Fem|Number=Sing|Person=3|Voice=Act	1	parataxis	1:parataxis	Vform=ذَكَرَت|Gloss=mention,cite,remember|Root=_d_k_r|Translit=ḏakarat|LTranslit=ḏakar
+3	وكالة	وِكَالَة	NOUN	N------S1R	Case=Nom|Definite=Cons|Number=Sing	2	nsubj	2:nsubj	Vform=وِكَالَةُ|Gloss=agency|Root=w_k_l|Translit=wikālatu|LTranslit=wikālat
+4	الانباء	نَبَأ	NOUN	N------P2D	Case=Gen|Definite=Def|Number=Plur	3	nmod	3:nmod:gen	Vform=اَلأَنبَاءِ|Gloss=news_item,report|Root=n_b_'|Translit=al-ʾanbāʾi|LTranslit=nabaʾ
+5	السورية	سُورِيّ	ADJ	A-----FS1D	Case=Nom|Definite=Def|Gender=Fem|Number=Sing	3	amod	3:amod	Vform=اَلسُّورِيَّةُ|Gloss=Syrian|Root=sUr|Translit=as-sūrīyatu|LTranslit=sūrīy
+6	ان	أَنَّ	SCONJ	C---------	_	8	mark	8:mark	Vform=أَنَّ|Gloss=that|Root='_n|Translit=ʾanna|LTranslit=ʾanna
+7	التعديل	تَعدِيل	NOUN	N------S4D	Case=Acc|Definite=Def|Number=Sing	8	obl	8:obl:acc	Vform=اَلتَّعدِيلَ|Gloss=adjustment,change,modification,amendment|Root=`_d_l|Translit=at-taʿdīla|LTranslit=taʿdīl
+8	شمل	شَمِل	VERB	VP-A-3MS--	Aspect=Perf|Gender=Masc|Number=Sing|Person=3|Voice=Act	2	ccomp	2:ccomp	Vform=شَمِلَ|Gloss=comprise,include,contain|Root=^s_m_l|Translit=šamila|LTranslit=šamil
+9	ثماني	ثَمَانُون	NUM	QL------4R	Case=Acc|Definite=Cons|NumForm=Word	8	obj	8:obj	Vform=ثَمَانِي|Gloss=eighty|Root=_t_m_n|Translit=ṯamānī|LTranslit=ṯamānūn
+10	حقائب	حَقِيبَة	NOUN	N------P2I	Case=Gen|Definite=Ind|Number=Plur	9	nmod	9:nmod:gen	Vform=حَقَائِبَ|Gloss=briefcase,suitcase,portfolio,luggage|Root=.h_q_b|Translit=ḥaqāʾiba|LTranslit=ḥaqībat
+11-12	بينها	_	_	_	_	_	_	_	_
+11	بين	بَينَ	ADP	PI------4-	AdpType=Prep|Case=Acc	12	case	12:case	Vform=بَينَ|Gloss=between,among|Root=b_y_n|Translit=bayna|LTranslit=bayna
+12	ها	هُوَ	PRON	SP---3FS2-	Case=Gen|Gender=Fem|Number=Sing|Person=3|PronType=Prs	10	obl	10:obl:بَينَ:gen	Vform=هَا|Gloss=he,she,it|Translit=hā|LTranslit=huwa
+13	وزارتا	وِزَارَة	NOUN	N------D1R	Case=Nom|Definite=Cons|Number=Dual	12	nsubj	12:nsubj	Vform=وِزَارَتَا|Gloss=ministry|Root=w_z_r|Translit=wizāratā|LTranslit=wizārat
+14	الداخلية	دَاخِلِيّ	ADJ	A-----FS2D	Case=Gen|Definite=Def|Gender=Fem|Number=Sing	13	amod	13:amod	Vform=اَلدَّاخِلِيَّةِ|Gloss=internal,domestic,interior,of_state|Root=d__h_l|Translit=ad-dāḫilīyati|LTranslit=dāḫilīy
+15-16	والاقتصاد	_	_	_	_	_	_	_	SpaceAfter=No
+15	و	وَ	CCONJ	C---------	_	16	cc	16:cc	Vform=وَ|Gloss=and|Root=wa|Translit=wa|LTranslit=wa
+16	الاقتصاد	اِقتِصَاد	NOUN	N------S2D	Case=Gen|Definite=Def|Number=Sing	14	conj	13:amod|14:conj	Vform=اَلِاقتِصَادِ|Gloss=economy,saving|Root=q_.s_d|Translit=al-i-ʼqtiṣādi|LTranslit=iqtiṣād
+17	.	.	PUNCT	G---------	_	1	punct	1:punct	Vform=.|Translit=.
