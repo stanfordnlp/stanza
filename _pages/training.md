@@ -21,6 +21,11 @@ Run `source config.sh` to set the following environment variables.  You will nee
 
 You may want to put these variables in your shell startup to save time.  For example, `.bashrc`  In that case, you will not need to run the config script.
 
+{% include alerts.html %}
+{{ note }}
+{{ "Make sure to use `source` or the environment variables will not last.  You can also set them in .bashrc for a more permanent solution" | markdownify }}
+{{ end }}
+
 Note that Windows users will not be able to run this `.sh` script, but they can still use the python tools after adding these variables via the control panel.  Control Panel -> Edit environment variables and create entries similar to the values in `config.sh`.
 
 We provide scripts that are useful for model training and evaluation in the `scripts` folder, the `stanza/utils/datasets`, and the `stanza/utils/training` directory. The first thing to do before training is to setup the environment variables by editing `scripts/config.sh`. The most important variables include:
