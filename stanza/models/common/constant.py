@@ -110,6 +110,7 @@ lcode2lang_raw = [
     ("ang", "Old_English"),
     ("fro", "Old_French"),
     ("otk", "Old_Turkish"),
+    ("ps",  "Pashto"),
     ("fa",  "Persian"),
     ("pl",  "Polish"),
     ("pt",  "Portuguese"),
@@ -120,6 +121,7 @@ lcode2lang_raw = [
     ("gd",  "Scottish_Gaelic"),
     ("sr",  "Serbian"),
     ("zh-hans", "Simplified_Chinese"),
+    ("sd",  "Sindhi"),
     ("sms", "Skolt_Sami"),
     ("sk",  "Slovak"),
     ("sl",  "Slovenian"),
@@ -194,6 +196,17 @@ def lang_to_langcode(lang):
     else:
         raise ValueError("Unable to find language code for %s" % lang)
     return lcode
+
+RIGHT_TO_LEFT = set(["ar", "arc", "az", "dv", "ff", "he", "ku", "nqo", "ps", "fa", "rhg", "sd", "syr", "ur"])
+
+def is_right_to_left(lang):
+    """
+    Covers all the RtL languages we support, as well as many we don't.
+
+    If a language is left out, please let us know!
+    """
+    lcode = lang_to_langcode(lang)
+    return lcode in RIGHT_TO_LEFT
 
 def treebank_to_short_name(treebank):
     """ Convert treebank name to short code. """

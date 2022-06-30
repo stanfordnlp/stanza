@@ -7,7 +7,7 @@ import tempfile
 import pytest
 
 import stanza
-from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode
+from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode, is_right_to_left
 from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -40,3 +40,9 @@ def test_lang_to_langcode():
     assert "hi" == lang_to_langcode("HI")
     assert "hi" == lang_to_langcode("hi")
 
+def test_right_to_left():
+    assert is_right_to_left("ar")
+    assert is_right_to_left("Arabic")
+
+    assert not is_right_to_left("en")
+    assert not is_right_to_left("English")
