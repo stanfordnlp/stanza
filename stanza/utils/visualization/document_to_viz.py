@@ -53,10 +53,7 @@ def visualize_str(text, pipeline):
     """
     pipe = stanza.Pipeline(pipeline)
     doc = pipe(text)
-    if is_right_to_left(pipeline):
-        visualize_doc(doc, pipeline)
-    else:
-        visualize_doc(doc, pipeline)
+    visualize_doc(doc, pipeline)
 
 
 def main():
