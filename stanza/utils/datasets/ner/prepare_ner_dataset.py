@@ -242,9 +242,26 @@ Daffodil University produced a Bangla NER dataset
   Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
 
+LST20 is a Thai NER dataset from 2020
+  - https://arxiv.org/abs/2008.05055
+    The Annotation Guideline of LST20 Corpus
+    Prachya Boonkwan, Vorapon Luantangsrisuk, Sitthaa Phaholphinyo,
+    Kanyanat Kriengket, Dhanon Leenoi, Charun Phrombut,
+    Monthika Boriboon, Krit Kosawat, Thepchai Supnithi
+  - This script processes a version which can be downloaded here after registration:
+    https://aiforthai.in.th/index.php
+  - There is another version downloadable from HuggingFace
+    The script will likely need some modification to be compatible
+    with the HuggingFace version
+  - Download the data in $NERBASE/thai/LST20_Corpus
+    There should be "train", "eval", "test" directories after downloading
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
+
 """
 
 import glob
@@ -266,6 +283,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
@@ -783,6 +801,9 @@ def process_hinercollapsed(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
+def process_lst20(paths, short_name, include_space_char=True):
+    convert_lst20.convert_lst20(paths, short_name, include_space_char)
+
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     in_directory = os.path.join(paths["NERBASE"], "MarathiNLP", "L3Cube-MahaNER", "IOB")
@@ -821,10 +842,12 @@ DATASET_MAPPING = {
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
     "mr_l3cube":         process_mr_l3cube,
+    "th_lst20":          process_lst20,
 }
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
+    print("Processing %s" % dataset_name)
 
     random.seed(1234)
 
@@ -848,6 +871,7 @@ def main(dataset_name):
         process_toy_dataset(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
+    print("Done processing %s" % dataset_name)
 
 if __name__ == '__main__':
     main(sys.argv[1])
