@@ -14,6 +14,7 @@ def visualize_doc(doc, pipeline):
     visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 80,
                              "font": "Source Sans Pro"}
     nlp = spacy.load("en_core_web_sm")   # Must install the latest version of spaCy's en_core_web_sm before running
+    # Find the download here: https://spacy.io/models/en
     sentences_to_visualize = []
     for sentence in doc.sentences:
         words, lemmas, heads, deps, tags = [], [], [], [], []
@@ -42,6 +43,8 @@ def visualize_doc(doc, pipeline):
         sentences_to_visualize.append(document_result)
 
         for line in sentences_to_visualize:  # render all sentences through displaCy
+            # If this program is NOT being run in a Jupyter notebook, replace displacy.render with displacy.serve
+            # and the visualization will be hosted locally, link being provided in the program output.
             displacy.render(line, style="dep", options=visualization_options)
 
 
@@ -64,6 +67,7 @@ def main():
     visualize_str("أراك في مابعد", "ar")
     visualize_str("لحظة من فضلك", "ar")
     # example sentences in left to right language
+    print("PRINTING left to right examples")
     visualize_str("This is a sentence.", "en")
     visualize_str("中国是一个很有意思的国家。", "zh")
 
