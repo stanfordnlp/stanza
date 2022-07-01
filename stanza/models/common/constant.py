@@ -262,13 +262,20 @@ lcode2lang_raw = [
     ("zu",  "Zulu"),
 ]
 
+# build the dictionary, checking for duplicate language codes
 lcode2lang = {}
 for code, language in lcode2lang_raw:
     assert code not in lcode2lang
     lcode2lang[code] = language
 
-lang2lcode = {lcode2lang[k]: k for k in lcode2lang}
-langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
+# invert the dictionary, checking for possible duplicate language names
+lang2lcode = {}
+for code, language in lcode2lang_raw:
+    assert language not in lang2lcode
+    lang2lcode[language] = code
+
+assert len(lcode2lang_raw) == len(lcode2lang)
+assert len(lcode2lang_raw) == len(lang2lcode)
 
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
@@ -280,6 +287,9 @@ lang2lcode['Chinese'] = 'zh'
 
 # treebank names changed from Old Russian to Old East Slavic in 2.8
 lang2lcode['Old_Russian'] = 'orv'
+
+# build a lowercase map *after* all the other edits are finished
+langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
 
 treebank_special_cases = {
     "UD_Chinese-GSDSimp": "zh-hans_gsdsimp",
