@@ -14,6 +14,26 @@ data for the various models, word vectors for all models other than
 tokenization, and possibly a character model for improving
 performance.
 
+## Language Codes
+
+In general we represent datasets and the annotators made from them
+using a shorthand, such as `en_ewt` for the English EWT dataset or
+`en_wsj` for the WSJ treebank.
+
+The characters before the `_` are the
+[language code](https://en.wikipedia.org/wiki/Language_code)
+for that language.  In almost all cases, if a UD dataset is exists for
+a language, we use the same language code as used in the dataset name.
+Otherwise, we use ISO 639-X for whichever X first defines the language.
+
+This is relevant for adding a new language because we have not
+necessarily implemented all of the language codes in the world.
+If you are adding new models and get an error such as
+`Unable to find language code ...`, you will need to fork Stanza
+and edit the following file:
+
+https://github.com/stanfordnlp/stanza/blob/dev/stanza/models/common/constant.py
+
 ## Data format
 
 Most of the training scripts expect data in [conllu
