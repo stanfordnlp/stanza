@@ -235,6 +235,7 @@ lcode2lang_raw = [
     ("uz",  "Uzbek"),
     ("ve",  "Venda"),
     ("vi",  "Vietnamese"),
+    ("vo",  "Volapük"),
     ("wa",  "Walloon"),
     ("wbp", "Warlpiri"),
     ("cy",  "Welsh"),
