@@ -283,7 +283,26 @@ lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
 
-lang2lcode['Chinese'] = 'zh'
+extra_lang_to_lcodes = [
+    ("ny",  "Chewa"),
+    ("zh",  "Chinese"),
+    ("za",  "Chuang"),
+    ("eme", "Emerillon"),
+    ("lij", "Genoese"),
+    ("jaa", "Jamamadí"),
+    ("kl",  "Kalaallisut"),
+    ("lb",  "Letzeburgesch"),
+    ("jaa", "Madí"),
+    ("ny",  "Nyanja"),
+    ("arr", "Ramarama"),
+    ("ii",  "Sichuan_Yi"),
+    ("soj", "Sohi"),
+]
+
+for code, language in extra_lang_to_lcodes:
+    assert language not in lang2lcode
+    assert code in lcode2lang
+    lang2lcode[language] = code
 
 # treebank names changed from Old Russian to Old East Slavic in 2.8
 lang2lcode['Old_Russian'] = 'orv'
