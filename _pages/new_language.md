@@ -46,10 +46,10 @@ already compatible with this format, you would need to write your own
 processing script to convert it to this format.
 
 Note that many of the columns in conllu format may not be present in
-your data.  Most of these columns can be represented with a blank "_".
+your data.  Most of these columns can be represented with a blank `_`.
 One exception to this is the dependency column, which occupies the
 7th, 8th, and 9th, columsn of the data.  There is some numeric
-processing involved in these columns, so "_" is not sufficient.  If
+processing involved in these columns, so `_` is not sufficient.  If
 these columns are not prsent, you should fake them as follows: set the
 first row's values to `0, root, 0:root`, set each other row `i` to
 `i-1, dep, i-1:dep`.  You can look at process_orchid.py for an
