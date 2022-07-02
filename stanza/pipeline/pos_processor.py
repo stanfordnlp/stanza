@@ -4,6 +4,7 @@ Processor for performing part-of-speech tagging
 
 from stanza.models.common import doc
 from stanza.models.common.utils import get_tqdm, unsort
+from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.pipeline._constants import *
@@ -28,6 +29,27 @@ class POSProcessor(UDProcessor):
 
     def __str__(self):
         return "POSProcessor(%s)" % self.config['model_path']
+
+    def get_known_xpos(self):
+        """
+        Returns the xpos tags known by this model
+        """
+        keys = [k for k in self.vocab['xpos']._unit2id.keys() if k not in VOCAB_PREFIX]
+        return keys
+
+    def get_known_upos(self):
+        """
+        Returns the upos tags known by this model
+        """
+        keys = [k for k in self.vocab['upos']._unit2id.keys() if k not in VOCAB_PREFIX]
+        return keys
+
+    def get_known_feats(self):
+        """
+        Returns the features known by this model
+        """
+        keys = [k for k in self.vocab['feats']._unit2id.keys() if k not in VOCAB_PREFIX]
+        return keys
 
     def process(self, document):
         batch = DataLoader(

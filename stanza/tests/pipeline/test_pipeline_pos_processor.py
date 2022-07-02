@@ -21,8 +21,30 @@ EN_DOC_GOLD = """
 <Token id=7;words=[<Word id=7;text=.;upos=PUNCT;xpos=.>]>
 """.strip()
 
+@pytest.fixture(scope="module")
+def pos_pipeline():
+    return stanza.Pipeline(**{'processors': 'tokenize,pos', 'dir': TEST_MODELS_DIR, 'lang': 'en'})
 
-def test_part_of_speech():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos', 'dir': TEST_MODELS_DIR, 'lang': 'en'})
-    doc = nlp(EN_DOC)
+def test_part_of_speech(pos_pipeline):
+    doc = pos_pipeline(EN_DOC)
     assert EN_DOC_GOLD == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+
+def test_get_known_xpos(pos_pipeline):
+    tags = pos_pipeline.processors['pos'].get_known_xpos()
+    # make sure we have xpos...
+    assert 'DT' in tags
+    # ... and not upos
+    assert 'DET' not in tags
+
+def test_get_known_upos(pos_pipeline):
+    tags = pos_pipeline.processors['pos'].get_known_upos()
+    # make sure we have upos...
+    assert 'DET' in tags
+    # ... and not xpos
+    assert 'DT' not in tags
+
+
+def test_get_known_feats(pos_pipeline):
+    feats = pos_pipeline.processors['pos'].get_known_feats()
+    # I appreciate how self-referential the Abbr feat is
+    assert 'Abbr' in feats
