@@ -168,6 +168,9 @@ At least one of the datasets is based on a raw constituency dataset,
 and the `prepare_ner_dataset` script will look in
 [`$CONSTITUENCY_BASE`](training.md#constituency-data) for that data.
 
+If you are adding a new NER model not yet supported by Stanza, you may find it helpful to review a couple examples of PRs which added new models, such as
+the [Japanese GSD dataset](https://github.com/stanfordnlp/stanza/commit/58427b51e83bbcf84c371be249d0c1fbc7f8bced) or the [Marathi L3Cube dataset](https://github.com/stanfordnlp/stanza/commit/968637772ac9f0f8282b6188878b0cb73e66a5ac)
+
 ### Constituency Data
 
 The constituency data is also in a different organizational model than the UD datasets.  There is a script for the constituencies:
