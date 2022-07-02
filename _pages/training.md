@@ -59,7 +59,15 @@ Once this is downloaded, the models each have a flag which tells the model where
 
 For more information and other options, [see here](word_vectors.md).
 
-## Converting UD data
+## Input Files
+
+In general, we use UD datasets for tokenizer, MWT, lemmatizer, pos, and depparse.
+The NER, constituency parser, and sentiment models all have different input formats.
+The conversion scripts turn the raw data of various forms into the formats expected
+by the tools, and the `run` scripts expect a standardized format produced by the
+data conversion scripts.
+
+### Converting UD data
 
 A large repository of data is available at [www.universaldependencies.org](http://www.universaldependencies.org).  Most of our models are trained using this data.  We provide python scripts for converting this data to the format used by our models at training time:
 ```bash
@@ -184,6 +192,36 @@ The expected end result is bracketed trees such as PTB brackets:
 The final data will go to `$CONSTITUENCY_DATA_DIR`, which defaults to
 `data/constituency`, but can be set to something else via
 environmental variables.
+
+## Filenames & short names
+
+In general, the training files for the UD datasets follow the pattern
+
+```
+lang_dataset-ud-train|dev|test.conllu
+```
+
+For example, see the [English EWT dataset](https://github.com/UniversalDependencies/UD_English-EWT)
+
+We try to replicate this pattern wherever possible.
+All of the UD based models (tokenizer, lemmatizer, etc) expect names to be in this format.
+The constituency parser files are converted to `lang_dataset_train|dev|test.mrg`,
+and the NER model input files are `lang_dataset.train|dev|test.json`.
+(Note that we generally keep the files in separate directories, so the similar names do not get confusing.)
+
+You can see that the first part of the names, `lang_dataset`, are common to all of the models.
+The code frequently refers to this as `short_name`, so `en_ewt` is the short name for UD_English-EWT,
+`en_wsj` is the shortname for Penn Treebank, and `en_ontonotes` is the short name for the OntoNotes NER dataset, etc.
+The training scripts will look for the converted input files in `${module}_DATA_DIR` and expect that you give them
+the appropriate shortname for the dataset you are training on.
+
+For example, `run_ner.py en_ontonotes` will expect a converted OntoNotes dataset in `$NER_DATA_DIR`
+
+Stanza knows about all of the language codes used by UD, along with a
+few others, but there may be some missing ones if you are working on a
+new language.
+[You can add missing language codes](new_language.md#language-codes)
+if needed.
 
 ## Training with Scripts
 
