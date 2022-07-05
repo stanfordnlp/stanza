@@ -1,4 +1,5 @@
 import pytest
+import shutil
 import tempfile
 
 import stanza
@@ -6,6 +7,7 @@ import stanza
 from stanza.tests import *
 
 from stanza.pipeline import core
+from stanza.resources.common import get_md5
 
 pytestmark = pytest.mark.pipeline
 
@@ -105,6 +107,35 @@ def test_download_not_repeated():
 
         pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"})
         assert os.path.getmtime(tokenize_path) == mod_time
+
+def test_download_none():
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        stanza.download("it", model_dir=test_dir, processors="tokenize", package="combined")
+        stanza.download("it", model_dir=test_dir, processors="tokenize", package="vit")
+
+        it_dir = os.path.join(test_dir, 'it')
+        it_dir_listing = sorted(os.listdir(it_dir))
+        assert sorted(it_dir_listing) == ['mwt', 'tokenize']
+        combined_path = os.path.join(it_dir, "tokenize", "combined.pt")
+        vit_path = os.path.join(it_dir, "tokenize", "vit.pt")
+
+        assert os.path.exists(combined_path)
+        assert os.path.exists(vit_path)
+
+        combined_md5 = get_md5(combined_path)
+        vit_md5 = get_md5(vit_path)
+        # check that the models are different
+        # otherwise the test is not testing anything
+        assert combined_md5 != vit_md5
+
+        shutil.copyfile(vit_path, combined_path)
+        assert get_md5(combined_path) == vit_md5
+
+        pipe = stanza.Pipeline("it", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"}, download_method=None)
+        assert get_md5(combined_path) == vit_md5
+
+        pipe = stanza.Pipeline("it", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"})
+        assert get_md5(combined_path) != vit_md5
 
 
 def check_download_method_updates(download_method):
