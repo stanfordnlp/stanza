@@ -107,27 +107,39 @@ def test_download_not_repeated():
         assert os.path.getmtime(tokenize_path) == mod_time
 
 
+def check_download_method_updates(download_method):
+    """
+    Run a single test of creating a pipeline with a given download_method, checking that the model is updated
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined")
+
+        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+        en_dir = os.path.join(test_dir, 'en')
+        en_dir_listing = sorted(os.listdir(en_dir))
+        assert en_dir_listing == ['tokenize']
+        tokenize_path = os.path.join(en_dir, "tokenize", "combined.pt")
+
+        with open(tokenize_path, "w") as fout:
+            fout.write("Unban mox opal!")
+        mod_time = os.path.getmtime(tokenize_path)
+
+        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"}, download_method=download_method)
+        assert os.path.getmtime(tokenize_path) != mod_time
 
 def test_download_fixed():
     """
     Test that a model is fixed if the existing model doesn't match the md5sum
     """
     for download_method in (core.DownloadMethod.REUSE_RESOURCES, core.DownloadMethod.DOWNLOAD_RESOURCES):
-        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-            stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined")
+        check_download_method_updates(download_method)
 
-            assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
-            en_dir = os.path.join(test_dir, 'en')
-            en_dir_listing = sorted(os.listdir(en_dir))
-            assert en_dir_listing == ['tokenize']
-            tokenize_path = os.path.join(en_dir, "tokenize", "combined.pt")
-
-            with open(tokenize_path, "w") as fout:
-                fout.write("Unban mox opal!")
-            mod_time = os.path.getmtime(tokenize_path)
-
-            pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"}, download_method=download_method)
-            assert os.path.getmtime(tokenize_path) != mod_time
+def test_download_strings():
+    """
+    Same as the test of the download_method, but tests that the pipeline works for string download_method
+    """
+    for download_method in ("reuse_resources", "download_resources"):
+        check_download_method_updates(download_method)
 
 def test_limited_pipeline():
     """
