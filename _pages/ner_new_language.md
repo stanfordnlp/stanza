@@ -21,6 +21,9 @@ We will work on Linux for this.  It is possible to recreate most of
 these steps on Windows or another OS, with the exception that the
 environment variables need to be set differently.
 
+As a reminder, Stanza only supports Python 3.6 or later.
+If you are using an earlier version of Python, it will not work.
+
 ### Codebase
 
 This is a previously unknown dataset, so it will require some code
@@ -57,6 +60,18 @@ values we use on our cluster to organize shared data:
 ```bash
 export NERBASE=/u/nlp/data/ner/stanza
 export NER_DATA_DIR=/nlp/scr/$USER/data/ner
+```
+
+Since you will be running python programs directly from the git checkout of Stanza, you will need to make sure `.` is in your `PYTHONPATH`.
+
+```bash
+echo $PYTHONPATH
+```
+
+If you have a blank `PYTHONPATH`, or your path does not include `.`, please also add this to your startup script:
+
+```bash
+export PYTHONPATH=$PYTHONPATH:.
 ```
 
 ### Data download
