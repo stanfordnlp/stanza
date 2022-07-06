@@ -144,7 +144,7 @@ default.
 
 ## Available NER Models
 
-The following table lists all NER models supported by Stanza, pretrained on various NER datasets. Again, you can find performance of all available models on the [System Performance](performance.md) page.
+The following table lists all NER models supported by Stanza, pretrained on various NER datasets. You can find the performance of all available NER models on the [NER Models](ner_models.md) page.
 
 **Table Notes**
 
