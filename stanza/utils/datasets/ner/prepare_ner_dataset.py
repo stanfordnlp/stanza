@@ -226,6 +226,20 @@ L3Cube is a Marathi dataset
   Then run
     prepare_ner_dataset.py mr_l3cube
 
+Daffodil University produced a Bangla NER dataset
+  - https://github.com/Rifat1493/Bengali-NER
+  - https://ieeexplore.ieee.org/document/8944804
+  - Bengali Named Entity Recognition:
+    A survey with deep learning benchmark
+    Md Jamiur Rahman Rifat, Sheikh Abujar, Sheak Rashed Haider Noori,
+    Syed Akhter Hossain
+
+  Clone the repo into a "bangla" subdirectory of $NERBASE
+    cd $NERBASE/bangla
+    git clone git@github.com:Rifat1493/Bengali-NER.git
+  Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -245,6 +259,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
+import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
@@ -778,10 +793,16 @@ def process_mr_l3cube(paths, short_name):
     datasets = [convert_mr_l3cube.convert(input_file) for input_file in input_files]
     write_dataset(datasets, base_output_path, short_name)
 
+def process_bn_daffodil(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "bangla", "Bengali-NER")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_bn_daffodil.convert_dataset(in_directory, out_directory)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
 DATASET_MAPPING = {
+    "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
     "fa_arman":          process_fa_arman,
