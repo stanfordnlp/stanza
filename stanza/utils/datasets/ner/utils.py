@@ -78,7 +78,7 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
 
     sentences = []
     current_sentence = []
-    for line in lines:
+    for line_idx, line in enumerate(lines):
         if not line:
             if current_sentence:
                 sentences.append(current_sentence)
@@ -88,11 +88,17 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
             continue
 
         pieces = line.split("\t")
-        word = pieces[text_column]
+        try:
+            word = pieces[text_column]
+        except IndexError as e:
+            raise IndexError("Could not find word index %d at line %d" % (text_column, line_idx)) from e
         if word == '\x96':
             # this happens in GermEval2014 for some reason
             continue
-        tag = pieces[annotation_column]
+        try:
+            tag = pieces[annotation_column]
+        except IndexError as e:
+            raise IndexError("Could not find tag index %d at line %d" % (annotation_column, line_idx)) from e
         if remap_fn:
             tag = remap_fn(tag)
 
