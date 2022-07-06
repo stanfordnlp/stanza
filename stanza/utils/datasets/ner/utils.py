@@ -65,11 +65,13 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio"):
     convert_bio_to_json(output_dir, output_dir, short_name, suffix)
 
 
-def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True):
+def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True, keep_broken_tags=False):
     """
     Read sentences from a TSV file
 
     Returns a list of list of (word, tag)
+
+    If keep_broken_tags==True, then None is returned for that tag.  Otherwise, an IndexError is thrown
     """
     with open(filename, encoding="utf-8") as fin:
         lines = fin.readlines()
@@ -98,7 +100,10 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
         try:
             tag = pieces[annotation_column]
         except IndexError as e:
-            raise IndexError("Could not find tag index %d at line %d" % (annotation_column, line_idx)) from e
+            if keep_broken_tags:
+                tag = None
+            else:
+                raise IndexError("Could not find tag index %d at line %d" % (annotation_column, line_idx)) from e
         if remap_fn:
             tag = remap_fn(tag)
 
