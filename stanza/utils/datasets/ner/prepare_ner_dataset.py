@@ -305,6 +305,8 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio"):
     datasets should be 3 lists: train, dev, test
     each list should be a list of sentences
     each sentence is a list of pairs: word, tag
+
+    after writing to .bio files, the files will be converted to .json
     """
     for shard, dataset in zip(SHARDS, datasets):
         output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
