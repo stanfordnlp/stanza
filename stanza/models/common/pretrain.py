@@ -80,6 +80,9 @@ class Pretrain:
             self.save(self.filename)
 
     def save(self, filename):
+        directory, _ = os.path.split(filename)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         # should not infinite loop since the load function sets _vocab and _emb before trying to save
         data = {'vocab': self.vocab.state_dict(), 'emb': self.emb}
         try:
