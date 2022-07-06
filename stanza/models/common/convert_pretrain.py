@@ -18,6 +18,8 @@ from stanza.models.common import pretrain
 
 def main():
     filename = sys.argv[1]
+    if os.path.exists(filename):
+        print("Not overwriting existing pretrain file in %s" % filename)
     vec_filename = sys.argv[2]
     if len(sys.argv) < 3:
         max_vocab = -1
