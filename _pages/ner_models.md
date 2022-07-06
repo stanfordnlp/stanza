@@ -18,36 +18,36 @@ WikiNER datasets, for which we used random splits.
 
 The Ukrainian model and its score [was provided by a user](https://github.com/stanfordnlp/stanza/issues/319).
 
-| Language                         | LCODE  | Corpus          | # Types   | F1    | DEFAULT                                            |
-| :--------------------            | :----  | :-----          | :-------- | :---- | :------------------------------------------------: |
-| Afrikaans                        |   af   | NCHLT           | 4         | 80.08 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Arabic                           |   ar   | AQMAR           | 4         | 74.3  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Bulgarian *New in 1.2.1*         |   bg   | BSNLP 2019      | 5         | 83.21 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Chinese                          |   zh   | OntoNotes       | 18        | 79.2  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Danish *New in 1.4.0*            |   da   | DDT             | 4         | 80.95 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch                            |   nl   | CoNLL02         | 4         | 89.2  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch                            |   nl   | WikiNER         | 4         | 94.8  |                                                    |
-| English                          |   en   | CoNLL03         | 4         | 92.1  |                                                    |
-| English                          |   en   | OntoNotes       | 18        | 88.8  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Finnish *New in 1.2.1*           |   fi   | Turku           | 6         | 87.04 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| French                           |   fr   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German                           |   de   | CoNLL03         | 4         | 81.9  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German                           |   de   | GermEval2014    | 4         | 85.2  |                                                    |
-| Hungarian *New in 1.2.1*         |   hu   | Combined        | 4         | -     | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Italian *New in 1.2.3*           |   it   | FBK             | 3         | 87.92 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Japanese *New in 1.4.0*          |   ja   | GSD             | 22        | 81.01 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Myanmar *New in 1.4.0*           |   my   | UCSY            | 7         | 95.86 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Norwegian-Bokmaal *New in 1.4.0* |   nb   | Norne           | 8         | 84.79 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Norwegian-Nynorsk *New in 1.4.0* |   nn   | Norne           | 8         | 80.16 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Persian *New in 1.4.0*           |   fa   | Arman           | 6         | 80.07 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Russian                          |   ru   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish                          |   es   | CoNLL02         | 4         | 88.1  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish                          |   es   | AnCora          | 4         | 88.6  |                                                    |
-| Swedish *New in 1.4.0*           |   sv   | SUC3 (shuffled) | 8         | 85.66 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Swedish *New in 1.4.0*           |   sv   | SUC3 (licensed) | 8         | 82.54 |                                                    |
-| Turkish *New in 1.4.0*           |   tr   | Starlang        | 5         | 81.65 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Ukrainian                        |   uk   | languk          | 4         | 86.05 | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Vietnamese *New in 1.2.1*        |   vi   | VLSP            | 4         | 82.44 | <i class="fas fa-check" style="color:#33a02c"></i> |
+| Language                         | LCODE  | Corpus          | # Types   | F1    | DEFAULT                                            |  CORPUS DOC |
+| :--------------------            | :----  | :-----          | :-------- | :---- | :------------------------------------------------: | :---------  |
+| Afrikaans                        |   af   | NCHLT           | 4         | 80.08 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://hdl.handle.net/20.500.12185/299) |
+| Arabic                           |   ar   | AQMAR           | 4         | 74.3  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) |
+| Bulgarian *New in 1.2.1*         |   bg   | BSNLP 2019      | 5         | 83.21 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) |
+| Chinese                          |   zh   | OntoNotes       | 18        | 79.2  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) |
+| Danish *New in 1.4.0*            |   da   | DDT             | 4         | 80.95 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane)  [<i class="fas fa-file-alt"></i>](https://aclanthology.org/2020.lrec-1.565.pdf)  |
+| Dutch                            |   nl   | CoNLL02         | 4         | 89.2  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) |
+| Dutch                            |   nl   | WikiNER         | 4         | 94.8  |                                                    | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) |
+| English                          |   en   | CoNLL03         | 4         | 92.1  |                                                    | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) |
+| English                          |   en   | OntoNotes       | 18        | 88.8  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) |
+| Finnish *New in 1.2.1*           |   fi   | Turku           | 6         | 87.04 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://turkunlp.org/fin-ner.html) |
+| French                           |   fr   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) |
+| German                           |   de   | CoNLL03         | 4         | 81.9  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) |
+| German                           |   de   | GermEval2014    | 4         | 85.2  |                                                    | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) |
+| Hungarian *New in 1.2.1*         |   hu   | Combined        | 4         | -     | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) |
+| Italian *New in 1.2.3*           |   it   | FBK             | 3         | 87.92 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://dh.fbk.eu/) |
+| Japanese *New in 1.4.0*          |   ja   | GSD             | 22        | 81.01 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/megagonlabs/UD_Japanese-GSD) |
+| Myanmar *New in 1.4.0*           |   my   | UCSY            | 7         | 95.86 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf) |
+| Norwegian-Bokmaal *New in 1.4.0* |   nb   | Norne           | 8         | 84.79 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
+| Norwegian-Nynorsk *New in 1.4.0* |   nn   | Norne           | 8         | 80.16 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
+| Persian *New in 1.4.0*           |   fa   | Arman           | 6         | 80.07 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/HaniehP/PersianNER) |
+| Russian                          |   ru   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) |
+| Spanish                          |   es   | CoNLL02         | 4         | 88.1  | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) |
+| Spanish                          |   es   | AnCora          | 4         | 88.6  |                                                    | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) |
+| Swedish *New in 1.4.0*           |   sv   | SUC3 (shuffled) | 8         | 85.66 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) |
+| Swedish *New in 1.4.0*           |   sv   | SUC3 (licensed) | 8         | 82.54 |                                                    | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) |
+| Turkish *New in 1.4.0*           |   tr   | Starlang        | 5         | 81.65 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://ieeexplore.ieee.org/document/9259873) |
+| Ukrainian                        |   uk   | languk          | 4         | 86.05 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  |
+| Vietnamese *New in 1.2.1*        |   vi   | VLSP            | 4         | 82.44 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://vlsp.org.vn/vlsp2018/eval/ner) |
 {: .compact #ner-results .datatable }
 
 ### Notes on NER Corpora
