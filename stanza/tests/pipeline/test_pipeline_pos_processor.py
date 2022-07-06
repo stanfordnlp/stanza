@@ -48,3 +48,4 @@ def test_get_known_feats(pos_pipeline):
     feats = pos_pipeline.processors['pos'].get_known_feats()
     # I appreciate how self-referential the Abbr feat is
     assert 'Abbr' in feats
+    assert 'Yes' in feats['Abbr']

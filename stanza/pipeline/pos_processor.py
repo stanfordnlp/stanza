@@ -48,8 +48,8 @@ class POSProcessor(UDProcessor):
         """
         Returns the features known by this model
         """
-        keys = [k for k in self.vocab['feats']._unit2id.keys() if k not in VOCAB_PREFIX]
-        return keys
+        values = {k: v.keys() - VOCAB_PREFIX for k, v in self.vocab['feats']._unit2id.items()}
+        return values
 
     def process(self, document):
         batch = DataLoader(
