@@ -134,7 +134,7 @@ For more detailed results and better viewing experience, please access the resul
 |UD_Welsh-CCG  |  99.84  |  97.89  |  99.29  |  93.97  |  92.58  |  89.06  |  86.25  |  92.56  |  83.21  |  76.16  |  69.77  |  58.45  |  62.76|
 |UD_Western_Armenian-ArmTDP  |  99.81  |  98.11  |  99.69  |  92.38  |  99.69  |  85.21  |  84.12  |  93.33  |  78.83  |  70.11  |  60.89  |  47.62  |  56.10|
 |UD_Wolof-WTB  |  99.93  |  92.31  |  99.37  |  93.86  |  93.61  |  92.83  |  90.76  |  93.96  |  83.52  |  77.41  |  71.47  |  64.41  |  67.16|
-{: .compact #conll18-results .datatable }
+{: .compact #conll18-results .colorful-datatable }
 
 ## System Performance on NER Corpora
 
@@ -170,6 +170,7 @@ In the table below you can find the performance of Stanza's pretrained NER model
 | Turkish *New in 1.4.0* | Starlang | 5 | 81.65 |
 | Ukrainian | languk | 4 | 86.05 |
 | Vietnamese *New in 1.2.1* | VLSP | 4 | 82.44 |
+{: .compact #ner-results .datatable }
 
 ### Notes on NER Corpora
 

@@ -120,5 +120,5 @@ For more detailed results and better viewing experience, please access the resul
 | UD_Uyghur-UDT | 99.79 | 86.9 | 99.79 | 89.45 | 91.92 | 87.92 | 80.54 | 96.16 | 75.55 | 63.61 | 57 | 46.06 | 54.39 |
 | UD_Vietnamese-VTB | 87.25 | 93.15 | 87.25 | 79.5 | 77.9 | 87.02 | 77.87 | 87.2 | 53.63 | 48.16 | 44.88 | 42.17 | 44.85 |
 | UD_Wolof-WTB | 99.97 | 91.06 | 99.42 | 94.09 | 94.03 | 93.11 | 91.26 | 94.6 | 83.25 | 77.05 | 70.94 | 64.25 | 66.99 |
-{: .compact #conll18-results .datatable }
+{: .compact #conll18-results .colorful-datatable }
 
