@@ -168,7 +168,28 @@ adding a Bert model or other transformer.
 
 Creating a new [charlm](new_language.md#character-lm) can make a
 substantial improvement to the results, but will take a few days to
-train.  Once you have created it, you will need to add a `--charlm`
+train.
+
+First, we need a large amount of text data.  For this model, we choose
+two sources: Oscar Common Crawl and Wikipedia.
+
+There is a script to copy Oscar from HuggingFace:
+
+```bash
+python3 stanza/utils/charlm/dump_oscar.py bn --output /nlp/scr/horatio/oscar/
+```
+
+We also download Wikipedia.  We will use Prof. Attardi's WikiExtractor
+tool to remove the markup, and it works on the
+`latest-pages-meta-current` file, so that is what we download.
+
+```bash
+wget https://dumps.wikimedia.org/bnwiki/latest/bnwiki-latest-pages-meta-current.xml.bz2
+```
+
+TODO: more steps to prepare the charlm go here
+
+Once you have created the charlm, you will need to add a `--charlm`
 flag to the `run_ner` script:
 
 ```bash
