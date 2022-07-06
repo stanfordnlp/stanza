@@ -8,8 +8,10 @@ Currently it supports converting wikiner datasets, available here:
 
 Also, Finnish Turku dataset, available here:
   - https://turkunlp.org/fin-ner.html
-  - Download and unzip the corpus, putting the .tsv files into
-    $NERBASE/fi_turku
+  - https://github.com/TurkuNLP/turku-ner-corpus
+    git clone the repo into $NERBASE/finnish
+    you will now have a directory
+    $NERBASE/finnish/turku-ner-corpus
   - prepare_ner_dataset.py fi_turku
 
 FBK in Italy produced an Italian dataset.
@@ -283,7 +285,7 @@ class UnknownDatasetError(ValueError):
 
 def process_turku(paths, short_name):
     assert short_name == 'fi_turku'
-    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    base_input_path = os.path.join(paths["NERBASE"], "finnish", "turku-ner-corpus", "data", "conll")
     base_output_path = paths["NER_DATA_DIR"]
     for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.tsv' % shard)
