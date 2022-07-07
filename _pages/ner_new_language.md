@@ -149,7 +149,8 @@ Once these are downloaded, there is a `convert_pretrain.py` script
 which turns the raw text file (or a .gz file, for example) into a
 `.pt` file such as what Stanza uses.
 
-```
+```bash
+# be sure to update the language abbreviation "bn" to match your dataset!
 python3 stanza/models/common/convert_pretrain.py ~/stanza_resources/bn/pretrain/fasttext.pt ~/extern_data/wordvec/fasttext/cc.bn.300.vec.gz 150000
 ```
 
