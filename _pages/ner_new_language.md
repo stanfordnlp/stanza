@@ -224,7 +224,7 @@ the raw data into one directory.  Then, we run the `make_lm_data` script.
 On our cluster, we put all of our raw charlm data into
 `/u/nlp/software/stanza/charlm_raw`
 and the train/dev/test splits into `/u/nlp/software/stanza/charlm`
-You can choose different base paths, of course
+You can choose different base paths, of course.
 
 ```bash
 export CHARLM_DIR=/u/nlp/software/stanza/charlm
@@ -243,6 +243,11 @@ AG.txt.xz  oscar_dump_006.txt.xz  oscar_dump_013.txt.xz  oscar_dump_020.txt.xz
 
 python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs bn --packages oscar
 ```
+
+{% include alerts.html %}
+{{ note }}
+{{ "make_lm_data has several subprocess calls which are not expected to work on Windows." | markdownify }}
+{{ end }}
 
 TODO: more steps to prepare the charlm go here
 
