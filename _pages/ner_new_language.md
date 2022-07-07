@@ -275,11 +275,13 @@ scripts will not clobber an existing model.  There are two ways to
 work around that:
 
 ```bash
-# use a new name for the new model
-python -m stanza.utils.training.run_ner bn_daffodil --save_name bn_daffodil_bert.pt --bert_model sagorsarker/bangla-bert-base
+# --save_name will give the script a new model name to save
+# using the new name will keep both the old and new models
+python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base --save_name bn_daffodil_bert.pt
 
+# --force will overwrite the old model with a new model
 # kiss the old model goodbye
-python -m stanza.utils.training.run_ner bn_daffodil --force --bert_model sagorsarker/bangla-bert-base
+python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base --force
 ```
 
 If the Transformer helps (as expected), you can add it to the map in `stanza/utils/training/common.py`.
