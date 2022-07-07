@@ -195,7 +195,7 @@ python3 stanza/utils/charlm/dump_oscar.py bn --output /nlp/scr/horatio/oscar/
 ```
 
 We also download Wikipedia.  We will use Prof. Attardi's
-[Wikiextractor](https://github.com/attardi/wikiextractor)
+[WikiExtractor](https://github.com/attardi/wikiextractor)
 tool to remove the markup, and it works on the
 `latest-pages-meta-current` file, so that is what we download.
 
@@ -203,7 +203,7 @@ tool to remove the markup, and it works on the
 wget https://dumps.wikimedia.org/bnwiki/latest/bnwiki-latest-pages-meta-current.xml.bz2
 ```
 
-You can then use the Wikiextractor to extract the text from the
+You can then use the WikiExtractor to extract the text from the
 Wikipedia dump you just downloaded:
 
 ```bash
