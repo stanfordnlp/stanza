@@ -56,26 +56,33 @@
             }
         }
 
-        $('table.plain-datatable').DataTable( {
-            paging: false,
-            fixedColumns: true,
-            fixedHeader: true,
-            scrollX: true,
-            stateSave: true
+        $('table.plain-datatable').each(function() {
+            let table = $(this).DataTable({
+                paging: false,
+                fixedColumns: true,
+                fixedHeader: true,
+                scrollX: true,
+                stateSave: true
+            });
+
+            $('div.main-content-wrap').on('scroll', function () {
+                table.fixedHeader.adjust();
+            });
         });
 
-        $('table.colorful-datatable').DataTable( {
-            paging: false,
-            fixedColumns: true,
-            fixedHeader: true,
-            scrollX: true,
-            stateSave: true,
-            createdRow: function ( row, data, index ) { conditional_formatting(row, data, index, 1)}
-        });
+        $('table.colorful-datatable').each(function() {
+            let table = $(this).DataTable({
+                paging: false,
+                fixedColumns: true,
+                fixedHeader: true,
+                scrollX: true,
+                stateSave: true,
+                createdRow: function ( row, data, index ) { conditional_formatting(row, data, index, 1)}
+            });
 
-        $('div.main-content-wrap').on('scroll', function () {
-            $('#conll18-results').DataTable().fixedHeader.adjust();
-            $('.plain-datatable').DataTable().fixedHeader.adjust();
+            $('div.main-content-wrap').on('scroll', function () {
+                table.fixedHeader.adjust();
+            });
         });
     })
   </script>
