@@ -74,11 +74,8 @@
         });
 
         $('div.main-content-wrap').on('scroll', function () {
-            $('.datatable').DataTable().fixedHeader.adjust();
-        });
-
-        $('div.main-content-wrap').on('scroll', function () {
-            $('.colorful-datatable').DataTable().fixedHeader.adjust();
+            $('#conll18-results').DataTable().fixedHeader.adjust();
+            $('#ner-results').DataTable().fixedHeader.adjust();
         });
     })
   </script>
