@@ -210,6 +210,40 @@ Wikipedia dump you just downloaded:
 python -m wikiextractor.WikiExtractor bnwiki-latest-pages-meta-current.xml.bz2
 ```
 
+This splits the text into multiple subdirectories full of small files
+`AA, AB, ...` depending on the size.  The splits are smaller than we
+need, but we can combine them:
+
+```bash
+for i in `ls text`; do echo $i; cat text/$i/* > $i.txt; xz $i.txt; done
+```
+
+We now have an Oscar dump and a Wikipedia dump.  We can turn this raw
+data into train/dev/test splits for the charlm.  First, we organize
+the raw data into one directory.  Then, we run the `make_lm_data` script.
+On our cluster, we put all of our raw charlm data into
+`/u/nlp/software/stanza/charlm_raw`
+and the train/dev/test splits into `/u/nlp/software/stanza/charlm`
+You can choose different base paths, of course
+
+```bash
+export CHARLM_DIR=/u/nlp/software/stanza/charlm
+export CHARLM_RAW_DIR=/u/nlp/software/stanza/charlm_raw
+# move the Oscar & Wikipedia .xz files to this directory
+mkdir -p $CHARLM_RAW_DIR/bn/oscar
+
+ls $CHARLM_RAW_DIR/bn/oscar
+AA.txt.xz  oscar_dump_000.txt.xz  oscar_dump_007.txt.xz  oscar_dump_014.txt.xz  oscar_dump_021.txt.xz
+AB.txt.xz  oscar_dump_001.txt.xz  oscar_dump_008.txt.xz  oscar_dump_015.txt.xz  oscar_dump_022.txt.xz
+AC.txt.xz  oscar_dump_002.txt.xz  oscar_dump_009.txt.xz  oscar_dump_016.txt.xz  oscar_dump_023.txt.xz
+AD.txt.xz  oscar_dump_003.txt.xz  oscar_dump_010.txt.xz  oscar_dump_017.txt.xz
+AE.txt.xz  oscar_dump_004.txt.xz  oscar_dump_011.txt.xz  oscar_dump_018.txt.xz
+AF.txt.xz  oscar_dump_005.txt.xz  oscar_dump_012.txt.xz  oscar_dump_019.txt.xz
+AG.txt.xz  oscar_dump_006.txt.xz  oscar_dump_013.txt.xz  oscar_dump_020.txt.xz
+
+python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs bn --packages oscar
+```
+
 TODO: more steps to prepare the charlm go here
 
 Once you have created the charlm, you will need to add a `--charlm`
