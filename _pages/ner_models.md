@@ -48,7 +48,7 @@ The Ukrainian model and its score [was provided by a user](https://github.com/st
 | Turkish *New in 1.4.0*           |   tr   | Starlang        | 5         | 81.65 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://ieeexplore.ieee.org/document/9259873) |
 | Ukrainian                        |   uk   | languk          | 4         | 86.05 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  |
 | Vietnamese *New in 1.2.1*        |   vi   | VLSP            | 4         | 82.44 | <i class="fas fa-check" style="color:#33a02c"></i> | [<i class="fas fa-file-alt"></i>](https://vlsp.org.vn/vlsp2018/eval/ner) |
-{: .compact #ner-results .datatable }
+{: .compact #ner-results .plain-datatable }
 
 ### Notes on NER Corpora
 
