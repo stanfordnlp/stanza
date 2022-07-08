@@ -155,6 +155,19 @@ def build_default_config(resources, lang, model_dir, load_list):
 
     return default_config
 
+def normalize_download_method(download_method):
+    """
+    Turn None -> DownloadMethod.NONE, strings to the corresponding enum
+    """
+    if download_method is None:
+        return DownloadMethod.NONE
+    elif isinstance(download_method, str):
+        try:
+            return DownloadMethod[download_method.upper()]
+        except KeyError as e:
+            raise ValueError("Unknown download method %s" % download_method) from e
+    return download_method
+
 class Pipeline:
 
     def __init__(self,
@@ -183,6 +196,7 @@ class Pipeline:
         # large sub-models, such as pretrained embeddings, bert, etc
         self.foundation_cache = FoundationCache()
 
+        download_method = normalize_download_method(download_method)
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
             (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
             logger.info("Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES")
@@ -213,7 +227,7 @@ class Pipeline:
             add_mwt(processors, resources, lang)
         self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
-        if download_method is not None and download_method is not DownloadMethod.NONE:
+        if download_method is not DownloadMethod.NONE:
             # skip processors which aren't downloaded from our collection
             download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
             # skip variants

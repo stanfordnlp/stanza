@@ -8,8 +8,10 @@ Currently it supports converting wikiner datasets, available here:
 
 Also, Finnish Turku dataset, available here:
   - https://turkunlp.org/fin-ner.html
-  - Download and unzip the corpus, putting the .tsv files into
-    $NERBASE/fi_turku
+  - https://github.com/TurkuNLP/turku-ner-corpus
+    git clone the repo into $NERBASE/finnish
+    you will now have a directory
+    $NERBASE/finnish/turku-ner-corpus
   - prepare_ner_dataset.py fi_turku
 
 FBK in Italy produced an Italian dataset.
@@ -226,6 +228,20 @@ L3Cube is a Marathi dataset
   Then run
     prepare_ner_dataset.py mr_l3cube
 
+Daffodil University produced a Bangla NER dataset
+  - https://github.com/Rifat1493/Bengali-NER
+  - https://ieeexplore.ieee.org/document/8944804
+  - Bengali Named Entity Recognition:
+    A survey with deep learning benchmark
+    Md Jamiur Rahman Rifat, Sheikh Abujar, Sheak Rashed Haider Noori,
+    Syed Akhter Hossain
+
+  Clone the repo into a "bangla" subdirectory of $NERBASE
+    cd $NERBASE/bangla
+    git clone git@github.com:Rifat1493/Bengali-NER.git
+  Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -245,6 +261,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
+import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
@@ -257,6 +274,7 @@ import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -265,100 +283,9 @@ class UnknownDatasetError(ValueError):
         super().__init__(text)
         self.dataset = dataset
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS):
-    """
-    Convert BIO files to json
-
-    It can often be convenient to put the intermediate BIO files in
-    the same directory as the output files, in which case you can pass
-    in same path for both base_input_path and base_output_path.
-    """
-    for input_shard, output_shard in zip(shard_names, SHARDS):
-        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix))
-        if not os.path.exists(input_filename):
-            alt_filename = os.path.join(base_input_path, '%s.%s' % (input_shard, suffix))
-            if os.path.exists(alt_filename):
-                input_filename = alt_filename
-            else:
-                raise FileNotFoundError('Cannot find %s component of %s in %s or %s' % (output_shard, short_name, input_filename, alt_filename))
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, output_shard))
-        print("Converting %s to %s" % (input_filename, output_filename))
-        prepare_ner_file.process_dataset(input_filename, output_filename)
-
-def get_tags(datasets):
-    """
-    return the set of tags used in these datasets
-
-    datasets is expected to be train, dev, test but could be any list
-    """
-    tags = set()
-    for dataset in datasets:
-        for sentence in dataset:
-            for word, tag in sentence:
-                tags.add(tag)
-    return tags
-
-def write_dataset(datasets, output_dir, short_name, suffix="bio"):
-    """
-    write all three pieces of a dataset to output_dir
-
-    datasets should be 3 lists: train, dev, test
-    each list should be a list of sentences
-    each sentence is a list of pairs: word, tag
-    """
-    for shard, dataset in zip(SHARDS, datasets):
-        output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
-        with open(output_filename, "w", encoding="utf-8") as fout:
-            for sentence in dataset:
-                for word in sentence:
-                    fout.write("%s\t%s\n" % word)
-                fout.write("\n")
-
-    convert_bio_to_json(output_dir, output_dir, short_name, suffix)
-
-
-def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True):
-    """
-    Read sentences from a TSV file
-
-    Returns a list of list of (word, tag)
-    """
-    with open(filename, encoding="utf-8") as fin:
-        lines = fin.readlines()
-
-    lines = [x.strip() for x in lines]
-
-    sentences = []
-    current_sentence = []
-    for line in lines:
-        if not line:
-            if current_sentence:
-                sentences.append(current_sentence)
-                current_sentence = []
-            continue
-        if skip_comments and line.startswith("#"):
-            continue
-
-        pieces = line.split("\t")
-        word = pieces[text_column]
-        if word == '\x96':
-            # this happens in GermEval2014 for some reason
-            continue
-        tag = pieces[annotation_column]
-        if remap_fn:
-            tag = remap_fn(tag)
-
-        current_sentence.append((word, tag))
-
-    if current_sentence:
-        sentences.append(current_sentence)
-
-    return sentences
-
-
 def process_turku(paths, short_name):
     assert short_name == 'fi_turku'
-    base_input_path = os.path.join(paths["NERBASE"], short_name)
+    base_input_path = os.path.join(paths["NERBASE"], "finnish", "turku-ner-corpus", "data", "conll")
     base_output_path = paths["NER_DATA_DIR"]
     for shard in SHARDS:
         input_filename = os.path.join(base_input_path, '%s.tsv' % shard)
@@ -905,10 +832,16 @@ def process_mr_l3cube(paths, short_name):
     datasets = [convert_mr_l3cube.convert(input_file) for input_file in input_files]
     write_dataset(datasets, base_output_path, short_name)
 
+def process_bn_daffodil(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "bangla", "Bengali-NER")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_bn_daffodil.convert_dataset(in_directory, out_directory)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
 DATASET_MAPPING = {
+    "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
     "fa_arman":          process_fa_arman,
