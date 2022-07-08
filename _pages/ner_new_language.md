@@ -107,7 +107,16 @@ To address these issues, we wrote a small conversion script.  First, we decide o
 "short name" for the dataset.  The language code for Bangla is `bn`, and the
 authors of this dataset are all at Daffodil University, so we choose `bn_daffodil`.
 
-Next, we write a short script which does each of these things.  We will call this script
+Next, we write a short script which does each of these things.  Our
+conversion script adjusts all of the tags so they fit a `B-TAG`,
+`I-TAG`, `E-TAG` scheme and randomly splits the training data into
+train & dev sets.  We set a random seed for the random split so that
+the split is repeatable.  Note that not all of these changes are
+always necessary for different datasets.  All that is necessary is for
+the script to turn the raw input into BIO format, at which point you
+can call the function to translate it into `.json`
+
+We will call this script
 
 ```
 stanza/utils/datasets/ner/convert_bn_daffodil.py
