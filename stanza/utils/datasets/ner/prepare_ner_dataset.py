@@ -856,22 +856,25 @@ def process_hinercollapsed(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
-def process_lst20(paths, short_name, include_space_char=False):
-    """
+def process_lst20(paths, short_name, include_space_char=True):
     assert short_name == 'th_lst20'
 
     SHARDS = ("train", "eval", "test")
-    input_split = [(os.path.join(paths["NERBASE"], x), x) for x in SHARDS]
+    BASE_OUTPUT_PATH = paths["NER_DATA_DIR"]
+
+    input_split = [(os.path.join(paths["NERBASE"], "LST20_Corpus", x), x) for x in SHARDS]
+
+    if not include_space_char:
+        short_name = short_name + "_no_ws"
 
     for input_folder, split_type in input_split:
         text_list = ['/{}'.format(text) for text in os.listdir(input_folder) if text[0] == 'T']
 
-        if include_space_char:
-            split_type = short_name + "." + split_type + ".bio"
-        else:
-            split_type = short_name + "_no_ws." + split_type + ".bio"
+        if split_type == "eval":
+            split_type = "dev"
 
-        output_path = os.path.join(paths["NER_DATA_DIR"], split_type)
+        output_path = os.path.join(BASE_OUTPUT_PATH, "%s.%s.bio" % (short_name, split_type))
+        print(output_path)
 
         with open(output_path, 'w', encoding='utf-8') as fout:
             for text in text_list:
@@ -888,8 +891,7 @@ def process_lst20(paths, short_name, include_space_char=False):
                         else:
                             fout.write('\n')
         print("Done")
-        """
-
+    convert_bio_to_json(BASE_OUTPUT_PATH, BASE_OUTPUT_PATH, short_name)
 
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
@@ -922,8 +924,7 @@ DATASET_MAPPING = {
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
-    "mr_l3cube":         process_mr_l3cube,
-    "th_lst20":          process_lst20
+    "mr_l3cube":         process_mr_l3cube
 }
 
 def main(dataset_name):
