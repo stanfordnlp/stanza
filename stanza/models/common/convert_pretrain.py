@@ -3,12 +3,17 @@ A utility script to load a word embedding file from a text file and save it as a
 
 Run it as follows:
   python stanza/models/common/convert_pretrain.py <.pt file> <text file> <# vectors>
-Note that -1 for # of vectors will keep all the vectors
+
+Note that -1 for # of vectors will keep all the vectors.
+You probably want to keep fewer than that for most publicly released
+embeddings, though, as they can get quite large.
+
 As a concrete example, you can convert a newly downloaded Faroese WV file as follows:
   python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_farpahc.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
 or save part of an Icelandic WV file:
   python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/is_icepahc.pretrain.pt ~/extern_data/wordvec/fasttext/icelandic.cc.is.300.vec 150000
 Note that if the pretrain already exists, nothing will be changed.  It will not overwrite an existing .pt file.
+
 """
 
 import os

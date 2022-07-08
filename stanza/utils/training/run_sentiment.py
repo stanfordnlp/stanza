@@ -14,7 +14,7 @@ from stanza.models import classifier
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, default_treebanks
+from stanza.resources.prepare_resources import default_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
 
@@ -46,7 +46,7 @@ def run_dataset(mode, paths, treebank, short_name,
 
     if '--wordvec_pretrain_file' not in extra_args:
         # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language, default_treebanks)
+        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains)
         wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
     else:
         wordvec_args = []

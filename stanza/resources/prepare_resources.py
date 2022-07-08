@@ -116,7 +116,12 @@ no_pretrain_languages = set([
     "pcm",
     "qtd",
     "swl",
+    "th",
 ])
+
+default_pretrains = dict(default_treebanks)
+for lang in no_pretrain_languages:
+    default_pretrains.pop(lang, None)
 
 # default ner for languages
 default_ners = {
