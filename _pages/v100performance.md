@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Old Performance
+title: Past Performance
 keywords: stanza, system performance
 permalink: '/v100performance.html'
 nav_order: 3
