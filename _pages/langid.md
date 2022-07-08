@@ -42,6 +42,11 @@ nlp(docs)
 print("\n".join(f"{doc.text}\t{doc.lang}" for doc in docs)) 
 ```
 
+## Use A Custom Model
+```python
+nlp = Pipeline(lang="multilingual", processors="langid", langid_model_path="/path/to/model.pt")
+```
+
 ## Apply Text Cleaning To Tweets
 
 If running on tweets, it is helpful to clean the text before submitting to the model. The text cleaning will remove shortened urls, hashtags, user handles, and emojis. This is not turned on by default.
