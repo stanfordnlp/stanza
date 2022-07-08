@@ -151,6 +151,7 @@ which turns the raw text file (or a .gz file, for example) into a
 
 ```bash
 # be sure to update the language abbreviation "bn" to match your dataset!
+# 150000 is usually a good balance between good coverage and a model which is too large
 python3 stanza/models/common/convert_pretrain.py ~/stanza_resources/bn/pretrain/fasttext.pt ~/extern_data/wordvec/fasttext/cc.bn.300.vec.gz 150000
 ```
 
