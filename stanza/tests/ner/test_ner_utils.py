@@ -8,6 +8,7 @@ pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 WORDS       = [["Unban",   "Mox",  "Opal"], ["Ragavan",  "is",     "red"], ["Urza",   "Lord",  "High", "Artificer", "goes", "infinite", "with",  "Thopter",    "Sword"]]
 BIO_TAGS    = [["O",     "B-ART", "I-ART"], ["B-MONKEY", "O",  "B-COLOR"], ["B-PER", "I-PER", "I-PER", "I-PER",        "O",        "O",    "O", "B-WEAPON", "B-WEAPON"]]
+BIO_U_TAGS  = [["O",     "B_ART", "I_ART"], ["B_MONKEY", "O",  "B_COLOR"], ["B_PER", "I_PER", "I_PER", "I_PER",        "O",        "O",    "O", "B_WEAPON", "B_WEAPON"]]
 BIOES_TAGS  = [["O",     "B-ART", "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "S-WEAPON", "S-WEAPON"]]
 # note the problem with not using BIO tags - the consecutive tags for thopter/sword get treated as one item
 BASIC_TAGS  = [["O",       "ART",   "ART"], ["MONKEY",   "O",    "COLOR"], [  "PER",   "PER",   "PER",   "PER",        "O",        "O",    "O",   "WEAPON",   "WEAPON"]]
@@ -47,6 +48,12 @@ def test_check_basic():
     assert     utils.is_basic_scheme([x for y in BASIC_TAGS for x in y])
     assert not utils.is_basic_scheme([x for y in BASIC_BIOES for x in y])
 
+def test_underscores():
+    """
+    Check that the methods work if the inputs are underscores instead of dashes
+    """
+    assert not utils.is_basic_scheme([x for y in BIO_U_TAGS for x in y])
+    check_reprocessed_tags(WORDS, BIO_U_TAGS, BIOES_TAGS)
 
 def test_merge_tags():
     """
