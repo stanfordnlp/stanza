@@ -61,7 +61,7 @@ We have provided links to all NER datasets used to train the released models on 
 
 - **Finnish**: The Turku dataset used for Finnish NER training can be found on [the Turku NLP website](https://turkunlp.org/fin-ner.html), and they also provide [a Turku NER dataset description paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf).
 
-- **Hungarian**: The dataset used for training our Hungarian NER system is a combination of 3 separate datasets. Two of these datasets can be found from [this Szeged page](https://rgai.inf.u-szeged.hu/node/130), and the third can be found in [this NYTK-NerKor github repo](https://github.com/nytud/NYTK-NerKor). A dataset description paper can also be found [here](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf).
+- **Hungarian**: The dataset used for training our Hungarian NER system is a combination of 3 separate datasets: Business, Criminal, and NYTK. Two of these datasets can be found from [this Szeged page](https://rgai.inf.u-szeged.hu/node/130), and the third can be found in [this NYTK-NerKor github repo](https://github.com/nytud/NYTK-NerKor). A dataset description paper can also be found [here](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf).
 
 - **Italian**: The Italian FBK dataset was licensed to us from [FBK](https://dh.fbk.eu/).  Paccosi T. and Palmero Aprosio A.  KIND: an Italian Multi-Domain Dataset for Named Entity Recognition.  LREC 2022
 
@@ -71,14 +71,15 @@ We have provided links to all NER datasets used to train the released models on 
 
 - **Vietnamese**: The Vietnamese VLSP dataset is available by [request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
 
+**Tag category notes**
 
-1. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous)
-1b. The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
-2. For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
-3. The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
-4. The Italian FBK dataset uses `LOC`, `ORG`, `PER`
-5. The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
-6. The Japanese GSD dataset uses 22 tags: `CARDINAL`, `DATE`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LAW`, `LOC`, `MONEY`, `MOVEMENT`, `NORP`, `ORDINAL`, `ORG`, `PERCENT`, `PERSON`, `PET_NAME`, `PHONE`, `PRODUCT`, `QUANTITY`, `TIME`, `TITLE_AFFIX`, `WORK_OF_ART`
-7. The Norwegian Norne dataset uses 8 tags for both NB and NN: `DRV`, `EVT`, `GPE`, `LOC`, `MISC`, `ORG`, `PER`, `PROD`
-8. The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
-9. The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
+- For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous)
+-- The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
+- For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
+- The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
+- The Italian FBK dataset uses `LOC`, `ORG`, `PER`
+- The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
+- The Japanese GSD dataset uses 22 tags: `CARDINAL`, `DATE`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LAW`, `LOC`, `MONEY`, `MOVEMENT`, `NORP`, `ORDINAL`, `ORG`, `PERCENT`, `PERSON`, `PET_NAME`, `PHONE`, `PRODUCT`, `QUANTITY`, `TIME`, `TITLE_AFFIX`, `WORK_OF_ART`
+- The Norwegian Norne dataset uses 8 tags for both NB and NN: `DRV`, `EVT`, `GPE`, `LOC`, `MISC`, `ORG`, `PER`, `PROD`
+- The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
+- The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
