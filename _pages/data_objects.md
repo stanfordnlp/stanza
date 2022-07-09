@@ -43,7 +43,7 @@ A [`Sentence`](data_objects.md#sentence) object represents a sentence (as is seg
 | --- | --- | --- |
 | doc | `Document` | A "back pointer" to the parent doc of this sentence. |
 | text | `str` | The raw text for this sentence. |
-| dependencies | `List[(Word, str, Word)]` | The list of dependencies for this sentence, where each item contains the head `Word` of the dependency relation, the type of dependency relation, and the dependent `Word` in that relation. |
+| dependencies | `List[(Word,str,Word)]` | The list of dependencies for this sentence, where each item contains the head `Word` of the dependency relation, the type of dependency relation, and the dependent `Word` in that relation. |
 | tokens | `List[Token]` | The list of tokens in this sentence. |
 | words | `List[Word]` | The list of words in this sentence. |
 | entities (ents) | `List[Span]` | The list of entities in this sentence. |
