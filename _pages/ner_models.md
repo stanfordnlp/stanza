@@ -74,7 +74,7 @@ We have provided links to all NER datasets used to train the released models on 
 **Tag category notes**
 
 - For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous)
--- The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
+    - The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
 - For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
 - The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
 - The Italian FBK dataset uses `LOC`, `ORG`, `PER`
