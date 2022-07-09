@@ -36,8 +36,8 @@ for path_in, path_out in paths:
             lst = []
             with open(path_in + text, 'r', encoding='utf-8') as f2:
                 for line in f2:
-                    x = line.split()
-                    if len(x) > 0:
+                    x = line.strip().split('\t')
+                    if len(x) > 1:
                         if x[0] == '_' and not INCLUDE_SPACE_CHAR:
                             continue
                         else:

@@ -808,8 +808,8 @@ def process_lst20(paths, short_name, include_space_char=True):
                 lst = []
                 with open(input_folder + text, 'r', encoding='utf-8') as fin:
                     for line in fin:
-                        x = line.split()
-                        if len(x) > 0:
+                        x = line.strip().split('\t')
+                        if len(x) > 1:
                             if x[0] == '_' and not include_space_char:
                                 continue
                             else:
