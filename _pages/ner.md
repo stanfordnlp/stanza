@@ -13,7 +13,7 @@ The named entity recognition (NER) module recognizes mention spans of a particul
 
 {% include alerts.html %}
 {{ note }}
-{{ "The NERProcessor currently only supports 8 languages. All supported languages along with their training datasets can be found [here](models#available-ner-models)." | markdownify }}
+{{ "The NERProcessor currently supports 23 languages. All supported languages along with their training datasets can be found [here](ner_models.md)." | markdownify }}
 {{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
