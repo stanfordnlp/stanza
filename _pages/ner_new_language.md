@@ -260,6 +260,13 @@ python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs 
 {{ "make_lm_data has several subprocess calls which are not expected to work on Windows." | markdownify }}
 {{ end }}
 
+You can now run the charlm.  This will take days.  Remember to update the language!
+
+```bash
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train
+```
+
 TODO: more steps to prepare the charlm go here
 
 Once you have created the charlm, you will need to add a `--charlm`
