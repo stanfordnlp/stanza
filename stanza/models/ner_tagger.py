@@ -184,6 +184,11 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
+    train_tags = utils.get_known_tags(train_batch.tags)
+    logger.info("Tags present in training set:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
+                " ".join(sorted(set(i for i in train_tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
+                " ".join(sorted(set(i[2:] for i in train_tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
+
     if args['finetune']:
         utils.warn_missing_tags([i for i in trainer.vocab['tag']], train_batch.tags, "training set")
     utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
