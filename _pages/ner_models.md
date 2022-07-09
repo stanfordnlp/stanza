@@ -18,8 +18,8 @@ WikiNER datasets, for which we used random splits.
 
 The Ukrainian model and its score [was provided by a user](https://github.com/stanfordnlp/stanza/issues/319).
 
-| Language          | LCODE  | Corpus          | # Types   | F1    | DEFAULT                                            | Since                              |  CORPUS DOC |
-| :--------------   | :----  | :-----          | :-------- | :---- | :------------------------------------------------: | :---:                              | :---------  |
+| Language          | LCODE  | Corpus          | # Types   | F1    | DEFAULT                                            | Since                              |  CORPUS DOC |
+| :--------------   | :----  | :-----          | :-------  | :---- | :------------------------------------------------: | :---:                              | :---------  |
 | Afrikaans         |   af   | NCHLT           | 4         | 80.08 | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://hdl.handle.net/20.500.12185/299) |
 | Arabic            |   ar   | AQMAR           | 4         | 74.3  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) |
 | Bulgarian         |   bg   | BSNLP 2019      | 5         | 83.21 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.1                              | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) |
