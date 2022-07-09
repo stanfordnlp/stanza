@@ -144,52 +144,7 @@ default.
 
 ## Available NER Models
 
-The following table lists all NER models supported by Stanza, pretrained on various NER datasets. You can find the performance of all available NER models on the [NER Models](ner_models.md) page.
-
-**Table Notes**
-
-1. <i class="fas fa-check" style="color:#33a02c"></i> marks the default package for a language.
-2. For packages with 4 named entity types, supported types include `PER` (Person), `LOC` (Location), `ORG` (Organization) and `MISC` (Miscellaneous)
-2b. The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
-3. For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
-4. The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
-5. The Italian FBK dataset uses `LOC`, `ORG`, `PER`
-6. The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
-7. The Japanese GSD dataset uses 22 tags: `CARDINAL`, `DATE`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LAW`, `LOC`, `MONEY`, `MOVEMENT`, `NORP`, `ORDINAL`, `ORG`, `PERCENT`, `PERSON`, `PET_NAME`, `PHONE`, `PRODUCT`, `QUANTITY`, `TIME`, `TITLE_AFFIX`, `WORK_OF_ART`
-8. The Norwegian Norne dataset uses 8 tags for both NB and NN: `DRV`, `EVT`, `GPE`, `LOC`, `MISC`, `ORG`, `PER`, `PROD`
-9. The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
-10. The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
-
-| Language | LANGUAGE CODE | PACKAGE | # Types | CORPUS DOC | DEFAULT |
-| :------- | :----- | :-------- | :---- | :---- | :---- |
-| Afrikaans | af | NCHLT | 4 | [<i class="fas fa-file-alt"></i>](https://hdl.handle.net/20.500.12185/299) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Arabic | ar | AQMAR | 4 | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Bulgarian | bg | BSNLP19 | 5 | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Chinese | zh | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Danish | da | DDT | 4 | [<i class="fas fa-file-alt"></i>](https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane)  [<i class="fas fa-file-alt"></i>](https://aclanthology.org/2020.lrec-1.565.pdf)  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch | nl | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Dutch | nl | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | |
-| English | en | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | |
-| English | en | OntoNotes | 18 | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Finnish | fi | Turku | 4 | [<i class="fas fa-file-alt"></i>](https://turkunlp.org/fin-ner.html) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| French | fr | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German | de | CoNLL03 | 4 | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| German | de | GermEval2014 | 4 | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) | |
-| Hungarian | hu | Business, Criminal, NYTK | 4 | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Italian | it | FBK | 3 | [<i class="fas fa-file-alt"></i>](https://dh.fbk.eu/) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Japanese | ja | GSD | 22 | [<i class="fas fa-file-alt"></i>](https://github.com/megagonlabs/UD_Japanese-GSD) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Myanmar | my | UCSY | 7 | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Norwegian | nb | Norne | 8 | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Norwegian | nn | Norne | 8 | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Persian | fa | arman | 6 | [<i class="fas fa-file-alt"></i>](https://github.com/HaniehP/PersianNER) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Russian | ru | WikiNER | 4 | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish | es | CoNLL02 | 4 | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Spanish | es | AnCora | 4 | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) | |
-| Swedish | sv | suc3shuffle | 8 | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Swedish | sv | suc3licensed | 8 | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) | |
-| Turkish | tr | starlang | 5 | [<i class="fas fa-file-alt"></i>](https://ieeexplore.ieee.org/document/9259873) | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Ukrainian | uk | languk | 4 | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  | <i class="fas fa-check" style="color:#33a02c"></i> |
-| Vietnamese | vi | VLSP | 4 | [<i class="fas fa-file-alt"></i>](https://vlsp.org.vn/vlsp2018/eval/ner) | <i class="fas fa-check" style="color:#33a02c"></i> |
+A description of the models available for the NER tool, along with their performance on test datasets, can be found [here](ner_models.md).
 
 ## Available Sentiment Models
 
