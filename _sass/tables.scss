@@ -36,6 +36,11 @@ td {
   }
 }
 
+#ner-results th,
+#ner-results td {
+  min-width: 60px;
+}
+
 tbody {
   tr {
     &:last-of-type {
