@@ -263,30 +263,54 @@ python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs 
 You can now run the charlm.  This will take days.  Remember to update the language!
 
 ```bash
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train > bn_forward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train > bn_backward.out 2>&1 &
 ```
 
-TODO: more steps to prepare the charlm go here
-
-Once you have created the charlm, you will need to add a `--charlm`
-flag to the `run_ner` script:
+You can tell when the model has converged and is no longer improving by looking for the eval scores:
 
 ```bash
-python -m stanza.utils.training.run_ner bn_daffodil --charlm oscar
+grep "eval checkpoint" bn_*.out
+```
+
+Alternatively, you can tie it in to wandb (requires Stanza 1.4.1 or later) by signing in to wandb and adding `wandb_name` to the original command line:
+
+```bash
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train --wandb_name bn_oscar_forward_charlm > bn_forward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train --wandb_name bn_oscar_backward_charlm > bn_backward.out 2>&1 &
+```
+
+Once it has converged satisfactorily, you can copy the models to the
+expected locations in your stanza resources and rerun the NER.  If you
+follow the name structure used in this example command line,
+`run_ner.py` will look for and find the charlm in these exact paths.
+Remember that you can update $STANZA_RESOURCES_DIR if you need.
+
+```bash
+mkdir -p ~/stanza_resources/bn/forward_charlm
+cp saved_models/charlm/bn_oscar_forward_charlm.pt ~/stanza_resources/bn/forward_charlm/oscar.pt
+
+mkdir -p ~/stanza_resources/bn/backward_charlm
+cp saved_models/charlm/bn_oscar_backward_charlm.pt ~/stanza_resources/bn/backward_charlm/oscar.pt
+
+python3 -m stanza.utils.training.run_ner bn_daffodil --charlm oscar --save_name bn_daffodil_charlm.pt
 ```
 
 You can choose a Transformer module from HuggingFace and then use it as follows:
 
 
 ```bash
-python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base
+python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base --save_name bn_daffodil_bert.pt
 ```
+
+If the Transformer helps (as expected), you can add it to the map in `stanza/utils/training/common.py`.
 
 {% include alerts.html %}
 {{ note }}
 {{ "Not all HF Transformer models are integrated with our code yet.  If you encounter such a model, please let us know." }}
 {{ end }}
+
+### Training multiple models
 
 Note that if you are attempting to train a new model, the `run`
 scripts will not clobber an existing model.  There are two ways to
@@ -301,8 +325,6 @@ python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/ban
 # kiss the old model goodbye
 python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base --force
 ```
-
-If the Transformer helps (as expected), you can add it to the map in `stanza/utils/training/common.py`.
 
 ### Contributing back
 
