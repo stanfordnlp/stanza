@@ -30,7 +30,7 @@ def visualize_doc(doc, pipeline):
                     heads.append(sent_len - word.id)
                 else:
                     heads.append(sent_len - word.head)
-        else:   # standard left to right rendering
+        else:   # left to right rendering
             for word in sentence.words:
                 words.append(word.text)
                 lemmas.append(word.lemma)
