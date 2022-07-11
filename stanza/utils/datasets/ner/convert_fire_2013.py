@@ -77,6 +77,8 @@ def write_fileset(output_csv_file, sentences):
             fout.write("\n")
 
 def convert_fire_2013(input_path, train_csv_file, dev_csv_file, test_csv_file):
+    random.seed(1234)
+
     filenames = glob.glob(os.path.join(input_path, "*"))
 
     # won't be numerically sorted... shouldn't matter
@@ -106,8 +108,6 @@ def convert_fire_2013(input_path, train_csv_file, dev_csv_file, test_csv_file):
     write_fileset(test_csv_file,  test_sentences)
     
 if __name__ == '__main__':
-    random.seed(1234)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_path', type=str, default="/home/john/extern_data/ner/FIRE2013/hindi_train",  help="Directory with raw files to read")
     parser.add_argument('--train_file', type=str, default="/home/john/stanza/data/ner/hi_fire2013.train.csv", help="Where to put the train file")
