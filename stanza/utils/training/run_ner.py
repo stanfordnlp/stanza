@@ -25,7 +25,7 @@ import os
 from stanza.models import ner_tagger
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, default_pretrains, ner_charlms, ner_pretrains
 
@@ -40,10 +40,6 @@ DATASET_EXTRA_ARGS = {
 }
 
 logger = logging.getLogger('stanza')
-
-def add_ner_args(parser):
-    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
-    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
@@ -121,7 +117,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "ner", "nertagger", add_ner_args)
+    common.main(run_treebank, "ner", "nertagger", add_charlm_args)
 
 if __name__ == "__main__":
     main()

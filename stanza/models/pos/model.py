@@ -1,14 +1,19 @@
+import logging
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, PackedSequence
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
 from stanza.models.common.biaffine import BiaffineScorer
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
-from stanza.models.common.char_model import CharacterModel
+from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+
+logger = logging.getLogger('stanza')
 
 class Tagger(nn.Module):
     def __init__(self, args, vocab, emb_matrix=None, share_hid=False):
@@ -35,13 +40,23 @@ class Tagger(nn.Module):
             self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            bidirectional = args.get('char_bidirectional', False)
-            self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
-            if bidirectional:
-                self.trans_char = nn.Linear(self.args['char_hidden_dim'] * 2, self.args['transformed_dim'], bias=False)
+            if self.args.get('charlm', None):
+                if args['charlm_forward_file'] is None or not os.path.exists(args['charlm_forward_file']):
+                    raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']))
+                if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
+                    raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
+                logger.debug("POS model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
+                add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
+                add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
-                self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
-            input_size += self.args['transformed_dim']
+                bidirectional = args.get('char_bidirectional', False)
+                self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
+                if bidirectional:
+                    self.trans_char = nn.Linear(self.args['char_hidden_dim'] * 2, self.args['transformed_dim'], bias=False)
+                else:
+                    self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
+                input_size += self.args['transformed_dim']
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
@@ -93,11 +108,11 @@ class Tagger(nn.Module):
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
         
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
-        
+
         inputs = []
         if self.args['word_emb_dim'] > 0:
             word_emb = self.word_emb(word)
@@ -114,9 +129,16 @@ class Tagger(nn.Module):
             return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
-            char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
-            inputs += [char_reps]
+            if self.args.get('charlm', None):
+                all_forward_chars = self.charmodel_forward.build_char_representation(text)
+                all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
+                all_backward_chars = self.charmodel_backward.build_char_representation(text)
+                all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
+                inputs += [all_forward_chars, all_backward_chars]
+            else:
+                char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+                char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
+                inputs += [char_reps]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
