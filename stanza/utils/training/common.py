@@ -133,6 +133,10 @@ def build_argparse():
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
+def add_charlm_args(parser):
+    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
+    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
+
 def main(run_treebank, model_dir, model_name, add_specific_args=None):
     """
     A main program for each of the run_xyz scripts
@@ -332,7 +336,9 @@ def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
         return None
     elif charlm != "default":
         return charlm
-    elif specific_charlm:
+    elif dataset in dataset_charlms.get(language, {}):
+        # this way, a "" or None result gets honored
+        # thus treating "not in the map" as a way for dataset_charlms to signal to use the default
         return specific_charlm
     elif default_charlm:
         return default_charlm

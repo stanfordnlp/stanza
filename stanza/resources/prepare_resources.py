@@ -177,6 +177,18 @@ default_charlms = {
     "zh-hans": "gigaword"
 }
 
+pos_charlms = {
+    "en": {
+        # none of the English charlms help with craft or genia
+        "craft": None,
+        "genia": None,
+        "mimic": "mimic",
+    },
+    "tr": {   # no idea why, but this particular one goes down in dev score
+        "boun": None,
+    },
+}
+
 ner_charlms = {
     "en": {
         "conll03": "1billion",
@@ -340,6 +352,25 @@ def get_con_dependencies(lang, package):
 
     return dependencies
 
+def get_pos_dependencies(lang, package):
+    # TODO: group pretrains by the type of pretrain
+    # that will greatly cut down on the number of number of copies of
+    # pretrains we have floating around
+    if lang in no_pretrain_languages:
+        dependencies = []
+    else:
+        dependencies = [{'model': 'pretrain', 'package': package}]
+
+    if lang in pos_charlms and package in pos_charlms[lang]:
+        charlm_package = pos_charlms[lang][package]
+    else:
+        charlm_package = default_charlms.get(lang, None)
+
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
 
 def get_ner_dependencies(lang, package):
     dependencies = []
@@ -380,9 +411,11 @@ def process_dirs(args):
             md5 = get_md5(output_path)
             # maintain dependencies
             dependencies = None
-            if processor == 'pos' or processor == 'depparse':
+            if processor == 'depparse':
                 if lang not in no_pretrain_languages:
                     dependencies = [{'model': 'pretrain', 'package': package}]
+            elif processor == 'pos':
+                dependencies = get_pos_dependencies(lang, package)
             elif processor == 'ner':
                 dependencies = get_ner_dependencies(lang, package)
             elif processor == 'sentiment':
@@ -416,7 +449,7 @@ def process_defaults(args):
         if lang in allowed_empty_languages or lang in no_pretrain_languages:
             default_dependencies = {}
         else:
-            default_dependencies = {'pos': [{'model': 'pretrain', 'package': ud_package}],
+            default_dependencies = {'pos': get_pos_dependencies(lang, ud_package),
                                     'depparse': [{'model': 'pretrain', 'package': ud_package}]}
 
         if lang in default_ners:

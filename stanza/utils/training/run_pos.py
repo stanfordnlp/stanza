@@ -7,7 +7,9 @@ from stanza.models import tagger
 
 from stanza.resources.prepare_resources import no_pretrain_languages
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm
+
+from stanza.resources.prepare_resources import default_charlms, pos_charlms
 
 logger = logging.getLogger('stanza')
 
@@ -33,7 +35,7 @@ def pos_batch_size(short_name):
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
-    short_language = short_name.split("_")[0]
+    short_language, dataset = short_name.split("_")
 
     pos_dir        = paths["POS_DATA_DIR"]
     train_file     = f"{pos_dir}/{short_name}.train.in.conllu"
@@ -43,6 +45,9 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{pos_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{pos_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{pos_dir}/{short_name}.test.pred.conllu"
+
+    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, pos_charlms)
+    charlm_args = build_charlm_args(short_language, charlm)
 
     if mode == Mode.TRAIN:
         if not os.path.exists(train_file):
@@ -61,7 +66,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-        train_args = train_args + wordvec_args(short_language)
+        train_args = train_args + wordvec_args(short_language) + charlm_args
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
@@ -74,7 +79,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        dev_args = dev_args + wordvec_args(short_language)
+        dev_args = dev_args + wordvec_args(short_language) + charlm_args
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
@@ -90,7 +95,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        test_args = test_args + wordvec_args(short_language)
+        test_args = test_args + wordvec_args(short_language) + charlm_args
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
@@ -100,7 +105,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "pos", "tagger")
+    common.main(run_treebank, "pos", "tagger", add_charlm_args)
 
 if __name__ == "__main__":
     main()
