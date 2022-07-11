@@ -70,6 +70,6 @@ def main():
     print("PRINTING left to right examples")
     visualize_str("This is a sentence.", "en")
     visualize_str("中国是一个很有意思的国家。", "zh")
-
+    return
 
 main()
