@@ -13,7 +13,8 @@ def visualize_doc(doc, pipeline):
     """
     visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 80,
                              "font": "Source Sans Pro"}
-    nlp = spacy.load("en_core_web_sm")   # Must install the latest version of spaCy's en_core_web_sm before running
+    # blank model - we don't use any of the model features, just the viz
+    nlp = spacy.blank("en")
     # Find the download here: https://spacy.io/models/en
     sentences_to_visualize = []
     for sentence in doc.sentences:
@@ -29,7 +30,7 @@ def visualize_doc(doc, pipeline):
                     heads.append(sent_len - word.id)
                 else:
                     heads.append(sent_len - word.head)
-        else:   # standard left to right rendering
+        else:   # left to right rendering
             for word in sentence.words:
                 words.append(word.text)
                 lemmas.append(word.lemma)
@@ -72,4 +73,7 @@ def main():
     visualize_str("中国是一个很有意思的国家。", "zh")
     return
 
-main()
+
+if __name__ == '__main__':
+    main()
+
