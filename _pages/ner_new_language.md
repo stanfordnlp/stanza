@@ -205,10 +205,14 @@ There is a script to copy Oscar from HuggingFace:
 python3 stanza/utils/charlm/dump_oscar.py bn --output /nlp/scr/horatio/oscar/
 ```
 
-We also download Wikipedia.  We will use Prof. Attardi's
-[WikiExtractor](https://github.com/attardi/wikiextractor)
-tool to remove the markup, and it works on the
-`latest-pages-meta-current` file, so that is what we download.
+We also download Wikipedia from the
+[Wikipedia dumps archive](https://dumps.wikimedia.org/backup-index-bydb.html).
+If a dump exists for your language, it will be under the language code
+for that language.
+We will use Prof. Attardi's
+[WikiExtractor](https://github.com/attardi/wikiextractor) tool to
+remove the markup, and it works on the `latest-pages-meta-current`
+file, so that is what we download.
 
 ```bash
 wget https://dumps.wikimedia.org/bnwiki/latest/bnwiki-latest-pages-meta-current.xml.bz2
