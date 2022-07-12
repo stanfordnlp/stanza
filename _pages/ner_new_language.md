@@ -205,6 +205,11 @@ There is a script to copy Oscar from HuggingFace:
 python3 stanza/utils/charlm/dump_oscar.py bn --output /nlp/scr/horatio/oscar/
 ```
 
+{% include alerts.html %}
+{{ note }}
+{{ "To use this script, you will need to install the HuggingFace library `datasets`." | markdownify }}
+{{ end }}
+
 We also download Wikipedia from the
 [Wikipedia dumps archive](https://dumps.wikimedia.org/backup-index-bydb.html).
 If a dump exists for your language, it will be under the language code
