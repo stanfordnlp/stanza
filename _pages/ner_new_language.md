@@ -202,7 +202,7 @@ two sources: Oscar Common Crawl and Wikipedia.
 There is a script to copy Oscar from HuggingFace:
 
 ```bash
-python3 stanza/utils/charlm/dump_oscar.py bn --output /nlp/scr/horatio/oscar/
+python3 -m stanza.utils.charlm.dump_oscar bn --output /nlp/scr/horatio/oscar/
 ```
 
 {% include alerts.html %}
