@@ -35,8 +35,12 @@ class Tagger(nn.Module):
             self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            self.charmodel = CharacterModel(args, vocab)
-            self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
+            bidirectional = args.get('char_bidirectional', False)
+            self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
+            if bidirectional:
+                self.trans_char = nn.Linear(self.args['char_hidden_dim'] * 2, self.args['transformed_dim'], bias=False)
+            else:
+                self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
 
         if self.args['pretrain']:
