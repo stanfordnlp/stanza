@@ -806,17 +806,44 @@ def process_lst20(paths, short_name, include_space_char=True):
         with open(output_path, 'w', encoding='utf-8') as fout:
             for text in text_list:
                 lst = []
-                with open(input_folder + text, 'r', encoding='utf-8') as fin:
-                    for line in fin:
-                        x = line.strip().split('\t')
-                        if len(x) > 1:
-                            if x[0] == '_' and not include_space_char:
-                                continue
-                            else:
-                                fout.write('{}\t{}'.format(x[0], x[2]))
-                                fout.write('\n')
+                fin = open(input_folder + text, 'r', encoding='utf-8').readlines()
+                
+                for i in range(len(fin)):
+                    line = fin[i]
+                    x = line.strip().split('\t')
+                    if len(x) > 1:
+                        if x[0] == '_' and not include_space_char:
+                            continue
                         else:
+                            word, tag = x[0], x[2]
+
+                            if tag == "MEA_BI":
+                                tag = "B_MEA"
+                            if tag == "OBRN_B":
+                                tag = "B_BRN"
+                            if tag == "ORG_I":
+                                tag = "I_ORG"
+                            if tag == "PER_I":
+                                tag = "I_PER"
+                            if tag == "B" and i != range(len(fin) - 1):
+                                x_next = fin[i+1].strip().split('\t')
+                                if len(x_next) > 1:
+                                    tag_next = x_next[2]
+                                    if "I_" in tag_next or "E_" in tag_next:
+                                        tag = tag + tag_next[1:]
+                                    else:
+                                        tag = "O"
+                                else:
+                                    tag = "O"
+                            if "_" in tag:
+                                tag = tag.replace("_", "-")
+                            if "ABB" in tag or tag == "DDEM" or tag == "I" or tag == "__":
+                                tag = "O"
+
+                            fout.write('{}\t{}'.format(word, tag))
                             fout.write('\n')
+                    else:
+                        fout.write('\n')
         print("Done")
     convert_bio_to_json(BASE_OUTPUT_PATH, BASE_OUTPUT_PATH, short_name)
 
