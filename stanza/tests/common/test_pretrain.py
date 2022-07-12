@@ -95,3 +95,21 @@ def test_whitespace():
         assert "unban mox" in pt.vocab
     finally:
         os.unlink(test_txt_file.name)
+
+NO_HEADER_PRETRAIN="""
+unban 1 2 3 4
+mox 5 6 7 8
+opal 9 10 11 12
+""".strip()
+
+def test_no_header():
+    """
+    Check loading a pretrain with no rows,cols header
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        filename = os.path.join(tmpdir, "tiny.txt")
+        with open(filename, "w", encoding="utf-8") as fout:
+            fout.write(NO_HEADER_PRETRAIN)
+        pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
+        check_embedding(pt.emb)
+

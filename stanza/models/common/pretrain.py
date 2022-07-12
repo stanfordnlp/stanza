@@ -136,7 +136,8 @@ class Pretrain:
         # some vector files, such as Google News, use tabs
         tab_space_pattern = re.compile(r"[ \t]+")
         first = True
-        words = []
+        cols = None
+        lines = []
         failed = 0
         with open_read_binary(filename) as f:
             for i, line in enumerate(f):
@@ -145,19 +146,35 @@ class Pretrain:
                 except UnicodeDecodeError:
                     failed += 1
                     continue
+                line = line.rstrip()
+                if not line:
+                    continue
                 if first:
                     # the first line contains the number of word vectors and the dimensionality
                     first = False
-                    line = line.strip().split(' ')
-                    rows, cols = [int(x) for x in line]
-                    emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+                    pieces = line.split()
+                    if len(pieces) > 2:
+                        lines.append(line)
+                    else:
+                        # note that a 1d embedding with a number as the first entry
+                        # will fail to read properly.  we ignore that case
+                        cols = int(pieces[1])
                     continue
 
-                line = tab_space_pattern.split((line.rstrip()))
-                emb[i+len(VOCAB_PREFIX)-1-failed, :] = [float(x) for x in line[-cols:]]
-                # if there were word pieces separated with spaces, rejoin them with nbsp instead
-                # this way, the normalize_unit method in vocab.py can find the word at test time
-                words.append('\xa0'.join(line[:-cols]))
+                lines.append(line)
+
+        lines = [tab_space_pattern.split(x) for x in lines]
+        if cols is None:
+            # another failure case: all words have spaces in them
+            cols = min(len(x) for x in lines) - 1
+        rows = len(lines)
+        emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+        for i, line in enumerate(lines):
+            emb[i+len(VOCAB_PREFIX)] = [float(x) for x in line[-cols:]]
+
+        # if there were word pieces separated with spaces, rejoin them with nbsp instead
+        # this way, the normalize_unit method in vocab.py can find the word at test time
+        words = ['\xa0'.join(line[:-cols]) for line in lines]
         return words, emb, failed
 
 

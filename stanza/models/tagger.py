@@ -62,6 +62,7 @@ def parse_args(args=None):
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
+    parser.add_argument('--char_bidirectional', dest='char_bidirectional', action='store_true', help="Use a bidirectional version of the charlm.  Doesn't help much, makes the models larger")
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--share_hid', action='store_true', help="Share hidden representations for UPOS, XPOS and UFeats.")
     parser.set_defaults(share_hid=False)
