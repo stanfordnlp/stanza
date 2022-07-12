@@ -825,8 +825,8 @@ def process_lst20(paths, short_name, include_space_char=True):
                                 tag = "I_ORG"
                             if tag == "PER_I":
                                 tag = "I_PER"
-                            if tag == "LOC-I":
-                                tag = "I-LOC"
+                            if tag == "LOC_I":
+                                tag = "I_LOC"
                             if tag == "B" and i != range(len(fin) - 1):
                                 x_next = fin[i+1].strip().split('\t')
                                 if len(x_next) > 1:
