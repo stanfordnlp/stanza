@@ -19,15 +19,19 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
     doc = conll.CoNLL.conll2doc(conll_file)
 
     if display_all:
+        print("ENTERED HERE")
         viz.visualize_doc(conll.CoNLL.conll2doc(conll_file), pipeline)
     else:  # visualize a given number of sentences
+        print("ENTERED HERE")
         visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 100,
                                  "font": "Source Sans Pro", "offset_x": 30,
                                  "arrow_spacing": 20}  # see spaCy visualization settings doc for more options
-        nlp = spacy.blank("en")  # Must install the latest version of spaCy's en_core_web_sm before running
-        sentences_to_visualize, rtl = [], is_right_to_left(pipeline)
+        nlp = spacy.blank("en")
+        sentences_to_visualize, rtl, num_sentences = [], is_right_to_left(pipeline), len(doc.sentences)
 
         for i in range(sent_count):
+            if i >= num_sentences:  # case where there are less sentences than amount requested
+                break
             sentence = doc.sentences[i]
             words, lemmas, heads, deps, tags = [], [], [], [], []
             sentence_words = sentence.words
@@ -56,15 +60,16 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
 
 
 def main():
-    file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_ewt-ud-test.conllu.txt"
-    conll_to_visual(file, "en", sent_count=2)
-    # conll_to_visual(file, "en")
-    # conll_to_visual(file, "en", sent_count=20)
-    # conll_to_visual(file, "en", display_all=True)
-    jp_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\ja_gsd-ud-test.conllu.txt"
-    ar_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\ar_padt-ud-test.conllu.txt"
-    conll_to_visual(jp_file, "ja")
-    conll_to_visual(ar_file, "ar")
+
+    en_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_test.conllu.txt"
+    jp_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\japanese_test.conllu.txt"
+    ar_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\arabic_test.conllu.txt"
+    conll_to_visual(en_file, "en", sent_count=2)
+    # conll_to_visual(en_file, "en", display_all=True)
+    # conll_to_visual(jp_file, "ja")
+    # conll_to_visual(ar_file, "ar")
+    return
 
 
-main()
+if __name__ == "__main__":
+    main()

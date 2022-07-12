@@ -43,34 +43,38 @@ def visualize_doc(doc, pipeline):
         document_result = Doc(nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags)
         sentences_to_visualize.append(document_result)
 
-        for line in sentences_to_visualize:  # render all sentences through displaCy
-            # If this program is NOT being run in a Jupyter notebook, replace displacy.render with displacy.serve
-            # and the visualization will be hosted locally, link being provided in the program output.
-            displacy.render(line, style="dep", options=visualization_options)
+    for line in sentences_to_visualize:  # render all sentences through displaCy
+        # If this program is NOT being run in a Jupyter notebook, replace displacy.render with displacy.serve
+        # and the visualization will be hosted locally, link being provided in the program output.
+        displacy.render(line, style="dep", options=visualization_options)
 
 
-def visualize_str(text, pipeline):
+def visualize_str(text, pipeline_code, pipe):
     """
     Takes a string and visualizes it using displacy. The string is processed using the stanza pipeline and
     its dependencies are formatted into a spaCy doc object for easy visualization. Accepts valid stanza (UD)
-    pipelines as the pipeline argument.
+    pipelines as the pipeline argument. Must supply the stanza pipeline code (the two-letter abbreviation of the
+    language, such as 'en' for English. Must also supply the stanza pipeline object as the third argument.
     """
-    pipe = stanza.Pipeline(pipeline)
     doc = pipe(text)
-    visualize_doc(doc, pipeline)
+    visualize_doc(doc, pipeline_code)
 
 
 def main():
+    # Load all necessary pipelines
+    en_pipe = stanza.Pipeline('en')
+    ar_pipe = stanza.Pipeline('ar')
+    zh_pipe = stanza.Pipeline('zh')
     print("PRINTING ARABIC DOCUMENTS")
     # example sentences in right to left language
-    visualize_str('برلين ترفض حصول شركة اميركية على رخصة تصنيع دبابة "ليوبارد" الالمانية', "ar")
-    visualize_str("هل بإمكاني مساعدتك؟", "ar")
-    visualize_str("أراك في مابعد", "ar")
-    visualize_str("لحظة من فضلك", "ar")
+    visualize_str('برلين ترفض حصول شركة اميركية على رخصة تصنيع دبابة "ليوبارد" الالمانية', "ar", ar_pipe)
+    visualize_str("هل بإمكاني مساعدتك؟", "ar", ar_pipe)
+    visualize_str("أراك في مابعد", "ar", ar_pipe)
+    visualize_str("لحظة من فضلك", "ar", ar_pipe)
     # example sentences in left to right language
     print("PRINTING left to right examples")
-    visualize_str("This is a sentence.", "en")
-    visualize_str("中国是一个很有意思的国家。", "zh")
+    visualize_str("This is a sentence.", "en", en_pipe)
+    visualize_str("中国是一个很有意思的国家。", "zh", zh_pipe)
     return
 
 
