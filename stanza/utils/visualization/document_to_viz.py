@@ -43,6 +43,7 @@ def visualize_doc(doc, pipeline):
         document_result = Doc(nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags)
         sentences_to_visualize.append(document_result)
 
+    print(sentences_to_visualize)
     for line in sentences_to_visualize:  # render all sentences through displaCy
         # If this program is NOT being run in a Jupyter notebook, replace displacy.render with displacy.serve
         # and the visualization will be hosted locally, link being provided in the program output.

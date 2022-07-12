@@ -19,10 +19,8 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
     doc = conll.CoNLL.conll2doc(conll_file)
 
     if display_all:
-        print("ENTERED HERE")
         viz.visualize_doc(conll.CoNLL.conll2doc(conll_file), pipeline)
     else:  # visualize a given number of sentences
-        print("ENTERED HERE")
         visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 100,
                                  "font": "Source Sans Pro", "offset_x": 30,
                                  "arrow_spacing": 20}  # see spaCy visualization settings doc for more options
@@ -35,7 +33,7 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
             sentence = doc.sentences[i]
             words, lemmas, heads, deps, tags = [], [], [], [], []
             sentence_words = sentence.words
-            if rtl:
+            if rtl:  # rtl languages will be visually rendered from right to left as well
                 sentence_words = reversed(sentence.words)
                 sent_len = len(sentence.words)
             for word in sentence_words:
@@ -55,19 +53,25 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
             document_result = Doc(nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags)
             sentences_to_visualize.append(document_result)
 
+        print(sentences_to_visualize)
         for line in sentences_to_visualize:  # render all sentences through displaCy
             displacy.render(line, style="dep", options=visualization_options)
 
 
 def main():
-
+    # load necessary conllu files
     en_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_test.conllu.txt"
     jp_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\japanese_test.conllu.txt"
     ar_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\arabic_test.conllu.txt"
+
+    # testing left to right languages
     conll_to_visual(en_file, "en", sent_count=2)
-    # conll_to_visual(en_file, "en", display_all=True)
-    # conll_to_visual(jp_file, "ja")
-    # conll_to_visual(ar_file, "ar")
+    conll_to_visual(en_file, "en", sent_count=10)
+    conll_to_visual(en_file, "en", display_all=True)
+    conll_to_visual(jp_file, "ja")
+
+    # testing right to left languages
+    conll_to_visual(ar_file, "ar")
     return
 
 
