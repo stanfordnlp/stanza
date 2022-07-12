@@ -260,6 +260,11 @@ python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs 
 {{ "make_lm_data has several subprocess calls which are not expected to work on Windows." | markdownify }}
 {{ end }}
 
+{% include alerts.html %}
+{{ note }}
+{{ "Please double check that the directory with the data is `$CHARLM_RAW_DIR/<lang>/<dataset>`" | markdownify }}
+{{ end }}
+
 You can now run the charlm.  This will take days.  Remember to update the language!
 
 ```bash
