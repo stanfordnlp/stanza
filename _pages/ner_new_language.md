@@ -324,6 +324,12 @@ If the Transformer helps (as expected), you can add it to the map in `stanza/uti
 {{ "Not all HF Transformer models are integrated with our code yet.  If you encounter such a model, please let us know." }}
 {{ end }}
 
+In our experiment, the initial model scored `66.62` on the Daffodil
+test set.  Quite low, actually.  Switching to the [Sagorsarker glove
+vectors](https://huggingface.co/sagorsarker/bangla-glove-vectors)
+improved performance to `75.23`, and adding our pretrained charlm
+further improved scores to `80.27`!
+
 ### Training multiple models
 
 Note that if you are attempting to train a new model, the `run`
