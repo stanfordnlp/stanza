@@ -84,19 +84,8 @@ resources.json for `forward_charlm` and `backward_charlm`
 It is not necessary to train a new charlm in order to build models,
 but the accuracy will improve on the models listed above if you do.
 
-For adding a new languages, we provide scripts to automate large parts of the process.  Scripts for converting raw text to conllu and conllu to a charlm dataset can be found in [stanza/utils/charlm/conll17_to_text.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/conll17_to_text.py) and [stanza/utils/charlm/make_lm_data.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/make_lm_data.py)
-
-* Gather a ton of tokenized text.  Ideally gigabytes.  Wikipedia is a good place to start for raw text, but in that case you will need to tokenize it.
-  * One such source of text is [the conll17 shared task](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-1989)
-  * Another possibility is to gather the Common Crawl data yourself, such as from [Oscar](https://oscar-corpus.com/), and download the Wikipedia dump for the language
-  * There is a script in the dev branch, [`stanza.utils.charlm.dump_oscar`](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/dump_oscar.py), which should help exporting Oscar data from HuggingFace to the charlm
-* If the data you gathered was from the conll17 shared task, we provide a script to turn it into txt files.  Run ```python3 -m stanza.utils.charlm.conll17_to_text ~/extern_data/finnish/conll17/Finnish/```  This will convert conllu or conllu.xz files to txt and put them in the same directory.
-* Run ```python3 -m stanza.utils.charlm.make_lm_data extern_data/charlm_raw extern_data/charlm```  This will convert text files in the `charlm_raw` directory to a suitable dataset in `extern_data/charlm`.  You may need to adjust your paths.
-* Forward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction forward --lang fi --shorthand fi_conll17  --mode train```
-* Backward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction backward --lang fi --shorthand fi_conll17  --mode train```
-* This will take days or weeks to fully train.
-
-For most languages, the current defaults are sufficient, but for some languages the learning rate is too aggressive and leads to NaNs in the training process.  For example, for Finnish, we used the following parameters: `--lr0 10`
+Please [see here](new_language_charlm.md) for a step by step
+explanation of how to train a charlm.
 
 ## Building models
 
