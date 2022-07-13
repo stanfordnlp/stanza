@@ -789,7 +789,7 @@ def process_lst20(paths, short_name, include_space_char=True):
     SHARDS = ("train", "eval", "test")
     BASE_OUTPUT_PATH = paths["NER_DATA_DIR"]
 
-    input_split = [(os.path.join(paths["NERBASE"], "LST20_Corpus", x), x) for x in SHARDS]
+    input_split = [(os.path.join(paths["NERBASE"], "thai", "LST20_Corpus", x), x) for x in SHARDS]
 
     if not include_space_char:
         short_name = short_name + "_no_ws"
@@ -807,7 +807,7 @@ def process_lst20(paths, short_name, include_space_char=True):
             for text in text_list:
                 lst = []
                 fin = open(input_folder + text, 'r', encoding='utf-8').readlines()
-                
+
                 for i in range(len(fin)):
                     line = fin[i]
                     x = line.strip().split('\t')
