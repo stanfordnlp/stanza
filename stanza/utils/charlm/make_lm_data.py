@@ -116,6 +116,8 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         subprocess.run(cmd, shell=True)
         size = os.path.getsize(tgt_tmp_shuffled) / 1024 / 1024 / 1024
         print(f"--> Shuffled file size: {size:.4f} GB")
+        if size < 0.1:
+            raise RuntimeError("Not enough data found to build a charlm.  At least 100MB data expected")
 
         print(f"--> Splitting into smaller files...")
         train_dir = tgt_dir / 'train'
