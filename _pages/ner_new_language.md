@@ -344,3 +344,8 @@ python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/ban
 
 If you like, you can open a PR with your code changes and post the
 models somewhere we can integrate them.  It would be very appreciated!
+
+### Citations
+
+Oscar was introducted in "A Monolingual Approach to Contextualized Word Embeddings for Mid-Resource Languages",
+by Ortiz Suárez, Pedro Javier, Laurent Romary, and Benoît Sagot
