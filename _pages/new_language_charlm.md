@@ -2,7 +2,7 @@
 layout: page
 title: Adding a new CharLM model
 keywords: charlm, stanza, model training
-permalink: '/new_language_ner.html'
+permalink: '/new_language_charlm.html'
 nav_order: 8
 parent: Usage
 ---
