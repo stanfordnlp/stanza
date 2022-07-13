@@ -2,7 +2,7 @@
 layout: page
 title: Adding a new NER model
 keywords: ner, named entity recognition, stanza, model training
-permalink: '/ner_new_language.html'
+permalink: '/new_language_ner.html'
 nav_order: 7
 parent: Usage
 ---
