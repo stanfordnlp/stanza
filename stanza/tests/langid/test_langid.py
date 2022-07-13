@@ -578,6 +578,23 @@ def test_lang_subset():
     nlp(docs)
     assert [doc.lang for doc in docs] == ["en", "en"]
 
+def test_lang_subset_unlikely_language():
+    """
+    Test that the language subset masking chooses a legal language, even if all legal languages are supa unlikely
+    """
+    sentences = ["你好" * 200]
+    docs = [Document([], text=text) for text in sentences]
+    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en"])
+    nlp(docs)
+    assert [doc.lang for doc in docs] == ["en"]
+
+    processor = nlp.processors['langid']
+    model = processor._model
+    text_tensor = processor._text_to_tensor(sentences)
+    en_idx = model.tag_to_idx['en']
+    predictions = model(text_tensor)
+    assert predictions[0, en_idx] < 0, "If this test fails, then regardless of how unlikely it was, the model is predicting the input string is possibly English.  Update the test by picking a different combination of languages & input"
+
 def test_multilingual_pipeline():
     """
     Basic test of multilingual pipeline
