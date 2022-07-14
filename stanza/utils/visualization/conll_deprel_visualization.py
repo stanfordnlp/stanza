@@ -1,5 +1,6 @@
 from stanza.models.common.constant import is_right_to_left
 import spacy
+import argparse
 from spacy import displacy
 from spacy.tokens import Doc
 from stanza.utils import conll
@@ -59,19 +60,17 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
 
 
 def main():
-    # load necessary conllu files
-    en_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_test.conllu.txt"
-    jp_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\japanese_test.conllu.txt"
-    ar_file = "C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\arabic_test.conllu.txt"
-
-    # testing left to right languages
-    conll_to_visual(en_file, "en", sent_count=2)
-    conll_to_visual(en_file, "en", sent_count=10)
-    conll_to_visual(en_file, "en", display_all=True)
-    conll_to_visual(jp_file, "ja")
-
-    # testing right to left languages
-    conll_to_visual(ar_file, "ar")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--conll_file', type=str,
+                        default="C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_test.conllu.txt",
+                        help="File path of the CoNLL file to visualize dependencies of")
+    parser.add_argument('--pipeline', type=str, default="en",
+                        help="Language code of the language pipeline to use (ex: 'en' for English)")
+    parser.add_argument('--sent_count', type=int, default=10, help="Number of sentences to visualize from CoNLL file")
+    parser.add_argument('--display_all', type=bool, default=False,
+                        help="Whether or not to visualize all of the sentences from the file. Overrides sent_count if set to True")
+    args = parser.parse_args()
+    conll_to_visual(args.conll_file, args.pipeline, args.sent_count, args.display_all)
     return
 
 
