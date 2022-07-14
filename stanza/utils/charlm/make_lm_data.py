@@ -127,6 +127,8 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         subprocess.run(cmd, shell=True)
         total = len(glob.glob(f'{train_dir}/*.txt'))
         print(f"--> {total} total files generated.")
+        if total < 3:
+            raise RuntimeError("Something went wrong!  %d file(s) produced by shuffle and split, expected at least 3" % total)
 
         print("--> Creating dev and test files...")
         dev_file = f"{tgt_dir}/dev.txt"
