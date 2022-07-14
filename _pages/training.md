@@ -55,9 +55,14 @@ python
 >>> stanza.download("vi")   # or whichever language you are using
 ```
 
-Once this is downloaded, the models each have a flag which tells the model where to find the `.pt` file.  Each of pos, depparse, ner, and sentiment support the `--wordvec_pretrain_file` flag for specifying the exact path.  If you don't supply this flag, it will attempt to guess the location.  In general, it will look in `saved_models/{model}/{dataset}.pretrain.pt`.
+Once this is downloaded, the models each have a flag which tells the model where to find the `.pt` file.  Each of pos, depparse, ner, conparse, and sentiment support the `--wordvec_pretrain_file` flag for specifying the exact path.  If you don't supply this flag, it will attempt to guess the location.  In general, it will look in `saved_models/{model}/{dataset}.pretrain.pt`.
 
 For more information and other options, [see here](word_vectors.md).
+
+{% include alerts.html %}
+{{ note }}
+{{ "run_pos.py and run_depparse.py support the --no_pretrain flag if you cannot find word embeddings for your language, but performance will degrade significantly.  NER, conparse, and sentiment do not support that flag." | markdownify }}
+{{ end }}
 
 ## Input Files
 
