@@ -4,7 +4,7 @@ import argparse
 from spacy import displacy
 from spacy.tokens import Doc
 from stanza.utils import conll
-from stanza.utils.visualization import document_to_viz as viz
+from stanza.utils.visualization import dependency_visualization as viz
 
 
 def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
