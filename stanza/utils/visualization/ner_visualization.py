@@ -6,7 +6,7 @@ import stanza
 import spacy
 
 
-def visualize_ner_doc(doc, pipeline, select=None, colors=None, rtl_clr_adjusted=False):
+def visualize_ner_doc(doc, language, select=None, colors=None, rtl_clr_adjusted=False):
     """
     Takes a stanza doc object and language pipeline and visualizes the named entities within it.
 
@@ -26,7 +26,7 @@ def visualize_ner_doc(doc, pipeline, select=None, colors=None, rtl_clr_adjusted=
     works properly on rtl languages.
     """
     model, documents = spacy.blank('en'), []  # blank model, spacy is only used for visualization purposes
-    sentences, rtl = doc.sentences, is_right_to_left(pipeline)
+    sentences, rtl = doc.sentences, is_right_to_left(language)
     if rtl:  # need to flip order of all the sentences in rendered display
         sentences = reversed(doc.sentences)
         # adjust colors to be in LTR flipped format due to the RLO unicode char flipping words
