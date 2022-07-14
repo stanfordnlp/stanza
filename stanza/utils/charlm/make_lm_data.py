@@ -113,7 +113,9 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
 
         print(f"--> Shuffling files into {tgt_tmp_shuffled}...")
         cmd = f"cat {tgt_tmp} | shuf > {tgt_tmp_shuffled}"
-        subprocess.run(cmd, shell=True)
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            raise RuntimeError("Failed to shuffle files!")
         size = os.path.getsize(tgt_tmp_shuffled) / 1024 / 1024 / 1024
         print(f"--> Shuffled file size: {size:.4f} GB")
         if size < 0.1:
@@ -124,7 +126,9 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         if not os.path.exists(train_dir): # make training dir
             os.makedirs(train_dir)
         cmd = f"split -C 52428800 -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
-        subprocess.run(cmd, shell=True)
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            raise RuntimeError("Failed to split files!")
         total = len(glob.glob(f'{train_dir}/*.txt'))
         print(f"--> {total} total files generated.")
         if total < 3:
