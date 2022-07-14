@@ -11,11 +11,10 @@ def visualize_doc(doc, pipeline):
     Works for English inputs. The reverse_order parameter can be set as True to flip the display of the
     words for languages such as Arabic, which are read from right-to-left.
     """
-    visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 80,
-                             "font": "Source Sans Pro"}
+    visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 90,
+                             "font": "Source Sans Pro", "arrow_spacing": 25}
     # blank model - we don't use any of the model features, just the viz
     nlp = spacy.blank("en")
-    # Find the download here: https://spacy.io/models/en
     sentences_to_visualize = []
     for sentence in doc.sentences:
         words, lemmas, heads, deps, tags = [], [], [], [], []
@@ -43,7 +42,6 @@ def visualize_doc(doc, pipeline):
         document_result = Doc(nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags)
         sentences_to_visualize.append(document_result)
 
-    print(sentences_to_visualize)
     for line in sentences_to_visualize:  # render all sentences through displaCy
         # If this program is NOT being run in a Jupyter notebook, replace displacy.render with displacy.serve
         # and the visualization will be hosted locally, link being provided in the program output.
@@ -61,21 +59,38 @@ def visualize_str(text, pipeline_code, pipe):
     visualize_doc(doc, pipeline_code)
 
 
+def visualize_docs(docs, lang_code):
+    """
+    Takes in a list of Stanza document objects and a language code (ex: 'en' for English) and visualizes the
+    dependency relationships within each document. This function uses spaCy visualizations. See the visualize_doc
+    function for more details.
+    """
+    for doc in docs:
+        visualize_doc(doc, lang_code)
+
+
+def visualize_strings(texts, lang_code):
+    """
+    Takes a language code (ex: 'en' for English) and a list of strings to process and visualizes the
+    dependency relationships in each text. This function loads the Stanza pipeline for the given language
+    and uses it to visualize all of the strings provided.
+    """
+    pipe = stanza.Pipeline(lang_code)
+    for text in texts:
+        visualize_str(text, lang_code, pipe)
+
+
 def main():
-    # Load all necessary pipelines
-    en_pipe = stanza.Pipeline('en')
-    ar_pipe = stanza.Pipeline('ar')
-    zh_pipe = stanza.Pipeline('zh')
-    print("PRINTING ARABIC DOCUMENTS")
-    # example sentences in right to left language
-    visualize_str('برلين ترفض حصول شركة اميركية على رخصة تصنيع دبابة "ليوبارد" الالمانية', "ar", ar_pipe)
-    visualize_str("هل بإمكاني مساعدتك؟", "ar", ar_pipe)
-    visualize_str("أراك في مابعد", "ar", ar_pipe)
-    visualize_str("لحظة من فضلك", "ar", ar_pipe)
-    # example sentences in left to right language
-    print("PRINTING left to right examples")
-    visualize_str("This is a sentence.", "en", en_pipe)
-    visualize_str("中国是一个很有意思的国家。", "zh", zh_pipe)
+    ar_strings = ['برلين ترفض حصول شركة اميركية على رخصة تصنيع دبابة "ليوبارد" الالمانية', "هل بإمكاني مساعدتك؟",
+               "أراك في مابعد", "لحظة من فضلك"]
+    en_strings = ["This is a sentence.",
+                  "Barack Obama was born in Hawaii. He was elected President of the United States in 2008."]
+    zh_strings = ["中国是一个很有意思的国家。"]
+    # Testing with right to left language
+    visualize_strings(ar_strings, "ar")
+    # Testing with left to right languages
+    visualize_strings(en_strings, "en")
+    visualize_strings(zh_strings, "zh")
     return
 
 
