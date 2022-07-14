@@ -67,7 +67,7 @@ def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--conll_file', type=str,
-                        default="C:\\Users\\Alex\\stanza\\stanza\\utils\\visualization\\en_test.conllu.txt",
+                        default="C:\\Users\\Alex\\stanza\\demo\\en_test.conllu.txt",
                         help="File path of the CoNLL file to visualize dependencies of")
     parser.add_argument('--pipeline', type=str, default="en",
                         help="Language code of the language pipeline to use (ex: 'en' for English)")
