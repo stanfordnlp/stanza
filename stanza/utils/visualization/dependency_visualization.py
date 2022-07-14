@@ -5,11 +5,13 @@ from spacy import displacy
 from spacy.tokens import Doc
 
 
-def visualize_doc(doc, pipeline):
+def visualize_doc(doc, language):
     """
-    Takes in a Document and visualizes it using displacy. The document must be from the stanza pipeline.
-    Works for English inputs. The reverse_order parameter can be set as True to flip the display of the
-    words for languages such as Arabic, which are read from right-to-left.
+    Takes in a Document and visualizes it using displacy.
+
+    The document to visualize must be from the stanza pipeline.
+
+    right-to-left languages such as Arabic are displayed right-to-left based on the language code
     """
     visualization_options = {"compact": True, "bg": "#09a3d5", "color": "white", "distance": 90,
                              "font": "Source Sans Pro", "arrow_spacing": 25}
@@ -18,7 +20,7 @@ def visualize_doc(doc, pipeline):
     sentences_to_visualize = []
     for sentence in doc.sentences:
         words, lemmas, heads, deps, tags = [], [], [], [], []
-        if is_right_to_left(pipeline):  # order of words displayed is reversed, dependency arcs remain intact
+        if is_right_to_left(language):  # order of words displayed is reversed, dependency arcs remain intact
             sent_len = len(sentence.words)
             for word in reversed(sentence.words):
                 words.append(word.text)
@@ -50,10 +52,14 @@ def visualize_doc(doc, pipeline):
 
 def visualize_str(text, pipeline_code, pipe):
     """
-    Takes a string and visualizes it using displacy. The string is processed using the stanza pipeline and
-    its dependencies are formatted into a spaCy doc object for easy visualization. Accepts valid stanza (UD)
-    pipelines as the pipeline argument. Must supply the stanza pipeline code (the two-letter abbreviation of the
-    language, such as 'en' for English. Must also supply the stanza pipeline object as the third argument.
+    Takes a string and visualizes it using displacy.
+
+    The string is processed using the stanza pipeline and its
+    dependencies are formatted into a spaCy doc object for easy
+    visualization. Accepts valid stanza (UD) pipelines as the pipeline
+    argument. Must supply the stanza pipeline code (the two-letter
+    abbreviation of the language, such as 'en' for English. Must also
+    supply the stanza pipeline object as the third argument.
     """
     doc = pipe(text)
     visualize_doc(doc, pipeline_code)
@@ -62,8 +68,9 @@ def visualize_str(text, pipeline_code, pipe):
 def visualize_docs(docs, lang_code):
     """
     Takes in a list of Stanza document objects and a language code (ex: 'en' for English) and visualizes the
-    dependency relationships within each document. This function uses spaCy visualizations. See the visualize_doc
-    function for more details.
+    dependency relationships within each document.
+
+    This function uses spaCy visualizations. See the visualize_doc function for more details.
     """
     for doc in docs:
         visualize_doc(doc, lang_code)
@@ -72,8 +79,9 @@ def visualize_docs(docs, lang_code):
 def visualize_strings(texts, lang_code):
     """
     Takes a language code (ex: 'en' for English) and a list of strings to process and visualizes the
-    dependency relationships in each text. This function loads the Stanza pipeline for the given language
-    and uses it to visualize all of the strings provided.
+    dependency relationships in each text.
+
+    This function loads the Stanza pipeline for the given language and uses it to visualize all of the strings provided.
     """
     pipe = stanza.Pipeline(lang_code)
     for text in texts:

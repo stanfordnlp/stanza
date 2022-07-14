@@ -10,11 +10,16 @@ from stanza.utils.visualization import dependency_visualization as viz
 def conll_to_visual(conll_file, pipeline, sent_count=10, display_all=False):
     """
     Takes in a conll file and visualizes it by converting the conll file to a Stanza Document object
-    and visualizing it with the visualize_doc method. Input should be a proper conll file. The pipeline
-    for the conll file to be processed in must be provided as well. Optionally, the sent_count argument
-    can be tweaked to display a different amount of sentences. To display all of the sentences in a
-    conll file, the display_all argument can optionally be set to True. BEWARE: setting this argument
-    for a large conll file may result in too many renderings, resulting in a crash.
+    and visualizing it with the visualize_doc method.
+
+    Input should be a proper conll file.
+
+    The pipeline for the conll file to be processed in must be provided as well.
+
+    Optionally, the sent_count argument can be tweaked to display a different amount of sentences.
+
+    To display all of the sentences in a conll file, the display_all argument can optionally be set to True.
+    BEWARE: setting this argument for a large conll file may result in too many renderings, resulting in a crash.
     """
     # convert conll file to doc
     doc = conll.CoNLL.conll2doc(conll_file)

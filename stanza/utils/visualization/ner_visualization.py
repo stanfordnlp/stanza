@@ -9,15 +9,19 @@ import spacy
 def visualize_ner_doc(doc, pipeline, select=None, colors=None, rtl_clr_adjusted=False):
     """
     Takes a stanza doc object and language pipeline and visualizes the named entities within it.
+
     Stanza currently supports a limited amount of languages for NER, which you can view here:
     https://stanfordnlp.github.io/stanza/ner_models.html
+
     To view only a specific type(s) of named entities, set the optional 'select' argument to
     a list of the named entity types. Ex: select=["PER", "ORG", "GPE"] to only see entities tagged as Person(s),
     Organizations, and Geo-political entities. A full list of the available types can be found here:
-    https://stanfordnlp.github.io/stanza/available_models.html (ctrl + F "The following table").
+    https://stanfordnlp.github.io/stanza/ner_models.html (ctrl + F "The following table").
+
     The colors argument is formatted as a dictionary of NER tags with their corresponding colors, which can be
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
+
     Do not change the 'rtl_clr_adjusted' argument; it is used for ensuring that the visualize_strings function
     works properly on rtl languages.
     """
@@ -79,9 +83,12 @@ def visualize_ner_doc(doc, pipeline, select=None, colors=None, rtl_clr_adjusted=
 
 def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None, rtl_clr_adjusted=False):
     """
-    Takes in a text string and visualizes the named entities within the text. Required args also include a
-    pipeline code, the two-letter code for a language defined by Universal Dependencies (ex: "en" for English).
+    Takes in a text string and visualizes the named entities within the text.
+
+    Required args also include a pipeline code, the two-letter code for a language defined by Universal Dependencies (ex: "en" for English).
+
     Lastly, the user must provide an NLP pipeline - we recommend Stanza (ex: pipe = stanza.Pipeline('en')).
+
     Optionally, the 'select' argument allows for specific NER tags to be highlighted; the 'color' argument allows
     for specific NER tags to have certain color(s).
     """
@@ -92,9 +99,12 @@ def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None, rtl_c
 def visualize_strings(texts, language_code, select=None, colors=None):
     """
     Takes in a list of strings and a language code (Stanza defines these, ex: 'en' for English) to visualize all
-    of the strings' named entities. The strings are processed by the Stanza pipeline and the named entities are displayed.
-    Each text is separated by a delimiting line.
+    of the strings' named entities.
+
+    The strings are processed by the Stanza pipeline and the named entities are displayed. Each text is separated by a delimiting line.
+
     Optionally, the 'select' argument may be configured to only visualize given named entities (ex: select=['ORG', 'PERSON']).
+
     The optional colors argument is formatted as a dictionary of NER tags with their corresponding colors, which can be
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
@@ -116,8 +126,12 @@ def visualize_strings(texts, language_code, select=None, colors=None):
 def visualize_docs(docs, language_code, select=None, colors=None):
     """
     Takes in a list of doc and a language code (Stanza defines these, ex: 'en' for English) to visualize all
-    of the strings' named entities. Each text is separated by a delimiting line.
+    of the strings' named entities.
+
+    Each text is separated by a delimiting line.
+
     Optionally, the 'select' argument may be configured to only visualize given named entities (ex: select=['ORG', 'PERSON']).
+
     The optional colors argument is formatted as a dictionary of NER tags with their corresponding colors, which can be
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
