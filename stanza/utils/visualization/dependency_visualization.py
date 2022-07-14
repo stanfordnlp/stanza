@@ -83,7 +83,7 @@ def visualize_strings(texts, lang_code):
 
     This function loads the Stanza pipeline for the given language and uses it to visualize all of the strings provided.
     """
-    pipe = stanza.Pipeline(lang_code)
+    pipe = stanza.Pipeline(lang_code, processors="tokenize,pos,lemma,depparse")
     for text in texts:
         visualize_str(text, lang_code, pipe)
 
