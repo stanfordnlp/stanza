@@ -154,6 +154,7 @@ SHORT_NAMES = {
     'nap_rb': 'UD_Neapolitan-RB',
     'sme_giella': 'UD_North_Sami-Giella',
     'no_bokmaal': 'UD_Norwegian-Bokmaal',
+    'nb_bokmaal': 'UD_Norwegian-Bokmaal',
     'nn_nynorsk': 'UD_Norwegian-Nynorsk',
     'nn_nynorsklia': 'UD_Norwegian-NynorskLIA',
     'cu_proiel': 'UD_Old_Church_Slavonic-PROIEL',

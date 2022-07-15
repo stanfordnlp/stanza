@@ -24,6 +24,9 @@ with open(output_name, "w") as fout:
         if short_name.startswith("zh_"):
             short_name = "zh-hans_" + short_name[3:]
             fout.write("    '%s': '%s',\n" % (short_name, ud_name))
+        elif short_name == 'no_bokmaal':
+            short_name = 'nb_bokmaal'
+            fout.write("    '%s': '%s',\n" % (short_name, ud_name))
 
     fout.write("}\n")
 
