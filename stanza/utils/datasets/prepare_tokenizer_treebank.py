@@ -626,6 +626,8 @@ def find_text_idx(sentence):
             return idx
     return -1
 
+DIGIT_RE = re.compile("[0-9]")
+
 def change_indices(line, delta):
     """
     Adjust all indices in the given sentence by delta.  Useful when removing a word, for example
@@ -641,17 +643,23 @@ def change_indices(line, delta):
         return line
 
     if MWT_OR_COPY_RE.match(pieces[0]):
-        raise NotImplementedError("Need to implement change_indices for copy nodes")
-
-    if not INT_RE.match(pieces[0]):
+        index_pieces = pieces[0].split(".", maxsplit=1)
+        pieces[0] = "%d.%s" % (int(index_pieces[0]) + delta, index_pieces[1])
+    elif not INT_RE.match(pieces[0]):
         raise NotImplementedError("Unknown index type: %s" % pieces[0])
-
-    pieces[0] = str(int(pieces[0]) + delta)
-    dep = int(pieces[6])
-    if dep != 0:
-        pieces[6] = str(int(dep) + delta)
+    else:
+        pieces[0] = str(int(pieces[0]) + delta)
+    if pieces[6] != '_':
+        # copy nodes don't have basic dependencies in the es_ancora treebank
+        dep = int(pieces[6])
+        if dep != 0:
+            pieces[6] = str(int(dep) + delta)
     if pieces[8] != '_':
-        raise NotImplementedError("Need to handle the additional deps field in change_indices")
+        dep_pieces = pieces[8].split(":", maxsplit=1)
+        if DIGIT_RE.search(dep_pieces[1]):
+            raise NotImplementedError("Need to handle multiple additional deps:\n%s" % line)
+        if int(dep_pieces[0]) != 0:
+            pieces[8] = str(int(dep_pieces[0]) + delta) + ":" + dep_pieces[1]
     line = "\t".join(pieces)
     return line
 
