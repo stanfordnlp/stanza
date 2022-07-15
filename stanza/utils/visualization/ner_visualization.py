@@ -36,7 +36,11 @@ def visualize_ner_doc(doc, language, select=None, colors=None):
                 if RTL_OVERRIDE not in color:
                     clr_val = visualization_colors[color]
                     visualization_colors.pop(color)
+                    # colors[clr_val] = RTL_OVERRIDE + color[::-1]
                     visualization_colors[RTL_OVERRIDE + color[::-1]] = clr_val
+                    # colors["‮" + color[::-1]] = clr_val
+            print(colors)
+            print(f'Visualization Colors: {visualization_colors}')
     for sentence in sentences:
         words, display_ents, already_found = [], [], False
         # initialize doc object with words first
@@ -71,6 +75,7 @@ def visualize_ner_doc(doc, language, select=None, colors=None):
                 to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, ent.type)
             else:  # RTL languages need the override char to flip order
                 to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, RTL_OVERRIDE + ent.type[::-1])
+                # to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, "‮" + ent.type[::-1])
             display_ents.append(to_add)
         document.set_ents(display_ents)
         documents.append(document)
@@ -112,6 +117,8 @@ def visualize_strings(texts, language_code, select=None, colors=None):
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
     """
     lang_pipe = stanza.Pipeline(language_code)
+    # rtl languages need to flip the color names, but only once. Multiple calls to visualize_ner_str() will
+    # unintentionally add too many RTLOverride chars, so only one modification is needed.
     for text in texts:
         visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors)
         print("\n\n")
