@@ -4,9 +4,10 @@ from spacy.tokens import Span
 from stanza.models.common.constant import is_right_to_left
 import stanza
 import spacy
+import copy
 
 
-def visualize_ner_doc(doc, language, select=None, colors=None, rtl_clr_adjusted=False):
+def visualize_ner_doc(doc, language, select=None, colors=None):
     """
     Takes a stanza doc object and language pipeline and visualizes the named entities within it.
 
@@ -25,16 +26,17 @@ def visualize_ner_doc(doc, language, select=None, colors=None, rtl_clr_adjusted=
     Do not change the 'rtl_clr_adjusted' argument; it is used for ensuring that the visualize_strings function
     works properly on rtl languages.
     """
-    model, documents = spacy.blank('en'), []  # blank model, spacy is only used for visualization purposes
-    sentences, rtl = doc.sentences, is_right_to_left(language)
+    model, documents, visualization_colors = spacy.blank('en'), [], copy.deepcopy(colors)  # blank model, spacy is only used for visualization purposes
+    sentences, rtl, RTL_OVERRIDE = doc.sentences, is_right_to_left(language), "‮"
     if rtl:  # need to flip order of all the sentences in rendered display
         sentences = reversed(doc.sentences)
         # adjust colors to be in LTR flipped format due to the RLO unicode char flipping words
-        if colors and not rtl_clr_adjusted:
-            for color in colors:
-                clr_val = colors[color]
-                colors.pop(color)
-                colors["‮" + color[::-1]] = clr_val
+        if colors:
+            for color in visualization_colors:
+                if RTL_OVERRIDE not in color:
+                    clr_val = visualization_colors[color]
+                    visualization_colors.pop(color)
+                    visualization_colors[RTL_OVERRIDE + color[::-1]] = clr_val
     for sentence in sentences:
         words, display_ents, already_found = [], [], False
         # initialize doc object with words first
@@ -68,7 +70,7 @@ def visualize_ner_doc(doc, language, select=None, colors=None, rtl_clr_adjusted=
             if not rtl:
                 to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, ent.type)
             else:  # RTL languages need the override char to flip order
-                to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, "‮" + ent.type[::-1])
+                to_add = Span(document, found_indexes[0], found_indexes[-1] + 1, RTL_OVERRIDE + ent.type[::-1])
             display_ents.append(to_add)
         document.set_ents(display_ents)
         documents.append(document)
@@ -76,12 +78,12 @@ def visualize_ner_doc(doc, language, select=None, colors=None, rtl_clr_adjusted=
     # Visualize doc objects
     visualization_options = {"ents": select}
     if colors:
-        visualization_options["colors"] = colors
+        visualization_options["colors"] = visualization_colors
     for document in documents:
         displacy.render(document, style='ent', options=visualization_options)
 
 
-def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None, rtl_clr_adjusted=False):
+def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None):
     """
     Takes in a text string and visualizes the named entities within the text.
 
@@ -93,7 +95,7 @@ def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None, rtl_c
     for specific NER tags to have certain color(s).
     """
     doc = pipe(text)
-    visualize_ner_doc(doc, pipeline_code, select, colors, rtl_clr_adjusted)
+    visualize_ner_doc(doc, pipeline_code, select, colors)
 
 
 def visualize_strings(texts, language_code, select=None, colors=None):
@@ -110,19 +112,9 @@ def visualize_strings(texts, language_code, select=None, colors=None):
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
     """
     lang_pipe = stanza.Pipeline(language_code)
-    # rtl languages need to flip the color names, but only once. Multiple calls to visualize_ner_str() will
-    # unintentionally add too many RTLOverride chars, so only one modification is needed.
-    if is_right_to_left(language_code) and len(texts) > 1:
-        for text in texts:
-            if text is texts[0]:   # flip the color names for the first time, future calls keep the modified colors arg
-                visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors)
-            else:   # rtl_clr_adjusted arg will prevent additional RTLOverride chars from being added
-                visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors, rtl_clr_adjusted=True)
-            print("\n\n")
-    else:   # ltr langs don't need a color name flip and rtl lang texts with one string only need one RTLOverride char
-        for text in texts:
-            visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors)
-            print("\n\n")
+    for text in texts:
+        visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors)
+        print("\n\n")
 
 
 def visualize_docs(docs, language_code, select=None, colors=None):
@@ -138,19 +130,9 @@ def visualize_docs(docs, language_code, select=None, colors=None):
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
     """
-    # rtl languages need to flip the color names, but only once. Multiple calls to visualize_ner_doc() will
-    # unintentionally add too many RTLOverride chars, so only one modification is needed.
-    if is_right_to_left(language_code) and len(docs) > 1:
-        for doc in docs:
-            if docs is docs[0]:  # flip the color names for the first time, future calls keep the modified colors arg
-                visualize_ner_doc(doc, language_code, select=select, colors=colors)
-            else:  # rtl_clr_adjusted arg will prevent additional RTLOverride chars from being added
-                visualize_ner_doc(doc, language_code, select=select, colors=colors, rtl_clr_adjusted=True)
-            print("\n\n")
-    else:   # ltr langs don't need a color name flip and rtl lang texts with one string only need one RTLOverride char
-        for doc in docs:
-            visualize_ner_doc(doc, language_code, select=select, colors=colors)
-            print("\n\n")
+    for doc in docs:
+        visualize_ner_doc(doc, language_code, select=select, colors=colors)
+        print("\n\n")
 
 
 def main():
