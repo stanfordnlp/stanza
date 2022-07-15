@@ -119,8 +119,8 @@ class CompositeVocab(BaseVocab):
             if len(parts) == 1 and parts[0] == '_':
                 return dict()
             parts = [x.split('=') for x in parts]
-            if any(len(x) == 1 for x in parts):
-                raise ValueError('Received "%s" for a dictionary which is supposed to be keyed, eg the entries should all be of the form key=value' % unit)
+            if any(len(x) != 2 for x in parts):
+                raise ValueError('Received "%s" for a dictionary which is supposed to be keyed, eg the entries should all be of the form key=value and separated by %s' % (unit, self.sep))
 
             # Just treat multi-valued properties values as one possible value
             parts = dict(parts)
