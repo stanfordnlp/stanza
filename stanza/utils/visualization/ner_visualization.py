@@ -109,7 +109,7 @@ def visualize_strings(texts, language_code, select=None, colors=None):
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
     """
-    lang_pipe = stanza.Pipeline(language_code)
+    lang_pipe = stanza.Pipeline(language_code, processors="tokenize,ner")
     if is_right_to_left(language_code) and len(texts) > 1:
         for text in texts:
             if text is texts[0]:
