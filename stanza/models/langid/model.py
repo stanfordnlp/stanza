@@ -58,11 +58,15 @@ class LangIDBiLSTM(nn.Module):
     def build_lang_mask(self, use_gpu=None):
         """
         Build language mask if a lang subset is specified (e.g. ["en", "fr"])
+
+        The mask will be added to the results to set the prediction scores of illegal languages to -inf
         """
         device = torch.device("cuda") if use_gpu else None
-        lang_mask_list = [int(lang in self.lang_subset) for lang in self.idx_to_tag] if self.lang_subset else \
-                         [1 for lang in self.idx_to_tag]
-        self.lang_mask = torch.tensor(lang_mask_list, device=device, dtype=torch.float)
+        if self.lang_subset:
+            lang_mask_list = [0.0 if lang in self.lang_subset else -float('inf') for lang in self.idx_to_tag]
+            self.lang_mask = torch.tensor(lang_mask_list, device=device, dtype=torch.float)
+        else:
+            self.lang_mask = torch.zeros(len(self.idx_to_tag), device=device, dtype=torch.float)
 
     def loss(self, Y_hat, Y):
         return self.loss_train(Y_hat, Y)
@@ -87,7 +91,7 @@ class LangIDBiLSTM(nn.Module):
         if self.lang_subset:
             prediction_batch_size = prediction_probs.size()[0]
             batch_mask = torch.stack([self.lang_mask for _ in range(prediction_batch_size)])
-            prediction_probs = prediction_probs * batch_mask
+            prediction_probs = prediction_probs + batch_mask
         return torch.argmax(prediction_probs, dim=1)
 
     def save(self, path):

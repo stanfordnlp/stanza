@@ -200,7 +200,6 @@ ner_charlms = {
     },
 }
 
-# the None are embeddings which aren't present elsewhere in stanza
 ner_pretrains = {
     "ar": {
         "aqmar": "fasttextwiki",

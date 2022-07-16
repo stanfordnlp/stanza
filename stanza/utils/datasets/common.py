@@ -7,6 +7,7 @@ import sys
 
 import stanza.utils.default_paths as default_paths
 from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.short_name_to_treebank import SHORT_NAMES
 
 logger = logging.getLogger('stanza')
 
@@ -128,6 +129,8 @@ def main(process_treebank, add_specific_args=None):
             ud_treebanks = get_ud_treebanks(paths["UDBASE"])
             treebanks.extend(ud_treebanks)
         else:
+            # If this is a known UD short name, use the official name (we need it for the paths)
+            treebank = SHORT_NAMES.get(treebank, treebank)
             treebanks.append(treebank)
 
     for treebank in treebanks:

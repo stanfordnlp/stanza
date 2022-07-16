@@ -7,11 +7,13 @@
 *.toklabels
 
 data/
+stanza_resources/
 stanza_test/
 saved_models/
 logs/
 log/
 *_test_treebanks
+wandb/
 
 params/*/*.json
 !params/*/default.json
