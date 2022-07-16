@@ -18,7 +18,10 @@ wandb/
 params/*/*.json
 !params/*/default.json
 
+# emacs backup files
 *~
+# VI backup files?
+*py.swp
 
 # standard github python project gitignore
 # Byte-compiled / optimized / DLL files
