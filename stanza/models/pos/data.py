@@ -26,7 +26,7 @@ class DataLoader:
             self.vocab = self.init_vocab(data)
         else:
             self.vocab = vocab
-        
+
         # handle pretrain; pretrain vocab is used when args['pretrain'] == True and pretrain is not None
         self.pretrain_vocab = None
         if pretrain is not None and args['pretrain']:
