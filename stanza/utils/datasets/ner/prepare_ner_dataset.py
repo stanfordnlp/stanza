@@ -846,7 +846,6 @@ def process_lst20(paths, short_name, include_space_char=True):
                             fout.write('\n')
                     else:
                         fout.write('\n')
-        print("Done")
     convert_bio_to_json(BASE_OUTPUT_PATH, BASE_OUTPUT_PATH, short_name)
 
 def process_mr_l3cube(paths, short_name):
@@ -916,6 +915,7 @@ def main(dataset_name):
         process_toy_dataset(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
+    print("Done processing %s" % dataset_name)
 
 if __name__ == '__main__':
     main(sys.argv[1])
