@@ -886,12 +886,13 @@ DATASET_MAPPING = {
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
-    "mr_l3cube":         process_mr_l3cube
+    "mr_l3cube":         process_mr_l3cube,
+    "th_lst20":          process_lst20,
 }
 
 def main(dataset_name):
     paths = default_paths.get_default_paths()
-    print(dataset_name)
+    print("Processing %s" % dataset_name)
 
     random.seed(1234)
 
@@ -913,8 +914,6 @@ def main(dataset_name):
         process_norne(paths, dataset_name)
     elif dataset_name == 'en_sample':
         process_toy_dataset(paths, dataset_name)
-    elif dataset_name == 'th_lst20':
-        process_lst20(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
 
