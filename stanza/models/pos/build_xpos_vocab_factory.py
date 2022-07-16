@@ -12,6 +12,7 @@ from stanza.utils import default_paths
 
 SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 DATA_DIR = default_paths.get_default_paths()['POS_DATA_DIR']
+DEFAULT_KEY = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
 
 def filter_data(data, idx):
     data_filtered = []
@@ -31,7 +32,7 @@ def get_factory(sh, fn):
                           'XPOS vocabulary for this treebank properly, please run the following command first:\n'
                           '\tstanza/utils/datasets/prepare_pos_treebank.py {}'.format(fn, fn))
         # without the training file, there's not much we can do
-        key = 'WordVocab(data, shorthand, idx=2)'
+        key = DEFAULT_KEY
         return key
 
     doc = CoNLL.conll2doc(input_file=train_file)
@@ -40,7 +41,7 @@ def get_factory(sh, fn):
     data = filter_data(data, idx=2)
     print(f'Filtered length = {len(data)}')
     vocab = WordVocab(data, sh, idx=2, ignore=["_"])
-    key = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
+    key = DEFAULT_KEY
     best_size = len(vocab) - len(VOCAB_PREFIX)
     if best_size > 20:
         for sep in ['', '-', '+', '|', ',', ':']: # separators
@@ -67,7 +68,7 @@ def main():
     elif os.path.exists(args.treebanks):
         # maybe it's a file with a list of names
         with open(args.treebanks) as fin:
-            treebanks = sorted([x.strip() for x in fin.readlines() if x.strip()])
+            treebanks = sorted(set([x.strip() for x in fin.readlines() if x.strip()]))
     else:
         raise ValueError("Cannot figure out which treebanks to use.   Please set the --treebanks parameter")
 
@@ -91,6 +92,12 @@ def main():
     for sh, fn in zip(shorthands, fullnames):
         factory = get_factory(sh, fn)
         mapping[factory].append(sh)
+        if sh == 'zh-hans_gsdsimp':
+            mapping[factory].append('zh_gsdsimp')
+        elif sh == 'no_bokmaal':
+            mapping[factory].append('nb_bokmaal')
+
+    mapping[DEFAULT_KEY].append('en_test')
 
     # Generate code. This takes the XPOS vocabulary classes selected above, and generates the
     # actual factory class as seen in models.pos.xpos_vocab_factory.
@@ -104,7 +111,7 @@ from stanza.models.pos.vocab import WordVocab, XPOSVocab
 def xpos_vocab_factory(data, shorthand):''', file=f)
 
         for key in mapping:
-            print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in mapping[key]])), file=f)
+            print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in sorted(mapping[key])])), file=f)
             print("        return {}".format(key), file=f)
 
             first = False
