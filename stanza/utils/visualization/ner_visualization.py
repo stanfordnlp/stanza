@@ -85,7 +85,7 @@ def visualize_ner_doc(doc, language, select=None, colors=None):
         displacy.render(document, style='ent', options=visualization_options)
 
 
-def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None):
+def visualize_ner_str(text, pipe, select=None, colors=None):
     """
     Takes in a text string and visualizes the named entities within the text.
 
@@ -97,7 +97,7 @@ def visualize_ner_str(text, pipeline_code, pipe, select=None, colors=None):
     for specific NER tags to have certain color(s).
     """
     doc = pipe(text)
-    visualize_ner_doc(doc, pipeline_code, select, colors)
+    visualize_ner_doc(doc, pipe.lang, select, colors)
 
 
 def visualize_strings(texts, language_code, select=None, colors=None):
@@ -113,10 +113,10 @@ def visualize_strings(texts, language_code, select=None, colors=None):
     represented as a string (ex: "blue"), a color hex value (ex: #aa9cfc), or as a linear gradient of color
     values (ex: "linear-gradient(90deg, #aa9cfc, #fc9ce7)").
     """
-    lang_pipe = stanza.Pipeline(language_code)
+    lang_pipe = stanza.Pipeline(language_code, processors="tokenize,ner")
 
     for text in texts:
-        visualize_ner_str(text, language_code, lang_pipe, select=select, colors=colors)
+        visualize_ner_str(text, lang_pipe, select=select, colors=colors)
         print("\n\n")
 
 
