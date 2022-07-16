@@ -93,6 +93,40 @@ SPANISH_QM_TEST_CASE = """
 1	Es	ser	AUX	_	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	2	cop	_	_
 2	imposible	imposible	ADJ	_	Number=Sing	0	root	_	SpaceAfter=No
 3	.	.	PUNCT	_	PunctType=Peri	2	punct	_	_
+
+# sent_id = 3LB-CAST-a1-2-s6
+# text = ¿Para qué seguir?
+# orig_file_sentence 006#22
+# The treebank now includes basic dependencies in the additional dependencies column
+1	¿	¿	PUNCT	fia	PunctSide=Ini|PunctType=Qest	4	punct	4:punct	SpaceAfter=No
+2	Para	para	ADP	sps00	_	3	case	3:case	_
+3	qué	qué	PRON	pt0cs000	Number=Sing|PronType=Int,Rel	4	obl	4:obl	_
+4	seguir	seguir	VERB	vmn0000	VerbForm=Inf	0	root	0:root	SpaceAfter=No
+5	?	?	PUNCT	fit	PunctSide=Fin|PunctType=Qest	4	punct	4:punct	_
+
+# sent_id = CESS-CAST-P-19990901-16-s19
+# text = ¿Estará fingiendo?.
+# orig_file_sentence 097#24
+# also it includes some copy nodes
+1	¿	¿	PUNCT	fia	PunctSide=Ini|PunctType=Qest	3	punct	3:punct	SpaceAfter=No
+2	Estará	estar	AUX	vmif3s0	Mood=Ind|Number=Sing|Person=3|Tense=Fut|VerbForm=Fin	3	aux	3:aux	_
+3	fingiendo	fingir	VERB	vmg0000	VerbForm=Ger	0	root	0:root	SpaceAfter=No
+3.1	_	_	PRON	p	_	_	_	3:nsubj	Entity=(CESSCASTP1999090116c2-person-1-CorefType:ident,gstype:spec)
+4	?	?	PUNCT	fit	PunctSide=Fin|PunctType=Qest	3	punct	3:punct	SpaceAfter=No
+5	.	.	PUNCT	fp	PunctType=Peri	3	punct	3:punct	_
+
+# sent_id = CESS-CAST-P-20000401-126-s31
+# text = ¿Qué pensó cuando se quedó
+# orig_file_sentence 087#37
+# this one has a colon in the dependency name
+1	¿	¿	PUNCT	fia	PunctSide=Ini|PunctType=Qest	3	punct	3:punct	SpaceAfter=No|Entity=(CESSCASTP20000401126c27--3
+2	Qué	qué	PRON	pt0cs000	Number=Sing|PronType=Int,Rel	3	obj	3:obj	_
+3	pensó	pensar	VERB	vmis3s0	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+3.1	_	_	PRON	p	_	_	_	3:nsubj	Entity=(CESSCASTP20000401126c1-person-1-CorefType:ident,gstype:spec)
+4	cuando	cuando	SCONJ	cs	_	6	mark	6:mark	_
+4.1	_	_	PRON	p	_	_	_	6:nsubj	Entity=(CESSCASTP20000401126c1-person-1-CorefType:ident,gstype:spec)
+5	se	él	PRON	p0300000	Case=Acc|Person=3|PrepCase=Npr|PronType=Prs|Reflex=Yes	6	expl:pv	6:expl:pv	_
+6	quedó	quedar	VERB	vmis3s0	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	advcl	3:advcl	_
 """
 
 SPANISH_QM_RESULT = """
@@ -145,6 +179,37 @@ SPANISH_QM_RESULT = """
 9	-	-	PUNCT	_	PunctType=Dash	3	punct	_	_
 10	-	-	PUNCT	_	PunctType=Dash	3	punct	_	SpaceAfter=No
 11	.	.	PUNCT	_	PunctType=Peri	3	punct	_	_
+
+# sent_id = 3LB-CAST-a1-2-s6
+# text = Para qué seguir?
+# orig_file_sentence 006#22
+# The treebank now includes basic dependencies in the additional dependencies column
+1	Para	para	ADP	sps00	_	2	case	2:case	_
+2	qué	qué	PRON	pt0cs000	Number=Sing|PronType=Int,Rel	3	obl	3:obl	_
+3	seguir	seguir	VERB	vmn0000	VerbForm=Inf	0	root	0:root	SpaceAfter=No
+4	?	?	PUNCT	fit	PunctSide=Fin|PunctType=Qest	3	punct	3:punct	_
+
+# sent_id = CESS-CAST-P-19990901-16-s19
+# text = Estará fingiendo?.
+# orig_file_sentence 097#24
+# also it includes some copy nodes
+1	Estará	estar	AUX	vmif3s0	Mood=Ind|Number=Sing|Person=3|Tense=Fut|VerbForm=Fin	2	aux	2:aux	_
+2	fingiendo	fingir	VERB	vmg0000	VerbForm=Ger	0	root	0:root	SpaceAfter=No
+2.1	_	_	PRON	p	_	_	_	2:nsubj	Entity=(CESSCASTP1999090116c2-person-1-CorefType:ident,gstype:spec)
+3	?	?	PUNCT	fit	PunctSide=Fin|PunctType=Qest	2	punct	2:punct	SpaceAfter=No
+4	.	.	PUNCT	fp	PunctType=Peri	2	punct	2:punct	_
+
+# sent_id = CESS-CAST-P-20000401-126-s31
+# text = Qué pensó cuando se quedó
+# orig_file_sentence 087#37
+# this one has a colon in the dependency name
+1	Qué	qué	PRON	pt0cs000	Number=Sing|PronType=Int,Rel	2	obj	2:obj	_
+2	pensó	pensar	VERB	vmis3s0	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+2.1	_	_	PRON	p	_	_	_	2:nsubj	Entity=(CESSCASTP20000401126c1-person-1-CorefType:ident,gstype:spec)
+3	cuando	cuando	SCONJ	cs	_	5	mark	5:mark	_
+3.1	_	_	PRON	p	_	_	_	5:nsubj	Entity=(CESSCASTP20000401126c1-person-1-CorefType:ident,gstype:spec)
+4	se	él	PRON	p0300000	Case=Acc|Person=3|PrepCase=Npr|PronType=Prs|Reflex=Yes	5	expl:pv	5:expl:pv	_
+5	quedó	quedar	VERB	vmis3s0	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	2	advcl	2:advcl	_
 """
 
 def test_augment_initial_punct():
@@ -153,6 +218,25 @@ def test_augment_initial_punct():
     expected = doc + read_test_doc(SPANISH_QM_RESULT)
     assert doc2 == expected
 
+SPANISH_SHOULD_THROW = """
+# sent_id = 3LB-CAST-a1-2-s6
+# text = ¿Para qué seguir?
+# orig_file_sentence 006#22
+# multiple heads are not handled yet in the augmented dependencies column
+1	¿	¿	PUNCT	fia	PunctSide=Ini|PunctType=Qest	4	punct	4:punct	SpaceAfter=No
+2	Para	para	ADP	sps00	_	3	case	3:case	_
+3	qué	qué	PRON	pt0cs000	Number=Sing|PronType=Int,Rel	4	obl	4:obl,3:foo	_
+4	seguir	seguir	VERB	vmn0000	VerbForm=Inf	0	root	0:root	SpaceAfter=No
+5	?	?	PUNCT	fit	PunctSide=Fin|PunctType=Qest	4	punct	4:punct	_
+"""
+
+def test_augment_initial_punct_error():
+    """
+    The augment script should protect against the single dependency assumption changing in the future
+    """
+    doc = read_test_doc(SPANISH_SHOULD_THROW)
+    with pytest.raises(NotImplementedError):
+        doc2 = prepare_tokenizer_treebank.augment_initial_punct(doc, ratio=1.0)
 
 # first sentence should have the space added
 # second sentence should be unchanged

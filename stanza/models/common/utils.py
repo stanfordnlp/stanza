@@ -344,6 +344,18 @@ def set_random_seed(seed, cuda):
         torch.cuda.manual_seed(seed)
     return seed
 
+def get_known_tags(known_tags):
+    """
+    Turns either a list or a list of lists into a single sorted list
+
+    Actually this is not at all necessarily about tags
+    """
+    if isinstance(known_tags, list) and isinstance(known_tags[0], list):
+        known_tags = sorted(set(x for y in known_tags for x in y))
+    else:
+        known_tags = sorted(known_tags)
+    return known_tags
+
 def find_missing_tags(known_tags, test_tags):
     if isinstance(known_tags, list) and isinstance(known_tags[0], list):
         known_tags = set(x for y in known_tags for x in y)

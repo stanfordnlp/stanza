@@ -62,7 +62,7 @@ class DataLoader:
             raise AssertionError("Vocab must exist for evaluation.")
         if self.args['charlm']:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
-        else: 
+        else:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
         tagvocab = TagVocab(data, self.args['shorthand'], idx=1)

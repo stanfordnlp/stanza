@@ -93,7 +93,7 @@ def parse_args(args=None):
     parser.add_argument('--cutoff', type=int, default=1000, help="Frequency cutoff for char vocab. By default we assume a very large corpus.")
     
     parser.add_argument('--report_steps', type=int, default=50, help="Update step interval to report loss")
-    parser.add_argument('--eval_steps', type=int, default=-1, help="Update step interval to run eval on dev; set to -1 to eval after each epoch")
+    parser.add_argument('--eval_steps', type=int, default=100000, help="Update step interval to run eval on dev; set to -1 to eval after each epoch")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--vocab_save_name', type=str, default=None, help="File name to save the vocab")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")

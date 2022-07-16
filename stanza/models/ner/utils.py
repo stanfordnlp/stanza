@@ -17,7 +17,7 @@ def is_basic_scheme(all_tags):
         True if the tagging scheme does not use B-, I-, etc, otherwise False
     """
     for tag in all_tags:
-        if len(tag) > 2 and tag[:2] in ('B-', 'I-', 'S-', 'E-'):
+        if len(tag) > 2 and tag[:2] in ('B-', 'I-', 'S-', 'E-', 'B_', 'I_', 'S_', 'E_'):
             return False
     return True
 
@@ -35,7 +35,7 @@ def is_bio_scheme(all_tags):
     for tag in all_tags:
         if tag == 'O':
             continue
-        elif len(tag) > 2 and tag[:2] in ('B-', 'I-'):
+        elif len(tag) > 2 and tag[:2] in ('B-', 'I-', 'B_', 'I_'):
             continue
         else:
             return False
@@ -105,14 +105,14 @@ def bio2_to_bioes(tags):
             if len(tag) < 2:
                 raise Exception(f"Invalid BIO2 tag found: {tag}")
             else:
-                if tag[:2] == 'I-': # convert to E- if next tag is not I-
-                    if i+1 < len(tags) and tags[i+1][:2] == 'I-':
-                        new_tags.append(tag)
+                if tag[:2] in ('I-', 'I_'): # convert to E- if next tag is not I-
+                    if i+1 < len(tags) and tags[i+1][:2] in ('I-', 'I_'):
+                        new_tags.append('I-' + tag[2:]) # compensate for underscores
                     else:
                         new_tags.append('E-' + tag[2:])
-                elif tag[:2] == 'B-': # convert to S- if next tag is not I-
-                    if i+1 < len(tags) and tags[i+1][:2] == 'I-':
-                        new_tags.append(tag)
+                elif tag[:2] in ('B-', 'B_'): # convert to S- if next tag is not I-
+                    if i+1 < len(tags) and tags[i+1][:2] in ('I-', 'I_'):
+                        new_tags.append('B-' + tag[2:])
                     else:
                         new_tags.append('S-' + tag[2:])
                 else:

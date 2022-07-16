@@ -18,7 +18,7 @@ import os
 
 from stanza.models import constituency_parser
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.resources.prepare_resources import default_charlms, default_treebanks
+from stanza.resources.prepare_resources import default_charlms, default_pretrains
 from stanza.utils.training import common
 
 logger = logging.getLogger('stanza')
@@ -54,7 +54,7 @@ def main():
 
         if not args.wordvec_pretrain_file:
             # will throw an error if the pretrain can't be found
-            wordvec_pretrain = common.find_wordvec_pretrain(language, default_treebanks)
+            wordvec_pretrain = common.find_wordvec_pretrain(language, default_pretrains)
             wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
         else:
             wordvec_args = []
