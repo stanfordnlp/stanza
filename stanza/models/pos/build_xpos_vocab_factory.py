@@ -1,32 +1,23 @@
 import argparse
 from collections import defaultdict
+import logging
 import os
 import re
 import sys
-from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.models.pos.vocab import XPOSVocab, WordVocab
+from stanza.models.pos.xpos_vocab_utils import DEFAULT_KEY, choose_simplest_factory, XPOSType
 from stanza.models.common.doc import *
 from stanza.utils.conll import CoNLL
 from stanza.utils import default_paths
 
 SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
 DATA_DIR = default_paths.get_default_paths()['POS_DATA_DIR']
-DEFAULT_KEY = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
 
-def filter_data(data, idx):
-    data_filtered = []
-    for sentence in data:
-        flag = True
-        for token in sentence:
-            if token[idx] is None:
-                flag = False
-        if flag: data_filtered.append(sentence)
-    return data_filtered
+logger = logging.getLogger('stanza')
 
-def get_factory(sh, fn):
-    print('Resolving vocab option for {}...'.format(sh))
-    train_file = os.path.join(DATA_DIR, '{}.train.in.conllu'.format(sh))
+def get_xpos_factory(shorthand, fn):
+    logger.info('Resolving vocab option for {}...'.format(shorthand))
+    train_file = os.path.join(DATA_DIR, '{}.train.in.conllu'.format(shorthand))
     if not os.path.exists(train_file):
         raise UserWarning('Training data for {} not found in the data directory, falling back to using WordVocab. To generate the '
                           'XPOS vocabulary for this treebank properly, please run the following command first:\n'
@@ -37,20 +28,7 @@ def get_factory(sh, fn):
 
     doc = CoNLL.conll2doc(input_file=train_file)
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
-    print(f'Original length = {len(data)}')
-    data = filter_data(data, idx=2)
-    print(f'Filtered length = {len(data)}')
-    vocab = WordVocab(data, sh, idx=2, ignore=["_"])
-    key = DEFAULT_KEY
-    best_size = len(vocab) - len(VOCAB_PREFIX)
-    if best_size > 20:
-        for sep in ['', '-', '+', '|', ',', ':']: # separators
-            vocab = XPOSVocab(data, sh, idx=2, sep=sep)
-            length = sum(len(x) - len(VOCAB_PREFIX) for x in vocab._id2unit.values())
-            if length < best_size:
-                key = 'XPOSVocab(data, shorthand, idx=2, sep="{}")'.format(sep)
-                best_size = length
-    return key
+    return choose_simplest_factory(data, shorthand)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -72,7 +50,7 @@ def main():
     else:
         raise ValueError("Cannot figure out which treebanks to use.   Please set the --treebanks parameter")
 
-    print("Processing the following treebanks: %s" % " ".join(treebanks))
+    logger.info("Processing the following treebanks: %s" % " ".join(treebanks))
 
     shorthands = []
     fullnames = []
@@ -90,7 +68,7 @@ def main():
     # WordVocab).
     mapping = defaultdict(list)
     for sh, fn in zip(shorthands, fullnames):
-        factory = get_factory(sh, fn)
+        factory = get_xpos_factory(sh, fn)
         mapping[factory].append(sh)
         if sh == 'zh-hans_gsdsimp':
             mapping[factory].append('zh_gsdsimp')
@@ -111,14 +89,18 @@ from stanza.models.pos.vocab import WordVocab, XPOSVocab
 def xpos_vocab_factory(data, shorthand):''', file=f)
 
         for key in mapping:
+            if key.xpos_type is XPOSType.WORD:
+                code = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
+            else:
+                code = 'XPOSVocab(data, shorthand, idx=2, sep="%s")' % key.sep
             print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in sorted(mapping[key])])), file=f)
-            print("        return {}".format(key), file=f)
+            print("        return {}".format(code), file=f)
 
             first = False
         print('''    else:
         raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))''', file=f)
 
-    print('Done!')
+    logger.info('Done!')
 
 if __name__ == "__main__":
     main()
