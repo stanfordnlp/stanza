@@ -827,7 +827,7 @@ def process_lst20(paths, short_name, include_space_char=True):
                                 tag = "I_PER"
                             if tag == "LOC_I":
                                 tag = "I_LOC"
-                            if tag == "B" and line_idx != range(len(lines) - 1):
+                            if tag == "B" and line_idx + 1 < len(lines):
                                 x_next = lines[line_idx+1].strip().split('\t')
                                 if len(x_next) > 1:
                                     tag_next = x_next[2]
