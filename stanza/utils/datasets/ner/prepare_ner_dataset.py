@@ -795,7 +795,7 @@ def process_lst20(paths, short_name, include_space_char=True):
         short_name = short_name + "_no_ws"
 
     for input_folder, split_type in input_split:
-        text_list = ['/{}'.format(text) for text in os.listdir(input_folder) if text[0] == 'T']
+        text_list = [text for text in os.listdir(input_folder) if text[0] == 'T']
 
         if split_type == "eval":
             split_type = "dev"
@@ -806,10 +806,10 @@ def process_lst20(paths, short_name, include_space_char=True):
         with open(output_path, 'w', encoding='utf-8') as fout:
             for text in text_list:
                 lst = []
-                fin = open(input_folder + text, 'r', encoding='utf-8').readlines()
+                with open(os.path.join(input_folder, text), 'r', encoding='utf-8') as fin:
+                    lines = fin.readlines()
 
-                for i in range(len(fin)):
-                    line = fin[i]
+                for line_idx, line in enumerate(lines):
                     x = line.strip().split('\t')
                     if len(x) > 1:
                         if x[0] == '_' and not include_space_char:
@@ -827,8 +827,8 @@ def process_lst20(paths, short_name, include_space_char=True):
                                 tag = "I_PER"
                             if tag == "LOC_I":
                                 tag = "I_LOC"
-                            if tag == "B" and i != range(len(fin) - 1):
-                                x_next = fin[i+1].strip().split('\t')
+                            if tag == "B" and line_idx != range(len(lines) - 1):
+                                x_next = lines[line_idx+1].strip().split('\t')
                                 if len(x_next) > 1:
                                     tag_next = x_next[2]
                                     if "I_" in tag_next or "E_" in tag_next:
