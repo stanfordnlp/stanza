@@ -81,24 +81,37 @@ def main():
     # actual factory class as seen in models.pos.xpos_vocab_factory.
     first = True
     with open(output_file, 'w') as f:
+        max_len = max(max(len(x) for x in mapping[key]) for key in mapping)
         print('''# This is the XPOS factory method generated automatically from stanza.models.pos.build_xpos_vocab_factory.
 # Please don't edit it!
 
+import logging
+
 from stanza.models.pos.vocab import WordVocab, XPOSVocab
+from stanza.models.pos.xpos_vocab_utils import XPOSDescription, XPOSType, build_xpos_vocab, choose_simplest_factory
 
-def xpos_vocab_factory(data, shorthand):''', file=f)
+logger = logging.getLogger('stanza')
 
-        for key in mapping:
-            if key.xpos_type is XPOSType.WORD:
-                code = 'WordVocab(data, shorthand, idx=2, ignore=["_"])'
-            else:
-                code = 'XPOSVocab(data, shorthand, idx=2, sep="%s")' % key.sep
-            print("    {} shorthand in [{}]:".format('if' if first else 'elif', ', '.join(['"{}"'.format(x) for x in sorted(mapping[key])])), file=f)
-            print("        return {}".format(code), file=f)
+XPOS_DESCRIPTIONS = {''', file=f)
 
-            first = False
-        print('''    else:
-        raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))''', file=f)
+        for key_idx, key in enumerate(mapping):
+            if key_idx > 0:
+                print(file=f)
+            for shorthand in sorted(mapping[key]):
+                # +2 to max_len for the ''
+                # this format string is left justified (either would be okay, probably)
+                print(("    {:%ds}: XPOSDescription({}, '{}')," % (max_len+2)).format("'%s'" % shorthand, key.xpos_type, key.sep), file=f)
+
+        print('''}
+
+def xpos_vocab_factory(data, shorthand):
+    if shorthand in XPOS_DESCRIPTIONS:
+        desc = XPOS_DESCRIPTIONS[shorthand]
+    else:
+        logger.warning("%s is not a known dataset.  Examining the data to choose which xpos vocab to use", shorthand)
+        desc = choose_simplest_factory(data, shorthand)
+    return build_xpos_vocab(desc, data, shorthand)
+''', file=f)
 
     logger.info('Done!')
 

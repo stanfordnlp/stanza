@@ -1,22 +1,160 @@
 # This is the XPOS factory method generated automatically from stanza.models.pos.build_xpos_vocab_factory.
 # Please don't edit it!
 
+import logging
+
 from stanza.models.pos.vocab import WordVocab, XPOSVocab
+from stanza.models.pos.xpos_vocab_utils import XPOSDescription, XPOSType, build_xpos_vocab, choose_simplest_factory
+
+logger = logging.getLogger('stanza')
+
+XPOS_DESCRIPTIONS = {
+    'af_afribooms'   : XPOSDescription(XPOSType.XPOS, ''),
+    'ar_padt'        : XPOSDescription(XPOSType.XPOS, ''),
+    'bg_btb'         : XPOSDescription(XPOSType.XPOS, ''),
+    'ca_ancora'      : XPOSDescription(XPOSType.XPOS, ''),
+    'cs_cac'         : XPOSDescription(XPOSType.XPOS, ''),
+    'cs_cltt'        : XPOSDescription(XPOSType.XPOS, ''),
+    'cs_fictree'     : XPOSDescription(XPOSType.XPOS, ''),
+    'cs_pdt'         : XPOSDescription(XPOSType.XPOS, ''),
+    'en_partut'      : XPOSDescription(XPOSType.XPOS, ''),
+    'es_ancora'      : XPOSDescription(XPOSType.XPOS, ''),
+    'fr_partut'      : XPOSDescription(XPOSType.XPOS, ''),
+    'gd_arcosg'      : XPOSDescription(XPOSType.XPOS, ''),
+    'gl_ctg'         : XPOSDescription(XPOSType.XPOS, ''),
+    'gl_treegal'     : XPOSDescription(XPOSType.XPOS, ''),
+    'grc_perseus'    : XPOSDescription(XPOSType.XPOS, ''),
+    'hr_set'         : XPOSDescription(XPOSType.XPOS, ''),
+    'is_icepahc'     : XPOSDescription(XPOSType.XPOS, ''),
+    'is_modern'      : XPOSDescription(XPOSType.XPOS, ''),
+    'it_combined'    : XPOSDescription(XPOSType.XPOS, ''),
+    'it_isdt'        : XPOSDescription(XPOSType.XPOS, ''),
+    'it_markit'      : XPOSDescription(XPOSType.XPOS, ''),
+    'it_partut'      : XPOSDescription(XPOSType.XPOS, ''),
+    'it_postwita'    : XPOSDescription(XPOSType.XPOS, ''),
+    'it_twittiro'    : XPOSDescription(XPOSType.XPOS, ''),
+    'it_vit'         : XPOSDescription(XPOSType.XPOS, ''),
+    'la_perseus'     : XPOSDescription(XPOSType.XPOS, ''),
+    'la_udante'      : XPOSDescription(XPOSType.XPOS, ''),
+    'lt_alksnis'     : XPOSDescription(XPOSType.XPOS, ''),
+    'lv_lvtb'        : XPOSDescription(XPOSType.XPOS, ''),
+    'ro_nonstandard' : XPOSDescription(XPOSType.XPOS, ''),
+    'ro_rrt'         : XPOSDescription(XPOSType.XPOS, ''),
+    'ro_simonero'    : XPOSDescription(XPOSType.XPOS, ''),
+    'sk_snk'         : XPOSDescription(XPOSType.XPOS, ''),
+    'sl_ssj'         : XPOSDescription(XPOSType.XPOS, ''),
+    'sl_sst'         : XPOSDescription(XPOSType.XPOS, ''),
+    'sr_set'         : XPOSDescription(XPOSType.XPOS, ''),
+    'ta_ttb'         : XPOSDescription(XPOSType.XPOS, ''),
+    'uk_iu'          : XPOSDescription(XPOSType.XPOS, ''),
+
+    'be_hse'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'cop_scriptorium': XPOSDescription(XPOSType.WORD, 'None'),
+    'cu_proiel'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'cy_ccg'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'da_ddt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'de_gsd'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'de_hdt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'el_gdt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_atis'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_combined'    : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_craft'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_ewt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_genia'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_gum'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_gumreddit'   : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_mimic'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'en_test'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'es_gsd'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'et_edt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'et_ewt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'eu_bdt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'fa_perdt'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'fa_seraji'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'fi_tdt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'fr_gsd'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'fr_parisstories': XPOSDescription(XPOSType.WORD, 'None'),
+    'fr_rhapsodie'   : XPOSDescription(XPOSType.WORD, 'None'),
+    'fr_sequoia'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'fro_srcmf'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'ga_idt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'got_proiel'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'grc_proiel'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'hbo_ptnk'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'he_htb'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'he_iahltwiki'   : XPOSDescription(XPOSType.WORD, 'None'),
+    'hi_hdtb'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'hu_szeged'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'hy_armtdp'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'hy_bsut'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'hyw_armtdp'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'id_csui'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'la_proiel'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'lt_hse'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'lzh_kyoto'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'mr_ufal'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'mt_mudt'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'nb_bokmaal'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'nn_nynorsk'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'nn_nynorsklia'  : XPOSDescription(XPOSType.WORD, 'None'),
+    'no_bokmaal'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'orv_birchbark'  : XPOSDescription(XPOSType.WORD, 'None'),
+    'orv_rnc'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'orv_torot'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'pcm_nsc'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'pt_bosque'      : XPOSDescription(XPOSType.WORD, 'None'),
+    'pt_gsd'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'qpm_philotis'   : XPOSDescription(XPOSType.WORD, 'None'),
+    'qtd_sagt'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'ru_gsd'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'ru_syntagrus'   : XPOSDescription(XPOSType.WORD, 'None'),
+    'ru_taiga'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'sa_vedic'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'sme_giella'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'swl_sslc'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'te_mtg'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_atis'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_boun'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_framenet'    : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_imst'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_kenet'       : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_penn'        : XPOSDescription(XPOSType.WORD, 'None'),
+    'tr_tourism'     : XPOSDescription(XPOSType.WORD, 'None'),
+    'ug_udt'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'vi_vtb'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'wo_wtb'         : XPOSDescription(XPOSType.WORD, 'None'),
+    'zh-hans_gsdsimp': XPOSDescription(XPOSType.WORD, 'None'),
+    'zh-hant_gsd'    : XPOSDescription(XPOSType.WORD, 'None'),
+    'zh_gsdsimp'     : XPOSDescription(XPOSType.WORD, 'None'),
+
+    'en_lines'       : XPOSDescription(XPOSType.XPOS, '-'),
+    'fo_farpahc'     : XPOSDescription(XPOSType.XPOS, '-'),
+    'ja_gsd'         : XPOSDescription(XPOSType.XPOS, '-'),
+    'ja_gsdluw'      : XPOSDescription(XPOSType.XPOS, '-'),
+    'sv_lines'       : XPOSDescription(XPOSType.XPOS, '-'),
+    'ur_udtb'        : XPOSDescription(XPOSType.XPOS, '-'),
+
+    'fi_ftb'         : XPOSDescription(XPOSType.XPOS, ','),
+
+    'id_gsd'         : XPOSDescription(XPOSType.XPOS, '+'),
+    'ko_gsd'         : XPOSDescription(XPOSType.XPOS, '+'),
+    'ko_kaist'       : XPOSDescription(XPOSType.XPOS, '+'),
+
+    'la_ittb'        : XPOSDescription(XPOSType.XPOS, '|'),
+    'la_llct'        : XPOSDescription(XPOSType.XPOS, '|'),
+    'nl_alpino'      : XPOSDescription(XPOSType.XPOS, '|'),
+    'nl_lassysmall'  : XPOSDescription(XPOSType.XPOS, '|'),
+    'sv_talbanken'   : XPOSDescription(XPOSType.XPOS, '|'),
+
+    'pl_lfg'         : XPOSDescription(XPOSType.XPOS, ':'),
+    'pl_pdb'         : XPOSDescription(XPOSType.XPOS, ':'),
+}
 
 def xpos_vocab_factory(data, shorthand):
-    if shorthand in ["af_afribooms", "ar_padt", "bg_btb", "ca_ancora", "cs_cac", "cs_cltt", "cs_fictree", "cs_pdt", "en_partut", "es_ancora", "fr_partut", "gd_arcosg", "gl_ctg", "gl_treegal", "grc_perseus", "hr_set", "is_icepahc", "is_modern", "it_combined", "it_isdt", "it_markit", "it_partut", "it_postwita", "it_twittiro", "it_vit", "la_perseus", "la_udante", "lt_alksnis", "lv_lvtb", "ro_nonstandard", "ro_rrt", "ro_simonero", "sk_snk", "sl_ssj", "sl_sst", "sr_set", "ta_ttb", "uk_iu"]:
-        return XPOSVocab(data, shorthand, idx=2, sep="")
-    elif shorthand in ["be_hse", "cop_scriptorium", "cu_proiel", "cy_ccg", "da_ddt", "de_gsd", "de_hdt", "el_gdt", "en_atis", "en_combined", "en_craft", "en_ewt", "en_genia", "en_gum", "en_gumreddit", "en_mimic", "en_test", "es_gsd", "et_edt", "et_ewt", "eu_bdt", "fa_perdt", "fa_seraji", "fi_tdt", "fr_gsd", "fr_parisstories", "fr_rhapsodie", "fr_sequoia", "fro_srcmf", "ga_idt", "got_proiel", "grc_proiel", "hbo_ptnk", "he_htb", "he_iahltwiki", "hi_hdtb", "hu_szeged", "hy_armtdp", "hy_bsut", "hyw_armtdp", "id_csui", "la_proiel", "lt_hse", "lzh_kyoto", "mr_ufal", "mt_mudt", "nb_bokmaal", "nn_nynorsk", "nn_nynorsklia", "no_bokmaal", "orv_birchbark", "orv_rnc", "orv_torot", "pcm_nsc", "pt_bosque", "pt_gsd", "qpm_philotis", "qtd_sagt", "ru_gsd", "ru_syntagrus", "ru_taiga", "sa_vedic", "sme_giella", "swl_sslc", "te_mtg", "tr_atis", "tr_boun", "tr_framenet", "tr_imst", "tr_kenet", "tr_penn", "tr_tourism", "ug_udt", "vi_vtb", "wo_wtb", "zh-hans_gsdsimp", "zh-hant_gsd", "zh_gsdsimp"]:
-        return WordVocab(data, shorthand, idx=2, ignore=["_"])
-    elif shorthand in ["en_lines", "fo_farpahc", "ja_gsd", "ja_gsdluw", "sv_lines", "ur_udtb"]:
-        return XPOSVocab(data, shorthand, idx=2, sep="-")
-    elif shorthand in ["fi_ftb"]:
-        return XPOSVocab(data, shorthand, idx=2, sep=",")
-    elif shorthand in ["id_gsd", "ko_gsd", "ko_kaist"]:
-        return XPOSVocab(data, shorthand, idx=2, sep="+")
-    elif shorthand in ["la_ittb", "la_llct", "nl_alpino", "nl_lassysmall", "sv_talbanken"]:
-        return XPOSVocab(data, shorthand, idx=2, sep="|")
-    elif shorthand in ["pl_lfg", "pl_pdb"]:
-        return XPOSVocab(data, shorthand, idx=2, sep=":")
+    if shorthand in XPOS_DESCRIPTIONS:
+        desc = XPOS_DESCRIPTIONS[shorthand]
     else:
-        raise NotImplementedError('Language shorthand "{}" not found!'.format(shorthand))
+        logger.warning("%s is not a known dataset.  Examining the data to choose which xpos vocab to use", shorthand)
+        desc = choose_simplest_factory(data, shorthand)
+    return build_xpos_vocab(desc, data, shorthand)
+
