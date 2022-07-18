@@ -106,7 +106,7 @@ def convert_bsf_in_folder(src_dir_path: str, dst_dir_path: str, converter: str =
     :param src_dir_path: path to directory with BSF marked files
     :param dst_dir_path: where to save output data
     :param converter: `beios` or `iob` output formats
-    :param train_test_split_file: path to file cotaining train/test lists of file names
+    :param train_test_split_file: path to file containing train/test lists of file names
     :return:
     """
     ann_path = os.path.join(src_dir_path, '*.tok.ann')
