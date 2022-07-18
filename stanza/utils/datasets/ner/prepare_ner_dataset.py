@@ -242,9 +242,26 @@ Daffodil University produced a Bangla NER dataset
   Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
 
+LST20 is a Thai NER dataset from 2020
+  - https://arxiv.org/abs/2008.05055
+    The Annotation Guideline of LST20 Corpus
+    Prachya Boonkwan, Vorapon Luantangsrisuk, Sitthaa Phaholphinyo,
+    Kanyanat Kriengket, Dhanon Leenoi, Charun Phrombut,
+    Monthika Boriboon, Krit Kosawat, Thepchai Supnithi
+  - This script processes a version which can be downloaded here after registration:
+    https://aiforthai.in.th/index.php
+  - There is another version downloadable from HuggingFace
+    The script will likely need some modification to be compatible
+    with the HuggingFace version
+  - Download the data in $NERBASE/thai/LST20_Corpus
+    There should be "train", "eval", "test" directories after downloading
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
+
 """
 
 import glob

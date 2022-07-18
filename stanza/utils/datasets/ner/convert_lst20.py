@@ -1,3 +1,10 @@
+"""
+Converts the Thai LST20 dataset to a format usable by Stanza's NER model
+
+The dataset in the original format has a few tag errors which we
+automatically fix (or at worst cover up)
+"""
+
 import os
 
 from stanza.utils.datasets.ner.utils import convert_bio_to_json
