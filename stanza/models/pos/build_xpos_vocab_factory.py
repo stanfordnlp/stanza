@@ -90,7 +90,8 @@ import logging
 from stanza.models.pos.vocab import WordVocab, XPOSVocab
 from stanza.models.pos.xpos_vocab_utils import XPOSDescription, XPOSType, build_xpos_vocab, choose_simplest_factory
 
-logger = logging.getLogger('stanza')
+# using a sublogger makes it easier to test in the unittests
+logger = logging.getLogger('stanza.models.pos.xpos_vocab_factory')
 
 XPOS_DESCRIPTIONS = {''', file=f)
 
@@ -114,6 +115,8 @@ def xpos_vocab_factory(data, shorthand):
     desc = choose_simplest_factory(data, shorthand)
     if shorthand in XPOS_DESCRIPTIONS:
         if XPOS_DESCRIPTIONS[shorthand] != desc:
+            # log instead of throw
+            # otherwise, updating datasets would be unpleasant
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
     return build_xpos_vocab(desc, data, shorthand)
 ''', file=f)

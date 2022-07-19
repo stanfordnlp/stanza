@@ -3,6 +3,7 @@ Test some pieces of the depparse dataloader
 """
 import pytest
 
+import logging
 import os
 import tempfile
 
@@ -18,6 +19,8 @@ from stanza.utils.conll import CoNLL
 from stanza.tests import TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
+
+logger = logging.getLogger('stanza.models.pos.xpos_vocab_factory')
 
 EN_EXAMPLE="""
 1	Sh'reyan	Sh'reyan	PROPN	NNP%(tag)s	Number=Sing	3	nmod:poss	3:nmod:poss	_
@@ -51,8 +54,48 @@ def build_data(iterations, suffix):
     doc = build_doc(iterations, suffix)
     data = DataLoader.load_doc(doc)
     return data
-    
+
+class ErrorFatalHandler(logging.Handler):
+    """
+    This handler turns any error logs into a fatal error
+
+    Theoretically you could change the level to make other things fatal as well
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.setLevel(logging.ERROR)
+
+    def emit(self, record):
+        raise AssertionError("Oh no, we printed an error")
+
 class TestXPOSVocabFactory:
+    @classmethod
+    def setup_class(cls):
+        """
+        Add a logger to the xpos factory logger so that it will throw an assertion instead of logging an error
+
+        We don't actually want assertions, since that would be a huge
+        pain in the event one of the models actually changes, so
+        instead we just logger.error in the factory.  Using this
+        handler is a simple way to check that the error is correctly
+        logged when something changes
+        """
+        logger.info("About to start xpos_vocab_factory tests - logger.error in that module will now cause AssertionError")
+
+        handler = ErrorFatalHandler()
+        logger.addHandler(handler)
+
+    @classmethod
+    def teardown_class(cls):
+        """
+        Remove the handler we installed earlier
+        """
+        handlers = [x for x in logger.handlers if isinstance(x, ErrorFatalHandler)]
+        for handler in handlers:
+            logger.removeHandler(handler)
+        logger.error("Done with xpos_vocab_factory tests - this should not throw an error")
+
     def test_basic_en_ewt(self):
         """
         en_ewt is currently the basic vocab
@@ -86,10 +129,11 @@ class TestXPOSVocabFactory:
         """
         The dataset looks like XPOS(-), which is wrong for en_ewt
         """
-        data = build_data(10, DASH_TAGS)
-        vocab = xpos_vocab_factory(data, "en_ewt")
-        assert isinstance(vocab, XPOSVocab)
-        assert vocab.sep == "-"
+        with pytest.raises(AssertionError):
+            data = build_data(10, DASH_TAGS)
+            vocab = xpos_vocab_factory(data, "en_ewt")
+            assert isinstance(vocab, XPOSVocab)
+            assert vocab.sep == "-"
 
     def check_reload(self, pt, shorthand, iterations, suffix, expected_vocab):
         """
