@@ -52,88 +52,88 @@ def build_data(iterations, suffix):
     data = DataLoader.load_doc(doc)
     return data
     
+class TestXPOSVocabFactory:
+    def test_basic_en_ewt(self):
+        """
+        en_ewt is currently the basic vocab
 
-def test_basic_en_ewt():
-    """
-    en_ewt is currently the basic vocab
-
-    note that this may change if the dataset is drastically relabeled in the future
-    """
-    data = build_data(1, EMPTY_TAG)
-    vocab = xpos_vocab_factory(data, "en_ewt")
-    assert isinstance(vocab, WordVocab)
-
-
-def test_basic_en_unknown():
-    """
-    With only 6 tags, it should use a basic vocab for an unknown dataset
-    """
-    data = build_data(10, EMPTY_TAG)
-    vocab = xpos_vocab_factory(data, "en_unknown")
-    assert isinstance(vocab, WordVocab)
+        note that this may change if the dataset is drastically relabeled in the future
+        """
+        data = build_data(1, EMPTY_TAG)
+        vocab = xpos_vocab_factory(data, "en_ewt")
+        assert isinstance(vocab, WordVocab)
 
 
-def test_dash_en_unknown():
-    """
-    With this many different tags, it should choose to reduce it to the base xpos removing the -
-    """
-    data = build_data(10, DASH_TAGS)
-    vocab = xpos_vocab_factory(data, "en_unknown")
-    assert isinstance(vocab, XPOSVocab)
-    assert vocab.sep == "-"
+    def test_basic_en_unknown(self):
+        """
+        With only 6 tags, it should use a basic vocab for an unknown dataset
+        """
+        data = build_data(10, EMPTY_TAG)
+        vocab = xpos_vocab_factory(data, "en_unknown")
+        assert isinstance(vocab, WordVocab)
 
-def test_dash_en_ewt_wrong():
-    """
-    The dataset looks like XPOS(-), which is wrong for en_ewt
-    """
-    data = build_data(10, DASH_TAGS)
-    vocab = xpos_vocab_factory(data, "en_ewt")
-    assert isinstance(vocab, XPOSVocab)
-    assert vocab.sep == "-"
 
-def check_reload(pt, shorthand, iterations, suffix, expected_vocab):
-    """
-    Build a Trainer (no actual training), save it, and load it back in to check the type of Vocab restored
+    def test_dash_en_unknown(self):
+        """
+        With this many different tags, it should choose to reduce it to the base xpos removing the -
+        """
+        data = build_data(10, DASH_TAGS)
+        vocab = xpos_vocab_factory(data, "en_unknown")
+        assert isinstance(vocab, XPOSVocab)
+        assert vocab.sep == "-"
 
-    TODO: This test may be a bit "eager" in that there are no other
-    tests which check building, saving, & loading a pos trainer.
-    Could add tests to test_trainer.py, for example
-    """
-    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-        args = tagger.parse_args(["--batch_size", "1", "--shorthand", shorthand])
-        train_doc = build_doc(iterations, suffix)
-        train_batch = DataLoader(train_doc, args["batch_size"], args, pt, evaluation=False)
-        vocab = train_batch.vocab
-        assert isinstance(vocab['xpos'], expected_vocab)
+    def test_dash_en_ewt_wrong(self):
+        """
+        The dataset looks like XPOS(-), which is wrong for en_ewt
+        """
+        data = build_data(10, DASH_TAGS)
+        vocab = xpos_vocab_factory(data, "en_ewt")
+        assert isinstance(vocab, XPOSVocab)
+        assert vocab.sep == "-"
 
-        trainer = Trainer(args=args, vocab=vocab, pretrain=pt, use_cuda=False)
+    def check_reload(self, pt, shorthand, iterations, suffix, expected_vocab):
+        """
+        Build a Trainer (no actual training), save it, and load it back in to check the type of Vocab restored
 
-        model_file = os.path.join(tmpdirname, "foo.pt")
-        trainer.save(model_file)
+        TODO: This test may be a bit "eager" in that there are no other
+        tests which check building, saving, & loading a pos trainer.
+        Could add tests to test_trainer.py, for example
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = tagger.parse_args(["--batch_size", "1", "--shorthand", shorthand])
+            train_doc = build_doc(iterations, suffix)
+            train_batch = DataLoader(train_doc, args["batch_size"], args, pt, evaluation=False)
+            vocab = train_batch.vocab
+            assert isinstance(vocab['xpos'], expected_vocab)
 
-        new_trainer = Trainer(model_file=model_file, pretrain=pt)
-        assert isinstance(new_trainer.vocab['xpos'], expected_vocab)
+            trainer = Trainer(args=args, vocab=vocab, pretrain=pt, use_cuda=False)
 
-@pytest.fixture(scope="module")
-def pt():
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
-    return pt
+            model_file = os.path.join(tmpdirname, "foo.pt")
+            trainer.save(model_file)
 
-def test_reload_word_vocab(pt):
-    """
-    Test that building a model with a known word vocab shorthand, saving it, and loading it gets back a word vocab
-    """
-    check_reload(pt, "en_ewt", 10, EMPTY_TAG, WordVocab)
+            new_trainer = Trainer(model_file=model_file, pretrain=pt)
+            assert isinstance(new_trainer.vocab['xpos'], expected_vocab)
 
-def test_reload_unknown_word_vocab(pt):
-    """
-    Test that building a model with an unknown word vocab, saving it, and loading it gets back a word vocab
-    """
-    check_reload(pt, "en_unknown", 10, EMPTY_TAG, WordVocab)
+    @pytest.fixture(scope="class")
+    def pt(self):
+        pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+        return pt
 
-def test_reload_unknown_xpos_vocab(pt):
-    """
-    Test that building a model with an unknown xpos vocab, saving it, and loading it gets back an xpos vocab
-    """
-    check_reload(pt, "en_unknown", 10, DASH_TAGS, XPOSVocab)
+    def test_reload_word_vocab(self, pt):
+        """
+        Test that building a model with a known word vocab shorthand, saving it, and loading it gets back a word vocab
+        """
+        self.check_reload(pt, "en_ewt", 10, EMPTY_TAG, WordVocab)
+
+    def test_reload_unknown_word_vocab(self, pt):
+        """
+        Test that building a model with an unknown word vocab, saving it, and loading it gets back a word vocab
+        """
+        self.check_reload(pt, "en_unknown", 10, EMPTY_TAG, WordVocab)
+
+    def test_reload_unknown_xpos_vocab(self, pt):
+        """
+        Test that building a model with an unknown xpos vocab, saving it, and loading it gets back an xpos vocab
+        """
+        self.check_reload(pt, "en_unknown", 10, DASH_TAGS, XPOSVocab)
 
