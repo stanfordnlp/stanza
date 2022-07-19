@@ -121,12 +121,14 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_doc(self, doc):
+    @staticmethod
+    def load_doc(doc):
         data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
-        data = self.resolve_none(data)
+        data = DataLoader.resolve_none(data)
         return data
 
-    def resolve_none(self, data):
+    @staticmethod
+    def resolve_none(data):
         # replace None to '_'
         for sent_idx in range(len(data)):
             for tok_idx in range(len(data[sent_idx])):
