@@ -73,13 +73,21 @@ def test_basic_en_unknown():
     assert isinstance(vocab, WordVocab)
 
 
-
 def test_dash_en_unknown():
     """
     With this many different tags, it should choose to reduce it to the base xpos removing the -
     """
     data = build_data(10, DASH_TAGS)
     vocab = xpos_vocab_factory(data, "en_unknown")
+    assert isinstance(vocab, XPOSVocab)
+    assert vocab.sep == "-"
+
+def test_dash_en_ewt_wrong():
+    """
+    The dataset looks like XPOS(-), which is wrong for en_ewt
+    """
+    data = build_data(10, DASH_TAGS)
+    vocab = xpos_vocab_factory(data, "en_ewt")
     assert isinstance(vocab, XPOSVocab)
     assert vocab.sep == "-"
 
