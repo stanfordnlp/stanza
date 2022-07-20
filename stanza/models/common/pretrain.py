@@ -111,8 +111,6 @@ class Pretrain:
         # load from pretrained filename
         if self._vec_filename is None:
             raise RuntimeError("Vector file is not provided.")
-        logger.info("Reading pretrained vectors from {}...".format(self._vec_filename))
-
         words, emb, failed = self.read_from_file(self._vec_filename)
 
         if len(emb) - len(VOCAB_PREFIX) != len(words):
@@ -131,6 +129,8 @@ class Pretrain:
         """
         Open a vector file using the provided function and read from it.
         """
+        logger.info("Reading pretrained vectors from %s...", filename)
+
         # some vector files, such as Google News, use tabs
         tab_space_pattern = re.compile(r"[ \t]+")
         first = True
@@ -173,6 +173,8 @@ class Pretrain:
         # if there were word pieces separated with spaces, rejoin them with nbsp instead
         # this way, the normalize_unit method in vocab.py can find the word at test time
         words = ['\xa0'.join(line[:-cols]) for line in lines]
+        if failed > 0:
+            logger.info("Failed to read %d lines from embedding", failed)
         return words, emb, failed
 
 
