@@ -31,7 +31,10 @@ def main():
     else:
         max_vocab = int(sys.argv[3])
 
-    pt = pretrain.Pretrain(filename, vec_filename, max_vocab)
+    if vec_filename.endswith(".csv"):
+        pt = pretrain.Pretrain(filename, max_vocab=max_vocab, csv_filename=vec_filename)
+    else:
+        pt = pretrain.Pretrain(filename, vec_filename, max_vocab=max_vocab)
     print("Pretrain is of size {}".format(len(pt.vocab)))
 
 if __name__ == '__main__':
