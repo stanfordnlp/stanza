@@ -1,6 +1,7 @@
 """
 Supports for pretrained data.
 """
+import csv
 import os
 import re
 
@@ -11,7 +12,7 @@ import torch
 
 from .vocab import BaseVocab, VOCAB_PREFIX
 
-from stanza.models.common.utils import open_read_binary
+from stanza.models.common.utils import open_read_binary, open_read_text
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
@@ -30,9 +31,10 @@ class PretrainedWordVocab(BaseVocab):
 class Pretrain:
     """ A loader and saver for pretrained embeddings. """
 
-    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True):
+    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True, csv_filename=None):
         self.filename = filename
         self._vec_filename = vec_filename
+        self._csv_filename = csv_filename
         self._max_vocab = max_vocab
         self._save_to_file = save_to_file
 
@@ -60,12 +62,12 @@ class Pretrain:
             except (KeyboardInterrupt, SystemExit):
                 raise
             except BaseException as e:
-                if not self._vec_filename:
+                if not self._vec_filename and not self._csv_filename:
                     raise
-                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}\nAttempting to fall back to {}".format(self.filename, e, self._vec_filename))
+                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
                 vocab, emb = self.read_pretrain()
         else:
-            if not self._vec_filename:
+            if not self._vec_filename and not self._csv_filename:
                 raise FileNotFoundError("Pretrained file {} does not exist, and no text/xz file was provided".format(self.filename))
             if self.filename is not None:
                 logger.info("Pretrained filename %s specified, but file does not exist.  Attempting to load from text file" % self.filename)
@@ -109,9 +111,12 @@ class Pretrain:
 
     def read_pretrain(self):
         # load from pretrained filename
-        if self._vec_filename is None:
+        if self._vec_filename is not None:
+            words, emb, failed = self.read_from_file(self._vec_filename)
+        elif self._csv_filename is not None:
+            words, emb = self.read_from_csv(self._csv_filename)
+        else:
             raise RuntimeError("Vector file is not provided.")
-        words, emb, failed = self.read_from_file(self._vec_filename)
 
         if len(emb) - len(VOCAB_PREFIX) != len(words):
             raise RuntimeError("Loaded number of vectors does not match number of words.")
@@ -125,7 +130,33 @@ class Pretrain:
         
         return vocab, emb
 
-    def read_from_file(self, filename, open_func=open):
+    @staticmethod
+    def read_from_csv(filename):
+        """
+        Read vectors from CSV
+
+        Skips the first row
+        """
+        logger.info("Reading pretrained vectors from csv file %s...", filename)
+        with open_read_text(filename) as fin:
+            csv_reader = csv.reader(fin)
+            # the header of the thai csv vector file we have is just the number of columns
+            # so we read past the first line
+            for line in csv_reader:
+                break
+            lines = [line for line in csv_reader]
+
+        rows = len(lines)
+        cols = len(lines[0]) - 1
+
+        emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+        for i, line in enumerate(lines):
+            emb[i+len(VOCAB_PREFIX)] = [float(x) for x in line[-cols:]]
+        words = [line[0].replace(' ', '\xa0') for line in lines]
+        return words, emb
+
+    @staticmethod
+    def read_from_file(filename):
         """
         Open a vector file using the provided function and read from it.
         """
