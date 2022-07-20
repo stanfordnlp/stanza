@@ -47,6 +47,10 @@ def test_zip_pretrain():
     pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.zip', save_to_file=False)
     check_pretrain(pt)
 
+def test_csv_pretrain():
+    pt = pretrain.Pretrain(csv_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.csv', save_to_file=False)
+    check_pretrain(pt)
+
 def test_resave_pretrain():
     """
     Test saving a pretrain and then loading from the existing file
