@@ -167,7 +167,7 @@ class Trainer(BaseTrainer):
         if pretrain is not None:
             emb_matrix = pretrain.emb
 
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model=self.bert_model, bert_tokenizer=self.bert_tokenizer, use_cuda=self.use_cuda)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.
