@@ -115,8 +115,6 @@ class Pretrain:
 
         words, emb, failed = self.read_from_file(self._vec_filename)
 
-        if failed > 0: # recover failure
-            emb = emb[:-failed]
         if len(emb) - len(VOCAB_PREFIX) != len(words):
             raise RuntimeError("Loaded number of vectors does not match number of words.")
 
