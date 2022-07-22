@@ -287,6 +287,9 @@ def train(args):
     if len(dev_score_history) > 0:
         best_f, best_eval = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         logger.info("Best dev F1 = {:.2f}, at iteration = {}".format(best_f, best_eval * args['eval_interval']))
+    else:
+        logger.info("Dev set never evaluated.  Saving final model.")
+        trainer.save(model_file)
 
 def evaluate(args):
     # file paths
