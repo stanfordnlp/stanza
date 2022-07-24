@@ -20,7 +20,7 @@ def test_xpos_retag(pipeline):
     Test using the English tagger that trees will be correctly retagged by read_trees using xpos
     """
     text = "((S (VP (X Find)) (NP (X Mox) (X Opal))))   ((S (NP (X Ragavan)) (VP (X steals) (NP (X important) (X cards)))))"
-    expected = "((S (VP (VB Find)) (NP (NNP Mox) (NNP Opal)))) ((S (NP (NNP Ragavan)) (VP (VBZ steals) (NP (JJ important) (NNS cards)))))"
+    expected = "((S (VP (VB Find)) (NP (NNP Mox) (NN Opal)))) ((S (NP (NNP Ragavan)) (VP (VBZ steals) (NP (JJ important) (NNS cards)))))"
 
     trees = tree_reader.read_trees(text)
 
@@ -34,7 +34,7 @@ def test_upos_retag(pipeline):
     Test using the English tagger that trees will be correctly retagged by read_trees using upos
     """
     text = "((S (VP (X Find)) (NP (X Mox) (X Opal))))   ((S (NP (X Ragavan)) (VP (X steals) (NP (X important) (X cards)))))"
-    expected = "((S (VP (VERB Find)) (NP (PROPN Mox) (PROPN Opal)))) ((S (NP (PROPN Ragavan)) (VP (VERB steals) (NP (ADJ important) (NOUN cards)))))"
+    expected = "((S (VP (VERB Find)) (NP (PROPN Mox) (NOUN Opal)))) ((S (NP (PROPN Ragavan)) (VP (VERB steals) (NP (ADJ important) (NOUN cards)))))"
 
     trees = tree_reader.read_trees(text)
 
