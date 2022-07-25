@@ -161,12 +161,23 @@ which turns the raw text file (or a .gz file, for example) into a
 ```bash
 # be sure to update the language abbreviation "bn" to match your dataset!
 # 150000 is usually a good balance between good coverage and a model which is too large
-python3 stanza/models/common/convert_pretrain.py ~/stanza_resources/bn/pretrain/fasttext.pt ~/extern_data/wordvec/fasttext/cc.bn.300.vec.gz 150000
+python3 -m stanza.models.common.convert_pretrain ~/stanza_resources/bn/pretrain/fasttext.pt ~/extern_data/wordvec/fasttext/cc.bn.300.vec.gz 150000
 ```
 
 Note that by default, Stanza will keep its resources in the
 `~/stanza_resources` directory.  This can be updated by changing the
 `$STANZA_RESOURCES_DIR` environment variable.
+
+In some cases, the word vector files are so large that they will not
+fit in memory.  The conversion program does not compensate for that at all.
+To handle this problem, you can use `head` to get just the lines we will make use of:
+
+```bash
+cd ~/extern_data/wordvec/fasttext   # or wherever you put the vectors
+gunzip cc.bn.300.vec.gz
+head -n 150001 cc.bn.300.vec > cc.bn.300.head   # +1 as many text formats include a header
+python3 -m stanza.models.common.convert_pretrain ~/stanza_resources/bn/pretrain/fasttext.pt cc.bn.300.head 150000
+```
 
 ### Training!
 
