@@ -77,7 +77,7 @@ def filter_data(model_name, data, tokenizer = None):
         sentence = [word[0] for word in sent]
         _, tokenized_sent = tokenize_manual(model_name, sentence, tokenizer)
         
-        if len(tokenized_sent) > tokenizer.model_max_length:
+        if len(tokenized_sent) > tokenizer.model_max_length - 2:
             continue
 
         filtered_data.append(sent)
@@ -202,7 +202,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
-        if len(offsets) > tokenizer.model_max_length:
+        if len(offsets) > tokenizer.model_max_length - 2:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
             raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
