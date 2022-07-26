@@ -33,22 +33,43 @@ as you have training data.
 
 ### Simple code example
 
-import stanza
 
-```
+```python
+import stanza
 nlp = stanza.Pipeline(lang='en', processors='tokenize,sentiment')
 doc = nlp('I hate that they banned Mox Opal')
 for i, sentence in enumerate(doc.sentences):
-    print(i, sentence.sentiment)
+    print("%d -> %d" % (i, sentence.sentiment))
 ```
 
 The output produced (aside from logging) will be:
 
 ```
-0
+0 -> 0
 ```
 
 This represents a negative sentiment.
+
+In some cases, such as datasets with one sentence per line or twitter
+data, you want to guarantee that there is one sentence per document
+processed.  You can do this [by turning off the sentence
+splitting](tokenize.html#tokenization-without-sentence-segmentation).
+
+```python
+import stanza
+nlp = stanza.Pipeline(lang='en', processors='tokenize,sentiment', tokenize_no_ssplit=True)
+doc = nlp('Jennifer has pretty antennae.  I hope I meet her someday')
+for i, sentence in enumerate(doc.sentences):
+    print("%d -> %d" % (i, sentence.sentiment))
+```
+
+The output produced (aside from logging) will be:
+
+```
+0 -> 2
+```
+
+This represents a positive sentiment.
 
 ## Available models
 
