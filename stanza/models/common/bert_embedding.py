@@ -185,6 +185,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if model_name in BAD_TOKENIZERS:
         data = fix_german_tokens(tokenizer, data)
 
+    is_xlnet = model_name.startswith("xlnet")
     #add add_prefix_space = True for RoBerTa-- error if not
     if isinstance(data, tuple):
         data = list(data)
@@ -196,9 +197,18 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             if offset is None:
                 continue
             # this uses the last token piece for any offset by overwriting the previous value
-            list_offsets[idx][offset+1] = pos
-        list_offsets[idx][0] = 0
+            if is_xlnet:
+                # this will be one token earlier
+                # we will add a <pad> to the start of each sentence for the endpoints
+                if offset == 0 and list_offsets[idx][offset+1] is None:
+                    list_offsets[idx][offset] = pos
+                list_offsets[idx][offset+1] = pos + 1
+            else:
+                list_offsets[idx][offset+1] = pos
         list_offsets[idx][-1] = list_offsets[idx][-2] + 1
+        if not is_xlnet:
+            list_offsets[idx][0] = 0
+        #print(list_offsets[idx])
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
@@ -209,9 +219,16 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     features = []
     for i in range(int(math.ceil(len(data)/128))):
         with torch.no_grad():
-            id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
+            if is_xlnet:
+                input_ids = [[tokenizer.pad_token_id] + x for x in tokenized['input_ids'][128*i:128*i+128]]
+            else:
+                input_ids = tokenized['input_ids'][128*i:128*i+128]
+            id_tensor = torch.tensor(input_ids, device=device)
             feature = model(id_tensor, output_hidden_states=True)
-            feature = feature[2]
+            # feature[2] is the same for bert, but it didn't work for
+            # older versions of transformers for xlnet
+            # feature = feature[2]
+            feature = feature.hidden_states
             feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
             features += feature.clone().detach()
 
