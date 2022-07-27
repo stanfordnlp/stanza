@@ -286,7 +286,7 @@ EXPECTED_RESULT = """
       "id": 25,
       "text": "Numérique",
       "lemma": "numérique",
-      "upos": "PROPN",
+      "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 17,
       "deprel": "conj",
