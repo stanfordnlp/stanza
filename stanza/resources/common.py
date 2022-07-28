@@ -534,7 +534,7 @@ def download(
     download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
     resources = load_resources_json(model_dir)
     if lang not in resources:
-        raise ValueError(f'Unsupported language: {lang}.')
+        raise ValueError(f'Unsupported language: {lang}')
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
@@ -544,7 +544,7 @@ def download(
     # Default: download zipfile and unzip
     if package == 'default' and (processors is None or len(processors) == 0):
         logger.info(
-            f'Downloading default packages for language: {lang} ({lang_name})...'
+            f'Downloading default packages for language: {lang} ({lang_name}) ...'
         )
         # want the URL to become, for example:
         # https://huggingface.co/stanfordnlp/stanza-af/resolve/v1.3.0/models/default.zip
