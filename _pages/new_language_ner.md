@@ -57,6 +57,16 @@ execution script will expect to find the data in that directory.
 In `~/.bashrc`, we can add the following lines.  Here are a couple
 values we use on our cluster to organize shared data:
 
+{% include alerts.html %}
+{{ note }}
+{{ "Your OS may use a different startup script than `~/.bashrc`" | markdownify }}
+{{ end }}
+
+{% include alerts.html %}
+{{ note }}
+{{ "On Windows, you can update these variables in `Edit the system environment variables` in the Control Panel" | markdownify }}
+{{ end }}
+
 ```bash
 export NERBASE=/u/nlp/data/ner/stanza
 export NER_DATA_DIR=/nlp/scr/$USER/data/ner
