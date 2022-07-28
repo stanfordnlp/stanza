@@ -264,3 +264,6 @@ models somewhere we can integrate them.  It would be very appreciated!
 
 Oscar was introducted in "A Monolingual Approach to Contextualized Word Embeddings for Mid-Resource Languages",
 by Ortiz Suárez, Pedro Javier, Laurent Romary, and Benoît Sagot
+
+The NER dataset described here was introduced in "Bengali Named Entity Recognition: A survey with deep learning benchmark",
+by Md Jamiur Rahman Rifat, Sheikh Abujar, Sheak Rashed Haider Noori, and Syed Akhter Hossain
