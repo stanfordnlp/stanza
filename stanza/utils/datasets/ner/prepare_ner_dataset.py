@@ -258,6 +258,19 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+kk_kazNERD is a Kazakh dataset published in 2021
+  - https://github.com/IS2AI/KazNERD
+  - https://arxiv.org/abs/2111.13419
+    KazNERD: Kazakh Named Entity Recognition Dataset
+    Rustem Yeshpanov, Yerbolat Khassanov, Huseyin Atakan Varol
+  - in $NERBASE, make a "kazakh" directory, then git clone the repo there
+    mkdir -p $NERBASE/kazakh
+    cd $NERBASE/kazakh
+    git clone git@github.com:IS2AI/KazNERD.git
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset kk_kazNERD
+
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -283,6 +296,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
 import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
@@ -821,6 +835,11 @@ def process_bn_daffodil(paths, short_name):
     out_directory = paths["NER_DATA_DIR"]
     convert_bn_daffodil.convert_dataset(in_directory, out_directory)
 
+def process_kk_kazNERD(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "kazakh", "KazNERD", "KazNERD")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_kk_kazNERD.convert_dataset(in_directory, out_directory, short_name)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -837,6 +856,7 @@ DATASET_MAPPING = {
     "hu_combined":       process_hu_combined,
     "it_fbk":            process_it_fbk,
     "ja_gsd":            process_ja_gsd,
+    "kk_kazNERD":        process_kk_kazNERD,
     "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
     "sv_suc3licensed":   process_sv_suc3licensed,
