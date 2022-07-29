@@ -39,6 +39,9 @@ def redo_time_tags(sentences):
 
     return new_sentences
 
+def strip_words(dataset):
+    return [[(x[0].strip(), x[1]) for x in sentence] for sentence in dataset]
+
 def filter_blank_words(train_file, train_filtered_file):
     """
     As of July 2022, this dataset has blank words with O labels, which is not ideal
@@ -87,12 +90,14 @@ def read_datasets(in_directory):
     train_sentences = filter_broken_tags(train_sentences)
     train_sentences = filter_bad_words(train_sentences)
     train_sentences = redo_time_tags(train_sentences)
+    train_sentences = strip_words(train_sentences)
 
     test_file = os.path.join(in_directory, "Input", "test_data.txt")
     test_sentences = read_tsv(test_file, text_column=0, annotation_column=1, keep_broken_tags=True)
     test_sentences = filter_broken_tags(test_sentences)
     test_sentences = filter_bad_words(test_sentences)
     test_sentences = redo_time_tags(test_sentences)
+    test_sentences = strip_words(test_sentences)
 
     random.shuffle(train_sentences)
     split_len = len(train_sentences) * 9 // 10
