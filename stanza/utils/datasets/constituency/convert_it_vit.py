@@ -23,7 +23,7 @@ Fortunately, -[ is always an open and ] is always a close
 As of April 2022, the UD version of the dataset has some minor edits
 which are necessary for the proper functioning of this script.
 Otherwise, the MWT won't align correctly, some typos won't be
-corrected, etc.
+corrected, etc.  These edits are released in UD 2.10
 
 The data itself is available from ELRA:
 

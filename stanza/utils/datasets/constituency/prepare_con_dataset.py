@@ -10,6 +10,11 @@ it_turin
 it_vit
   The original for the VIT UD Dataset
   The UD version has a lot of corrections, so we try to apply those as much as possible
+  In fact, we applied some corrections of our own back to UD based on this treebank.
+    The first version which had those corrections is UD 2.10
+    Versions of UD before that won't work
+    Hopefully versions after that work
+    Set UDBASE to a path such that $UDBASE/UD_Italian-VIT is the UD version
   The constituency labels are generally not very understandable, unfortunately
   Available from ELRA:
     http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/
@@ -115,8 +120,8 @@ def process_it_turin(paths):
 
 def process_it_vit(paths):
     input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "italian", "VIT")
-    # can't use UD yet until the updates are released
-    ud_dir = os.path.join(paths["EXTERN_DIR"], "ud2", "git", "UD_Italian-VIT")
+    # needs at least UD 2.10 or this will not work
+    ud_dir = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     convert_it_vit(input_dir, ud_dir, output_dir, "it_vit")
 
