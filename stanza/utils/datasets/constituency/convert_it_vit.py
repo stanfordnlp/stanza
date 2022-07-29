@@ -501,7 +501,7 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
 # test set:
 # 04541: similar to another tree which is missed
 # 09785: da riempire inconsistency
-IGNORE_IDS = ["sent_00856", "sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
+IGNORE_IDS = ["sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
