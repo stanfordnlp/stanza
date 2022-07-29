@@ -67,8 +67,7 @@ def filter_bad_words(train_sentences):
     """
     return [[x for x in sentence if not x[0] in ("", "")] for sentence in train_sentences]
 
-
-def convert_dataset(in_directory, out_directory):
+def read_datasets(in_directory):
     """
     Reads & splits the train data, reads the test data
 
@@ -101,7 +100,13 @@ def convert_dataset(in_directory, out_directory):
     train_sentences = train_sentences[:split_len]
 
     datasets = (train_sentences, dev_sentences, test_sentences)
+    return datasets
 
+def convert_dataset(in_directory, out_directory):
+    """
+    Reads the datasets using read_datasets, then write them back out
+    """
+    datasets = read_datasets(in_directory)
     write_dataset(datasets, out_directory, "bn_daffodil")
 
 if __name__ == '__main__':
