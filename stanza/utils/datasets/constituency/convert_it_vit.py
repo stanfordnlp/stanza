@@ -190,6 +190,9 @@ def raw_tree(text):
         "num-'18/20'":             "(num 18:20)",
         "num-295/mila'":           "(num 295mila)",
         "num-'295/mila'":          "(num 295mila)",
+        "num-0/07%plus":           "(num 0,07%) (num plus)",
+        "num-0/69%minus":          "(num 0,69%) (num minus)",
+        "num-0_39%minus":          "(num 0,39%) (num minus)",
         "n-giga_flop/s":           "(n giga_flop/s)",
         "sect-'g-1'":              "(sect g-1)",
         "sect-'h-1'":              "(sect h-1)",
@@ -200,6 +203,7 @@ def raw_tree(text):
         "abbr-d_p_r_":             "(abbr DPR)",
         "abbr-D_P_R_":             "(abbr DPR)",
         "abbr-d_m_":               "(abbr dm)",
+        "abbr-T_U_":               "(abbr TU)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
