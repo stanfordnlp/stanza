@@ -80,7 +80,9 @@ def read_constituency_sentences(fin):
         if not line:
             continue
         sent_id, sent_text = line.split(maxsplit=1)
-        if not sent_id.startswith("#ID=sent"):
+        # we have seen a couple different versions of this sentence header
+        # although one file is always consistent with itself, at least
+        if not sent_id.startswith("#ID=sent") and not sent_id.startswith("ID#sent"):
             raise ValueError("Unexpected start of sentence: |{}|".format(sent_id))
         if not sent_text:
             raise ValueError("Empty text for |{}|".format(sent_id))
@@ -137,6 +139,7 @@ def raw_tree(text):
         "da_riempire-'...'":       "(da_riempire ...)",
         "date-1992_1993":          "(date 1992/1993)",
         "date-'31-12-95'":         "(date 31-12-95)",
+        "date-'novantaquattro-95'":"(date novantaquattro-95)",
         "date-'novantaquattro-95": "(date novantaquattro-95)",
         "date-'novantaquattro-novantacinque'": "(date novantaquattro-novantacinque)",
         "dirs-':'":                "(dirs :)",
@@ -519,7 +522,11 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
 def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
-    con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
+    # this is the April 2022 version
+    #con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
+    # the most recent update from ELRA may look like this?
+    # it's what we got, at least
+    con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
@@ -542,7 +549,10 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     for idx, sentence in enumerate(tqdm(con_sentences, postfix="Processing")):
         try:
             tree = raw_tree(sentence[1])
-            tree_id = sentence[0].split("=")[-1]
+            if sentence[0].startswith("#ID="):
+                tree_id = sentence[0].split("=")[-1]
+            else:
+                tree_id = sentence[0].split("#")[-1]
             # don't care about the raw text?
             con_tree_map[tree_id] = tree
         except UnclosedTreeError as e:
@@ -576,8 +586,8 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     write_dataset([train_trees, dev_trees, test_trees], output_directory, dataset_name)
 
 def main():
-    con_directory = "extern_data/constituency/italian/VIT"
-    ud_directory = "extern_data/ud2/git/UD_Italian-VIT"
+    con_directory = "extern_data/constituency"
+    ud_directory = "extern_data/ud2/ud-treebanks-v2.10/UD_Italian-VIT"
 
     output_directory = "data/constituency"
     dataset_name = "it_vit"
