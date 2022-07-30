@@ -2,7 +2,7 @@ import argparse
 import os
 import subprocess
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 import stanza.utils.default_paths as default_paths
@@ -23,7 +23,7 @@ def get_subtrees(input_file, *args):
     """
     Use the CoreNLP OutputSubtrees tool to convert the input file to a bunch of phrases
 
-    Returns a list of the Fragment namedtuple
+    Returns a list of the SentimentDatum namedtuple
     """
     # TODO: maybe can convert this to use the python tree?
     cmd = ["java", "edu.stanford.nlp.trees.OutputSubtrees", "-input", input_file]
@@ -35,7 +35,7 @@ def get_subtrees(input_file, *args):
     lines = [x.strip() for x in lines]
     lines = [x for x in lines if x]
     lines = [x.split(maxsplit=1) for x in lines]
-    phrases = [Fragment(x[0], x[1].split()) for x in lines]
+    phrases = [SentimentDatum(x[0], x[1].split()) for x in lines]
     return phrases
 
 def get_phrases(dataset, treebank_file, input_dir):

@@ -13,7 +13,7 @@ import sys
 from tqdm import tqdm
 
 import stanza
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 import stanza.utils.default_paths as default_paths
@@ -32,7 +32,7 @@ def combine_columns(in_directory, dataset, nlp):
     text = [[token.text for sentence in nlp(line.strip()).sentences for token in sentence.tokens]
             for line in tqdm(text)]
 
-    phrases = [Fragment(s.strip(), t) for s, t in zip(sentiment, text)]
+    phrases = [SentimentDatum(s.strip(), t) for s, t in zip(sentiment, text)]
     return phrases
 
 def main(in_directory, out_directory, short_name):

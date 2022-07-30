@@ -22,7 +22,7 @@ process_slsd.py <directory> <outputfile>
 import os
 import sys
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_phrases(in_directory):
@@ -47,7 +47,7 @@ def get_phrases(in_directory):
             sentiment = '2'
         else:
             raise ValueError("Unknown sentiment: {}".format(sentiment))
-        phrases.append(Fragment(sentiment, utterance))
+        phrases.append(SentimentDatum(sentiment, utterance))
 
     return phrases
 

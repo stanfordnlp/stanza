@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 import stanza
 
-Fragment = namedtuple('Fragment', ['sentiment', 'text'])
+SentimentDatum = namedtuple('SentimentDatum', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
 SHARDS = ("train", "dev", "test")
@@ -19,7 +19,7 @@ def write_list(out_filename, dataset):
     """
     Write a list of items to the given output file
 
-    Expected: list(Fragment)
+    Expected: list(SentimentDatum)
     """
     formatted_dataset = [{'sentiment': line.sentiment, 'text': line.text} for line in dataset]
     # Rather than write the dataset at once, we write one line at a time
@@ -80,7 +80,7 @@ def clean_tokenized_tweet(line):
     line = [x for x in line if x and not x.startswith("http:") and not x.startswith("https:")]
     return line
 
-def get_ptb_tokenized_phrases(fragments):
+def get_ptb_tokenized_phrases(dataset):
     """
     Use the PTB tokenizer to retokenize the phrases
 
@@ -94,10 +94,10 @@ def get_ptb_tokenized_phrases(fragments):
         phrase_filename = os.path.join(tempdir, "phrases.txt")
         #phrase_filename = "asdf.txt"
         with open(phrase_filename, "w", encoding="utf-8") as fout:
-            for fragment in fragments:
+            for item in dataset:
                 # extra newlines are so the tokenizer treats the lines
                 # as separate sentences
-                fout.write("%s\n\n\n" % (fragment.text))
+                fout.write("%s\n\n\n" % (item.text))
         tok_filename = os.path.join(tempdir, "tokenized.txt")
         os.system('java edu.stanford.nlp.process.PTBTokenizer -options "strictAcronym=true,tokenizePerLine=true" -preserveLines %s > %s' % (phrase_filename, tok_filename))
         with open(tok_filename, encoding="utf-8") as fin:
@@ -105,12 +105,12 @@ def get_ptb_tokenized_phrases(fragments):
 
     tokenized = [x.strip() for x in tokenized]
     tokenized = [x for x in tokenized if x]
-    phrases = [Fragment(x.sentiment, y.split()) for x, y in zip(fragments, tokenized)]
+    phrases = [SentimentDatum(x.sentiment, y.split()) for x, y in zip(dataset, tokenized)]
     return phrases
 
 def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False):
     """
-    Read in a single CSV file and return a list of fragments
+    Read in a single CSV file and return a list of SentimentDatums
     """
     nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
 
@@ -135,6 +135,6 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
         for sentence in doc.sentences:
             text.extend(token.text for token in sentence.tokens)
         text = clean_tokenized_tweet(text)
-        snippets.append(Fragment(sentiment, text))
+        snippets.append(SentimentDatum(sentiment, text))
     return snippets
 

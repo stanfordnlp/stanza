@@ -28,7 +28,7 @@ import csv
 import os
 import sys
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_phrases(in_filename):
@@ -51,7 +51,7 @@ def get_phrases(in_filename):
         else:
             raise ValueError("Unknown sentiment: {}".format(sentiment))
         utterance = line[1].replace("Â", "")
-        phrases.append(Fragment(sentiment, utterance))
+        phrases.append(SentimentDatum(sentiment, utterance))
     return phrases
 
 def get_tokenized_phrases(split, in_directory):

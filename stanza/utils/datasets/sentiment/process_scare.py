@@ -21,7 +21,7 @@ import sys
 
 import stanza
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv"):
@@ -60,7 +60,7 @@ def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv")
                 num_tokens = sum(len(sentence.tokens) for sentence in doc.sentences)
                 if num_tokens < 4:
                     num_short_items = num_short_items + 1
-                snippets.append(Fragment(sentiment, text))
+                snippets.append(SentimentDatum(sentiment, text))
     print("Number of short items: {}".format(num_short_items))
     return snippets
 

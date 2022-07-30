@@ -24,7 +24,7 @@ import csv
 import os
 import sys
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_phrases(in_directory):
@@ -46,14 +46,14 @@ def get_phrases(in_directory):
             raise ValueError("Unknown sentiment: {}".format(sentiment))
         # some of the tweets have \n in them
         utterance = line[10].replace("\n", " ")
-        phrases.append(Fragment(sentiment, utterance))
+        phrases.append(SentimentDatum(sentiment, utterance))
 
     return phrases
 
 def get_tokenized_phrases(in_directory):
     phrases = get_phrases(in_directory)
     phrases = process_utils.get_ptb_tokenized_phrases(phrases)
-    phrases = [Fragment(x.sentiment, process_utils.clean_tokenized_tweet(x.text)) for x in phrases]
+    phrases = [SentimentDatum(x.sentiment, process_utils.clean_tokenized_tweet(x.text)) for x in phrases]
     print("Found {} phrases in the airline corpus".format(len(phrases)))
     return phrases
 
@@ -66,7 +66,7 @@ def main(in_directory, out_directory, short_name):
     process_utils.write_list(out_filename, phrases)
 
     # something like this would count @s if you cared enough to count
-    # would need to update for Fragment()
+    # would need to update for SentimentDatum()
     #ats = Counter()
     #for line in lines:
     #    ats.update([x for x in line.split() if x[0] == '@'])

@@ -9,7 +9,7 @@ from collections import namedtuple
 
 import stanza
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 """
@@ -54,7 +54,7 @@ def get_phrases(filename):
                         sentiment = "2"
                     else:
                         raise ValueError("Unknown polarity {} in {}".format(polarity.text, filename))
-                    fragments.append(Fragment(sentiment, text))
+                    fragments.append(SentimentDatum(sentiment, text))
 
     return fragments
 
@@ -68,7 +68,7 @@ def read_snippets(xml_directory):
     for sentence in sentences:
         doc = nlp(sentence.text)
         text = [token.text for sentence in doc.sentences for token in sentence.tokens]
-        snippets.append(Fragment(sentence.sentiment, text))
+        snippets.append(SentimentDatum(sentence.sentiment, text))
     random.shuffle(snippets)
     return snippets
 

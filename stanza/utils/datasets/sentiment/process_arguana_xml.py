@@ -4,10 +4,10 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 
-from stanza.utils.datasets.sentiment.process_utils import Fragment
+from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
-ArguanaFragment = namedtuple('ArguanaFragment', ['begin', 'end', 'rating'])
+ArguanaSentimentDatum = namedtuple('ArguanaSentimentDatum', ['begin', 'end', 'rating'])
 
 """
 Extracts positive, neutral, and negative phrases from the ArguAna hotel review corpus
@@ -32,9 +32,9 @@ def get_phrases(filename):
         if child.tag == '{http:///uima/cas.ecore}Sofa':
             body = child.attrib['sofaString']
         elif child.tag == '{http:///de/aitools/ie/uima/type/arguana.ecore}Fact':
-            fragments.append(ArguanaFragment(begin=int(child.attrib['begin']),
-                                             end=int(child.attrib['end']),
-                                             rating="1"))
+            fragments.append(ArguanaSentimentDatum(begin=int(child.attrib['begin']),
+                                                   end=int(child.attrib['end']),
+                                                   rating="1"))
         elif child.tag == '{http:///de/aitools/ie/uima/type/arguana.ecore}Opinion':
             if child.attrib['polarity'] == 'negative':
                 rating = "0"
@@ -42,12 +42,12 @@ def get_phrases(filename):
                 rating = "2"
             else:
                 raise ValueError("Unexpected polarity found in {}".format(filename))
-            fragments.append(ArguanaFragment(begin=int(child.attrib['begin']),
-                                             end=int(child.attrib['end']),
-                                             rating=rating))
+            fragments.append(ArguanaSentimentDatum(begin=int(child.attrib['begin']),
+                                                   end=int(child.attrib['end']),
+                                                   rating=rating))
 
 
-    phrases = [Fragment(fragment.rating, body[fragment.begin:fragment.end]) for fragment in fragments]
+    phrases = [SentimentDatum(fragment.rating, body[fragment.begin:fragment.end]) for fragment in fragments]
     #phrases = [phrase.replace("\n", " ") for phrase in phrases]
     return phrases
 
