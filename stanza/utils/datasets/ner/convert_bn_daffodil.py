@@ -40,7 +40,7 @@ def redo_time_tags(sentences):
     return new_sentences
 
 def strip_words(dataset):
-    return [[(x[0].strip(), x[1]) for x in sentence] for sentence in dataset]
+    return [[(x[0].strip().replace('\ufeff', ''), x[1]) for x in sentence] for sentence in dataset]
 
 def filter_blank_words(train_file, train_filtered_file):
     """
