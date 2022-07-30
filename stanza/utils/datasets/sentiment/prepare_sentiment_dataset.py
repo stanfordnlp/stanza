@@ -157,6 +157,23 @@ zh-hans_ren
 
 The following will be available starting in 1.4.1:
 
+Spanish
+-------
+
+tass2020
+  - http://tass.sepln.org/2020/?page_id=74
+  - Download the following 5 files:
+      task1.2-test-gold.tsv
+      Task1-train-dev.zip
+      tass2020-test-gold.zip
+      Test1.1.zip
+      test1.2.zip
+    Put them in a directory
+      $SENTIMENT_BASE/spanish/tass2020
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset es_tass2020
+
+
 Vietnamese
 ----------
 
@@ -198,6 +215,7 @@ import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.sentiment import process_airline
 from stanza.utils.datasets.sentiment import process_arguana_xml
+from stanza.utils.datasets.sentiment import process_es_tass2020
 from stanza.utils.datasets.sentiment import process_MELD
 from stanza.utils.datasets.sentiment import process_ren_chinese
 from stanza.utils.datasets.sentiment import process_sb10k
@@ -320,6 +338,9 @@ def convert_mr_l3cube(paths, dataset_name):
 
     process_utils.write_dataset(datasets, out_directory, dataset_name)
 
+def convert_es_tass2020(paths, dataset_name):
+    process_es_tass2020.convert_tass2020(paths['SENTIMENT_BASE'], paths['SENTIMENT_DATA_DIR'], dataset_name)
+
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
     out_directory = paths['SENTIMENT_DATA_DIR']
@@ -335,6 +356,8 @@ DATASET_MAPPING = {
     "en_sst3roots": convert_sst3roots,
     "en_sstplus":   convert_sstplus,
     "en_meld":      convert_meld,
+
+    "es_tass2020":  convert_es_tass2020,
 
     "mr_l3cube":    convert_mr_l3cube,
 
