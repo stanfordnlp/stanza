@@ -13,6 +13,8 @@ import stanza
 Fragment = namedtuple('Fragment', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
+SHARDS = ("train", "dev", "test")
+
 def write_list(out_filename, dataset):
     """
     Write a list of items to the given output file
@@ -35,6 +37,16 @@ def write_list(out_filename, dataset):
                 fout.write(",")
             fout.write("\n")
         fout.write("]\n")
+
+def write_dataset(dataset, out_directory, dataset_name):
+    """
+    Write train, dev, test as .json files for a given dataset
+
+    dataset: 3 lists of sentiment tuples
+    """
+    for shard, phrases in zip(SHARDS, dataset):
+        output_file = os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard))
+        write_list(output_file, phrases)
 
 def write_splits(out_directory, snippets, splits):
     """

@@ -209,18 +209,6 @@ from stanza.utils.datasets.sentiment import process_vsfc_vietnamese
 
 from stanza.utils.datasets.sentiment import process_utils
 
-SHARDS = ("train", "dev", "test")
-
-def write_dataset(dataset, out_directory, dataset_name):
-    """
-    Write train, dev, test as .json files for a given dataset
-
-    dataset: 3 lists of sentiment tuples
-    """
-    for shard, phrases in zip(SHARDS, dataset):
-        output_file = os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard))
-        process_utils.write_list(output_file, phrases)
-
 def convert_sst_general(paths, dataset_name, version):
     in_directory = paths['SENTIMENT_BASE']
     sst_dir = os.path.join(in_directory, "sentiment-treebank")
@@ -230,7 +218,7 @@ def convert_sst_general(paths, dataset_name, version):
 
     out_directory = paths['SENTIMENT_DATA_DIR']
     dataset = [train_phrases, dev_phrases, test_phrases]
-    write_dataset(dataset, out_directory, dataset_name)
+    process_utils.write_dataset(dataset, out_directory, dataset_name)
 
 def convert_sst2(paths, dataset_name):
     """
@@ -271,7 +259,7 @@ def convert_sstplus(paths, dataset_name):
 
     out_directory = paths['SENTIMENT_DATA_DIR']
     dataset = [train_phrases, dev_phrases, test_phrases]
-    write_dataset(dataset, out_directory, dataset_name)
+    process_utils.write_dataset(dataset, out_directory, dataset_name)
 
 def convert_meld(paths, dataset_name):
     """
@@ -330,7 +318,7 @@ def convert_mr_l3cube(paths, dataset_name):
     datasets = [process_utils.read_snippets(csv_filename, sentiment_column=1, text_column=0, tokenizer_language="mr", mapping=MAPPING, delimiter=',', quotechar='"', skip_first_line=True)
                 for csv_filename in input_files]
 
-    write_dataset(datasets, out_directory, dataset_name)
+    process_utils.write_dataset(datasets, out_directory, dataset_name)
 
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
