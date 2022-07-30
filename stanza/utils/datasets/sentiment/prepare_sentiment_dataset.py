@@ -209,11 +209,13 @@ from stanza.utils.datasets.sentiment import process_vsfc_vietnamese
 
 from stanza.utils.datasets.sentiment import process_utils
 
-SHARDS = ["train", "dev", "test"]
+SHARDS = ("train", "dev", "test")
 
 def write_dataset(dataset, out_directory, dataset_name):
     """
-    Write train, dev, test for a given dataset
+    Write train, dev, test as .json files for a given dataset
+
+    dataset: 3 lists of sentiment tuples
     """
     for shard, phrases in zip(SHARDS, dataset):
         output_file = os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard))
@@ -328,9 +330,7 @@ def convert_mr_l3cube(paths, dataset_name):
     datasets = [process_utils.read_snippets(csv_filename, sentiment_column=1, text_column=0, tokenizer_language="mr", mapping=MAPPING, delimiter=',', quotechar='"', skip_first_line=True)
                 for csv_filename in input_files]
 
-    for snippets, shard in zip(datasets, SHARDS):
-        process_utils.write_list(os.path.join(out_directory, "%s.%s.json" % (dataset_name, shard)), snippets)
-
+    write_dataset(datasets, out_directory, dataset_name)
 
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
