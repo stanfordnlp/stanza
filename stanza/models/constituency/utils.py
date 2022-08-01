@@ -99,25 +99,26 @@ def build_optimizer(args, model):
     """
     Build an optimizer based on the arguments given
     """
+    parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
     if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
+        optimizer = optim.Adadelta(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
     elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], betas=(0.9, args['learning_beta2']), eps=args['learning_eps'], weight_decay=args['weight_decay'])
+        optimizer = optim.AdamW(parameters, lr=args['learning_rate'], betas=(0.9, args['learning_beta2']), eps=args['learning_eps'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adabelief':
         try:
             from adabelief_pytorch import AdaBelief
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
         # TODO: make these args
-        optimizer = AdaBelief(model.parameters(), lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], weight_decouple=False, rectify=False)
+        optimizer = AdaBelief(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], weight_decouple=False, rectify=False)
     elif args['optim'].lower() == 'madgrad':
         try:
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        optimizer = madgrad.MADGRAD(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'])
     else:
         raise ValueError("Unknown optimizer: %s" % args['optim'])
     return optimizer
