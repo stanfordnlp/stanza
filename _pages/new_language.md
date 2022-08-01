@@ -61,6 +61,12 @@ phrase, with the label first and the text as a whitespaced tokenized
 sentencse after that.  For example, see any of the sentiment
 processing scripts.
 
+The NER model uses a `.json` format converted from `BIO` files.  We
+have added an [end to end NER training example](new_language_ner.md).
+Please reference that for a complete description of how to add a new
+NER model.
+
+The constituency parser uses bracketed trees similar to the PTB format.
 
 ## Word Vectors
 
