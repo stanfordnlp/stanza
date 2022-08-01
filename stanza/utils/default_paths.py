@@ -26,7 +26,7 @@ def get_default_paths():
 
         # TODO: not sure what other people actually have
         # TODO: also, could make this automatically update to the latest
-        "UDBASE": "extern_data/ud2/ud-treebanks-v2.8",
+        "UDBASE": "extern_data/ud2/ud-treebanks-v2.10",
 
         "NERBASE": "extern_data/ner",
         "CONSTITUENCY_BASE": "extern_data/constituency",
