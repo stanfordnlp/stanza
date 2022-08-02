@@ -11,7 +11,7 @@ logger = logging.getLogger('stanza')
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
-    short_language = short_name.split("_")[0]
+    short_language, dataset = short_name.split("_")
 
     # TODO: refactor these blocks?
     depparse_dir   = paths["DEPPARSE_DATA_DIR"]
@@ -48,7 +48,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-        train_args = train_args + wordvec_args(short_language)
+        train_args = train_args + wordvec_args(short_language, dataset, extra_args)
         train_args = train_args + extra_args
         logger.info("Running train depparse for {} with args {}".format(treebank, train_args))
         parser.main(train_args)
