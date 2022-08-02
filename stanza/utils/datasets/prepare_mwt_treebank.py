@@ -44,12 +44,11 @@ def process_treebank(treebank, paths, args):
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "dev", "gold")
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "test", "gold")
 
-        shutil.copyfile(prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, "train"),
-                        prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, "train"))
-        shutil.copyfile(prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, "dev"),
-                        prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, "dev"))
-        shutil.copyfile(prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, "test"),
-                        prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, "test"))
+        for shard in ("train", "dev", "test"):
+            source_filename = prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, shard)
+            dest_filename = prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, shard)
+            print("Copying from %s to %s" % (source_filename, dest_filename))
+            shutil.copyfile(source_filename, dest_filename)
 
         contract_mwt(f"{mwt_dir}/{short_name}.dev.gold.conllu",
                      f"{mwt_dir}/{short_name}.dev.in.conllu")

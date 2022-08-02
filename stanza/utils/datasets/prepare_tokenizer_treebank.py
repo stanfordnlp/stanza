@@ -44,6 +44,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     original = f"{tokenizer_dir}/{short_name}.{tokenizer_file}.conllu"
     copied = f"{dest_dir}/{short_name}.{dest_file}.conllu"
 
+    print("Copying from %s to %s" % (original, copied))
     shutil.copyfile(original, copied)
 
 def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
