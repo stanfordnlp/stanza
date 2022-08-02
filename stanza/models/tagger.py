@@ -290,10 +290,13 @@ def evaluate(args):
 
     pretrain = load_pretrain(args)
 
+    load_args = {'charlm_forward_file': args.get('charlm_forward_file', None),
+                 'charlm_backward_file': args.get('charlm_backward_file', None)}
+
     # load model
     logger.info("Loading model from: {}".format(model_file))
     use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda, args=load_args)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
