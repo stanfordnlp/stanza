@@ -199,8 +199,7 @@ class CharacterLanguageModel(nn.Module):
             if self.finetune: # only set to training mode in finetune status
                 super().train(mode)
 
-    def save(self, filename):
-        os.makedirs(os.path.split(filename)[0], exist_ok=True)
+    def full_state(self):
         state = {
             'vocab': self.vocab['char'].state_dict(),
             'args': self.args,
@@ -208,14 +207,83 @@ class CharacterLanguageModel(nn.Module):
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
         }
+        return state
+
+    def save(self, filename):
+        os.makedirs(os.path.split(filename)[0], exist_ok=True)
+        state = self.full_state()
         torch.save(state, filename, _use_new_zipfile_serialization=False)
 
     @classmethod
-    def load(cls, filename, finetune=False):
-        state = torch.load(filename, lambda storage, loc: storage)
+    def from_full_state(cls, state, finetune=False):
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
         model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
         model.eval()
         model.finetune = finetune # set finetune status
         return model
+
+    @classmethod
+    def load(cls, filename, finetune=False):
+        state = torch.load(filename, lambda storage, loc: storage)
+        # allow saving just the Model object,
+        # and allow for old charlms to still work
+        if 'state_dict' in state:
+            return cls.from_full_state(state, finetune)
+        return cls.from_full_state(state['model'], finetune)
+
+class CharacterLanguageModelTrainer():
+    def __init__(self, model, params, optimizer, criterion, scheduler):
+        self.model = model
+        self.params = params
+        self.optimizer = optimizer
+        self.criterion = criterion
+        self.scheduler = scheduler
+
+    def save(self, filename, full=True):
+        os.makedirs(os.path.split(filename)[0], exist_ok=True)
+        state = {
+            'model': self.model.full_state()
+        }
+        if full and self.optimizer is not None:
+            state['optimizer'] = self.optimizer.state_dict()
+        if full and self.criterion is not None:
+            state['criterion'] = self.criterion.state_dict()
+        if full and self.scheduler is not None:
+            state['scheduler'] = self.scheduler.state_dict()
+        torch.save(state, filename, _use_new_zipfile_serialization=False)
+
+    @classmethod
+    def from_new_model(cls, args, vocab):
+        model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
+        if args['cuda']: model = model.cuda()
+        params = [param for param in model.parameters() if param.requires_grad]
+        optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
+        criterion = torch.nn.CrossEntropyLoss()
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
+        return cls(model, params, optimizer, criterion, scheduler)
+
+
+    @classmethod
+    def load(cls, args, filename, finetune=False):
+        """
+        Load the model along with any other saved state for training
+
+        Note that you MUST set finetune=True if planning to continue training
+        Otherwise the only benefit you will get will be a warm GPU
+        """
+        state = torch.load(filename, lambda storage, loc: storage)
+        model = CharacterLanguageModel.from_full_state(state['model'], finetune)
+        if args['cuda']: model = model.cuda()
+
+        params = [param for param in model.parameters() if param.requires_grad]
+        optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
+        if 'optimizer' in state: optimizer.load_state_dict(state['optimizer'])
+
+        criterion = torch.nn.CrossEntropyLoss()
+        if 'criterion' in state: criterion.load_state_dict(state['criterion'])
+
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
+        if 'scheduler' in state: scheduler.load_state_dict(state['scheduler'])
+        return cls(model, params, optimizer, criterion, scheduler)
+
