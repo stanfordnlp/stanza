@@ -196,3 +196,16 @@ Note that MWT does not apply for datasets with no multi-word tokens.  If you att
 | POS      | stanza.utils.datasets.prepare_pos_treebank       | stanza.utils.training.run_pos      | POS_DATA_DIR          | saved_models/pos      |
 | Depparse | stanza.utils.datasets.prepare_depparse_treebank  | stanza.utils.training.run_depparse | DEPPARSE_DATA_DIR     | saved_models/depparse |
 
+### Word Vectors
+
+The POS models use word vectors and charlm.  We provide default word
+vectors for existing models, which the `run_pos` script will download.
+You can also provide your own.  You will first need to
+[convert the word vectors](word_vectors.md) to a `.pt` file.
+Once that is done, you can specify a path to a new vectors file
+with the `--wordvec_pretrain_file` argument.
+
+The POS models also use charlm for languages where that is supported.
+(On the TODO list is adding that feature to depparse.)  If you want to
+test the effect of a new set of word vectors, you may want to use the
+`--no_charlm` flag to turn off the charlm models.
