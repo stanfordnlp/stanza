@@ -179,9 +179,7 @@ python3 -m stanza.utils.training.run_tokenizer UD_English-EWT --score_test
 
 ### Other processors
 
-The process is identical for MWT, Lemmatizer, and POS.
-
-There is a subtle difference for Depparse, though.  TODO
+The process is identical for MWT, Lemmatizer, and POS.  Depparse will [redo the tags](retrain_ud.md#depparse-retagging) by default.
 
 Note that MWT does not apply for datasets with no multi-word tokens.  If you attempt to run MWT on a dataset with no MWTs, you will get a message such as
 
@@ -209,3 +207,29 @@ The POS models also use charlm for languages where that is supported.
 (On the TODO list is adding that feature to depparse.)  If you want to
 test the effect of a new set of word vectors, you may want to use the
 `--no_charlm` flag to turn off the charlm models.
+
+### Depparse retagging
+
+At runtime, the dependency parser will not have gold tags, but will
+have predicted tags from the POS tagger.  Accordingly, the
+`prepare_depparse_treebank` script will run the tagger to put
+predicted tags on the dependency dataset.
+
+This behavior can be turned off with `--gold`, but that is not recommended.
+
+If a tagger model is present in the pos save directory, that model
+will be used.  In other words, a retrained model will be the preferred
+model to use.  Otherwise, `prepare_depparse_treebank` will download
+the default model for the given treebank.  For some languages, that
+will include the charlm, which will also be automatically downloaded.
+
+The path to the tagger model can also be manually specified with the `--tagger_model` flag.
+
+`prepare_depparse_treebank` flags:
+
+| Flag                      | Behavior                                                                                              |
+| :------                   | :-------                                                                                              |
+| `--predicted`             | Turn on retagging for the depparse dataset (default)                                                  |
+| `--gold`                  | Turn off retagging for the depparse dataset                                                           |
+| `--tagger_model`          | Where to find the POS tagger.  An attempt will be made to find it if not specified                    |
+| `--wordvec_pretrain_file` | Word vectors to use for the POS tagger when retagging.  A default will be downloaded if not specified |
