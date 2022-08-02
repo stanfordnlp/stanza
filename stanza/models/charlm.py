@@ -14,7 +14,7 @@ from types import GeneratorType
 import numpy as np
 import torch
 
-from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel
+from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel, CharacterLanguageModelTrainer
 from stanza.models.common.vocab import CharVocab
 from stanza.models.common import utils
 from stanza.models import _training_logging
@@ -96,6 +96,8 @@ def parse_args(args=None):
     parser.add_argument('--eval_steps', type=int, default=100000, help="Update step interval to run eval on dev; set to -1 to eval after each epoch")
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--vocab_save_name', type=str, default=None, help="File name to save the vocab")
+    parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
+    parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--summary', action='store_true', help='Use summary writer to record progress.')
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
@@ -156,15 +158,16 @@ def evaluate_epoch(args, vocab, data, model, criterion):
             total_loss += data.size(1) * loss.data.item()
     return total_loss / batches.size(1)
 
-def evaluate_and_save(args, vocab, data, model, criterion, scheduler, best_loss, global_step, model_file, writer=None):
+def evaluate_and_save(args, vocab, data, trainer, best_loss, global_step, model_file, checkpoint_file, writer=None):
     """
     Run an evaluation over entire dataset, print progress and save the model if necessary.
     """
     start_time = time.time()
-    loss = evaluate_epoch(args, vocab, data, model, criterion)
+    loss = evaluate_epoch(args, vocab, data, trainer.model, trainer.criterion)
     ppl = math.exp(loss)
     elapsed = int(time.time() - start_time)
-    scheduler.step(loss)
+    # TODO: step the scheduler less often when the eval frequency is higher
+    trainer.scheduler.step(loss)
     logger.info(
         "| eval checkpoint @ global step {:10d} | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
             global_step,
@@ -175,11 +178,15 @@ def evaluate_and_save(args, vocab, data, model, criterion, scheduler, best_loss,
     )
     if best_loss is None or loss < best_loss:
         best_loss = loss
-        model.save(model_file)
-        logger.info('new best model saved at step {:10d}.'.format(global_step))
+        trainer.save(model_file, full=False)
+        logger.info('new best model saved at step {:10d}'.format(global_step))
     if writer:
         writer.add_scalar('dev_loss', loss, global_step=global_step)
         writer.add_scalar('dev_ppl', ppl, global_step=global_step)
+    if checkpoint_file:
+        trainer.save(checkpoint_file, full=True)
+        logger.info('new checkpoint saved at step {:10d}'.format(global_step))
+
     return loss, ppl, best_loss
 
 def train(args):
@@ -187,6 +194,11 @@ def train(args):
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
     vocab_file = args['save_dir'] + '/' + args['vocab_save_name'] if args['vocab_save_name'] is not None \
         else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
+    if args['checkpoint']:
+        checkpoint_file = os.path.join(args['save_dir'], args['checkpoint_save_name']) if args['checkpoint_save_name'] \
+            else os.path.join(args['save_dir'], '{}_{}_charlm_checkpoint.pt'.format(args['shorthand'], args['direction']))
+    else:
+        checkpoint_file = None
 
     if os.path.exists(vocab_file):
         logger.info('Loading existing vocab file')
@@ -197,12 +209,10 @@ def train(args):
         torch.save(vocab['char'].state_dict(), vocab_file)
     logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
 
-    model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
-    if args['cuda']: model = model.cuda()
-    params = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
-    criterion = torch.nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
+    if checkpoint_file and os.path.exists(checkpoint_file):
+        trainer = CharacterLanguageModelTrainer.load(args, checkpoint_file, finetune=True)
+    else:
+        trainer = CharacterLanguageModelTrainer.from_new_model(args, vocab)
 
     writer = None
     if args['summary']:
@@ -243,7 +253,7 @@ def train(args):
             iteration, i = 0, 0
             # over the data chunk
             while i < batches.size(1) - 1 - 1:
-                model.train()
+                trainer.model.train()
                 global_step += 1
                 start_time = time.time()
                 bptt = args['bptt_size'] if np.random.random() < 0.95 else args['bptt_size']/ 2.
@@ -257,14 +267,14 @@ def train(args):
                     data = data.cuda()
                     target = target.cuda()
                 
-                optimizer.zero_grad()
-                output, hidden, decoded = model.forward(data, lens, hidden)
-                loss = criterion(decoded.view(-1, len(vocab['char'])), target)
+                trainer.optimizer.zero_grad()
+                output, hidden, decoded = trainer.model.forward(data, lens, hidden)
+                loss = trainer.criterion(decoded.view(-1, len(vocab['char'])), target)
                 total_loss += loss.data.item()
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(params, args['max_grad_norm'])
-                optimizer.step()
+                torch.nn.utils.clip_grad_norm_(trainer.params, args['max_grad_norm'])
+                trainer.optimizer.step()
 
                 hidden = repackage_hidden(hidden)
 
@@ -290,15 +300,15 @@ def train(args):
 
                 # evaluate if necessary
                 if eval_within_epoch and global_step % args['eval_steps'] == 0:
-                    _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
-                                                          global_step, model_file, writer)
+                    _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
+                                                          global_step, model_file, checkpoint_file, writer)
                     if args['wandb']:
                         wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
 
         # if eval_interval isn't provided, run evaluation after each epoch
         if not eval_within_epoch:
-            _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, model, criterion, scheduler, best_loss, \
-                                                  epoch, model_file, writer) # use epoch in place of global_step for logging
+            _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
+                                                  epoch, model_file, checkpoint_file, writer) # use epoch in place of global_step for logging
             if args['wandb']:
                 wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
 
