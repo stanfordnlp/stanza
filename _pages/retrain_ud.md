@@ -206,7 +206,7 @@ with the `--wordvec_pretrain_file` argument.
 The POS models also use charlm for languages where that is supported.
 (On the TODO list is adding that feature to depparse.)  If you want to
 test the effect of a new set of word vectors, you may want to use the
-`--no_charlm` flag to turn off the charlm models.
+`--no_charlm` flag to turn off the charlm models in the POS.
 
 ### Depparse retagging
 
@@ -215,7 +215,12 @@ have predicted tags from the POS tagger.  Accordingly, the
 `prepare_depparse_treebank` script will run the tagger to put
 predicted tags on the dependency dataset.
 
-This behavior can be turned off with `--gold`, but that is not recommended.
+This behavior can be turned off with `--gold`, but that is not
+recommended.  One situation where you might want to turn off retagging
+is when testing the effects of different word embeddings.  In such a
+situation, you can isolate the effect of the word vectors on the
+dependency parsing by using gold tags instead of tags predicted by
+POS.
 
 If a tagger model is present in the pos save directory, that model
 will be used.  In other words, a retrained model will be the preferred
