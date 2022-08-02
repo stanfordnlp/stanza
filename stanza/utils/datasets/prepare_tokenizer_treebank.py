@@ -1013,6 +1013,7 @@ def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
     input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
     output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+    print("Reading from %s and writing to %s" % (input_conllu, output_conllu))
 
     if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
