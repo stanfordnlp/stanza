@@ -99,6 +99,39 @@ Instead of downloading an individual repo, we can download them all
 [from the UD home page](https://universaldependencies.org/#download)
 and put that in `$UDBASE`.
 
+### Updating data
+
+If you wish to make changes to the data itself, this is the moment to
+do so.  You can edit the `{train,dev,test}.conllu` files in the
+dataset directory to make those changes.  In the case of
+`UD_English-EWT`, for example, you would edit
+
+```
+en_ewt-ud-train.conllu
+en_ewt-ud-dev.conllu
+en_ewt-ud-test.conllu
+```
+
+Please refer to the
+[UD documentation](https://universaldependencies.org/format.html)
+for the expected format.  It is not necessary to update the `.txt`
+files, as the prepare scripts will rebuild them in your local data
+directory.
+
+In the UD files, the tokenizer separates the raw text into sentences
+and "forms".  The MWT processor marks which tokens are composed of
+multiple words, which is represented in the datasets as:
+
+```
+1-2     Don't   _       _       _       _       _       _       _       _
+1       Do      do      AUX     VBP     Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin   3       aux     3:aux   _
+2       n't     not     PART    RB      _       3       advmod  3:advmod        _
+```
+
+The lemmatizer processes lemmas, the POS processes upos, xpos, and
+features as a joint model, and depparse processes HEAD and DEPREL.
+
+
 ### Preparing data
 
 A script is included with Stanza which will read the dataset from `$UDBASE` and write it to `$TOKENIZE_DATA_DIR`:
