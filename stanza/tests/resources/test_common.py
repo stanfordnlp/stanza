@@ -20,6 +20,7 @@ def test_assert_file_exists():
 
         with open(filename, "w", encoding="utf-8") as fout:
             fout.write("Unban mox opal!")
+        # MD5 of the fake model file, not any real model files in the system
         EXPECTED_MD5 = "44dbf21b4e89cea5184615a72a825a36"
         common.assert_file_exists(filename)
         common.assert_file_exists(filename, md5=EXPECTED_MD5)
