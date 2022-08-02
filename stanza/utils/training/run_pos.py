@@ -7,21 +7,28 @@ from stanza.models import tagger
 
 from stanza.resources.prepare_resources import no_pretrain_languages
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, pos_charlms
+from stanza.resources.prepare_resources import default_charlms, pos_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
 
 # TODO: move this somewhere common
-def wordvec_args(short_language):
+def wordvec_args(short_language, dataset, extra_args):
+    if '--wordvec_pretrain_file' in extra_args:
+        return []
+
     if short_language in no_pretrain_languages:
-        # we couldn't find word vectors for these languages:
+        # we couldn't find word vectors for a few languages...:
         # coptic, naija, old russian, turkish german, swedish sign language
         logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
         return ["--no_pretrain"]
     else:
-        return []
+        # for POS and depparse, there is a separate copy of the pretrain for each of the datasets
+        # TODO: unify those into one pretrain
+        dataset_pretrains = {short_language: {dataset: dataset}}
+        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
+        return ["--wordvec_pretrain_file", wordvec_pretrain]
 
 def pos_batch_size(short_name):
     if short_name == 'de_hdt':
@@ -66,7 +73,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-        train_args = train_args + wordvec_args(short_language) + charlm_args
+        train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
@@ -79,7 +86,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        dev_args = dev_args + wordvec_args(short_language) + charlm_args
+        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
@@ -95,7 +102,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        test_args = test_args + wordvec_args(short_language) + charlm_args
+        test_args = test_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
