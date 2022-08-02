@@ -69,7 +69,11 @@ loading and smaller disk sizes.  A script is provided which does that:
 python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_fasttext.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
 ```
 
-The third argument sets the limit on how many vectors to keep.
+The third argument sets the limit on how many vectors to keep.  In
+most cases you will not want to keep them all, as the resulting file
+could be GB large with a long tail of junk that provides no value to
+the model.  We typically use 150000 as a compromise between
+completeness and size/memory.
 
 New in v1.2.1
 {: .label .label-green }
@@ -79,3 +83,17 @@ There is also a script for counting how many times words in a UD training set ap
 ```
 stanza/models/common/count_pretrain_coverage.py
 ```
+
+### Large vector files
+
+In some cases, the word vector files are so large that they will not
+fit in memory.  The conversion program does not compensate for that at all.
+To handle this problem, you can use `head` to get just the lines we will make use of:
+
+```bash
+cd ~/extern_data/wordvec/fasttext   # or wherever you put the vectors
+gunzip cc.bn.300.vec.gz
+head -n 150001 cc.bn.300.vec > cc.bn.300.head   # +1 as many text formats include a header
+python3 -m stanza.models.common.convert_pretrain ~/stanza_resources/bn/pretrain/fasttext.pt cc.bn.300.head 150000
+```
+

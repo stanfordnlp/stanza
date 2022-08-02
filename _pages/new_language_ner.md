@@ -189,6 +189,8 @@ head -n 150001 cc.bn.300.vec > cc.bn.300.head   # +1 as many text formats includ
 python3 -m stanza.models.common.convert_pretrain ~/stanza_resources/bn/pretrain/fasttext.pt cc.bn.300.head 150000
 ```
 
+More information is [here](word_vectors.md)
+
 ### Training!
 
 At this point, everything is ready to push the button and start training.
