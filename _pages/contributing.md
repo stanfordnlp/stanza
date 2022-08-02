@@ -3,8 +3,8 @@ layout: page
 title: Contributing
 keywords: testing
 permalink: '/contributing.html'
+nav_order: 10
 parent: Usage
-nav_order: 9
 ---
 
 ## Git issues
