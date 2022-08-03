@@ -9,7 +9,7 @@ import tempfile
 from enum import Enum
 
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.resources.common import download, DEFAULT_MODEL_DIR
+from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
 from stanza.utils import conll18_ud_eval as ud_eval
@@ -263,7 +263,12 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         default_pt_path = '{}/{}/pretrain/{}.pt'.format(DEFAULT_MODEL_DIR, language, default_pt)
         if not os.path.exists(default_pt_path):
             logger.info("Default pretrain should be {}  Attempting to download".format(default_pt_path))
-            download(lang=language, package=None, processors={"pretrain": default_pt})
+            try:
+                download(lang=language, package=None, processors={"pretrain": default_pt})
+            except UnknownLanguageError:
+                # if there's a pretrain in the directory, hiding this
+                # error will let us find that pretrain later
+                pass
         if os.path.exists(default_pt_path):
             logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             return default_pt_path
@@ -275,7 +280,14 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         # and it didn't work.  maybe the default language package
         # will have something?
         logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
-        download(lang=language)
+        try:
+            download(lang=language)
+        except UnknownLanguageError as e:
+            # this is a very unusual situation
+            # basically, there was a language which we started to add
+            # to the resources, but then didn't release the models
+            # as part of resources.json
+            raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  No pretrains in the system for this language.  Please prepare an embedding as a .pt and use --wordvec_pretrain_file to specify a .pt file to use") from e
         pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
         raise FileNotFoundError(f"Cannot find any pretrains in {pretrain_path}  Try 'stanza.download(\"{language}\")' to get a default pretrain or use --wordvec_pretrain_file to specify a .pt file to use")
