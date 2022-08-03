@@ -46,6 +46,11 @@ class ResourcesFileNotFoundError(FileNotFoundError):
         super().__init__(f"Resources file not found at: {resources_filepath}  Try to download the model again.")
         self.resources_filepath = resources_filepath
 
+class UnknownLanguageError(ValueError):
+    def __init__(self, unknown):
+        super().__init__(f"Unknown language requested: {unknown}")
+        self.unknown_language = unknown
+
 class UnknownProcessorError(ValueError):
     def __init__(self, unknown):
         super().__init__(f"Unknown processor type requested: {unknown}")
@@ -534,7 +539,7 @@ def download(
     download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
     resources = load_resources_json(model_dir)
     if lang not in resources:
-        raise ValueError(f'Unsupported language: {lang}')
+        raise UnknownLanguageError(lang)
     if 'alias' in resources[lang]:
         logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
         lang = resources[lang]['alias']
