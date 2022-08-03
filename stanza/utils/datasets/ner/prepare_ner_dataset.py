@@ -261,6 +261,17 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+Thai-NNER is another Thai NER dataset, from 2022
+  - https://github.com/vistec-AI/Thai-NNER
+  - https://aclanthology.org/2022.findings-acl.116/
+    Thai Nested Named Entity Recognition Corpus
+    Weerayut Buaphet, Can Udomcharoenchaikit, Peerat Limkonchotiwat,
+    Attapol Rutherford, and Sarana Nutanong
+  - git clone the data to $NERBASE/thai
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_nner22
+
+
 NKJP is a Polish NER dataset
   - http://nkjp.pl/index.php?page=0&lang=1
     About the Project
@@ -385,6 +396,7 @@ import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
 import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
+import stanza.utils.datasets.ner.convert_nner22 as convert_nner22
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
@@ -909,6 +921,9 @@ def process_hinercollapsed(paths, short_name):
 def process_lst20(paths, short_name, include_space_char=True):
     convert_lst20.convert_lst20(paths, short_name, include_space_char)
 
+def process_nner22(paths, short_name, include_space_char=True):
+    convert_nner22.convert_nner22(paths, short_name, include_space_char)
+
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     in_directory = os.path.join(paths["NERBASE"], "marathi", "MarathiNLP", "L3Cube-MahaNER", "IOB")
@@ -1074,6 +1089,7 @@ DATASET_MAPPING = {
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
     "th_lst20":          process_lst20,
+    "th_nner22":         process_nner22
 }
 
 def main(dataset_name):
