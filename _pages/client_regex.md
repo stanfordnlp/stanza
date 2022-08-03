@@ -97,38 +97,38 @@ For this snippet, the result will look like:
 result {
   result {
     match {
-      index: 9
+      matchIndex: 9
       node {
         name: "action"
-        index: 3
+        matchIndex: 3
       }
       node {
         name: "object"
-        index: 9
+        matchIndex: 9
       }
     }
   }
   result {
     match {
-      index: 6
+      matchIndex: 6
       node {
         name: "action"
-        index: 3
+        matchIndex: 3
       }
       node {
         name: "thing"
-        index: 6
+        matchIndex: 6
       }
     }
     match {
-      index: 2
+      matchIndex: 2
       node {
         name: "action"
-        index: 1
+        matchIndex: 1
       }
       node {
         name: "thing"
-        index: 2
+        matchIndex: 2
       }
     }
   }
@@ -138,14 +138,14 @@ result {
   }
   result {
     match {
-      index: 4
+      matchIndex: 4
       node {
         name: "action"
-        index: 3
+        matchIndex: 3
       }
       node {
         name: "thing"
-        index: 4
+        matchIndex: 4
       }
     }
   }
@@ -157,14 +157,106 @@ result {
 New in v1.2.1
 {: .label .label-green }
 
-In the next release, it will be possible to use semgrex as a Python
-context.  This will allow multiple calls per Java process, hopefully
-reducing overhead in situations where there are lots of small queries.
+As of v1.2.1, there is now a Python context which allows reuse of an
+existing Java process.  This will allow multiple calls per Java
+process, hopefully reducing overhead in situations where there are
+lots of small queries, as creating the Java process can wind up being
+more expensive than the semgrex query itself.
+
+{% include alerts.html %}
+{{ note }}
+{{ "If you use the parameter `classpath="$CLASSPATH"`, it will use your system classpath when launching CoreNLP tasks" | markdownify }}
+{{ end }}
 
 ```python
-with Semgrex(classpath=???) as sem:
-  result = sem.process(doc, patterns)
+import stanza
+from stanza.server.semgrex import Semgrex
+
+nlp = stanza.Pipeline("en", processors="tokenize,pos,lemma,depparse")
+
+doc = nlp("Banning opal removed all artifact decks from the meta.  I miss playing lantern.")
+with Semgrex(classpath="$CLASSPATH") as sem:
+    semgrex_results = sem.process(doc,
+                                  "{pos:NN}=object <obl {}=action",
+                                  "{cpos:NOUN}=thing <obj {cpos:VERB}=action")
+    print(semgrex_results)
+    print(semgrex_results.result[0].result[0])
 ```
+
+A single result `.result[i].result[j]` is a list of matches for
+sentence `i` on semgrex query `j`.  So, for example,
+`semgrex_results.result[0].result[0]` in the previous example is:
+
+```
+match {
+  matchIndex: 9
+  node {
+    name: "object"
+    matchIndex: 9
+  }
+  node {
+    name: "action"
+    matchIndex: 3
+  }
+}
+```
+
+The graphs and semgrex expressions are indexed from `0`, but the words
+are effectively indexed from `1` considering there is a `ROOT` node
+added at index `0` to each dependency graph.
+
+In plain English, the `0th` semgrex expression says:
+- Find a word with POS tag `NN` which is the dependent of a word using an `obl` relation.
+- Label the child `object` and the parent `action`
+
+In this example, in the `0th` graph, the word "meta" is the child of "removed".
+
+If there are no matches for graph `i` and query `j`, the result will
+be empty.  In the previous example, there are no `obl` relations in
+the sentence `I miss playing lantern.`  Therefore,
+`semgrex_results.result[1].result[0]` is empty:
+
+```
+print(len(semgrex_results.result[1].result[0].match))
+
+0
+```
+
+Multiple matches can occur for a single graph / query pair.  For
+example, there are two `obj` relations in the sentence
+`Banning opal removed all artifact decks ...`
+`opal` is the dependent of `Banning`, and `decks` is the dependent of `removed`:
+
+```
+print(semgrex_results.result[0].result[1].match[0])
+
+matchIndex: 6
+node {
+  name: "thing"
+  matchIndex: 6
+}
+node {
+  name: "action"
+  matchIndex: 3
+}
+
+
+print(semgrex_results.result[0].result[1].match[1])
+
+matchIndex: 2
+node {
+  name: "thing"
+  matchIndex: 2
+}
+node {
+  name: "action"
+  matchIndex: 1
+}
+```
+
+The format for communication with the Java semgrex is a
+[Protobuf](https://developers.google.com/protocol-buffers/docs/pythontutorial).
+Look for SemgrexResponse in the [CoreNLP proto definition](https://github.com/stanfordnlp/stanza/blob/main/doc/CoreNLP.proto).
 
 ## TokensRegex
 
