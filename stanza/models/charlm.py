@@ -85,7 +85,7 @@ def parse_args(args=None):
     parser.add_argument('--bptt_size', type=int, default=250, help="Sequence length to consider at a time")
     parser.add_argument('--epochs', type=int, default=50, help="Total epochs to train the model for")
     parser.add_argument('--max_grad_norm', type=float, default=0.25, help="Maximum gradient norm to clip to")
-    parser.add_argument('--lr0', type=float, default=20, help="Initial learning rate")
+    parser.add_argument('--lr0', type=float, default=5, help="Initial learning rate")
     parser.add_argument('--anneal', type=float, default=0.25, help="Anneal the learning rate by this amount when dev performance deteriorate")
     parser.add_argument('--patience', type=int, default=1, help="Patience for annealing the learning rate")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
