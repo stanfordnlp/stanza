@@ -195,6 +195,73 @@ Together this is the BIOES format on the wikipedia page.  The NER
 model will internally convert both of the previous tag schemes to
 BIOES, so it is not necessary to do that manually.
 
+### Untokenized text
+
+{% include alerts.html %}
+{{ note }}
+{{ "This section is not relevant to datasets which already have one label per token, such as the Bangla dataset we are following." | markdownify }}
+{{ end }}
+
+Some datasets have untokenized text in one form or another.  This will
+not work for our NER model, which labels text on a per-token basis and
+uses the tokens to look up in word vectors, the character model, and
+transformers.
+
+In the case of a language which is previously unknown to Stanza, this
+is a problem which can only be fixed by first finding a dataset
+suitable for training a tokenizer, then training a tokenizer.  You can
+file an issue on github if there is a language where you want to
+create an NER model, but do not have a tokenizer.
+
+In the case of a model where we do already have a tokenizer, though,
+you can use the existing tokenizer to tokenize the dataset.
+
+{% include alerts.html %}
+{{ note }}
+{{ "Only load the tokenizer once, then reuse it multiple times for each sentence processed" | markdownify }}
+{{ end }}
+
+Each case will be different, depending on how the tags are annotated
+in the dataset, but there are two common situations: the text is one
+block with no sentence splits, or the text is already split one
+sentence per line.
+
+```python
+import stanza
+# assuming there are no sentence breaks either
+pipe = stanza.Pipeline(language, processors="tokenize")
+
+doc = pipe(text)
+for sentence in doc:
+    for token in sentence.tokens:
+        # process the tokens and their tags here
+        print(token)
+        # token.text is the text
+        # in case token boundaries are marked by character:
+        # token.start_char is the start character
+        # token.end_char is the end character
+        #  (not inclusive, so `John` would be start_char=0, end_char=4)
+```
+
+
+```python
+import stanza
+# assuming there is one line per sentence
+pipe = stanza.Pipeline(language, processors="tokenize", tokenize_no_ssplit=True)
+
+for text in lines:
+    doc = pipe(text)
+    sentence = doc.sentences[0]
+    for token in sentence.tokens:
+        # process the tokens and their tags here
+        print(token)
+        # token.text is the text
+        # in case token boundaries are marked by character:
+        # token.start_char is the start character
+        # token.end_char is the end character
+        #  (not inclusive, so `John` would be start_char=0, end_char=4)
+```
+
 ### Word Vectors
 
 Processed data is not everything we need, though, as this is the first model we
