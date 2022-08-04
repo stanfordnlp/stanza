@@ -110,6 +110,7 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
     return args
 
 def main(args=None):
@@ -123,7 +124,6 @@ def main(args=None):
     elif args.cuda:
         torch.cuda.manual_seed(args.seed)
 
-    args = vars(args)
     logger.info("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
     
     utils.ensure_dir(args['save_dir'])
