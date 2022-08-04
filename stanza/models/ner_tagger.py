@@ -177,10 +177,14 @@ def train(args):
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_doc = Document(json.load(open(args['train_file'])))
     logger.info("Loaded %d sentences of training data", len(train_doc.sentences))
+    if len(train_doc.sentences) == 0:
+        raise ValueError("File %s exists but has no usable training data" % args['train_file'])
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = Document(json.load(open(args['eval_file'])))
     logger.info("Loaded %d sentences of dev data", len(dev_doc.sentences))
+    if len(dev_doc.sentences) == 0:
+        raise ValueError("File %s exists but has no usable dev data" % args['train_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
 
