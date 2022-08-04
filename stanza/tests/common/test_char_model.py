@@ -12,6 +12,7 @@ import tempfile
 
 import pytest
 
+from stanza.models import charlm
 from stanza.models.common import char_model
 from stanza.tests import TEST_MODELS_DIR
 
@@ -93,6 +94,41 @@ def test_cutoff_vocab():
         else:
             assert letter in vocab
 
+def test_build_model():
+    """
+    Test the whole thing on a small dataset for an iteration or two
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        eval_file = os.path.join(tempdir, "en_test.dev.txt")
+        with open(eval_file, "w", encoding="utf-8") as fout:
+            fout.write(fake_text_1)
+        train_file = os.path.join(tempdir, "en_test.train.txt")
+        with open(train_file, "w", encoding="utf-8") as fout:
+            for i in range(1000):
+                fout.write(fake_text_1)
+                fout.write("\n")
+                fout.write(fake_text_2)
+                fout.write("\n")
+        save_name = 'en_test.forward.pt'
+        vocab_save_name = 'en_text.vocab.pt'
+        args = ['--train_file', train_file,
+                '--eval_file', eval_file,
+                '--eval_steps', '0', # eval once per opoch
+                '--epochs', '2',
+                '--cutoff', '1',
+                '--batch_size', '%d' % len(fake_text_1),
+                '--lang', 'en',
+                '--shorthand', 'en_test',
+                '--save_dir', tempdir,
+                '--save_name', save_name,
+                '--vocab_save_name', vocab_save_name]
+        args = charlm.parse_args(args)
+        charlm.train(args)
+
+        assert os.path.exists(os.path.join(tempdir, vocab_save_name))
+        # test that saving & loading worked
+        assert os.path.exists(os.path.join(tempdir, save_name))
+        model = char_model.CharacterLanguageModel.load(os.path.join(tempdir, save_name))
 
 @pytest.fixture
 def english_forward():
@@ -126,8 +162,8 @@ def test_save_load_model(english_forward, english_backward):
     Load, save, and load again
     """
     with tempfile.TemporaryDirectory() as tempdir:
-        for charlm in (english_forward, english_backward):
+        for model in (english_forward, english_backward):
             save_file = os.path.join(tempdir, "resaved", "charlm.pt")
-            charlm.save(save_file)
+            model.save(save_file)
             reloaded = char_model.CharacterLanguageModel.load(save_file)
-            assert charlm.is_forward_lm == reloaded.is_forward_lm
+            assert model.is_forward_lm == reloaded.is_forward_lm
