@@ -148,9 +148,56 @@ Daffodil dataset for use as a Bangla NER dataset.
 
 [This is the complete change described here.](https://github.com/stanfordnlp/stanza/commit/1ad08b4f07f24eff01e2f9949fcf7f63226e154d)
 
+### Tags
+
+As hinted at in the previous section, there are expected formats for the tags.
+
+For all tagging schemes, the not-an-entity tag is the letter `O`
+
+The simplest tagging scheme is to label words with the type, such as `PER`, `LOC`, `ORG`.  The tags would look something like:
+
+```
+John PER
+works O
+at O
+Stanford ORG
+```
+
+This does not properly handle a sentence such as `Peter Paul and Mary went to ...`  Leaving aside the question of if "Peter Paul and Mary" should be labeled as one entity (music group), this makes `Peter Paul` look like one entity and `Mary` a second:
+
+```
+Peter PER
+Paul PER
+and O
+Mary PER
+went O
+to O
+...
+```
+
+This can be solved with [`BIO`](https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_\(tagging\)) tagging:
+
+```
+Peter B-PER
+Paul B-PER
+and O
+Mary B-PER
+went O
+to O
+...
+```
+
+If the dataset uses this tagging scheme, it is better to use this for
+the labels.  There are also more complicated labeling schemes, such as
+labeling single entities differently (`Peter S-PER`) or explicitly
+labeling the end of entities (`Jennifer B-PER Sh'reyan E-PER`).
+Together this is the BIOES format on the wikipedia page.  The NER
+model will internally convert both of the previous tag schemes to
+BIOES, so it is not necessary to do that manually.
+
 ### Word Vectors
 
-This is not everything we need, though, as this is the first model we
+Processed data is not everything we need, though, as this is the first model we
 have created for Bangla in Stanza.  We also need to obtain pretrained
 word embeddings for this language or any other new language we add.
 
