@@ -84,12 +84,16 @@ def build_charlm_vocab(path, cutoff=0):
             for line in fin:
                 counter.update(list(line))
 
+    if len(counter) == 0:
+        raise ValueError("Training data was empty!")
     # remove infrequent characters from vocab
     for k in list(counter.keys()):
         if counter[k] < cutoff:
             del counter[k]
     # a singleton list of all characters
     data = [sorted([x[0] for x in counter.most_common()])]
+    if len(data[0]) == 0:
+        raise ValueError("All characters in the training data were less frequent than --cutoff!")
     vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     return vocab
 
