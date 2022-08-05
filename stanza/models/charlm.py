@@ -116,13 +116,9 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
-    if args.cpu:
-        args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    if args['cpu']:
+        args['cuda'] = False
+    utils.set_random_seed(args['seed'], args['cuda'])
 
     logger.info("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
     
