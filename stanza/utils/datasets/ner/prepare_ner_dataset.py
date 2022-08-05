@@ -223,7 +223,7 @@ L3Cube is a Marathi dataset
   - L3Cube-MahaNER: A Marathi Named Entity Recognition Dataset and BERT models
     Parth Patil, Aparna Ranade, Maithili Sabane, Onkar Litake, Raviraj Joshi
 
-  Clone the repo into $NERBASE
+  Clone the repo into $NERBASE/marathi
     git clone git@github.com:l3cube-pune/MarathiNLP.git
   Then run
     prepare_ner_dataset.py mr_l3cube
@@ -806,7 +806,7 @@ def process_lst20(paths, short_name, include_space_char=True):
 
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
-    in_directory = os.path.join(paths["NERBASE"], "MarathiNLP", "L3Cube-MahaNER", "IOB")
+    in_directory = os.path.join(paths["NERBASE"], "marathi", "MarathiNLP", "L3Cube-MahaNER", "IOB")
     input_files = ["train_iob.txt", "valid_iob.txt", "test_iob.txt"]
     input_files = [os.path.join(in_directory, x) for x in input_files]
     for input_file in input_files:
@@ -837,11 +837,11 @@ DATASET_MAPPING = {
     "hu_combined":       process_hu_combined,
     "it_fbk":            process_it_fbk,
     "ja_gsd":            process_ja_gsd,
+    "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
-    "mr_l3cube":         process_mr_l3cube,
     "th_lst20":          process_lst20,
 }
 
