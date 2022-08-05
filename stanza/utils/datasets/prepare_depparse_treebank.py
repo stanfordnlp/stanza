@@ -80,7 +80,8 @@ def process_treebank(treebank, paths, args) -> None:
 
         # perhaps download a tagger if one doesn't already exist
         tagger_model = choose_tagger_model(short_language, dataset, args.tagger_model)
-        base_args = base_args + ['--save_name', tagger_model]
+        tagger_dir, tagger_name = os.path.split(tagger_model)
+        base_args = base_args + ['--save_dir', tagger_dir, '--save_name', tagger_name]
 
         # word vector file for POS
         base_args = base_args + wordvec_args(short_language, dataset, args)
