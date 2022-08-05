@@ -154,7 +154,7 @@ SUC3 is a Swedish NER dataset provided by Språkbanken
   - If you fill out the license form and get the official data,
     you can get the official splits by putting the provided zip file
     in $NERBASE/sv_suc3licensed.  Again, not necessary to unzip it
-    prepare_ner_dataset.py sv_suc3licensed
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sv_suc3licensed
 
 DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
   - https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane
@@ -164,7 +164,7 @@ DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
     Rasmus Hvingelby, Amalie Brogaard Pauli, Maria Barrett,
     Christina Rosted, Lasse Malm Lidegaard, Anders Søgaard
   - place ddt.zip in $NERBASE/da_ddt/ddt.zip
-    prepare_ner_dataset.py da_ddt
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset da_ddt
 
 NorNE is the Norwegian Dependency Treebank with NER labels
   - LREC 2020
@@ -176,8 +176,8 @@ NorNE is the Norwegian Dependency Treebank with NER labels
     https://github.com/ltgoslo/norne
     Clone it into $NERBASE
     git clone git@github.com:ltgoslo/norne.git
-    prepare_ner_dataset.py nb_norne
-    prepare_ner_dataset.py nn_norne
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset nb_norne
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset nn_norne
 
 tr_starlang is a set of constituency trees for Turkish
   The words in this dataset (usually) have NER labels as well
@@ -192,7 +192,7 @@ tr_starlang is a set of constituency trees for Turkish
     https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
   Put them in
     $CONSTITUENCY_HOME/turkish    (yes, the constituency home)
-  prepare_ner_dataset.py tr_starlang
+  python3 -m stanza.utils.datasets.ner.prepare_ner_dataset tr_starlang
 
 GermEval2014 is a German NER dataset
   https://sites.google.com/site/germeval2014ner/data
@@ -202,7 +202,7 @@ GermEval2014 is a German NER dataset
   put them in
     $NERBASE/germeval2014
   then run
-    prepare_ner_dataset.py de_germeval2014
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset de_germeval2014
 
 The UD Japanese GSD dataset has a conversion by Megagon Labs
   https://github.com/megagonlabs/UD_Japanese-GSD
@@ -214,7 +214,7 @@ The UD Japanese GSD dataset has a conversion by Megagon Labs
       $NERBASE/ja_gsd
     so it should wind up in
       $NERBASE/ja_gsd/UD_Japanese-GSD-r2.9-NE
-    prepare_ner_dataset.py ja_gsd
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset ja_gsd
 
 L3Cube is a Marathi dataset
   - https://arxiv.org/abs/2204.06029
@@ -226,7 +226,7 @@ L3Cube is a Marathi dataset
   Clone the repo into $NERBASE/marathi
     git clone git@github.com:l3cube-pune/MarathiNLP.git
   Then run
-    prepare_ner_dataset.py mr_l3cube
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset mr_l3cube
 
 Daffodil University produced a Bangla NER dataset
   - https://github.com/Rifat1493/Bengali-NER
@@ -240,7 +240,7 @@ Daffodil University produced a Bangla NER dataset
     cd $NERBASE/bangla
     git clone git@github.com:Rifat1493/Bengali-NER.git
   Then run
-    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
 
 LST20 is a Thai NER dataset from 2020
   - https://arxiv.org/abs/2008.05055
