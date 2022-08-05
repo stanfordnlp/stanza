@@ -116,7 +116,6 @@ no_pretrain_languages = set([
     "pcm",
     "qtd",
     "swl",
-    "th",
 ])
 
 default_pretrains = dict(default_treebanks)
@@ -145,6 +144,7 @@ default_ners = {
     "nn": "norne",
     "ru": "wikiner",
     "sv": "suc3shuffle",
+    "th": "lst20",
     "tr": "starlang",
     "uk": "languk",
     "vi": "vlsp",
@@ -171,6 +171,7 @@ default_charlms = {
     "nl": "ccwiki",
     "ru": "newswiki",
     "sv": "conll17",
+    "th": "oscar",
     "tr": "conll17",
     "uk": "conll17",
     "vi": "conll17",
@@ -251,6 +252,9 @@ ner_pretrains = {
     },
     "ru": {
         "wikiner": "fasttextwiki",
+    },
+    "th": {
+        "lst20": "fasttext",
     },
     "zh-hans": {
         "ontonotes": "fasttextwiki",
