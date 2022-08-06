@@ -4,7 +4,7 @@ Processor for performing part-of-speech tagging
 
 from stanza.models.common import doc
 from stanza.models.common.utils import get_tqdm, unsort
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.common.vocab import VOCAB_PREFIX, CompositeVocab
 from stanza.models.pos.data import DataLoader
 from stanza.models.pos.trainer import Trainer
 from stanza.pipeline._constants import *
@@ -36,8 +36,18 @@ class POSProcessor(UDProcessor):
         """
         Returns the xpos tags known by this model
         """
-        keys = [k for k in self.vocab['xpos']._unit2id.keys() if k not in VOCAB_PREFIX]
-        return keys
+        if isinstance(self.vocab['xpos'], CompositeVocab):
+            if len(self.vocab['xpos']) == 1:
+                return [k for k in self.vocab['xpos'][0]._unit2id.keys() if k not in VOCAB_PREFIX]
+            else:
+                return {k: v.keys() - VOCAB_PREFIX for k, v in self.vocab['xpos']._unit2id.items()}
+        return [k for k in self.vocab['xpos']._unit2id.keys() if k not in VOCAB_PREFIX]
+
+    def is_composite_xpos(self):
+        """
+        Returns if the xpos tags are part of a composite vocab
+        """
+        return isinstance(self.vocab['xpos'], CompositeVocab)
 
     def get_known_upos(self):
         """
