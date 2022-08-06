@@ -158,7 +158,7 @@ def evaluate_epoch(args, vocab, data, model, criterion):
             total_loss += data.size(1) * loss.data.item()
     return total_loss / batches.size(1)
 
-def evaluate_and_save(args, vocab, data, trainer, best_loss, global_step, model_file, checkpoint_file, writer=None):
+def evaluate_and_save(args, vocab, data, trainer, best_loss, model_file, checkpoint_file, writer=None):
     """
     Run an evaluation over entire dataset, print progress and save the model if necessary.
     """
@@ -170,7 +170,7 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, global_step, model_
     trainer.scheduler.step(loss)
     logger.info(
         "| eval checkpoint @ global step {:10d} | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
-            global_step,
+            trainer.global_step,
             elapsed,
             loss,
             ppl,
@@ -179,13 +179,13 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, global_step, model_
     if best_loss is None or loss < best_loss:
         best_loss = loss
         trainer.save(model_file, full=False)
-        logger.info('new best model saved at step {:10d}'.format(global_step))
+        logger.info('new best model saved at step {:10d}'.format(trainer.global_step))
     if writer:
-        writer.add_scalar('dev_loss', loss, global_step=global_step)
-        writer.add_scalar('dev_ppl', ppl, global_step=global_step)
+        writer.add_scalar('dev_loss', loss, global_step=trainer.global_step)
+        writer.add_scalar('dev_ppl', ppl, global_step=trainer.global_step)
     if checkpoint_file:
         trainer.save(checkpoint_file, full=True)
-        logger.info('new checkpoint saved at step {:10d}'.format(global_step))
+        logger.info('new checkpoint saved at step {:10d}'.format(trainer.global_step))
 
     return loss, ppl, best_loss
 
@@ -234,8 +234,8 @@ def train(args):
         wandb.run.define_metric('ppl', summary='min')
 
     best_loss = None
-    global_step = 0
-    for epoch in range(1,args['epochs']+1):
+    start_epoch = trainer.epoch  # will default to 1 for a new trainer
+    for trainer.epoch in range(start_epoch, args['epochs']+1):
         # load train data from train_dir if not empty, otherwise load from file
         if args['train_dir'] is not None:
             train_path = args['train_dir']
@@ -254,7 +254,7 @@ def train(args):
             # over the data chunk
             while i < batches.size(1) - 1 - 1:
                 trainer.model.train()
-                global_step += 1
+                trainer.global_step += 1
                 start_time = time.time()
                 bptt = args['bptt_size'] if np.random.random() < 0.95 else args['bptt_size']/ 2.
                 # prevent excessively small or negative sequence lengths
@@ -283,7 +283,7 @@ def train(args):
                     elapsed = time.time() - start_time
                     logger.info(
                         "| epoch {:5d} | {:5d}/{:5d} batches | sec/batch {:.6f} | loss {:5.2f} | ppl {:8.2f}".format(
-                            epoch,
+                            trainer.epoch,
                             iteration + 1,
                             total_batches,
                             elapsed / args['report_steps'],
@@ -292,25 +292,25 @@ def train(args):
                         )
                     )
                     if args['wandb']:
-                        wandb.log({'train_loss': cur_loss}, step=global_step)
+                        wandb.log({'train_loss': cur_loss}, step=trainer.global_step)
                     total_loss = 0.0
 
                 iteration += 1
                 i += seq_len
 
                 # evaluate if necessary
-                if eval_within_epoch and global_step % args['eval_steps'] == 0:
+                if eval_within_epoch and trainer.global_step % args['eval_steps'] == 0:
                     _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
-                                                          global_step, model_file, checkpoint_file, writer)
+                                                          model_file, checkpoint_file, writer)
                     if args['wandb']:
-                        wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
+                        wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=trainer.global_step)
 
         # if eval_interval isn't provided, run evaluation after each epoch
         if not eval_within_epoch:
             _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
-                                                  epoch, model_file, checkpoint_file, writer) # use epoch in place of global_step for logging
+                                                  model_file, checkpoint_file, writer) # use epoch in place of global_step for logging
             if args['wandb']:
-                wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=global_step)
+                wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=trainer.global_step)
 
     if writer:
         writer.close()

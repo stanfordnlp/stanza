@@ -138,6 +138,9 @@ def test_build_model():
         model = char_model.CharacterLanguageModel.load(os.path.join(tempdir, checkpoint_save_name))
         trainer = char_model.CharacterLanguageModelTrainer.load(args, os.path.join(tempdir, checkpoint_save_name))
 
+        assert trainer.global_step > 0
+        assert trainer.epoch == 2
+
 @pytest.fixture
 def english_forward():
     # eg, stanza_test/models/en/forward_charlm/1billion.pt

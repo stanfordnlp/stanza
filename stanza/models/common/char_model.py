@@ -233,17 +233,21 @@ class CharacterLanguageModel(nn.Module):
         return cls.from_full_state(state['model'], finetune)
 
 class CharacterLanguageModelTrainer():
-    def __init__(self, model, params, optimizer, criterion, scheduler):
+    def __init__(self, model, params, optimizer, criterion, scheduler, epoch=1, global_step=0):
         self.model = model
         self.params = params
         self.optimizer = optimizer
         self.criterion = criterion
         self.scheduler = scheduler
+        self.epoch = epoch
+        self.global_step = global_step
 
     def save(self, filename, full=True):
         os.makedirs(os.path.split(filename)[0], exist_ok=True)
         state = {
-            'model': self.model.full_state()
+            'model': self.model.full_state(),
+            'epoch': self.epoch,
+            'global_step': self.global_step,
         }
         if full and self.optimizer is not None:
             state['optimizer'] = self.optimizer.state_dict()
@@ -285,5 +289,8 @@ class CharacterLanguageModelTrainer():
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
         if 'scheduler' in state: scheduler.load_state_dict(state['scheduler'])
-        return cls(model, params, optimizer, criterion, scheduler)
+
+        epoch = state.get('epoch', 1)
+        global_step = state.get('global_step', 0)
+        return cls(model, params, optimizer, criterion, scheduler, epoch, global_step)
 
