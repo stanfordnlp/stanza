@@ -189,6 +189,12 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, model_file, checkpo
 
     return loss, ppl, best_loss
 
+def get_current_lr(trainer, args):
+    return trainer.scheduler.state_dict().get('_last_lr', [args['lr0']])[0]
+
+def load_char_vocab(vocab_file):
+    return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
+
 def train(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
@@ -202,7 +208,7 @@ def train(args):
 
     if os.path.exists(vocab_file):
         logger.info('Loading existing vocab file')
-        vocab = {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
+        vocab = load_char_vocab(vocab_file)
     else:
         logger.info('Building and saving vocab')
         vocab = {'char': build_charlm_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
@@ -210,6 +216,7 @@ def train(args):
     logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
 
     if checkpoint_file and os.path.exists(checkpoint_file):
+        logger.info('Loading existing checkpoint: %s' % checkpoint_file)
         trainer = CharacterLanguageModelTrainer.load(args, checkpoint_file, finetune=True)
     else:
         trainer = CharacterLanguageModelTrainer.from_new_model(args, vocab)
@@ -229,7 +236,7 @@ def train(args):
     if args['wandb']:
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else '%s_%s_charlm' % (args['shorthand'], args['direction'])
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('best_loss', summary='min')
         wandb.run.define_metric('ppl', summary='min')
 
@@ -303,14 +310,14 @@ def train(args):
                     _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
                                                           model_file, checkpoint_file, writer)
                     if args['wandb']:
-                        wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=trainer.global_step)
+                        wandb.log({'ppl': ppl, 'best_loss': best_loss, 'lr': get_current_lr(trainer, args)}, step=trainer.global_step)
 
         # if eval_interval isn't provided, run evaluation after each epoch
         if not eval_within_epoch:
             _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
                                                   model_file, checkpoint_file, writer) # use epoch in place of global_step for logging
             if args['wandb']:
-                wandb.log({'ppl': ppl, 'best_loss': best_loss}, step=trainer.global_step)
+                wandb.log({'ppl': ppl, 'best_loss': best_loss, 'lr': get_current_lr(trainer, args)}, step=trainer.global_step)
 
     if writer:
         writer.close()

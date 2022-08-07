@@ -141,6 +141,16 @@ def test_build_model():
         assert trainer.global_step > 0
         assert trainer.epoch == 2
 
+        # quick test to verify this method works with a trained model
+        charlm.get_current_lr(trainer, args)
+
+        # test loading a vocab built by the training method...
+        vocab = charlm.load_char_vocab(os.path.join(tempdir, vocab_save_name))
+        trainer = char_model.CharacterLanguageModelTrainer.from_new_model(args, vocab)
+        # ... and test the get_current_lr for an untrained model as well
+        # this test is super "eager"
+        assert charlm.get_current_lr(trainer, args) == args['lr0']
+
 @pytest.fixture
 def english_forward():
     # eg, stanza_test/models/en/forward_charlm/1billion.pt
