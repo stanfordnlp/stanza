@@ -431,7 +431,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
         global wandb
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_constituency" % args['shorthand']
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('dev_score', summary='max')
 
     with EvaluateParser(kbest=kbest) as evaluator:

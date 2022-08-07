@@ -417,7 +417,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     if args.wandb:
         import wandb
         wandb_name = args.wandb_name if args.wandb_name else "%s_classifier" % args.shorthand
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('accuracy', summary='max')
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
