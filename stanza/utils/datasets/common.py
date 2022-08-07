@@ -101,9 +101,11 @@ def get_ud_treebanks(udbase_dir, filtered=True):
         treebanks = [t for t in treebanks
                      if not mostly_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
         # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
+        # if the train set is small and the test set is large enough, we'll flip them
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
-                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000)]
+                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000 or
+                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "test", "conllu")) > 5000)]
     return treebanks
 
 def build_argparse():
