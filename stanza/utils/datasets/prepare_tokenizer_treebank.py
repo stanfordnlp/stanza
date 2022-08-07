@@ -103,8 +103,7 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
-def split_train_file(treebank, train_input_conllu,
-                     train_output_conllu, dev_output_conllu):
+def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -119,8 +118,8 @@ def split_train_file(treebank, train_input_conllu,
     # split conllu data
     dev_sents = sents[:n_dev]
     train_sents = sents[n_dev:]
-    print("Train/dev split not present.  Randomly splitting train file")
-    print(f"{len(sents)} total sentences found: {n_train} in train, {n_dev} in dev.")
+    print("Train/dev split not present.  Randomly splitting train file from %s to %s and %s" % (train_input_conllu, train_output_conllu, dev_output_conllu))
+    print(f"{len(sents)} total sentences found: {n_train} in train, {n_dev} in dev")
 
     # write conllu
     write_sentences_to_conllu(train_output_conllu, train_sents)
@@ -1011,9 +1010,11 @@ def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
     for dataset in ("train", "dev", "test"):
         build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment)
 
-def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True):
-    input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
-    output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, input_conllu=None, output_conllu=None):
+    if input_conllu is None:
+        input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+    if output_conllu is None:
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
     print("Reading from %s and writing to %s" % (input_conllu, output_conllu))
 
     if short_name == "te_mtg" and dataset == 'train' and augment:
@@ -1060,8 +1061,15 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
       UD_Welsh-CCG
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu")
+
     train_output_conllu = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
     dev_output_conllu = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
+    test_output_conllu = f"{tokenizer_dir}/{short_name}.test.gold.conllu"
+
+    if (common.num_words_in_file(train_input_conllu) <= 1000 and
+        common.num_words_in_file(test_input_conllu) > 5000):
+        train_input_conllu, test_input_conllu = test_input_conllu, train_input_conllu
 
     if not split_train_file(treebank=treebank,
                             train_input_conllu=train_input_conllu,
@@ -1071,7 +1079,7 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False)
+    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, input_conllu=test_input_conllu, output_conllu=test_output_conllu)
 
 def add_specific_args(parser):
     parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
