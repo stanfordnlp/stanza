@@ -47,10 +47,10 @@ The processing goes as follows:
 - replace the words in the con tree with the dep tree's words
   this takes advantage of spelling & capitalization fixes
 
-NOTE: there is a small update to the dataset from Prof. Delmonte.
+In 2022, there was an update to the dataset from Prof. Delmonte.
+This update is hopefully in current ELRA distributions now.
+If not, please contact ELRA to specifically ask for the updated version.
 Internally to Stanford, feel free to ask Chris or John for the updates.
-Otherwise, if this note is still here, that means the updates haven't
-reached ELRA yet.
 Look for the line below "original version with more errors"
 """
 
