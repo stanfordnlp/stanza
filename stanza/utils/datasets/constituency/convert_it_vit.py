@@ -58,6 +58,7 @@ from collections import defaultdict, deque
 import itertools
 import os
 import re
+import sys
 
 from tqdm import tqdm
 
@@ -65,6 +66,7 @@ from stanza.models.constituency.tree_reader import read_trees, UnclosedTreeError
 from stanza.server import tsurgeon
 from stanza.utils.conll import CoNLL
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
+import stanza.utils.default_paths as default_paths
 
 def read_constituency_sentences(fin):
     """
@@ -318,7 +320,7 @@ def match_ngrams(sentence_ngrams, ngram_map, debug=False):
         return None
     return potential_match
 
-def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name):
+def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name, debug_sentence=None):
     """
     Match ngrams in the dependency sentences to the constituency sentences
 
@@ -338,8 +340,7 @@ def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name):
     bad_match = 0
     for sentence in dep_sentences:
         sentence_ngrams = extract_ngrams(sentence, DEP_PROCESS_FUNC)
-        potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams)
-        #potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, DEP_ID_FUNC(sentence) == "VIT-4096")
+        potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, debug_sentence is not None and DEP_ID_FUNC(sentence) == debug_sentence)
         if potential_match is None:
             if unmatched < 5:
                 print("Could not match the following sentence: {} {}".format(DEP_ID_FUNC(sentence), sentence.text))
@@ -519,7 +520,7 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
         trees.append(updated_tree)
     return trees
 
-def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
+def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence=None):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
     # this is the April 2022 version
@@ -572,9 +573,9 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     con_vit_ngrams = build_ngrams(con_tree_map.items(), lambda x: CON_PROCESS_FUNC(x[1]), lambda x: x[0])
 
     # TODO: match more sentences.  some are probably missing because of MWT
-    train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train")
-    dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev")
-    test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test")
+    train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train", debug_sentence)
+    dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev",   debug_sentence)
+    test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test",  debug_sentence)
     print("Trees: {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
 
     # the moveprune feature requires a new corenlp release after 4.4.0
@@ -586,13 +587,16 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     write_dataset([train_trees, dev_trees, test_trees], output_directory, dataset_name)
 
 def main():
-    con_directory = "extern_data/constituency"
-    ud_directory = "extern_data/ud2/ud-treebanks-v2.10/UD_Italian-VIT"
+    paths = default_paths.get_default_paths()
+    con_directory = paths["CONSTITUENCY_BASE"]
+    ud_directory  = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
 
-    output_directory = "data/constituency"
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
     dataset_name = "it_vit"
 
-    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name)
+    debug_sentence = sys.argv[1] if len(sys.argv) > 1 else None
+
+    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence)
 
 if __name__ == '__main__':
     main()
