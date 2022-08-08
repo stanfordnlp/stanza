@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from stanza.models.common import pretrain
+from stanza.models.common.vocab import UNK_ID
 from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -17,7 +18,7 @@ def check_vocab(vocab):
     assert 'mox' in vocab
     assert 'opal' in vocab
 
-def check_embedding(emb):
+def check_embedding(emb, unk=False):
     expected = np.array([[ 0.,  0.,  0.,  0.,],
                          [ 0.,  0.,  0.,  0.,],
                          [ 0.,  0.,  0.,  0.,],
@@ -25,6 +26,8 @@ def check_embedding(emb):
                          [ 1.,  2.,  3.,  4.,],
                          [ 5.,  6.,  7.,  8.,],
                          [ 9., 10., 11., 12.,]])
+    if unk:
+        expected[UNK_ID] = -1
     np.testing.assert_allclose(emb, expected)
 
 def check_pretrain(pt):
@@ -117,3 +120,20 @@ def test_no_header():
         pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
         check_embedding(pt.emb)
 
+UNK_PRETRAIN="""
+unban 1 2 3 4
+mox 5 6 7 8
+opal 9 10 11 12
+<unk> -1 -1 -1 -1
+""".strip()
+
+def test_no_header():
+    """
+    Check loading a pretrain with <unk> at the end, like GloVe does
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        filename = os.path.join(tmpdir, "tiny.txt")
+        with open(filename, "w", encoding="utf-8") as fout:
+            fout.write(UNK_PRETRAIN)
+        pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
+        check_embedding(pt.emb, unk=True)
