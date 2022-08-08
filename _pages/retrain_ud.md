@@ -170,6 +170,8 @@ python3 -m stanza.utils.training.run_tokenizer UD_English-EWT --save_name en_ewt
 
 ### Testing the model
 
+The training script will report the dev score of the final model when it finishes.
+
 After a model is built, you can test it on the dev and test sets:
 
 ```bash
