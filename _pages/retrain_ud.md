@@ -81,7 +81,14 @@ For this tutorial, we will use the UD English EWT repo.  In July 2022,
 for example, this repo was updated with morphological feature changes
 which would not be released until UD 2.11 in November 2022.
 
-The first step is to git clone [UD_English-EWT](https://github.com/UniversalDependencies/UD_English-EWT):
+{% include alerts.html %}
+{{ note }}
+{{ "The official release is just the final data files, not a collection of git releases" | markdownify }}
+{{ end }}
+
+If you want to use data more recent than the most recent UD release,
+the first step is to git clone
+[UD_English-EWT](https://github.com/UniversalDependencies/UD_English-EWT):
 
 ```bash
 cd $UDBASE
@@ -92,7 +99,7 @@ git checkout dev    # because we want the dev set updates, of course
 
 {% include alerts.html %}
 {{ note }}
-{{ "If you are using the latest official release, you do not need to clone a UD repo" | markdownify }}
+{{ "Links for each of the git repos can be found on the UD homepage as part of the treebank description" | markdownify }}
 {{ end }}
 
 Instead of downloading an individual repo, we can download them all
