@@ -65,6 +65,7 @@ default_treebanks = {
     "ko":      "kaist",
     "kmr":     "mg",
     "la":      "ittb",
+    "lij":     "glt",
     "lv":      "lvtb",
     "pcm":     "nsc",
     "sme":     "giella",
