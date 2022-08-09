@@ -307,15 +307,13 @@ def train(args):
 
                 # evaluate if necessary
                 if eval_within_epoch and trainer.global_step % args['eval_steps'] == 0:
-                    _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
-                                                          model_file, checkpoint_file, writer)
+                    _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, model_file, checkpoint_file, writer)
                     if args['wandb']:
                         wandb.log({'ppl': ppl, 'best_loss': best_loss, 'lr': get_current_lr(trainer, args)}, step=trainer.global_step)
 
         # if eval_interval isn't provided, run evaluation after each epoch
-        if not eval_within_epoch:
-            _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, \
-                                                  model_file, checkpoint_file, writer) # use epoch in place of global_step for logging
+        if not eval_within_epoch or trainer.epoch == args['epochs']:
+            _, ppl, best_loss = evaluate_and_save(args, vocab, dev_data, trainer, best_loss, model_file, checkpoint_file, writer)
             if args['wandb']:
                 wandb.log({'ppl': ppl, 'best_loss': best_loss, 'lr': get_current_lr(trainer, args)}, step=trainer.global_step)
 
