@@ -35,6 +35,8 @@ There are a few minor differences in the model:
   - Initializing the embeddings with smaller values than pytorch default
     For example, on a ja_alt dataset, scores went from 0.8980 to 0.8985
     at 200 iterations averaged over 5 trials
+  - Partitioned transformer layers help quite a bit, but require some
+    finicky training mechanism.  See --multistage
 
 A couple experiments which have been tried with little noticeable impact:
   - Combining constituents using the method in the paper (only a trained
@@ -294,7 +296,7 @@ def parse_args(args=None):
     #    0.010:   0.81474348
     #    0.005:   0.81503
     parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief')
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
     parser.add_argument('--learning_rho', default=DEFAULT_LEARNING_RHO, type=float, help='Rho parameter in Adadelta')
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
 
