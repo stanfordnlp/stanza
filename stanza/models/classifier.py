@@ -182,6 +182,8 @@ def parse_args(args=None):
     parser.add_argument('--bilstm_hidden_dim', type=int, default=200, help="Dimension of the bilstm to use")
     parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs")
 
+    parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
+
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 

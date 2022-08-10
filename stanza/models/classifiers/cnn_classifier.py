@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 import re
 from types import SimpleNamespace
@@ -75,6 +76,7 @@ class CNNClassifier(nn.Module):
                                       bert_model = args.bert_model,
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
+                                      maxpool_width = args.maxpool_width,
                                       model_type = 'CNNClassifier')
 
         self.char_lowercase = args.char_lowercase
@@ -184,7 +186,7 @@ class CNNClassifier(nn.Module):
                                                     kernel_size=(filter_size, conv_input_dim))
                                           for filter_size in self.config.filter_sizes])
 
-        previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
+        previous_layer_size = len(self.config.filter_sizes) * (self.config.filter_channels // self.config.maxpool_width)
         fc_layers = []
         for shape in self.config.fc_shapes:
             fc_layers.append(nn.Linear(previous_layer_size, shape))
@@ -347,7 +349,7 @@ class CNNClassifier(nn.Module):
 
         conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
                      for conv in self.conv_layers]
-        pool_outs = [F.max_pool1d(out, out.shape[2]).squeeze(2) for out in conv_outs]
+        pool_outs = [F.max_pool2d(out, (self.config.maxpool_width, out.shape[2])).squeeze(2) for out in conv_outs]
         pooled = torch.cat(pool_outs, dim=1)
 
         previous_layer = pooled
@@ -397,6 +399,7 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
     setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
     setattr(checkpoint['config'], 'bilstm', getattr(checkpoint['config'], 'bilstm', False))
     setattr(checkpoint['config'], 'bilstm_hidden_dim', getattr(checkpoint['config'], 'bilstm_hidden_dim', 0))
+    setattr(checkpoint['config'], 'maxpool_width', getattr(checkpoint['config'], 'maxpool_width', 1))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
