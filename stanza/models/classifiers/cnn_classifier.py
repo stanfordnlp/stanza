@@ -73,6 +73,8 @@ class CNNClassifier(nn.Module):
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
                                       bert_model = args.bert_model,
+                                      bilstm = args.bilstm,
+                                      bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       model_type = 'CNNClassifier')
 
         self.char_lowercase = args.char_lowercase
@@ -165,9 +167,21 @@ class CNNClassifier(nn.Module):
             self.bert_dim = self.bert_model.config.hidden_size
             total_embedding_dim += self.bert_dim
 
+        if self.config.bilstm:
+            conv_input_dim = self.config.bilstm_hidden_dim * 2
+            self.bilstm = nn.LSTM(batch_first=True,
+                                  input_size=total_embedding_dim,
+                                  hidden_size=self.config.bilstm_hidden_dim,
+                                  num_layers=2,
+                                  bidirectional=True,
+                                  dropout=0.2)
+        else:
+            conv_input_dim = total_embedding_dim
+            self.bilstm = None
+
         self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
                                                     out_channels=self.config.filter_channels,
-                                                    kernel_size=(filter_size, total_embedding_dim))
+                                                    kernel_size=(filter_size, conv_input_dim))
                                           for filter_size in self.config.filter_sizes])
 
         previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
@@ -325,6 +339,9 @@ class CNNClassifier(nn.Module):
         # still works even if there's just one item
         input_vectors = torch.cat(all_inputs, dim=2)
 
+        if self.config.bilstm:
+            input_vectors, _ = self.bilstm(self.dropout(input_vectors))
+
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
 
@@ -378,6 +395,8 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
     setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
     setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
+    setattr(checkpoint['config'], 'bilstm', getattr(checkpoint['config'], 'bilstm', False))
+    setattr(checkpoint['config'], 'bilstm_hidden_dim', getattr(checkpoint['config'], 'bilstm_hidden_dim', 0))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
