@@ -1,4 +1,5 @@
 import lzma
+import os
 import tempfile
 
 import pytest
@@ -176,4 +177,18 @@ def test_open_read_text():
             pass
         assert finexxz.closed
 
+
+def test_checkpoint_name():
+    """
+    Test some expected results for the checkpoint names
+    """
+    # use os.path.split so that the test is agnostic of file separator on Linux or Windows
+    checkpoint = utils.checkpoint_name("saved_models", "kk_oscar_forward_charlm.pt", None)
+    assert os.path.split(checkpoint) == ("saved_models", "kk_oscar_forward_charlm_checkpoint.pt")
+
+    checkpoint = utils.checkpoint_name("saved_models", "kk_oscar_forward_charlm", None)
+    assert os.path.split(checkpoint) == ("saved_models", "kk_oscar_forward_charlm_checkpoint")
+
+    checkpoint = utils.checkpoint_name("saved_models", "kk_oscar_forward_charlm", "othername.pt")
+    assert os.path.split(checkpoint) == ("saved_models", "othername.pt")
 

@@ -196,13 +196,17 @@ def load_char_vocab(vocab_file):
     return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
 
 def train(args):
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-        else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
+    if args['save_name']:
+        save_name = args['save_name']
+    else:
+        save_name = '{}_{}_charlm.pt'.format(args['shorthand'], args['direction'])
+    model_file = os.path.join(args['save_dir'], save_name)
+
     vocab_file = args['save_dir'] + '/' + args['vocab_save_name'] if args['vocab_save_name'] is not None \
         else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
+
     if args['checkpoint']:
-        checkpoint_file = os.path.join(args['save_dir'], args['checkpoint_save_name']) if args['checkpoint_save_name'] \
-            else os.path.join(args['save_dir'], '{}_{}_charlm_checkpoint.pt'.format(args['shorthand'], args['direction']))
+        checkpoint_file = utils.checkpoint_name(args['save_dir'], save_name, args['checkpoint_save_name'])
     else:
         checkpoint_file = None
 

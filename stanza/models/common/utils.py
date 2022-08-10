@@ -413,3 +413,18 @@ def get_tqdm():
         return tqdm(*args, **kwargs)
 
     return hidden_tqdm
+
+def checkpoint_name(save_dir, save_name, checkpoint_name):
+    """
+    Will return a recommended checkpoint name for the given dir, save_name, optional checkpoint_name
+
+    For example, can pass in args['save_dir'], args['save_name'], args['checkpoint_save_name']
+    """
+    if checkpoint_name:
+        return os.path.join(save_dir, checkpoint_name)
+
+    save_name = os.path.join(save_dir, save_name)
+    if save_name.endswith(".pt"):
+        return save_name[:-3] + "_checkpoint.pt"
+
+    return save_name + "_checkpoint"
