@@ -180,7 +180,8 @@ def ensure_dir(d, verbose=True):
     if not os.path.exists(d):
         if verbose:
             logger.info("Directory {} does not exist; creating...".format(d))
-        os.makedirs(d)
+        # exist_ok: guard against race conditions
+        os.makedirs(d, exist_ok=True)
 
 def save_config(config, path, verbose=True):
     with open(path, 'w') as outfile:
