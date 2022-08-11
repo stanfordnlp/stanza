@@ -1,10 +1,10 @@
 """
-Converts the Thai NNER22 dataset to a format usable by Stanza's NER model
+Converts the Thai NNER22 dataset to a nested format for Stanza's NER model
 
 The dataset is already written in json format, so we will convert into a compatible json format.
 
-The dataset in the original format has nested NER format which we will only extract the first layer
-of NER tag and write it in the format accepted by current Stanza model
+The dataset in the original format has nested NER format using span key to indicate the oken span. We will extract all the layers
+of NER tag and write it as a list of tags which will be fed into Stanza model
 """
 
 import os
@@ -21,7 +21,7 @@ def convert_nner22(paths, short_name, include_space_char=True):
 
     for shard in SHARDS:
         input_path = os.path.join(BASE_INPUT_PATH, "%s.json" % (shard))
-        output_path = os.path.join(paths["NER_DATA_DIR"], "%s.%s.json" % (short_name, shard))
+        output_path = os.path.join(paths["NER_DATA_DIR"], "ner", "%s.%s.json" % (short_name, shard))
 
         logging.info("Output path for %s split at %s" % (shard, output_path))
 
@@ -32,34 +32,34 @@ def convert_nner22(paths, short_name, include_space_char=True):
         for i in range(len(data)):
             token, entities = data[i]["tokens"], data[i]["entities"]
 
-            token_length, sofar = len(token), 0
+            token_length = len(token)
             document, ner_dict = [], {}
 
             for entity in entities:
                 start, stop = entity["span"]
+                ner = entity["entity_type"].upper()
+                
+                for j in range(start, stop):
+                    if j == start:
+                        ner_tag = "B-" + ner
+                    elif j == stop - 1:
+                        ner_tag = "E-" + ner
+                    else:
+                        ner_tag = "I-" + ner
 
-                if stop > sofar:
-                    ner = entity["entity_type"].upper()
-                    sofar = stop
-
-                    for j in range(start, stop):
-                        if j == start:
-                            ner_tag = "B-" + ner
-                        elif j == stop - 1:
-                            ner_tag = "E-" + ner
-                        else:
-                            ner_tag = "I-" + ner
-
-                        ner_dict[j] = (ner_tag, token[j])
+                    if j not in ner_dict:
+                        ner_dict[j] = []
+                    ner_dict[j].append(ner_tag)
 
             for k in range(token_length):
                 dict_add = {}
 
                 if k not in ner_dict:
-                    dict_add["ner"], dict_add["text"] = "O", token[k]
+                    dict_add["ner"] = ["O"]
                 else:
-                    dict_add["ner"], dict_add["text"] = ner_dict[k]
-
+                    dict_add["ner"] = ner_dict[k]
+                dict_add["text"] = token[k]
+                
                 document.append(dict_add)
 
             documents.append(document)
