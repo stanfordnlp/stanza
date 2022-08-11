@@ -55,9 +55,11 @@ def convert_nner22(paths, short_name, include_space_char=True):
                 dict_add = {}
 
                 if k not in ner_dict:
-                    dict_add["ner"] = ["O"]
+                    ner_add = ["O"]
                 else:
-                    dict_add["ner"] = ner_dict[k]
+                    ner_add = ner_dict[k]
+                # Hard-code 8 for now, have to change to max_depth later
+                dict_add["ner"] = ner_add + ["O"] * (8 - len(ner_add))
                 dict_add["text"] = token[k]
                 
                 document.append(dict_add)
