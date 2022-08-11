@@ -38,4 +38,20 @@ with open(output_name, "w") as fout:
 
 def short_name_to_treebank(short_name):
     return SHORT_NAMES[short_name]
+
+
+""")
+
+    max_len = max(len(x) for x in ud_names) + 5
+    line_format = "    %-" + str(max_len) + "s '%s',\n"
+    fout.write("CANONICAL_NAMES = {\n")
+    for ud_name in ud_names:
+        fout.write(line_format % ("'" + ud_name.lower() + "':", ud_name))
+    fout.write("}\n")
+    fout.write("""
+
+def canonical_treebank_name(ud_name):
+    if ud_name in SHORT_NAMES:
+        return SHORT_NAMES[ud_name]
+    return CANONICAL_NAMES.get(ud_name.lower(), ud_name)
 """)
