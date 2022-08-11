@@ -33,6 +33,10 @@ def test_treebank():
     assert "zh-hans_gsdsimp" == treebank_to_short_name("zh-hans_gsdsimp")
 
     assert "wo_masakhane" == treebank_to_short_name("wo_masakhane")
+    assert "wo_masakhane" == treebank_to_short_name("wol_masakhane")
+    assert "wo_masakhane" == treebank_to_short_name("Wol_masakhane")
+    assert "wo_masakhane" == treebank_to_short_name("wolof_masakhane")
+    assert "wo_masakhane" == treebank_to_short_name("Wolof_masakhane")
 
 def test_lang_to_langcode():
     assert "hi" == lang_to_langcode("Hindi")

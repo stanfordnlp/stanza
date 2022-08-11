@@ -457,7 +457,9 @@ def treebank_to_short_name(treebank):
     if treebank in treebank_special_cases:
         return treebank_special_cases.get(treebank)
     if SHORTNAME_RE.match(treebank):
-        return treebank
+        lang, corpus = treebank.split("_")
+        lang = lang_to_langcode(lang)
+        return lang + "_" + corpus
 
     if treebank.startswith('UD_'):
         treebank = treebank[3:]
