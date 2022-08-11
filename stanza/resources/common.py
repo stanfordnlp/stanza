@@ -381,11 +381,15 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
         # also allow for setting alternate packages for these processors
         # via the package argument
         if package is None:
+            # each processor will be 'default' for this language
             package = defaultdict(lambda: 'default')
         elif isinstance(package, str):
+            # same, but now the named package will be the default instead
             default = package
             package = defaultdict(lambda: default)
         elif isinstance(package, dict):
+            # the dictionary of packages will be used to build the processors dict
+            # any processor not specified in package will be 'default'
             package = defaultdict(lambda: 'default', package)
         else:
             raise TypeError(
