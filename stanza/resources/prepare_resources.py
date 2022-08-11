@@ -16,7 +16,7 @@ import hashlib
 import shutil
 import zipfile
 
-from stanza.models.common.constant import lcode2lang
+from stanza.models.common.constant import lcode2lang, two_to_three_letters
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -546,6 +546,8 @@ def process_lcode(args):
         resources[lang]['lang_name'] = lang_name
         resources_new[lang.lower()] = resources[lang.lower()]
         resources_new[lang_name.lower()] = {'alias': lang.lower()}
+        if lang.lower() in two_to_three_letters:
+            resources_new[two_to_three_letters[lang.lower()]] = {'alias': lang.lower()}
     print("Processed lcode aliases.  Writing resources.json")
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 

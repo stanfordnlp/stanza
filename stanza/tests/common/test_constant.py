@@ -7,7 +7,7 @@ import tempfile
 import pytest
 
 import stanza
-from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode, is_right_to_left
+from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode, is_right_to_left, two_to_three_letters, langlower2lcode
 from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -31,7 +31,8 @@ def test_treebank():
     assert "zh-hant_pud" == treebank_to_short_name("zh-hant_pud")
     assert "zh-hant_pud" == treebank_to_short_name("zh-hant-pud")
     assert "zh-hans_gsdsimp" == treebank_to_short_name("zh-hans_gsdsimp")
-    
+
+    assert "wo_masakhane" == treebank_to_short_name("wo_masakhane")
 
 def test_lang_to_langcode():
     assert "hi" == lang_to_langcode("Hindi")
@@ -46,3 +47,17 @@ def test_right_to_left():
 
     assert not is_right_to_left("en")
     assert not is_right_to_left("English")
+
+def test_two_to_three():
+    assert lang_to_langcode("Wolof") == "wo"
+    assert lang_to_langcode("wol") == "wo"
+
+    assert "wo" in two_to_three_letters
+    assert two_to_three_letters["wo"] == "wol"
+
+def test_langlower():
+    assert lang_to_langcode("WOLOF") == "wo"
+    assert lang_to_langcode("nOrWeGiAn") == "nb"
+
+    assert "soj" == langlower2lcode["soi"]
+    assert "soj" == langlower2lcode["sohi"]
