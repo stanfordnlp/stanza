@@ -522,6 +522,48 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
+def load_model(args):
+    """
+    Load both the pretrained embedding and other pieces from the args as well as the model itself
+    """
+    pretrain = load_pretrain(args)
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    if os.path.exists(args.load_name):
+        load_name = args.load_name
+    else:
+        load_name = os.path.join(args.save_dir, args.load_name)
+        if not os.path.exists(load_name):
+            raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
+    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+
+def build_new_model(args, train_set):
+    """
+    Load pretrained pieces and then build a new model
+    """
+    if train_set is None:
+        raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
+
+    pretrain = load_pretrain(args)
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    labels = dataset_labels(train_set)
+    extra_vocab = dataset_vocab(train_set)
+
+    bert_model, bert_tokenizer = load_bert(args.bert_model)
+
+    return cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                        extra_vocab=extra_vocab,
+                                        labels=labels,
+                                        charmodel_forward=charmodel_forward,
+                                        charmodel_backward=charmodel_backward,
+                                        bert_model=bert_model,
+                                        bert_tokenizer=bert_tokenizer,
+                                        args=args)
+
+
 def main(args=None):
     args = parse_args(args)
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -543,34 +585,10 @@ def main(args=None):
     else:
         train_set = None
 
-    pretrain = load_pretrain(args)
-
-    charmodel_forward = load_charlm(args.charlm_forward_file)
-    charmodel_backward = load_charlm(args.charlm_backward_file)
-
     if args.load_name:
-        if os.path.exists(args.load_name):
-            load_name = args.load_name
-        else:
-            load_name = os.path.join(args.save_dir, args.load_name)
-            if not os.path.exists(load_name):
-                raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-        model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+        model = load_model(args)
     else:
-        assert train_set is not None
-        labels = dataset_labels(train_set)
-        extra_vocab = dataset_vocab(train_set)
-
-        bert_model, bert_tokenizer = load_bert(args.bert_model)
-
-        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                             extra_vocab=extra_vocab,
-                                             labels=labels,
-                                             charmodel_forward=charmodel_forward,
-                                             charmodel_backward=charmodel_backward,
-                                             bert_model=bert_model,
-                                             bert_tokenizer=bert_tokenizer,
-                                             args=args)
+        model = build_new_model(args, train_set)
 
     if args.cuda:
         model.cuda()
