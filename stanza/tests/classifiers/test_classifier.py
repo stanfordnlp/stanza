@@ -178,3 +178,14 @@ def test_train_maxpool_width(tmp_path, fake_embeddings, train_file, dev_file):
 
     args = ["--maxpool_width", "3", "--filter_channels", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+
+def test_train_conv_2d(tmp_path, fake_embeddings, train_file, dev_file):
+    args = ["--filter_sizes", "(3,4,5)", "--filter_channels", "20"]
+    run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+
+    args = ["--filter_sizes", "((3,2),)", "--filter_channels", "20"]
+    run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
+    run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+
