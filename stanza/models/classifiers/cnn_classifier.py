@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import random
 import re
 from types import SimpleNamespace
@@ -365,6 +366,8 @@ class CNNClassifier(nn.Module):
 
 # TODO: all this code is basically the same as for POS and NER.  Should refactor
 def save(filename, model, skip_modules=True):
+    save_dir = os.path.split(filename)[0]
+    os.makedirs(save_dir, exist_ok=True)
     model_state = model.state_dict()
     # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
     if skip_modules:
@@ -377,13 +380,8 @@ def save(filename, model, skip_modules=True):
         'labels': model.labels,
         'extra_vocab': model.extra_vocab,
     }
-    try:
-        torch.save(params, filename, _use_new_zipfile_serialization=False)
-        logger.info("Model saved to {}".format(filename))
-    except (KeyboardInterrupt, SystemExit):
-        raise
-    except BaseException as e:
-        logger.warning("Saving failed to {}... continuing anyway.  Error: {}".format(filename, e))
+    torch.save(params, filename, _use_new_zipfile_serialization=False)
+    logger.info("Model saved to {}".format(filename))
 
 def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
     try:
