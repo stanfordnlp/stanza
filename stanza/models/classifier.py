@@ -35,6 +35,7 @@ class DevScoring(Enum):
     WEIGHTED_F1 = 'WF'
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
 DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
@@ -177,6 +178,12 @@ def parse_args(args=None):
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+
+    parser.add_argument('--bilstm', dest='bilstm', action='store_true', help="Use a bilstm after the inputs, before the convs")
+    parser.add_argument('--bilstm_hidden_dim', type=int, default=200, help="Dimension of the bilstm to use")
+    parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs")
+
+    parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -369,6 +376,8 @@ def log_param_sizes(model):
     logger.debug("  Total size: %d", total_size)
 
 def train_model(model, model_file, args, train_set, dev_set, labels):
+    tlogger.setLevel(logging.DEBUG)
+
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
@@ -516,6 +525,48 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
+def load_model(args):
+    """
+    Load both the pretrained embedding and other pieces from the args as well as the model itself
+    """
+    pretrain = load_pretrain(args)
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    if os.path.exists(args.load_name):
+        load_name = args.load_name
+    else:
+        load_name = os.path.join(args.save_dir, args.load_name)
+        if not os.path.exists(load_name):
+            raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
+    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+
+def build_new_model(args, train_set):
+    """
+    Load pretrained pieces and then build a new model
+    """
+    if train_set is None:
+        raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
+
+    pretrain = load_pretrain(args)
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    labels = dataset_labels(train_set)
+    extra_vocab = dataset_vocab(train_set)
+
+    bert_model, bert_tokenizer = load_bert(args.bert_model)
+
+    return cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                        extra_vocab=extra_vocab,
+                                        labels=labels,
+                                        charmodel_forward=charmodel_forward,
+                                        charmodel_backward=charmodel_backward,
+                                        bert_model=bert_model,
+                                        bert_tokenizer=bert_tokenizer,
+                                        args=args)
+
+
 def main(args=None):
     args = parse_args(args)
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -537,34 +588,10 @@ def main(args=None):
     else:
         train_set = None
 
-    pretrain = load_pretrain(args)
-
-    charmodel_forward = load_charlm(args.charlm_forward_file)
-    charmodel_backward = load_charlm(args.charlm_backward_file)
-
     if args.load_name:
-        if os.path.exists(args.load_name):
-            load_name = args.load_name
-        else:
-            load_name = os.path.join(args.save_dir, args.load_name)
-            if not os.path.exists(load_name):
-                raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-        model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+        model = load_model(args)
     else:
-        assert train_set is not None
-        labels = dataset_labels(train_set)
-        extra_vocab = dataset_vocab(train_set)
-
-        bert_model, bert_tokenizer = load_bert(args.bert_model)
-
-        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                             extra_vocab=extra_vocab,
-                                             labels=labels,
-                                             charmodel_forward=charmodel_forward,
-                                             charmodel_backward=charmodel_backward,
-                                             bert_model=bert_model,
-                                             bert_tokenizer=bert_tokenizer,
-                                             args=args)
+        model = build_new_model(args, train_set)
 
     if args.cuda:
         model.cuda()
