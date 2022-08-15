@@ -11,7 +11,10 @@ def send_request(request, response_type, java_main, classpath=None):
 
     Returns the protobuf response
     """
-    pipe = subprocess.run(["java", "-cp", resolve_classpath(classpath), java_main],
+    classpath = resolve_classpath(classpath)
+    if classpath is None:
+        raise ValueError("Classpath is None,  Perhaps you need to set the $CLASSPATH or $CORENLP_HOME environment variable to point to a CoreNLP install.")
+    pipe = subprocess.run(["java", "-cp", classpath, java_main],
                           input=request.SerializeToString(),
                           stdout=subprocess.PIPE,
                           check=True)
