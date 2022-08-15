@@ -315,6 +315,7 @@ class LSTMModel(BaseModel, nn.Module):
                 else:
                     self.lattn_d_input = self.pattn_d_model
                 self.label_attention_module = LabelAttentionModule(self.lattn_d_input,
+                                                                   self.args['lattn_d_input_proj'],
                                                                    self.args['lattn_d_kv'],
                                                                    self.args['lattn_d_kv'],
                                                                    self.args['lattn_d_l'],

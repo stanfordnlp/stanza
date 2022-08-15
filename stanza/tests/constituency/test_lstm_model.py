@@ -241,6 +241,23 @@ def test_forward_labeled_attention(pretrain_file):
     model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_combined_input')
     run_forward_checks(model)
 
+def test_lattn_projection(pretrain_file):
+    """
+    Test with & without labeled attention layers
+    """
+    with pytest.raises(ValueError):
+        # this is too small
+        model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '256')
+        run_forward_checks(model)
+
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '768')
+    run_forward_checks(model)
+
+    # check that it works if we turn off the projection,
+    # in case having it on beccomes the default
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '0')
+    run_forward_checks(model)
+
 def test_forward_timing_choices(pretrain_file):
     """
     Test different timing / position encodings
