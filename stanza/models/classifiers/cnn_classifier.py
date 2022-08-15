@@ -41,6 +41,7 @@ help, but dev performance went down for each variation of
 """
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
@@ -91,12 +92,12 @@ class CNNClassifier(nn.Module):
 
         self.add_unsaved_module('forward_charlm', charmodel_forward)
         if charmodel_forward is not None:
-            logger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
+            tlogger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
             if not charmodel_forward.is_forward_lm:
                 raise ValueError("Got a backward charlm as a forward charlm!")
         self.add_unsaved_module('backward_charlm', charmodel_backward)
         if charmodel_backward is not None:
-            logger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
+            tlogger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
@@ -130,7 +131,7 @@ class CNNClassifier(nn.Module):
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
                                                 padding_idx = 0)
-            logger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
+            tlogger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
         else:
             self.extra_vocab = None
             self.extra_vocab_map = None
@@ -189,7 +190,7 @@ class CNNClassifier(nn.Module):
             if isinstance(filter_size, int):
                 self.max_window = max(self.max_window, filter_size)
                 fc_delta = self.config.filter_channels // self.config.maxpool_width
-                logger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, self.config.filter_channels, fc_delta)
+                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, self.config.filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
                 self.conv_layers.append(nn.Conv2d(in_channels=1,
                                                   out_channels=self.config.filter_channels,
@@ -199,7 +200,7 @@ class CNNClassifier(nn.Module):
                 self.max_window = max(self.max_window, filter_width)
                 filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
                 fc_delta = filter_channels * (conv_input_dim // filter_width) // self.config.maxpool_width
-                logger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
+                tlogger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
                 self.conv_layers.append(nn.Conv2d(in_channels=1,
                                                   out_channels=filter_channels,
@@ -208,7 +209,7 @@ class CNNClassifier(nn.Module):
             else:
                 raise ValueError("Expected int or 2d tuple for conv size")
 
-        logger.debug("Input dim to FC layers: %d", self.fc_input_size)
+        tlogger.debug("Input dim to FC layers: %d", self.fc_input_size)
         fc_layers = []
         previous_layer_size = self.fc_input_size
         for shape in self.config.fc_shapes:

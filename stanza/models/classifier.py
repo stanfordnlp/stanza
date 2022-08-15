@@ -35,6 +35,7 @@ class DevScoring(Enum):
     WEIGHTED_F1 = 'WF'
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
 DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
@@ -375,6 +376,8 @@ def log_param_sizes(model):
     logger.debug("  Total size: %d", total_size)
 
 def train_model(model, model_file, args, train_set, dev_set, labels):
+    tlogger.setLevel(logging.DEBUG)
+
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
