@@ -12,12 +12,20 @@ To use the CoreNLP client, please first make sure that you have correctly instal
 
 After Stanza is installed, you need to install the CoreNLP software package and make sure Stanza knows where the downloaded package is located on your computer. There are two ways to do this.
 
+## Installing Java
+
+The client is written in Java, so you will first need to install the
+Java client.  CoreNLP requires Java 1.8 or higher.  You will also need
+to add Java to your path.  On some systems, such as with the Windows
+installer, this may happen automatically, or you may need to manually
+update your path.
+
 ## Automated Installation
 
 New in v1.1
 {: .label .label-green }
 
-The automated installation function is the simplest way to install CoreNLP along with the default models. You do not neeed to download and install CoreNLP yourself; rather Stanza does it for you. Most simply you can use:
+The automated installation function is the simplest way to install CoreNLP along with the default models. You do not need to download and install CoreNLP yourself; rather Stanza does it for you. Most simply you can use:
 ```python
 import stanza
 stanza.install_corenlp()
