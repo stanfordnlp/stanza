@@ -580,6 +580,7 @@ def main(args=None):
         train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
+        tlogger.setLevel(logging.DEBUG)
     elif not args.load_name:
         if args.save_name:
             args.load_name = args.save_name
