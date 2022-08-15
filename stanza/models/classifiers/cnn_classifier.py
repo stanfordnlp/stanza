@@ -23,10 +23,17 @@ The CNN classifier is based on Yoon Kim's work:
 
 https://arxiv.org/abs/1408.5882
 
+Also included are maxpool 2d, conv 2d, and a bilstm, as in
+
+Text Classification Improved by Integrating Bidirectional LSTM
+with Two-dimensional Max Pooling
+https://aclanthology.org/C16-1329.pdf
+
 The architecture is simple:
 
 - Embedding at the bottom layer
   - separate learnable entry for UNK, since many of the embeddings we have use 0 for UNK
+- maybe a bilstm layer, as per a command line flag
 - Some number of conv2d layers over the embedding
 - Maxpool layers over small windows, window size being a parameter
 - FC layer to the classification layer
