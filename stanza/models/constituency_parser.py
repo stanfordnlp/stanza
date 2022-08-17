@@ -298,6 +298,11 @@ def parse_args(args=None):
     parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
     parser.add_argument('--learning_rho', default=DEFAULT_LEARNING_RHO, type=float, help='Rho parameter in Adadelta')
+    # A few experiments on beta2 didn't show much benefit from changing it
+    #   On an experiment with training WSJ with default parameters
+    #   AdaDelta for 200 iterations, then training AdamW for 200 more,
+    #   0.999, 0.997, 0.995 all wound up with 0.9588
+    #   values lower than 0.995 all had a slight dropoff
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
 
     parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
