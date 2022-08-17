@@ -270,6 +270,36 @@ kk_kazNERD is a Kazakh dataset published in 2021
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset kk_kazNERD
 
+Masakhane NER is a set of NER datasets for African languages
+  - MasakhaNER: Named Entity Recognition for African Languages
+    Adelani, David Ifeoluwa; Abbott, Jade; Neubig, Graham;
+    D’souza, Daniel; Kreutzer, Julia; Lignos, Constantine;
+    Palen-Michel, Chester; Buzaaba, Happy; Rijhwani, Shruti;
+    Ruder, Sebastian; Mayhew, Stephen; Azime, Israel Abebe;
+    Muhammad, Shamsuddeen H.; Emezue, Chris Chinenye;
+    Nakatumba-Nabende, Joyce; Ogayo, Perez; Anuoluwapo, Aremu;
+    Gitau, Catherine; Mbaye, Derguene; Alabi, Jesujoba;
+    Yimam, Seid Muhie; Gwadabe, Tajuddeen Rabiu; Ezeani, Ignatius;
+    Niyongabo, Rubungo Andre; Mukiibi, Jonathan; Otiende, Verrah;
+    Orife, Iroro; David, Davis; Ngom, Samba; Adewumi, Tosin;
+    Rayson, Paul; Adeyemi, Mofetoluwa; Muriuki, Gerald;
+    Anebi, Emmanuel; Chukwuneke, Chiamaka; Odu, Nkiruka;
+    Wairagala, Eric Peter; Oyerinde, Samuel; Siro, Clemencia;
+    Bateesa, Tobius Saul; Oloyede, Temilola; Wambui, Yvonne;
+    Akinode, Victor; Nabagereka, Deborah; Katusiime, Maurice;
+    Awokoya, Ayodele; MBOUP, Mouhamadane; Gebreyohannes, Dibora;
+    Tilaye, Henok; Nwaike, Kelechi; Wolde, Degaga; Faye, Abdoulaye;
+    Sibanda, Blessing; Ahia, Orevaoghene; Dossou, Bonaventure F. P.;
+    Ogueji, Kelechi; DIOP, Thierno Ibrahima; Diallo, Abdoulaye;
+    Akinfaderin, Adewale; Marengereke, Tendai; Osei, Salomey
+  - https://github.com/masakhane-io/masakhane-ner
+  - git clone the repo to $NERBASE
+  - Then run
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset lcode_masakhane
+  - You can use the full language name, the 3 letter language code,
+    or in the case of languages with a 2 letter language code,
+    the 2 letter code for lcode.  The tool will throw an error
+    if the language is not supported in Masakhane.
 
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
@@ -285,7 +315,7 @@ import shutil
 import sys
 import tempfile
 
-from stanza.models.common.constant import treebank_to_short_name, lcode2lang
+from stanza.models.common.constant import treebank_to_short_name, lcode2lang, lang_to_langcode, two_to_three_letters
 import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
@@ -840,6 +870,47 @@ def process_kk_kazNERD(paths, short_name):
     out_directory = paths["NER_DATA_DIR"]
     convert_kk_kazNERD.convert_dataset(in_directory, out_directory, short_name)
 
+def process_masakhane(paths, dataset_name):
+    """
+    Converts Masakhane NER datasets to Stanza's .json format
+
+    If we let N be the length of the first sentence, the NER files
+    (in version 2, at least) are all of the form
+
+    word tag
+    ...
+    word tag
+      (blank line for sentence break)
+    word tag
+    ...
+
+    Once the dataset is git cloned in $NERBASE, the directory structure is
+
+    $NERBASE/masakhane-ner/MasakhaNER2.0/data/$lcode/{train,dev,test}.txt
+
+    The only tricky thing here is that for some languages, we treat
+    the 2 letter lcode as canonical thanks to UD, but Masakhane NER
+    uses 3 letter lcodes for all languages.
+    """
+    language, dataset = dataset_name.split("_")
+    lcode = lang_to_langcode(language)
+    if lcode in two_to_three_letters:
+        masakhane_lcode = two_to_three_letters[lcode]
+    else:
+        masakhane_lcode = lcode
+
+    mn_directory = os.path.join(paths["NERBASE"], "masakhane-ner")
+    if not os.path.exists(mn_directory):
+        raise FileNotFoundError("Cannot find Masakhane NER repo.  Please check the setting of NERBASE or clone the repo to %s" % mn_directory)
+    data_directory = os.path.join(mn_directory, "MasakhaNER2.0", "data")
+    if not os.path.exists(data_directory):
+        raise FileNotFoundError("Apparently found the repo at %s but the expected directory structure is not there - was looking for %s" % (mn_directory, data_directory))
+
+    in_directory = os.path.join(data_directory, masakhane_lcode)
+    if not os.path.exists(in_directory):
+        raise UnknownDatasetError(dataset_name, "Found the Masakhane repo, but there was no %s in the repo at path %s" % (dataset_name, in_directory))
+    convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], "%s_masakhane" % lcode, "txt")
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -889,6 +960,8 @@ def main(dataset_name):
         process_norne(paths, dataset_name)
     elif dataset_name == 'en_sample':
         process_toy_dataset(paths, dataset_name)
+    elif dataset_name.lower().endswith("_masakhane"):
+        process_masakhane(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
     print("Done processing %s" % dataset_name)

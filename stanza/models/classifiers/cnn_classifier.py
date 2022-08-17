@@ -1,4 +1,6 @@
 import logging
+import math
+import os
 import random
 import re
 from types import SimpleNamespace
@@ -21,10 +23,17 @@ The CNN classifier is based on Yoon Kim's work:
 
 https://arxiv.org/abs/1408.5882
 
+Also included are maxpool 2d, conv 2d, and a bilstm, as in
+
+Text Classification Improved by Integrating Bidirectional LSTM
+with Two-dimensional Max Pooling
+https://aclanthology.org/C16-1329.pdf
+
 The architecture is simple:
 
 - Embedding at the bottom layer
   - separate learnable entry for UNK, since many of the embeddings we have use 0 for UNK
+- maybe a bilstm layer, as per a command line flag
 - Some number of conv2d layers over the embedding
 - Maxpool layers over small windows, window size being a parameter
 - FC layer to the classification layer
@@ -39,6 +48,7 @@ help, but dev performance went down for each variation of
 """
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
@@ -73,6 +83,9 @@ class CNNClassifier(nn.Module):
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
                                       bert_model = args.bert_model,
+                                      bilstm = args.bilstm,
+                                      bilstm_hidden_dim = args.bilstm_hidden_dim,
+                                      maxpool_width = args.maxpool_width,
                                       model_type = 'CNNClassifier')
 
         self.char_lowercase = args.char_lowercase
@@ -86,12 +99,12 @@ class CNNClassifier(nn.Module):
 
         self.add_unsaved_module('forward_charlm', charmodel_forward)
         if charmodel_forward is not None:
-            logger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
+            tlogger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
             if not charmodel_forward.is_forward_lm:
                 raise ValueError("Got a backward charlm as a forward charlm!")
         self.add_unsaved_module('backward_charlm', charmodel_backward)
         if charmodel_backward is not None:
-            logger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
+            tlogger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
@@ -125,7 +138,7 @@ class CNNClassifier(nn.Module):
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
                                                 padding_idx = 0)
-            logger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
+            tlogger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
         else:
             self.extra_vocab = None
             self.extra_vocab_map = None
@@ -165,20 +178,52 @@ class CNNClassifier(nn.Module):
             self.bert_dim = self.bert_model.config.hidden_size
             total_embedding_dim += self.bert_dim
 
-        self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
-                                                    out_channels=self.config.filter_channels,
-                                                    kernel_size=(filter_size, total_embedding_dim))
-                                          for filter_size in self.config.filter_sizes])
+        if self.config.bilstm:
+            conv_input_dim = self.config.bilstm_hidden_dim * 2
+            self.bilstm = nn.LSTM(batch_first=True,
+                                  input_size=total_embedding_dim,
+                                  hidden_size=self.config.bilstm_hidden_dim,
+                                  num_layers=2,
+                                  bidirectional=True,
+                                  dropout=0.2)
+        else:
+            conv_input_dim = total_embedding_dim
+            self.bilstm = None
 
-        previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
+        self.fc_input_size = 0
+        self.conv_layers = nn.ModuleList()
+        self.max_window = 0
+        for filter_size in self.config.filter_sizes:
+            if isinstance(filter_size, int):
+                self.max_window = max(self.max_window, filter_size)
+                fc_delta = self.config.filter_channels // self.config.maxpool_width
+                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, self.config.filter_channels, fc_delta)
+                self.fc_input_size += fc_delta
+                self.conv_layers.append(nn.Conv2d(in_channels=1,
+                                                  out_channels=self.config.filter_channels,
+                                                  kernel_size=(filter_size, conv_input_dim)))
+            elif isinstance(filter_size, tuple) and len(filter_size) == 2:
+                filter_height, filter_width = filter_size
+                self.max_window = max(self.max_window, filter_width)
+                filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                fc_delta = filter_channels * (conv_input_dim // filter_width) // self.config.maxpool_width
+                tlogger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
+                self.fc_input_size += fc_delta
+                self.conv_layers.append(nn.Conv2d(in_channels=1,
+                                                  out_channels=filter_channels,
+                                                  stride=(1, filter_width),
+                                                  kernel_size=(filter_height, filter_width)))
+            else:
+                raise ValueError("Expected int or 2d tuple for conv size")
+
+        tlogger.debug("Input dim to FC layers: %d", self.fc_input_size)
         fc_layers = []
+        previous_layer_size = self.fc_input_size
         for shape in self.config.fc_shapes:
             fc_layers.append(nn.Linear(previous_layer_size, shape))
             previous_layer_size = shape
         fc_layers.append(nn.Linear(previous_layer_size, self.config.num_classes))
         self.fc_layers = nn.ModuleList(fc_layers)
-
-        self.max_window = max(self.config.filter_sizes)
 
         self.dropout = nn.Dropout(self.config.dropout)
 
@@ -325,12 +370,23 @@ class CNNClassifier(nn.Module):
         # still works even if there's just one item
         input_vectors = torch.cat(all_inputs, dim=2)
 
+        if self.config.bilstm:
+            input_vectors, _ = self.bilstm(self.dropout(input_vectors))
+
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
 
-        conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
-                     for conv in self.conv_layers]
-        pool_outs = [F.max_pool1d(out, out.shape[2]).squeeze(2) for out in conv_outs]
+        conv_outs = []
+        for conv, filter_size in zip(self.conv_layers, self.config.filter_sizes):
+            # TODO: non-int filter sizes
+            if isinstance(filter_size, int):
+                conv_out = self.dropout(F.relu(conv(x).squeeze(3)))
+                conv_outs.append(conv_out)
+            else:
+                conv_out = conv(x).transpose(2, 3).flatten(1, 2)
+                conv_out = self.dropout(F.relu(conv_out))
+                conv_outs.append(conv_out)
+        pool_outs = [F.max_pool2d(out, (self.config.maxpool_width, out.shape[2])).squeeze(2) for out in conv_outs]
         pooled = torch.cat(pool_outs, dim=1)
 
         previous_layer = pooled
@@ -346,6 +402,8 @@ class CNNClassifier(nn.Module):
 
 # TODO: all this code is basically the same as for POS and NER.  Should refactor
 def save(filename, model, skip_modules=True):
+    save_dir = os.path.split(filename)[0]
+    os.makedirs(save_dir, exist_ok=True)
     model_state = model.state_dict()
     # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
     if skip_modules:
@@ -358,13 +416,8 @@ def save(filename, model, skip_modules=True):
         'labels': model.labels,
         'extra_vocab': model.extra_vocab,
     }
-    try:
-        torch.save(params, filename, _use_new_zipfile_serialization=False)
-        logger.info("Model saved to {}".format(filename))
-    except (KeyboardInterrupt, SystemExit):
-        raise
-    except BaseException as e:
-        logger.warning("Saving failed to {}... continuing anyway.  Error: {}".format(filename, e))
+    torch.save(params, filename, _use_new_zipfile_serialization=False)
+    logger.info("Model saved to {}".format(filename))
 
 def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
     try:
@@ -378,6 +431,9 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
     setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
     setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
+    setattr(checkpoint['config'], 'bilstm', getattr(checkpoint['config'], 'bilstm', False))
+    setattr(checkpoint['config'], 'bilstm_hidden_dim', getattr(checkpoint['config'], 'bilstm_hidden_dim', 0))
+    setattr(checkpoint['config'], 'maxpool_width', getattr(checkpoint['config'], 'maxpool_width', 1))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')

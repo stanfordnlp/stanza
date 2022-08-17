@@ -162,7 +162,7 @@ class MultiHeadAttention(nn.Module):
         self.d_k = d_k
         self.d_v = d_v
 
-        if d_positional is None:
+        if not d_positional:
             self.partitioned = False
         else:
             self.partitioned = True
@@ -389,7 +389,7 @@ class LabelAttention(nn.Module):
         self.q_as_matrix = q_as_matrix # Using a Matrix of Q to be multiplied with input instead of learned q vectors
         self.combine_as_self = combine_as_self # Using the Combination Method of Self-Attention
 
-        if d_positional is None:
+        if not d_positional:
             self.partitioned = False
         else:
             self.partitioned = True
@@ -625,6 +625,7 @@ class LabelAttentionModule(nn.Module):
     #
     def __init__(self,
                  d_model,
+                 d_input_proj,
                  d_k,
                  d_v,
                  d_l,
@@ -641,7 +642,18 @@ class LabelAttentionModule(nn.Module):
         super().__init__()
         self.ff_dim = d_proj * d_l
 
-        self.label_attention = LabelAttention(d_model,
+        self.d_positional = d_positional if d_positional else 0
+
+        if d_input_proj:
+            if d_input_proj <= d_positional:
+                raise ValueError("Illegal argument for d_input_proj: d_input_proj %d is smaller than d_positional %d" % (d_input_proj, d_positional))
+            self.input_projection = nn.Linear(d_model - d_positional, d_input_proj - d_positional, bias=False)
+            d_input = d_input_proj
+        else:
+            self.input_projection = None
+            d_input = d_model
+
+        self.label_attention = LabelAttention(d_input,
                                               d_k,
                                               d_v,
                                               d_l,
@@ -651,22 +663,26 @@ class LabelAttentionModule(nn.Module):
                                               q_as_matrix,
                                               residual_dropout,
                                               attention_dropout,
-                                              d_positional)
+                                              self.d_positional)
 
         if not lattn_partitioned:
             self.lal_ff = PositionwiseFeedForward(self.ff_dim,
                                                   d_ff,
-                                                  d_positional,
+                                                  self.d_positional,
                                                   relu_dropout,
                                                   residual_dropout)
         else:
             self.lal_ff = PartitionedPositionwiseFeedForward(self.ff_dim,
                                                              d_ff,
-                                                             d_positional,
+                                                             self.d_positional,
                                                              relu_dropout,
                                                              residual_dropout)
 
     def forward(self, word_embeddings, tagged_word_lists):
+        if self.input_projection:
+            word_embeddings = [torch.cat((self.input_projection(sentence[:, :-self.d_positional]),
+                                          sentence[:, -self.d_positional:]), dim=1)
+                               for sentence in word_embeddings]
         # Extract Labeled Representation
         packed_len = sum(sentence.shape[0] for sentence in word_embeddings)
         batch_idxs = np.zeros(packed_len, dtype=int)
