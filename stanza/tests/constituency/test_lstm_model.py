@@ -155,6 +155,9 @@ def test_nonlinearity_init(pretrain_file):
     model = build_model(pretrain_file, '--nonlinearity', 'tanh')
     run_forward_checks(model)
 
+    model = build_model(pretrain_file, '--nonlinearity', 'silu')
+    run_forward_checks(model)
+
 def test_forward_charlm(pretrain_file):
     """
     Tests loading and running a charlm

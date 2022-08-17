@@ -83,17 +83,22 @@ def retag_trees(trees, pipeline, xpos=True):
             raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
     return new_trees
 
+NONLINEARITY = {
+    'tanh':       nn.Tanh,
+    'relu':       nn.ReLU,
+    'gelu':       nn.GELU,
+    'leaky_relu': nn.LeakyReLU,
+    'silu':       nn.SiLU,
+    'mish':       nn.Mish,
+}
+
 def build_nonlinearity(nonlinearity):
-    if nonlinearity == 'tanh':
-        return nn.Tanh()
-    elif nonlinearity == 'relu':
-        return nn.ReLU()
-    elif nonlinearity == 'gelu':
-        return nn.GELU()
-    elif nonlinearity == 'leaky_relu':
-        return nn.LeakyReLU()
-    else:
-        raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
+    """
+    Look up "nonlinearity" in a map from function name to function, build the appropriate layer.
+    """
+    if nonlinearity in NONLINEARITY:
+        return NONLINEARITY[nonlinearity]()
+    raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
 
 def build_optimizer(args, model):
     """

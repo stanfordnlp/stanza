@@ -136,7 +136,7 @@ from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
 
 logger = logging.getLogger('stanza')
 
@@ -348,7 +348,7 @@ def parse_args(args=None):
     # after the same clock time on the same hardware.  the two had been
     # trading places in terms of accuracy over those ~500 iterations.
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
-    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu', 'gelu', 'leaky_relu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
+    parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
