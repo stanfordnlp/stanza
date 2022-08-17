@@ -20,7 +20,7 @@
 #   stanza/utils/datasets/ner/prepare_ner_dataset.py
 # If rebuilding NER data, choose a location for the NER directory
 #   and set NERBASE to that variable.
-# export NERBASE=/path/to/NER
+export NERBASE=/nlp/scr/aaydin/kazNERD
 
 # Set CONSTITUENCY_BASE to the location of NER data folder
 # The data will be in some dataset-specific format
@@ -35,7 +35,7 @@
 # $DATA_ROOT is a default home for where all the outputs from the
 #   preparation scripts will go.  The training scripts will then look
 #   for the stanza formatted data in that directory.
-export DATA_ROOT=./data
+export DATA_ROOT=/nlp/scr/aaydin/kazNERD/data
 export TOKENIZE_DATA_DIR=$DATA_ROOT/tokenize
 export MWT_DATA_DIR=$DATA_ROOT/mwt
 export LEMMA_DATA_DIR=$DATA_ROOT/lemma
