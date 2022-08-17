@@ -284,7 +284,7 @@ def parse_args(args=None):
     #           0.0005  - 0.8076
     #           0.001   - 0.8069
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
-    parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
+    parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
     # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
