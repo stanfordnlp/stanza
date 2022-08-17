@@ -84,6 +84,12 @@ If you have a blank `PYTHONPATH`, or your path does not include `.`, please also
 export PYTHONPATH=$PYTHONPATH:.
 ```
 
+### Language code
+
+If the dataset involves a language currently not in Stanza, it may
+need [the language code](new_language.md#language-codes) added to
+Stanza.  Feel free to open an issue on our github or send us a PR.
+
 ### Data download
 
 We can organize the data in a variety of ways.  For this dataset, we
