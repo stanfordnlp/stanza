@@ -63,6 +63,13 @@ In some scenarios you may know that the possible language is only from a small s
 nlp = Pipeline(lang="multilingual", processors="langid", langid_lang_subset=["en","fr"])
 ```
 
+If you are using the `MultilingualPipeline`, you can set this by adding `langid_lang_subset` to the `lang_id_config`:
+
+```python
+lang_id_config = {"langid_lang_subset": ['ar', 'hi']}
+nlp = MultilingualPipeline(lang_id_config=lang_id_config)
+```
+
 ## Basic Multilingual Pipeline Example
 
 A `MultilingualPipeline` will detect the language of text, and run the appropriate language specific Stanza pipeline on the text. The `MultilingualPipeline` will maintain a cache of pipelines for each language. This example demonstrates handling some English and French text. Each example is classified as English or French, and then an appropriate English or French pipeline is run on the text.
