@@ -4,11 +4,15 @@ Class for running multilingual pipelines
 
 import torch
 
+import copy
+import logging
+
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline._constants import *
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
+logger = logging.getLogger('stanza')
 
 class MultilingualPipeline:
     """
@@ -23,16 +27,32 @@ class MultilingualPipeline:
         lang_configs: dict = None,
         ld_batch_size: int = 64,
         max_cache_size: int = 10,
-        use_gpu: bool = None
+        use_gpu: bool = None,
+        restrict: bool = False,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
-        self.lang_id_config = {} if lang_id_config is None else lang_id_config
-        self.lang_configs = {} if lang_configs is None else lang_configs
+        self.lang_id_config = {} if lang_id_config is None else copy.deepcopy(lang_id_config)
+        self.lang_configs = {} if lang_configs is None else copy.deepcopy(lang_configs)
         self.max_cache_size = max_cache_size
         self.pipeline_cache = {}
         self.lang_request_history = []
-        
+
+        # if lang is not in any of the lang_configs, update them to
+        # include the lang parameter.  otherwise, the default language
+        # will always be used...
+        for lang in self.lang_configs:
+            if 'lang' not in self.lang_configs[lang]:
+                self.lang_configs[lang]['lang'] = lang
+
+        if restrict and 'langid_lang_subset' not in self.lang_id_config:
+            known_langs = sorted(self.lang_configs.keys())
+            if known_langs == 0:
+                logger.warning("MultilingualPipeline asked to restrict to lang_configs, but lang_configs was empty.  Ignoring...")
+            else:
+                logger.debug("Restricting MultilingualPipeline to %s", known_langs)
+                self.lang_id_config['langid_lang_subset'] = known_langs
+
         # set use_gpu
         if use_gpu is None:
             self.use_gpu = torch.cuda.is_available()
@@ -48,7 +68,7 @@ class MultilingualPipeline:
         Do any necessary updates to the pipeline cache for this language. This includes building a new
         pipeline for the lang, and possibly clearing out a language with the old last access date.
         """
-        
+
         # update request history
         if lang in self.lang_request_history:
             self.lang_request_history.remove(lang)
@@ -60,6 +80,7 @@ class MultilingualPipeline:
 
         # update pipeline cache
         if lang not in self.pipeline_cache:
+            logger.debug("Loading unknown language in MultilingualPipeline: %s", lang)
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
                 lru_lang = self.lang_request_history[0]
@@ -87,7 +108,8 @@ class MultilingualPipeline:
 
         # create language specific batches, store global idx with each doc
         lang_batches = {}
-        for doc in docs_w_langid:
+        for doc_idx, doc in enumerate(docs_w_langid):
+            logger.debug("Language for document %d: %s", doc_idx, doc.lang)
             if doc.lang not in lang_batches:
                 lang_batches[doc.lang] = []
             lang_batches[doc.lang].append(doc)
