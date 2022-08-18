@@ -44,6 +44,16 @@ def get_tags(datasets):
                 tags.add(tag)
     return tags
 
+def write_sentences(output_filename, dataset):
+    """
+    Write exactly one output file worth of dataset
+    """
+    with open(output_filename, "w", encoding="utf-8") as fout:
+        for sentence in dataset:
+            for word in sentence:
+                fout.write("%s\t%s\n" % word)
+            fout.write("\n")
+
 def write_dataset(datasets, output_dir, short_name, suffix="bio"):
     """
     write all three pieces of a dataset to output_dir
@@ -56,11 +66,7 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio"):
     """
     for shard, dataset in zip(SHARDS, datasets):
         output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
-        with open(output_filename, "w", encoding="utf-8") as fout:
-            for sentence in dataset:
-                for word in sentence:
-                    fout.write("%s\t%s\n" % word)
-                fout.write("\n")
+        write_sentences(output_filename, dataset)
 
     convert_bio_to_json(output_dir, output_dir, short_name, suffix)
 
