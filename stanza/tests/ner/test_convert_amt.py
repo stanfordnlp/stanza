@@ -1,5 +1,5 @@
 """
-Test some of the 
+Test some of the functions used for converting an AMT json to a Stanza json
 """
 
 
