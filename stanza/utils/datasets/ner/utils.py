@@ -48,6 +48,7 @@ def write_sentences(output_filename, dataset):
     """
     Write exactly one output file worth of dataset
     """
+    os.makedirs(os.path.split(output_filename)[0], exist_ok=True)
     with open(output_filename, "w", encoding="utf-8") as fout:
         for sentence in dataset:
             for word in sentence:
