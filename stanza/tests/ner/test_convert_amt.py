@@ -30,6 +30,7 @@ LABELS = [
     fake_label('Person', 1, 8),
     fake_label('Person', 0, 7),
     fake_label('Person', 0, 9),
+    fake_label('Appendage', 29, 38),
 ]
 
 def fake_labels(*indices):
@@ -94,6 +95,10 @@ def test_process_doc():
 
     # test a slightly wronger end index
     doc = convert_amt.process_doc(TEXT, fake_labels(7, 4), nlp)
+    check_results(doc, "B-Person", "O", "O", "O", "B-Appendage", "O")
+
+    # test a period at the end of a text - should not be captured
+    doc = convert_amt.process_doc(TEXT, fake_labels(7, 8), nlp)
     check_results(doc, "B-Person", "O", "O", "O", "B-Appendage", "O")
 
     
