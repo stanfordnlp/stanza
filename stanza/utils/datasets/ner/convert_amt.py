@@ -177,6 +177,9 @@ def process_doc(source, labels, pipe):
                 if token.start_char >= end_offset and token_idx > 0:
                     end_token = sentence.tokens[token_idx-1]
                     break
+                if token.end_char == end_offset and token_idx > 0 and token.text in (',', '.'):
+                    end_token = sentence.tokens[token_idx-1]
+                    break
                 token.ner = "I-" + ner
             if token.end_char >= end_offset and end_token is None:
                 end_token = token
