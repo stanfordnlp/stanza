@@ -4,27 +4,33 @@ Kazakh Transliteration:
 
 
 """
+
+import argparse
+import os
 from re import M
-import sys
 import string
+import sys
+
+from stanza.models.common.utils import open_read_text, get_tqdm
+tqdm = get_tqdm()
 
 """
 This dictionary isn't used in the code, just put this here in case you want to implement it more
 efficiently and in case the need to look up the unicode encodings for these letters might arise.
 Some letters are mapped to multiple latin letters, for these, I separated the unicde with a '%' delimiter
-between the two unicode characters. 
+between the two unicode characters.
 """
 alph_map = {
-    '\u0410' # А 
+    '\u0410' # А
     : '\u0041', # A
-    '\u0430' # а 
+    '\u0430' # а
     : '\u0061', # a
 
     '\u04D8' # Ә
     : '\u00c4', # Ä
     '\u04D9' # ә
     : '\u00e4', # ä
-    
+
     '\u0411' # Б
     : '\u0042', # B
     '\u0431' # б
@@ -32,7 +38,7 @@ alph_map = {
 
     '\u0412' # В
     : '\u0056', # V
-    '\u0432' # в 
+    '\u0432' # в
     : '\u0076', # v
 
     '\u0413' # Г
@@ -55,9 +61,9 @@ alph_map = {
     '\u0435' # е
     : '\u0065', # e
 
-    '\u0401' # Ё 
+    '\u0401' # Ё
     : '\u0130%\u006f', # İo
-    '\u0451' # ё 
+    '\u0451' # ё
     : '\u0069%\u006f', #io
 
     '\u0416' # Ж
@@ -65,19 +71,19 @@ alph_map = {
     '\u0436' # ж
     : '\u006a', # j
 
-    '\u0417' # З 
+    '\u0417' # З
     : '\u005a', # Z
     '\u0437' # з
     : '\u007a', # z
 
     '\u0418' # И
     : '\u0130', # İ
-    '\u0438' # и 
+    '\u0438' # и
     : '\u0069', # i
 
-    '\u0419' # Й 
+    '\u0419' # Й
     : '\u0130', # İ
-    '\u0439' # й 
+    '\u0439' # й
     : '\u0069', # i
 
     '\u041A' # К
@@ -90,9 +96,9 @@ alph_map = {
     '\u049B' # қ
     : '\u0071', # q
 
-    '\u041B' # Л 
+    '\u041B' # Л
     : '\u004c', # L
-    '\u043B' # л 
+    '\u043B' # л
     : '\u006c', # l
 
     '\u041C' # М
@@ -115,9 +121,9 @@ alph_map = {
     '\u043E' # о
     : '\u006f', # o
 
-    '\u04E8' # Ө 
+    '\u04E8' # Ө
     : '\u00d6', # Ö
-    '\u04E9' # ө 
+    '\u04E9' # ө
     : '\u00f6', # ö
 
     '\u041F' # П
@@ -125,14 +131,14 @@ alph_map = {
     '\u043F' # п
     : '\u0070', # p
 
-    '\u0420' # Р 
+    '\u0420' # Р
     : '\u0052', # R
     '\u0440' # р
     : '\u0072', # r
 
     '\u0421' # С
     : '\u0053', # S
-    '\u0441' # с 
+    '\u0441' # с
     : '\u0073', # s
 
     '\u0422' # Т
@@ -145,17 +151,17 @@ alph_map = {
     '\u0443' # у
     : '\u0075', # u
 
-    '\u04B0' # Ұ 
+    '\u04B0' # Ұ
     : '\u016a', # Ū
     '\u04B1' # ұ
-    : '\u016b', # ū 
+    : '\u016b', # ū
 
     '\u04AE' # Ү
     : '\u00dc', # Ü
-    '\u04AF' # ү 
-    : '\u00fc', # ü 
+    '\u04AF' # ү
+    : '\u00fc', # ü
 
-    '\u0424' # Ф 
+    '\u0424' # Ф
     : '\u0046', # F
     '\u0444' # ф
     : '\u0066', # f
@@ -164,15 +170,15 @@ alph_map = {
     : '\u0048', # H
     '\u0445' # х
     : '\u0068', # h
-    
-    '\u04BA' # Һ 
+
+    '\u04BA' # Һ
     : '\u0048', # H
-    '\u04BB' # һ 
+    '\u04BB' # һ
     : '\u0068', # h
 
-    '\u0426' # Ц 
+    '\u0426' # Ц
     : '\u0043', # C
-    '\u0446' # ц 
+    '\u0446' # ц
     : '\u0063', # c
 
     '\u0427' # Ч
@@ -185,9 +191,9 @@ alph_map = {
     '\u0448' # ш
     : '\u015f', # ş
 
-    '\u0429' # Щ 
+    '\u0429' # Щ
     : '\u015e%\u00e7', # Şç
-    '\u0449' # щ 
+    '\u0449' # щ
     : '\u015f%\u00e7', # şç
 
     '\u042A' # Ъ
@@ -195,14 +201,14 @@ alph_map = {
     '\u044A' # ъ
     : '', # Empty String \u
 
-    '\u042B' # Ы 
+    '\u042B' # Ы
     : '\u0059', # Y
-    '\u044B' # ы 
+    '\u044B' # ы
     : '\u0079', # y
 
     '\u0406' # І
     : '\u0130', # İ
-    '\u0456' # і 
+    '\u0456' # і
     : '\u0069', # i
 
     '\u042C' # Ь
@@ -210,19 +216,19 @@ alph_map = {
     '\u044C' # ь
     : '', # Empty String
 
-    '\u042D' # Э 
+    '\u042D' # Э
     : '\u0045', # E
     '\u044D' # э
     : '\u0065', # e
 
-    '\u042E' # Ю 
+    '\u042E' # Ю
     : '\u0130%\u0075', # İu
-    '\u044E' # ю 
+    '\u044E' # ю
     : '\u0069%\u0075', # iu
 
-    '\u042F' # Я 
+    '\u042F' # Я
     : '\u0130%\u0061', # İa
-    '\u044F' # я 
+    '\u044F' # я
     : '\u0069%\u0061' # ia
 }
 
@@ -255,7 +261,7 @@ def create_dic(source_alph, target_alph, mult_mapping, empty_mapping):
         else:
             res[l_s] = target_alph[idx]
         idx += 1
-    
+
     res['ϵ'] = 'io'
     res['ə'] = 'ä'
     res['ó'] = 'ö'
@@ -263,7 +269,7 @@ def create_dic(source_alph, target_alph, mult_mapping, empty_mapping):
 
     print(res)
     return res
-        
+
 
 supp_alph = "IWwXx0123456789–«»—"
 
@@ -275,43 +281,50 @@ def transliterate(source):
     for c in source:
         if c in punc or c in white_spc:
             output += c
-        
+
         elif c in latin_alph or c in supp_alph:
             output += c
-        
+
         elif c in tr_dict:
             output += tr_dict[c]
-        
+
         else:
             print(f"Transliteration Error: {c}")
 
     return output
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_file', type=str, nargs="+", help="Files to process")
+    parser.add_argument('--output_dir', type=str, default=None, help="Directory to output results")
+    args = parser.parse_args()
 
-        filename = sys.argv[1]
-        name, extension = filename.split('.')
+    tr_dict = create_dic(kazakh_alph, latin_alph, mult_mapping, empty_mapping)
+    for filename in tqdm(args.input_file):
+        if args.output_dir is not None:
+            os.makedirs(args.output_dir, exist_ok=True)
+            directory, basename = os.path.split(filename)
+            output_name = os.path.join(args.output_dir, basename)
+            if output_name.endswith(".xz"):
+                output_name = output_name[:-3]
+            output_name = output_name + ".trans"
+        else:
+            output_name = filename + ".trans"
 
-        with open(filename, 'r') as f_in:
+        tqdm.write("Transliterating %s to %s" % (filename, output_name))
+
+        with open_read_text(filename) as f_in:
             data = f_in.read()
-            f_out = open(f"{name}_TRANSLITERATED.{extension}", 'w')
-
-            tr_dict = create_dic(kazakh_alph, latin_alph, mult_mapping, empty_mapping)
+        with open(output_name, 'w') as f_out:
             punc = string.punctuation
             white_spc = string.whitespace
-            for c in data:
-                if c in punc or c in white_spc:
-                    f_out.write(c)
-        
-                elif c in latin_alph or c in supp_alph:
-                    f_out.write(c)
-        
-                elif c in tr_dict:
+            for c in tqdm(data, leave=False):
+                if c in tr_dict:
                     f_out.write(tr_dict[c])
-        
+
                 else:
-                    print(f"Transliteration Error: {c}")
-        
-        print("Process Completed Successfully!")
+                    f_out.write(c)
+
+
+    print("Process Completed Successfully!")
 
