@@ -18,6 +18,10 @@ def read_json(input_filename):
     Read the json file and extract the NER labels
 
     Will not return lines which are not labeled
+
+    Return format is a list of lines
+    where each line is a tuple: (text, labels)
+    labels is a list of maps, {'label':..., 'startOffset':..., 'endOffset':...}
     """
     docs = []
     blank = 0
