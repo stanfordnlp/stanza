@@ -52,7 +52,7 @@ def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) ->
     for filename in dataset.split(","):
         with open(filename, encoding="utf-8") as fin:
             new_lines = json.load(fin)
-        new_lines = [(x['sentiment'], x['text']) for x in new_lines]
+        new_lines = [(str(x['sentiment']), x['text']) for x in new_lines]
         lines.extend(new_lines)
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
