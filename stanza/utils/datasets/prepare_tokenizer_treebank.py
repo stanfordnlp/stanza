@@ -83,7 +83,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=Tr
 def read_sentences_from_conllu(filename):
     sents = []
     cache = []
-    with open(filename) as infile:
+    with open(filename, encoding="utf-8") as infile:
         for line in infile:
             line = line.strip()
             if len(line) == 0:
@@ -97,7 +97,7 @@ def read_sentences_from_conllu(filename):
     return sents
 
 def write_sentences_to_conllu(filename, sents):
-    with open(filename, 'w') as outfile:
+    with open(filename, 'w', encoding="utf-8") as outfile:
         for lines in sents:
             for line in lines:
                 print(line, file=outfile)
