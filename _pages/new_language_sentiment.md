@@ -192,6 +192,18 @@ At this point, everything is ready to push the button and start training.
 python -m stanza.utils.training.run_sentiment es_tass2020
 ```
 
+### Charlm and Bert
+
+There is a pretrained character model that ships with Stanza, and
+there is also support in the Sentiment model for HuggingFace
+transformers.  There is more description of how to use them in the
+corresponding section of the
+[NER models](new_language_ner.md#charlm-and-bert) page.
+
+{% include alerts.html %}
+{{ note }}
+{{ "Stanza also has a pretrained Spanish charlm, so we do not need to do anything to add that.  The `run_sentiment` script will also attempt to automatically download that model." | markdownify }}
+{{ end }}
 
 ### Contributing back
 
