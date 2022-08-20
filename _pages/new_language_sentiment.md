@@ -212,5 +212,11 @@ models somewhere we can integrate them.  It would be very appreciated!
 
 ### Citations
 
-TODO
+The original sentiment model is based on ["Convolutional Neural Networks for Sentence Classification"](https://arxiv.org/abs/1408.5882), by Yoon Kim.
 
+Improvements to the model are incorporated from ["Text Classification
+Improved by Integrating Bidirectional LSTM with Two-dimensional Max
+Pooling"](https://arxiv.org/abs/1408.5882) by Peng Zhou, Zhenyu Qi,
+Suncong Zheng, Jiaming Xu, Hongyun Bao, Bo Xu
+
+The TASS 2020 dataset is introduced in ["Overview of TASS 2020: Introducing Emotion Detection"](https://www.semanticscholar.org/paper/Overview-of-TASS-2020%3A-Introducing-Emotion-Vega-D%C3%ADaz-Galiano/a951edc8a65ad8ecaf5ff145bab22d970cec1636) by M. Vega, M. C. Díaz-Galiano, et al
