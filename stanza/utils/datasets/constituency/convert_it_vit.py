@@ -52,6 +52,9 @@ This update is hopefully in current ELRA distributions now.
 If not, please contact ELRA to specifically ask for the updated version.
 Internally to Stanford, feel free to ask Chris or John for the updates.
 Look for the line below "original version with more errors"
+
+In August 2022, Prof. Delmonte made a slight update in a zip file `john.zip`.
+If/when that gets updated to ELRA, we will update it here.
 """
 
 from collections import defaultdict, deque
@@ -198,6 +201,7 @@ def raw_tree(text):
         "num-0/07%plus":           "(num 0,07%) (num plus)",
         "num-0/69%minus":          "(num 0,69%) (num minus)",
         "num-0_39%minus":          "(num 0,39%) (num minus)",
+        "num-9_11/16":             "(num 9-11,16)",
         "n-giga_flop/s":           "(n giga_flop/s)",
         "sect-'g-1'":              "(sect g-1)",
         "sect-'h-1'":              "(sect h-1)",
@@ -487,22 +491,21 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
     try:
         updated_tree = updated_tree.replace_words(ud_words)
     except ValueError as e:
-        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\n{}\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
+        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\nUPDATED LEAVES\n{}\nUD TEXT\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
     return updated_tree
 
 # train set:
 #  858: missing close parens in the UD conversion
-# 2388: the problem is inconsistent treatment of s_p_a_
-# 05071: the heuristic to fill in a missing "si" doesn't work because there's
+# 2375: the problem is inconsistent treatment of s_p_a_
+# 05052: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
-# 07089: wrong word edited out in UD?
-# 07137: FAME -> F A ME wtf?
-# 08391: da riempire inconsistency
+# 07069: "i" edited out in UD incorrectly?
+# 07117: FAME -> F A ME wtf?
+# 08371: da riempire inconsistency
 #
 # test set:
-# 04541: similar to another tree which is missed
-# 09785: da riempire inconsistency
-IGNORE_IDS = ["sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
+# 09765: da riempire inconsistency
+IGNORE_IDS = ["sent_00867", "sent_01169", "sent_02375", "sent_05052", "sent_07069", "sent_07117", "sent_08371", "sent_09765"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
@@ -527,7 +530,8 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
     #con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
     # the most recent update from ELRA may look like this?
     # it's what we got, at least
-    con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+    # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+    con_filename = os.path.join(con_directory, "italian", "john", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
