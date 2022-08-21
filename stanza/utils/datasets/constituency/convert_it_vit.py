@@ -53,8 +53,11 @@ If not, please contact ELRA to specifically ask for the updated version.
 Internally to Stanford, feel free to ask Chris or John for the updates.
 Look for the line below "original version with more errors"
 
-In August 2022, Prof. Delmonte made a slight update in a zip file `john.zip`.
-If/when that gets updated to ELRA, we will update it here.
+In August 2022, Prof. Delmonte made a slight update in a zip file
+`john.zip`.  If/when that gets updated to ELRA, we will update it
+here.  Contact Chris or John for a copy if not updated yet, or go
+back in git history to get the older version of the code which
+works with the 2022 ELRA update.
 """
 
 from collections import defaultdict, deque
