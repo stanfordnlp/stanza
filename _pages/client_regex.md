@@ -176,12 +176,20 @@ nlp = stanza.Pipeline("en", processors="tokenize,pos,lemma,depparse")
 
 doc = nlp("Banning opal removed all artifact decks from the meta.  I miss playing lantern.")
 with Semgrex(classpath="$CLASSPATH") as sem:
+    # sem.process takes a single doc, which can have any number of
+    # sentences and therefore any number of dependency graphs
+    # it also takes a variable length list of semgrex expressions to run
     semgrex_results = sem.process(doc,
                                   "{pos:NN}=object <obl {}=action",
                                   "{cpos:NOUN}=thing <obj {cpos:VERB}=action")
     print(semgrex_results)
     print(semgrex_results.result[0].result[0])
 ```
+
+{% include alerts.html %}
+{{ note }}
+{{ "Serializing graphs can be expensive.  If you intend to run multiple semgrex expressions on the same graph, running one call to sem.process will be cheaper than multiple calls." | markdownify }}
+{{ end }}
 
 A single result `.result[i].result[j]` is a list of matches for
 sentence `i` on semgrex query `j`.  So, for example,
