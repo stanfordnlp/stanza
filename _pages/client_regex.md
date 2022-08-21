@@ -165,7 +165,7 @@ more expensive than the semgrex query itself.
 
 {% include alerts.html %}
 {{ note }}
-{{ "If you use the parameter `classpath="$CLASSPATH"`, it will use your system classpath when launching CoreNLP tasks" | markdownify }}
+{{ "If you use the parameter `classpath='$CLASSPATH'`, it will use your system classpath when launching CoreNLP tasks" | markdownify }}
 {{ end }}
 
 ```python
