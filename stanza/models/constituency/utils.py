@@ -12,8 +12,9 @@ from stanza.models.common.doc import TEXT, Document
 
 DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
-DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
 DEFAULT_LEARNING_RHO = 0.9
+DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
 
 class TextTooLongError(ValueError):
     """
@@ -106,7 +107,7 @@ def build_optimizer(args, model):
     """
     parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
     if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=args['momentum'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
         optimizer = optim.Adadelta(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
     elif args['optim'].lower() == 'adamw':
@@ -123,7 +124,7 @@ def build_optimizer(args, model):
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'])
+        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'], momentum=args['momentum'])
     else:
         raise ValueError("Unknown optimizer: %s" % args['optim'])
     return optimizer

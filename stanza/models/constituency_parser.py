@@ -136,7 +136,7 @@ from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
 
 logger = logging.getLogger('stanza')
 
@@ -285,6 +285,7 @@ def parse_args(args=None):
     #           0.001   - 0.8069
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
+    parser.add_argument('--momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
     # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
@@ -427,6 +428,8 @@ def parse_args(args=None):
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
     if args.learning_eps is None:
         args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
+    if args.momentum is None:
+        args.momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
     if args.weight_decay is None:
         args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
