@@ -129,6 +129,7 @@ def run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=Non
 
     save_filename = os.path.join(args.save_dir, args.save_name)
     classifier.train_model(model, save_filename, args, train_set, dev_set, labels)
+    return model
 
 def test_build_model(tmp_path, fake_embeddings, train_file, dev_file):
     """
@@ -189,3 +190,12 @@ def test_train_conv_2d(tmp_path, fake_embeddings, train_file, dev_file):
     args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
+def test_train_filter_channels(tmp_path, fake_embeddings, train_file, dev_file):
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
+    model = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+    assert model.fc_input_size == 40
+
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "15,20"]
+    model = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+    # 50 = 2x15 for the 2d conv (over 5 dim embeddings) + 20
+    assert model.fc_input_size == 50

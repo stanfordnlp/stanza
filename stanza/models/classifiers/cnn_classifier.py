@@ -193,19 +193,26 @@ class CNNClassifier(nn.Module):
         self.fc_input_size = 0
         self.conv_layers = nn.ModuleList()
         self.max_window = 0
-        for filter_size in self.config.filter_sizes:
+        for filter_idx, filter_size in enumerate(self.config.filter_sizes):
             if isinstance(filter_size, int):
                 self.max_window = max(self.max_window, filter_size)
-                fc_delta = self.config.filter_channels // self.config.maxpool_width
-                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, self.config.filter_channels, fc_delta)
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = self.config.filter_channels
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
+                fc_delta = filter_channels // self.config.maxpool_width
+                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
                 self.conv_layers.append(nn.Conv2d(in_channels=1,
-                                                  out_channels=self.config.filter_channels,
+                                                  out_channels=filter_channels,
                                                   kernel_size=(filter_size, conv_input_dim)))
             elif isinstance(filter_size, tuple) and len(filter_size) == 2:
                 filter_height, filter_width = filter_size
                 self.max_window = max(self.max_window, filter_width)
-                filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
                 fc_delta = filter_channels * (conv_input_dim // filter_width) // self.config.maxpool_width
                 tlogger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
