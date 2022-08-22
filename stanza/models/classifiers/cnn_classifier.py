@@ -378,7 +378,6 @@ class CNNClassifier(nn.Module):
 
         conv_outs = []
         for conv, filter_size in zip(self.conv_layers, self.config.filter_sizes):
-            # TODO: non-int filter sizes
             if isinstance(filter_size, int):
                 conv_out = self.dropout(F.relu(conv(x).squeeze(3)))
                 conv_outs.append(conv_out)
