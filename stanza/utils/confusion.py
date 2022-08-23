@@ -30,15 +30,22 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
     The matrix should look like this:
       confusion[gold][pred]
     """
+    def sort_labels(labels):
+        if not all(len(x) > 2 and x[0] in ('B', 'I', 'E', 'S') and x[1] in ('-', '_') for x in labels):
+            return sorted(labels)
+
+        # sort first by the body of the lable, then by BEIS
+        return sorted(labels, key=lambda x: (x[2:], x[0]))
+
     if labels is None:
         labels = set(confusion.keys())
         for key in confusion.keys():
             labels = labels.union(confusion[key].keys())
         if 'O' in labels:
             labels.remove('O')
-            labels = ['O'] + sorted(labels)
+            labels = ['O'] + sort_labels(labels)
         else:
-            labels = labels.sorted()
+            labels = sort_labels(labels)
 
     columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
     empty_cell = " " * columnwidth
@@ -70,13 +77,13 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
         confusion, labels = condense_ner_labels(confusion, labels)
 
     # Print header
-    fst_empty_cell = (columnwidth-3)//2 * " " + "t\p" + (columnwidth-3)//2 * " "
+    fst_empty_cell = (columnwidth-3)//2 * " " + "t/p" + (columnwidth-3)//2 * " "
     if len(fst_empty_cell) < len(empty_cell):
         fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
     header = "    " + fst_empty_cell + " "
     for label in labels:
         header = header + "%{0}s ".format(columnwidth) % label
-    text = [header]
+    text = [header.rstrip()]
 
     # Print rows
     for i, label1 in enumerate(labels):
@@ -87,7 +94,7 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
             if hide_zeroes:
                 cell = cell if confusion_cell else empty_cell
             row = row + cell + " "
-        text.append(row)
+        text.append(row.rstrip())
     return "\n".join(text)
 
 
