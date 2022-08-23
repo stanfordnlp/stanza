@@ -186,7 +186,9 @@ def parse_args(args=None):
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_size', type=int, default=20, help="Embedding size for transition stack")
     # larger was more effective, up to a point
-    parser.add_argument('--hidden_size', type=int, default=128, help="Size of the output layers for constituency stack and word queue")
+    # substantially smaller, such as 128,
+    # is fine if bert & charlm are not available
+    parser.add_argument('--hidden_size', type=int, default=512, help="Size of the output layers for constituency stack and word queue")
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")

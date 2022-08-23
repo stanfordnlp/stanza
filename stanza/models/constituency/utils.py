@@ -14,7 +14,22 @@ DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adab
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
-DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
+
+# madgrad experiment for weight decay
+# with learning_rate set to 0.0000007 and momentum 0.9
+# on en_wsj, with a baseline model trained on adadela for 200,
+# then madgrad used to further improve that model
+#  0.00000002.out: 0.9590347746438835
+#  0.00000005.out: 0.9591378819960182
+#  0.0000001.out: 0.9595450596319405
+#  0.0000002.out: 0.9594603134479271
+#  0.0000005.out: 0.9591317672706594
+#  0.000001.out: 0.9592548741021389
+#  0.000002.out: 0.9598395477013945
+#  0.000003.out: 0.9594974271553495
+#  0.000004.out: 0.9596665982603754
+#  0.000005.out: 0.9591620720706487
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
 
 class TextTooLongError(ValueError):
     """
