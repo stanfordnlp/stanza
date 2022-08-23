@@ -24,6 +24,7 @@ class Loss(Enum):
     CROSS = 1
     WEIGHTED_CROSS = 2
     LOG_CROSS = 3
+    FOCAL = 4
 
 class DevScoring(Enum):
     ACCURACY = 'ACC'
@@ -427,11 +428,17 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
                      for (y, x) in enumerate(labels)}
 
     if args.loss == Loss.CROSS:
+        logger.info("Creating CrossEntropyLoss")
         loss_function = nn.CrossEntropyLoss()
     elif args.loss == Loss.WEIGHTED_CROSS:
+        logger.info("Creating weighted cross entropy loss w/o log")
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=False)
     elif args.loss == Loss.LOG_CROSS:
+        logger.info("Creating weighted cross entropy loss w/ log")
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
+    elif args.loss == Loss.FOCAL:
+        logger.info("Creating FocalLoss")
+        loss_function = loss.FocalLoss()
     else:
         raise ValueError("Unknown loss function {}".format(args.loss))
     loss_function.to(device)

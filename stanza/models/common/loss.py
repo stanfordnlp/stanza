@@ -36,6 +36,57 @@ def weighted_cross_entropy_loss(labels, log_dampened=False):
     )
     return loss
 
+class FocalLoss(nn.Module):
+    """
+    Uses the model's assessment of how likely the correct answer is
+    to weight the loss for a each error
+
+    multi-category focal loss, in other words
+
+    from "Focal Loss for Dense Object Detection"
+
+    https://arxiv.org/abs/1708.02002
+    """
+    def __init__(self, reduction='mean', gamma=2.0):
+        super().__init__()
+        if reduction not in ('sum', 'none', 'mean'):
+            raise ValueError("Unknown reduction: %s" % reduction)
+
+        self.reduction = reduction
+        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        """
+        Weight the loss using the models assessment of the correct answer
+
+        inputs: [N, C]
+        targets: [N]
+        """
+        if len(inputs.shape) == 2 and len(targets.shape) == 1:
+            if inputs.shape[0] != targets.shape[0]:
+                raise ValueError("Expected inputs N,C and targets N, but got {} and {}".format(inputs.shape, targets.shape))
+        elif len(inputs.shape) == 1 and len(targets.shape) == 0:
+            raise NotImplementedError("This would be a reasonable thing to implement, but we haven't done it yet")
+        else:
+            raise ValueError("Expected inputs N,C and targets N, but got {} and {}".format(inputs.shape, targets.shape))
+
+        raw_loss = self.ce_loss(inputs, targets)
+
+        probs = torch.softmax(inputs, 1)
+        probs = probs.gather(1, targets.view(-1, 1)).squeeze()
+        assert len(probs.shape) == 1 and probs.shape[0] == inputs.shape[0]
+        assert len(raw_loss.shape) == 1 and raw_loss.shape[0] == inputs.shape[0]
+        final_loss = raw_loss * ((1 - probs) ** self.gamma)
+        assert len(final_loss.shape) == 1 and final_loss.shape[0] == inputs.shape[0]
+        if self.reduction == 'sum':
+            return final_loss.sum()
+        elif self.reduction == 'mean':
+            return final_loss.mean()
+        elif self.reduction == 'none':
+            return final_loss
+        raise AssertionError("unknown reduction!  how did this happen??")
+
 class MixLoss(nn.Module):
     """
     A mixture of SequenceLoss and CrossEntropyLoss.

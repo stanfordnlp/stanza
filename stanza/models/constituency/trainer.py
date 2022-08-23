@@ -25,6 +25,7 @@ from torch import nn
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
+from stanza.models.common.loss import FocalLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -539,7 +540,12 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     # Various experiments generally show about 0.5 F1 loss on various
     # datasets when using 'mean' instead of 'sum' for reduction
     # (Remember to adjust the weight decay when rerunning that experiment)
-    model_loss_function = nn.CrossEntropyLoss(reduction='sum')
+    if args['loss'] == 'cross':
+        logger.info("Building CrossEntropyLoss(sum)")
+        model_loss_function = nn.CrossEntropyLoss(reduction='sum')
+    else:
+        logger.info("Building FocalLoss, gamma=%f", args['loss_focal_gamma'])
+        model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
     if args['cuda']:
         model_loss_function.cuda()
 
