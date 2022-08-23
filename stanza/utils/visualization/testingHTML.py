@@ -7,7 +7,6 @@ from spacy.tokens import Doc
 from IPython.core.display import display, HTML
 
 
-
 def get_sentences_html(doc, language):
     """
     Returns a list of the HTML strings of the dependency visualizations of a given stanza doc object.
