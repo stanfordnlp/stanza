@@ -39,6 +39,7 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--eval_output_file', type=str, default=None, help='Where to write results: text, gold, pred.  If None, no results file printed')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
@@ -295,6 +296,24 @@ def train(args):
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
 
+def write_ner_results(filename, batch, preds):
+    if len(batch.tags) != len(preds):
+        raise ValueError("Unexpected batch vs pred lengths: %d vs %d" % (len(batch.tags), len(preds)))
+
+    with open(filename, "w", encoding="utf-8") as fout:
+        tag_idx = 0
+        for b in batch:
+            # b[0] is words, b[5] is orig_idx
+            # a namedtuple would make this cleaner without being much slower
+            text = utils.unsort(b[0], b[5])
+            for sentence in text:
+                sentence_gold = batch.tags[tag_idx]
+                sentence_pred = preds[tag_idx]
+                tag_idx += 1
+                for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
+                    fout.write("%s\t%s\t%s\n" % (word, gold, pred))
+                fout.write("\n")
+
 def evaluate(args):
     # file paths
     model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
@@ -321,6 +340,9 @@ def evaluate(args):
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
+
+    if args['eval_output_file']:
+        write_ner_results(args['eval_output_file'], batch, preds)
 
     return confusion
 

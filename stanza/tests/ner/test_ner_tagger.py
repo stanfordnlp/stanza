@@ -39,6 +39,23 @@ University E-ORG
 . O
 """.strip().replace(" ", "\t")
 
+EN_EXPECTED_OUTPUT = """
+Chris B-PERSON B-PERSON
+Manning E-PERSON E-PERSON
+is O O
+a O O
+good O O
+man O O
+. O O
+
+He O O
+works O O
+in O O
+Stanford B-ORG B-ORG
+University E-ORG E-ORG
+. O O
+""".strip().replace(" ", "\t")
+
 
 def test_ner():
     nlp = stanza.Pipeline(**{'processors': 'tokenize,ner', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'logging_level': 'error'})
@@ -56,6 +73,7 @@ def test_evaluate(tmp_path):
 
     test_bio_filename = tmp_path / "test.bio"
     test_json_filename = tmp_path / "test.json"
+    test_output_filename = tmp_path / "output.bio"
     with open(test_bio_filename, "w", encoding="utf-8") as fout:
         fout.write(EN_BIO)
 
@@ -63,9 +81,15 @@ def test_evaluate(tmp_path):
 
     args = ["--save_name", str(model_path),
             "--eval_file", str(test_json_filename),
+            "--eval_output_file", str(test_output_filename),
             "--mode", "predict"]
     args = args + build_pretrain_args("en", "ontonotes", model_dir=TEST_MODELS_DIR)
     args = ner_tagger.parse_args(args=args)
     confusion = ner_tagger.evaluate(args)
     assert confusion_to_macro_f1(confusion) == pytest.approx(1.0)
 
+    with open(test_output_filename, encoding="utf-8") as fin:
+        results = fin.read().strip()
+
+    assert results == EN_EXPECTED_OUTPUT
+    print(results)
