@@ -23,6 +23,7 @@ import logging
 import os
 
 from stanza.models import ner_tagger
+from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
@@ -40,6 +41,21 @@ DATASET_EXTRA_ARGS = {
 }
 
 logger = logging.getLogger('stanza')
+
+def build_pretrain_args(language, dataset, charlm="default", extra_args=None, model_dir=DEFAULT_MODEL_DIR):
+    """
+    Returns one list with the args for this language & dataset's charlm and pretrained embedding
+    """
+    charlm = choose_charlm(language, dataset, charlm, default_charlms, ner_charlms)
+    charlm_args = build_charlm_args(language, charlm, model_dir=model_dir)
+
+    wordvec_args = []
+    if extra_args is None or '--wordvec_pretrain_file' not in extra_args:
+        # will throw an error if the pretrain can't be found
+        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains, ner_pretrains, dataset, model_dir=model_dir)
+        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+
+    return charlm_args + wordvec_args
 
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
@@ -63,14 +79,7 @@ def run_treebank(mode, paths, treebank, short_name,
         except Exception as e:
             raise FileNotFoundError(f"An exception occurred while trying to build the data for {short_name}  At least one portion of the data was missing: {missing_file}  Please correctly build these files and then try again.") from e
 
-    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, ner_charlms)
-    charlm_args = build_charlm_args(language, charlm)
-
-    wordvec_args = []
-    if '--wordvec_pretrain_file' not in extra_args:
-        # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains, ner_pretrains, dataset)
-        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+    pretrain_args = build_pretrain_args(language, dataset, command_args.charlm, extra_args)
 
     if mode == Mode.TRAIN:
         # VI example arguments:
