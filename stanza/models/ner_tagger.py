@@ -105,17 +105,17 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
+    if args.cpu:
+        args.cuda = False
 
+    args = vars(args)
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args['seed'], args['cuda'])
 
-    args = vars(args)
     logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -322,6 +322,7 @@ def evaluate(args):
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
+    return confusion
 
 def load_model(args, model_file):
     # load model
