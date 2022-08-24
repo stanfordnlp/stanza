@@ -64,6 +64,11 @@ For more information and other options, [see here](word_vectors.md).
 {{ "run_pos.py and run_depparse.py support the --no_pretrain flag if you cannot find word embeddings for your language, but performance will degrade significantly.  NER, conparse, and sentiment do not support that flag." | markdownify }}
 {{ end }}
 
+{% include alerts.html %}
+{{ note }}
+{{ "Tokenize, MWT, and lemmatize do not use word vectors. | markdownify }}
+{{ end }}
+
 ## Input Files
 
 In general, we use UD datasets for tokenizer, MWT, lemmatizer, pos, and depparse.
