@@ -193,17 +193,23 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
 
-        if command_args.save_name:
-            save_name = command_args.save_name
-            if len(treebanks) > 1:
-                save_name_dir, save_name_filename = os.path.split(save_name)
-                save_name_filename = "%s_%s" % (short_name, save_name_filename)
-                save_name = os.path.join(save_name_dir, save_name_filename)
-                logger.info("Save file for %s model for %s: %s", short_name, save_name)
-        else:
-            save_name = "%s_%s.pt" % (short_name, model_name)
-            logger.info("Save file for %s model: %s", short_name, save_name)
-        save_name_args = ['--save_name', save_name]
+        save_name_args = []
+        if model_name != 'ete':
+            # ete is several models at once, so we don't set --save_name
+            # theoretically we could handle a parametrized save_name
+            if command_args.save_name:
+                save_name = command_args.save_name
+                # if there's more than 1 treebank, we can't save them all to this save_name
+                # we have to override that value for each treebank
+                if len(treebanks) > 1:
+                    save_name_dir, save_name_filename = os.path.split(save_name)
+                    save_name_filename = "%s_%s" % (short_name, save_name_filename)
+                    save_name = os.path.join(save_name_dir, save_name_filename)
+                    logger.info("Save file for %s model for %s: %s", short_name, treebank, save_name)
+            else:
+                save_name = "%s_%s.pt" % (short_name, model_name)
+                logger.info("Save file for %s model: %s", short_name, save_name)
+            save_name_args = ['--save_name', save_name]
 
         if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
             if command_args.save_dir:
