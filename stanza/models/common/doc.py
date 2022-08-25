@@ -156,7 +156,10 @@ class Document(StanzaObject):
     def _process_sentences(self, sentences, comments=None):
         self.sentences = []
         for sent_idx, tokens in enumerate(sentences):
-            sentence = Sentence(tokens, doc=self)
+            try:
+                sentence = Sentence(tokens, doc=self)
+            except ValueError as e:
+                raise ValueError("Could not process document at sentence %d: %s" % (sent_idx, str(e))) from e
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
@@ -607,7 +610,8 @@ class Sentence(StanzaObject):
             else:
                 # id is index in words list + 1
                 head = self.words[word.head - 1]
-                assert(word.head == head.id)
+                if word.head != head.id:
+                    raise ValueError("Dependency tree is incorrectly constructed")
             self.dependencies.append((head, word.deprel, word))
 
     def print_dependencies(self, file=None):
@@ -692,7 +696,8 @@ class Token(StanzaObject):
         """
         self._id = token_entry.get(ID)
         self._text = token_entry.get(TEXT)
-        assert self._id and self._text, 'id and text should be included for the token'
+        if not self._id or not self._text:
+            raise ValueError('id and text should be included for the token')
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._multi_ner = token_entry.get(MULTI_NER, None)
