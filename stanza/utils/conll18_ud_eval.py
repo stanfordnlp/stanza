@@ -179,8 +179,10 @@ def load_conllu(file):
 
     # Load the CoNLL-U file
     index, sentence_start = 0, None
+    line_idx = 0
     while True:
         line = file.readline()
+        line_idx += 1
         if not line:
             break
         line = _decode(line.rstrip("\r\n"))
@@ -197,11 +199,11 @@ def load_conllu(file):
             # Add parent and children UDWord links and check there are no cycles
             def process_word(word):
                 if word.parent == "remapping":
-                    raise UDError("There is a cycle in a sentence")
+                    raise UDError("There is a cycle in a sentence at line %d" % line_idx)
                 if word.parent is None:
                     head = int(word.columns[HEAD])
                     if head < 0 or head > len(ud.words) - sentence_start:
-                        raise UDError("HEAD '{}' points outside of the sentence".format(_encode(word.columns[HEAD])))
+                        raise UDError("HEAD '{}' points outside of the sentence at line {}".format(_encode(word.columns[HEAD]), line_idx))
                     if head:
                         parent = ud.words[sentence_start + head - 1]
                         word.parent = "remapping"
@@ -219,7 +221,7 @@ def load_conllu(file):
             # Check there is a single root node
             num_roots = len([word for word in ud.words[sentence_start:] if word.parent is None])
             if num_roots != 1:
-                raise UDError("There are %d roots in a sentence" % num_roots)
+                raise UDError("There are %d roots in a sentence at line %d" % (num_roots, line_idx))
 
             # End the sentence
             ud.sentences[-1].end = index
@@ -229,7 +231,7 @@ def load_conllu(file):
         # Read next token/word
         columns = line.split("\t")
         if len(columns) != 10:
-            raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(line)))
+            raise UDError("The CoNLL-U line does not contain 10 tab-separated columns at line {}: '{}'".format(line_idx, _encode(line)))
 
         # Skip empty nodes
         if "." in columns[ID]:
@@ -240,7 +242,7 @@ def load_conllu(file):
         # with category Zs.
         columns[FORM] = "".join(filter(lambda c: unicodedata.category(c) != "Zs", columns[FORM]))
         if not columns[FORM]:
-            raise UDError("There is an empty FORM in the CoNLL-U file")
+            raise UDError("There is an empty FORM in the CoNLL-U file at line %d" % line_idx)
 
         # Save token
         ud.characters.extend(columns[FORM])
@@ -252,7 +254,7 @@ def load_conllu(file):
             try:
                 start, end = map(int, columns[ID].split("-"))
             except:
-                raise UDError("Cannot parse multi-word token ID '{}'".format(_encode(columns[ID])))
+                raise UDError("Cannot parse multi-word token ID '{}' at line {}".format(_encode(columns[ID]), line_idx))
 
             for _ in range(start, end + 1):
                 word_line = _decode(file.readline().rstrip("\r\n"))
@@ -265,17 +267,17 @@ def load_conllu(file):
             try:
                 word_id = int(columns[ID])
             except:
-                raise UDError("Cannot parse word ID '{}'".format(_encode(columns[ID])))
+                raise UDError("Cannot parse word ID '{}' at line {}".format(_encode(columns[ID]), line_idx))
             if word_id != len(ud.words) - sentence_start + 1:
-                raise UDError("Incorrect word ID '{}' for word '{}', expected '{}'".format(
-                    _encode(columns[ID]), _encode(columns[FORM]), len(ud.words) - sentence_start + 1))
+                raise UDError("Incorrect word ID '{}' for word '{}', expected '{}' at line {}".format(
+                    _encode(columns[ID]), _encode(columns[FORM]), len(ud.words) - sentence_start + 1, line_idx))
 
             try:
                 head_id = int(columns[HEAD])
             except:
-                raise UDError("Cannot parse HEAD '{}'".format(_encode(columns[HEAD])))
+                raise UDError("Cannot parse HEAD '{}' at line {}".format(_encode(columns[HEAD]), line_idx))
             if head_id < 0:
-                raise UDError("HEAD cannot be negative")
+                raise UDError("HEAD cannot be negative at line %d" % line_idx)
 
             ud.words.append(UDWord(ud.tokens[-1], columns, is_multiword=False))
 
