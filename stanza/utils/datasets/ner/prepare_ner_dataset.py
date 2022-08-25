@@ -258,6 +258,15 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+NKJP is a Polish NER dataset
+  - http://nkjp.pl/index.php?page=0&lang=1
+    About the Project
+  - http://zil.ipipan.waw.pl/DistrNKJP
+    Wikipedia subcorpus used to train charlm model
+  - http://clip.ipipan.waw.pl/NationalCorpusOfPolish?action=AttachFile&do=view&target=NKJP-PodkorpusMilionowy-1.2.tar.gz
+    Annotated subcorpus to train NER model.
+    Download and extract to $NERBASE/Polish-NKJP
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -289,6 +298,7 @@ import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
+import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
@@ -821,6 +831,12 @@ def process_bn_daffodil(paths, short_name):
     out_directory = paths["NER_DATA_DIR"]
     convert_bn_daffodil.convert_dataset(in_directory, out_directory)
 
+def process_pl_nkjp(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "Polish-NKJP")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_nkjp.convert_nkjp(in_directory, out_directory)
+
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -843,6 +859,7 @@ DATASET_MAPPING = {
     "tr_starlang":       process_starlang,
     "mr_l3cube":         process_mr_l3cube,
     "th_lst20":          process_lst20,
+    "pl_nkjp":           process_pl_nkjp,
 }
 
 def main(dataset_name):
