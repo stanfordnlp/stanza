@@ -258,6 +258,7 @@ def load_conllu(file):
 
             for _ in range(start, end + 1):
                 word_line = _decode(file.readline().rstrip("\r\n"))
+                line_idx += 1
                 word_columns = word_line.split("\t")
                 if len(word_columns) != 10:
                     raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(word_line)))
