@@ -9,6 +9,7 @@ import tempfile
 from enum import Enum
 
 from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
@@ -235,9 +236,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
 
 def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
     """ Wrapper for lemma scorer. """
-    gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
-    system_ud = ud_eval.load_conllu_file(system_conllu_file)
-    evaluation = ud_eval.evaluate(gold_ud, system_ud)
+    evaluation = ud_scores(gold_conllu_file, system_conllu_file)
 
     if evals is None:
         return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False)
