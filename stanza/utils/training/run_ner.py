@@ -102,7 +102,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + charlm_args + bert_args + dataset_args + wordvec_args + extra_args
+        train_args = train_args + pretrain_args + bert_args + dataset_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         ner_tagger.main(train_args)
 
@@ -111,7 +111,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        dev_args = dev_args + charlm_args + wordvec_args + extra_args
+        dev_args = dev_args + pretrain_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         ner_tagger.main(dev_args)
 
@@ -120,7 +120,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        test_args = test_args + charlm_args + wordvec_args + extra_args
+        test_args = test_args + pretrain_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         ner_tagger.main(test_args)
 
