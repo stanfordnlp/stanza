@@ -275,6 +275,15 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
+def add_grad_clipping(trainer, grad_clipping):
+    """
+    Adds a torch.clamp hook on each parameter if grad_clipping is not None
+    """
+    if grad_clipping is not None:
+        for p in trainer.model.parameters():
+            if p.requires_grad:
+                p.register_hook(lambda grad: torch.clamp(grad, -grad_clipping, grad_clipping))
+
 def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
@@ -391,6 +400,8 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         scheduler = build_scheduler(args, optimizer)
 
         trainer = Trainer(args, model, optimizer, scheduler)
+
+    add_grad_clipping(trainer, args['grad_clipping'])
 
     return trainer, train_sequences, train_transitions
 
@@ -606,6 +617,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             optimizer = build_optimizer(temp_args, new_model)
             scheduler = build_scheduler(temp_args, optimizer)
             trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
+            add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
