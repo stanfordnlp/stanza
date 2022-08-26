@@ -348,7 +348,10 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         temp_args.pop('lattn_d_proj', None)
         trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False)
 
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        # using the model's current values works for if the new
+        # dataset is the same or smaller
+        # TODO: handle a larger dataset as well
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
         if args['cuda']:
             model.cuda()
         model.copy_with_new_structure(trainer.model)
@@ -507,8 +510,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     device = next(model.parameters()).device
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
-                          for (y, x) in enumerate(transitions)}
-
+                          for (y, x) in enumerate(model.transitions)}
     model.train()
 
     preterminal_lists = [[Tree(label=preterminal.label, children=Tree(label=preterminal.children[0].label))
