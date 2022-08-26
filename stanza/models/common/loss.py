@@ -72,12 +72,10 @@ class FocalLoss(nn.Module):
             raise ValueError("Expected inputs N,C and targets N, but got {} and {}".format(inputs.shape, targets.shape))
 
         raw_loss = self.ce_loss(inputs, targets)
-
-        probs = torch.softmax(inputs, 1)
-        probs = probs.gather(1, targets.view(-1, 1)).squeeze()
-        assert len(probs.shape) == 1 and probs.shape[0] == inputs.shape[0]
         assert len(raw_loss.shape) == 1 and raw_loss.shape[0] == inputs.shape[0]
-        final_loss = raw_loss * ((1 - probs) ** self.gamma)
+
+        # https://www.tutorialexample.com/implement-focal-loss-for-multi-label-classification-in-pytorch-pytorch-tutorial/
+        final_loss = raw_loss * ((1 - torch.exp(-raw_loss)) ** self.gamma)
         assert len(final_loss.shape) == 1 and final_loss.shape[0] == inputs.shape[0]
         if self.reduction == 'sum':
             return final_loss.sum()
