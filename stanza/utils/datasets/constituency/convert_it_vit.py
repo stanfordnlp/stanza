@@ -58,6 +58,8 @@ In August 2022, Prof. Delmonte made a slight update in a zip file
 here.  Contact Chris or John for a copy if not updated yet, or go
 back in git history to get the older version of the code which
 works with the 2022 ELRA update.
+In later 2022, there is a new update, Archive.zip  Put that file in
+$CONSTITUENCY_BASE/italian/it_vit and unzip it there
 """
 
 from collections import defaultdict, deque
@@ -216,6 +218,7 @@ def raw_tree(text):
         "abbr-D_P_R_":             "(abbr DPR)",
         "abbr-d_m_":               "(abbr dm)",
         "abbr-T_U_":               "(abbr TU)",
+        "dots-'...'":              "(dots ...)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
@@ -229,7 +232,7 @@ def raw_tree(text):
             # maxsplit=1 because of words like 1990-EQU-100
             tag, word = piece.split("-", maxsplit=1)
             if word.find("'") >= 0 or word.find("(") >= 0 or word.find(")") >= 0:
-                raise ValueError(piece)
+                raise ValueError("Unhandled weird node: {}".format(piece))
             if word.endswith("_"):
                 word = word[:-1] + "'"
             date_match = DATE_RE.match(word)
@@ -565,12 +568,12 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
             con_tree_map[tree_id] = tree
         except UnclosedTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ExtraCloseTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ValueError as e:
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
             num_discarded = num_discarded + 1
             #raise ValueError("Could not process line %d" % idx) from e
 
