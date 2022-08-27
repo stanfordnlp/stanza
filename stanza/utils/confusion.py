@@ -1,5 +1,7 @@
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+
+F1Result = namedtuple("F1Result", ['precision', 'recall', 'f1'])
 
 def condense_ner_labels(confusion, labels):
     new_confusion = defaultdict(lambda: defaultdict(int))
@@ -112,11 +114,9 @@ def confusion_to_accuracy(confusion_matrix):
                 total = total + confusion_matrix[l1][l2]
     return correct, (correct + total)
 
+def confusion_to_f1(confusion_matrix):
+    results = {}
 
-def confusion_to_macro_f1(confusion_matrix):
-    """
-    Return the macro f1 for a confusion matrix.
-    """
     keys = set()
     for k in confusion_matrix.keys():
         keys.add(k)
@@ -146,8 +146,31 @@ def confusion_to_macro_f1(confusion_matrix):
             f1 = 0.0
         else:
             f1 = 2 * (precision * recall) / (precision + recall)
-        sum_f1 = sum_f1 + f1
 
-    return sum_f1 / len(keys)
+        results[k] = F1Result(precision, recall, f1)
 
+    return results
 
+def confusion_to_macro_f1(confusion_matrix):
+    """
+    Return the macro f1 for a confusion matrix.
+    """
+    sum_f1 = 0.0
+    results = confusion_to_f1(confusion_matrix)
+    for k in results.keys():
+        sum_f1 = sum_f1 + results[k].f1
+
+    return sum_f1 / len(results)
+
+def confusion_to_weighted_f1(confusion_matrix, exclude=None):
+    results = confusion_to_f1(confusion_matrix)
+
+    sum_f1 = 0.0
+    total_items = 0
+    for k in results.keys():
+        if exclude is not None and k in exclude:
+            continue
+        k_items = sum(confusion_matrix.get(k, {}).values())
+        total_items += k_items
+        sum_f1 += results[k].f1 * k_items
+    return sum_f1 / total_items

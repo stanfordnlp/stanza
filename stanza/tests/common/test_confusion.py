@@ -5,7 +5,7 @@ Test a couple simple confusion matrices and output formats
 from collections import defaultdict
 import pytest
 
-from stanza.utils.confusion import format_confusion, confusion_to_macro_f1
+from stanza.utils.confusion import format_confusion, confusion_to_f1, confusion_to_macro_f1, confusion_to_weighted_f1
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -58,3 +58,11 @@ def test_output(simple_confusion, short_confusion):
 def test_macro_f1(simple_confusion, short_confusion):
     assert confusion_to_macro_f1(simple_confusion) == pytest.approx(0.466666666666)
     assert confusion_to_macro_f1(short_confusion) == pytest.approx(0.277777777777)
+
+def test_weighted_f1(simple_confusion, short_confusion):
+    assert confusion_to_weighted_f1(simple_confusion) == pytest.approx(0.83333333)
+    assert confusion_to_weighted_f1(short_confusion) == pytest.approx(0.66666666)
+
+    assert confusion_to_weighted_f1(simple_confusion, exclude=["O"]) == pytest.approx(0.66666666)
+    assert confusion_to_weighted_f1(short_confusion, exclude=["O"]) == pytest.approx(0.33333333)
+
