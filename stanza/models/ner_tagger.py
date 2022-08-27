@@ -27,7 +27,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 from stanza.models import _training_logging
 
-from stanza.utils.confusion import format_confusion
+from stanza.utils.confusion import confusion_to_weighted_f1, format_confusion
 
 logger = logging.getLogger('stanza')
 
@@ -336,6 +336,7 @@ def evaluate(args):
     gold_tags = batch.tags
     _, _, score = scorer.score_by_entity(preds, gold_tags)
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags)
+    logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
