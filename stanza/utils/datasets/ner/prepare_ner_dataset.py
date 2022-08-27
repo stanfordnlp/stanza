@@ -49,6 +49,9 @@ HiNER is another Hindi dataset option
     hi_hinercollapsed and hi_hiner
   The collapsed version has just PER, LOC, ORG
   - convert data as follows:
+    cd $NERBASE
+    mkdir hindi
+    cd hindi
     git clone git@github.com:cfiltnlp/HiNER.git
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hiner
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hinercollapsed
@@ -838,11 +841,11 @@ def process_de_germeval2014(paths, short_name):
     write_dataset(datasets, base_output_path, short_name)
 
 def process_hiner(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "original")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "original")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_hinercollapsed(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_lst20(paths, short_name, include_space_char=True):
