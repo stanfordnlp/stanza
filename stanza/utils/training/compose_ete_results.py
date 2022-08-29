@@ -21,13 +21,21 @@ MLAS       |     72.28 |     71.87 |     72.07 |     71.94
 BLEX       |     73.20 |     72.79 |     73.00 |     72.86
 """
 
+import argparse
+
 from stanza.utils.training.run_ete import RESULTS_STRING
 from stanza.models.common.short_name_to_treebank import short_name_to_treebank
 
 EXPECTED_ORDER = ["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]
 
-with open("ete_full.out") as fin:
-    lines = fin.readlines()
+parser = argparse.ArgumentParser()
+parser.add_argument("filenames", type=str, nargs="+", help="Which file(s) to read")
+args = parser.parse_args()
+
+lines = []
+for filename in args.filenames:
+    with open(filename) as fin:
+        lines.extend(fin.readlines())
 
 blocks = []
 index = 0
