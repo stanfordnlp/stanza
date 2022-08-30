@@ -422,15 +422,7 @@ def log_param_sizes(model):
         logger.debug("  %s %d %d %d", name, param.element_size(), param.nelement(), param_size)
     logger.debug("  Total size: %d", total_size)
 
-def train_model(model, model_file, args, train_set, dev_set, labels):
-    tlogger.setLevel(logging.DEBUG)
-
-    # TODO: separate this into a trainer like the other models.
-    # TODO: possibly reuse the trainer code other models have
-    # TODO: use a (torch) dataloader to possibly speed up the GPU usage
-    device = next(model.parameters()).device
-    logger.info("Current device: %s" % device)
-
+def build_optimizer(model, args):
     # TODO: if reloading a model for continued training, the internal
     # parameters for the optimizer should be reloaded as well
     # Otherwise this ability is actually not very useful
@@ -446,6 +438,18 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
+    return optimizer
+
+def train_model(model, model_file, args, train_set, dev_set, labels):
+    tlogger.setLevel(logging.DEBUG)
+
+    # TODO: separate this into a trainer like the other models.
+    # TODO: possibly reuse the trainer code other models have
+    # TODO: use a (torch) dataloader to possibly speed up the GPU usage
+    device = next(model.parameters()).device
+    logger.info("Current device: %s" % device)
+
+    optimizer = build_optimizer(model, args)
 
     label_map = {x: y for (y, x) in enumerate(labels)}
     label_tensors = {x: torch.tensor(y, requires_grad=False, device=device)
