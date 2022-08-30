@@ -119,6 +119,15 @@ def convert_fc_shapes(arg):
         return arg
     return tuple(arg)
 
+# For the most part, these values are for the constituency parser.
+# Only the WD for adadelta is originally for sentiment
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007, "sgd": 0.001 }
+DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
+DEFAULT_LEARNING_RHO = 0.9
+DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.0001, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
+
+
 def parse_args(args=None):
     """
     Add arguments for building the classifier.
@@ -155,9 +164,11 @@ def parse_args(args=None):
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
 
-    parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate to use in the optimizer')
+    parser.add_argument('--momentum', default=None, type=float, help='Momentum to use in the optimizer')
 
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
+    parser.add_argument('--optim', default='adadelta', choices=['adadelta', 'madgrad', 'sgd'], help='Optimizer type: SGD or Adadelta')
 
     parser.add_argument('--test_remap_labels', default=None, type=ast.literal_eval,
                         help='Map of which label each classifier label should map to.  For example, "{0:0, 1:0, 3:1, 4:1}" to map a 5 class sentiment test to a 2 class.  Any labels not mapped will be considered wrong')
@@ -192,6 +203,14 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
+
+    args.optim = args.optim.lower()
+    if args.weight_decay is None:
+        args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim, None)
+    if args.momentum is None:
+        args.momentum = DEFAULT_MOMENTUM.get(args.optim, None)
+    if args.learning_rate is None:
+        args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim, None)
 
     return args
 
@@ -388,10 +407,15 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # parameters for the optimizer should be reloaded as well
     # Otherwise this ability is actually not very useful
     if args.optim.lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9,
-                              weight_decay=args.weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
     elif args.optim.lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+        optimizer = optim.Adadelta(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    elif args.optim.lower() == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
 
