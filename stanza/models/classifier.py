@@ -123,7 +123,7 @@ def convert_fc_shapes(arg):
 
 # For the most part, these values are for the constituency parser.
 # Only the WD for adadelta is originally for sentiment
-DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007, "sgd": 0.001 }
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.001, "sgd": 0.001 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
@@ -170,7 +170,7 @@ def parse_args(args=None):
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate to use in the optimizer')
     parser.add_argument('--momentum', default=None, type=float, help='Momentum to use in the optimizer')
 
-    parser.add_argument('--optim', default='adadelta', choices=['adadelta', 'madgrad', 'sgd'], help='Optimizer type: SGD or Adadelta')
+    parser.add_argument('--optim', default='adadelta', choices=['adadelta', 'madgrad', 'sgd'], help='Optimizer type: SGD, Adadelta, or madgrad.  Highly recommend to install madgrad and use that')
 
     parser.add_argument('--test_remap_labels', default=None, type=ast.literal_eval,
                         help='Map of which label each classifier label should map to.  For example, "{0:0, 1:0, 3:1, 4:1}" to map a 5 class sentiment test to a 2 class.  Any labels not mapped will be considered wrong')
