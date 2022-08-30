@@ -25,18 +25,14 @@ Example command line:
 logger = logging.getLogger('stanza')
 
 
-def parse_args() -> None:
+def parse_args():
     """Add and parse arguments."""
-    parser = argparse.ArgumentParser()
+    parser = classifier.build_parser()
 
-    classifier_args.add_common_args(parser)
-
-    parser.add_argument('--test_file', type=str, default='extern_data/sentiment/sst-processed/binary/test-binary-roots.txt', help='Input file to use as the test set.')
     parser.add_argument('--glob', type=str, default='saved_models/classifier/*classifier*pt', help='Model file(s) to test.')
 
     args = parser.parse_args()
     return args
-
 
 args = parse_args()
 seed = utils.set_random_seed(args.seed, args.cuda)
@@ -46,17 +42,16 @@ for glob_piece in args.glob.split():
     model_files.extend(glob.glob(glob_piece))
 model_files = sorted(set(model_files))
 
-test_set = classifier.read_dataset(args.test_file, args.wordvec_type, min_len=None)
+test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
 logger.info("Using test set: %s" % args.test_file)
-
-pretrain = classifier.load_pretrain(args)
 
 device = None
 for load_name in model_files:
+    args.load_name = load_name
+    model = classifier.load_model(args)
+
     logger.info("Testing %s" % load_name)
     model = cnn_classifier.load(load_name, pretrain)
-    if args.cuda:
-        model.cuda()
     if device is None:
         device = next(model.parameters()).device
         logger.info("Current device: %s" % device)

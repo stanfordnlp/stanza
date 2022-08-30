@@ -18,7 +18,7 @@ from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.pos.vocab import CharVocab
 
-import stanza.models.classifiers.classifier_args as classifier_args
+from stanza.models.classifiers.classifier_args import WVType, ExtraVectors
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 
@@ -137,13 +137,13 @@ def build_parser():
     """
     parser = argparse.ArgumentParser()
 
-    classifier_args.add_common_args(parser)
-
     parser.add_argument('--train', dest='train', default=True, action='store_true', help='Train the model (default)')
     parser.add_argument('--no_train', dest='train', action='store_false', help="Don't train the model")
 
-    parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
+    parser.add_argument('--shorthand', type=str, default='en_ewt', help="Treebank shorthand, eg 'en' for English")
 
+    parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
+    parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
@@ -184,6 +184,15 @@ def build_parser():
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
+    parser.add_argument('--pretrain_max_vocab', type=int, default=-1)
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
+    parser.add_argument('--wordvec_raw_file', type=str, default=None, help='Exact name of the raw wordvec file to read')
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors')
+    parser.add_argument('--wordvec_type', type=lambda x: WVType[x.upper()], default='word2vec', help='Different vector types have different options, such as google 300d replacing numbers with #')
+    parser.add_argument('--extra_wordvec_dim', type=int, default=0, help="Extra dim of word vectors - will be trained")
+    parser.add_argument('--extra_wordvec_method', type=lambda x: ExtraVectors[x.upper()], default='sum', help='How to train extra dimensions of word vectors, if at all')
+    parser.add_argument('--extra_wordvec_max_norm', type=float, default=None, help="Max norm for initializing the extra vectors")
+
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
@@ -204,6 +213,11 @@ def build_parser():
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
+    parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
+
+    parser.add_argument('--cuda', action='store_true', help='Use CUDA for training/testing', default=torch.cuda.is_available())
+    parser.add_argument('--cpu', action='store_false', help='Ignore CUDA.', dest='cuda')
 
     return parser
 
@@ -578,7 +592,12 @@ def load_model(args):
         load_name = os.path.join(args.save_dir, args.load_name)
         if not os.path.exists(load_name):
             raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward, elmo_model)
+
+
+    model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward, elmo_model)
+    if args.cuda:
+        model.cuda()
+    return model
 
 def build_new_model(args, train_set):
     """
@@ -597,15 +616,20 @@ def build_new_model(args, train_set):
 
     bert_model, bert_tokenizer = load_bert(args.bert_model)
 
-    return cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                        extra_vocab=extra_vocab,
-                                        labels=labels,
-                                        charmodel_forward=charmodel_forward,
-                                        charmodel_backward=charmodel_backward,
-                                        elmo_model=elmo_model,
-                                        bert_model=bert_model,
-                                        bert_tokenizer=bert_tokenizer,
-                                        args=args)
+    model = cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                         extra_vocab=extra_vocab,
+                                         labels=labels,
+                                         charmodel_forward=charmodel_forward,
+                                         charmodel_backward=charmodel_backward,
+                                         elmo_model=elmo_model,
+                                         bert_model=bert_model,
+                                         bert_tokenizer=bert_tokenizer,
+                                         args=args)
+
+    if args.cuda:
+        model.cuda()
+
+    return model
 
 
 def main(args=None):
@@ -634,9 +658,6 @@ def main(args=None):
         model = load_model(args)
     else:
         model = build_new_model(args, train_set)
-
-    if args.cuda:
-        model.cuda()
 
     logger.info("Filter sizes: %s" % str(model.config.filter_sizes))
     logger.info("Filter channels: %s" % str(model.config.filter_channels))
