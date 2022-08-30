@@ -459,8 +459,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
     else:
         raise ValueError("Unknown loss function {}".format(args.loss))
-    if args.cuda:
-        loss_function.cuda()
+    loss_function.to(device)
 
     train_set_by_len = sort_dataset_by_len(train_set)
 
