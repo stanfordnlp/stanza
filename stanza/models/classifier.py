@@ -496,7 +496,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
                     if best_score is None or dev_score > best_score:
                         best_score = dev_score
                         cnn_classifier.save(model_file, model)
-                        logger.info("Saved new best score model!")
+                        logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, epoch+1, batch_num+1))
                     model.train()
                 epoch_loss += running_loss
                 running_loss = 0.0
@@ -513,7 +513,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         if best_score is None or dev_score > best_score:
             best_score = dev_score
             cnn_classifier.save(model_file, model)
-            logger.info("Saved new best score model!")
+            logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, epoch+1))
 
     if args.wandb:
         wandb.finish()
