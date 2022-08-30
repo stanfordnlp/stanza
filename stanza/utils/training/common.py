@@ -116,7 +116,7 @@ BERT = {
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
 
     # https://huggingface.co/allegro/herbert-base-cased
-    # Scores by entity:
+    # Scores by entity on the NKJP NER task:
     # no bert (dev/test): 88.64/88.75
     # herbert-base-cased (dev/test): 91.48/91.02,
     # herbert-large-cased (dev/test): 92.25/91.62
