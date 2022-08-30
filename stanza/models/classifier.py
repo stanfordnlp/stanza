@@ -555,7 +555,7 @@ def load_pretrain(args):
     elif args.wordvec_type:
         pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
     else:
-        raise Exception("TODO: need to get the wv type back from get_wordvec_file")
+        raise RuntimeError("TODO: need to get the wv type back from get_wordvec_file")
 
     logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
     if os.path.exists(pretrain_file):
