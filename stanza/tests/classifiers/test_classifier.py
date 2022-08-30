@@ -85,7 +85,7 @@ def test_dataset_vocab(train_file):
     Converting a dataset to vocab should have a specific set of words along with PAD and UNK
     """
     train_set = data.read_dataset(str(train_file), WVType.OTHER, 1)
-    vocab = classifier.dataset_vocab(train_set)
+    vocab = data.dataset_vocab(train_set)
     expected = set([PAD, UNK] + [x.lower() for y in SENTENCES for x in y])
     assert set(vocab) == expected
 
@@ -94,7 +94,7 @@ def test_dataset_labels(train_file):
     Test the extraction of labels from a dataset
     """
     train_set = data.read_dataset(str(train_file), WVType.OTHER, 1)
-    labels = classifier.dataset_labels(train_set)
+    labels = data.dataset_labels(train_set)
     assert labels == ["0", "1", "2"]
 
 def build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args=None):
@@ -125,7 +125,7 @@ def run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=Non
     """
     model, train_set, args = build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args)
     dev_set = data.read_dataset(args.dev_file, args.wordvec_type, args.min_train_len)
-    labels = classifier.dataset_labels(train_set)
+    labels = data.dataset_labels(train_set)
 
     save_filename = os.path.join(args.save_dir, args.save_name)
     classifier.train_model(model, save_filename, args, train_set, dev_set, labels)

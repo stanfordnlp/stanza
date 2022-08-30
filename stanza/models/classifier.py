@@ -1,6 +1,5 @@
 import argparse
 import ast
-import collections
 import logging
 import os
 import random
@@ -15,7 +14,6 @@ from stanza.models.common import loss
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.pretrain import Pretrain
-from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 from stanza.models.pos.vocab import CharVocab
 
 from stanza.models.classifiers.classifier_args import WVType, ExtraVectors
@@ -243,55 +241,6 @@ def parse_args(args=None):
     return args
 
 
-def dataset_labels(dataset):
-    """
-    Returns a sorted list of label name
-    """
-    labels = set([x[0] for x in dataset])
-    if all(re.match("^[0-9]+$", label) for label in labels):
-        # if all of the labels are integers, sort numerically
-        # maybe not super important, but it would be nicer than having
-        # 10 before 2
-        labels = [str(x) for x in sorted(map(int, list(labels)))]
-    else:
-        labels = sorted(list(labels))
-    return labels
-
-def dataset_vocab(dataset):
-    vocab = set()
-    for line in dataset:
-        for word in line[1]:
-            vocab.add(word)
-    vocab = [PAD, UNK] + list(vocab)
-    if vocab[PAD_ID] != PAD or vocab[UNK_ID] != UNK:
-        raise ValueError("Unexpected values for PAD and UNK!")
-    return vocab
-
-def sort_dataset_by_len(dataset):
-    """
-    returns a dict mapping length -> list of items of that length
-    an OrderedDict is used to that the mapping is sorted from smallest to largest
-    """
-    sorted_dataset = collections.OrderedDict()
-    lengths = sorted(list(set(len(x[1]) for x in dataset)))
-    for l in lengths:
-        sorted_dataset[l] = []
-    for item in dataset:
-        sorted_dataset[len(item[1])].append(item)
-    return sorted_dataset
-
-def shuffle_dataset(sorted_dataset):
-    """
-    Given a dataset sorted by len, sorts within each length to make
-    chunks of roughly the same size.  Returns all items as a single list.
-    """
-    dataset = []
-    for l in sorted_dataset.keys():
-        items = list(sorted_dataset[l])
-        random.shuffle(items)
-        dataset.extend(items)
-    return dataset
-
 def confusion_dataset(model, dataset):
     """
     Returns a confusion matrix
@@ -303,7 +252,7 @@ def confusion_dataset(model, dataset):
     model.eval()
     index_label_map = {x: y for (x, y) in enumerate(model.labels)}
 
-    dataset_lengths = sort_dataset_by_len(dataset)
+    dataset_lengths = data.sort_dataset_by_len(dataset)
 
     confusion_matrix = {}
     for label in model.labels:
@@ -340,7 +289,7 @@ def score_dataset(model, dataset, label_map=None,
     if label_map is None:
         label_map = {x: y for (y, x) in enumerate(model.labels)}
     correct = 0
-    dataset_lengths = sort_dataset_by_len(dataset)
+    dataset_lengths = data.sort_dataset_by_len(dataset)
 
     for length in dataset_lengths.keys():
         # TODO: possibly break this up into smaller batches
@@ -394,17 +343,6 @@ def score_dev_set(model, dev_set, dev_eval_scoring):
         return macro_f1, accuracy, macro_f1
     else:
         raise ValueError("Unknown scoring method {}".format(dev_eval_scoring))
-
-def check_labels(labels, dataset):
-    """
-    Check that all of the labels in the dataset are in the known labels.
-    Actually, unknown labels could be acceptable if we just treat the model as always wrong.
-    However, this is a good sanity check to make sure the datasets match
-    """
-    new_labels = dataset_labels(dataset)
-    not_found = [i for i in new_labels if i not in labels]
-    if not_found:
-        raise RuntimeError('Dataset contains labels which the model does not know about:' + str(not_found))
 
 def checkpoint_name(filename, epoch, dev_scoring, score):
     """
@@ -465,7 +403,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         raise ValueError("Unknown loss function {}".format(args.loss))
     loss_function.to(device)
 
-    train_set_by_len = sort_dataset_by_len(train_set)
+    train_set_by_len = data.sort_dataset_by_len(train_set)
 
     best_score = 0
     if args.load_name:
@@ -491,7 +429,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     for epoch in range(args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
-        shuffled = shuffle_dataset(train_set_by_len)
+        shuffled = data.shuffle_dataset(train_set_by_len)
         model.train()
         random.shuffle(batch_starts)
         for batch_num, start_batch in enumerate(batch_starts):
@@ -614,8 +552,8 @@ def build_new_model(args, train_set):
     charmodel_forward = load_charlm(args.charlm_forward_file)
     charmodel_backward = load_charlm(args.charlm_backward_file)
 
-    labels = dataset_labels(train_set)
-    extra_vocab = dataset_vocab(train_set)
+    labels = data.dataset_labels(train_set)
+    extra_vocab = data.dataset_vocab(train_set)
 
     bert_model, bert_tokenizer = load_bert(args.bert_model)
 
@@ -647,7 +585,7 @@ def main(args=None):
     if args.train:
         train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
-        logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
+        logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
         tlogger.setLevel(logging.DEBUG)
     elif not args.load_name:
         if args.save_name:
@@ -683,13 +621,13 @@ def main(args=None):
         logger.info("Using dev set: %s", args.dev_file)
         logger.info("Training set has %d items", len(train_set))
         logger.info("Dev set has %d items", len(dev_set))
-        check_labels(model.labels, dev_set)
+        data.check_labels(model.labels, dev_set)
 
         train_model(model, model_file, args, train_set, dev_set, model.labels)
 
     test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
-    check_labels(model.labels, test_set)
+    data.check_labels(model.labels, test_set)
 
     if args.test_remap_labels is None:
         confusion_matrix = confusion_dataset(model, test_set)
