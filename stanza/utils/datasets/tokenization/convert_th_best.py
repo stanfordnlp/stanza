@@ -25,7 +25,10 @@ import random
 import re
 import sys
 
-from pythainlp import sent_tokenize
+try:
+    from pythainlp import sent_tokenize
+except ImportError:
+    pass
 
 from stanza.utils.datasets.tokenization.process_thai_tokenization import reprocess_lines, write_dataset, convert_processed_lines, write_dataset_best, write_dataset
 

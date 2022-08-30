@@ -172,7 +172,7 @@ def train(args):
     if args['wandb']:
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_tokenizer" % args['shorthand']
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('train_loss', summary='min')
         wandb.run.define_metric('dev_score', summary='max')
 

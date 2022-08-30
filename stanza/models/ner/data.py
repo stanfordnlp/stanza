@@ -55,8 +55,11 @@ class DataLoader:
         def from_model(model_filename):
             """ Try loading vocab from charLM model file. """
             state_dict = torch.load(model_filename, lambda storage, loc: storage)
-            assert 'vocab' in state_dict, "Cannot find vocab in charLM model file."
-            return state_dict['vocab']
+            if 'vocab' in state_dict:
+                return state_dict['vocab']
+            if 'model' in state_dict and 'vocab' in state_dict['model']:
+                return state_dict['model']['vocab']
+            raise ValueError("Cannot find vocab in charLM model file %s" % model_filename)
 
         if self.eval:
             raise AssertionError("Vocab must exist for evaluation.")

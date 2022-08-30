@@ -16,7 +16,7 @@ import hashlib
 import shutil
 import zipfile
 
-from stanza.models.common.constant import lcode2lang
+from stanza.models.common.constant import lcode2lang, two_to_three_letters
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -65,6 +65,7 @@ default_treebanks = {
     "ko":      "kaist",
     "kmr":     "mg",
     "la":      "ittb",
+    "lij":     "glt",
     "lv":      "lvtb",
     "pcm":     "nsc",
     "sme":     "giella",
@@ -116,7 +117,6 @@ no_pretrain_languages = set([
     "pcm",
     "qtd",
     "swl",
-    "th",
 ])
 
 default_pretrains = dict(default_treebanks)
@@ -138,6 +138,7 @@ default_ners = {
     "hu": "combined",
     "it": "fbk",
     "ja": "gsd",
+    "kk": "kazNERD",
     "mr": "l3cube",
     "my": "ucsy",
     "nb": "norne",
@@ -145,6 +146,7 @@ default_ners = {
     "nn": "norne",
     "ru": "wikiner",
     "sv": "suc3shuffle",
+    "th": "lst20",
     "tr": "starlang",
     "uk": "languk",
     "vi": "vlsp",
@@ -165,12 +167,14 @@ default_charlms = {
     "fr": "newswiki",
     "it": "conll17",
     "ja": "conll17",
+    "kk": "oscar",
     "mr": "l3cube",
     "my": "oscar",
     "nb": "conll17",
     "nl": "ccwiki",
     "ru": "newswiki",
     "sv": "conll17",
+    "th": "oscar",
     "tr": "conll17",
     "uk": "conll17",
     "vi": "conll17",
@@ -251,6 +255,9 @@ ner_pretrains = {
     },
     "ru": {
         "wikiner": "fasttextwiki",
+    },
+    "th": {
+        "lst20": "fasttext",
     },
     "zh-hans": {
         "ontonotes": "fasttextwiki",
@@ -539,6 +546,8 @@ def process_lcode(args):
         resources[lang]['lang_name'] = lang_name
         resources_new[lang.lower()] = resources[lang.lower()]
         resources_new[lang_name.lower()] = {'alias': lang.lower()}
+        if lang.lower() in two_to_three_letters:
+            resources_new[two_to_three_letters[lang.lower()]] = {'alias': lang.lower()}
     print("Processed lcode aliases.  Writing resources.json")
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 

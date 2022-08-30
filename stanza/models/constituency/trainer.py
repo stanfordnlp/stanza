@@ -95,7 +95,15 @@ class Trainer:
         # TODO: remove when all models are rebuilt
         if 'lattn_combined_input' not in saved_args:
             saved_args['lattn_combined_input'] = False
+        if 'lattn_d_input_proj' not in saved_args:
+            saved_args['lattn_d_input_proj'] = 0
         params = checkpoint['params']
+        # this is because galaxy brain decided it was worth the effort
+        # of moving the layer norm from inside the positional encoding
+        if 'partitioned_transformer_module.add_timing.norm.weight' in params['model']:
+            params['model']['partitioned_transformer_module.transformer_input_norm.weight'] = params['model']['partitioned_transformer_module.add_timing.norm.weight']
+        if 'partitioned_transformer_module.add_timing.norm.bias' in params['model']:
+            params['model']['partitioned_transformer_module.transformer_input_norm.bias'] = params['model']['partitioned_transformer_module.add_timing.norm.bias']
 
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
@@ -267,6 +275,15 @@ def convert_trees_to_sequences(trees, tree_type, transition_scheme):
     transitions = transition_sequence.all_transitions(sequences)
     return sequences, transitions
 
+def add_grad_clipping(trainer, grad_clipping):
+    """
+    Adds a torch.clamp hook on each parameter if grad_clipping is not None
+    """
+    if grad_clipping is not None:
+        for p in trainer.model.parameters():
+            if p.requires_grad:
+                p.register_hook(lambda grad: torch.clamp(grad, -grad_clipping, grad_clipping))
+
 def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
@@ -340,7 +357,10 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         temp_args.pop('lattn_d_proj', None)
         trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False)
 
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        # using the model's current values works for if the new
+        # dataset is the same or smaller
+        # TODO: handle a larger dataset as well
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
         if args['cuda']:
             model.cuda()
         model.copy_with_new_structure(trainer.model)
@@ -380,6 +400,8 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         scheduler = build_scheduler(args, optimizer)
 
         trainer = Trainer(args, model, optimizer, scheduler)
+
+    add_grad_clipping(trainer, args['grad_clipping'])
 
     return trainer, train_sequences, train_transitions
 
@@ -431,7 +453,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
         global wandb
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_constituency" % args['shorthand']
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('dev_score', summary='max')
 
     with EvaluateParser(kbest=kbest) as evaluator:
@@ -499,8 +521,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     device = next(model.parameters()).device
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
-                          for (y, x) in enumerate(transitions)}
-
+                          for (y, x) in enumerate(model.transitions)}
     model.train()
 
     preterminal_lists = [[Tree(label=preterminal.label, children=Tree(label=preterminal.children[0].label))
@@ -596,6 +617,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             optimizer = build_optimizer(temp_args, new_model)
             scheduler = build_scheduler(temp_args, optimizer)
             trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
+            add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):

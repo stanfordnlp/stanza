@@ -180,7 +180,8 @@ def ensure_dir(d, verbose=True):
     if not os.path.exists(d):
         if verbose:
             logger.info("Directory {} does not exist; creating...".format(d))
-        os.makedirs(d)
+        # exist_ok: guard against race conditions
+        os.makedirs(d, exist_ok=True)
 
 def save_config(config, path, verbose=True):
     with open(path, 'w') as outfile:
@@ -413,3 +414,28 @@ def get_tqdm():
         return tqdm(*args, **kwargs)
 
     return hidden_tqdm
+
+def checkpoint_name(save_dir, save_name, checkpoint_name):
+    """
+    Will return a recommended checkpoint name for the given dir, save_name, optional checkpoint_name
+
+    For example, can pass in args['save_dir'], args['save_name'], args['checkpoint_save_name']
+    """
+    if checkpoint_name:
+        return os.path.join(save_dir, checkpoint_name)
+
+    save_name = os.path.join(save_dir, save_name)
+    if save_name.endswith(".pt"):
+        return save_name[:-3] + "_checkpoint.pt"
+
+    return save_name + "_checkpoint"
+
+def load_elmo(elmo_model):
+    # This import is here so that Elmo integration can be treated
+    # as an optional feature
+    import elmoformanylangs
+
+    logger.info("Loading elmo: %s" % elmo_model)
+    elmo_model = elmoformanylangs.Embedder(elmo_model)
+    return elmo_model
+

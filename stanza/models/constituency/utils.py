@@ -10,10 +10,26 @@ from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 
-DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.01, "madgrad": 0.005 }
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
-DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 1e-6 }
 DEFAULT_LEARNING_RHO = 0.9
+DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+
+# madgrad experiment for weight decay
+# with learning_rate set to 0.0000007 and momentum 0.9
+# on en_wsj, with a baseline model trained on adadela for 200,
+# then madgrad used to further improve that model
+#  0.00000002.out: 0.9590347746438835
+#  0.00000005.out: 0.9591378819960182
+#  0.0000001.out: 0.9595450596319405
+#  0.0000002.out: 0.9594603134479271
+#  0.0000005.out: 0.9591317672706594
+#  0.000001.out: 0.9592548741021389
+#  0.000002.out: 0.9598395477013945
+#  0.000003.out: 0.9594974271553495
+#  0.000004.out: 0.9596665982603754
+#  0.000005.out: 0.9591620720706487
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
 
 class TextTooLongError(ValueError):
     """
@@ -83,17 +99,22 @@ def retag_trees(trees, pipeline, xpos=True):
             raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
     return new_trees
 
+NONLINEARITY = {
+    'tanh':       nn.Tanh,
+    'relu':       nn.ReLU,
+    'gelu':       nn.GELU,
+    'leaky_relu': nn.LeakyReLU,
+    'silu':       nn.SiLU,
+    'mish':       nn.Mish,
+}
+
 def build_nonlinearity(nonlinearity):
-    if nonlinearity == 'tanh':
-        return nn.Tanh()
-    elif nonlinearity == 'relu':
-        return nn.ReLU()
-    elif nonlinearity == 'gelu':
-        return nn.GELU()
-    elif nonlinearity == 'leaky_relu':
-        return nn.LeakyReLU()
-    else:
-        raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
+    """
+    Look up "nonlinearity" in a map from function name to function, build the appropriate layer.
+    """
+    if nonlinearity in NONLINEARITY:
+        return NONLINEARITY[nonlinearity]()
+    raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
 
 def build_optimizer(args, model):
     """
@@ -101,7 +122,7 @@ def build_optimizer(args, model):
     """
     parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
     if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=0.9, weight_decay=args['weight_decay'])
+        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=args['momentum'], weight_decay=args['weight_decay'])
     elif args['optim'].lower() == 'adadelta':
         optimizer = optim.Adadelta(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
     elif args['optim'].lower() == 'adamw':
@@ -118,7 +139,7 @@ def build_optimizer(args, model):
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'])
+        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'], momentum=args['momentum'])
     else:
         raise ValueError("Unknown optimizer: %s" % args['optim'])
     return optimizer

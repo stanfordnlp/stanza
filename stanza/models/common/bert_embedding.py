@@ -170,9 +170,73 @@ def fix_german_tokens(tokenizer, data):
     for sentence in data:
         tokenized = tokenizer(sentence, is_split_into_words=False).input_ids
         new_sentence = [word if len(token) > 2 else "-" for word, token in zip(sentence, tokenized)]
-        #print(new_sentence)
         new_data.append(new_sentence)
     return new_data
+
+def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+    # using attention masks makes contextual embeddings much more useful for downstream tasks
+    tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
+    #tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
+
+    list_offsets = [[None] * (len(sentence)+2) for sentence in data]
+    for idx in range(len(data)):
+        offsets = tokenized.word_ids(batch_index=idx)
+        list_offsets[idx][0] = 0
+        for pos, offset in enumerate(offsets):
+            if offset is None:
+                break
+            # this uses the last token piece for any offset by overwriting the previous value
+            # this will be one token earlier
+            # we will add a <pad> to the start of each sentence for the endpoints
+            list_offsets[idx][offset+1] = pos + 1
+        list_offsets[idx][-1] = list_offsets[idx][-2] + 1
+        if any(x is None for x in list_offsets[idx]):
+            raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
+
+        if len(offsets) > tokenizer.model_max_length - 2:
+            logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
+            raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
+
+    features = []
+    for i in range(int(math.ceil(len(data)/128))):
+        with torch.no_grad():
+            # TODO: find a suitable representation for attention masks for xlnet
+            # xlnet base on WSJ:
+            # sep_token_id at beginning, cls_token_id at end:     0.9441
+            # bos_token_id at beginning, eos_token_id at end:     0.9463
+            # bos_token_id at beginning, sep_token_id at end:     0.9459
+            # bos_token_id at beginning, cls_token_id at end:     0.9457
+            # bos_token_id at beginning, sep/cls at end:          0.9454
+            # use the xlnet tokenization with words at end,
+            # begin token is last pad, end token is sep, no mask: 0.9463
+            # same, but with masks:                               0.9440
+            input_ids = [[tokenizer.bos_token_id] + x[:-2] + [tokenizer.eos_token_id] for x in tokenized['input_ids'][128*i:128*i+128]]
+            max_len = max(len(x) for x in input_ids)
+            attention_mask = torch.zeros(len(input_ids), max_len, dtype=torch.long, device=device)
+            for idx, input_row in enumerate(input_ids):
+                attention_mask[idx, :len(input_row)] = 1
+                if len(input_row) < max_len:
+                    input_row.extend([tokenizer.pad_token_id] * (max_len - len(input_row)))
+            id_tensor = torch.tensor(input_ids, device=device)
+            feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
+            # feature[2] is the same for bert, but it didn't work for
+            # older versions of transformers for xlnet
+            # feature = feature[2]
+            feature = feature.hidden_states
+            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+            features += feature.clone().detach()
+
+    processed = []
+    #process the output
+    if not keep_endpoints:
+        #remove the bos and eos tokens
+        list_offsets = [sent[1:-1] for sent in list_offsets]
+    for feature, offsets in zip(features, list_offsets):
+        new_sent = feature[offsets]
+        processed.append(new_sent)
+
+    return processed
+
 
 def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
     """
@@ -182,13 +246,16 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if model_name.startswith("vinai/phobert"):
         return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
 
+    if isinstance(data, tuple):
+        data = list(data)
+
+    if model_name.startswith("xlnet"):
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+
     if model_name in BAD_TOKENIZERS:
         data = fix_german_tokens(tokenizer, data)
 
-    is_xlnet = model_name.startswith("xlnet")
     #add add_prefix_space = True for RoBerTa-- error if not
-    if isinstance(data, tuple):
-        data = list(data)
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
     list_offsets = [[None] * (len(sentence)+2) for sentence in data]
@@ -198,17 +265,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             if offset is None:
                 continue
             # this uses the last token piece for any offset by overwriting the previous value
-            if is_xlnet:
-                # this will be one token earlier
-                # we will add a <pad> to the start of each sentence for the endpoints
-                if offset == 0 and list_offsets[idx][offset+1] is None:
-                    list_offsets[idx][offset] = pos
-                list_offsets[idx][offset+1] = pos + 1
-            else:
-                list_offsets[idx][offset+1] = pos
+            list_offsets[idx][offset+1] = pos
+        list_offsets[idx][0] = 0
         list_offsets[idx][-1] = list_offsets[idx][-2] + 1
-        if not is_xlnet:
-            list_offsets[idx][0] = 0
         #print(list_offsets[idx])
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
@@ -220,14 +279,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     features = []
     for i in range(int(math.ceil(len(data)/128))):
         with torch.no_grad():
-            if is_xlnet:
-                # TODO: find a suitable representation for attention masks for xlnet
-                input_ids = [[tokenizer.pad_token_id] + x for x in tokenized['input_ids'][128*i:128*i+128]]
-                attention_mask = None
-            else:
-                input_ids = tokenized['input_ids'][128*i:128*i+128]
-                attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
-            id_tensor = torch.tensor(input_ids, device=device)
+            attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
+            id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
             feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
             # feature[2] is the same for bert, but it didn't work for
             # older versions of transformers for xlnet

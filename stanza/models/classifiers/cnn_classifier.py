@@ -1,4 +1,6 @@
 import logging
+import math
+import os
 import random
 import re
 from types import SimpleNamespace
@@ -21,10 +23,17 @@ The CNN classifier is based on Yoon Kim's work:
 
 https://arxiv.org/abs/1408.5882
 
+Also included are maxpool 2d, conv 2d, and a bilstm, as in
+
+Text Classification Improved by Integrating Bidirectional LSTM
+with Two-dimensional Max Pooling
+https://aclanthology.org/C16-1329.pdf
+
 The architecture is simple:
 
 - Embedding at the bottom layer
   - separate learnable entry for UNK, since many of the embeddings we have use 0 for UNK
+- maybe a bilstm layer, as per a command line flag
 - Some number of conv2d layers over the embedding
 - Maxpool layers over small windows, window size being a parameter
 - FC layer to the classification layer
@@ -39,10 +48,11 @@ help, but dev performance went down for each variation of
 """
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, bert_model, bert_tokenizer,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -72,7 +82,12 @@ class CNNClassifier(nn.Module):
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
+                                      use_elmo = args.use_elmo,
+                                      elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
+                                      bilstm = args.bilstm,
+                                      bilstm_hidden_dim = args.bilstm_hidden_dim,
+                                      maxpool_width = args.maxpool_width,
                                       model_type = 'CNNClassifier')
 
         self.char_lowercase = args.char_lowercase
@@ -81,17 +96,18 @@ class CNNClassifier(nn.Module):
 
         emb_matrix = pretrain.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.add_unsaved_module('elmo_model', elmo_model)
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
         self.add_unsaved_module('forward_charlm', charmodel_forward)
         if charmodel_forward is not None:
-            logger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
+            tlogger.debug("Got forward char model of dimension {}".format(charmodel_forward.hidden_dim()))
             if not charmodel_forward.is_forward_lm:
                 raise ValueError("Got a backward charlm as a forward charlm!")
         self.add_unsaved_module('backward_charlm', charmodel_backward)
         if charmodel_backward is not None:
-            logger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
+            tlogger.debug("Got backward char model of dimension {}".format(charmodel_backward.hidden_dim()))
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
@@ -125,7 +141,7 @@ class CNNClassifier(nn.Module):
                                                 embedding_dim = self.config.extra_wordvec_dim,
                                                 max_norm = self.config.extra_wordvec_max_norm,
                                                 padding_idx = 0)
-            logger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
+            tlogger.debug("Extra embedding size: {}".format(self.extra_embedding.weight.shape))
         else:
             self.extra_vocab = None
             self.extra_vocab_map = None
@@ -159,26 +175,78 @@ class CNNClassifier(nn.Module):
                 self.charmodel_backward_projection = None
                 total_embedding_dim += charmodel_backward.hidden_dim()
 
+        if self.config.use_elmo:
+            if elmo_model is None:
+                raise ValueError("Model requires elmo, but elmo_model not passed in")
+            elmo_dim = elmo_model.sents2elmo([["Test"]])[0].shape[1]
+
+            # this mapping will combine 3 layers of elmo to 1 layer of features
+            self.elmo_combine_layers = nn.Linear(in_features=3, out_features=1, bias=False)
+            if self.config.elmo_projection:
+                self.elmo_projection = nn.Linear(in_features=elmo_dim, out_features=self.config.elmo_projection)
+                total_embedding_dim = total_embedding_dim + self.config.elmo_projection
+            else:
+                total_embedding_dim = total_embedding_dim + elmo_dim
+
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
             self.bert_dim = self.bert_model.config.hidden_size
             total_embedding_dim += self.bert_dim
 
-        self.conv_layers = nn.ModuleList([nn.Conv2d(in_channels=1,
-                                                    out_channels=self.config.filter_channels,
-                                                    kernel_size=(filter_size, total_embedding_dim))
-                                          for filter_size in self.config.filter_sizes])
+        if self.config.bilstm:
+            conv_input_dim = self.config.bilstm_hidden_dim * 2
+            self.bilstm = nn.LSTM(batch_first=True,
+                                  input_size=total_embedding_dim,
+                                  hidden_size=self.config.bilstm_hidden_dim,
+                                  num_layers=2,
+                                  bidirectional=True,
+                                  dropout=0.2)
+        else:
+            conv_input_dim = total_embedding_dim
+            self.bilstm = None
 
-        previous_layer_size = len(self.config.filter_sizes) * self.config.filter_channels
+        self.fc_input_size = 0
+        self.conv_layers = nn.ModuleList()
+        self.max_window = 0
+        for filter_idx, filter_size in enumerate(self.config.filter_sizes):
+            if isinstance(filter_size, int):
+                self.max_window = max(self.max_window, filter_size)
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = self.config.filter_channels
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
+                fc_delta = filter_channels // self.config.maxpool_width
+                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
+                self.fc_input_size += fc_delta
+                self.conv_layers.append(nn.Conv2d(in_channels=1,
+                                                  out_channels=filter_channels,
+                                                  kernel_size=(filter_size, conv_input_dim)))
+            elif isinstance(filter_size, tuple) and len(filter_size) == 2:
+                filter_height, filter_width = filter_size
+                self.max_window = max(self.max_window, filter_width)
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
+                fc_delta = filter_channels * (conv_input_dim // filter_width) // self.config.maxpool_width
+                tlogger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
+                self.fc_input_size += fc_delta
+                self.conv_layers.append(nn.Conv2d(in_channels=1,
+                                                  out_channels=filter_channels,
+                                                  stride=(1, filter_width),
+                                                  kernel_size=(filter_height, filter_width)))
+            else:
+                raise ValueError("Expected int or 2d tuple for conv size")
+
+        tlogger.debug("Input dim to FC layers: %d", self.fc_input_size)
         fc_layers = []
+        previous_layer_size = self.fc_input_size
         for shape in self.config.fc_shapes:
             fc_layers.append(nn.Linear(previous_layer_size, shape))
             previous_layer_size = shape
         fc_layers.append(nn.Linear(previous_layer_size, self.config.num_classes))
         self.fc_layers = nn.ModuleList(fc_layers)
-
-        self.max_window = max(self.config.filter_sizes)
 
         self.dropout = nn.Dropout(self.config.dropout)
 
@@ -232,6 +300,9 @@ class CNNClassifier(nn.Module):
         extra_batch_indices = []
         begin_paddings = []
         end_paddings = []
+
+        elmo_batch_words = []
+
         for phrase in inputs:
             # we use random at training time to try to learn different
             # positions of padding.  at test time, though, we want to
@@ -280,6 +351,13 @@ class CNNClassifier(nn.Module):
                 extra_sentence_indices.extend([PAD_ID] * end_pad_width)
                 extra_batch_indices.append(extra_sentence_indices)
 
+            if self.config.use_elmo:
+                elmo_phrase_words = [""] * begin_pad_width
+                for word in phrase:
+                    elmo_phrase_words.append(word)
+                elmo_phrase_words.extend([""] * end_pad_width)
+                elmo_batch_words.append(elmo_phrase_words)
+
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
         # many tiny tensors
@@ -318,6 +396,25 @@ class CNNClassifier(nn.Module):
             char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
 
+        if self.config.use_elmo:
+            # this will be N arrays of 3xMx1024 where M is the number of words
+            # and N is the number of sentences (and 1024 is actually the number of weights)
+            elmo_arrays = self.elmo_model.sents2elmo(elmo_batch_words, output_layer=-2)
+            elmo_tensors = [torch.tensor(x).to(device=device) for x in elmo_arrays]
+            # elmo_tensor will now be Nx3xMx1024
+            elmo_tensor = torch.stack(elmo_tensors)
+            # Nx1024xMx3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 3)
+            # NxMx1024x3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 2)
+            # NxMx1024x1
+            elmo_tensor = self.elmo_combine_layers(elmo_tensor)
+            # NxMx1024
+            elmo_tensor = elmo_tensor.squeeze(3)
+            if self.config.elmo_projection:
+                elmo_tensor = self.elmo_projection(elmo_tensor)
+            all_inputs.append(elmo_tensor)
+
         if self.bert_model is not None:
             bert_embeddings = self.extract_bert_embeddings(inputs, max_phrase_len, begin_paddings, device)
             all_inputs.append(bert_embeddings)
@@ -325,12 +422,22 @@ class CNNClassifier(nn.Module):
         # still works even if there's just one item
         input_vectors = torch.cat(all_inputs, dim=2)
 
+        if self.config.bilstm:
+            input_vectors, _ = self.bilstm(self.dropout(input_vectors))
+
         # reshape to fit the input tensors
         x = input_vectors.unsqueeze(1)
 
-        conv_outs = [self.dropout(F.relu(conv(x).squeeze(3)))
-                     for conv in self.conv_layers]
-        pool_outs = [F.max_pool1d(out, out.shape[2]).squeeze(2) for out in conv_outs]
+        conv_outs = []
+        for conv, filter_size in zip(self.conv_layers, self.config.filter_sizes):
+            if isinstance(filter_size, int):
+                conv_out = self.dropout(F.relu(conv(x).squeeze(3)))
+                conv_outs.append(conv_out)
+            else:
+                conv_out = conv(x).transpose(2, 3).flatten(1, 2)
+                conv_out = self.dropout(F.relu(conv_out))
+                conv_outs.append(conv_out)
+        pool_outs = [F.max_pool2d(out, (self.config.maxpool_width, out.shape[2])).squeeze(2) for out in conv_outs]
         pooled = torch.cat(pool_outs, dim=1)
 
         previous_layer = pooled
@@ -346,6 +453,8 @@ class CNNClassifier(nn.Module):
 
 # TODO: all this code is basically the same as for POS and NER.  Should refactor
 def save(filename, model, skip_modules=True):
+    save_dir = os.path.split(filename)[0]
+    os.makedirs(save_dir, exist_ok=True)
     model_state = model.state_dict()
     # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
     if skip_modules:
@@ -358,15 +467,10 @@ def save(filename, model, skip_modules=True):
         'labels': model.labels,
         'extra_vocab': model.extra_vocab,
     }
-    try:
-        torch.save(params, filename, _use_new_zipfile_serialization=False)
-        logger.info("Model saved to {}".format(filename))
-    except (KeyboardInterrupt, SystemExit):
-        raise
-    except BaseException as e:
-        logger.warning("Saving failed to {}... continuing anyway.  Error: {}".format(filename, e))
+    torch.save(params, filename, _use_new_zipfile_serialization=False)
+    logger.info("Model saved to {}".format(filename))
 
-def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
+def load(filename, pretrain, charmodel_forward, charmodel_backward, elmo_model, foundation_cache=None):
     try:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
     except BaseException:
@@ -375,9 +479,14 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
     logger.debug("Loaded model {}".format(filename))
 
     # TODO: should not be needed when all models have this value set
+    setattr(checkpoint['config'], 'use_elmo', getattr(checkpoint['config'], 'use_elmo', False))
+    setattr(checkpoint['config'], 'elmo_projection', getattr(checkpoint['config'], 'elmo_projection', False))
     setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
     setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
     setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
+    setattr(checkpoint['config'], 'bilstm', getattr(checkpoint['config'], 'bilstm', False))
+    setattr(checkpoint['config'], 'bilstm_hidden_dim', getattr(checkpoint['config'], 'bilstm_hidden_dim', 0))
+    setattr(checkpoint['config'], 'maxpool_width', getattr(checkpoint['config'], 'maxpool_width', 1))
 
     # TODO: the getattr is not needed when all models have this baked into the config
     model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
@@ -391,6 +500,7 @@ def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_c
                               labels=checkpoint['labels'],
                               charmodel_forward=charmodel_forward,
                               charmodel_backward=charmodel_backward,
+                              elmo_model=elmo_model,
                               bert_model=bert_model,
                               bert_tokenizer=bert_tokenizer,
                               args=checkpoint['config'])

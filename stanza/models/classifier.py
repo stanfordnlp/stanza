@@ -35,6 +35,9 @@ class DevScoring(Enum):
     WEIGHTED_F1 = 'WF'
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.classifiers.trainer')
+
+logging.getLogger('elmoformanylangs').setLevel(logging.WARNING)
 
 DEFAULT_TRAIN='data/sentiment/en_sstplus.train.txt'
 DEFAULT_DEV='data/sentiment/en_sst3roots.dev.txt'
@@ -118,6 +121,15 @@ def convert_fc_shapes(arg):
         return arg
     return tuple(arg)
 
+# For the most part, these values are for the constituency parser.
+# Only the WD for adadelta is originally for sentiment
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007, "sgd": 0.001 }
+DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
+DEFAULT_LEARNING_RHO = 0.9
+DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.0001, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
+
+
 def parse_args(args=None):
     """
     Add arguments for building the classifier.
@@ -144,7 +156,7 @@ def parse_args(args=None):
     parser.add_argument('--max_epochs', type=int, default=100)
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
-    parser.add_argument('--filter_channels', default=1000, type=int, help='Number of channels for layers after the word vectors')
+    parser.add_argument('--filter_channels', default=1000, type=ast.literal_eval, help='Number of channels for layers after the word vectors.  Int for same number of channels (scaled by width) for each filter, or tuple/list for exact lengths for each filter')
     parser.add_argument('--fc_shapes', default="400,100", type=convert_fc_shapes, help='Extra fully connected layers to put after the initial filters.  If set to blank, will FC directly from the max pooling to the output layer.')
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
@@ -154,9 +166,11 @@ def parse_args(args=None):
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
 
-    parser.add_argument('--weight_decay', default=0.0001, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate to use in the optimizer')
+    parser.add_argument('--momentum', default=None, type=float, help='Momentum to use in the optimizer')
 
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD or Adadelta')
+    parser.add_argument('--optim', default='adadelta', choices=['adadelta', 'madgrad', 'sgd'], help='Optimizer type: SGD or Adadelta')
 
     parser.add_argument('--test_remap_labels', default=None, type=ast.literal_eval,
                         help='Map of which label each classifier label should map to.  For example, "{0:0, 1:0, 3:1, 4:1}" to map a 5 class sentiment test to a 2 class.  Any labels not mapped will be considered wrong')
@@ -175,8 +189,18 @@ def parse_args(args=None):
     parser.add_argument('--charlm_projection', type=int, default=None, help="Project the charlm values to this dimension")
     parser.add_argument('--char_lowercase', dest='char_lowercase', action='store_true', help="Use lowercased characters in character model.")
 
+    parser.add_argument('--elmo_model', default='extern_data/manyelmo/english', help='Directory with elmo model')
+    parser.add_argument('--use_elmo', dest='use_elmo', default=False, action='store_true', help='Use an elmo model as a source of parameters')
+    parser.add_argument('--elmo_projection', type=int, default=None, help='Project elmo to this many dimensions')
+
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+
+    parser.add_argument('--bilstm', dest='bilstm', action='store_true', help="Use a bilstm after the inputs, before the convs")
+    parser.add_argument('--bilstm_hidden_dim', type=int, default=200, help="Dimension of the bilstm to use")
+    parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs")
+
+    parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -185,6 +209,14 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
+
+    args.optim = args.optim.lower()
+    if args.weight_decay is None:
+        args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim, None)
+    if args.momentum is None:
+        args.momentum = DEFAULT_MOMENTUM.get(args.optim, None)
+    if args.learning_rate is None:
+        args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim, None)
 
     return args
 
@@ -369,6 +401,8 @@ def log_param_sizes(model):
     logger.debug("  Total size: %d", total_size)
 
 def train_model(model, model_file, args, train_set, dev_set, labels):
+    tlogger.setLevel(logging.DEBUG)
+
     # TODO: separate this into a trainer like the other models.
     # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
@@ -379,10 +413,15 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     # parameters for the optimizer should be reloaded as well
     # Otherwise this ability is actually not very useful
     if args.optim.lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9,
-                              weight_decay=args.weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
     elif args.optim.lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+        optimizer = optim.Adadelta(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    elif args.optim.lower() == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
     else:
         raise ValueError("Unknown optimizer: %s" % args.optim)
 
@@ -417,7 +456,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
     if args.wandb:
         import wandb
         wandb_name = args.wandb_name if args.wandb_name else "%s_classifier" % args.shorthand
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('accuracy', summary='max')
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
@@ -463,7 +502,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
                     if best_score is None or dev_score > best_score:
                         best_score = dev_score
                         cnn_classifier.save(model_file, model)
-                        logger.info("Saved new best score model!")
+                        logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, epoch+1, batch_num+1))
                     model.train()
                 epoch_loss += running_loss
                 running_loss = 0.0
@@ -480,7 +519,7 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         if best_score is None or dev_score > best_score:
             best_score = dev_score
             cnn_classifier.save(model_file, model)
-            logger.info("Saved new best score model!")
+            logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, epoch+1))
 
     if args.wandb:
         wandb.finish()
@@ -516,6 +555,51 @@ def print_args(args):
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
 
+def load_model(args):
+    """
+    Load both the pretrained embedding and other pieces from the args as well as the model itself
+    """
+    pretrain = load_pretrain(args)
+    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    if os.path.exists(args.load_name):
+        load_name = args.load_name
+    else:
+        load_name = os.path.join(args.save_dir, args.load_name)
+        if not os.path.exists(load_name):
+            raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
+    return cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward, elmo_model)
+
+def build_new_model(args, train_set):
+    """
+    Load pretrained pieces and then build a new model
+    """
+    if train_set is None:
+        raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
+
+    pretrain = load_pretrain(args)
+    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
+    charmodel_forward = load_charlm(args.charlm_forward_file)
+    charmodel_backward = load_charlm(args.charlm_backward_file)
+
+    labels = dataset_labels(train_set)
+    extra_vocab = dataset_vocab(train_set)
+
+    bert_model, bert_tokenizer = load_bert(args.bert_model)
+
+    return cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                        extra_vocab=extra_vocab,
+                                        labels=labels,
+                                        charmodel_forward=charmodel_forward,
+                                        charmodel_backward=charmodel_backward,
+                                        elmo_model=elmo_model,
+                                        bert_model=bert_model,
+                                        bert_tokenizer=bert_tokenizer,
+                                        args=args)
+
+
 def main(args=None):
     args = parse_args(args)
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -529,6 +613,7 @@ def main(args=None):
         train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
         logger.info("Using training set: %s" % args.train_file)
         logger.info("Training set has %d labels" % len(dataset_labels(train_set)))
+        tlogger.setLevel(logging.DEBUG)
     elif not args.load_name:
         if args.save_name:
             args.load_name = args.save_name
@@ -537,34 +622,10 @@ def main(args=None):
     else:
         train_set = None
 
-    pretrain = load_pretrain(args)
-
-    charmodel_forward = load_charlm(args.charlm_forward_file)
-    charmodel_backward = load_charlm(args.charlm_backward_file)
-
     if args.load_name:
-        if os.path.exists(args.load_name):
-            load_name = args.load_name
-        else:
-            load_name = os.path.join(args.save_dir, args.load_name)
-            if not os.path.exists(load_name):
-                raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-        model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward)
+        model = load_model(args)
     else:
-        assert train_set is not None
-        labels = dataset_labels(train_set)
-        extra_vocab = dataset_vocab(train_set)
-
-        bert_model, bert_tokenizer = load_bert(args.bert_model)
-
-        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                             extra_vocab=extra_vocab,
-                                             labels=labels,
-                                             charmodel_forward=charmodel_forward,
-                                             charmodel_backward=charmodel_backward,
-                                             bert_model=bert_model,
-                                             bert_tokenizer=bert_tokenizer,
-                                             args=args)
+        model = build_new_model(args, train_set)
 
     if args.cuda:
         model.cuda()

@@ -9,6 +9,7 @@ import tempfile
 from enum import Enum
 
 from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
@@ -201,17 +202,23 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
         short_name = treebank_to_short_name(treebank)
         logger.debug("%s: %s" % (treebank, short_name))
 
-        if command_args.save_name:
-            save_name = command_args.save_name
-            if len(treebanks) > 1:
-                save_name_dir, save_name_filename = os.path.split(save_name)
-                save_name_filename = "%s_%s" % (short_name, save_name_filename)
-                save_name = os.path.join(save_name_dir, save_name_filename)
-                logger.info("Save file for %s model for %s: %s", short_name, save_name)
-        else:
-            save_name = "%s_%s.pt" % (short_name, model_name)
-            logger.info("Save file for %s model: %s", short_name, save_name)
-        save_name_args = ['--save_name', save_name]
+        save_name_args = []
+        if model_name != 'ete':
+            # ete is several models at once, so we don't set --save_name
+            # theoretically we could handle a parametrized save_name
+            if command_args.save_name:
+                save_name = command_args.save_name
+                # if there's more than 1 treebank, we can't save them all to this save_name
+                # we have to override that value for each treebank
+                if len(treebanks) > 1:
+                    save_name_dir, save_name_filename = os.path.split(save_name)
+                    save_name_filename = "%s_%s" % (short_name, save_name_filename)
+                    save_name = os.path.join(save_name_dir, save_name_filename)
+                    logger.info("Save file for %s model for %s: %s", short_name, treebank, save_name)
+            else:
+                save_name = "%s_%s.pt" % (short_name, model_name)
+                logger.info("Save file for %s model: %s", short_name, save_name)
+            save_name_args = ['--save_name', save_name]
 
         if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
             if command_args.save_dir:
@@ -237,9 +244,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
 
 def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
     """ Wrapper for lemma scorer. """
-    gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
-    system_ud = ud_eval.load_conllu_file(system_conllu_file)
-    evaluation = ud_eval.evaluate(gold_ud, system_ud)
+    evaluation = ud_scores(gold_conllu_file, system_conllu_file)
 
     if evals is None:
         return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False)
@@ -260,7 +265,7 @@ def run_eval_script_depparse(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["UAS", "LAS", "CLAS", "MLAS", "BLEX"])
 
 
-def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, dataset=None):
+def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, dataset=None, model_dir=DEFAULT_MODEL_DIR):
     # try to get the default pretrain for the language,
     # but allow the package specific value to override it if that is set
     default_pt = default_pretrains.get(language, None)
@@ -268,7 +273,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         default_pt = dataset_pretrains.get(language, {}).get(dataset, default_pt)
 
     if default_pt is not None:
-        default_pt_path = '{}/{}/pretrain/{}.pt'.format(DEFAULT_MODEL_DIR, language, default_pt)
+        default_pt_path = '{}/{}/pretrain/{}.pt'.format(model_dir, language, default_pt)
         if not os.path.exists(default_pt_path):
             logger.info("Default pretrain should be {}  Attempting to download".format(default_pt_path))
             try:
@@ -281,7 +286,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
             logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             return default_pt_path
 
-    pretrain_path = '{}/{}/pretrain/*.pt'.format(DEFAULT_MODEL_DIR, language)
+    pretrain_path = '{}/{}/pretrain/*.pt'.format(model_dir, language)
     pretrains = glob.glob(pretrain_path)
     if len(pretrains) == 0:
         # we already tried to download the default pretrain once
@@ -305,7 +310,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
     logger.info(f"Using pretrain found in {pt}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pt
 
-def find_charlm_file(direction, language, charlm):
+def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
     """
     Return the path to the forward or backward charlm if it exists for the given package
 
@@ -316,7 +321,7 @@ def find_charlm_file(direction, language, charlm):
         logger.info(f'Using model {saved_path} for {direction} charlm')
         return saved_path
 
-    resource_path = '{}/{}/{}_charlm/{}.pt'.format(DEFAULT_MODEL_DIR, language, direction, charlm)
+    resource_path = '{}/{}/{}_charlm/{}.pt'.format(model_dir, language, direction, charlm)
     if os.path.exists(resource_path):
         logger.info(f'Using model {resource_path} for {direction} charlm')
         return resource_path
@@ -332,13 +337,13 @@ def find_charlm_file(direction, language, charlm):
 
     raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work")
 
-def build_charlm_args(language, charlm, base_args=True):
+def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
     """
     If specified, return forward and backward charlm args
     """
     if charlm:
-        forward = find_charlm_file('forward', language, charlm)
-        backward = find_charlm_file('backward', language, charlm)
+        forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
+        backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
         char_args = ['--charlm_forward_file', forward,
                      '--charlm_backward_file', backward]
         if not base_args:

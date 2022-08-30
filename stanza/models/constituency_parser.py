@@ -35,6 +35,8 @@ There are a few minor differences in the model:
   - Initializing the embeddings with smaller values than pytorch default
     For example, on a ja_alt dataset, scores went from 0.8980 to 0.8985
     at 200 iterations averaged over 5 trials
+  - Partitioned transformer layers help quite a bit, but require some
+    finicky training mechanism.  See --multistage
 
 A couple experiments which have been tried with little noticeable impact:
   - Combining constituents using the method in the paper (only a trained
@@ -134,7 +136,7 @@ from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
 
 logger = logging.getLogger('stanza')
 
@@ -184,7 +186,9 @@ def parse_args(args=None):
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_size', type=int, default=20, help="Embedding size for transition stack")
     # larger was more effective, up to a point
-    parser.add_argument('--hidden_size', type=int, default=128, help="Size of the output layers for constituency stack and word queue")
+    # substantially smaller, such as 128,
+    # is fine if bert & charlm are not available
+    parser.add_argument('--hidden_size', type=int, default=512, help="Size of the output layers for constituency stack and word queue")
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
@@ -282,7 +286,8 @@ def parse_args(args=None):
     #           0.0005  - 0.8076
     #           0.001   - 0.8069
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
-    parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
+    parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
+    parser.add_argument('--momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
     # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
@@ -294,11 +299,19 @@ def parse_args(args=None):
     #    0.010:   0.81474348
     #    0.005:   0.81503
     parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief')
     parser.add_argument('--learning_rho', default=DEFAULT_LEARNING_RHO, type=float, help='Rho parameter in Adadelta')
+    # A few experiments on beta2 didn't show much benefit from changing it
+    #   On an experiment with training WSJ with default parameters
+    #   AdaDelta for 200 iterations, then training AdamW for 200 more,
+    #   0.999, 0.997, 0.995 all wound up with 0.9588
+    #   values lower than 0.995 all had a slight dropoff
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
+    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
 
     parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
+
+    parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
+    parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
 
     # When using word_dropout and predict_dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:
     # 0.0: 0.9085
@@ -346,7 +359,7 @@ def parse_args(args=None):
     # after the same clock time on the same hardware.  the two had been
     # trading places in terms of accuracy over those ~500 iterations.
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
-    parser.add_argument('--nonlinearity', default='relu', choices=['tanh', 'relu', 'gelu', 'leaky_relu'], help='Nonlinearity to use in the model.  relu is a noticeable improvement')
+    parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
 
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
@@ -386,6 +399,7 @@ def parse_args(args=None):
     parser.add_argument('--pattn_timing', default='sin', choices=['learned', 'sin'], help='Use a learned embedding or a sin embedding')
 
     # Label Attention
+    parser.add_argument('--lattn_d_input_proj', default=None, type=int, help='If set, project the non-positional inputs down to this size before proceeding.')
     parser.add_argument('--lattn_d_kv', default=64, type=int, help='Dimension of the key/query vector')
     parser.add_argument('--lattn_d_proj', default=64, type=int, help='Dimension of the output vector from each label attention head')
     parser.add_argument('--lattn_resdrop', default=True, action='store_true', help='Whether or not to use Residual Dropout')
@@ -419,6 +433,8 @@ def parse_args(args=None):
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
     if args.learning_eps is None:
         args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
+    if args.momentum is None:
+        args.momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
     if args.weight_decay is None:
         args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 

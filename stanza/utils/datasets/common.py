@@ -7,7 +7,7 @@ import sys
 
 import stanza.utils.default_paths as default_paths
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.models.common.short_name_to_treebank import SHORT_NAMES
+from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 
 logger = logging.getLogger('stanza')
 
@@ -101,9 +101,11 @@ def get_ud_treebanks(udbase_dir, filtered=True):
         treebanks = [t for t in treebanks
                      if not mostly_underscores(find_treebank_dataset_file(t, udbase_dir, "train", "conllu"))]
         # eliminate partial treebanks (fixed with XV) for which we only have 1000 words or less
+        # if the train set is small and the test set is large enough, we'll flip them
         treebanks = [t for t in treebanks
                      if (find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") or
-                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000)]
+                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "train", "conllu")) > 1000 or
+                         num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "test", "conllu")) > 5000)]
     return treebanks
 
 def build_argparse():
@@ -130,7 +132,7 @@ def main(process_treebank, add_specific_args=None):
             treebanks.extend(ud_treebanks)
         else:
             # If this is a known UD short name, use the official name (we need it for the paths)
-            treebank = SHORT_NAMES.get(treebank, treebank)
+            treebank = canonical_treebank_name(treebank)
             treebanks.append(treebank)
 
     for treebank in treebanks:

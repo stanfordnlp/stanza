@@ -16,6 +16,9 @@ it_vit
     Hopefully versions after that work
     Set UDBASE to a path such that $UDBASE/UD_Italian-VIT is the UD version
   The constituency labels are generally not very understandable, unfortunately
+    Some documentation is available here:
+      https://core.ac.uk/download/pdf/223148096.pdf
+      https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.423.5538&rep=rep1&type=pdf
   Available from ELRA:
     http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/
 

@@ -33,7 +33,7 @@ def process_dataset(input_filename, output_filename):
             sent += [{'text': w, 'ner': t}]
         document += [sent]
 
-    with open(output_filename, 'w') as outfile:
+    with open(output_filename, 'w', encoding="utf-8") as outfile:
         json.dump(document, outfile, indent=1)
     print("Generated json file {}".format(output_filename))
 
@@ -41,7 +41,7 @@ def process_dataset(input_filename, output_filename):
 def load_conll03(filename, skip_doc_start=True):
     cached_lines = []
     examples = []
-    with open(filename) as infile:
+    with open(filename, encoding="utf-8") as infile:
         for line in infile:
             line = line.strip()
             if skip_doc_start and DOC_START_TOKEN in line:

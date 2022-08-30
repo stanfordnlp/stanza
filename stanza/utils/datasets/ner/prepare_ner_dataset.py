@@ -49,6 +49,9 @@ HiNER is another Hindi dataset option
     hi_hinercollapsed and hi_hiner
   The collapsed version has just PER, LOC, ORG
   - convert data as follows:
+    cd $NERBASE
+    mkdir hindi
+    cd hindi
     git clone git@github.com:cfiltnlp/HiNER.git
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hiner
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hinercollapsed
@@ -154,7 +157,7 @@ SUC3 is a Swedish NER dataset provided by Språkbanken
   - If you fill out the license form and get the official data,
     you can get the official splits by putting the provided zip file
     in $NERBASE/sv_suc3licensed.  Again, not necessary to unzip it
-    prepare_ner_dataset.py sv_suc3licensed
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sv_suc3licensed
 
 DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
   - https://danlp-alexandra.readthedocs.io/en/latest/docs/datasets.html#dane
@@ -164,7 +167,7 @@ DDT is a reformulation of the Danish Dependency Treebank as an NER dataset
     Rasmus Hvingelby, Amalie Brogaard Pauli, Maria Barrett,
     Christina Rosted, Lasse Malm Lidegaard, Anders Søgaard
   - place ddt.zip in $NERBASE/da_ddt/ddt.zip
-    prepare_ner_dataset.py da_ddt
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset da_ddt
 
 NorNE is the Norwegian Dependency Treebank with NER labels
   - LREC 2020
@@ -176,8 +179,8 @@ NorNE is the Norwegian Dependency Treebank with NER labels
     https://github.com/ltgoslo/norne
     Clone it into $NERBASE
     git clone git@github.com:ltgoslo/norne.git
-    prepare_ner_dataset.py nb_norne
-    prepare_ner_dataset.py nn_norne
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset nb_norne
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset nn_norne
 
 tr_starlang is a set of constituency trees for Turkish
   The words in this dataset (usually) have NER labels as well
@@ -192,7 +195,7 @@ tr_starlang is a set of constituency trees for Turkish
     https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
   Put them in
     $CONSTITUENCY_HOME/turkish    (yes, the constituency home)
-  prepare_ner_dataset.py tr_starlang
+  python3 -m stanza.utils.datasets.ner.prepare_ner_dataset tr_starlang
 
 GermEval2014 is a German NER dataset
   https://sites.google.com/site/germeval2014ner/data
@@ -202,7 +205,7 @@ GermEval2014 is a German NER dataset
   put them in
     $NERBASE/germeval2014
   then run
-    prepare_ner_dataset.py de_germeval2014
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset de_germeval2014
 
 The UD Japanese GSD dataset has a conversion by Megagon Labs
   https://github.com/megagonlabs/UD_Japanese-GSD
@@ -214,7 +217,7 @@ The UD Japanese GSD dataset has a conversion by Megagon Labs
       $NERBASE/ja_gsd
     so it should wind up in
       $NERBASE/ja_gsd/UD_Japanese-GSD-r2.9-NE
-    prepare_ner_dataset.py ja_gsd
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset ja_gsd
 
 L3Cube is a Marathi dataset
   - https://arxiv.org/abs/2204.06029
@@ -223,10 +226,10 @@ L3Cube is a Marathi dataset
   - L3Cube-MahaNER: A Marathi Named Entity Recognition Dataset and BERT models
     Parth Patil, Aparna Ranade, Maithili Sabane, Onkar Litake, Raviraj Joshi
 
-  Clone the repo into $NERBASE
+  Clone the repo into $NERBASE/marathi
     git clone git@github.com:l3cube-pune/MarathiNLP.git
   Then run
-    prepare_ner_dataset.py mr_l3cube
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset mr_l3cube
 
 Daffodil University produced a Bangla NER dataset
   - https://github.com/Rifat1493/Bengali-NER
@@ -240,7 +243,7 @@ Daffodil University produced a Bangla NER dataset
     cd $NERBASE/bangla
     git clone git@github.com:Rifat1493/Bengali-NER.git
   Then run
-    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset bn_daffodil
 
 LST20 is a Thai NER dataset from 2020
   - https://arxiv.org/abs/2008.05055
@@ -267,6 +270,49 @@ NKJP is a Polish NER dataset
     Annotated subcorpus to train NER model.
     Download and extract to $NERBASE/Polish-NKJP
 
+kk_kazNERD is a Kazakh dataset published in 2021
+  - https://github.com/IS2AI/KazNERD
+  - https://arxiv.org/abs/2111.13419
+    KazNERD: Kazakh Named Entity Recognition Dataset
+    Rustem Yeshpanov, Yerbolat Khassanov, Huseyin Atakan Varol
+  - in $NERBASE, make a "kazakh" directory, then git clone the repo there
+    mkdir -p $NERBASE/kazakh
+    cd $NERBASE/kazakh
+    git clone git@github.com:IS2AI/KazNERD.git
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset kk_kazNERD
+
+Masakhane NER is a set of NER datasets for African languages
+  - MasakhaNER: Named Entity Recognition for African Languages
+    Adelani, David Ifeoluwa; Abbott, Jade; Neubig, Graham;
+    D’souza, Daniel; Kreutzer, Julia; Lignos, Constantine;
+    Palen-Michel, Chester; Buzaaba, Happy; Rijhwani, Shruti;
+    Ruder, Sebastian; Mayhew, Stephen; Azime, Israel Abebe;
+    Muhammad, Shamsuddeen H.; Emezue, Chris Chinenye;
+    Nakatumba-Nabende, Joyce; Ogayo, Perez; Anuoluwapo, Aremu;
+    Gitau, Catherine; Mbaye, Derguene; Alabi, Jesujoba;
+    Yimam, Seid Muhie; Gwadabe, Tajuddeen Rabiu; Ezeani, Ignatius;
+    Niyongabo, Rubungo Andre; Mukiibi, Jonathan; Otiende, Verrah;
+    Orife, Iroro; David, Davis; Ngom, Samba; Adewumi, Tosin;
+    Rayson, Paul; Adeyemi, Mofetoluwa; Muriuki, Gerald;
+    Anebi, Emmanuel; Chukwuneke, Chiamaka; Odu, Nkiruka;
+    Wairagala, Eric Peter; Oyerinde, Samuel; Siro, Clemencia;
+    Bateesa, Tobius Saul; Oloyede, Temilola; Wambui, Yvonne;
+    Akinode, Victor; Nabagereka, Deborah; Katusiime, Maurice;
+    Awokoya, Ayodele; MBOUP, Mouhamadane; Gebreyohannes, Dibora;
+    Tilaye, Henok; Nwaike, Kelechi; Wolde, Degaga; Faye, Abdoulaye;
+    Sibanda, Blessing; Ahia, Orevaoghene; Dossou, Bonaventure F. P.;
+    Ogueji, Kelechi; DIOP, Thierno Ibrahima; Diallo, Abdoulaye;
+    Akinfaderin, Adewale; Marengereke, Tendai; Osei, Salomey
+  - https://github.com/masakhane-io/masakhane-ner
+  - git clone the repo to $NERBASE
+  - Then run
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset lcode_masakhane
+  - You can use the full language name, the 3 letter language code,
+    or in the case of languages with a 2 letter language code,
+    the 2 letter code for lcode.  The tool will throw an error
+    if the language is not supported in Masakhane.
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -281,7 +327,7 @@ import shutil
 import sys
 import tempfile
 
-from stanza.models.common.constant import treebank_to_short_name, lcode2lang
+from stanza.models.common.constant import treebank_to_short_name, lcode2lang, lang_to_langcode, two_to_three_letters
 import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
@@ -292,6 +338,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
+import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
 import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
@@ -804,11 +851,11 @@ def process_de_germeval2014(paths, short_name):
     write_dataset(datasets, base_output_path, short_name)
 
 def process_hiner(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "original")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "original")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_hinercollapsed(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_lst20(paths, short_name, include_space_char=True):
@@ -816,7 +863,7 @@ def process_lst20(paths, short_name, include_space_char=True):
 
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
-    in_directory = os.path.join(paths["NERBASE"], "MarathiNLP", "L3Cube-MahaNER", "IOB")
+    in_directory = os.path.join(paths["NERBASE"], "marathi", "MarathiNLP", "L3Cube-MahaNER", "IOB")
     input_files = ["train_iob.txt", "valid_iob.txt", "test_iob.txt"]
     input_files = [os.path.join(in_directory, x) for x in input_files]
     for input_file in input_files:
@@ -836,6 +883,51 @@ def process_pl_nkjp(paths, short_name):
     out_directory = paths["NER_DATA_DIR"]
     convert_nkjp.convert_nkjp(in_directory, out_directory)
 
+def process_kk_kazNERD(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "kazakh", "KazNERD", "KazNERD")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_kk_kazNERD.convert_dataset(in_directory, out_directory, short_name)
+
+def process_masakhane(paths, dataset_name):
+    """
+    Converts Masakhane NER datasets to Stanza's .json format
+
+    If we let N be the length of the first sentence, the NER files
+    (in version 2, at least) are all of the form
+
+    word tag
+    ...
+    word tag
+      (blank line for sentence break)
+    word tag
+    ...
+
+    Once the dataset is git cloned in $NERBASE, the directory structure is
+
+    $NERBASE/masakhane-ner/MasakhaNER2.0/data/$lcode/{train,dev,test}.txt
+
+    The only tricky thing here is that for some languages, we treat
+    the 2 letter lcode as canonical thanks to UD, but Masakhane NER
+    uses 3 letter lcodes for all languages.
+    """
+    language, dataset = dataset_name.split("_")
+    lcode = lang_to_langcode(language)
+    if lcode in two_to_three_letters:
+        masakhane_lcode = two_to_three_letters[lcode]
+    else:
+        masakhane_lcode = lcode
+
+    mn_directory = os.path.join(paths["NERBASE"], "masakhane-ner")
+    if not os.path.exists(mn_directory):
+        raise FileNotFoundError("Cannot find Masakhane NER repo.  Please check the setting of NERBASE or clone the repo to %s" % mn_directory)
+    data_directory = os.path.join(mn_directory, "MasakhaNER2.0", "data")
+    if not os.path.exists(data_directory):
+        raise FileNotFoundError("Apparently found the repo at %s but the expected directory structure is not there - was looking for %s" % (mn_directory, data_directory))
+
+    in_directory = os.path.join(data_directory, masakhane_lcode)
+    if not os.path.exists(in_directory):
+        raise UnknownDatasetError(dataset_name, "Found the Masakhane repo, but there was no %s in the repo at path %s" % (dataset_name, in_directory))
+    convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], "%s_masakhane" % lcode, "txt")
 
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
@@ -853,13 +945,14 @@ DATASET_MAPPING = {
     "hu_combined":       process_hu_combined,
     "it_fbk":            process_it_fbk,
     "ja_gsd":            process_ja_gsd,
+    "kk_kazNERD":        process_kk_kazNERD,
+    "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
+    "pl_nkjp":           process_pl_nkjp,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
-    "mr_l3cube":         process_mr_l3cube,
     "th_lst20":          process_lst20,
-    "pl_nkjp":           process_pl_nkjp,
 }
 
 def main(dataset_name):
@@ -886,6 +979,8 @@ def main(dataset_name):
         process_norne(paths, dataset_name)
     elif dataset_name == 'en_sample':
         process_toy_dataset(paths, dataset_name)
+    elif dataset_name.lower().endswith("_masakhane"):
+        process_masakhane(paths, dataset_name)
     else:
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
     print("Done processing %s" % dataset_name)

@@ -111,6 +111,7 @@ def test_build_model():
                 fout.write("\n")
         save_name = 'en_test.forward.pt'
         vocab_save_name = 'en_text.vocab.pt'
+        checkpoint_save_name = 'en_text.checkpoint.pt'
         args = ['--train_file', train_file,
                 '--eval_file', eval_file,
                 '--eval_steps', '0', # eval once per opoch
@@ -121,14 +122,34 @@ def test_build_model():
                 '--shorthand', 'en_test',
                 '--save_dir', tempdir,
                 '--save_name', save_name,
-                '--vocab_save_name', vocab_save_name]
+                '--vocab_save_name', vocab_save_name,
+                '--checkpoint_save_name', checkpoint_save_name]
         args = charlm.parse_args(args)
         charlm.train(args)
 
         assert os.path.exists(os.path.join(tempdir, vocab_save_name))
-        # test that saving & loading worked
+
+        # test that saving & loading of the model worked
         assert os.path.exists(os.path.join(tempdir, save_name))
         model = char_model.CharacterLanguageModel.load(os.path.join(tempdir, save_name))
+
+        # test that saving & loading of the checkpoint worked
+        assert os.path.exists(os.path.join(tempdir, checkpoint_save_name))
+        model = char_model.CharacterLanguageModel.load(os.path.join(tempdir, checkpoint_save_name))
+        trainer = char_model.CharacterLanguageModelTrainer.load(args, os.path.join(tempdir, checkpoint_save_name))
+
+        assert trainer.global_step > 0
+        assert trainer.epoch == 2
+
+        # quick test to verify this method works with a trained model
+        charlm.get_current_lr(trainer, args)
+
+        # test loading a vocab built by the training method...
+        vocab = charlm.load_char_vocab(os.path.join(tempdir, vocab_save_name))
+        trainer = char_model.CharacterLanguageModelTrainer.from_new_model(args, vocab)
+        # ... and test the get_current_lr for an untrained model as well
+        # this test is super "eager"
+        assert charlm.get_current_lr(trainer, args) == args['lr0']
 
 @pytest.fixture
 def english_forward():

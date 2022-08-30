@@ -61,7 +61,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        dev_args = dev_args + wordvec_args(short_language)
+        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args)
         dev_args = dev_args + extra_args
         logger.info("Running dev depparse for {} with args {}".format(treebank, dev_args))
         parser.main(dev_args)
@@ -77,7 +77,7 @@ def run_treebank(mode, paths, treebank, short_name,
                      "--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]
-        test_args = test_args + wordvec_args(short_language)
+        test_args = test_args + wordvec_args(short_language, dataset, extra_args)
         test_args = test_args + extra_args
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
         parser.main(test_args)

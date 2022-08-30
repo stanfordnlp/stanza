@@ -47,17 +47,26 @@ The processing goes as follows:
 - replace the words in the con tree with the dep tree's words
   this takes advantage of spelling & capitalization fixes
 
-NOTE: there is a small update to the dataset from Prof. Delmonte.
+In 2022, there was an update to the dataset from Prof. Delmonte.
+This update is hopefully in current ELRA distributions now.
+If not, please contact ELRA to specifically ask for the updated version.
 Internally to Stanford, feel free to ask Chris or John for the updates.
-Otherwise, if this note is still here, that means the updates haven't
-reached ELRA yet.
 Look for the line below "original version with more errors"
+
+In August 2022, Prof. Delmonte made a slight update in a zip file
+`john.zip`.  If/when that gets updated to ELRA, we will update it
+here.  Contact Chris or John for a copy if not updated yet, or go
+back in git history to get the older version of the code which
+works with the 2022 ELRA update.
+In later 2022, there is a new update, Archive.zip  Put that file in
+$CONSTITUENCY_BASE/italian/it_vit and unzip it there
 """
 
 from collections import defaultdict, deque
 import itertools
 import os
 import re
+import sys
 
 from tqdm import tqdm
 
@@ -65,6 +74,7 @@ from stanza.models.constituency.tree_reader import read_trees, UnclosedTreeError
 from stanza.server import tsurgeon
 from stanza.utils.conll import CoNLL
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
+import stanza.utils.default_paths as default_paths
 
 def read_constituency_sentences(fin):
     """
@@ -196,6 +206,7 @@ def raw_tree(text):
         "num-0/07%plus":           "(num 0,07%) (num plus)",
         "num-0/69%minus":          "(num 0,69%) (num minus)",
         "num-0_39%minus":          "(num 0,39%) (num minus)",
+        "num-9_11/16":             "(num 9-11,16)",
         "n-giga_flop/s":           "(n giga_flop/s)",
         "sect-'g-1'":              "(sect g-1)",
         "sect-'h-1'":              "(sect h-1)",
@@ -207,6 +218,7 @@ def raw_tree(text):
         "abbr-D_P_R_":             "(abbr DPR)",
         "abbr-d_m_":               "(abbr dm)",
         "abbr-T_U_":               "(abbr TU)",
+        "dots-'...'":              "(dots ...)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
@@ -220,7 +232,7 @@ def raw_tree(text):
             # maxsplit=1 because of words like 1990-EQU-100
             tag, word = piece.split("-", maxsplit=1)
             if word.find("'") >= 0 or word.find("(") >= 0 or word.find(")") >= 0:
-                raise ValueError(piece)
+                raise ValueError("Unhandled weird node: {}".format(piece))
             if word.endswith("_"):
                 word = word[:-1] + "'"
             date_match = DATE_RE.match(word)
@@ -318,7 +330,7 @@ def match_ngrams(sentence_ngrams, ngram_map, debug=False):
         return None
     return potential_match
 
-def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name):
+def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name, debug_sentence=None):
     """
     Match ngrams in the dependency sentences to the constituency sentences
 
@@ -338,8 +350,7 @@ def match_sentences(con_tree_map, con_vit_ngrams, dep_sentences, split_name):
     bad_match = 0
     for sentence in dep_sentences:
         sentence_ngrams = extract_ngrams(sentence, DEP_PROCESS_FUNC)
-        potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams)
-        #potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, DEP_ID_FUNC(sentence) == "VIT-4096")
+        potential_match = match_ngrams(sentence_ngrams, con_vit_ngrams, debug_sentence is not None and DEP_ID_FUNC(sentence) == debug_sentence)
         if potential_match is None:
             if unmatched < 5:
                 print("Could not match the following sentence: {} {}".format(DEP_ID_FUNC(sentence), sentence.text))
@@ -486,22 +497,21 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
     try:
         updated_tree = updated_tree.replace_words(ud_words)
     except ValueError as e:
-        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\n{}\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
+        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\nUPDATED LEAVES\n{}\nUD TEXT\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
     return updated_tree
 
 # train set:
 #  858: missing close parens in the UD conversion
-# 2388: the problem is inconsistent treatment of s_p_a_
-# 05071: the heuristic to fill in a missing "si" doesn't work because there's
+# 2375: the problem is inconsistent treatment of s_p_a_
+# 05052: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
-# 07089: wrong word edited out in UD?
-# 07137: FAME -> F A ME wtf?
-# 08391: da riempire inconsistency
+# 07069: "i" edited out in UD incorrectly?
+# 07117: FAME -> F A ME wtf?
+# 08371: da riempire inconsistency
 #
 # test set:
-# 04541: similar to another tree which is missed
-# 09785: da riempire inconsistency
-IGNORE_IDS = ["sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
+# 09765: da riempire inconsistency
+IGNORE_IDS = ["sent_00867", "sent_01169", "sent_02375", "sent_05052", "sent_07069", "sent_07117", "sent_08371", "sent_09765"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
@@ -519,14 +529,15 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
         trees.append(updated_tree)
     return trees
 
-def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
+def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence=None):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
     # this is the April 2022 version
     #con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
     # the most recent update from ELRA may look like this?
     # it's what we got, at least
-    con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+    # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+    con_filename = os.path.join(con_directory, "italian", "john", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
@@ -557,12 +568,12 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
             con_tree_map[tree_id] = tree
         except UnclosedTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ExtraCloseTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ValueError as e:
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
             num_discarded = num_discarded + 1
             #raise ValueError("Could not process line %d" % idx) from e
 
@@ -572,9 +583,9 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     con_vit_ngrams = build_ngrams(con_tree_map.items(), lambda x: CON_PROCESS_FUNC(x[1]), lambda x: x[0])
 
     # TODO: match more sentences.  some are probably missing because of MWT
-    train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train")
-    dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev")
-    test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test")
+    train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train", debug_sentence)
+    dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev",   debug_sentence)
+    test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test",  debug_sentence)
     print("Trees: {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
 
     # the moveprune feature requires a new corenlp release after 4.4.0
@@ -586,13 +597,16 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name):
     write_dataset([train_trees, dev_trees, test_trees], output_directory, dataset_name)
 
 def main():
-    con_directory = "extern_data/constituency"
-    ud_directory = "extern_data/ud2/ud-treebanks-v2.10/UD_Italian-VIT"
+    paths = default_paths.get_default_paths()
+    con_directory = paths["CONSTITUENCY_BASE"]
+    ud_directory  = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
 
-    output_directory = "data/constituency"
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
     dataset_name = "it_vit"
 
-    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name)
+    debug_sentence = sys.argv[1] if len(sys.argv) > 1 else None
+
+    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence)
 
 if __name__ == '__main__':
     main()

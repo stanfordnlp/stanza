@@ -40,8 +40,8 @@ class CoNLL:
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
                     continue
-                assert len(array) == FIELD_NUM, \
-                        f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found.\n  {array}"
+                if len(array) != FIELD_NUM:
+                    raise ValueError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
@@ -55,10 +55,13 @@ class CoNLL:
         Output: a list of list of dictionaries for each token in each sentence in the document.
         """
         doc_dict = []
-        for sent_conll in doc_conll:
+        for sent_idx, sent_conll in enumerate(doc_conll):
             sent_dict = []
-            for token_conll in sent_conll:
-                token_dict = CoNLL.convert_conll_token(token_conll)
+            for token_idx, token_conll in enumerate(sent_conll):
+                try:
+                    token_dict = CoNLL.convert_conll_token(token_conll)
+                except ValueError as e:
+                    raise ValueError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
                 sent_dict.append(token_dict)
             doc_dict.append(sent_dict)
         return doc_dict

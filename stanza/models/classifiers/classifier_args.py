@@ -36,7 +36,7 @@ def add_pretrain_args(parser):
     parser.add_argument('--wordvec_type', type=lambda x: WVType[x.upper()], default='word2vec', help='Different vector types have different options, such as google 300d replacing numbers with #')
     parser.add_argument('--shorthand', type=str, default='en_ewt', help="Treebank shorthand, eg 'en' for English")
     parser.add_argument('--extra_wordvec_dim', type=int, default=0, help="Extra dim of word vectors - will be trained")
-    parser.add_argument('--extra_wordvec_method', type=lambda x: ExtraVectors[x.upper()], default='none', help='How to train extra dimensions of word vectors, if at all')
+    parser.add_argument('--extra_wordvec_method', type=lambda x: ExtraVectors[x.upper()], default='sum', help='How to train extra dimensions of word vectors, if at all')
     parser.add_argument('--extra_wordvec_max_norm', type=float, default=None, help="Max norm for initializing the extra vectors")
 
 def add_device_args(parser):

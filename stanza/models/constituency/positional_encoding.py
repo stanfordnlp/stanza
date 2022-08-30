@@ -26,7 +26,12 @@ class SinusoidalEncoding(nn.Module):
 
     def forward(self, x):
         if max(x) >= self.pe.shape[0]:
-            self.register_buffer('pe', self.build_position(self.pe.shape[1], max(x)+1, device=self.pe.device))
+            # try to drop the reference first before creating a new encoding
+            # the goal being to save memory if we are close to the memory limit
+            device = self.pe.device
+            shape = self.pe.shape[1]
+            self.register_buffer('pe', None)
+            self.register_buffer('pe', self.build_position(shape, max(x)+1, device=device))
         return self.pe[x]
 
     def max_len(self):
@@ -39,12 +44,11 @@ class ConcatSinusoidalEncoding(nn.Module):
     """
     def __init__(self, d_model=256, max_len=512):
         super().__init__()
-        self.encoding = SinusoidalEncoding(d_model // 2, max_len)
-        self.norm = nn.LayerNorm(d_model)
+        self.encoding = SinusoidalEncoding(d_model, max_len)
 
     def forward(self, x):
         timing = self.encoding(torch.arange(x.shape[1], device=x.device))
-        x, timing = torch.broadcast_tensors(x, timing)
-        out = torch.cat([x, timing], dim=-1)
-        out = self.norm(out)
+        timing = timing.expand(x.shape[0], -1, -1)
+        out = torch.cat((x, timing), dim=-1)
         return out
+

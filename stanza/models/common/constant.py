@@ -80,6 +80,7 @@ lcode2lang_raw = [
     ("fo",  "Faroese"),
     ("fj",  "Fijian"),
     ("fi",  "Finnish"),
+    ("fon", "Fon"),
     ("fr",  "French"),
     ("qfn", "Frisian_Dutch"),
     ("ff",  "Fulah"),
@@ -87,6 +88,7 @@ lcode2lang_raw = [
     ("lg",  "Ganda"),
     ("ka",  "Georgian"),
     ("de",  "German"),
+    ("bbj", "Ghomálá'"),
     ("got", "Gothic"),
     ("el",  "Greek"),
     ("kl",  "Greenlandic"),
@@ -173,6 +175,7 @@ lcode2lang_raw = [
     ("mwl", "Mirandese"),
     ("mdf", "Moksha"),
     ("mn",  "Mongolian"),
+    ("mos", "Mossi"),
     ("myu", "Munduruku"),
     ("my",  "Myanmar"),
     ("nqo", "N'Ko"),
@@ -310,8 +313,42 @@ for code, language in lcode2lang_raw:
     assert language not in lang2lcode
     lang2lcode[language] = code
 
+# check that nothing got clobbered
 assert len(lcode2lang_raw) == len(lcode2lang)
 assert len(lcode2lang_raw) == len(lang2lcode)
+
+# some of the two letter langcodes get used elsewhere as three letters
+# for example, Wolof is abbreviated "wo" in UD, but "wol" in Masakhane NER
+two_to_three_letters_raw = (
+    ("bm",  "bam"),
+    ("ee",  "ewe"),
+    ("ha",  "hau"),
+    ("ig",  "ibo"),
+    ("rw",  "kin"),
+    ("lg",  "lug"),
+    ("ny",  "nya"),
+    ("sn",  "sna"),
+    ("sw",  "swa"),
+    ("tn",  "tsn"),
+    ("tw",  "twi"),
+    ("wo",  "wol"),
+    ("xh",  "xho"),
+    ("yo",  "yor"),
+    ("zu",  "zul"),
+)
+
+for two, three in two_to_three_letters_raw:
+    assert two in lcode2lang
+    assert three not in lcode2lang
+    assert three not in lang2lcode
+    lang2lcode[three] = two
+    lcode2lang[three] = lcode2lang[two]
+
+two_to_three_letters = {
+    two: three for two, three in two_to_three_letters_raw
+}
+
+assert len(two_to_three_letters) == len(two_to_three_letters_raw)
 
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
@@ -341,10 +378,12 @@ extra_lang_to_lcodes = [
     ("km",  "Khmer"),
     ("ky",  "Kirghiz"),
     ("lb",  "Letzeburgesch"),
+    ("lg",  "Luganda"),
     ("jaa", "Madí"),
     ("dv",  "Maldivian"),
     ("mjl", "Mandeali"),
     ("skr", "Multani"),
+    ("nb",  "Norwegian"),
     ("ny",  "Nyanja"),
     ("sga", "Old_Gaelic"),
     ("or",  "Oriya"),
@@ -371,8 +410,10 @@ for code, language in extra_lang_to_lcodes:
 # treebank names changed from Old Russian to Old East Slavic in 2.8
 lang2lcode['Old_Russian'] = 'orv'
 
-# build a lowercase map *after* all the other edits are finished
-langlower2lcode = {lcode2lang[k].lower(): k.lower() for k in lcode2lang}
+# build a lowercase map from language to langcode
+langlower2lcode = {}
+for k in lang2lcode:
+    langlower2lcode[k.lower()] = lang2lcode[k]
 
 treebank_special_cases = {
     "UD_Chinese-GSDSimp": "zh-hans_gsdsimp",
@@ -416,7 +457,9 @@ def treebank_to_short_name(treebank):
     if treebank in treebank_special_cases:
         return treebank_special_cases.get(treebank)
     if SHORTNAME_RE.match(treebank):
-        return treebank
+        lang, corpus = treebank.split("_")
+        lang = lang_to_langcode(lang)
+        return lang + "_" + corpus
 
     if treebank.startswith('UD_'):
         treebank = treebank[3:]

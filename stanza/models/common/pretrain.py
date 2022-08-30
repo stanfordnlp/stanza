@@ -10,7 +10,7 @@ import logging
 import numpy as np
 import torch
 
-from .vocab import BaseVocab, VOCAB_PREFIX
+from .vocab import BaseVocab, VOCAB_PREFIX, UNK_ID
 
 from stanza.models.common.utils import open_read_binary, open_read_text
 from stanza.resources.common import DEFAULT_MODEL_DIR
@@ -168,6 +168,7 @@ class Pretrain:
         cols = None
         lines = []
         failed = 0
+        unk_line = None
         with open_read_binary(filename) as f:
             for i, line in enumerate(f):
                 try:
@@ -178,26 +179,32 @@ class Pretrain:
                 line = line.rstrip()
                 if not line:
                     continue
+                pieces = tab_space_pattern.split(line)
                 if first:
                     # the first line contains the number of word vectors and the dimensionality
+                    # note that a 1d embedding with a number as the first entry
+                    # will fail to read properly.  we ignore that case
                     first = False
-                    pieces = line.split()
-                    if len(pieces) > 2:
-                        lines.append(line)
-                    else:
-                        # note that a 1d embedding with a number as the first entry
-                        # will fail to read properly.  we ignore that case
+                    if len(pieces) == 2:
                         cols = int(pieces[1])
-                    continue
+                        continue
 
-                lines.append(line)
+                if pieces[0] == '<unk>':
+                    if unk_line is not None:
+                        logger.error("More than one <unk> line in the pretrain!  Keeping the most recent one")
+                    else:
+                        logger.debug("Found an unk line while reading the pretrain")
+                    unk_line = pieces
+                else:
+                    lines.append(pieces)
 
-        lines = [tab_space_pattern.split(x) for x in lines]
         if cols is None:
             # another failure case: all words have spaces in them
             cols = min(len(x) for x in lines) - 1
         rows = len(lines)
         emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+        if unk_line is not None:
+            emb[UNK_ID] = [float(x) for x in unk_line[-cols:]]
         for i, line in enumerate(lines):
             emb[i+len(VOCAB_PREFIX)] = [float(x) for x in line[-cols:]]
 

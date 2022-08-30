@@ -27,7 +27,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 from stanza.models import _training_logging
 
-from stanza.utils.confusion import format_confusion
+from stanza.utils.confusion import confusion_to_weighted_f1, format_confusion
 
 logger = logging.getLogger('stanza')
 
@@ -39,6 +39,7 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--eval_output_file', type=str, default=None, help='Where to write results: text, gold, pred.  If None, no results file printed')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
@@ -105,17 +106,17 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
+    if args.cpu:
+        args.cuda = False
 
+    args = vars(args)
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args['seed'], args['cuda'])
 
-    args = vars(args)
     logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -226,7 +227,7 @@ def train(args):
     if args['wandb']:
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_ner" % args['shorthand']
-        wandb.init(name=wandb_name)
+        wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('train_loss', summary='min')
         wandb.run.define_metric('dev_score', summary='max')
 
@@ -295,6 +296,24 @@ def train(args):
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
 
+def write_ner_results(filename, batch, preds):
+    if len(batch.tags) != len(preds):
+        raise ValueError("Unexpected batch vs pred lengths: %d vs %d" % (len(batch.tags), len(preds)))
+
+    with open(filename, "w", encoding="utf-8") as fout:
+        tag_idx = 0
+        for b in batch:
+            # b[0] is words, b[5] is orig_idx
+            # a namedtuple would make this cleaner without being much slower
+            text = utils.unsort(b[0], b[5])
+            for sentence in text:
+                sentence_gold = batch.tags[tag_idx]
+                sentence_pred = preds[tag_idx]
+                tag_idx += 1
+                for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
+                    fout.write("%s\t%s\t%s\n" % (word, gold, pred))
+                fout.write("\n")
+
 def evaluate(args):
     # file paths
     model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
@@ -317,11 +336,16 @@ def evaluate(args):
     gold_tags = batch.tags
     _, _, score = scorer.score_by_entity(preds, gold_tags)
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags)
+    logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
+    if args['eval_output_file']:
+        write_ner_results(args['eval_output_file'], batch, preds)
+
+    return confusion
 
 def load_model(args, model_file):
     # load model
