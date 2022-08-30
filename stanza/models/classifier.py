@@ -129,11 +129,11 @@ DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
 DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.0001, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
 
-
-def parse_args(args=None):
+def build_parser():
     """
-    Add arguments for building the classifier.
-    Parses command line args and returns the result.
+    Build the argparse for the classifier.
+
+    Refactored so that other utility scripts can use the same parser if needed.
     """
     parser = argparse.ArgumentParser()
 
@@ -205,6 +205,14 @@ def parse_args(args=None):
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 
+    return parser
+
+def parse_args(args=None):
+    """
+    Add arguments for building the classifier.
+    Parses command line args and returns the result.
+    """
+    parser = build_parser()
     args = parser.parse_args(args)
 
     if args.wandb_name:
