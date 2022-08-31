@@ -138,13 +138,13 @@ def test_build_model(tmp_path, fake_embeddings, train_file, dev_file):
     """
     Test that building a basic model works
     """
-    build_model(tmp_path, fake_embeddings, train_file, dev_file)
+    build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20"])
 
 def test_save_load(tmp_path, fake_embeddings, train_file, dev_file):
     """
     Test that a basic model can save & load
     """
-    trainer, _, args = build_model(tmp_path, fake_embeddings, train_file, dev_file)
+    trainer, _, args = build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20"])
 
     save_filename = os.path.join(args.save_dir, args.save_name)
     trainer.save(save_filename)
@@ -155,13 +155,13 @@ def test_save_load(tmp_path, fake_embeddings, train_file, dev_file):
     trainer = Trainer.load(args.load_name, args)
 
 def test_train_basic(tmp_path, fake_embeddings, train_file, dev_file):
-    run_training(tmp_path, fake_embeddings, train_file, dev_file)
+    run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20"])
 
 def test_train_bilstm(tmp_path, fake_embeddings, train_file, dev_file):
     """
     Test w/ and w/o bilstm variations of the classifier
     """
-    args = ["--bilstm"]
+    args = ["--bilstm", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
     args = ["--no_bilstm"]
@@ -174,23 +174,23 @@ def test_train_maxpool_width(tmp_path, fake_embeddings, train_file, dev_file):
     Also sets --filter_channels to a multiple of 2 but not of 3 for
     the test to make sure the math is done correctly on a non-divisible width
     """
-    args = ["--maxpool_width", "1", "--filter_channels", "20"]
+    args = ["--maxpool_width", "1", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
-    args = ["--maxpool_width", "2", "--filter_channels", "20"]
+    args = ["--maxpool_width", "2", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
-    args = ["--maxpool_width", "3", "--filter_channels", "20"]
+    args = ["--maxpool_width", "3", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
 def test_train_conv_2d(tmp_path, fake_embeddings, train_file, dev_file):
-    args = ["--filter_sizes", "(3,4,5)", "--filter_channels", "20"]
+    args = ["--filter_sizes", "(3,4,5)", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
-    args = ["--filter_sizes", "((3,2),)", "--filter_channels", "20"]
+    args = ["--filter_sizes", "((3,2),)", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
-    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20", "--bilstm_hidden_dim", "20"]
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
 def test_train_filter_channels(tmp_path, fake_embeddings, train_file, dev_file):
