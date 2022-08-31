@@ -194,11 +194,11 @@ def test_train_conv_2d(tmp_path, fake_embeddings, train_file, dev_file):
     run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
 
 def test_train_filter_channels(tmp_path, fake_embeddings, train_file, dev_file):
-    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20", "--no_bilstm"]
     trainer = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
     assert trainer.model.fc_input_size == 40
 
-    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "15,20"]
+    args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "15,20", "--no_bilstm"]
     trainer = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
     # 50 = 2x15 for the 2d conv (over 5 dim embeddings) + 20
     assert trainer.model.fc_input_size == 50

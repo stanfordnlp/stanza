@@ -204,9 +204,23 @@ def build_parser():
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
 
-    parser.add_argument('--bilstm', dest='bilstm', action='store_true', help="Use a bilstm after the inputs, before the convs")
-    parser.add_argument('--bilstm_hidden_dim', type=int, default=200, help="Dimension of the bilstm to use")
-    parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs")
+    parser.add_argument('--bilstm', dest='bilstm', action='store_true', default=True, help="Use a bilstm after the inputs, before the convs.  Using bilstm is about as accurate and significantly faster (because of dim reduction) than going straight to the filters")
+    parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs.")
+    # 300 seems to be the sweet spot for a couple datasets:
+    # macro f1 scores on 3 class problems
+    # es_tass2020:
+    #   150        0.5580
+    #   200        0.5629
+    #   300        0.5642
+    #   500        0.5579
+    #   750        0.5585
+    # en_sstplus:
+    #   150        0.6816
+    #   200        0.6721
+    #   300        0.6824
+    #   500        0.6745   **
+    #   750        0.6696   **
+    parser.add_argument('--bilstm_hidden_dim', type=int, default=300, help="Dimension of the bilstm to use")
 
     parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
