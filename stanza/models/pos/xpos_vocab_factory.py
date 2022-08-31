@@ -83,6 +83,7 @@ XPOS_DESCRIPTIONS = {
     'got_proiel'     : XPOSDescription(XPOSType.WORD, None),
     'grc_proiel'     : XPOSDescription(XPOSType.WORD, None),
     'hbo_ptnk'       : XPOSDescription(XPOSType.WORD, None),
+    'he_combined'    : XPOSDescription(XPOSType.WORD, None),
     'he_htb'         : XPOSDescription(XPOSType.WORD, None),
     'he_iahltwiki'   : XPOSDescription(XPOSType.WORD, None),
     'hi_hdtb'        : XPOSDescription(XPOSType.WORD, None),
