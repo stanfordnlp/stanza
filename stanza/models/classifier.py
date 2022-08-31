@@ -495,7 +495,7 @@ def main(args=None):
         train_set = None
 
     if args.load_name:
-        trainer = Trainer.load_model(args, load_optimizer=args.train)
+        trainer = Trainer.load(args.load_name, args, load_optimizer=args.train)
     else:
         trainer = Trainer.build_new_model(args, train_set)
 

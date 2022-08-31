@@ -31,24 +31,22 @@ class SentimentProcessor(UDProcessor):
     def _set_up_model(self, config, pipeline, use_gpu):
         # get pretrained word vectors
         pretrain_path = config.get('pretrain_path', None)
-        self._pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
         forward_charlm_path = config.get('forward_charlm_path', None)
-        charmodel_forward = pipeline.foundation_cache.load_charlm(forward_charlm_path)
         backward_charlm_path = config.get('backward_charlm_path', None)
-        charmodel_backward = pipeline.foundation_cache.load_charlm(backward_charlm_path)
-        args = SimpleNamespace(cuda = use_gpu)
-        # set up model
         # elmo does not have a convenient way to download intermediate
         # models the way stanza downloads charlms & pretrains or
         # transformers downloads bert etc
         # however, elmo in general is not as good as using a
         # transformer, so it is unlikely we will ever fix this
+        args = SimpleNamespace(cuda = use_gpu,
+                               charlm_forward_file = forward_charlm_path,
+                               charlm_backward_file = backward_charlm_path,
+                               wordvec_pretrain_file = pretrain_path,
+                               elmo_model = None,
+                               use_elmo = False)
+        # set up model
         trainer = Trainer.load(filename=config['model_path'],
                                args=args,
-                               pretrain=self._pretrain,
-                               charmodel_forward=charmodel_forward,
-                               charmodel_backward=charmodel_backward,
-                               elmo_model=None,
                                foundation_cache=pipeline.foundation_cache)
         self._model = trainer.model
         # batch size counted as words

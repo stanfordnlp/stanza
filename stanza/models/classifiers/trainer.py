@@ -11,7 +11,7 @@ import torch.optim as optim
 
 import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
-from stanza.models.common.foundation_cache import load_bert, load_charlm
+from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
 
 logger = logging.getLogger('stanza')
@@ -52,29 +52,12 @@ class Trainer:
         logger.info("Model saved to {}".format(filename))
 
     @staticmethod
-    def load_model(args, load_optimizer=False):
-        """
-        Load both the pretrained embedding and other pieces from the args as well as the model itself
-        """
-        pretrain = Trainer.load_pretrain(args)
-        elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-        charmodel_forward = load_charlm(args.charlm_forward_file)
-        charmodel_backward = load_charlm(args.charlm_backward_file)
-
-        if os.path.exists(args.load_name):
-            load_name = args.load_name
-        else:
-            load_name = os.path.join(args.save_dir, args.load_name)
-            if not os.path.exists(load_name):
-                raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-
-        trainer = Trainer.load(load_name, args, pretrain, charmodel_forward, charmodel_backward, elmo_model, load_optimizer=load_optimizer)
-        return trainer
-
-    # TODO: load the pretrain and all that stuff here
-    # in other words, combine load_model and load...
-    @staticmethod
-    def load(filename, args, pretrain, charmodel_forward, charmodel_backward, elmo_model, foundation_cache=None, load_optimizer=False):
+    def load(filename, args, foundation_cache=None, load_optimizer=False):
+        if not os.path.exists(filename):
+            if os.path.exists(os.path.join(args.save_dir, filename)):
+                filename = os.path.join(args.save_dir, filename)
+            else:
+                raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args.save_dir, filename)))
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -97,6 +80,11 @@ class Trainer:
 
         # TODO: the getattr is not needed when all models have this baked into the config
         model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
+
+        pretrain = Trainer.load_pretrain(args, foundation_cache)
+        elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
+        charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
+        charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
 
         bert_model = checkpoint['config'].bert_model
         bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
@@ -138,7 +126,7 @@ class Trainer:
         return trainer
 
 
-    def load_pretrain(args):
+    def load_pretrain(args, foundation_cache):
         if args.wordvec_pretrain_file:
             pretrain_file = args.wordvec_pretrain_file
         elif args.wordvec_type:
@@ -148,7 +136,7 @@ class Trainer:
 
         logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
         if os.path.exists(pretrain_file):
-            vec_file = None
+            return load_pretrain(pretrain_file, foundation_cache)
         elif args.wordvec_raw_file:
             vec_file = args.wordvec_raw_file
             logger.info("Pretrain not found.  Looking in {}".format(vec_file))
@@ -168,7 +156,7 @@ class Trainer:
         if train_set is None:
             raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
 
-        pretrain = Trainer.load_pretrain(args)
+        pretrain = Trainer.load_pretrain(args, foundation_cache=None)
         elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
         charmodel_forward = load_charlm(args.charlm_forward_file)
         charmodel_backward = load_charlm(args.charlm_backward_file)

@@ -148,9 +148,9 @@ def test_save_load(tmp_path, fake_embeddings, train_file, dev_file):
     trainer.save(save_filename)
 
     args.load_name = args.save_name
-    trainer = Trainer.load_model(args)
+    trainer = Trainer.load(args.load_name, args)
     args.load_name = save_filename
-    trainer = Trainer.load_model(args)
+    trainer = Trainer.load(args.load_name, args)
 
 def test_train_basic(tmp_path, fake_embeddings, train_file, dev_file):
     run_training(tmp_path, fake_embeddings, train_file, dev_file)
