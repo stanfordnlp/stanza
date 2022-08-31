@@ -21,13 +21,16 @@ class Trainer:
     Stores a constituency model and its optimizer
     """
 
-    def __init__(self, model, optimizer=None, epochs_trained=0, global_step=0):
+    def __init__(self, model, optimizer=None, epochs_trained=0, global_step=0, best_score=None):
         self.model = model
         self.optimizer = optimizer
         # we keep track of position in the learning so that we can
         # checkpoint & restart if needed without restarting the epoch count
         self.epochs_trained = epochs_trained
         self.global_step = global_step
+        # save the best dev score so that when reloading a checkpoint
+        # of a model, we know how far we got
+        self.best_score = best_score
 
     def save(self, filename, epochs_trained=None, skip_modules=True, save_optimizer=True):
         """
@@ -52,6 +55,7 @@ class Trainer:
             'extra_vocab':    self.model.extra_vocab,
             'epochs_trained': epochs_trained,
             'global_step':    self.global_step,
+            'best_score':     self.best_score,
         }
         if save_optimizer and self.optimizer is not None:
             params['optimizer_state_dict'] = self.optimizer.state_dict()
@@ -84,6 +88,7 @@ class Trainer:
 
         epochs_trained = checkpoint.get('epochs_trained', 0)
         global_step = checkpoint.get('global_step', 0)
+        best_score = checkpoint.get('best_score', None)
 
         # TODO: the getattr is not needed when all models have this baked into the config
         model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
@@ -128,7 +133,7 @@ class Trainer:
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-        trainer = Trainer(model, optimizer, epochs_trained, global_step)
+        trainer = Trainer(model, optimizer, epochs_trained, global_step, best_score)
 
         return trainer
 

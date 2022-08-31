@@ -387,11 +387,12 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
 
     train_set_by_len = data.sort_dataset_by_len(train_set)
 
-    best_score = 0
     if trainer.global_step > 0:
         # We reloaded the model, so let's report its current dev set score
-        best_score, _, _ = score_dev_set(model, dev_set, args.dev_eval_scoring)
+        _ = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
+        if trainer.best_score is not None:
+            logger.info("Previous best score: %.5f", trainer.best_score)
 
     log_param_sizes(model)
 
@@ -442,8 +443,8 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
                     dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if args.wandb:
                         wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1}, step=trainer.global_step)
-                    if best_score is None or dev_score > best_score:
-                        best_score = dev_score
+                    if trainer.best_score is None or dev_score > trainer.best_score:
+                        trainer.best_score = dev_score
                         trainer.save(model_file)
                         logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, trainer.epochs_trained+1, batch_num+1))
                     model.train()
@@ -461,8 +462,8 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         if args.save_intermediate_models:
             intermediate_file = intermediate_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
             trainer.save(intermediate_file)
-        if best_score is None or dev_score > best_score:
-            best_score = dev_score
+        if trainer.best_score is None or dev_score > trainer.best_score:
+            trainer.best_score = dev_score
             trainer.save(model_file, trainer)
             logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, trainer.epochs_trained+1))
 
