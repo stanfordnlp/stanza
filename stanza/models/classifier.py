@@ -142,6 +142,9 @@ def build_parser():
     parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
     parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
 
+    parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
+    parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
+
     parser.add_argument('--save_intermediate_models', default=False, action='store_true',
                         help='Save all intermediate models - this can be a lot!')
 
@@ -341,9 +344,9 @@ def score_dev_set(model, dev_set, dev_eval_scoring):
     else:
         raise ValueError("Unknown scoring method {}".format(dev_eval_scoring))
 
-def checkpoint_name(filename, epoch, dev_scoring, score):
+def intermediate_name(filename, epoch, dev_scoring, score):
     """
-    Build an informative checkpoint name from a base name, epoch #, and accuracy
+    Build an informative intermediate checkpoint name from a base name, epoch #, and accuracy
     """
     root, ext = os.path.splitext(filename)
     return root + ".E{epoch:04d}-{score_type}{acc:05.2f}".format(**{"epoch": epoch, "score_type": dev_scoring.value, "acc": score * 100}) + ext
@@ -357,7 +360,7 @@ def log_param_sizes(model):
         logger.debug("  %s %d %d %d", name, param.element_size(), param.nelement(), param_size)
     logger.debug("  Total size: %d", total_size)
 
-def train_model(trainer, model_file, args, train_set, dev_set, labels):
+def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, labels):
     tlogger.setLevel(logging.DEBUG)
 
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
@@ -384,7 +387,7 @@ def train_model(trainer, model_file, args, train_set, dev_set, labels):
     train_set_by_len = data.sort_dataset_by_len(train_set)
 
     best_score = 0
-    if args.load_name:
+    if trainer.global_step > 0:
         # We reloaded the model, so let's report its current dev set score
         best_score, _, _ = score_dev_set(model, dev_set, args.dev_eval_scoring)
         logger.info("Reloaded model for continued training.")
@@ -452,9 +455,11 @@ def train_model(trainer, model_file, args, train_set, dev_set, labels):
         dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
         if args.wandb:
             wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1, 'epoch_loss': epoch_loss}, step=trainer.global_step)
+        if checkpoint_file:
+            trainer.save(checkpoint_file)
         if args.save_intermediate_models:
-            checkpoint_file = checkpoint_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
-            trainer.save(checkpoint_file, model)
+            intermediate_file = intermediate_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
+            trainer.save(intermediate_file)
         if best_score is None or dev_score > best_score:
             best_score = dev_score
             trainer.save(model_file, trainer)
@@ -479,30 +484,6 @@ def main(args=None):
 
     utils.ensure_dir(args.save_dir)
 
-    # TODO: maybe the dataset needs to be in a torch data loader in order to
-    # make cuda operations faster
-    if args.train:
-        train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
-        logger.info("Using training set: %s" % args.train_file)
-        logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
-        tlogger.setLevel(logging.DEBUG)
-    elif not args.load_name:
-        if args.save_name:
-            args.load_name = args.save_name
-        else:
-            raise ValueError("No model provided and not asked to train a model.  This makes no sense")
-    else:
-        train_set = None
-
-    if args.load_name:
-        trainer = Trainer.load(args.load_name, args, load_optimizer=args.train)
-    else:
-        trainer = Trainer.build_new_model(args, train_set)
-
-    logger.info("Filter sizes: %s" % str(trainer.model.config.filter_sizes))
-    logger.info("Filter channels: %s" % str(trainer.model.config.filter_channels))
-    logger.info("Intermediate layers: %s" % str(trainer.model.config.fc_shapes))
-
     save_name = args.save_name
     if not(save_name):
         save_name = args.base_name + "_" + args.shorthand + "_"
@@ -511,6 +492,37 @@ def main(args=None):
         if model.config.fc_shapes:
             save_name = save_name + "FC_%s_" % "_".join([str(x) for x in model.config.fc_shapes])
         save_name = save_name + "classifier.pt"
+
+    # TODO: maybe the dataset needs to be in a torch data loader in order to
+    # make cuda operations faster
+    checkpoint_file = None
+    if args.train:
+        train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
+        logger.info("Using training set: %s" % args.train_file)
+        logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
+        tlogger.setLevel(logging.DEBUG)
+
+        if args.checkpoint:
+            checkpoint_file = utils.checkpoint_name(args.save_dir, save_name, args.checkpoint_save_name)
+    elif not args.load_name:
+        if args.save_name:
+            args.load_name = args.save_name
+        else:
+            raise ValueError("No model provided and not asked to train a model.  This makes no sense")
+    else:
+        train_set = None
+
+    if args.train and checkpoint_file is not None and os.path.exists(checkpoint_file):
+        trainer = Trainer.load(checkpoint_file, args, load_optimizer=args.train)
+    elif args.load_name:
+        trainer = Trainer.load(args.load_name, args, load_optimizer=args.train)
+    else:
+        trainer = Trainer.build_new_model(args, train_set)
+
+    logger.info("Filter sizes: %s" % str(trainer.model.config.filter_sizes))
+    logger.info("Filter channels: %s" % str(trainer.model.config.filter_channels))
+    logger.info("Intermediate layers: %s" % str(trainer.model.config.fc_shapes))
+
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
@@ -522,7 +534,7 @@ def main(args=None):
         logger.info("Dev set has %d items", len(dev_set))
         data.check_labels(trainer.model.labels, dev_set)
 
-        train_model(trainer, model_file, args, train_set, dev_set, trainer.model.labels)
+        train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
 
     test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)

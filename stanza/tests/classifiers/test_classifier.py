@@ -11,6 +11,7 @@ import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.classifiers.classifier_args import WVType
 from stanza.models.common import pretrain
+from stanza.models.common import utils
 from stanza.models.common.vocab import PAD, UNK
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -129,7 +130,8 @@ def run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=Non
     labels = data.dataset_labels(train_set)
 
     save_filename = os.path.join(args.save_dir, args.save_name)
-    classifier.train_model(trainer, save_filename, args, train_set, dev_set, labels)
+    checkpoint_file = utils.checkpoint_name(args.save_dir, save_filename, args.checkpoint_save_name)
+    classifier.train_model(trainer, save_filename, checkpoint_file, args, train_set, dev_set, labels)
     return trainer
 
 def test_build_model(tmp_path, fake_embeddings, train_file, dev_file):
