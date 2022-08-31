@@ -165,5 +165,7 @@ def xpos_vocab_factory(data, shorthand):
             # log instead of throw
             # otherwise, updating datasets would be unpleasant
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
+    else:
+        logger.warning("Chose %s for the xpos factory for %s", desc, shorthand)
     return build_xpos_vocab(desc, data, shorthand)
 
