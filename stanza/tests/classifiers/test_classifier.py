@@ -6,8 +6,9 @@ import pytest
 import numpy as np
 
 import stanza.models.classifier as classifier
-import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+import stanza.models.classifiers.data as data
+from stanza.models.classifiers.trainer import Trainer
 from stanza.models.classifiers.classifier_args import WVType
 from stanza.models.common import pretrain
 from stanza.models.common.vocab import PAD, UNK
@@ -116,20 +117,20 @@ def build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args=None
         args = args + extra_args
     args = classifier.parse_args(args)
     train_set = data.read_dataset(args.train_file, args.wordvec_type, args.min_train_len)
-    model = classifier.build_new_model(args, train_set)
-    return model, train_set, args
+    trainer = Trainer.build_new_model(args, train_set)
+    return trainer, train_set, args
 
 def run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=None):
     """
     Iterate a couple times over a model
     """
-    model, train_set, args = build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args)
+    trainer, train_set, args = build_model(tmp_path, fake_embeddings, train_file, dev_file, extra_args)
     dev_set = data.read_dataset(args.dev_file, args.wordvec_type, args.min_train_len)
     labels = data.dataset_labels(train_set)
 
     save_filename = os.path.join(args.save_dir, args.save_name)
-    classifier.train_model(model, save_filename, args, train_set, dev_set, labels)
-    return model
+    classifier.train_model(trainer, save_filename, args, train_set, dev_set, labels)
+    return trainer
 
 def test_build_model(tmp_path, fake_embeddings, train_file, dev_file):
     """
@@ -141,15 +142,15 @@ def test_save_load(tmp_path, fake_embeddings, train_file, dev_file):
     """
     Test that a basic model can save & load
     """
-    model, _, args = build_model(tmp_path, fake_embeddings, train_file, dev_file)
+    trainer, _, args = build_model(tmp_path, fake_embeddings, train_file, dev_file)
 
     save_filename = os.path.join(args.save_dir, args.save_name)
-    cnn_classifier.save(save_filename, model)
+    trainer.save(save_filename)
 
     args.load_name = args.save_name
-    model = classifier.load_model(args)
+    trainer = Trainer.load_model(args)
     args.load_name = save_filename
-    model = classifier.load_model(args)
+    trainer = Trainer.load_model(args)
 
 def test_train_basic(tmp_path, fake_embeddings, train_file, dev_file):
     run_training(tmp_path, fake_embeddings, train_file, dev_file)
@@ -192,10 +193,10 @@ def test_train_conv_2d(tmp_path, fake_embeddings, train_file, dev_file):
 
 def test_train_filter_channels(tmp_path, fake_embeddings, train_file, dev_file):
     args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "20"]
-    model = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
-    assert model.fc_input_size == 40
+    trainer = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+    assert trainer.model.fc_input_size == 40
 
     args = ["--filter_sizes", "((3,2),3)", "--filter_channels", "15,20"]
-    model = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
+    trainer = run_training(tmp_path, fake_embeddings, train_file, dev_file, args)
     # 50 = 2x15 for the 2d conv (over 5 dim embeddings) + 20
-    assert model.fc_input_size == 50
+    assert trainer.model.fc_input_size == 50

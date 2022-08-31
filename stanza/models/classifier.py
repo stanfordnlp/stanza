@@ -8,16 +8,13 @@ from enum import Enum
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 from stanza.models.common import loss
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_charlm
-from stanza.models.common.pretrain import Pretrain
 from stanza.models.pos.vocab import CharVocab
 
 from stanza.models.classifiers.classifier_args import WVType, ExtraVectors
-import stanza.models.classifiers.cnn_classifier as cnn_classifier
+from stanza.models.classifiers.trainer import Trainer
 import stanza.models.classifiers.data as data
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
@@ -360,34 +357,15 @@ def log_param_sizes(model):
         logger.debug("  %s %d %d %d", name, param.element_size(), param.nelement(), param_size)
     logger.debug("  Total size: %d", total_size)
 
-def build_optimizer(model, args):
-    # TODO: if reloading a model for continued training, the internal
-    # parameters for the optimizer should be reloaded as well
-    # Otherwise this ability is actually not very useful
-    if args.optim.lower() == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
-    elif args.optim.lower() == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    elif args.optim.lower() == 'madgrad':
-        try:
-            import madgrad
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
-    else:
-        raise ValueError("Unknown optimizer: %s" % args.optim)
-    return optimizer
-
-def train_model(model, model_file, args, train_set, dev_set, labels):
+def train_model(trainer, model_file, args, train_set, dev_set, labels):
     tlogger.setLevel(logging.DEBUG)
 
-    # TODO: separate this into a trainer like the other models.
-    # TODO: possibly reuse the trainer code other models have
     # TODO: use a (torch) dataloader to possibly speed up the GPU usage
+    model = trainer.model
+    optimizer = trainer.optimizer
+
     device = next(model.parameters()).device
     logger.info("Current device: %s" % device)
-
-    optimizer = build_optimizer(model, args)
 
     label_map = {x: y for (y, x) in enumerate(labels)}
     label_tensors = {x: torch.tensor(y, requires_grad=False, device=device)
@@ -424,17 +402,15 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
 
-    global_step = 0
-
-    for epoch in range(args.max_epochs):
+    for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
         shuffled = data.shuffle_dataset(train_set_by_len)
         model.train()
         random.shuffle(batch_starts)
         for batch_num, start_batch in enumerate(batch_starts):
-            global_step += 1
-            logger.debug("Starting batch: %d step %d", start_batch, global_step)
+            trainer.global_step += 1
+            logger.debug("Starting batch: %d step %d", start_batch, trainer.global_step)
 
             batch = shuffled[start_batch:start_batch+args.batch_size]
             text = [x[1] for x in batch]
@@ -453,61 +429,39 @@ def train_model(model, model_file, args, train_set, dev_set, labels):
             if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
                 train_loss = running_loss / 2000
                 logger.info('[%d, %5d] Average loss: %.3f' %
-                            (epoch + 1, ((batch_num + 1) * args.batch_size), train_loss))
+                            (trainer.epochs_trained + 1, ((batch_num + 1) * args.batch_size), train_loss))
                 if args.wandb:
-                    wandb.log({'train_loss': train_loss}, step=global_step)
+                    wandb.log({'train_loss': train_loss}, step=trainer.global_step)
                 if (args.dev_eval_steps > 0 and
                     ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
                     logger.info('---- Interim analysis ----')
                     dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if args.wandb:
-                        wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1}, step=global_step)
+                        wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1}, step=trainer.global_step)
                     if best_score is None or dev_score > best_score:
                         best_score = dev_score
-                        cnn_classifier.save(model_file, model)
-                        logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, epoch+1, batch_num+1))
+                        trainer.save(model_file)
+                        logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, trainer.epochs_trained+1, batch_num+1))
                     model.train()
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
         epoch_loss += running_loss
 
-        logger.info("Finished epoch %d  Total loss %.3f" % (epoch + 1, epoch_loss))
+        logger.info("Finished epoch %d  Total loss %.3f" % (trainer.epochs_trained + 1, epoch_loss))
         dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
         if args.wandb:
-            wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1, 'epoch_loss': epoch_loss}, step=global_step)
+            wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1, 'epoch_loss': epoch_loss}, step=trainer.global_step)
         if args.save_intermediate_models:
-            checkpoint_file = checkpoint_name(model_file, epoch + 1, args.dev_eval_scoring, dev_score)
-            cnn_classifier.save(checkpoint_file, model)
+            checkpoint_file = checkpoint_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
+            trainer.save(checkpoint_file, model)
         if best_score is None or dev_score > best_score:
             best_score = dev_score
-            cnn_classifier.save(model_file, model)
-            logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, epoch+1))
+            trainer.save(model_file, trainer)
+            logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, trainer.epochs_trained+1))
 
     if args.wandb:
         wandb.finish()
-
-def load_pretrain(args):
-    if args.wordvec_pretrain_file:
-        pretrain_file = args.wordvec_pretrain_file
-    elif args.wordvec_type:
-        pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
-    else:
-        raise RuntimeError("TODO: need to get the wv type back from get_wordvec_file")
-
-    logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
-    if os.path.exists(pretrain_file):
-        vec_file = None
-    elif args.wordvec_raw_file:
-        vec_file = args.wordvec_raw_file
-        logger.info("Pretrain not found.  Looking in {}".format(vec_file))
-    else:
-        vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
-        logger.info("Pretrain not found.  Looking in {}".format(vec_file))
-    pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
-    logger.info("Embedding shape: %s" % str(pretrain.emb.shape))
-    return pretrain
-
 
 def print_args(args):
     """
@@ -517,61 +471,6 @@ def print_args(args):
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
-
-def load_model(args):
-    """
-    Load both the pretrained embedding and other pieces from the args as well as the model itself
-    """
-    pretrain = load_pretrain(args)
-    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-    charmodel_forward = load_charlm(args.charlm_forward_file)
-    charmodel_backward = load_charlm(args.charlm_backward_file)
-
-    if os.path.exists(args.load_name):
-        load_name = args.load_name
-    else:
-        load_name = os.path.join(args.save_dir, args.load_name)
-        if not os.path.exists(load_name):
-            raise FileNotFoundError("Could not find model to load in either %s or %s" % (args.load_name, load_name))
-
-
-    model = cnn_classifier.load(load_name, pretrain, charmodel_forward, charmodel_backward, elmo_model)
-    if args.cuda:
-        model.cuda()
-    return model
-
-def build_new_model(args, train_set):
-    """
-    Load pretrained pieces and then build a new model
-    """
-    if train_set is None:
-        raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
-
-    pretrain = load_pretrain(args)
-    elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-    charmodel_forward = load_charlm(args.charlm_forward_file)
-    charmodel_backward = load_charlm(args.charlm_backward_file)
-
-    labels = data.dataset_labels(train_set)
-    extra_vocab = data.dataset_vocab(train_set)
-
-    bert_model, bert_tokenizer = load_bert(args.bert_model)
-
-    model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                         extra_vocab=extra_vocab,
-                                         labels=labels,
-                                         charmodel_forward=charmodel_forward,
-                                         charmodel_backward=charmodel_backward,
-                                         elmo_model=elmo_model,
-                                         bert_model=bert_model,
-                                         bert_tokenizer=bert_tokenizer,
-                                         args=args)
-
-    if args.cuda:
-        model.cuda()
-
-    return model
-
 
 def main(args=None):
     args = parse_args(args)
@@ -596,13 +495,13 @@ def main(args=None):
         train_set = None
 
     if args.load_name:
-        model = load_model(args)
+        trainer = Trainer.load_model(args, load_optimizer=args.train)
     else:
-        model = build_new_model(args, train_set)
+        trainer = Trainer.build_new_model(args, train_set)
 
-    logger.info("Filter sizes: %s" % str(model.config.filter_sizes))
-    logger.info("Filter channels: %s" % str(model.config.filter_channels))
-    logger.info("Intermediate layers: %s" % str(model.config.fc_shapes))
+    logger.info("Filter sizes: %s" % str(trainer.model.config.filter_sizes))
+    logger.info("Filter channels: %s" % str(trainer.model.config.filter_channels))
+    logger.info("Intermediate layers: %s" % str(trainer.model.config.fc_shapes))
 
     save_name = args.save_name
     if not(save_name):
@@ -621,21 +520,21 @@ def main(args=None):
         logger.info("Using dev set: %s", args.dev_file)
         logger.info("Training set has %d items", len(train_set))
         logger.info("Dev set has %d items", len(dev_set))
-        data.check_labels(model.labels, dev_set)
+        data.check_labels(trainer.model.labels, dev_set)
 
-        train_model(model, model_file, args, train_set, dev_set, model.labels)
+        train_model(trainer, model_file, args, train_set, dev_set, trainer.model.labels)
 
     test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
     data.check_labels(model.labels, test_set)
 
     if args.test_remap_labels is None:
-        confusion_matrix = confusion_dataset(model, test_set)
-        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion_matrix, model.labels)))
+        confusion_matrix = confusion_dataset(trainer.model, test_set)
+        logger.info("Confusion matrix:\n{}".format(format_confusion(confusion_matrix, trainer.model.labels)))
         correct, total = confusion_to_accuracy(confusion_matrix)
         logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion_matrix)))
     else:
-        correct = score_dataset(model, test_set,
+        correct = score_dataset(trainer.model, test_set,
                                 remap_labels=args.test_remap_labels,
                                 forgive_unmapped_labels=args.forgive_unmapped_labels)
         total = len(test_set)
