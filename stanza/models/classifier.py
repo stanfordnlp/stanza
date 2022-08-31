@@ -119,6 +119,24 @@ def convert_fc_shapes(arg):
 # For the most part, these values are for the constituency parser.
 # Only the WD for adadelta is originally for sentiment
 # Also LR for adadelta and madgrad
+
+# madgrad learning rate experiment on sstplus
+# note that the hyperparameters are not cross-validated in tandem, so
+# later changes may make some earlier experiments slightly out of date
+# LR
+#   0.01         failed to converge
+#   0.004        failed to converge
+#   0.003        0.5572
+#   0.002        failed to converge
+#   0.001        0.6857
+#   0.0008       0.6799
+#   0.0005       0.6849
+#   0.00025      0.6749
+#   0.0001       0.6746
+#   0.00001      0.6536
+#   0.000001     0.6267
+# LR 0.001 produced the best model, but it does occasionally fail to
+# converge to a working model, so we set the default to 0.0005 instead
 DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0005, "sgd": 0.001 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
