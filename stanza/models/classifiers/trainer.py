@@ -29,7 +29,14 @@ class Trainer:
         self.epochs_trained = epochs_trained
         self.global_step = global_step
 
-    def save(self, filename, skip_modules=True, save_optimizer=True):
+    def save(self, filename, epochs_trained=None, skip_modules=True, save_optimizer=True):
+        """
+        save the current model, optimizer, and other state to filename
+
+        epochs_trained can be passed as a parameter to handle saving at the end of an epoch
+        """
+        if epochs_trained is None:
+            epochs_trained = self.epochs_trained
         save_dir = os.path.split(filename)[0]
         os.makedirs(save_dir, exist_ok=True)
         model_state = self.model.state_dict()
@@ -43,7 +50,7 @@ class Trainer:
             'config':         self.model.config,
             'labels':         self.model.labels,
             'extra_vocab':    self.model.extra_vocab,
-            'epochs_trained': self.epochs_trained,
+            'epochs_trained': epochs_trained,
             'global_step':    self.global_step,
         }
         if save_optimizer and self.optimizer is not None:

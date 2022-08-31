@@ -456,7 +456,7 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         if args.wandb:
             wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1, 'epoch_loss': epoch_loss}, step=trainer.global_step)
         if checkpoint_file:
-            trainer.save(checkpoint_file)
+            trainer.save(checkpoint_file, epochs_trained = trainer.epochs_trained + 1)
         if args.save_intermediate_models:
             intermediate_file = intermediate_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
             trainer.save(intermediate_file)
