@@ -118,7 +118,8 @@ def convert_fc_shapes(arg):
 
 # For the most part, these values are for the constituency parser.
 # Only the WD for adadelta is originally for sentiment
-DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.001, "sgd": 0.001 }
+# Also LR for adadelta and madgrad
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0005, "sgd": 0.001 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
