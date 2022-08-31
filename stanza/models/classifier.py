@@ -487,8 +487,8 @@ def main(args=None):
     save_name = args.save_name
     if not(save_name):
         save_name = args.base_name + "_" + args.shorthand + "_"
-        save_name = save_name + "FS_%s_" % "_".join([str(x) for x in model.config.filter_sizes])
-        save_name = save_name + "C_%d_" % model.config.filter_channels
+        save_name = save_name + "FS_%s_" % "_".join([str(x) for x in args.filter_sizes])
+        save_name = save_name + "C_%d_" % args.filter_channels
         if model.config.fc_shapes:
             save_name = save_name + "FC_%s_" % "_".join([str(x) for x in model.config.fc_shapes])
         save_name = save_name + "classifier.pt"
@@ -538,7 +538,7 @@ def main(args=None):
 
     test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
-    data.check_labels(model.labels, test_set)
+    data.check_labels(trainer.model.labels, test_set)
 
     if args.test_remap_labels is None:
         confusion_matrix = confusion_dataset(trainer.model, test_set)
