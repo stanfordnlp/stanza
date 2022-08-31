@@ -477,7 +477,7 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
                         wandb.log({'accuracy': accuracy, 'macro_f1': macro_f1}, step=trainer.global_step)
                     if trainer.best_score is None or dev_score > trainer.best_score:
                         trainer.best_score = dev_score
-                        trainer.save(model_file)
+                        trainer.save(model_file, save_optimizer=False)
                         logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, trainer.epochs_trained+1, batch_num+1))
                     model.train()
                 epoch_loss += running_loss
@@ -493,10 +493,10 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
             trainer.save(checkpoint_file, epochs_trained = trainer.epochs_trained + 1)
         if args.save_intermediate_models:
             intermediate_file = intermediate_name(model_file, trainer.epochs_trained + 1, args.dev_eval_scoring, dev_score)
-            trainer.save(intermediate_file)
+            trainer.save(intermediate_file, save_optimizer=False)
         if trainer.best_score is None or dev_score > trainer.best_score:
             trainer.best_score = dev_score
-            trainer.save(model_file, trainer)
+            trainer.save(model_file, save_optimizer=False)
             logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d" % (accuracy, macro_f1, trainer.epochs_trained+1))
 
     if args.wandb:
