@@ -969,7 +969,12 @@ def build_combined_hebrew_dataset(paths, dataset):
             sents.extend(new_sents)
 
         # if/when this gets ported back to UD, switch to getting both datasets from UD
-        conllu_file = os.path.join(udbase_git_dir, "UD_Hebrew", "he_htb-ud-train.conllu")
+        hebrew_git_dir = os.path.join(udbase_git_dir, "UD_Hebrew")
+        if not os.path.exists(hebrew_git_dir):
+            raise FileNotFoundError("Please download git@github.com:IAHLT/UD_Hebrew.git to %s (based on $UDBASE_GIT)" % hebrew_git_dir)
+        conllu_file = os.path.join(hebrew_git_dir, "he_htb-ud-train.conllu")
+        if not os.path.exists(conllu_file):
+            raise FileNotFoundError("Found %s but inexplicably there was no %s" % (hebrew_git_dir, conllu_file))
         new_sents = read_sentences_from_conllu(conllu_file)
         print("Read %d sentences from %s" % (len(new_sents), conllu_file))
         sents.extend(new_sents)
