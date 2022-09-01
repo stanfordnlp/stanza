@@ -95,6 +95,113 @@ token: Area	ner: E-LOC
 token: .	ner: O
 ```
 
+### Using multiple models
+
+New in v1.4.0
+{: .label .label-green }
+
+When creating the pipeline, it is possible to use multiple NER models
+at once by specifying a list in the package dict.  Here is a brief example:
+
+```python
+import stanza
+pipe = stanza.Pipeline("en", processors="tokenize,ner", package={"ner": ["ncbi_disease", "ontonotes"]})
+doc = pipe("John Bauer works at Stanford and has hip arthritis.  He works for Chris Manning")
+print(doc.ents)
+```
+
+Output:
+
+```
+[{
+  "text": "John Bauer",
+  "type": "PERSON",
+  "start_char": 0,
+  "end_char": 10
+}, {
+  "text": "Stanford",
+  "type": "ORG",
+  "start_char": 20,
+  "end_char": 28
+}, {
+  "text": "hip arthritis",
+  "type": "DISEASE",
+  "start_char": 37,
+  "end_char": 50
+}, {
+  "text": "Chris Manning",
+  "type": "PERSON",
+  "start_char": 66,
+  "end_char": 79
+}]
+```
+
+Furthermore, the `multi_ner` field will have the outputs of each NER model in order.
+
+```python
+# results truncated for legibility
+# note that the token ids start from 1, not 0
+print(doc.sentences[0].tokens[0:2])
+print(doc.sentences[0].tokens[8:10])
+```
+
+Output:
+
+```
+[[
+  {
+    "id": 1,
+    "text": "John",
+    "start_char": 0,
+    "end_char": 4,
+    "ner": "B-PERSON",
+    "multi_ner": [
+      "O",
+      "B-PERSON"
+    ]
+  }
+], [
+  {
+    "id": 2,
+    "text": "Bauer",
+    "start_char": 5,
+    "end_char": 10,
+    "ner": "E-PERSON",
+    "multi_ner": [
+      "O",
+      "E-PERSON"
+    ]
+  }
+]]
+[[
+  {
+    "id": 8,
+    "text": "hip",
+    "start_char": 37,
+    "end_char": 40,
+    "ner": "B-DISEASE",
+    "multi_ner": [
+      "B-DISEASE",
+      "O"
+    ]
+  }
+], [
+  {
+    "id": 9,
+    "text": "arthritis",
+    "start_char": 41,
+    "end_char": 50,
+    "ner": "E-DISEASE",
+    "multi_ner": [
+      "E-DISEASE",
+      "O"
+    ]
+  }
+]]
+```
+
+
+
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/ner_tagger.py#L32) of the NER tagger.
