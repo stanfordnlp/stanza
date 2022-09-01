@@ -5,7 +5,7 @@ Also produces the resources.json file.
 
 For example, on the cluster, you can do this:
 
-python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models --output_dir /u/nlp/software/stanza/models/1.3.1b > resources.out 2>&1
+python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models --output_dir /u/nlp/software/stanza/models/1.4.1 > resources.out 2>&1
 """
 
 import json
@@ -53,7 +53,7 @@ default_treebanks = {
     "de":      "gsd",
     "got":     "proiel",
     "el":      "gdt",
-    "he":      "htb",
+    "he":      "combined",
     "hi":      "hdtb",
     "hu":      "szeged",
     "id":      "gsd",
