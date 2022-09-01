@@ -239,7 +239,7 @@ def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
     evaluation = ud_scores(gold_conllu_file, system_conllu_file)
 
     if evals is None:
-        return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False)
+        return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False, enhanced=False)
     else:
         results = [evaluation[key].f1 for key in evals]
         return " ".join("{:.2f}".format(100 * x) for x in results)
