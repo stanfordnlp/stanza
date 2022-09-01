@@ -404,8 +404,8 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
         package = None
     elif isinstance(processors, dict):
         processors = {
-            k.strip().lower(): v.strip().lower() \
-                for k, v in processors.items()
+            k.strip().lower(): ([v_i.strip().lower() for v_i in v] if isinstance(v, (tuple, list)) else v.strip().lower())
+            for k, v in processors.items()
         }
     elif processors is not None:
         raise TypeError(
