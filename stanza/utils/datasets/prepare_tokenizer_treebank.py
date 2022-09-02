@@ -26,7 +26,6 @@ import glob
 import os
 import random
 import re
-import shutil
 import subprocess
 import tempfile
 
@@ -45,7 +44,9 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     copied = f"{dest_dir}/{short_name}.{dest_file}.conllu"
 
     print("Copying from %s to %s" % (original, copied))
-    shutil.copyfile(original, copied)
+    # do this instead of shutil.copyfile in case there are manipulations needed
+    sents = read_sentences_from_conllu(original)
+    write_sentences_to_conllu(copied, sents)
 
 def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
     """
@@ -88,12 +89,12 @@ def read_sentences_from_conllu(filename):
             line = line.strip()
             if len(line) == 0:
                 if len(cache) > 0:
-                    sents += [cache]
+                    sents.append(cache)
                     cache = []
                 continue
-            cache += [line]
+            cache.append(line)
         if len(cache) > 0:
-            sents += [cache]
+            sents.append(cache)
     return sents
 
 def write_sentences_to_conllu(filename, sents):
@@ -1076,7 +1077,8 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     elif dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_punct)
     else:
-        shutil.copyfile(input_conllu, output_conllu)
+        sents = read_sentences_from_conllu(input_conllu)
+        write_sentences_to_conllu(output_conllu, sents)
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
     """
