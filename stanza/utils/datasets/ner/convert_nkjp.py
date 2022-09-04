@@ -1,7 +1,7 @@
+import argparse
+import json
 import os
 import random
-import json
-import click
 from tqdm import tqdm
 from lxml import etree
 
@@ -223,10 +223,13 @@ def convert_nkjp(nkjp_dir, output_dir):
                 json.dump(split, f, ensure_ascii=False, indent=2)
 
 
-@click.command()
-@click.argument('nkjp_dir', default="NKJP")
-def main(nkjp_dir, output_dir):
-    convert_nkjp(nkjp_dir, output_dir)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_path', type=str, default="NKJP", help="Where to find the files")
+    parser.add_argument('--output_path', type=str, default="data/ner", help="Where to output the results")
+    args = parser.parse_args()
+
+    convert_nkjp(args.input_path, args.output_path)
 
 
 if __name__ == '__main__':
