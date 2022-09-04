@@ -261,6 +261,15 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+NKJP is a Polish NER dataset
+  - http://nkjp.pl/index.php?page=0&lang=1
+    About the Project
+  - http://zil.ipipan.waw.pl/DistrNKJP
+    Wikipedia subcorpus used to train charlm model
+  - http://clip.ipipan.waw.pl/NationalCorpusOfPolish?action=AttachFile&do=view&target=NKJP-PodkorpusMilionowy-1.2.tar.gz
+    Annotated subcorpus to train NER model.
+    Download and extract to $NERBASE/Polish-NKJP
+
 kk_kazNERD is a Kazakh dataset published in 2021
   - https://github.com/IS2AI/KazNERD
   - https://arxiv.org/abs/2111.13419
@@ -336,6 +345,7 @@ import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
+import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
@@ -868,6 +878,11 @@ def process_bn_daffodil(paths, short_name):
     out_directory = paths["NER_DATA_DIR"]
     convert_bn_daffodil.convert_dataset(in_directory, out_directory)
 
+def process_pl_nkjp(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "Polish-NKJP")
+    out_directory = paths["NER_DATA_DIR"]
+    convert_nkjp.convert_nkjp(in_directory, out_directory)
+
 def process_kk_kazNERD(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "kazakh", "KazNERD", "KazNERD")
     out_directory = paths["NER_DATA_DIR"]
@@ -933,6 +948,7 @@ DATASET_MAPPING = {
     "kk_kazNERD":        process_kk_kazNERD,
     "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
+    "pl_nkjp":           process_pl_nkjp,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,

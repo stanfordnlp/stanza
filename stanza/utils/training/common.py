@@ -115,6 +115,14 @@ BERT = {
     # https://github.com/ymcui/Chinese-BERT-wwm
     # there's also hfl/chinese-roberta-wwm-ext-large
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
+
+    # https://huggingface.co/allegro/herbert-base-cased
+    # Scores by entity on the NKJP NER task:
+    # no bert (dev/test): 88.64/88.75
+    # herbert-base-cased (dev/test): 91.48/91.02,
+    # herbert-large-cased (dev/test): 92.25/91.62
+    # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
+    "pl": "allegro/herbert-base-cased",
 }
 
 def build_argparse():
