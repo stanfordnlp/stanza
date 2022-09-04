@@ -10,7 +10,6 @@ NAMESPACES = {"x":"http://www.tei-c.org/ns/1.0"}
 MORPH_FILE = "ann_morphosyntax.xml"
 NER_FILE = "ann_named.xml"
 SEGMENTATION_FILE = "ann_segmentation.xml"
-xml_dir = "NKJP"
 
 def parse_xml(path):
     if not os.path.exists(path):
@@ -25,9 +24,9 @@ def get_node_id(node):
     return node.get('{http://www.w3.org/XML/1998/namespace}id')
 
 
-def extract_entities_from_subfolder(subfolder):
+def extract_entities_from_subfolder(subfolder, nkjp_dir):
     # read the ner annotation from a subfolder, assign it to paragraphs
-    ner_path = os.path.join(xml_dir, subfolder, NER_FILE)
+    ner_path = os.path.join(nkjp_dir, subfolder, NER_FILE)
     rt = parse_xml(ner_path)
     if rt is None:
         return None
@@ -42,7 +41,7 @@ def extract_entities_from_subfolder(subfolder):
             _, ner_sent_id  = corresp.split("#morph_")
             par_entities[ner_sent_id] = extract_entities_from_sentence(ner_sent)
         subfolder_entities[par_id] = par_entities
-    par_id_to_segs = assign_entities(subfolder, subfolder_entities)
+    par_id_to_segs = assign_entities(subfolder, subfolder_entities, nkjp_dir)
     return par_id_to_segs
 
 
@@ -115,9 +114,9 @@ def eliminate_overlapping_entities(entities_list):
     return [entity for entity in entities_list if entity["ent_id"] not in subsumed]
 
 
-def assign_entities(subfolder, subfolder_entities):
+def assign_entities(subfolder, subfolder_entities, nkjp_dir):
     # recovers all the segments from a subfolder, and annotates it with NER
-    morph_path = os.path.join(xml_dir, subfolder, MORPH_FILE)
+    morph_path = os.path.join(nkjp_dir, subfolder, MORPH_FILE)
     rt = parse_xml(morph_path)
     morph_pars = rt.xpath("x:TEI/x:text/x:body/x:p", namespaces=NAMESPACES)
     par_id_to_segs = {}
@@ -161,10 +160,10 @@ def assign_entities(subfolder, subfolder_entities):
     return par_id_to_segs
 
 
-def load_xml_nkjp():
+def load_xml_nkjp(nkjp_dir):
     subfolder_to_annotations = {}
-    for subfolder in tqdm([name for name in os.listdir(xml_dir) if os.path.isdir(os.path.join(xml_dir, name))]):
-        out = extract_entities_from_subfolder(subfolder)
+    for subfolder in tqdm([name for name in os.listdir(nkjp_dir) if os.path.isdir(os.path.join(nkjp_dir, name))]):
+        out = extract_entities_from_subfolder(subfolder, nkjp_dir)
         if out:
             subfolder_to_annotations[subfolder] = out
         else:
@@ -200,9 +199,7 @@ def convert_nkjp(nkjp_dir, output_dir):
     nkjp_dir is the path to directory where NKJP files are located.
     """
     # Load XML NKJP
-    global xml_dir
-    xml_dir = nkjp_dir
-    subfolder_to_entities = load_xml_nkjp()
+    subfolder_to_entities = load_xml_nkjp(nkjp_dir)
     converted = []
     for subfolder_name, pars in subfolder_to_entities.items():
         for par_id, par in pars.items():
