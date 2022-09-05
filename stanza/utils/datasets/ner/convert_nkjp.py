@@ -26,6 +26,15 @@ def get_node_id(node):
 
 def extract_entities_from_subfolder(subfolder, nkjp_dir):
     # read the ner annotation from a subfolder, assign it to paragraphs
+    subfolder_entities = extract_unassigned_subfolder_entities(subfolder, nkjp_dir)
+    par_id_to_segs = assign_entities(subfolder, subfolder_entities, nkjp_dir)
+    return par_id_to_segs
+
+
+def extract_unassigned_subfolder_entities(subfolder, nkjp_dir):
+    """
+    Build and return a map from par_id to extracted entities
+    """
     ner_path = os.path.join(nkjp_dir, subfolder, NER_FILE)
     rt = parse_xml(ner_path)
     if rt is None:
@@ -41,9 +50,7 @@ def extract_entities_from_subfolder(subfolder, nkjp_dir):
             _, ner_sent_id  = corresp.split("#morph_")
             par_entities[ner_sent_id] = extract_entities_from_sentence(ner_sent)
         subfolder_entities[par_id] = par_entities
-    par_id_to_segs = assign_entities(subfolder, subfolder_entities, nkjp_dir)
-    return par_id_to_segs
-
+    return subfolder_entities
 
 def extract_entities_from_sentence(ner_sent):
     # extracts all the entity dicts from the sentence
