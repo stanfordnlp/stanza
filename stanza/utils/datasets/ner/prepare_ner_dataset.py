@@ -268,7 +268,7 @@ NKJP is a Polish NER dataset
     Wikipedia subcorpus used to train charlm model
   - http://clip.ipipan.waw.pl/NationalCorpusOfPolish?action=AttachFile&do=view&target=NKJP-PodkorpusMilionowy-1.2.tar.gz
     Annotated subcorpus to train NER model.
-    Download and extract to $NERBASE/Polish-NKJP
+    Download and extract to $NERBASE/Polish-NKJP or leave the gzip in $NERBASE/polish/...
 
 kk_kazNERD is a Kazakh dataset published in 2021
   - https://github.com/IS2AI/KazNERD
@@ -879,9 +879,16 @@ def process_bn_daffodil(paths, short_name):
     convert_bn_daffodil.convert_dataset(in_directory, out_directory)
 
 def process_pl_nkjp(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "Polish-NKJP")
     out_directory = paths["NER_DATA_DIR"]
-    convert_nkjp.convert_nkjp(in_directory, out_directory)
+    candidates = [os.path.join(paths["NERBASE"], "Polish-NKJP"),
+                  os.path.join(paths["NERBASE"], "polish", "Polish-NKJP"),
+                  os.path.join(paths["NERBASE"], "polish", "NKJP-PodkorpusMilionowy-1.2.tar.gz"),]
+    for in_path in candidates:
+        if os.path.exists(in_path):
+            break
+    else:
+        raise FileNotFoundError("Could not find %s  Looked in %s" % (short_name, " ".join(candidates)))
+    convert_nkjp.convert_nkjp(in_path, out_directory)
 
 def process_kk_kazNERD(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "kazakh", "KazNERD", "KazNERD")

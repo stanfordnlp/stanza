@@ -2,6 +2,8 @@ import argparse
 import json
 import os
 import random
+import tarfile
+import tempfile
 from tqdm import tqdm
 # could import lxml here, but that would involve adding lxml as a
 # dependency to the stanza package
@@ -210,13 +212,24 @@ def split_dataset(dataset, shuffle=True, train_fraction=0.9, dev_fraction=0.05, 
     }
 
 
-def convert_nkjp(nkjp_dir, output_dir):
+def convert_nkjp(nkjp_path, output_dir):
     """Converts NKJP NER data into IOB json format.
 
     nkjp_dir is the path to directory where NKJP files are located.
     """
     # Load XML NKJP
-    subfolder_to_entities = load_xml_nkjp(nkjp_dir)
+    print("Reading data from %s" % nkjp_path)
+    if os.path.isfile(nkjp_path) and (nkjp_path.endswith(".tar.gz") or nkjp_path.endswith(".tgz")):
+        with tempfile.TemporaryDirectory() as nkjp_dir:
+            print("Temporarily extracting %s to %s" % (nkjp_path, nkjp_dir))
+            with tarfile.open(nkjp_path, "r:gz") as tar_in:
+                tar_in.extractall(nkjp_dir)
+
+            subfolder_to_entities = load_xml_nkjp(nkjp_dir)
+    elif os.path.isdir(nkjp_path):
+        subfolder_to_entities = load_xml_nkjp(nkjp_path)
+    else:
+        raise FileNotFoundError("Cannot find either unpacked dataset or gzipped file")
     converted = []
     for subfolder_name, pars in subfolder_to_entities.items():
         for par_id, par in pars.items():
@@ -242,7 +255,7 @@ def convert_nkjp(nkjp_dir, output_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_path', type=str, default="NKJP", help="Where to find the files")
+    parser.add_argument('--input_path', type=str, default="/u/nlp/data/ner/stanza/polish/NKJP-PodkorpusMilionowy-1.2.tar.gz", help="Where to find the files")
     parser.add_argument('--output_path', type=str, default="data/ner", help="Where to output the results")
     args = parser.parse_args()
 
