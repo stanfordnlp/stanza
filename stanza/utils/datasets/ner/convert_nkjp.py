@@ -6,7 +6,7 @@ from tqdm import tqdm
 from lxml import etree
 
 
-NAMESPACES = {"x":"http://www.tei-c.org/ns/1.0"}
+NAMESPACE = "http://www.tei-c.org/ns/1.0"
 MORPH_FILE = "ann_morphosyntax.xml"
 NER_FILE = "ann_named.xml"
 SEGMENTATION_FILE = "ann_segmentation.xml"
@@ -40,11 +40,11 @@ def extract_unassigned_subfolder_entities(subfolder, nkjp_dir):
     if rt is None:
         return None
     subfolder_entities = {}
-    ner_pars = rt.xpath("x:TEI/x:text/x:body/x:p", namespaces=NAMESPACES)
+    ner_pars = rt.findall("{%s}TEI/{%s}text/{%s}body/{%s}p" % (NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE))
     for par in ner_pars:
         par_entities = {}
         _, par_id = get_node_id(par).split("_")
-        ner_sents = par.xpath("x:s", namespaces=NAMESPACES)
+        ner_sents = par.findall("{%s}s" % NAMESPACE)
         for ner_sent in ner_sents:
             corresp = ner_sent.get("corresp")
             _, ner_sent_id  = corresp.split("#morph_")
@@ -55,14 +55,14 @@ def extract_unassigned_subfolder_entities(subfolder, nkjp_dir):
 def extract_entities_from_sentence(ner_sent):
     # extracts all the entity dicts from the sentence
     # we assume that an entity cannot span across sentences
-    segs = ner_sent.xpath("x:seg", namespaces=NAMESPACES)
+    segs = ner_sent.findall("./{%s}seg" % NAMESPACE)
     sent_entities = {}
     for i, seg in enumerate(segs):
         ent_id = get_node_id(seg)
-        targets = [ptr.get("target") for ptr in seg.xpath("x:ptr", namespaces=NAMESPACES)]
-        orth = seg.xpath("x:fs/x:f[@name='orth']/x:string", namespaces=NAMESPACES)[0].text
-        ner_type = seg.xpath("x:fs/x:f[@name='type']/x:symbol", namespaces=NAMESPACES)[0].get("value")
-        ner_subtype_node = seg.xpath("x:fs/x:f[@name='subtype']/x:symbol", namespaces=NAMESPACES)
+        targets = [ptr.get("target") for ptr in seg.findall("./{%s}ptr" % NAMESPACE)]
+        orth = seg.findall("./{%s}fs/{%s}f[@name='orth']/{%s}string" % (NAMESPACE, NAMESPACE, NAMESPACE))[0].text
+        ner_type = seg.findall("./{%s}fs/{%s}f[@name='type']/{%s}symbol" % (NAMESPACE, NAMESPACE, NAMESPACE))[0].get("value")
+        ner_subtype_node = seg.findall("./{%s}fs/{%s}f[@name='subtype']/{%s}symbol" % (NAMESPACE, NAMESPACE, NAMESPACE))
         if ner_subtype_node:
             ner_subtype = ner_subtype_node[0].get("value")
         else:
@@ -125,19 +125,19 @@ def assign_entities(subfolder, subfolder_entities, nkjp_dir):
     # recovers all the segments from a subfolder, and annotates it with NER
     morph_path = os.path.join(nkjp_dir, subfolder, MORPH_FILE)
     rt = parse_xml(morph_path)
-    morph_pars = rt.xpath("x:TEI/x:text/x:body/x:p", namespaces=NAMESPACES)
+    morph_pars = rt.findall("{%s}TEI/{%s}text/{%s}body/{%s}p" % (NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE))
     par_id_to_segs = {}
     for par in morph_pars:
         _, par_id = get_node_id(par).split("_")
-        morph_sents = par.xpath("x:s", namespaces=NAMESPACES)
+        morph_sents = par.findall("{%s}s" % NAMESPACE)
         sent_id_to_segs = {}
         for morph_sent in morph_sents:
             _, sent_id = get_node_id(morph_sent).split("_")
-            segs = morph_sent.xpath("x:seg", namespaces=NAMESPACES)
+            segs = morph_sent.findall("{%s}seg" % NAMESPACE)
             sent_segs = {}
             for i, seg in enumerate(segs):
                 _, seg_id = get_node_id(seg).split("morph_")
-                orth = seg.xpath("x:fs/x:f[@name='orth']/x:string", namespaces=NAMESPACES)[0].text
+                orth = seg.findall("{%s}fs/{%s}f[@name='orth']/{%s}string" % (NAMESPACE, NAMESPACE, NAMESPACE))[0].text
                 token = {"seg_id": seg_id,
                           "i": i,
                           "orth": orth,
@@ -149,6 +149,9 @@ def assign_entities(subfolder, subfolder_entities, nkjp_dir):
                 sent_segs[seg_id] = token
             sent_id_to_segs[sent_id] = sent_segs
         par_id_to_segs[par_id] = sent_id_to_segs
+
+    if subfolder_entities is None:
+        return None
 
     for par_key in subfolder_entities:
         par_ents = subfolder_entities[par_key]
