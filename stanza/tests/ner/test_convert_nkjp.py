@@ -2,7 +2,7 @@ import pytest
 
 import io
 import os
-from lxml import etree
+import xml.etree.ElementTree as ET
 
 from stanza.utils.datasets.ner.convert_nkjp import MORPH_FILE, NER_FILE, extract_entities_from_subfolder, extract_entities_from_sentence, extract_unassigned_subfolder_entities
 
@@ -84,11 +84,11 @@ SENTENCE_SAMPLE = """
 EMPTY_SENTENCE = """<s xml:id="named_1.56-s" corresp="ann_morphosyntax.xml#morph_1.56-s"/>"""
 
 def test_extract_entities_from_sentence():
-    rt = etree.fromstring(SENTENCE_SAMPLE)
+    rt = ET.fromstring(SENTENCE_SAMPLE)
     entities = extract_entities_from_sentence(rt)
     assert entities == EXPECTED_ENTITIES['1-p']['1.39-s']
 
-    rt = etree.fromstring(EMPTY_SENTENCE)
+    rt = ET.fromstring(EMPTY_SENTENCE)
     entities = extract_entities_from_sentence(rt)
     assert entities == []
 
