@@ -178,7 +178,8 @@ def assign_entities(subfolder, subfolder_entities, nkjp_dir):
 
 def load_xml_nkjp(nkjp_dir):
     subfolder_to_annotations = {}
-    for subfolder in tqdm([name for name in os.listdir(nkjp_dir) if os.path.isdir(os.path.join(nkjp_dir, name))]):
+    subfolders = sorted(os.listdir(nkjp_dir))
+    for subfolder in tqdm([name for name in subfolders if os.path.isdir(os.path.join(nkjp_dir, name))]):
         out = extract_entities_from_subfolder(subfolder, nkjp_dir)
         if out:
             subfolder_to_annotations[subfolder] = out
