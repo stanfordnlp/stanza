@@ -3,7 +3,13 @@ import json
 import os
 import random
 from tqdm import tqdm
-from lxml import etree
+# could import lxml here, but that would involve adding lxml as a
+# dependency to the stanza package
+# another alternative would be to try & catch ImportError
+try:
+    from lxml import etree
+except ImportError:
+    import xml.etree.ElementTree as etree
 
 
 NAMESPACE = "http://www.tei-c.org/ns/1.0"
