@@ -8,6 +8,8 @@ from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
 from stanza.tests import TEST_MODELS_DIR
 
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
 #pytestmark = pytest.mark.skip
 
 def test_langid():

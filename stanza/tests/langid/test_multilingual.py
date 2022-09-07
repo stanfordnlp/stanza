@@ -8,6 +8,8 @@ from stanza.pipeline.multilingual import MultilingualPipeline
 
 from stanza.tests import TEST_MODELS_DIR
 
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
 def test_multilingual_pipeline():
     """
     Basic test of multilingual pipeline
