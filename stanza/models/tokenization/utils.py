@@ -374,7 +374,13 @@ def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit
                             partlen = match.end(0) - match.start(0)
                             lstripped = match.group(0).lstrip()
                         else:
-                            st0 = text.index(part, char_offset) - char_offset
+                            try:
+                                st0 = text.index(part, char_offset) - char_offset
+                            except ValueError as e:
+                                sub_start = max(0, char_offset - 20)
+                                sub_end = min(len(text), char_offset + 20)
+                                sub = text[sub_start:sub_end]
+                                raise ValueError("Could not find |%s| starting from char_offset %d.  Surrounding text: |%s|" % (part, char_offset, sub)) from e
                             partlen = len(part)
                             lstripped = part.lstrip()
                         if st < 0:
