@@ -542,10 +542,10 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
 
 # train set:
 #  858: missing close parens in the UD conversion
+# 1169: 'che', 'poi', 'tutti', 'i', 'Paesi', 'ue', '.' -> 'per', 'tutti', 'i', 'paesi', 'Ue', '.'
 # 2375: the problem is inconsistent treatment of s_p_a_
 # 05052: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
-# 07683: weird token
 #
 # test set:
 # 09764: weird punct at end
