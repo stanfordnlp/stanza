@@ -84,7 +84,7 @@ class MultilingualPipeline:
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
                 lru_lang = self.lang_request_history[0]
-                self.pipeline_cache.remove(lru_lang)
+                self.pipeline_cache.pop(lru_lang)
                 self.lang_request_history.remove(lru_lang)
             self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
 
