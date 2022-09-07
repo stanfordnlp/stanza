@@ -31,6 +31,7 @@ import tempfile
 
 from collections import Counter
 
+from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
@@ -56,7 +57,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=Tr
     """
     os.makedirs(dest_dir, exist_ok=True)
 
-    short_name = common.project_to_short_name(treebank)
+    short_name = treebank_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     with tempfile.TemporaryDirectory() as tokenizer_dir:
@@ -1156,7 +1157,7 @@ def process_treebank(treebank, paths, args):
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     handparsed_dir = paths["HANDPARSED_DIR"]
 
-    short_name = common.project_to_short_name(treebank)
+    short_name = treebank_to_short_name(treebank)
     short_language = short_name.split("_")[0]
 
     os.makedirs(tokenizer_dir, exist_ok=True)

@@ -6,18 +6,9 @@ import os
 import sys
 
 import stanza.utils.default_paths as default_paths
-from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 
 logger = logging.getLogger('stanza')
-
-def project_to_short_name(treebank):
-    """
-    Project either a treebank or a short name to a short name
-
-    TODO: see if treebank_to_short_name can incorporate this
-    """
-    return treebank_to_short_name(treebank)
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False):
     """

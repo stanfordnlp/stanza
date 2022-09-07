@@ -28,9 +28,10 @@ from stanza.models import parser
 from stanza.models import tagger
 from stanza.models import tokenizer
 
+from stanza.models.common.constant import treebank_to_short_name
+
 from stanza.resources.prepare_resources import default_charlms, pos_charlms
 
-from stanza.utils.datasets.common import project_to_short_name
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm
 from stanza.utils.training.run_lemma import check_lemmas
@@ -65,7 +66,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     # value of command_args.save_output
 
     if command_args and command_args.test_data:
-        test_short_name = project_to_short_name(command_args.test_data)
+        test_short_name = treebank_to_short_name(command_args.test_data)
     else:
         test_short_name = short_name
 
