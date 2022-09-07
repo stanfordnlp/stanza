@@ -3,12 +3,92 @@ import argparse
 import glob
 import logging
 import os
+import re
+import subprocess
 import sys
 
-import stanza.utils.default_paths as default_paths
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
+import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
+import stanza.utils.default_paths as default_paths
 
 logger = logging.getLogger('stanza')
+
+# RE to see if the index of a conllu line represents an MWT
+MWT_RE = re.compile("^[0-9]+[-][0-9]+")
+
+# RE to see if the index of a conllu line represents an MWT or copy node
+MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
+
+# more restrictive than an actual int as we expect certain formats in the conllu files
+INT_RE = re.compile("^[0-9]+$")
+
+CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+
+def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
+    """
+    Uses the udtools perl script to convert a conllu file to txt
+
+    TODO: switch to a python version to get rid of some perl dependence
+    """
+    for dataset in shards:
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+
+        if not os.path.exists(output_conllu):
+            # the perl script doesn't raise an error code for file not found!
+            raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
+        # use an external script to produce the txt files
+        subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
+
+def mwt_name(base_dir, short_name, dataset):
+    return os.path.join(base_dir, f"{short_name}-ud-{dataset}-mwt.json")
+
+def tokenizer_conllu_name(base_dir, short_name, dataset):
+    return os.path.join(base_dir, f"{short_name}.{dataset}.gold.conllu")
+
+def prepare_tokenizer_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, dataset):
+    prepare_tokenizer_data.main([input_txt,
+                                 input_conllu,
+                                 "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
+                                 "-m", mwt_name(tokenizer_dir, short_name, dataset)])
+
+def prepare_tokenizer_treebank_labels(tokenizer_dir, short_name):
+    """
+    Given the txt and gold.conllu files, prepare mwt and label files for train/dev/test
+    """
+    for dataset in ("train", "dev", "test"):
+        output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
+        output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
+        try:
+            prepare_tokenizer_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            print("Failed to convert %s to %s" % (output_txt, output_conllu))
+            raise
+
+def read_sentences_from_conllu(filename):
+    sents = []
+    cache = []
+    with open(filename, encoding="utf-8") as infile:
+        for line in infile:
+            line = line.strip()
+            if len(line) == 0:
+                if len(cache) > 0:
+                    sents.append(cache)
+                    cache = []
+                continue
+            cache.append(line)
+        if len(cache) > 0:
+            sents.append(cache)
+    return sents
+
+def write_sentences_to_conllu(filename, sents):
+    with open(filename, 'w', encoding="utf-8") as outfile:
+        for lines in sents:
+            for line in lines:
+                print(line, file=outfile)
+            print("", file=outfile)
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False):
     """

@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 
+import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 import stanza.utils.default_paths as default_paths
 
@@ -54,9 +55,9 @@ def process_treebank(treebank, paths, output_dir):
         dev_file = f"{tokenizer_dir}/{short_name}.dev.gold.conllu"
         test_file = f"{tokenizer_dir}/{short_name}.test.gold.conllu"
 
-        train_set = prepare_tokenizer_treebank.read_sentences_from_conllu(train_file)
-        dev_set = prepare_tokenizer_treebank.read_sentences_from_conllu(dev_file)
-        test_set = prepare_tokenizer_treebank.read_sentences_from_conllu(test_file)
+        train_set = common.read_sentences_from_conllu(train_file)
+        dev_set = common.read_sentences_from_conllu(dev_file)
+        test_set = common.read_sentences_from_conllu(test_file)
 
         train_out = os.path.join(output_dir, f"{short_name}.train.seg.txt")
         test_out = os.path.join(output_dir, f"{short_name}.test.seg.txt")
