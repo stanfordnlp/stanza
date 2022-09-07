@@ -58,8 +58,13 @@ In August 2022, Prof. Delmonte made a slight update in a zip file
 here.  Contact Chris or John for a copy if not updated yet, or go
 back in git history to get the older version of the code which
 works with the 2022 ELRA update.
-In later 2022, there is a new update, Archive.zip  Put that file in
-$CONSTITUENCY_BASE/italian/it_vit and unzip it there
+
+Later, in September 2022, there is yet another update,
+New version of VIT.zip
+Unzip the contents into a folder
+$CONSTITUENCY_BASE/italian/it_vit
+so there should be a file
+$CONSTITUENCY_BASE/italian/it_vit/VITwritten/VITconstsyntNumb
 """
 
 from collections import defaultdict, deque
@@ -207,6 +212,32 @@ def raw_tree(text):
         "num-0/69%minus":          "(num 0,69%) (num minus)",
         "num-0_39%minus":          "(num 0,39%) (num minus)",
         "num-9_11/16":             "(num 9-11,16)",
+        "num-2/184_90":            "(num 2=184/90)",
+        "num-3/429_20":            "(num 3eq429/20)",
+        # TODO: remove the following num conversions if possible
+        # this would require editing either constituency or UD
+        "num-1:28_124":            "(num 1=8/1242)",
+        "num-1:28_397":            "(num 1=8/3972)",
+        "num-1:28_947":            "(num 1=8/9472)",
+        "num-1:29_657":            "(num 1=9/6572)",
+        "num-1:29_867":            "(num 1=9/8672)",
+        "num-1:29_874":            "(num 1=9/8742)",
+        "num-1:30_083":            "(num 1=0/0833)",
+        "num-1:30_140":            "(num 1=0/1403)",
+        "num-1:30_354":            "(num 1=0/3543)",
+        "num-1:30_453":            "(num 1=0/4533)",
+        "num-1:30_946":            "(num 1=0/9463)",
+        "num-1:31_602":            "(num 1=1/6023)",
+        "num-1:31_842":            "(num 1=1/8423)",
+        "num-1:32_087":            "(num 1=2/0873)",
+        "num-1:32_259":            "(num 1=2/2593)",
+        "num-1:33_166":            "(num 1=3/1663)",
+        "num-1:34_154":            "(num 1=4/1543)",
+        "num-1:34_556":            "(num 1=4/5563)",
+        "num-1:35_323":            "(num 1=5/3233)",
+        "num-1:36_023":            "(num 1=6/0233)",
+        "num-1:36_076":            "(num 1=6/0763)",
+        "num-1:36_651":            "(num 1=6/6513)",
         "n-giga_flop/s":           "(n giga_flop/s)",
         "sect-'g-1'":              "(sect g-1)",
         "sect-'h-1'":              "(sect h-1)",
@@ -214,10 +245,13 @@ def raw_tree(text):
         "sect-'h-3'":              "(sect h-3)",
         "abbr-'a-b-c'":            "(abbr a-b-c)",
         "abbr-d_o_a_":             "(abbr DOA)",
+        "abbr-d_l_":               "(abbr DL)",
+        "abbr-i_s_e_f_":           "(abbr ISEF)",
         "abbr-d_p_r_":             "(abbr DPR)",
         "abbr-D_P_R_":             "(abbr DPR)",
         "abbr-d_m_":               "(abbr dm)",
         "abbr-T_U_":               "(abbr TU)",
+        "abbr-F_A_M_E_":           "(abbr Fame)",
         "dots-'...'":              "(dots ...)",
     }
     new_pieces = ["(ROOT "]
@@ -415,6 +449,12 @@ def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon
         operations.append(["/^testo$/ !, __ . /^:$/=prune", "prune prune"])
         operations.append(["/^testo$/=prune !, __", "prune prune"])
 
+    if len(con_words) >= 2 and con_words[-2] == '...' and con_words[-1] == '.':
+        # the most recent VIT constituency has some sentence final . after a ...
+        # the UD dataset has a more typical ... ending instead
+        # these lines used to say "riempire" which was rather odd
+        operations.append(["/^[.][.][.]$/ . /^[.]$/=prune", "prune prune"])
+
     # now assemble a bunch of regex to split and otherwise manipulate
     # the MWT in the trees
     for token in dev_sentence.tokens:
@@ -505,13 +545,12 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
 # 2375: the problem is inconsistent treatment of s_p_a_
 # 05052: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
-# 07069: "i" edited out in UD incorrectly?
-# 07117: FAME -> F A ME wtf?
-# 08371: da riempire inconsistency
+# 07683: weird token
 #
 # test set:
-# 09765: da riempire inconsistency
-IGNORE_IDS = ["sent_00867", "sent_01169", "sent_02375", "sent_05052", "sent_07069", "sent_07117", "sent_08371", "sent_09765"]
+# 09764: weird punct at end
+# 10058: weird punct at end
+IGNORE_IDS = ["sent_00867", "sent_01169", "sent_02375", "sent_05052", "sent_09764", "sent_10058"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
@@ -537,7 +576,7 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
     # the most recent update from ELRA may look like this?
     # it's what we got, at least
     # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
-    con_filename = os.path.join(con_directory, "italian", "john", "VITconstsyntNumb")
+    con_filename = os.path.join(con_directory, "italian", "it_vit", "VITwritten", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
