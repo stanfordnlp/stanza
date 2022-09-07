@@ -83,7 +83,14 @@ class MultilingualPipeline:
             logger.debug("Loading unknown language in MultilingualPipeline: %s", lang)
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
-                lru_lang = self.lang_request_history[0]
+                lru_lang = next(
+                    (
+                        lru_lang
+                        for lru_lang in self.lang_request_history
+                        if lru_lang in self.pipeline_cache.keys()
+                    ),
+                    None,
+                )
                 self.pipeline_cache.pop(lru_lang)
                 self.lang_request_history.remove(lru_lang)
             self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
