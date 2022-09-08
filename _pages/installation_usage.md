@@ -38,7 +38,13 @@ Note that for now installing Stanza via Anaconda does not work for Python 3.8. F
 
 ### From Source
 
-Alternatively, you can also install from source via Stanza's git repository, which will give you more flexibility in developing on top of Stanza. For this option, run
+Alternatively, you can also install from source via Stanza's git
+repository, which will give you more flexibility in developing on top
+of Stanza. For this option, first install
+[Cuda](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
+(optional, but highly recommended), then install
+[PyTorch](https://pytorch.org/), then run
+
 ```bash
 git clone https://github.com/stanfordnlp/stanza.git
 cd stanza
