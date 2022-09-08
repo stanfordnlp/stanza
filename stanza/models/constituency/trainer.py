@@ -209,14 +209,16 @@ def evaluate(args, model_file, retag_pipeline):
         kbest = args['num_generate'] + 1
     else:
         kbest = None
+
     with EvaluateParser(kbest=kbest) as evaluator:
+        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
         load_args = {
             'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
             'charlm_backward_file': args['charlm_backward_file'],
             'cuda': args['cuda'],
         }
-        trainer = Trainer.load(model_file, args=load_args)
+        trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
 
         treebank = tree_reader.read_treebank(args['eval_file'])
         logger.info("Read %d trees for evaluation", len(treebank))
@@ -474,7 +476,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
             dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        foundation_cache = FoundationCache()
+        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file)
 
         iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
