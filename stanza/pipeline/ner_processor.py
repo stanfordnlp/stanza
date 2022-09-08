@@ -104,10 +104,11 @@ class NERProcessor(UDProcessor):
             doc.build_ents()
         return docs
 
-    def get_known_tags(self):
+    def get_known_tags(self, model_idx=0):
         """
         Return the tags known by this model
 
         Removes the S-, B-, etc, and does not include O
+        Specify model_idx if the processor  has more than one model
         """        
-        return self._trainer.get_known_tags()
+        return self.trainers[model_idx].get_known_tags()

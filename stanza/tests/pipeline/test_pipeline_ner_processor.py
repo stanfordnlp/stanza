@@ -142,3 +142,6 @@ class TestMultiNERProcessor:
         multi_ner = [[token.multi_ner for token in sentence.tokens] for sentence in doc.sentences]
         assert multi_ner == EXPECTED_MULTI_NER
 
+    def test_known_tags(self, pipeline):
+        assert pipeline.processors["ner"].get_known_tags() == ["DISEASE"]
+        assert len(pipeline.processors["ner"].get_known_tags(1)) == 18
