@@ -571,7 +571,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(model_latest_filename, save_optimizer=True)
         if model_save_each_filename:
             trainer.save(model_save_each_filename % epoch, save_optimizer=True)
-        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1))
+        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1)
 
         if args['wandb']:
             wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=epoch)
