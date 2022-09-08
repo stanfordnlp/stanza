@@ -66,3 +66,12 @@ class ConstituencyProcessor(UDProcessor):
         trees = trainer.parse_tagged_words(self._model.model, words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
+
+    def get_constituents(self):
+        """
+        Return a set of the constituents known by this model
+
+        For a pipeline, this can be queried with
+          pipeline.processors["constituency"].get_constituents()
+        """
+        return set(self._model.model.constituents)

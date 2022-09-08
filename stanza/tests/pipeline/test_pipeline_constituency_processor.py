@@ -35,3 +35,7 @@ def test_sorted_two_batch():
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", constituency_batch_size=2)
     doc = pipe(TEST_TEXT)
     check_results(doc)
+
+def test_get_constituents():
+    pipe = stanza.Pipeline("en", processors="tokenize,pos,constituency")
+    assert "SBAR" in pipe.processors["constituency"].get_constituents()
