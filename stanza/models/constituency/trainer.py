@@ -357,7 +357,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         # remove the pattn & lattn layers unless the saved model had them
         temp_args.pop('pattn_num_layers', None)
         temp_args.pop('lattn_d_proj', None)
-        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False)
+        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
 
         # using the model's current values works for if the new
         # dataset is the same or smaller
