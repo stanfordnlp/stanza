@@ -4,6 +4,7 @@ Collects a few of the conparser utility methods which don't belong elsewhere
 
 from collections import deque
 import copy
+import logging
 
 import torch.nn as nn
 from torch import optim
@@ -14,6 +15,8 @@ DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adab
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+
+logger = logging.getLogger('stanza')
 
 # madgrad experiment for weight decay
 # with learning_rate set to 0.0000007 and momentum 0.9
@@ -116,32 +119,56 @@ def build_nonlinearity(nonlinearity):
         return NONLINEARITY[nonlinearity]()
     raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
 
-def build_optimizer(args, model):
+def build_optimizer(args, model, build_simple_adadelta=False):
     """
     Build an optimizer based on the arguments given
+
+    If we are "multistage" training and epochs_trained < epochs // 2,
+    we build an AdaDelta optimizer instead of whatever was requested
+    The build_simple_adadelta parameter controls this
     """
+    if build_simple_adadelta:
+        optim_type = 'adadelta'
+        learning_eps = DEFAULT_LEARNING_EPS['adadelta']
+        learning_rate = DEFAULT_LEARNING_RATES['adadelta']
+        learning_rho = DEFAULT_LEARNING_RHO
+        weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
+    else:
+        optim_type = args['optim'].lower()
+        learning_beta2 = args['learning_beta2']
+        learning_eps = args['learning_eps']
+        learning_rate = args['learning_rate']
+        learning_rho = args['learning_rho']
+        momentum = args['momentum']
+        weight_decay = args['weight_decay']
+
     parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
-    if args['optim'].lower() == 'sgd':
-        optimizer = optim.SGD(parameters, lr=args['learning_rate'], momentum=args['momentum'], weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adadelta':
-        optimizer = optim.Adadelta(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], rho=args['learning_rho'])
-    elif args['optim'].lower() == 'adamw':
-        optimizer = optim.AdamW(parameters, lr=args['learning_rate'], betas=(0.9, args['learning_beta2']), eps=args['learning_eps'], weight_decay=args['weight_decay'])
-    elif args['optim'].lower() == 'adabelief':
+    if optim_type == 'sgd':
+        logger.info("Building SGD with lr=%f, momentum=%f, weight_decay=%f", learning_rate, momentum, weight_decay)
+        optimizer = optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+    elif optim_type == 'adadelta':
+        logger.info("Building Adadelta with lr=%f, eps=%f, weight_decay=%f, rho=%f", learning_rate, learning_eps, weight_decay, learning_rho)
+        optimizer = optim.Adadelta(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, rho=learning_rho)
+    elif optim_type == 'adamw':
+        logger.info("Building AdamW with lr=%f, beta2=%f, eps=%f, weight_decay=%f", learning_rate, learning_beta2, learning_eps, weight_decay)
+        optimizer = optim.AdamW(parameters, lr=learning_rate, betas=(0.9, learning_beta2), eps=learning_eps, weight_decay=weight_decay)
+    elif optim_type == 'adabelief':
         try:
             from adabelief_pytorch import AdaBelief
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
+        logger.info("Building AdaBelief with lr=%f, eps=%f, weight_decay=%f", learning_rate, learning_eps, weight_decay)
         # TODO: make these args
-        optimizer = AdaBelief(parameters, lr=args['learning_rate'], eps=args['learning_eps'], weight_decay=args['weight_decay'], weight_decouple=False, rectify=False)
-    elif args['optim'].lower() == 'madgrad':
+        optimizer = AdaBelief(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, weight_decouple=False, rectify=False)
+    elif optim_type == 'madgrad':
         try:
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        optimizer = madgrad.MADGRAD(parameters, lr=args['learning_rate'], weight_decay=args['weight_decay'], momentum=args['momentum'])
+        logger.info("Building AdaBelief with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
+        optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
     else:
-        raise ValueError("Unknown optimizer: %s" % args['optim'])
+        raise ValueError("Unknown optimizer: %s" % optim)
     return optimizer
 
 def build_scheduler(args, optimizer):

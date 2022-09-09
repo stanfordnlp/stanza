@@ -132,8 +132,12 @@ class Trainer:
         if saved_args['cuda']:
             model.cuda()
 
+        epochs_trained = checkpoint.get('epochs_trained', 0)
+
         if load_optimizer:
-            optimizer = build_optimizer(saved_args, model)
+            # need to match the optimizer we build with the one that was used at training time
+            build_simple_adadelta = checkpoint['args']['multistage'] and epochs_trained < checkpoint['args']['epochs'] // 2
+            optimizer = build_optimizer(saved_args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -150,8 +154,6 @@ class Trainer:
         logger.debug("-- MODEL CONFIG --")
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
-
-        epochs_trained = checkpoint.get('epochs_trained', -1)
 
         return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained)
 
@@ -348,9 +350,25 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
     backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
     bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
 
-    if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
-        logger.info("Loading model to continue training from %s", model_load_file)
+    trainer = None
+    if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
+        logger.info("Found checkpoint to continue training: %s", args['checkpoint_save_name'])
+        trainer = Trainer.load(args['checkpoint_save_name'], args, load_optimizer=True, foundation_cache=foundation_cache)
+        # grad clipping is not saved with the rest of the model
+        add_grad_clipping(trainer, args['grad_clipping'])
+
+        # TODO: turn finetune, relearn_structure, multistage into an enum
+        # finetune just means continue learning, so checkpoint is sufficient
+        # relearn_structure is essentially a one stage multistage
+        # multistage with a checkpoint will have the proper optimizer for that epoch
+        # and no special learning mode means we are training a new model and should continue
+        return trainer, train_sequences, train_transitions
+
+    if args['finetune']:
+        logger.info("Loading model to finetune: %s", model_load_file)
         trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=foundation_cache)
+        # a new finetuning will start with a new epochs_trained count
+        trainer.epochs_trained = 0
     elif args['relearn_structure']:
         logger.info("Loading model to continue training with new structure from %s", model_load_file)
         temp_args = dict(args)
@@ -366,7 +384,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         if args['cuda']:
             model.cuda()
         model.copy_with_new_structure(trainer.model)
-        optimizer = build_optimizer(args, model)
+        optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
         trainer = Trainer(args, model, optimizer, scheduler)
     elif args['multistage']:
@@ -375,13 +393,6 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         # this works surprisingly well
         logger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
         temp_args = dict(args)
-        temp_args['optim'] = 'adadelta'
-        temp_args['learning_rate'] = DEFAULT_LEARNING_RATES['adadelta']
-        temp_args['learning_eps'] = DEFAULT_LEARNING_EPS['adadelta']
-        temp_args['learning_rho'] = DEFAULT_LEARNING_RHO
-        temp_args['weight_decay'] = DEFAULT_WEIGHT_DECAY['adadelta']
-        temp_args['epochs'] = args['epochs'] // 2
-        temp_args['learning_rate_warmup'] = 0
         # remove the attention layers for the temporary model
         temp_args['pattn_num_layers'] = 0
         temp_args['lattn_d_proj'] = 0
@@ -389,8 +400,8 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
         if args['cuda']:
             temp_model.cuda()
-        temp_optim = build_optimizer(temp_args, temp_model)
-        scheduler = build_scheduler(args, temp_optim)
+        temp_optim = build_optimizer(temp_args, temp_model, True)
+        scheduler = build_scheduler(temp_args, temp_optim)
         trainer = Trainer(temp_args, temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
@@ -398,7 +409,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
             model.cuda()
         logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
 
-        optimizer = build_optimizer(args, model)
+        optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
 
         trainer = Trainer(args, model, optimizer, scheduler)
@@ -435,7 +446,7 @@ def remove_no_tags(trees):
         logger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
     return new_trees
 
-def train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline):
+def train(args, model_load_file, model_save_each_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
     """
@@ -479,7 +490,7 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
         foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file)
 
-        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
+        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_each_file, evaluator)
 
     if args['wandb']:
         wandb.finish()
@@ -498,7 +509,7 @@ class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 
         return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
 
 
-def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, foundation_cache, model_filename, model_latest_filename, model_save_each_filename, evaluator):
+def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, foundation_cache, model_save_each_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -543,9 +554,10 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     leftover_training_data = []
     best_f1 = 0.0
     best_epoch = 0
-    for epoch in range(1, args['epochs']+1):
+    # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
+    for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
-        logger.info("Starting epoch %d", epoch)
+        logger.info("Starting epoch %d", trainer.epochs_trained)
         if args['log_norms']:
             model.log_norms()
         epoch_data = leftover_training_data
@@ -556,7 +568,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data[:args['epoch_size']]
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args, evaluator)
@@ -566,16 +578,16 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             # very simple model didn't learn anything
             logger.info("New best dev score: %.5f > %.5f", f1, best_f1)
             best_f1 = f1
-            best_epoch = epoch
-            trainer.save(model_filename, save_optimizer=True)
-        if model_latest_filename:
-            trainer.save(model_latest_filename, save_optimizer=True)
+            best_epoch = trainer.epochs_trained
+            trainer.save(args['save_name'], save_optimizer=False)
+        if args['checkpoint'] and args['checkpoint_save_name']:
+            trainer.save(args['checkpoint_save_name'], save_optimizer=True)
         if model_save_each_filename:
-            trainer.save(model_save_each_filename % epoch, save_optimizer=True)
-        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1)
+            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, best_epoch, best_f1)
 
         if args['wandb']:
-            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=epoch)
+            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
             if args['wandb_norm_regex']:
                 watch_regex = re.compile(args['wandb_norm_regex'])
                 for n, p in model.named_parameters():
@@ -583,22 +595,20 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                         wandb.log({n: torch.linalg.norm(p)})
 
         # don't redo the optimizer a second time if we're not changing the structure
-        if args['multistage'] and epoch in multistage_splits:
-            # TODO: start counting epoch from trainer.epochs_trained for a previously trained model?
-
+        if args['multistage'] and trainer.epochs_trained in multistage_splits:
             # we may be loading a save model from an earlier epoch if the scores stopped increasing
             epochs_trained = trainer.epochs_trained
 
-            stage_pattn_layers, stage_uses_lattn = multistage_splits[epoch]
+            stage_pattn_layers, stage_uses_lattn = multistage_splits[epochs_trained]
 
             # when loading the model, let the saved model determine whether it has pattn or lattn
             temp_args = dict(trainer.args)
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
             # overwriting the old trainer & model will hopefully free memory
-            trainer = Trainer.load(model_filename, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
+            trainer = Trainer.load(args['save_name'], temp_args, load_optimizer=False, foundation_cache=foundation_cache)
             model = trainer.model
-            logger.info("Finished stage at epoch %d.  Restarting optimizer", epoch)
+            logger.info("Finished stage at epoch %d.  Restarting optimizer", epochs_trained)
             logger.info("Previous best model was at epoch %d", trainer.epochs_trained)
 
             temp_args = dict(args)
@@ -615,7 +625,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                 new_model.cuda()
             new_model.copy_with_new_structure(model)
 
-            optimizer = build_optimizer(temp_args, new_model)
+            optimizer = build_optimizer(temp_args, new_model, False)
             scheduler = build_scheduler(temp_args, optimizer)
             trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
             add_grad_clipping(trainer, args['grad_clipping'])
@@ -647,8 +657,6 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     new_lr = scheduler.get_last_lr()[0]
     if old_lr != new_lr:
         logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
-
-    trainer.epochs_trained += 1
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())

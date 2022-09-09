@@ -242,7 +242,6 @@ def parse_args(args=None):
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
-    parser.add_argument('--save_latest_name', type=str, default=None, help="Save the latest model here regardless of score.  Useful for restarting training")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -376,7 +375,8 @@ def parse_args(args=None):
 
     parser.add_argument('--relearn_structure', action='store_true', help='Starting from an existing checkpoint, add or remove pattn / lattn.  One thing that works well is to train an initial model using adadelta with no pattn, then add pattn with adamw')
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
-    parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
+    parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
+    parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
     parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
@@ -450,8 +450,13 @@ def parse_args(args=None):
     else:
         raise ValueError("Unknown retag method {}".format(xpos))
 
-    if args['multistage'] and (args['finetune'] or args['maybe_finetune'] or args['relearn_structure']):
-        raise ValueError('Learning multistage from a previously started model is not yet implemented.  TODO')
+    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+
+    if args['checkpoint']:
+        args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
+
+    model_save_file = os.path.join(args['save_dir'], model_save_file)
+    args['save_name'] = model_save_file
 
     return args
 
@@ -468,13 +473,6 @@ def main(args=None):
     logger.info("Running constituency parser in %s mode", args['mode'])
     logger.debug("Using GPU: %s", args['cuda'])
 
-    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
-    model_save_file = os.path.join(args['save_dir'], model_save_file)
-
-    model_save_latest_file = None
-    if args['save_latest_name']:
-        model_save_latest_file = os.path.join(args['save_dir'], args['save_latest_name'])
-
     model_save_each_file = None
     if args['save_each_name']:
         model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
@@ -485,14 +483,12 @@ def main(args=None):
             pieces = os.path.splitext(model_save_each_file)
             model_save_each_file = pieces[0] + "_%4d" + pieces[1]
 
-    model_load_file = model_save_file
+    model_load_file = args['save_name']
     if args['load_name']:
         if os.path.exists(args['load_name']):
             model_load_file = args['load_name']
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
-    elif args['mode'] == 'train' and args['save_latest_name']:
-        model_load_file = model_save_latest_file
 
     if args['retag_package'] is not None and args['mode'] != 'remove_optimizer':
         if '_' in args['retag_package']:
@@ -509,7 +505,7 @@ def main(args=None):
         retag_pipeline = None
 
     if args['mode'] == 'train':
-        trainer.train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline)
+        trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
