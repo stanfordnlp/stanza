@@ -163,7 +163,7 @@ class TestTrainer:
 
         save_name = os.path.join(args['save_dir'], args['save_name'])
         latest_name = os.path.join(args['save_dir'], 'latest.pt')
-        each_name = os.path.join(args['save_dir'], 'each_%2d.pt')
+        each_name = os.path.join(args['save_dir'], 'each_%02d.pt')
         assert not os.path.exists(save_name)
         retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
         tr = trainer.train(args, save_name, None, latest_name, each_name, retag_pipeline)
@@ -212,7 +212,7 @@ class TestTrainer:
             if use_lattn:
                 args += ['--lattn_d_proj', '16']
             args = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=8, extra_args=args)
-            each_name = os.path.join(args['save_dir'], 'each_%2d.pt')
+            each_name = os.path.join(args['save_dir'], 'each_%02d.pt')
 
             word_input_sizes = defaultdict(list)
             for i in range(1, 9):
