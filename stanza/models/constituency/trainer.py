@@ -479,10 +479,12 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
         foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file)
 
-        iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
+        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
 
     if args['wandb']:
         wandb.finish()
+
+    return trainer
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
@@ -507,9 +509,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         batch predict the model's interpretation of the current states
         add the errors to the list of things to backprop
         advance the parsing state for each of the trees
-
-    Currently the only method implemented for advancing the parsing state
-    is to use the gold transition.
     """
     model = trainer.model
 
@@ -621,6 +620,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
             add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
+
+    return trainer
 
 def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
