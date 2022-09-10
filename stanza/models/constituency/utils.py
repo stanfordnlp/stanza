@@ -165,7 +165,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        logger.info("Building AdaBelief with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
+        logger.info("Building madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
         optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
     else:
         raise ValueError("Unknown optimizer: %s" % optim)
