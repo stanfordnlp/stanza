@@ -455,6 +455,17 @@ def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon
         # these lines used to say "riempire" which was rather odd
         operations.append(["/^[.][.][.]$/ . /^[.]$/=prune", "prune prune"])
 
+    # a few constituent tags are simply errors which need to be fixed
+    if original_tree.children[0].label == 'p':
+        # 'p' shouldn't be at root
+        operations.append(["_ROOT_ < p=p", "relabel p cp"])
+    # fix one specific tree if it has an s_top in it
+    operations.append(["s_top=stop < (in=in < più=piu)", "replace piu (q più)", "relabel in sq", "relabel stop sa"])
+    # sect doesn't exist as a constituent.  replace it with sa
+    operations.append(["sect=sect < num", "relabel sect sa"])
+    # ppas as an internal node gets removed
+    operations.append(["ppas=ppas < (__ < __)", "excise ppas ppas"])
+
     # now assemble a bunch of regex to split and otherwise manipulate
     # the MWT in the trees
     for token in dev_sentence.tokens:
