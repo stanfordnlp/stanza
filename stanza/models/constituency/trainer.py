@@ -137,6 +137,7 @@ class Trainer:
         if load_optimizer:
             # need to match the optimizer we build with the one that was used at training time
             build_simple_adadelta = checkpoint['args']['multistage'] and epochs_trained < checkpoint['args']['epochs'] // 2
+            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", checkpoint['args']['multistage'], epochs_trained, checkpoint['args']['epochs'], build_simple_adadelta)
             optimizer = build_optimizer(saved_args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
