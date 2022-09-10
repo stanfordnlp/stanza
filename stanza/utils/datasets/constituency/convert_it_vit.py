@@ -434,7 +434,13 @@ def get_mwt(*dep_datasets):
                 mwt_map[token.text] = expansion
     return mwt_map
 
-def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon_processor):
+def update_mwts_and_special_cases(original_tree, dep_sentence, mwt_map, tsurgeon_processor):
+    """
+    Replace MWT structures with their UD equivalents, along with some other minor tsurgeon based edits
+
+    original_tree: the tree as read from VIT
+    dep_sentence: the UD dependency dataset version of this sentence
+    """
     updated_tree = original_tree
 
     operations = []
@@ -468,7 +474,7 @@ def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon
 
     # now assemble a bunch of regex to split and otherwise manipulate
     # the MWT in the trees
-    for token in dev_sentence.tokens:
+    for token in dep_sentence.tokens:
         if len(token.words) == 1:
             continue
         if token.text in mwt_map:
