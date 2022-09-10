@@ -20,6 +20,7 @@ logger = logging.getLogger('stanza')
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
+    "es": "upos",   # AnCora has half-finished xpos tags
     "it": "upos",
     "vi": "upos",
     "pt": "upos",   # default PT model has no xpos either
