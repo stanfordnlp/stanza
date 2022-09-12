@@ -455,7 +455,9 @@ def parse_args(args=None):
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
 
-    model_save_file = os.path.join(args['save_dir'], model_save_file)
+    model_dir = os.path.split(model_save_file)[0]
+    if model_dir != args['save_dir']:
+        model_save_file = os.path.join(args['save_dir'], model_save_file)
     args['save_name'] = model_save_file
 
     return args
