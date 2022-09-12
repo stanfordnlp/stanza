@@ -509,7 +509,7 @@ def main(args=None):
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
-        trainer.remove_optimizer(args, model_save_file, model_load_file)
+        trainer.remove_optimizer(args, args['save_name'], model_load_file)
 
 if __name__ == '__main__':
     main()
