@@ -146,17 +146,17 @@ class Trainer:
         else:
             raise RuntimeError("TODO: need to get the wv type back from get_wordvec_file")
 
-        logger.info("Looking for pretrained vectors in {}".format(pretrain_file))
+        logger.debug("Looking for pretrained vectors in {}".format(pretrain_file))
         if os.path.exists(pretrain_file):
             return load_pretrain(pretrain_file, foundation_cache)
         elif args.wordvec_raw_file:
             vec_file = args.wordvec_raw_file
-            logger.info("Pretrain not found.  Looking in {}".format(vec_file))
+            logger.debug("Pretrain not found.  Looking in {}".format(vec_file))
         else:
             vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
-            logger.info("Pretrain not found.  Looking in {}".format(vec_file))
+            logger.debug("Pretrain not found.  Looking in {}".format(vec_file))
         pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
-        logger.info("Embedding shape: %s" % str(pretrain.emb.shape))
+        logger.debug("Embedding shape: %s" % str(pretrain.emb.shape))
         return pretrain
 
 
