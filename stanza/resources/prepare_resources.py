@@ -173,7 +173,7 @@ default_charlms = {
     "my": "oscar",
     "nb": "conll17",
     "nl": "ccwiki",
-    "pl": "oscar",
+    #"pl": "oscar",
     "ru": "newswiki",
     "sv": "conll17",
     "th": "oscar",
@@ -190,7 +190,6 @@ pos_charlms = {
         "genia": None,
         "mimic": "mimic",
     },
-    "pl": None,  # temporary until these are rebuilt with charlm
     "tr": {   # no idea why, but this particular one goes down in dev score
         "boun": None,
     },
@@ -216,6 +215,9 @@ ner_charlms = {
     },
     "nn": {
         "norne": None,
+    },
+    "pl": {
+        "nkjp": "oscar",
     },
 }
 
@@ -373,10 +375,8 @@ def get_pos_dependencies(lang, package):
     else:
         dependencies = [{'model': 'pretrain', 'package': package}]
 
-    if lang in pos_charlms and isinstance(pos_charlms[lang], dict) and package in pos_charlms[lang]:
+    if lang in pos_charlms and package in pos_charlms[lang]:
         charlm_package = pos_charlms[lang][package]
-    elif lang in pos_charlms and not isinstance(pos_charlms[lang], dict):
-        charlm_package = pos_charlms[lang]
     else:
         charlm_package = default_charlms.get(lang, None)
 
