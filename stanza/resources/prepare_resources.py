@@ -403,6 +403,26 @@ def get_ner_dependencies(lang, package):
                                        {'model': 'backward_charlm', 'package': charlm_package}]
     return dependencies
 
+def get_sentiment_dependencies(lang, package):
+    """
+    Return a list of dependencies for the sentiment model
+
+    Generally this will be pretrain, forward & backward charlm
+    So far, this invariant is true:
+    sentiment models use the default pretrain for the language
+    also, they all use the default charlm for a language
+    """
+    pretrain_package = default_treebanks[lang]
+    dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+
+    charlm_package = default_charlms.get(lang, None)
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
+
+
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
@@ -430,10 +450,7 @@ def process_dirs(args):
             elif processor == 'ner':
                 dependencies = get_ner_dependencies(lang, package)
             elif processor == 'sentiment':
-                # so far, this invariant is true:
-                # sentiment models use the default pretrain for the language
-                pretrain_package = default_treebanks[lang]
-                dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+                dependencies = get_sentiment_dependencies(lang, package)
             elif processor == 'constituency':
                 dependencies = get_con_dependencies(lang, package)
             # maintain resources
@@ -467,19 +484,16 @@ def process_defaults(args):
             ner_package = default_ners[lang]
         if lang in default_charlms:
             charlm_package = default_charlms[lang]
-        if lang in default_sentiment:
-            sentiment_package = default_sentiment[lang]
-        if lang in default_constituency:
-            constituency_package = default_constituency[lang]
-
         if lang in default_ners and lang in default_charlms:
             ner_dependencies = get_ner_dependencies(lang, ner_package)
             if ner_dependencies is not None:
                 default_dependencies['ner'] = ner_dependencies
         if lang in default_sentiment:
-            # All of the sentiment models created so far have used the default pretrain
-            default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
+            sentiment_package = default_sentiment[lang]
+            sentiment_dependencies = get_sentiment_dependencies(lang, package)
+            default_dependencies['sentiment'] = sentiment_dependencies
         if lang in default_constituency:
+            constituency_package = default_constituency[lang]
             default_dependencies['constituency'] = get_con_dependencies(lang, constituency_package)
 
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
