@@ -375,7 +375,7 @@ def get_pos_dependencies(lang, package):
 
     if lang in pos_charlms and isinstance(pos_charlms[lang], dict) and package in pos_charlms[lang]:
         charlm_package = pos_charlms[lang][package]
-    elif lang in pos_charlms:
+    elif lang in pos_charlms and not isinstance(pos_charlms[lang], dict):
         charlm_package = pos_charlms[lang]
     else:
         charlm_package = default_charlms.get(lang, None)
