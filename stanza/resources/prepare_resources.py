@@ -268,6 +268,8 @@ ner_pretrains = {
 default_sentiment = {
     "en": "sstplus",
     "de": "sb10k",
+    "es": "tass2020",
+    "mr": "l3cube",
     "vi": "vsfc",
     "zh-hans": "ren",
 }
