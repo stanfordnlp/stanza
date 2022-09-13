@@ -34,7 +34,7 @@ from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
-from stanza.server.parser_eval import EvaluateParser
+from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
 
 tqdm = utils.get_tqdm()
 
@@ -823,9 +823,6 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
         tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
     return tree_batch
 
-ParseResult = namedtuple("ParseResult", ['gold', 'predictions'])
-ParsePrediction = namedtuple("ParsePrediction", ['tree', 'score'])
-
 @torch.no_grad()
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True):
     """
@@ -864,7 +861,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True)
                 predicted_tree = tree.get_tree(model)
                 gold_tree = tree.gold_tree
                 # TODO: put an actual score here?
-                treebank.append(ParseResult(gold_tree, [ParsePrediction(predicted_tree, 1.0)]))
+                treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)]))
                 treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 

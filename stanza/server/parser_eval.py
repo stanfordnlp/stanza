@@ -1,5 +1,8 @@
+"""
+This class runs a Java process to evaluate a treebank prediction using CoreNLP
+"""
 
-
+from collections import namedtuple
 
 import stanza
 from stanza.protobuf import EvaluateParserRequest, EvaluateParserResponse
@@ -7,6 +10,9 @@ from stanza.server.java_protobuf_requests import send_request, build_tree, JavaP
 
 
 EVALUATE_JAVA = "edu.stanford.nlp.parser.metrics.EvaluateExternalParser"
+
+ParseResult = namedtuple("ParseResult", ['gold', 'predictions'])
+ScoredTree = namedtuple("ScoredTree", ['tree', 'score'])
 
 def build_request(treebank):
     """
@@ -19,7 +25,12 @@ def build_request(treebank):
     for gold, predictions in treebank:
         parse_result = request.treebank.add()
         parse_result.gold.CopyFrom(build_tree(gold, None))
-        for prediction, score in predictions:
+        for pred in predictions:
+            if isinstance(pred, tuple):
+                prediction, score = pred
+            else:
+                prediction = pred
+                score = None
             parse_result.predicted.append(build_tree(prediction, score))
 
     return request
