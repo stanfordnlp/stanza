@@ -58,13 +58,13 @@ class TestNERProcessor:
         """
         return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner")
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def processed_doc(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
-        return [pipeline(text) for text in  EN_DOCS]
+        return [pipeline(text) for text in EN_DOCS]
 
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def processed_bulk(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
         docs = [Document([], text=t) for t in EN_DOCS]
