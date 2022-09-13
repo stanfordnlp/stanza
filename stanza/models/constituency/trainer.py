@@ -942,19 +942,19 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         else:
             with open(pred_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write("{:_}".format(tree.predictions[0].tree))
+                    fout.write("{:_O}".format(tree.predictions[0].tree))
                     fout.write("\n")
 
             for i in range(args['num_generate']):
                 pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
                 with open(pred_file, 'w') as fout:
                     for tree in generated_treebanks[i+1]:
-                        fout.write("{:_}".format(tree.predictions[0].tree))
+                        fout.write("{:_O}".format(tree.predictions[0].tree))
                         fout.write("\n")
 
             with open(orig_file, 'w') as fout:
                 for tree in treebank:
-                    fout.write("{:_}".format(tree.gold))
+                    fout.write("{:_O}".format(tree.gold))
                     fout.write("\n")
 
     if len(full_results) == 0:
