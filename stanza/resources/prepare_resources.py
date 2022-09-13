@@ -173,7 +173,7 @@ default_charlms = {
     "my": "oscar",
     "nb": "conll17",
     "nl": "ccwiki",
-    #"pl": "oscar",
+    "pl": "oscar",
     "ru": "newswiki",
     "sv": "conll17",
     "th": "oscar",
@@ -215,9 +215,6 @@ ner_charlms = {
     },
     "nn": {
         "norne": None,
-    },
-    "pl": {
-        "nkjp": "oscar",
     },
 }
 
