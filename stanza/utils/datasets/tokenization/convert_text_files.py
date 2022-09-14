@@ -10,6 +10,27 @@ import random
 from stanza.models.tokenization.utils import match_tokens_with_text
 import stanza.utils.datasets.common as common
 
+def read_tokens_file(token_file):
+    """
+    Returns a list of list of tokens
+
+    Each sentence is a list of tokens
+    """
+    sentences = []
+    current_sentence = []
+    with open(token_file, encoding="utf-8") as fin:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                if current_sentence:
+                    sentences.append(current_sentence)
+                    current_sentence = []
+            else:
+                current_sentence.append(line)
+        if current_sentence:
+            sentences.append(current_sentence)
+
+    return sentences
 
 def process_raw_file(text_file, token_file):
     """
@@ -26,21 +47,8 @@ def process_raw_file(text_file, token_file):
     with open(text_file, encoding="utf-8") as fin:
         text = fin.read()
 
-    sentences = []
-    current_sentence = []
-    with open(token_file, encoding="utf-8") as fin:
-        for line in fin:
-            line = line.strip()
-            if not line:
-                if current_sentence:
-                    sentences.append(current_sentence)
-                    current_sentence = []
-            else:
-                current_sentence.append(line)
-        if current_sentence:
-            sentences.append(current_sentence)
-
-    doc = match_tokens_with_text(sentences, text)
+    tokens = read_tokens_file(token_file)
+    doc = match_tokens_with_text(tokens, text)
 
     sentences = []
     for sent_idx, sentence in enumerate(doc.sentences):
