@@ -107,9 +107,16 @@ NONLINEARITY = {
     'relu':       nn.ReLU,
     'gelu':       nn.GELU,
     'leaky_relu': nn.LeakyReLU,
-    'silu':       nn.SiLU,
-    'mish':       nn.Mish,
 }
+
+# separating these out allows for backwards compatibility with earlier versions of pytorch
+# NOTE torch compatibility: if we ever *release* models with these
+# activation functions, we will need to break that compatibility
+if hasattr(nn, 'SiLU'):
+    NONLINEARITY['silu'] = nn.SiLU
+
+if hasattr(nn, 'Mish'):
+    NONLINEARITY['mish'] = nn.Mish
 
 def build_nonlinearity(nonlinearity):
     """
