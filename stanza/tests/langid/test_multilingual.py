@@ -10,7 +10,7 @@ from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
-def run_multilingual_pipeline(**kwargs):
+def run_multilingual_pipeline(nlp):
     english_text = "This is an English sentence."
     english_deps_gold = "\n".join((
         "('This', 5, 'nsubj')",
@@ -31,7 +31,6 @@ def run_multilingual_pipeline(**kwargs):
         "('.', 4, 'punct')"
     ))
 
-    nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, **kwargs)
     docs = [english_text, french_text]
     docs = nlp(docs)
 
@@ -40,15 +39,19 @@ def run_multilingual_pipeline(**kwargs):
     assert docs[1].lang == "fr"
     assert docs[1].sentences[0].dependencies_string() == french_deps_gold
 
+@pytest.fixture(scope="module")
+def basic_multilingual():
+    return MultilingualPipeline(model_dir=TEST_MODELS_DIR)
 
-def test_multilingual_pipeline():
+def test_multilingual_pipeline(basic_multilingual):
     """
     Basic test of multilingual pipeline
     """
-    run_multilingual_pipeline()
+    run_multilingual_pipeline(basic_multilingual)
 
 def test_multilingual_pipeline_small_cache():
     """
     Test with the cache size 1
     """
-    run_multilingual_pipeline(max_cache_size=1)
+    nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, max_cache_size=1)
+    run_multilingual_pipeline(nlp)
