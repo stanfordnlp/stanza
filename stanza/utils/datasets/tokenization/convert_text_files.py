@@ -1,5 +1,7 @@
 """
 Given a text file and a file with one word per line, convert the text file
+
+Sentence splits should be represented as blank lines at the end of a sentence.
 """
 
 import argparse
