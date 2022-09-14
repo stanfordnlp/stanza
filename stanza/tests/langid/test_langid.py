@@ -12,7 +12,23 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 #pytestmark = pytest.mark.skip
 
-def test_langid():
+@pytest.fixture(scope="module")
+def basic_multilingual():
+    return Pipeline(dir=TEST_MODELS_DIR, lang='multilingual', processors="langid")
+
+@pytest.fixture(scope="module")
+def enfr_multilingual():
+    return Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en", "fr"])
+
+@pytest.fixture(scope="module")
+def en_multilingual():
+    return Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en"])
+
+@pytest.fixture(scope="module")
+def clean_multilingual():
+    return Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_clean_text=True)
+
+def test_langid(basic_multilingual):
     """
     Basic test of language identification
     """
@@ -20,13 +36,12 @@ def test_langid():
     french_text = "C'est une phrase française."
     docs = [english_text, french_text]
 
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang='multilingual', processors="langid")
     docs = [Document([], text=text) for text in docs]
-    nlp(docs)
+    basic_multilingual(docs)
     predictions = [doc.lang for doc in docs]
     assert predictions == ["en", "fr"]
 
-def test_langid_benchmark():
+def test_langid_benchmark(basic_multilingual):
     """
     Run lang id model on 500 examples, confirm reasonable accuracy.
     """
@@ -532,15 +547,14 @@ def test_langid_benchmark():
     {"text": "Například Pedagogická fakulta Univerzity Karlovy", "label": "cs"},
     {"text": "nostris ut eriperet nos de praesenti saeculo", "label": "la"}]
     
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
     docs = [Document([], text=example["text"]) for example in examples]
     gold_labels = [example["label"] for example in examples]
-    nlp(docs)
+    basic_multilingual(docs)
     accuracy = sum([(doc.lang == label) for doc,label in zip(docs,gold_labels)])/len(docs)
     assert accuracy >= 0.98
 
 
-def test_text_cleaning():
+def test_text_cleaning(basic_multilingual, clean_multilingual):
     """
     Basic test of cleaning text
     """
@@ -548,48 +562,42 @@ def test_text_cleaning():
             "Bonjour le monde! https://t.co/U0Zjp3tusD"]
     docs = [Document([], text=text) for text in docs]
     
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
-    nlp(docs)
+    basic_multilingual(docs)
     assert [doc.lang for doc in docs] == ["it", "it"]
     
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_clean_text=True)
-    assert nlp.processors["langid"]._clean_text
-    nlp(docs)
+    assert clean_multilingual.processors["langid"]._clean_text
+    clean_multilingual(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
 
-def test_lang_subset():
+def test_lang_subset(basic_multilingual, enfr_multilingual, en_multilingual):
     """
     Basic test of restricting output to subset of languages
     """
     docs = ["Bonjour le monde! #thisisfrench #ilovefrance",
             "Bonjour le monde! https://t.co/U0Zjp3tusD"]
     docs = [Document([], text=text) for text in docs]
-    
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid")
-    nlp(docs)
+
+    basic_multilingual(docs)
     assert [doc.lang for doc in docs] == ["it", "it"]
-    
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en","fr"])
-    assert nlp.processors["langid"]._model.lang_subset == ["en", "fr"]
-    nlp(docs)
+
+    assert enfr_multilingual.processors["langid"]._model.lang_subset == ["en", "fr"]
+    enfr_multilingual(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
-    
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en"])
-    assert nlp.processors["langid"]._model.lang_subset == ["en"]
-    nlp(docs)
+
+    assert en_multilingual.processors["langid"]._model.lang_subset == ["en"]
+    en_multilingual(docs)
     assert [doc.lang for doc in docs] == ["en", "en"]
 
-def test_lang_subset_unlikely_language():
+def test_lang_subset_unlikely_language(en_multilingual):
     """
     Test that the language subset masking chooses a legal language, even if all legal languages are supa unlikely
     """
     sentences = ["你好" * 200]
     docs = [Document([], text=text) for text in sentences]
-    nlp = Pipeline(dir=TEST_MODELS_DIR, lang="multilingual", processors="langid", langid_lang_subset=["en"])
-    nlp(docs)
+    en_multilingual(docs)
     assert [doc.lang for doc in docs] == ["en"]
 
-    processor = nlp.processors['langid']
+    processor = en_multilingual.processors['langid']
     model = processor._model
     text_tensor = processor._text_to_tensor(sentences)
     en_idx = model.tag_to_idx['en']
