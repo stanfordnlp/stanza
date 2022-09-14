@@ -82,7 +82,7 @@ To install Stanza via Anaconda, use the following conda command:
 conda install -c stanfordnlp stanza
 ```
 
-Note that for now installing Stanza via Anaconda does not work for Python 3.8. For Python 3.8 please use pip installation.
+Note that for now installing Stanza via Anaconda does not work for Python 3.10. For Python 3.10 please use pip installation.
 
 ### From Source
 
@@ -140,7 +140,7 @@ There are a few initial setup steps.
 
 * Download [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and models for the language you wish to use
 * Put the model jars in the distribution folder
-* Tell the Python code where Stanford CoreNLP is located by setting the `CORENLP_HOME` environment variable (e.g., in *nix): `export CORENLP_HOME=/path/to/stanford-corenlp-4.1.0`
+* Tell the Python code where Stanford CoreNLP is located by setting the `CORENLP_HOME` environment variable (e.g., in *nix): `export CORENLP_HOME=/path/to/stanford-corenlp-4.5.1`
 
 We provide [comprehensive examples](https://stanfordnlp.github.io/stanza/corenlp_client.html) in our documentation that show how one can use CoreNLP through Stanza and extract various annotations from it.
 
