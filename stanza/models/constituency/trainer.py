@@ -781,7 +781,12 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
         for n, p in model.named_parameters():
             if watch_regex.search(n):
                 matched = True
-                logger.info("  %s norm: %f grad: %f", n, torch.linalg.norm(p), torch.linalg.norm(p.grad))
+                if p.requires_grad and p.grad is not None:
+                    logger.info("  %s norm: %f grad: %f", n, torch.linalg.norm(p), torch.linalg.norm(p.grad))
+                elif p.requires_grad:
+                    logger.info("  %s norm: %f grad required, but is None!", n, torch.linalg.norm(p))
+                else:
+                    logger.info("  %s norm: %f grad not required", n, torch.linalg.norm(p))
         if not matched:
             logger.info("  (none found!)")
     if torch.any(torch.isnan(tree_loss)):
