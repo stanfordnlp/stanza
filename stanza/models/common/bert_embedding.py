@@ -87,7 +87,24 @@ def filter_data(model_name, data, tokenizer = None):
     return filtered_data
 
 
-def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+def cloned_feature(feature, num_layers):
+    """
+    Clone & detach the feature, keeping the last N layers (or averaging -2,-3,-4 if not specified)
+
+    averaging 3 of the last 4 layers worked well for non-VI languages
+    """
+    # feature[2] is the same for bert, but it didn't work for
+    # older versions of transformers for xlnet
+    # feature = feature[2]
+    feature = feature.hidden_states
+    if num_layers is None:
+        feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+    else:
+        feature = torch.stack(feature[-num_layers:], axis=3)
+    return feature.clone().detach()
+
+
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers):
     """
     Extract transformer embeddings using a method specifically for phobert
 
@@ -129,10 +146,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     for i in range(int(math.ceil(size/128))):
         with torch.no_grad():
             feature = model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
-            # averaging the last four layers worked well for non-VI languages
-            feature = feature[2]
-            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach()
+            features += cloned_feature(feature, num_layers)
 
     assert len(features)==size
     assert len(features)==len(processed)
@@ -173,7 +187,7 @@ def fix_german_tokens(tokenizer, data):
         new_data.append(new_sentence)
     return new_data
 
-def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers):
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
     #tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
@@ -222,9 +236,7 @@ def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_en
             # feature[2] is the same for bert, but it didn't work for
             # older versions of transformers for xlnet
             # feature = feature[2]
-            feature = feature.hidden_states
-            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach()
+            features += cloned_feature(feature, num_layers)
 
     processed = []
     #process the output
@@ -238,19 +250,21 @@ def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_en
     return processed
 
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None):
     """
     Extract transformer embeddings using a generic roberta extraction
+
     data: list of list of string (the text tokens)
+    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
     """
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
     if isinstance(data, tuple):
         data = list(data)
 
     if model_name.startswith("xlnet"):
-        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
     if model_name in BAD_TOKENIZERS:
         data = fix_german_tokens(tokenizer, data)
@@ -282,12 +296,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
             id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
             feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
-            # feature[2] is the same for bert, but it didn't work for
-            # older versions of transformers for xlnet
-            # feature = feature[2]
-            feature = feature.hidden_states
-            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach()
+            features += cloned_feature(feature, num_layers)
 
     processed = []
     #process the output

@@ -103,6 +103,10 @@ class Trainer:
             saved_args['constituent_stack'] = StackHistory.LSTM
         if 'num_tree_lstm_layers' not in saved_args:
             saved_args['num_tree_lstm_layers'] = 1
+        if 'bert_hidden_layers' not in checkpoint['args']:
+            # TODO: no need to do this once the models have bert_hidden_layers in them
+            saved_args['bert_hidden_layers'] = None
+
         params = checkpoint['params']
 
         # TODO: can remove when all models have been rearranged to use the refactored lstm_stacks
