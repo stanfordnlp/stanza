@@ -311,6 +311,15 @@ class LSTMModel(BaseModel, nn.Module):
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
             self.bert_dim = self.bert_model.config.hidden_size
+            if args['bert_hidden_layers']:
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
             self.word_input_size = self.word_input_size + self.bert_dim
 
         self.partitioned_transformer_module = None
@@ -616,7 +625,14 @@ class LSTMModel(BaseModel, nn.Module):
             # result will be len+2 for each sentence
             # we will take 1:-1 if we don't care about the endpoints
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
-                                                      keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE)
+                                                      keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
+                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+            if self.bert_layer_mix is not None:
+                # add the average so that the default behavior is to
+                # take an average of the N layers, and anything else
+                # other than that needs to be learned
+                bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
+
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 
         # Extract partitioned representation
