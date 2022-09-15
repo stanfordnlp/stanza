@@ -77,7 +77,15 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['emoji', 'numpy', 'protobuf', 'requests', 'six', 'torch>=1.3.0', 'tqdm'],
+    install_requires=[
+        'emoji', 
+        'numpy', 
+        'protobuf', 
+        'requests', 
+        'six', 
+        'torch>=1.3.0', 
+        'tqdm',
+    ],
 
     # List required Python versions
     python_requires='>=3.6',
@@ -87,8 +95,16 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'dev': ['check-manifest'],
-        'test': ['coverage', 'pytest'],
+        'dev': [
+            'check-manifest',
+        ],
+        'test': [
+            'coverage', 
+            'pytest',
+        ],
+        'transformers': [
+            'transformers>=3.0.0',
+        ],
     },
 
     # If there are data files included in your packages that need to be
