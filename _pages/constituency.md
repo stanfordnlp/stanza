@@ -84,13 +84,16 @@ Note that the following scores are slight underestimates.  They use the CoreNLP 
 
 | Language | Dataset | Base score | Transformer score | Notes |
 | --- | --- | --- | --- |
-| Chinese | CTB7 | 84.7 | 89.08 | Future work: update to later versions of CTB |
-| Danish | [Arboretum](http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/) | 82.38 | 83.10 | [Non-projective constituents are rearranged](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/datasets/constituency/convert_arboretum.py) |
-| English | PTB | 91.96 | 93.79 | |
-| Italian | [Turin](http://www.di.unito.it/~tutreeb/treebanks.html) | 88.07 | 91.34 | Test scores are on [Evalita](http://www.di.unito.it/~tutreeb/evalita-parsingtask-11.html) |
-| Japanese | [ALT](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/) | 90.34 | --- | Transformers were not used - required a separate tokenizer |
-| Portuguese | [Cintil](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/) | 90.09 | 93.28 | |
-| Turkish | Starlang | 72.46 | 75.39 | |
+| Chinese | CTB7 | 86.85 | 90.98 | Future work: update to later versions of CTB |
+| Danish | [Arboretum](http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/) | 82.7 | 83.45 | [Non-projective constituents are rearranged](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/datasets/constituency/convert_arboretum.py) |
+| English | PTB | 93.21 | 95.64 | with NMLs and separated dashes |
+| English | PTB3 | --- | 95.72 | |
+| Italian | [Turin](http://www.di.unito.it/~tutreeb/treebanks.html) | 89.42 | 92.76 | Test scores are on [Evalita](http://www.di.unito.it/~tutreeb/evalita-parsingtask-11.html) |
+| Italian | VIT | 78.52 | 82.43 | Split based on UD VIT (some trees dropped) |
+| Japanese | [ALT](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/) | 91.03 | --- | Transformers were not used - required a separate tokenizer |
+| Portuguese | [Cintil](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/) | 90.98 | 93.61 | |
+| Spanish | AnCora + LDC | ??? | ??? | Compared against a combination of the test sets |
+| Turkish | Starlang | 73.04 | 75.7 | |
 
 As of Stanza 1.3.0, there was an English model trained on PTB.
 It achieved a test score of 91.5 using the inorder transition scheme.
