@@ -138,13 +138,18 @@ class TokenizationDataset:
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
 
-        def process_sentence(sent):
-            return np.array([self.vocab.unit2id(y[0]) for y in sent]), np.array([y[1] for y in sent]), np.array([y[2] for y in sent]), [y[0] for y in sent]
+        def process_sentence(sent_units, sent_labels, sent_feats):
+            return (np.array([self.vocab.unit2id(y) for y in sent_units]),
+                    np.array(sent_labels),
+                    np.array(sent_feats),
+                    list(sent_units))
 
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
-        current = []
         use_dictionary = self.args['use_dictionary']
+        current_units = []
+        current_labels = []
+        current_feats = []
         for i, (unit, label) in enumerate(para):
             feats = composite_func(unit)
             # position-dependent features
@@ -160,16 +165,20 @@ class TokenizationDataset:
                 dict_feats = self.extract_dict_feat(para, i)
                 feats = feats + dict_feats
 
-            current += [(unit, label, feats)]
+            current_units.append(unit)
+            current_labels.append(label)
+            current_feats.append(feats)
             if not self.eval and (label == 2 or label == 4): # end of sentence
-                if len(current) <= self.args['max_seqlen']:
+                if len(current_units) <= self.args['max_seqlen']:
                     # get rid of sentences that are too long during training of the tokenizer
-                    res.append(process_sentence(current))
-                current = []
+                    res.append(process_sentence(current_units, current_labels, current_feats))
+                current_units.clear()
+                current_labels.clear()
+                current_feats.clear()
 
-        if len(current) > 0:
-            if self.eval or len(current) <= self.args['max_seqlen']:
-                res.append(process_sentence(current))
+        if len(current_units) > 0:
+            if self.eval or len(current_units) <= self.args['max_seqlen']:
+                res.append(process_sentence(current_units, current_labels, current_feats))
 
         return res
 
