@@ -92,18 +92,7 @@ class Trainer:
 
         saved_args = dict(checkpoint['args'])
         saved_args.update(args)
-        # TODO: remove when all models are rebuilt
-        if 'lattn_combined_input' not in saved_args:
-            saved_args['lattn_combined_input'] = False
-        if 'lattn_d_input_proj' not in saved_args:
-            saved_args['lattn_d_input_proj'] = 0
         params = checkpoint['params']
-        # this is because galaxy brain decided it was worth the effort
-        # of moving the layer norm from inside the positional encoding
-        if 'partitioned_transformer_module.add_timing.norm.weight' in params['model']:
-            params['model']['partitioned_transformer_module.transformer_input_norm.weight'] = params['model']['partitioned_transformer_module.add_timing.norm.weight']
-        if 'partitioned_transformer_module.add_timing.norm.bias' in params['model']:
-            params['model']['partitioned_transformer_module.transformer_input_norm.bias'] = params['model']['partitioned_transformer_module.add_timing.norm.bias']
 
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
