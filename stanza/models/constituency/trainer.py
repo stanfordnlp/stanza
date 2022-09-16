@@ -46,7 +46,7 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0):
+    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0, best_f1=0.0):
         self.args = args
         self.model = model
         self.optimizer = optimizer
@@ -54,6 +54,7 @@ class Trainer:
         # keeping track of the epochs trained will be useful
         # for adjusting the learning scheme
         self.epochs_trained = epochs_trained
+        self.best_f1 = best_f1
 
     def uses_xpos(self):
         return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
@@ -68,6 +69,7 @@ class Trainer:
             'params': params,
             'model_type': 'LSTM',
             'epochs_trained': self.epochs_trained,
+            'best_f1': self.best_f1,
         }
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
@@ -121,7 +123,9 @@ class Trainer:
         if saved_args['cuda']:
             model.cuda()
 
+        # TODO: can remove these once everything is retrained?
         epochs_trained = checkpoint.get('epochs_trained', 0)
+        best_f1 = checkpoint.get('best_f1', 0.0)
 
         if load_optimizer:
             # need to match the optimizer we build with the one that was used at training time
@@ -145,7 +149,7 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained)
+        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, best_f1=best_f1)
 
 
 def load_pretrain_or_wordvec(args):
@@ -543,7 +547,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
 
     leftover_training_data = []
-    best_f1 = 0.0
+    best_f1 = trainer.best_f1
     best_epoch = 0
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
@@ -620,7 +624,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
             optimizer = build_optimizer(temp_args, new_model, False)
             scheduler = build_scheduler(temp_args, optimizer)
-            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
+            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained, best_f1)
             add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
