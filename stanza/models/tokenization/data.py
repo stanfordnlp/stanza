@@ -190,7 +190,7 @@ class TokenizationDataset:
         lens = (ounits != padid).sum(1).tolist()
         pad_len = max(l-i for i, l in zip(eval_offsets, lens))
 
-        units = torch.full((len(ounits), pad_len), padid, dtype=torch.int32)
+        units = torch.full((len(ounits), pad_len), padid, dtype=torch.int64)
         labels = torch.full((len(ounits), pad_len), -1, dtype=torch.int32)
         features = torch.zeros((len(ounits), pad_len, feat_size), dtype=torch.float32)
         raw_units = []
@@ -398,7 +398,7 @@ class SortedDataset(Dataset):
         # +1 so that all samples end with at least one pad
         pad_len = max(len(x[0][3]) for x in samples) + 1
 
-        units = torch.full((len(samples), pad_len), padid, dtype=torch.int32)
+        units = torch.full((len(samples), pad_len), padid, dtype=torch.int64)
         labels = torch.full((len(samples), pad_len), -1, dtype=torch.int32)
         features = torch.zeros((len(samples), pad_len, feat_size), dtype=torch.float32)
         raw_units = []
