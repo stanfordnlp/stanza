@@ -553,7 +553,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
 
     model: SimpleModel, LSTMModel, or any other form of model
     tree_batch: list of States (legacy name)
-    transitions: list of transitions
+    transitions: list of transitions, one per state
     fail: throw an exception on a failed transition, as opposed to skipping the tree
     """
     remove = set()
