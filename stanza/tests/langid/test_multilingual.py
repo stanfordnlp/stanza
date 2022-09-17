@@ -31,7 +31,9 @@ def run_multilingual_pipeline(**kwargs):
         "('.', 4, 'punct')"
     ))
 
-    nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, **kwargs)
+    lang_configs = {"en": {"processors": "tokenize,pos,lemma,depparse"},
+                    "fr": {"processors": "tokenize,pos,lemma,depparse"}}
+    nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, lang_configs=lang_configs, **kwargs)
     docs = [english_text, french_text]
     docs = nlp(docs)
 
