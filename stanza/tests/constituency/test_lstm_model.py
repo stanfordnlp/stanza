@@ -17,6 +17,7 @@ def pretrain_file():
     return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
 def build_model(pretrain_file, *args):
+    args = ['--pattn_d_model', '256', '--hidden_size', '128'] + list(args)
     trainer = build_trainer(pretrain_file, *args)
     return trainer.model
 
@@ -250,7 +251,7 @@ def test_lattn_projection(pretrain_file):
     """
     with pytest.raises(ValueError):
         # this is too small
-        model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '256')
+        model = build_model(pretrain_file, '--pattn_d_model', '1024', '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '256')
         run_forward_checks(model)
 
     model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_d_input_proj', '768')
