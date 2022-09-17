@@ -184,6 +184,7 @@ class Pipeline:
                  resources_branch=None,
                  resources_version=DEFAULT_RESOURCES_VERSION,
                  proxies=None,
+                 foundation_cache=None,
                  **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
@@ -194,7 +195,10 @@ class Pipeline:
 
         # processors can use this to save on the effort of loading
         # large sub-models, such as pretrained embeddings, bert, etc
-        self.foundation_cache = FoundationCache()
+        if foundation_cache is None:
+            self.foundation_cache = FoundationCache()
+        else:
+            self.foundation_cache = foundation_cache
 
         download_method = normalize_download_method(download_method)
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
