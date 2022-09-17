@@ -271,6 +271,16 @@ def test_forward_timing_choices(pretrain_file):
     model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
     run_forward_checks(model)
 
+def test_different_transition_sizes(pretrain_file):
+    """
+    If the transition hidden size and embedding size are different, the model should still work
+    """
+    model = build_model(pretrain_file, '--pattn_num_layers', '0', '--lattn_d_proj', '0', '--transition_embedding_dim', '10', '--transition_hidden_size', '10')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file, '--pattn_num_layers', '0', '--lattn_d_proj', '0', '--transition_embedding_dim', '20', '--transition_hidden_size', '10')
+    run_forward_checks(model)
+
 def check_structure_test(pretrain_file, args1, args2):
     """
     Test that the "copy" method copies the parameters from one model to another
