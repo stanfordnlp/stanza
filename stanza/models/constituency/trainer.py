@@ -107,6 +107,17 @@ class Trainer:
             params['model']['transition_lstm_stack.lstm.bias_ih_l1']   = params['model']['transition_lstm.bias_ih_l1']
             params['model']['transition_lstm_stack.lstm.bias_hh_l1']   = params['model']['transition_lstm.bias_hh_l1']
 
+        if 'constituent_start_embedding' in params['model']:
+            params['model']['constituent_lstm_stack.start_embedding']   = params['model']['constituent_start_embedding']
+            params['model']['constituent_lstm_stack.lstm.weight_ih_l0'] = params['model']['constituent_lstm.weight_ih_l0']
+            params['model']['constituent_lstm_stack.lstm.weight_hh_l0'] = params['model']['constituent_lstm.weight_hh_l0']
+            params['model']['constituent_lstm_stack.lstm.bias_ih_l0']   = params['model']['constituent_lstm.bias_ih_l0']
+            params['model']['constituent_lstm_stack.lstm.bias_hh_l0']   = params['model']['constituent_lstm.bias_hh_l0']
+            params['model']['constituent_lstm_stack.lstm.weight_ih_l1'] = params['model']['constituent_lstm.weight_ih_l1']
+            params['model']['constituent_lstm_stack.lstm.weight_hh_l1'] = params['model']['constituent_lstm.weight_hh_l1']
+            params['model']['constituent_lstm_stack.lstm.bias_ih_l1']   = params['model']['constituent_lstm.bias_ih_l1']
+            params['model']['constituent_lstm_stack.lstm.bias_hh_l1']   = params['model']['constituent_lstm.bias_hh_l1']
+
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
             pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
