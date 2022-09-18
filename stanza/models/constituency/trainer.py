@@ -96,6 +96,17 @@ class Trainer:
         saved_args.update(args)
         params = checkpoint['params']
 
+        if 'transition_start_embedding' in params['model']:
+            params['model']['transition_lstm_stack.start_embedding']   = params['model']['transition_start_embedding']
+            params['model']['transition_lstm_stack.lstm.weight_ih_l0'] = params['model']['transition_lstm.weight_ih_l0']
+            params['model']['transition_lstm_stack.lstm.weight_hh_l0'] = params['model']['transition_lstm.weight_hh_l0']
+            params['model']['transition_lstm_stack.lstm.bias_ih_l0']   = params['model']['transition_lstm.bias_ih_l0']
+            params['model']['transition_lstm_stack.lstm.bias_hh_l0']   = params['model']['transition_lstm.bias_hh_l0']
+            params['model']['transition_lstm_stack.lstm.weight_ih_l1'] = params['model']['transition_lstm.weight_ih_l1']
+            params['model']['transition_lstm_stack.lstm.weight_hh_l1'] = params['model']['transition_lstm.weight_hh_l1']
+            params['model']['transition_lstm_stack.lstm.bias_ih_l1']   = params['model']['transition_lstm.bias_ih_l1']
+            params['model']['transition_lstm_stack.lstm.bias_hh_l1']   = params['model']['transition_lstm.bias_hh_l1']
+
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
             pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
