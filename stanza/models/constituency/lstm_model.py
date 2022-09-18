@@ -41,6 +41,7 @@ from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.label_attention import LabelAttentionModule
+from stanza.models.constituency.lstm_tree_stack import LSTMTreeStack
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
@@ -50,7 +51,6 @@ from stanza.models.constituency.utils import build_nonlinearity, initialize_line
 logger = logging.getLogger('stanza')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
-TransitionNode = namedtuple("TransitionNode", ['value', 'output', 'lstm_hx', 'lstm_cx'])
 
 # Invariant: the tree_hx at the top of the constituency stack will have a
 # single dimension
@@ -249,9 +249,12 @@ class LSTMModel(BaseModel, nn.Module):
         self.num_lstm_layers = self.args['num_lstm_layers']
         self.lstm_layer_dropout = self.args['lstm_layer_dropout']
 
+        self.word_dropout = nn.Dropout(self.args['word_dropout'])
+        self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
+        self.lstm_input_dropout = nn.Dropout(self.args['lstm_input_dropout'])
+
         # also register a buffer of zeros so that we can always get zeros on the appropriate device
         self.register_buffer('word_zeros', torch.zeros(self.hidden_size))
-        self.register_buffer('transition_zeros', torch.zeros(self.num_lstm_layers, 1, self.transition_hidden_size))
         self.register_buffer('constituent_zeros', torch.zeros(self.num_lstm_layers, 1, self.hidden_size))
 
         # possibly add a couple vectors for bookends of the sentence
@@ -346,9 +349,12 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
         nn.init.normal_(self.transition_embedding.weight, std=0.25)
-        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-            self.register_parameter('transition_start_embedding', torch.nn.Parameter(0.2 * torch.randn(self.transition_embedding_dim, requires_grad=True)))
-        self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_size, num_layers=self.num_lstm_layers, dropout=self.lstm_layer_dropout)
+        self.transition_lstm_stack = LSTMTreeStack(input_size=self.transition_embedding_dim,
+                                                   hidden_size=self.transition_hidden_size,
+                                                   num_lstm_layers=self.num_lstm_layers,
+                                                   dropout=self.lstm_layer_dropout,
+                                                   uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
+                                                   input_dropout=self.lstm_input_dropout)
 
         self.constituent_opens = sorted(list(constituent_opens))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
@@ -402,10 +408,6 @@ class LSTMModel(BaseModel, nn.Module):
             raise ValueError("Unhandled ConstituencyComposition: {}".format(self.constituency_composition))
 
         self.nonlinearity = build_nonlinearity(self.args['nonlinearity'])
-
-        self.word_dropout = nn.Dropout(self.args['word_dropout'])
-        self.predict_dropout = nn.Dropout(self.args['predict_dropout'])
-        self.lstm_input_dropout = nn.Dropout(self.args['lstm_input_dropout'])
 
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
@@ -604,19 +606,8 @@ class LSTMModel(BaseModel, nn.Module):
     def initial_transitions(self):
         """
         Return an initial TreeStack with no transitions
-
-        Note that the transition_start operation is already batched, in a sense
-        The subsequent batch built this way will be used for batch_size trees
         """
-        if self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING:
-            transition_start = self.transition_start_embedding.unsqueeze(0).unsqueeze(0)
-            output, (hx, cx) = self.transition_lstm(transition_start)
-            transition_start = output[0, 0, :]
-        else:
-            transition_start = self.transition_zeros[-1, 0, :]
-            hx = self.transition_zeros
-            cx = self.transition_zeros
-        return TreeStack(value=TransitionNode(None, transition_start, hx, cx), parent=None, length=1)
+        return self.transition_lstm_stack.initial_state()
 
     def initial_constituents(self):
         """
@@ -772,14 +763,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
         transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
-        transition_input = self.lstm_input_dropout(transition_input)
-
-        hx = torch.cat([t.value.lstm_hx for t in transition_stacks], axis=1)
-        cx = torch.cat([t.value.lstm_cx for t in transition_stacks], axis=1)
-        output, (hx, cx) = self.transition_lstm(transition_input, (hx, cx))
-        new_stacks = [stack.push(TransitionNode(transition, output[0, i, :], hx[:, i:i+1, :], cx[:, i:i+1, :]))
-                      for i, (stack, transition) in enumerate(zip(transition_stacks, transitions))]
-        return new_stacks
+        return self.transition_lstm_stack.push_states(transition_stacks, transitions, transition_input)
 
     def get_top_transition(self, transitions):
         """

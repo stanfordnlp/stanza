@@ -350,7 +350,6 @@ def check_structure_test(pretrain_file, args1, args2):
     for i, j in zip(other_states[0].word_queue, model_states[0].word_queue):
         assert torch.allclose(i.hx, j.hx)
     for i, j in zip(other_states[0].transitions, model_states[0].transitions):
-        assert torch.allclose(i.output, j.output)
         assert torch.allclose(i.lstm_hx, j.lstm_hx)
         assert torch.allclose(i.lstm_cx, j.lstm_cx)
     for i, j in zip(other_states[0].constituents, model_states[0].constituents):
