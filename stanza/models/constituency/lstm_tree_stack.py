@@ -25,17 +25,17 @@ class LSTMTreeStack(nn.Module):
         self.uses_boundary_vector = uses_boundary_vector
 
         # The start embedding needs to be input_size as we put it through the LSTM
-        # A zeros vector needs to be *hidden_size* as we do not put that through the LSTM
         if uses_boundary_vector:
             self.register_parameter('start_embedding', torch.nn.Parameter(0.2 * torch.randn(input_size, requires_grad=True)))
         else:
-            self.register_buffer('zeros', torch.zeros(num_lstm_layers, 1, hidden_size))
+            self.register_buffer('input_zeros',  torch.zeros(num_lstm_layers, 1, input_size))
+            self.register_buffer('hidden_zeros', torch.zeros(num_lstm_layers, 1, hidden_size))
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_lstm_layers, dropout=dropout)
         self.input_dropout = input_dropout
 
 
-    def initial_state(self):
+    def initial_state(self, initial_value=None):
         """
         Return an initial state, either based on zeros or based on the initial embedding and LSTM
 
@@ -50,9 +50,10 @@ class LSTMTreeStack(nn.Module):
             output, (hx, cx) = self.lstm(start)
             start = output[0, 0, :]
         else:
-            hx = self.zeros
-            cx = self.zeros
-        return TreeStack(value=Node(None, hx, cx), parent=None, length=1)
+            start = self.input_zeros
+            hx = self.hidden_zeros
+            cx = self.hidden_zeros
+        return TreeStack(value=Node(initial_value, hx, cx), parent=None, length=1)
 
     def push_states(self, stacks, values, inputs):
         """

@@ -353,7 +353,9 @@ def check_structure_test(pretrain_file, args1, args2):
         assert torch.allclose(i.lstm_hx, j.lstm_hx)
         assert torch.allclose(i.lstm_cx, j.lstm_cx)
     for i, j in zip(other_states[0].constituents, model_states[0].constituents):
-        assert torch.allclose(i.tree_hx, j.tree_hx)
+        assert (i.value is None) == (j.value is None)
+        if i.value is not None:
+            assert torch.allclose(i.value.tree_hx, j.value.tree_hx)
         assert torch.allclose(i.lstm_hx, j.lstm_hx)
         assert torch.allclose(i.lstm_cx, j.lstm_cx)
 
