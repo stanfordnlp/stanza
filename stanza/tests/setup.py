@@ -31,6 +31,7 @@ logger.info("COPYING FILES")
 
 shutil.copy("stanza/tests/data/external_server.properties", scripts_dir)
 shutil.copy("stanza/tests/data/example_french.json", out_dir)
+shutil.copy("stanza/tests/data/aws_annotations.zip", in_dir)
 for emb_file in glob.glob("stanza/tests/data/tiny_emb.*"):
     shutil.copy(emb_file, in_dir)
 
