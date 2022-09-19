@@ -20,6 +20,16 @@ Node = namedtuple("Node", ['value', 'lstm_hx', 'lstm_cx'])
 
 class LSTMTreeStack(nn.Module):
     def __init__(self, input_size, hidden_size, num_lstm_layers, dropout, uses_boundary_vector, input_dropout):
+        """
+        Prepare LSTM and parameters
+
+        input_size: dimension of the inputs to the LSTM
+        hidden_size: LSTM internal & output dimension
+        num_lstm_layers: how many layers of LSTM to use
+        dropout: value of the LSTM dropout
+        uses_boundary_vector: if set, learn a start_embedding parameter.  otherwise, use zeros
+        input_dropout: an nn.Module to dropout inputs.  TODO: allow a float parameter as well
+        """
         super().__init__()
 
         self.uses_boundary_vector = uses_boundary_vector
