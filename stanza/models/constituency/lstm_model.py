@@ -45,6 +45,7 @@ from stanza.models.constituency.lstm_tree_stack import LSTMTreeStack
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.partitioned_transformer import PartitionedTransformerModule
+from stanza.models.constituency.transformer_tree_stack import TransformerTreeStack
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
 
@@ -67,6 +68,10 @@ class SentenceBoundary(Enum):
     NONE               = 1
     WORDS              = 2
     EVERYTHING         = 3
+
+class StackHistory(Enum):
+    LSTM               = 1
+    ATTN               = 2
 
 # How to compose constituent children into new constituents
 # MAX is simply take the max value of the children
@@ -191,7 +196,20 @@ class LSTMModel(BaseModel, nn.Module):
             if self.hidden_size % self.reduce_heads != 0:
                 self.hidden_size = self.hidden_size + self.reduce_heads - (self.hidden_size % self.reduce_heads)
 
+        if args['constituent_stack'] == StackHistory.ATTN:
+            self.reduce_heads = self.args['reduce_heads']
+            if self.hidden_size % args['constituent_heads'] != 0:
+                # TODO: technically we should either use the LCM of this and reduce_heads, or just have two separate fields
+                self.hidden_size = self.hidden_size + args['constituent_heads'] - (hidden_size % args['constituent_heads'])
+                if self.constituency_composition == ConstituencyComposition.ATTN and self.hidden_size % self.reduce_heads != 0:
+                    raise ValueError("--reduce_heads and --constituent_heads not compatible!")
+
         self.transition_hidden_size = self.args['transition_hidden_size']
+        if args['transition_stack'] == StackHistory.ATTN:
+            if self.transition_hidden_size % args['transition_heads'] > 0:
+                logger.warning("transition_hidden_size %d %% transition_heads %d != 0.  reconfiguring", transition_hidden_size, args['transition_heads'])
+                self.transition_hidden_size = self.transition_hidden_size + args['transition_heads'] - (self.transition_hidden_size % args['transition_heads'])
+
         self.tag_embedding_dim = self.args['tag_embedding_dim']
         self.transition_embedding_dim = self.args['transition_embedding_dim']
         self.delta_embedding_dim = self.args['delta_embedding_dim']
@@ -346,12 +364,21 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
         nn.init.normal_(self.transition_embedding.weight, std=0.25)
-        self.transition_stack = LSTMTreeStack(input_size=self.transition_embedding_dim,
-                                              hidden_size=self.transition_hidden_size,
-                                              num_lstm_layers=self.num_lstm_layers,
-                                              dropout=self.lstm_layer_dropout,
-                                              uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                              input_dropout=self.lstm_input_dropout)
+        if args['transition_stack'] == StackHistory.LSTM:
+            self.transition_stack = LSTMTreeStack(input_size=self.transition_embedding_dim,
+                                                  hidden_size=self.transition_hidden_size,
+                                                  num_lstm_layers=self.num_lstm_layers,
+                                                  dropout=self.lstm_layer_dropout,
+                                                  uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
+                                                  input_dropout=self.lstm_input_dropout)
+        elif args['transition_stack'] == StackHistory.ATTN:
+            self.transition_stack = TransformerTreeStack(input_size=self.transition_embedding_dim,
+                                                         output_size=self.transition_hidden_size,
+                                                         input_dropout=self.lstm_input_dropout,
+                                                         use_position=True,
+                                                         num_heads=args['transition_heads'])
+        else:
+            raise ValueError("Unhandled transition_stack StackHistory: {}".format(args['transition_stack']))
 
         self.constituent_opens = sorted(list(constituent_opens))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
@@ -363,12 +390,22 @@ class LSTMModel(BaseModel, nn.Module):
         nn.init.normal_(self.constituent_open_embedding.weight, std=0.2)
 
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
-        self.constituent_stack = LSTMTreeStack(input_size=self.hidden_size,
-                                               hidden_size=self.hidden_size,
-                                               num_lstm_layers=self.num_lstm_layers,
-                                               dropout=self.lstm_layer_dropout,
-                                               uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                               input_dropout=self.lstm_input_dropout)
+        if args['constituent_stack'] == StackHistory.LSTM:
+            self.constituent_stack = LSTMTreeStack(input_size=self.hidden_size,
+                                                   hidden_size=self.hidden_size,
+                                                   num_lstm_layers=self.num_lstm_layers,
+                                                   dropout=self.lstm_layer_dropout,
+                                                   uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
+                                                   input_dropout=self.lstm_input_dropout)
+        elif args['constituent_stack'] == StackHistory.ATTN:
+            self.constituent_stack = TransformerTreeStack(input_size=self.hidden_size,
+                                                          output_size=self.hidden_size,
+                                                          input_dropout=self.lstm_input_dropout,
+                                                          use_position=True,
+                                                          num_heads=args['constituent_heads'])
+        else:
+            raise ValueError("Unhandled constituent_stack StackHistory: {}".format(args['transition_stack']))
+
 
         if args['combined_dummy_embedding']:
             self.dummy_embedding = self.constituent_open_embedding

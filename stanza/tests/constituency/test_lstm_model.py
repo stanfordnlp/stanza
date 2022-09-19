@@ -272,6 +272,44 @@ def test_forward_timing_choices(pretrain_file):
     model = build_model(pretrain_file, '--pattn_num_heads', '4', '--pattn_num_layers', '4', '--pattn_timing', 'learned')
     run_forward_checks(model)
 
+def test_transition_stack(pretrain_file):
+    """
+    Test different transition stack types: lstm & attention
+    """
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--transition_stack', 'attn', '--transition_heads', '1')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--transition_stack', 'attn', '--transition_heads', '4')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--transition_stack', 'lstm')
+    run_forward_checks(model)
+
+def test_constituent_stack(pretrain_file):
+    """
+    Test different constituent stack types: lstm & attention
+    """
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--constituent_stack', 'attn', '--constituent_heads', '1')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--constituent_stack', 'attn', '--constituent_heads', '4')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file,
+                        '--pattn_num_layers', '0', '--lattn_d_proj', '0',
+                        '--constituent_stack', 'lstm')
+    run_forward_checks(model)
+
 def test_different_transition_sizes(pretrain_file):
     """
     If the transition hidden size and embedding size are different, the model should still work

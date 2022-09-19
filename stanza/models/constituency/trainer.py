@@ -29,7 +29,7 @@ from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
-from stanza.models.constituency.lstm_model import LSTMModel
+from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
@@ -96,6 +96,10 @@ class Trainer:
 
         saved_args = dict(checkpoint['args'])
         saved_args.update(args)
+        if 'transition_stack' not in checkpoint['args']:
+            saved_args['transition_stack'] = StackHistory.LSTM
+        if 'constituent_stack' not in checkpoint['args']:
+            saved_args['constituent_stack'] = StackHistory.LSTM
         params = checkpoint['params']
 
         # TODO: can remove when all models have been rearranged to use the refactored lstm_stacks
