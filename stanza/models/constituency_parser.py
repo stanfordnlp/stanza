@@ -134,7 +134,7 @@ from stanza import Pipeline
 from stanza.models.common import utils
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.constituency import trainer
-from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
+from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
 
@@ -185,6 +185,14 @@ def parse_args(args=None):
 
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_size', type=int, default=20, help="Embedding size for transition stack")
+    parser.add_argument('--transition_stack', default=StackHistory.LSTM, type=lambda x: StackHistory[x.upper()],
+                        help='How to track transitions over a parse.  {}'.format(", ".join(x.name for x in StackHistory)))
+    parser.add_argument('--transition_heads', default=4, type=int, help="How many heads to use in MHA *if* the transition_stack is Attention")
+
+    parser.add_argument('--constituent_stack', default=StackHistory.LSTM, type=lambda x: StackHistory[x.upper()],
+                        help='How to track transitions over a parse.  {}'.format(", ".join(x.name for x in StackHistory)))
+    parser.add_argument('--constituent_heads', default=8, type=int, help="How many heads to use in MHA *if* the transition_stack is Attention")
+
     # larger was more effective, up to a point
     # substantially smaller, such as 128,
     # is fine if bert & charlm are not available
