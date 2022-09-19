@@ -96,6 +96,7 @@ class Trainer:
         saved_args.update(args)
         params = checkpoint['params']
 
+        # TODO: can remove when all models have been rearranged to use the refactored lstm_stacks
         if 'transition_start_embedding' in params['model']:
             params['model']['transition_lstm_stack.start_embedding']   = params['model']['transition_start_embedding']
             params['model']['transition_lstm_stack.lstm.weight_ih_l0'] = params['model']['transition_lstm.weight_ih_l0']
