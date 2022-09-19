@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--langs", default="", help="A list of language codes to process.  If not set, all languages under src_root will be processed.")
     parser.add_argument("--packages", default="", help="A list of packages to process.  If not set, all packages under the languages found will be processed.")
     parser.add_argument("--no_xz_output", default=True, dest="xz_output", action="store_false", help="Output compressed xz files")
+    parser.add_argument("--split_size", default=50, type=int, help="How large to make each split, in MB")
     args = parser.parse_args()
 
     print("Processing files:")
@@ -65,6 +66,8 @@ def main():
     print(lang_dirs)
     print("")
 
+    split_size = int(args.split_size * 1024 * 1024)
+
     for lang in lang_dirs:
         lang_root = src_root / lang
         data_dirs = os.listdir(lang_root)
@@ -82,11 +85,11 @@ def main():
             if not os.path.exists(tgt_dir):
                 os.makedirs(tgt_dir)
             print(f"-> Processing {lang}-{dataset_name}")
-            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output)
+            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output, split_size)
 
         print("")
 
-def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
+def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size):
     """
     Combine, shuffle and split data into smaller files, following a naming convention.
     """
@@ -121,11 +124,11 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         if size < 0.1:
             raise RuntimeError("Not enough data found to build a charlm.  At least 100MB data expected")
 
-        print(f"--> Splitting into smaller files...")
+        print(f"--> Splitting into smaller files of size {split_size} ...")
         train_dir = tgt_dir / 'train'
         if not os.path.exists(train_dir): # make training dir
             os.makedirs(train_dir)
-        cmd = f"split -C 52428800 -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
+        cmd = f"split -C {split_size} -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
             raise RuntimeError("Failed to split files!")
