@@ -774,12 +774,12 @@ class LSTMModel(BaseModel, nn.Module):
         part of applying the transitions, so this method is very simple
         """
         word_hx = torch.stack([state.word_queue[state.word_position].hx for state in states])
-        transition_hx = torch.stack([state.transitions.value.lstm_hx[-1, 0, :] for state in states])
+        transition_hx = torch.stack([self.transition_lstm_stack.output(state.transitions) for state in states])
         # note that we use lstm_hx instead of output from the constituents
         # this way, we can, as an option, NOT include the constituents to the left
         # when building the current vector for a constituent
         # and the vector used for inference will still incorporate the entire LSTM
-        constituent_hx = torch.stack([state.constituents.value.lstm_hx[-1, 0, :] for state in states])
+        constituent_hx = torch.stack([self.constituent_lstm_stack.output(state.constituents) for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):

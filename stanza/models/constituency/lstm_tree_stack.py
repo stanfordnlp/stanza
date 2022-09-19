@@ -6,7 +6,7 @@ The TreeStack nodes keep the hx and cx for the LSTM, along with a
 
 The TreeStacks can be ppped to get back to the previous LSTM state.
 
-The module itself implements two methods: initial_state and push_states
+The module itself implements three methods: initial_state, push_states, output
 """
 
 from collections import namedtuple
@@ -72,3 +72,10 @@ class LSTMTreeStack(nn.Module):
                       for i, (stack, transition) in enumerate(zip(stacks, values))]
         return new_stacks
 
+    def output(self, stack):
+        """
+        Return the last layer of the lstm_hx as the output from a stack
+
+        Refactored so that alternate structures have an easy way of getting the output
+        """
+        return stack.value.lstm_hx[-1, 0, :]
