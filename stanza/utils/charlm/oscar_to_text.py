@@ -53,8 +53,9 @@ def main():
     Go through each of the given filenames or directories, convert json to .txt.xz
     """
     args = parse_args()
-    for filename in args.filenames:
+    if args.output is not None:
         os.makedirs(args.output, exist_ok=True)
+    for filename in args.filenames:
         if os.path.isfile(filename):
             extract_file(args.output, filename)
         elif os.path.isdir(filename):
