@@ -69,9 +69,9 @@ class LSTMTreeStack(nn.Module):
         """
         Starting from a list of current stacks, put the inputs through the LSTM and build new stack nodes.
 
-        N = stacks.len() = values.len()
+        B = stacks.len() = values.len()
 
-        inputs must be of shape 1 x N x input_size
+        inputs must be of shape 1 x B x input_size
         """
         inputs = self.input_dropout(inputs)
 
