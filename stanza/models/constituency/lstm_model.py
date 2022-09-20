@@ -346,12 +346,12 @@ class LSTMModel(BaseModel, nn.Module):
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
         nn.init.normal_(self.transition_embedding.weight, std=0.25)
-        self.transition_lstm_stack = LSTMTreeStack(input_size=self.transition_embedding_dim,
-                                                   hidden_size=self.transition_hidden_size,
-                                                   num_lstm_layers=self.num_lstm_layers,
-                                                   dropout=self.lstm_layer_dropout,
-                                                   uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                                   input_dropout=self.lstm_input_dropout)
+        self.transition_stack = LSTMTreeStack(input_size=self.transition_embedding_dim,
+                                              hidden_size=self.transition_hidden_size,
+                                              num_lstm_layers=self.num_lstm_layers,
+                                              dropout=self.lstm_layer_dropout,
+                                              uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
+                                              input_dropout=self.lstm_input_dropout)
 
         self.constituent_opens = sorted(list(constituent_opens))
         # an embedding for the spot on the constituent LSTM taken up by the Open transitions
@@ -363,12 +363,12 @@ class LSTMModel(BaseModel, nn.Module):
         nn.init.normal_(self.constituent_open_embedding.weight, std=0.2)
 
         # input_size is hidden_size - could introduce a new constituent_size instead if we liked
-        self.constituent_lstm_stack = LSTMTreeStack(input_size=self.hidden_size,
-                                                    hidden_size=self.hidden_size,
-                                                    num_lstm_layers=self.num_lstm_layers,
-                                                    dropout=self.lstm_layer_dropout,
-                                                    uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                                    input_dropout=self.lstm_input_dropout)
+        self.constituent_stack = LSTMTreeStack(input_size=self.hidden_size,
+                                               hidden_size=self.hidden_size,
+                                               num_lstm_layers=self.num_lstm_layers,
+                                               dropout=self.lstm_layer_dropout,
+                                               uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
+                                               input_dropout=self.lstm_input_dropout)
 
         if args['combined_dummy_embedding']:
             self.dummy_embedding = self.constituent_open_embedding
@@ -452,9 +452,9 @@ class LSTMModel(BaseModel, nn.Module):
         Middle layer sizes are self.hidden_size
         """
         middle_layers = num_output_layers - 1
-        # word_lstm:        hidden_size
-        # transition_lstm:  transition_hidden_size
-        # constituent_lstm: hidden_size
+        # word_lstm:         hidden_size
+        # transition_stack:  transition_hidden_size
+        # constituent_stack: hidden_size
         predict_input_size = [self.hidden_size * 2 + self.transition_hidden_size] + [self.hidden_size] * middle_layers
         predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
         output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
@@ -608,13 +608,13 @@ class LSTMModel(BaseModel, nn.Module):
         """
         Return an initial TreeStack with no transitions
         """
-        return self.transition_lstm_stack.initial_state()
+        return self.transition_stack.initial_state()
 
     def initial_constituents(self):
         """
         Return an initial TreeStack with no constituents
         """
-        return self.constituent_lstm_stack.initial_state()
+        return self.constituent_stack.initial_state()
 
     def get_word(self, word_node):
         return word_node.value
@@ -735,7 +735,7 @@ class LSTMModel(BaseModel, nn.Module):
         constituent_input = torch.stack([x.tree_hx for x in constituents])
         constituent_input = constituent_input.unsqueeze(0)
         # the constituents are already Constituent(tree, tree_hx)
-        return self.constituent_lstm_stack.push_states(constituent_stacks, constituents, constituent_input)
+        return self.constituent_stack.push_states(constituent_stacks, constituents, constituent_input)
 
     def get_top_constituent(self, constituents):
         """
@@ -755,7 +755,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
         transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
-        return self.transition_lstm_stack.push_states(transition_stacks, transitions, transition_input)
+        return self.transition_stack.push_states(transition_stacks, transitions, transition_input)
 
     def get_top_transition(self, transitions):
         """
@@ -774,12 +774,12 @@ class LSTMModel(BaseModel, nn.Module):
         part of applying the transitions, so this method is very simple
         """
         word_hx = torch.stack([state.word_queue[state.word_position].hx for state in states])
-        transition_hx = torch.stack([self.transition_lstm_stack.output(state.transitions) for state in states])
+        transition_hx = torch.stack([self.transition_stack.output(state.transitions) for state in states])
         # note that we use lstm_hx instead of output from the constituents
         # this way, we can, as an option, NOT include the constituents to the left
         # when building the current vector for a constituent
         # and the vector used for inference will still incorporate the entire LSTM
-        constituent_hx = torch.stack([self.constituent_lstm_stack.output(state.constituents) for state in states])
+        constituent_hx = torch.stack([self.constituent_stack.output(state.constituents) for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
