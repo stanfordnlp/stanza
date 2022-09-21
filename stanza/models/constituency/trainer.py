@@ -46,7 +46,7 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0, best_f1=0.0):
+    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0, best_f1=0.0, best_epoch=0):
         self.args = args
         self.model = model
         self.optimizer = optimizer
@@ -55,6 +55,7 @@ class Trainer:
         # for adjusting the learning scheme
         self.epochs_trained = epochs_trained
         self.best_f1 = best_f1
+        self.best_epoch = best_epoch
 
     def uses_xpos(self):
         return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
@@ -70,6 +71,7 @@ class Trainer:
             'model_type': 'LSTM',
             'epochs_trained': self.epochs_trained,
             'best_f1': self.best_f1,
+            'best_epoch': self.best_epoch,
         }
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
@@ -149,6 +151,7 @@ class Trainer:
         # TODO: can remove these once everything is retrained?
         epochs_trained = checkpoint.get('epochs_trained', 0)
         best_f1 = checkpoint.get('best_f1', 0.0)
+        best_epoch = checkpoint.get('best_epoch', 0)
 
         if load_optimizer:
             # need to match the optimizer we build with the one that was used at training time
@@ -172,7 +175,7 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, best_f1=best_f1)
+        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, best_f1=best_f1, best_epoch=best_epoch)
 
 
 def load_pretrain_or_wordvec(args):
@@ -570,7 +573,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
 
     leftover_training_data = []
-    best_epoch = 0
+    if trainer.best_epoch > 0:
+        logger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
@@ -589,13 +593,13 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
         # print statistics
         f1 = run_dev_set(model, dev_trees, args, evaluator)
-        if f1 > trainer.best_f1 or (best_epoch == 0 and trainer.best_f1 == 0.0):
+        if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
             # very simple model didn't learn anything
             logger.info("New best dev score: %.5f > %.5f", f1, trainer.best_f1)
             trainer.best_f1 = f1
-            best_epoch = trainer.epochs_trained
+            trainer.best_epoch = trainer.epochs_trained
             trainer.save(args['save_name'], save_optimizer=False)
         if args['checkpoint'] and args['checkpoint_save_name']:
             trainer.save(args['checkpoint_save_name'], save_optimizer=True)
@@ -603,7 +607,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
         if epoch_stats.nans > 0:
             logger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
-        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, best_epoch, trainer.best_f1)
+        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
 
         if args['wandb']:
             wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
@@ -646,7 +650,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
             optimizer = build_optimizer(temp_args, new_model, False)
             scheduler = build_scheduler(temp_args, optimizer)
-            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained, trainer.best_f1)
+            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained, trainer.best_f1, trainer.best_epoch)
             add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
