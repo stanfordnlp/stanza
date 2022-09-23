@@ -26,7 +26,7 @@ class POSProcessor(UDProcessor):
         args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                 'charlm_backward_file': config.get('backward_charlm_path', None)}
         # set up trainer
-        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu, args=args)
+        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu, args=args, foundation_cache=pipeline.foundation_cache)
         self._tqdm = 'tqdm' in config and config['tqdm']
 
     def __str__(self):

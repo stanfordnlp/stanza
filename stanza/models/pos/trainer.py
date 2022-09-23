@@ -29,16 +29,16 @@ def unpack_batch(batch, use_cuda):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False, foundation_cache=None):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file, pretrain, args=args)
+            self.load(model_file, pretrain, args=args, foundation_cache=foundation_cache)
         else:
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'])
+            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         if self.use_cuda:
             self.model.cuda()
@@ -101,7 +101,7 @@ class Trainer(BaseTrainer):
         except Exception as e:
             logger.warning(f"Saving failed... {e} continuing anyway.")
 
-    def load(self, filename, pretrain, args=None):
+    def load(self, filename, pretrain, args=None, foundation_cache=None):
         """
         Load a model from file, with preloaded pretrain embeddings. Here we allow the pretrain to be None or a dummy input,
         and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
@@ -118,5 +118,5 @@ class Trainer(BaseTrainer):
         emb_matrix = None
         if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
             emb_matrix = pretrain.emb
-        self.model = Tagger(self.args, self.vocab, emb_matrix=emb_matrix, share_hid=self.args['share_hid'])
+        self.model = Tagger(self.args, self.vocab, emb_matrix=emb_matrix, share_hid=self.args['share_hid'], foundation_cache=foundation_cache)
         self.model.load_state_dict(checkpoint['model'], strict=False)
