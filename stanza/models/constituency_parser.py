@@ -506,7 +506,7 @@ def main(args=None):
         else:
             lang = args['lang']
             package = args['retag_package']
-        retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
+        retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, package={"pos": package}, pos_tqdm=True)
         if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
             logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
             args['retag_xpos'] = False
