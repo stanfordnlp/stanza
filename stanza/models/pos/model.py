@@ -8,15 +8,16 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
 from stanza.models.common.biaffine import BiaffineScorer
+from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
-from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+from stanza.models.common.char_model import CharacterModel
 
 logger = logging.getLogger('stanza')
 
 class Tagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None):
         super().__init__()
 
         self.vocab = vocab
@@ -46,8 +47,8 @@ class Tagger(nn.Module):
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
                     raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
                 logger.debug("POS model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
-                add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
-                add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
+                add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 bidirectional = args.get('char_bidirectional', False)
