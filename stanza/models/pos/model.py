@@ -7,8 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
+from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.biaffine import BiaffineScorer
-from stanza.models.common.foundation_cache import load_charlm
+from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
@@ -58,6 +59,15 @@ class Tagger(nn.Module):
                 else:
                     self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
                 input_size += self.args['transformed_dim']
+
+        if self.args['bert_model']:
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+            input_size += bert_model.config.hidden_size
+        else:
+            bert_model = None
+            bert_tokenizer = None
+        add_unsaved_module('bert_model', bert_model)
+        add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
@@ -140,6 +150,12 @@ class Tagger(nn.Module):
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
                 char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
                 inputs += [char_reps]
+
+        if self.bert_model is not None:
+            device = next(self.parameters()).device
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=False)
+            processed_bert = pad_sequence(processed_bert, batch_first=True)
+            inputs += [pack(processed_bert)]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)
