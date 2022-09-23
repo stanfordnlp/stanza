@@ -389,6 +389,7 @@ def parse_args(args=None):
 
     parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
     parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
+    parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default')
     parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
 
     # Partitioned Attention
@@ -506,7 +507,14 @@ def main(args=None):
         else:
             lang = args['lang']
             package = args['retag_package']
-        retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, package={"pos": package}, pos_tqdm=True)
+        retag_args = {"lang": lang,
+                      "processors": "tokenize, pos",
+                      "tokenize_pretokenized": True,
+                      "package": {"pos": package},
+                      "pos_tqdm": True}
+        if args['retag_model_path'] is not None:
+            retag_args['pos_model_path'] = args['retag_model_path']
+        retag_pipeline = Pipeline(**retag_args)
         if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
             logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
             args['retag_xpos'] = False
