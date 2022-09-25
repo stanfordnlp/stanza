@@ -149,6 +149,11 @@ class StackHistory(Enum):
 # Note that although the scores for TREE_LSTM_CX are slightly higher
 # than MAX for the JA dataset, the benefit was not as clear for EN,
 # so we left the default at MAX.
+# For example, on English WSJ, before switching to Bert POS and
+# a learned Bert mixing layer, a comparison of 5x models trained
+# for 400 iterations got dev scores of:
+#   TREE_LSTM_CX        0.9589
+#   MAX                 0.9593
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
