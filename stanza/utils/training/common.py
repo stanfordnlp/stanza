@@ -250,7 +250,10 @@ def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
         return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False, enhanced=False)
     else:
         results = [evaluation[key].f1 for key in evals]
-        return " ".join("{:.2f}".format(100 * x) for x in results)
+        max_len = max(5, max(len(e) for e in evals))
+        evals_string = " ".join(("{:>%d}" % max_len).format(e) for e in evals)
+        results_string = " ".join(("{:%d.2f}" % max_len).format(100 * x) for x in results)
+        return evals_string + "\n" + results_string
 
 def run_eval_script_tokens(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["Tokens", "Sentences", "Words"])
