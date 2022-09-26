@@ -219,6 +219,15 @@ ner_charlms = {
     },
 }
 
+# TODO: eventually we want to
+#   - rename all the pretrains to indicate where they are from
+#   - only have special / unique names for the few which need it, such as the bio pretrains
+pos_pretrains = {
+    "en": {
+        "combined_bert": "combined",
+    }
+}
+
 ner_pretrains = {
     "ar": {
         "aqmar": "fasttextwiki",
@@ -370,8 +379,10 @@ def get_pos_dependencies(lang, package):
     # pretrains we have floating around
     if lang in no_pretrain_languages:
         dependencies = []
-    else:
+    elif lang not in pos_pretrains or package not in pos_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': package}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': pos_pretrains[lang][package]}]
 
     if lang in pos_charlms and package in pos_charlms[lang]:
         charlm_package = pos_charlms[lang][package]

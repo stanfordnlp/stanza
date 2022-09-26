@@ -426,7 +426,7 @@ treebank_special_cases = {
     "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
 }
 
-SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
+SHORTNAME_RE = re.compile("^[a-z-]+_[a-z0-9-_]+$")
 
 def lang_to_langcode(lang):
     if lang in lang2lcode:
@@ -457,7 +457,7 @@ def treebank_to_short_name(treebank):
     if treebank in treebank_special_cases:
         return treebank_special_cases.get(treebank)
     if SHORTNAME_RE.match(treebank):
-        lang, corpus = treebank.split("_")
+        lang, corpus = treebank.split("_", 1)
         lang = lang_to_langcode(lang)
         return lang + "_" + corpus
 

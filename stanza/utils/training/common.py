@@ -283,7 +283,10 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
                 # error will let us find that pretrain later
                 pass
         if os.path.exists(default_pt_path):
-            logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+            if dataset is not None and dataset_pretrains is not None and language in dataset_pretrains and dataset in dataset_pretrains[language]:
+                logger.info(f"Using default pretrain for {language}:{dataset}, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+            else:
+                logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             return default_pt_path
 
     pretrain_path = '{}/{}/pretrain/*.pt'.format(model_dir, language)
