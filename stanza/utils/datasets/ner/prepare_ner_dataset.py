@@ -313,6 +313,19 @@ Masakhane NER is a set of NER datasets for African languages
     the 2 letter code for lcode.  The tool will throw an error
     if the language is not supported in Masakhane.
 
+SiNER is a Sindhi NER dataset
+  - https://aclanthology.org/2020.lrec-1.361/
+    SiNER: A Large Dataset for Sindhi Named Entity Recognition
+    Wazir Ali, Junyu Lu, Zenglin Xu
+  - It is available via git repository
+    https://github.com/AliWazir/SiNER-dataset
+    Temporarily (September 2022) there is a pull request which
+    fixes a few tag errors, but the code should compensate for
+    that regardless
+  - Clone the repo to $NERBASE/sindhi
+  - python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
+
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -347,6 +360,7 @@ import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
+import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset
@@ -936,6 +950,17 @@ def process_masakhane(paths, dataset_name):
         raise UnknownDatasetError(dataset_name, "Found the Masakhane repo, but there was no %s in the repo at path %s" % (dataset_name, in_directory))
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], "%s_masakhane" % lcode, "txt")
 
+def process_sd_siner(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "sindhi", "SiNER-dataset")
+    if not os.path.exists(in_directory):
+        raise FileNotFoundError("Cannot find SiNER checkout in $NERBASE/sindhi  Please git clone to repo in that directory")
+    in_filename = os.path.join(in_directory, "SiNER-dataset.txt")
+    if not os.path.exists(in_filename):
+        in_filename = os.path.join(in_directory, "SiNER dataset.txt")
+        if not os.path.exists(in_filename):
+            raise FileNotFoundError("Found an SiNER directory at %s but the directory did not contain the dataset" % in_directory)
+    convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -956,6 +981,7 @@ DATASET_MAPPING = {
     "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
     "pl_nkjp":           process_pl_nkjp,
+    "sd_siner":          process_sd_siner,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
