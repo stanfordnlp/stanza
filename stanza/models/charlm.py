@@ -196,6 +196,7 @@ def load_char_vocab(vocab_file):
     return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
 
 def train(args):
+    utils.log_training_args(args, logger)
     if args['save_name']:
         save_name = args['save_name']
     else:

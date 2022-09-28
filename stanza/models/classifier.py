@@ -516,15 +516,6 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
     if args.wandb:
         wandb.finish()
 
-def print_args(args):
-    """
-    For record keeping purposes, print out the arguments when training
-    """
-    args = vars(args)
-    keys = sorted(args.keys())
-    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINING TIME:\n%s\n' % '\n'.join(log_lines))
-
 def main(args=None):
     args = parse_args(args)
     seed = utils.set_random_seed(args.seed, args.cuda)
@@ -574,7 +565,7 @@ def main(args=None):
     model_file = os.path.join(args.save_dir, save_name)
 
     if args.train:
-        print_args(args)
+        utils.log_training_args(args, logger)
 
         dev_set = data.read_dataset(args.dev_file, args.wordvec_type, min_len=None)
         logger.info("Using dev set: %s", args.dev_file)

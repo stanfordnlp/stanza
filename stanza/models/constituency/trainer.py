@@ -276,14 +276,6 @@ def get_open_nodes(trees, args):
     else:
         return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
 
-def log_args(args):
-    """
-    For record keeping purposes, log the arguments when training
-    """
-    keys = sorted(args.keys())
-    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINING TIME:\n%s\n', '\n'.join(log_lines))
-
 def remove_optimizer(args, model_save_file, model_load_file):
     """
     A utility method to remove the optimizer from a save file
@@ -481,7 +473,7 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
     """
-    log_args(args)
+    utils.log_training_args(args, logger)
 
     # we create the Evaluator here because otherwise the transformers
     # library constantly complains about forking the process
