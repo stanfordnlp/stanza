@@ -52,7 +52,7 @@ def read_dataset(dataset, wordvec_type: WVType, min_len: int) -> List[tuple]:
       label, [token...]
     """
     lines = []
-    for filename in dataset.split(","):
+    for filename in str(dataset).split(","):
         with open(filename, encoding="utf-8") as fin:
             new_lines = json.load(fin)
         new_lines = [(str(x['sentiment']), x['text']) for x in new_lines]
