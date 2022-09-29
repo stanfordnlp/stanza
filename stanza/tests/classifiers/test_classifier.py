@@ -9,16 +9,14 @@ import stanza.models.classifier as classifier
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
-from stanza.models.classifiers.utils import WVType
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.vocab import PAD, UNK
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 SENTENCES = [
     ["I", "hate", "the", "Opal", "banning"],
-    ["Tell", "my", "wife", "hello"],
+    ["Tell", "my", "wife", "hello"], # obviously this is the neutral result
     ["I", "like", "Sh'reyan", "'s", "antennae"],
 ]
 
@@ -30,31 +28,31 @@ DATASET = [
 
 EMB_DIM = 5
 
+@pytest.fixture(scope="module")
+def train_file(tmp_path_factory):
+    train_set = DATASET * 20
+    train_filename = tmp_path_factory.mktemp("data") / "train.json"
+    with open(train_filename, "w", encoding="utf-8") as fout:
+        json.dump(train_set, fout, ensure_ascii=False)
+    return train_filename
+
+@pytest.fixture(scope="module")
+def dev_file(tmp_path_factory):
+    dev_set = DATASET * 2
+    dev_filename = tmp_path_factory.mktemp("data") / "dev.json"
+    with open(dev_filename, "w", encoding="utf-8") as fout:
+        json.dump(dev_set, fout, ensure_ascii=False)
+    return dev_filename
+
+@pytest.fixture(scope="module")
+def test_file(tmp_path_factory):
+    test_set = DATASET
+    test_filename = tmp_path_factory.mktemp("data") / "test.json"
+    with open(test_filename, "w", encoding="utf-8") as fout:
+        json.dump(test_set, fout, ensure_ascii=False)
+    return test_filename
+
 class TestClassifier:
-    @pytest.fixture(scope="class")
-    def train_file(self, tmp_path_factory):
-        train_set = DATASET * 20
-        train_filename = tmp_path_factory.mktemp("data") / "train.json"
-        with open(train_filename, "w", encoding="utf-8") as fout:
-            json.dump(train_set, fout, ensure_ascii=False)
-        return train_filename
-
-    @pytest.fixture(scope="class")
-    def dev_file(self, tmp_path_factory):
-        dev_set = DATASET * 2
-        dev_filename = tmp_path_factory.mktemp("data") / "dev.json"
-        with open(dev_filename, "w", encoding="utf-8") as fout:
-            json.dump(dev_set, fout, ensure_ascii=False)
-        return dev_filename
-
-    @pytest.fixture(scope="class")
-    def test_file(self, tmp_path_factory):
-        test_set = DATASET
-        test_filename = tmp_path_factory.mktemp("data") / "test.json"
-        with open(test_filename, "w", encoding="utf-8") as fout:
-            json.dump(test_set, fout, ensure_ascii=False)
-        return test_filename
-
     @pytest.fixture(scope="class")
     def fake_embeddings(self, tmp_path_factory):
         # could set np random seed here
@@ -75,30 +73,6 @@ class TestClassifier:
         pt.load()
         assert os.path.exists(embedding_pt)
         return embedding_pt
-
-    def test_read_data(self, train_file):
-        """
-        Test reading of the json format
-        """
-        train_set = data.read_dataset(str(train_file), WVType.OTHER, 1)
-        assert len(train_set) == 60
-
-    def test_dataset_vocab(self, train_file):
-        """
-        Converting a dataset to vocab should have a specific set of words along with PAD and UNK
-        """
-        train_set = data.read_dataset(str(train_file), WVType.OTHER, 1)
-        vocab = data.dataset_vocab(train_set)
-        expected = set([PAD, UNK] + [x.lower() for y in SENTENCES for x in y])
-        assert set(vocab) == expected
-
-    def test_dataset_labels(self, train_file):
-        """
-        Test the extraction of labels from a dataset
-        """
-        train_set = data.read_dataset(str(train_file), WVType.OTHER, 1)
-        labels = data.dataset_labels(train_set)
-        assert labels == ["0", "1", "2"]
 
     def build_model(self, tmp_path, fake_embeddings, train_file, dev_file, extra_args=None):
         """
