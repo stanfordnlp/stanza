@@ -92,7 +92,8 @@ def dataset_vocab(dataset):
 def sort_dataset_by_len(dataset):
     """
     returns a dict mapping length -> list of items of that length
-    an OrderedDict is used to that the mapping is sorted from smallest to largest
+
+    an OrderedDict is used so that the mapping is sorted from smallest to largest
     """
     sorted_dataset = collections.OrderedDict()
     lengths = sorted(list(set(len(x[1]) for x in dataset)))
