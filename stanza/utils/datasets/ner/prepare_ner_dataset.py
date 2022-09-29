@@ -323,8 +323,11 @@ SiNER is a Sindhi NER dataset
     fixes a few tag errors, but the code should compensate for
     that regardless
   - Clone the repo to $NERBASE/sindhi
-  - python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
-
+    mkdir $NERBASE/sindhi
+    cd $NERBASE/sindhi
+    git clone git@github.com:AliWazir/SiNER-dataset.git
+  - Then, prepare the dataset with this script:
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
 
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
