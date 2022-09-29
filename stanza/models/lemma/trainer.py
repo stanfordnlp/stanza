@@ -19,12 +19,9 @@ from stanza.models.lemma.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:6]]
-    else:
-        inputs = [b if b is not None else None for b in batch[:6]]
+    inputs = [b.to(device) if b is not None else None for b in batch[:6]]
     orig_idx = batch[6]
     return inputs, orig_idx
 
@@ -59,7 +56,8 @@ class Trainer(object):
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out, pos, edits = inputs
 
         if eval:
@@ -84,7 +82,8 @@ class Trainer(object):
         return loss_val
 
     def predict(self, batch, beam_size=1):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask, pos, edits = inputs
 
         self.model.eval()
