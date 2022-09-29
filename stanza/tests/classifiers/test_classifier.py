@@ -1,4 +1,3 @@
-import json
 import os
 
 import pytest
@@ -11,45 +10,11 @@ from stanza.models.classifiers.trainer import Trainer
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 
+from stanza.tests.classifiers.test_data import train_file, dev_file, test_file, DATASET, SENTENCES
+
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
-SENTENCES = [
-    ["I", "hate", "the", "Opal", "banning"],
-    ["Tell", "my", "wife", "hello"], # obviously this is the neutral result
-    ["I", "like", "Sh'reyan", "'s", "antennae"],
-]
-
-DATASET = [
-    {"sentiment": "0", "text": SENTENCES[0]},
-    {"sentiment": "1", "text": SENTENCES[1]},
-    {"sentiment": "2", "text": SENTENCES[2]},
-]
-
 EMB_DIM = 5
-
-@pytest.fixture(scope="module")
-def train_file(tmp_path_factory):
-    train_set = DATASET * 20
-    train_filename = tmp_path_factory.mktemp("data") / "train.json"
-    with open(train_filename, "w", encoding="utf-8") as fout:
-        json.dump(train_set, fout, ensure_ascii=False)
-    return train_filename
-
-@pytest.fixture(scope="module")
-def dev_file(tmp_path_factory):
-    dev_set = DATASET * 2
-    dev_filename = tmp_path_factory.mktemp("data") / "dev.json"
-    with open(dev_filename, "w", encoding="utf-8") as fout:
-        json.dump(dev_set, fout, ensure_ascii=False)
-    return dev_filename
-
-@pytest.fixture(scope="module")
-def test_file(tmp_path_factory):
-    test_set = DATASET
-    test_filename = tmp_path_factory.mktemp("data") / "test.json"
-    with open(test_filename, "w", encoding="utf-8") as fout:
-        json.dump(test_set, fout, ensure_ascii=False)
-    return test_filename
 
 @pytest.fixture(scope="module")
 def fake_embeddings(tmp_path_factory):

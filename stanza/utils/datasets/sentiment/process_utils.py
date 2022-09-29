@@ -21,7 +21,7 @@ def write_list(out_filename, dataset):
 
     Expected: list(SentimentDatum)
     """
-    formatted_dataset = [{'sentiment': line.sentiment, 'text': line.text} for line in dataset]
+    formatted_dataset = [line._asdict() for line in dataset]
     # Rather than write the dataset at once, we write one line at a time
     # Using `indent` puts each word on a separate line, which is rather noisy,
     # but not formatting at all makes one long line out of an entire dataset,
