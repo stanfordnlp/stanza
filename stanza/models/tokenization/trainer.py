@@ -41,10 +41,10 @@ class Trainer(BaseTrainer):
         self.model.train()
         units, labels, features, _ = inputs
 
-        if self.use_cuda:
-            units = units.cuda()
-            labels = labels.cuda()
-            features = features.cuda()
+        device = next(self.model.parameters()).device
+        units = units.to(device)
+        labels = labels.to(device)
+        features = features.to(device)
 
         pred = self.model(units, features)
 
@@ -62,9 +62,9 @@ class Trainer(BaseTrainer):
         self.model.eval()
         units, _, features, _ = inputs
 
-        if self.use_cuda:
-            units = units.cuda()
-            features = features.cuda()
+        device = next(self.model.parameters()).device
+        units = units.to(device)
+        features = features.to(device)
 
         pred = self.model(units, features)
 

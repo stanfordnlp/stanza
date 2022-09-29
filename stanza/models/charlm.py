@@ -29,13 +29,14 @@ def repackage_hidden(h):
     else:
         return tuple(repackage_hidden(v) for v in h)
 
-def batchify(data, bsz):
+def batchify(data, bsz, device):
     # Work out how cleanly we can divide the dataset into bsz parts.
     nbatch = data.size(0) // bsz
     # Trim off any extra elements that wouldn't cleanly fit (remainders).
     data = data.narrow(0, 0, nbatch * bsz)
     # Evenly divide the data across the bsz batches.
     data = data.view(bsz, -1) # batch_first is True
+    data = data.to(device)
     return data
 
 def get_batch(source, i, seq_len):
@@ -136,20 +137,18 @@ def evaluate_epoch(args, vocab, data, model, criterion):
     Run an evaluation over entire dataset.
     """
     model.eval()
+    device = next(model.parameters()).device
     hidden = None
     total_loss = 0
     if isinstance(data, GeneratorType):
         data = list(data)
         assert len(data) == 1, 'Only support single dev/test file'
         data = data[0]
-    batches = batchify(data, args['batch_size'])
+    batches = batchify(data, args['batch_size'], device)
     with torch.no_grad():
         for i in range(0, batches.size(1) - 1, args['bptt_size']):
             data, target = get_batch(batches, i, args['bptt_size'])
             lens = [data.size(1) for i in range(data.size(0))]
-            if args['cuda']:
-                data = data.cuda()
-                target = target.cuda()
 
             output, hidden, decoded = model.forward(data, lens, hidden)
             loss = criterion(decoded.view(-1, len(vocab['char'])), target)
@@ -245,6 +244,8 @@ def train(args):
         wandb.run.define_metric('best_loss', summary='min')
         wandb.run.define_metric('ppl', summary='min')
 
+    device = next(trainer.model.parameters()).device
+
     best_loss = None
     start_epoch = trainer.epoch  # will default to 1 for a new trainer
     for trainer.epoch in range(start_epoch, args['epochs']+1):
@@ -258,7 +259,7 @@ def train(args):
 
         # run over entire training set
         for data_chunk in train_data:
-            batches = batchify(data_chunk, args['batch_size'])
+            batches = batchify(data_chunk, args['batch_size'], device)
             hidden = None
             total_loss = 0.0
             total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
@@ -275,9 +276,6 @@ def train(args):
                 seq_len = min(seq_len, int(args['bptt_size'] * 1.2))
                 data, target = get_batch(batches, i, seq_len)
                 lens = [data.size(1) for i in range(data.size(0))]
-                if args['cuda']:
-                    data = data.cuda()
-                    target = target.cuda()
                 
                 trainer.optimizer.zero_grad()
                 output, hidden, decoded = trainer.model.forward(data, lens, hidden)
