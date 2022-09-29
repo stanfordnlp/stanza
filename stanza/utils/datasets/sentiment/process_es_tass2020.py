@@ -27,8 +27,9 @@ import zipfile
 
 import stanza
 
+from stanza.models.classifiers.data import SentimentDatum
 import stanza.utils.default_paths as default_paths
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum, write_dataset, write_list
+from stanza.utils.datasets.sentiment.process_utils import write_dataset, write_list
 
 def convert_label(label):
     """

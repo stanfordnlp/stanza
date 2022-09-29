@@ -21,7 +21,7 @@ import sys
 
 import stanza
 
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
+from stanza.models.classifiers.data import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def get_scare_snippets(nlp, csv_dir_path, text_id_map, filename_pattern="*.csv"):

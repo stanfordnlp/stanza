@@ -9,8 +9,8 @@ from collections import namedtuple
 from tqdm import tqdm
 
 import stanza
+from stanza.models.classifiers.data import SentimentDatum
 
-SentimentDatum = namedtuple('SentimentDatum', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
 SHARDS = ("train", "dev", "test")
