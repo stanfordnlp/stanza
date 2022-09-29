@@ -7,10 +7,10 @@ import pytest
 
 import stanza
 
-import stanza.models.classifiers.data as data
+from stanza.models.classifiers import data
+from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import WVType
 from stanza.utils.datasets.sentiment import process_utils
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
 
 from stanza.tests import TEST_MODELS_DIR
 from stanza.tests.classifiers.test_classifier import train_file, dev_file, test_file
@@ -19,14 +19,11 @@ from stanza.tests.classifiers.test_classifier import train_file, dev_file, test_
 def test_write_list(tmp_path, train_file):
     """
     Test that writing a single list of items to an output file works
-
-    TODO: when read_dataset reads SentimentDatum, no need to create these objects
     """
     train_set = data.read_dataset(train_file, WVType.OTHER, 1)
 
-    dataset = [SentimentDatum(*x) for x in train_set]
     dataset_file = tmp_path / "foo.json"
-    process_utils.write_list(dataset_file, dataset)
+    process_utils.write_list(dataset_file, train_set)
 
     train_copy = data.read_dataset(dataset_file, WVType.OTHER, 1)
     assert train_copy == train_set
@@ -34,10 +31,8 @@ def test_write_list(tmp_path, train_file):
 def test_write_dataset(tmp_path, train_file, dev_file, test_file):
     """
     Test that writing all three parts of a dataset works
-
-    TODO: when read_dataset reads SentimentDatum, no need to create these objects
     """
-    dataset = [[SentimentDatum(*x) for x in data.read_dataset(filename, WVType.OTHER, 1)] for filename in (train_file, dev_file, test_file)]
+    dataset = [data.read_dataset(filename, WVType.OTHER, 1) for filename in (train_file, dev_file, test_file)]
     process_utils.write_dataset(dataset, tmp_path, "en_test")
 
     expected_files = ['en_test.train.json', 'en_test.dev.json', 'en_test.test.json']

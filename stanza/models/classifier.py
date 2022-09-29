@@ -307,8 +307,8 @@ def confusion_dataset(model, dataset):
 
     for length in dataset_lengths.keys():
         batch = dataset_lengths[length]
-        text = [x[1] for x in batch]
-        expected_labels = [x[0] for x in batch]
+        text = [x.text for x in batch]
+        expected_labels = [x.sentiment for x in batch]
 
         output = model(text)
         for i in range(len(expected_labels)):
@@ -341,8 +341,8 @@ def score_dataset(model, dataset, label_map=None,
     for length in dataset_lengths.keys():
         # TODO: possibly break this up into smaller batches
         batch = dataset_lengths[length]
-        text = [x[1] for x in batch]
-        expected_labels = [label_map[x[0]] for x in batch]
+        text = [x.text for x in batch]
+        expected_labels = [label_map[x.sentiment] for x in batch]
 
         output = model(text)
 
@@ -464,8 +464,8 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
             logger.debug("Starting batch: %d step %d", start_batch, trainer.global_step)
 
             batch = shuffled[start_batch:start_batch+args.batch_size]
-            text = [x[1] for x in batch]
-            label = torch.stack([label_tensors[x[0]] for x in batch])
+            text = [x.text for x in batch]
+            label = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
             optimizer.zero_grad()
