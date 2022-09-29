@@ -13,7 +13,7 @@ from stanza.models.classifiers.utils import WVType
 from stanza.utils.datasets.sentiment import process_utils
 
 from stanza.tests import TEST_MODELS_DIR
-from stanza.tests.classifiers.test_classifier import train_file, dev_file, test_file
+from stanza.tests.classifiers.test_data import train_file, dev_file, test_file
 
 
 def test_write_list(tmp_path, train_file):

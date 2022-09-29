@@ -10,10 +10,28 @@ from typing import List
 
 from stanza.models.classifiers.utils import WVType
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
+import stanza.models.constituency.tree_reader as tree_reader
 
 logger = logging.getLogger('stanza')
 
-SentimentDatum = namedtuple('SentimentDatum', ['sentiment', 'text'])
+class SentimentDatum:
+    def __init__(self, sentiment, text, constituency=None):
+        self.sentiment = sentiment
+        self.text = text
+        self.constituency = constituency
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, SentimentDatum):
+            return False
+        return self.sentiment == other.sentiment and self.text == other.text and self.constituency == other.constituency
+
+    def _asdict(self):
+        if self.constituency is None:
+            return {'sentiment': self.sentiment, 'text': self.text}
+        else:
+            return {'sentiment': self.sentiment, 'text': self.text, 'constituency': str(self.constituency)}
 
 def update_text(sentence: List[str], wordvec_type: WVType) -> List[str]:
     """
@@ -57,12 +75,12 @@ def read_dataset(dataset, wordvec_type: WVType, min_len: int) -> List[SentimentD
     for filename in str(dataset).split(","):
         with open(filename, encoding="utf-8") as fin:
             new_lines = json.load(fin)
-        new_lines = [(str(x['sentiment']), x['text']) for x in new_lines]
+        new_lines = [(str(x['sentiment']), x['text'], x.get('constituency', None)) for x in new_lines]
         lines.extend(new_lines)
     # TODO: maybe do this processing later, once the model is built.
     # then move the processing into the model so we can use
     # overloading to potentially make future model types
-    lines = [SentimentDatum(x[0], update_text(x[1], wordvec_type)) for x in lines]
+    lines = [SentimentDatum(x[0], update_text(x[1], wordvec_type), tree_reader.read_trees(x[2])[0] if x[2] else None) for x in lines]
     if min_len:
         lines = [x for x in lines if len(x.text) >= min_len]
     return lines
