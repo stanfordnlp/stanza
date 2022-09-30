@@ -244,13 +244,14 @@ def update_pred_regex(raw, pred):
 SPACE_RE = re.compile(r'\s')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0):
-    batch_size = trainer.args['batch_size']
+def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, num_workers):
+    """
+    The guts of the prediction method
 
+    Calls trainer.predict() over and over until we have predictions for all of the text
+    """
     all_preds = []
     all_raw = []
-
-    max_seqlen = max(1000, max_seqlen)
 
     sorted_data = SortedDataset(data_generator)
     dataloader = TorchDataLoader(sorted_data, batch_size=batch_size, collate_fn=sorted_data.collate, num_workers=num_workers)
@@ -310,8 +311,16 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
             else:
                 all_preds.append(pred[par_idx][:par_len])
 
-    all_raw = sorted_data.unsort(all_raw)
     all_preds = sorted_data.unsort(all_preds)
+    all_raw = sorted_data.unsort(all_raw)
+
+    return all_preds, all_raw
+
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0):
+    batch_size = trainer.args['batch_size']
+    max_seqlen = max(1000, max_seqlen)
+
+    all_preds, all_raw = predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, num_workers)
 
     use_la_ittb_shorthand = trainer.args['shorthand'] == 'la_ittb'
     skip_newline = trainer.args['skip_newline']
