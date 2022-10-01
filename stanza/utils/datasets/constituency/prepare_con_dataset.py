@@ -124,9 +124,7 @@ def process_it_turin(paths):
 def process_it_vit(paths):
     # needs at least UD 2.11 or this will not work
     # in the meantime, the git version of VIT will suffice
-    ud_dir = os.path.join(paths["UDBASE_GIT"], "UD_Italian-VIT")
-    output_dir = paths["CONSTITUENCY_DATA_DIR"]
-    convert_it_vit(paths["CONSTITUENCY_BASE"], ud_dir, output_dir, "it_vit")
+    convert_it_vit(paths, "it_vit")
 
 def process_vlsp09(paths):
     """

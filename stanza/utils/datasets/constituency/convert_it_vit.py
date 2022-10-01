@@ -590,7 +590,7 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
         trees.append(updated_tree)
     return trees
 
-def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence=None):
+def convert_it_vit(paths, dataset_name, debug_sentence=None):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
     # this is the April 2022 version
@@ -598,6 +598,13 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
     # the most recent update from ELRA may look like this?
     # it's what we got, at least
     # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+
+    # needs at least UD 2.11 or this will not work
+    # in the meantime, the git version of VIT will suffice
+    con_directory = paths["CONSTITUENCY_BASE"]
+    ud_directory = os.path.join(paths["UDBASE_GIT"], "UD_Italian-VIT")
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
+
     con_filename = os.path.join(con_directory, "italian", "it_vit", "VITwritten", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
@@ -661,15 +668,11 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
 
 def main():
     paths = default_paths.get_default_paths()
-    con_directory = paths["CONSTITUENCY_BASE"]
-    ud_directory  = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
-
-    output_directory = paths["CONSTITUENCY_DATA_DIR"]
     dataset_name = "it_vit"
 
     debug_sentence = sys.argv[1] if len(sys.argv) > 1 else None
 
-    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence)
+    convert_it_vit(paths, dataset_name, debug_sentence)
 
 if __name__ == '__main__':
     main()
