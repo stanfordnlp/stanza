@@ -65,6 +65,11 @@ Unzip the contents into a folder
 $CONSTITUENCY_BASE/italian/it_vit
 so there should be a file
 $CONSTITUENCY_BASE/italian/it_vit/VITwritten/VITconstsyntNumb
+
+There are a few other updates needed to improve the annotations,
+but all the nagging seemed to give Prof. Delmonte a headache,
+so at this point we include those fixes in this script instead.
+See the first few tsurgeon operations in update_mwts_and_special_cases
 """
 
 from collections import defaultdict, deque
