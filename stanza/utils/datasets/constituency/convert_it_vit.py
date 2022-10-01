@@ -647,7 +647,9 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
     train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train", debug_sentence)
     dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev",   debug_sentence)
     test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test",  debug_sentence)
-    print("Trees: {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
+    print("Remaining total trees: %d" % (len(train_ids) + len(dev_ids) + len(test_ids)))
+    print("  {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
+    print("Updating trees with MWT and newer tokens from UD...")
 
     # the moveprune feature requires a new corenlp release after 4.4.0
     with tsurgeon.Tsurgeon(classpath="$CLASSPATH") as tsurgeon_processor:
