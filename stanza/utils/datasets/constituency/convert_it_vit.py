@@ -72,7 +72,7 @@ so at this point we include those fixes in this script instead.
 See the first few tsurgeon operations in update_mwts_and_special_cases
 """
 
-from collections import defaultdict, deque
+from collections import defaultdict, deque, namedtuple
 import itertools
 import os
 import re
@@ -119,6 +119,8 @@ CLOSE = "]"
 DATE_RE = re.compile("^([0-9]{1,2})[_]([0-9]{2})$")
 PERCENT_RE = re.compile(r"^([0-9]{1,2})[_]([0-9]{1,2}[%])$")
 DECIMAL_RE = re.compile(r"^([0-9])[_]([0-9])$")
+
+ProcessedTree = namedtuple('ProcessedTree', ['con_id', 'dep_id', 'tree'])
 
 def raw_tree(text):
     """
@@ -587,10 +589,10 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
         dep_sentence = dep_sentence_map[dep_id]
         updated_tree = update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_processor)
 
-        trees.append(updated_tree)
+        trees.append(ProcessedTree(con_id, dep_id, updated_tree))
     return trees
 
-def convert_it_vit(paths, dataset_name, debug_sentence=None):
+def read_updated_trees(paths, debug_sentence=None):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
     # this is the April 2022 version
@@ -602,7 +604,6 @@ def convert_it_vit(paths, dataset_name, debug_sentence=None):
     # needs at least UD 2.11 or this will not work
     con_directory = paths["CONSTITUENCY_BASE"]
     ud_directory = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
-    output_directory = paths["CONSTITUENCY_DATA_DIR"]
 
     con_filename = os.path.join(con_directory, "italian", "it_vit", "VITwritten", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
@@ -663,6 +664,19 @@ def convert_it_vit(paths, dataset_name, debug_sentence=None):
         dev_trees   = extract_updated_dataset(con_tree_map, ud_vit_dev_map,   dev_ids,   mwt_map, tsurgeon_processor)
         test_trees  = extract_updated_dataset(con_tree_map, ud_vit_test_map,  test_ids,  mwt_map, tsurgeon_processor)
 
+    return train_trees, dev_trees, test_trees
+
+def convert_it_vit(paths, dataset_name, debug_sentence=None):
+    """
+    Read the trees, then write them out to the expected output_directory
+    """
+    train_trees, dev_trees, test_trees = read_updated_trees(paths, debug_sentence)
+
+    train_trees = [x.tree for x in train_trees]
+    dev_trees   = [x.tree for x in dev_trees]
+    test_trees  = [x.tree for x in test_trees]
+
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
     write_dataset([train_trees, dev_trees, test_trees], output_directory, dataset_name)
 
 def main():
