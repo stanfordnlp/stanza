@@ -32,7 +32,7 @@ ALTERNATE_DATASET = {
 def run_dataset(mode, paths, treebank, short_name,
                 temp_output_file, command_args, extra_args):
     sentiment_dir = paths["SENTIMENT_DATA_DIR"]
-    language, dataset = short_name.split("_")
+    language, dataset = short_name.split("_", 1)
 
     train_file = os.path.join(sentiment_dir, f"{short_name}.train.json")
 
