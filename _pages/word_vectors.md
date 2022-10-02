@@ -44,12 +44,10 @@ This is in addition to specifying the path for the model you have retrained.  Th
 pipe = stanza.Pipeline(lang="en", processors="tokenize,pos", pos_pretrain_path="new_en_wv.pt", pos_model_path="new_pos_model.pt")
 ```
 
-Currently the NER model includes the word vectors in the finished model, so no such argument is necessary, although that may change in the future.
-
-{% include alerts.html %}
-{{ note }}
-{{ "This will change in v1.4.1 - the NER models will no longer include the word vectors.  Use ner_model_path to specify the word vector path in that case" | markdownify }}
-{{ end }}
+Prior to 1.4.1, the NER models included the word vectors in the models
+themselves, but this was wasteful in terms of disk space and memory.
+As of 1.4.1, the NER models no longer include the word vectors.  Use
+ner_model_path to specify the word vector path if needed.
 
 
 The pretrain embedding file expected by the pipeline is the `.pt` format PyTorch uses to save models.  The module which loads embeddings will convert a text file to a `.pt` file if needed, so you can use the following code snippet to create the `.pt` file:
