@@ -11,8 +11,13 @@ def resplit_mwt(tokens, pipeline, keep_tokens=True):
     tokens: a list of list of string
     pipeline: a Stanza pipeline which contains, at a minimum, tokenize and mwt
 
-    between running the tokenize model and breaking the text into
-    tokens, we can update all_preds to use the original token boundaries
+    keep_tokens: if True, enforce the old token boundaries by modify
+      the results of the tokenize inference.
+      Otherwise, use whatever new boundaries the model comes up with.
+
+    between running the tokenize model and breaking the text into tokens,
+    we can update all_preds to use the original token boundaries
+    (if and only if keep_tokens == True)
     """
     if "tokenize" not in pipeline.processors:
         raise ValueError("Need a Pipeline with a valid tokenize processor")
