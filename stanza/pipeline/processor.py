@@ -131,6 +131,8 @@ class Processor(ABC):
 
     def _check_requirements(self):
         """ Given a list of fulfilled requirements, check if all of this processor's requirements are met or not. """
+        if not self.config.get("check_requirements", True):
+            return
         provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors]+[set([])])
         if self.requires - provided_reqs:
             load_names = [item[0] for item in self.pipeline.load_list]
