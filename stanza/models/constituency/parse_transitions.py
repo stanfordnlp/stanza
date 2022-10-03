@@ -547,12 +547,12 @@ class CloseConstituent(Transition):
     def __hash__(self):
         return hash(93)
 
-def bulk_apply(model, tree_batch, transitions, fail=False):
+def bulk_apply(model, state_batch, transitions, fail=False):
     """
     Apply the given list of Transitions to the given list of States, using the model as a reference
 
     model: SimpleModel, LSTMModel, or any other form of model
-    tree_batch: list of States (legacy name)
+    state_batch: list of States
     transitions: list of transitions, one per state
     fail: throw an exception on a failed transition, as opposed to skipping the tree
     """
@@ -563,7 +563,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
     new_constituents = []
     callbacks = defaultdict(list)
 
-    for idx, (tree, transition) in enumerate(zip(tree_batch, transitions)):
+    for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
         if not transition:
             error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             if fail:
@@ -604,20 +604,20 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
         for idx, constituent in zip(idxs, callback_constituents):
             new_constituents[idx] = constituent
 
-    tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+    state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
 
-    if len(tree_batch) == 0:
-        return tree_batch
+    if len(state_batch) == 0:
+        return state_batch
 
-    new_transitions = model.push_transitions([tree.transitions for tree in tree_batch], transitions)
+    new_transitions = model.push_transitions([tree.transitions for tree in state_batch], transitions)
     new_constituents = model.push_constituents(constituents, new_constituents)
 
-    tree_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
+    state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
                                  word_position=word_position,
                                  transitions=transition_stack,
                                  constituents=constituents)
                   for (state, transition, word_position, transition_stack, constituents)
-                  in zip(tree_batch, transitions, word_positions, new_transitions, new_constituents)]
+                  in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
 
-    return tree_batch
+    return state_batch

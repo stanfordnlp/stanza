@@ -12,6 +12,7 @@ See the `train` method for the code block which starts from
 
 from collections import Counter
 from collections import namedtuple
+from enum import Enum
 import logging
 import random
 import re
@@ -824,36 +825,48 @@ def build_batch_from_trees(batch_size, data_iterator, model):
     """
     Read from the data_iterator batch_size trees and turn them into new parsing states
     """
-    tree_batch = []
+    state_batch = []
     for _ in range(batch_size):
         gold_tree = next(data_iterator, None)
         if gold_tree is None:
             break
-        tree_batch.append(gold_tree)
+        state_batch.append(gold_tree)
 
-    if len(tree_batch) > 0:
-        tree_batch = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
-    return tree_batch
+    if len(state_batch) > 0:
+        state_batch = parse_transitions.initial_state_from_gold_trees(state_batch, model)
+    return state_batch
 
 def build_batch_from_tagged_words(batch_size, data_iterator, model):
     """
     Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
     """
-    tree_batch = []
+    state_batch = []
     for _ in range(batch_size):
         sentence = next(data_iterator, None)
         if sentence is None:
             break
-        tree_batch.append(sentence)
+        state_batch.append(sentence)
 
-    if len(tree_batch) > 0:
-        tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
-    return tree_batch
+    if len(state_batch) > 0:
+        state_batch = parse_transitions.initial_state_from_words(state_batch, model)
+    return state_batch
 
-@torch.no_grad()
-def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True):
+
+class TransitionChoice(Enum):
     """
-    Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
+    How to choose a transition when parsing
+    """
+    # best: the model's predictions are used
+    BEST          = 1
+    # weighted: the model will choose from the possible predictions
+    # with a weighted choice.  goal being to produce several parses
+    # and somehow choose amongst those parses
+    WEIGHTED      = 2
+
+
+def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST):
+    """
+    Repeat transitions to build a list of trees from the input batches.
 
     The data_iterator should be anything which returns the data for a parse task via next()
     build_batch_fn is a function that turns that data into State objects
@@ -864,31 +877,28 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True)
     currently score is always 1.0, but the interface may be expanded
     to get a score from the result of the parsing
 
-    no_grad() is so that gradients aren't kept, which makes the model
-    run faster and use less memory at inference time
+    transition_choice:
 
-    best: if True, the model's predictions are used
-          if False, the model will choose from the possible predictions
-            with a weighted choice.  goal being to produce several parses
-            and somehow choose amongst those parses
     """
     treebank = []
     treebank_indices = []
-    tree_batch = build_batch_fn(batch_size, data_iterator, model)
-    batch_indices = list(range(len(tree_batch)))
+    state_batch = build_batch_fn(batch_size, data_iterator, model)
+    batch_indices = list(range(len(state_batch)))
     horizon_iterator = iter([])
 
-    if best:
+    if transition_choice is TransitionChoice.BEST:
         predict = model.predict
-    else:
+    elif transition_choice is TransitionChoice.WEIGHTED:
         predict = model.weighted_choice
+    else:
+        raise ValueError("Unknown transition choice {}".format(transition_choice))
 
-    while len(tree_batch) > 0:
-        _, transitions = predict(tree_batch)
-        tree_batch = parse_transitions.bulk_apply(model, tree_batch, transitions)
+    while len(state_batch) > 0:
+        _, transitions = predict(state_batch)
+        state_batch = parse_transitions.bulk_apply(model, state_batch, transitions)
 
         remove = set()
-        for idx, tree in enumerate(tree_batch):
+        for idx, tree in enumerate(state_batch):
             if tree.finished(model):
                 predicted_tree = tree.get_tree(model)
                 gold_tree = tree.gold_tree
@@ -898,10 +908,10 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True)
                 remove.add(idx)
 
         if len(remove) > 0:
-            tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+            state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
             batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
 
-        for _ in range(batch_size - len(tree_batch)):
+        for _ in range(batch_size - len(state_batch)):
             horizon_tree = next(horizon_iterator, None)
             if not horizon_tree:
                 horizon_batch = build_batch_fn(batch_size, data_iterator, model)
@@ -910,11 +920,21 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True)
                 horizon_iterator = iter(horizon_batch)
                 horizon_tree = next(horizon_iterator, None)
 
-            tree_batch.append(horizon_tree)
-            batch_indices.append(len(treebank) + len(tree_batch))
+            state_batch.append(horizon_tree)
+            batch_indices.append(len(treebank) + len(state_batch))
 
     treebank = utils.unsort(treebank, treebank_indices)
     return treebank
+
+def parse_sentences_no_grad(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST):
+    """
+    Given an iterator over the data and a method for building batches, returns a list of parse trees.
+
+    no_grad() is so that gradients aren't kept, which makes the model
+    run faster and use less memory at inference time
+    """
+    with torch.no_grad():
+        return parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice)
 
 def parse_tagged_words(model, words, batch_size):
     """
@@ -929,7 +949,7 @@ def parse_tagged_words(model, words, batch_size):
     model.eval()
 
     sentence_iterator = iter(words)
-    treebank = parse_sentences(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
+    treebank = parse_sentences_no_grad(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
 
     results = [t.predictions[0].tree for t in treebank]
     return results
@@ -944,7 +964,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
     model.eval()
 
     tree_iterator = iter(tqdm(dev_trees))
-    treebank = parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model)
+    treebank = parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model)
     full_results = treebank
 
     if args['num_generate'] > 0:
@@ -952,7 +972,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
-            generated_treebanks.append(parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, best=False))
+            generated_treebanks.append(parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, TransitionChoice.WEIGHTED))
 
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses])
                         for parses in zip(*generated_treebanks)]
