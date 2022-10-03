@@ -866,6 +866,11 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True)
 
     no_grad() is so that gradients aren't kept, which makes the model
     run faster and use less memory at inference time
+
+    best: if True, the model's predictions are used
+          if False, the model will choose from the possible predictions
+            with a weighted choice.  goal being to produce several parses
+            and somehow choose amongst those parses
     """
     treebank = []
     treebank_indices = []
