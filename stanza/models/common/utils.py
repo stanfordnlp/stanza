@@ -163,11 +163,6 @@ def flatten_indices(seq_lens, width):
             flat.append(i * width + j)
     return flat
 
-def set_cuda(var, cuda):
-    if cuda:
-        return var.cuda()
-    return var
-
 def keep_partial_grad(grad, topk):
     """
     Keep only the topk rows of grads.
