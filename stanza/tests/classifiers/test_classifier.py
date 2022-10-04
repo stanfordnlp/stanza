@@ -9,7 +9,7 @@ import stanza.models.classifier as classifier
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
-from stanza.models.classifiers.classifier_args import WVType
+from stanza.models.classifiers.utils import WVType
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.vocab import PAD, UNK

@@ -7,13 +7,13 @@ import random
 import re
 from typing import List
 
-import stanza.models.classifiers.classifier_args as classifier_args
+from stanza.models.classifiers.utils import WVType
 from stanza.models.common.vocab import PAD, PAD_ID, UNK, UNK_ID
 
 logger = logging.getLogger('stanza')
 
 
-def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> List[str]:
+def update_text(sentence: List[str], wordvec_type: WVType) -> List[str]:
     """
     Process a line of text (with tokenization provided as whitespace)
     into a list of strings.
@@ -29,24 +29,24 @@ def update_text(sentence: List[str], wordvec_type: classifier_args.WVType) -> Li
         sentence = ["-"]
     # our current word vectors are all entirely lowercased
     sentence = [word.lower() for word in sentence]
-    if wordvec_type == classifier_args.WVType.WORD2VEC:
+    if wordvec_type == WVType.WORD2VEC:
         return sentence
-    elif wordvec_type == classifier_args.WVType.GOOGLE:
+    elif wordvec_type == WVType.GOOGLE:
         new_sentence = []
         for word in sentence:
             if word != '0' and word != '1':
                 word = re.sub('[0-9]', '#', word)
             new_sentence.append(word)
         return new_sentence
-    elif wordvec_type == classifier_args.WVType.FASTTEXT:
+    elif wordvec_type == WVType.FASTTEXT:
         return sentence
-    elif wordvec_type == classifier_args.WVType.OTHER:
+    elif wordvec_type == WVType.OTHER:
         return sentence
     else:
         raise ValueError("Unknown wordvec_type {}".format(wordvec_type))
 
 
-def read_dataset(dataset, wordvec_type: classifier_args.WVType, min_len: int) -> List[tuple]:
+def read_dataset(dataset, wordvec_type: WVType, min_len: int) -> List[tuple]:
     """
     returns a list where the values of the list are
       label, [token...]

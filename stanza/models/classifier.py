@@ -13,9 +13,9 @@ from stanza.models.common import loss
 from stanza.models.common import utils
 from stanza.models.pos.vocab import CharVocab
 
-from stanza.models.classifiers.classifier_args import WVType, ExtraVectors
-from stanza.models.classifiers.trainer import Trainer
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.trainer import Trainer
+from stanza.models.classifiers.utils import WVType, ExtraVectors
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 

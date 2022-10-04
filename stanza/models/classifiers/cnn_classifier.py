@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.utils import ExtraVectors
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
@@ -123,12 +123,12 @@ class CNNClassifier(nn.Module):
         # replacing NBSP picks up a whole bunch of words for VI
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
 
-        if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is not ExtraVectors.NONE:
             if not extra_vocab:
                 raise ValueError("Should have had extra_vocab set for extra_wordvec_method {}".format(self.config.extra_wordvec_method))
             if not args.extra_wordvec_dim:
                 self.config.extra_wordvec_dim = self.embedding_dim
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            if self.config.extra_wordvec_method is ExtraVectors.SUM:
                 if self.config.extra_wordvec_dim != self.embedding_dim:
                     raise ValueError("extra_wordvec_dim must equal embedding_dim for {}".format(self.config.extra_wordvec_method))
 
@@ -150,11 +150,11 @@ class CNNClassifier(nn.Module):
 
         # Pytorch is "aware" of the existence of the nn.Modules inside
         # an nn.ModuleList in terms of parameters() etc
-        if self.config.extra_wordvec_method is classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is ExtraVectors.NONE:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+        elif self.config.extra_wordvec_method is ExtraVectors.SUM:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+        elif self.config.extra_wordvec_method is ExtraVectors.CONCAT:
             total_embedding_dim = self.embedding_dim + self.config.extra_wordvec_dim
         else:
             raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
@@ -379,9 +379,9 @@ class CNNClassifier(nn.Module):
         if self.extra_vocab:
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
             extra_input_vectors = self.extra_embedding(extra_batch_indices)
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+            if self.config.extra_wordvec_method is ExtraVectors.CONCAT:
                 all_inputs = [input_vectors, extra_input_vectors]
-            elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            elif self.config.extra_wordvec_method is ExtraVectors.SUM:
                 all_inputs = [input_vectors + extra_input_vectors]
             else:
                 raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
