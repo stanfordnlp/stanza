@@ -13,7 +13,7 @@ import os
 
 from collections import Counter
 
-from stanza.models.constituency.tree_reader import read_trees, MixedTreeError
+from stanza.models.constituency.tree_reader import read_trees, MixedTreeError, UnlabeledTreeError
 
 REMAPPING = {
     '(MPD':     '(MDP',
@@ -73,7 +73,7 @@ def unify_label(tree):
     return tree
 
 
-def is_closed_tree(tree):
+def count_paren_parity(tree):
     """
     Checks if the tree is properly closed
     :param tree: tree as a string
@@ -85,7 +85,7 @@ def is_closed_tree(tree):
             count += 1
         elif char == ')':
             count -= 1
-    return count == 0
+    return count
 
 
 def is_valid_line(line):
@@ -106,7 +106,7 @@ def is_valid_line(line):
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
 WEIRD_LABELS = ["WP", "YP", "SNP", "STC", "UPC", "(TP"]
 
-def convert_file(orig_file, new_file):
+def convert_file(orig_file, new_file, verbose=False):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
@@ -120,7 +120,7 @@ def convert_file(orig_file, new_file):
         # does not have a '(' that signifies the presence of constituents
         tree = ""
         reading_tree = False
-        for line in content:
+        for line_idx, line in enumerate(content):
             line = ' '.join(line.split())
             if line == '':
                 continue
@@ -136,11 +136,19 @@ def convert_file(orig_file, new_file):
                     errors["empty"] += 1
                     continue
                 tree += ')\n'
-                if not is_closed_tree(tree):
-                    #print("Rejecting the following tree from {} for being unclosed: |{}|".format(orig_file, tree))
+                parity = count_paren_parity(tree)
+                if parity > 0:
+                    if verbose:
+                        print("Rejecting the following tree from {} line {} for being unclosed: |{}|".format(orig_file, line_idx, tree))
                     tree = ""
                     errors["unclosed"] += 1
                     continue
+                if parity < 0:
+                    if verbose:
+                        print("Rejecting the following tree from {} line {} for having extra parens: {}".format(orig_file, line_idx, tree))
+                        tree = ""
+                        errors["extra_parens"] += 1
+                        continue
                 # TODO: these blocks eliminate 11 trees
                 # maybe those trees can be salvaged?
                 bad_label = False
@@ -160,27 +168,33 @@ def convert_file(orig_file, new_file):
                     reading_tree = False
                     tree = ""
                 except MixedTreeError:
-                    #print("Skipping an illegal tree: {}".format(tree))
-                    errors["illegal"] += 1
+                    if verbose:
+                        print("Skipping a tree with mixed leaves and constituents from {} line {}: {}".format(orig_file, line_idx, tree))
+                    errors["mixed"] += 1
+                except UnlabeledTreeError:
+                    if verbose:
+                        print("Skipping a tree with unlabeled nodes from {} line {}: {}".format(orig_file, line_idx, tree))
+                    errors["unlabeled"] += 1
             else:  # content line
                 if is_valid_line(line) and reading_tree:
                     tree += line
                 elif reading_tree:
                     errors["invalid"] += 1
-                    #print("Invalid tree error in {}: |{}|, rejected because of line |{}|".format(orig_file, tree, line))
+                    if verbose:
+                        print("Invalid tree error in {} line {}: |{}|, rejected because of line |{}|".format(orig_file, line_idx, tree, line))
                     tree = ""
                     reading_tree = False
 
     return errors
 
-def convert_files(file_list, new_dir):
+def convert_files(file_list, new_dir, verbose=False):
     errors = Counter()
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        errors += convert_file(filename, new_file_path)
+        errors += convert_file(filename, new_file_path, verbose)
 
     errors = "\n  ".join(sorted(["%s: %s" % x for x in  errors.items()]))
     print("Found the following error counts:\n  {}".format(errors))
