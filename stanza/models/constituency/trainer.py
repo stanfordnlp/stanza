@@ -898,29 +898,29 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition
         state_batch = parse_transitions.bulk_apply(model, state_batch, transitions)
 
         remove = set()
-        for idx, tree in enumerate(state_batch):
-            if tree.finished(model):
-                predicted_tree = tree.get_tree(model)
-                gold_tree = tree.gold_tree
+        for idx, state in enumerate(state_batch):
+            if state.finished(model):
+                predicted_tree = state.get_tree(model)
+                gold_tree = state.gold_tree
                 # TODO: put an actual score here?
                 treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)]))
                 treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 
         if len(remove) > 0:
-            state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
+            state_batch = [state for idx, state in enumerate(state_batch) if idx not in remove]
             batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
 
         for _ in range(batch_size - len(state_batch)):
-            horizon_tree = next(horizon_iterator, None)
-            if not horizon_tree:
+            horizon_state = next(horizon_iterator, None)
+            if not horizon_state:
                 horizon_batch = build_batch_fn(batch_size, data_iterator, model)
                 if len(horizon_batch) == 0:
                     break
                 horizon_iterator = iter(horizon_batch)
-                horizon_tree = next(horizon_iterator, None)
+                horizon_state = next(horizon_iterator, None)
 
-            state_batch.append(horizon_tree)
+            state_batch.append(horizon_state)
             batch_indices.append(len(treebank) + len(state_batch))
 
     treebank = utils.unsort(treebank, treebank_indices)
