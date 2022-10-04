@@ -161,7 +161,22 @@ def convert_file(orig_file, new_file, verbose=False):
                     continue
                 try:
                     # test that the tree can be read in properly
-                    read_trees(tree)
+                    processed_trees = read_trees(tree)
+                    if len(processed_trees) > 1:
+                        if verbose:
+                            print("Multiple trees in one xml annotation from {} line {}".format(orig_file, line_idx))
+                        errors["multiple"] += 1
+                        continue
+                    if len(processed_trees) == 0:
+                        if verbose:
+                            print("Empty tree in {} line {}".format(orig_file, line_idx))
+                        errors["empty"] += 1
+                        continue
+                    if not processed_trees[0].all_leaves_are_preterminals():
+                        if verbose:
+                            print("Tree with non-preterminal leaves in {} line {}: {}".format(orig_file, line_idx, tree))
+                        errors["untagged_leaf"] += 1
+                        continue
                     # Unify the labels
                     tree = unify_label(tree)
                     writer.write(tree)
