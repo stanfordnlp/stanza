@@ -480,6 +480,9 @@ def process_dirs(args):
 def process_defaults(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     for lang in resources:
+        if all(k in ("backward_charlm", "forward_charlm", "pretrain") for k in resources[lang].keys()):
+            print(f'Skipping empty resources for language {lang}')
+            continue
         if lang not in default_treebanks: 
             raise AssertionError(f'{lang} not in default treebanks!!!')
         print(f'Preparing default models for language {lang}')
