@@ -280,10 +280,11 @@ class TestTrainer:
                 assert isinstance(tr.optimizer, optim.AdamW)
 
 
-    def test_hooks(self, wordvec_pretrain_file):
+    def test_grad_clip_hooks(self, wordvec_pretrain_file):
         """
         Verify that grad clipping is not saved with the model, but is attached at training time
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             args = ['--grad_clipping', '25']
             self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
