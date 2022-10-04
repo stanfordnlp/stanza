@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.data as data
-from stanza.models.classifiers.utils import ExtraVectors, ModelType
+from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
@@ -240,13 +240,7 @@ class CNNClassifier(nn.Module):
                 raise ValueError("Expected int or 2d tuple for conv size")
 
         tlogger.debug("Input dim to FC layers: %d", self.fc_input_size)
-        fc_layers = []
-        previous_layer_size = self.fc_input_size
-        for shape in self.config.fc_shapes:
-            fc_layers.append(nn.Linear(previous_layer_size, shape))
-            previous_layer_size = shape
-        fc_layers.append(nn.Linear(previous_layer_size, self.config.num_classes))
-        self.fc_layers = nn.ModuleList(fc_layers)
+        self.fc_layers = build_output_layers(self.fc_input_size, self.config.fc_shapes, self.config.num_classes)
 
         self.dropout = nn.Dropout(self.config.dropout)
 
