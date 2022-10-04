@@ -836,6 +836,18 @@ def build_batch_from_trees(batch_size, data_iterator, model):
         state_batch = parse_transitions.initial_state_from_gold_trees(state_batch, model)
     return state_batch
 
+def build_batch_from_trees_with_gold_sequence(batch_size, data_iterator, model):
+    """
+    Same as build_batch_from_trees, but use the model parameters to turn the trees into gold sequences and include the sequence
+    """
+    state_batch = build_batch_from_trees(batch_size, data_iterator, model)
+    if len(state_batch) == 0:
+        return state_batch
+
+    gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], model.args['transition_scheme'])
+    state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
+    return state_batch
+
 def build_batch_from_tagged_words(batch_size, data_iterator, model):
     """
     Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
@@ -862,7 +874,9 @@ class TransitionChoice(Enum):
     # with a weighted choice.  goal being to produce several parses
     # and somehow choose amongst those parses
     WEIGHTED      = 2
-
+    # gold: follow along with the gold transitions
+    # useful for getting the scores of a model on a specific tree
+    GOLD          = 3
 
 def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST):
     """
@@ -890,6 +904,8 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition
         predict = model.predict
     elif transition_choice is TransitionChoice.WEIGHTED:
         predict = model.weighted_choice
+    elif transition_choice is TransitionChoice.GOLD:
+        predict = lambda x: (None, [y.gold_sequence[y.num_transitions()] for y in x])
     else:
         raise ValueError("Unknown transition choice {}".format(transition_choice))
 
@@ -903,7 +919,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition
                 predicted_tree = state.get_tree(model)
                 gold_tree = state.gold_tree
                 # TODO: put an actual score here?
-                treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)]))
+                treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)], state))
                 treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 
@@ -935,6 +951,22 @@ def parse_sentences_no_grad(data_iterator, build_batch_fn, batch_size, model, tr
     """
     with torch.no_grad():
         return parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice)
+
+def analyze_trees(model, trees, batch_size=None, use_tqdm=True):
+    """
+    Return a ParseResult for each tree in the trees list
+
+    The transitions run will be the transitions represented by the tree
+    The output layers will be available in result.state for each result
+    """
+    if batch_size is None:
+        batch_size = model.args['eval_batch_size']
+    if use_tqdm:
+        tree_iterator = iter(tqdm(trees))
+    else:
+        tree_iterator = iter(trees)
+    treebank = parse_sentences(tree_iterator, build_batch_from_trees_with_gold_sequence, batch_size, model, TransitionChoice.GOLD)
+    return treebank
 
 def parse_tagged_words(model, words, batch_size):
     """
@@ -974,7 +1006,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
             generated_treebanks.append(parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, TransitionChoice.WEIGHTED))
 
-        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses])
+        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None)
                         for parses in zip(*generated_treebanks)]
 
     if len(treebank) < len(dev_trees):

@@ -22,7 +22,7 @@ def build_one_tree_treebank(fake_scores=True):
         prediction = (gold, 1.0)
     else:
         prediction = gold
-    treebank = [(gold, [prediction])]
+    treebank = [(gold, [prediction], None)]
     return treebank
 
 def check_build(fake_scores=True):
