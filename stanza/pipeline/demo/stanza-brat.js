@@ -1088,7 +1088,7 @@ $(document).ready(function() {
           // Re-render divs
           function createAnnotationDiv(id, annotator, selector, label) {
             // (make sure we requested that element)
-            if (annotators().indexOf(annotator) < 0) {
+            if (annotators().split(",").indexOf(annotator) < 0) {
               return;
             }
             // (make sure the data contains that element)
