@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
@@ -301,6 +302,7 @@ class CNNClassifier(nn.Module):
                     return idx
             return vocab_map.get(word.lower(), UNK_ID)
 
+        inputs = [x.text if isinstance(x, SentimentDatum) else x for x in inputs]
         # we will pad each phrase so either it matches the longest
         # conv or the longest phrase in the input, whichever is longer
         max_phrase_len = max(len(x) for x in inputs)
