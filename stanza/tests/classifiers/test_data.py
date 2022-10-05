@@ -62,6 +62,14 @@ def train_file_with_trees(tmp_path_factory):
         json.dump(train_set, fout, ensure_ascii=False)
     return train_filename
 
+@pytest.fixture(scope="module")
+def dev_file_with_trees(tmp_path_factory):
+    dev_set = DATASET_WITH_TREES * 2
+    dev_filename = tmp_path_factory.mktemp("data") / "dev_trees.json"
+    with open(dev_filename, "w", encoding="utf-8") as fout:
+        json.dump(dev_set, fout, ensure_ascii=False)
+    return dev_filename
+
 class TestClassifierData:
     def test_read_data(self, train_file):
         """

@@ -24,6 +24,7 @@ class ExtraVectors(Enum):
 
 class ModelType(Enum):
     CNN = 1
+    CONSTITUENCY = 2
 
 def build_output_layers(fc_input_size, fc_shapes, num_classes):
     """
