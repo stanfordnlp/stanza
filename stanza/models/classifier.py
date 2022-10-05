@@ -262,6 +262,16 @@ def build_parser():
 
     parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
+    parser.add_argument('--no_constituency_backprop', dest='constituency_backprop', default=True, action='store_false', help="When using a constituency parser, backprop into the parser's weights if True")
+    parser.add_argument('--constituency_model', type=str, default="/home/john/stanza_resources/it/constituency/vit_bert.pt", help="Which constituency model to use.  TODO: make this more user friendly")
+    parser.add_argument('--constituency_batch_norm', default=False, action='store_true', help='Add a LayerNorm between the output of the parser and the classifier layers')
+    parser.add_argument('--constituency_node_attn', default=False, action='store_true', help='True means to make an attn layer out of the tree, with the words as key and nodes as query')
+    parser.add_argument('--no_constituency_node_attn', dest='constituency_node_attn', action='store_false', help='True means to make an attn layer out of the tree, with the words as key and nodes as query')
+    parser.add_argument('--constituency_top_layer', dest='constituency_top_layer', default=False, action='store_true', help='True means use the top (ROOT) layer of the constituents.  Otherwise, the next layer down (S, usually) will be used')
+    parser.add_argument('--no_constituency_top_layer', dest='constituency_top_layer', action='store_false', help='True means use the top (ROOT) layer of the constituents.  Otherwise, the next layer down (S, usually) will be used')
+    parser.add_argument('--constituency_use_words', default=True, action='store_true', help='Use the start and end word embeddings as inputs to the constituency classifier')
+    parser.add_argument('--no_constituency_use_words', dest='constituency_use_words', default=True, action='store_false', help='Use the start and end word embeddings as inputs to the constituency classifier')
+
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')

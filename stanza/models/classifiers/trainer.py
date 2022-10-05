@@ -11,9 +11,11 @@ import torch.optim as optim
 
 import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+import stanza.models.classifiers.constituency_classifier as constituency_classifier
 from stanza.models.classifiers.utils import ModelType
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.constituency.tree_embedding import TreeEmbedding
 
 logger = logging.getLogger('stanza')
 
@@ -87,14 +89,14 @@ class Trainer:
             model_params = checkpoint['params']
         model_type = model_params['config'].model_type
 
-        pretrain = Trainer.load_pretrain(args, foundation_cache)
-        elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-        charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
-        charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
-
-        bert_model = model_params['config'].bert_model
-        bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
         if model_type == ModelType.CNN:
+            pretrain = Trainer.load_pretrain(args, foundation_cache)
+            elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
+            charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
+            charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
+
+            bert_model = model_params['config'].bert_model
+            bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=model_params['extra_vocab'],
                                                  labels=model_params['labels'],
@@ -104,6 +106,16 @@ class Trainer:
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
                                                  args=model_params['config'])
+        elif model_type == ModelType.CONSTITUENCY:
+            pretrain_args = {
+                'wordvec_pretrain_file': args.wordvec_pretrain_file,
+                'charlm_forward_file': args.charlm_forward_file,
+                'charlm_backward_file': args.charlm_backward_file,
+            }
+            tree_embedding = TreeEmbedding.model_from_params(model_params['tree_embedding'], pretrain_args, foundation_cache)
+            model = constituency_classifier.ConstituencyClassifier(tree_embedding=tree_embedding,
+                                                                   labels=model_params['labels'],
+                                                                   args=model_params['config'])
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(model_params['model'], strict=False)
@@ -159,26 +171,42 @@ class Trainer:
         if train_set is None:
             raise ValueError("Must have a train set to build a new model - needed for labels and delta word vectors")
 
-        pretrain = Trainer.load_pretrain(args, foundation_cache=None)
-        elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-        charmodel_forward = load_charlm(args.charlm_forward_file)
-        charmodel_backward = load_charlm(args.charlm_backward_file)
-
         labels = data.dataset_labels(train_set)
-        extra_vocab = data.dataset_vocab(train_set)
 
-        bert_model, bert_tokenizer = load_bert(args.bert_model)
+        if args.model_type == ModelType.CNN:
+            pretrain = Trainer.load_pretrain(args, foundation_cache=None)
+            elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
+            charmodel_forward = load_charlm(args.charlm_forward_file)
+            charmodel_backward = load_charlm(args.charlm_backward_file)
+            bert_model, bert_tokenizer = load_bert(args.bert_model)
 
-        model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                             extra_vocab=extra_vocab,
-                                             labels=labels,
-                                             charmodel_forward=charmodel_forward,
-                                             charmodel_backward=charmodel_backward,
-                                             elmo_model=elmo_model,
-                                             bert_model=bert_model,
-                                             bert_tokenizer=bert_tokenizer,
-                                             args=args)
-        model = model.to(args.device)
+            extra_vocab = data.dataset_vocab(train_set)
+            model = cnn_classifier.CNNClassifier(pretrain=pretrain,
+                                                 extra_vocab=extra_vocab,
+                                                 labels=labels,
+                                                 charmodel_forward=charmodel_forward,
+                                                 charmodel_backward=charmodel_backward,
+                                                 elmo_model=elmo_model,
+                                                 bert_model=bert_model,
+                                                 bert_tokenizer=bert_tokenizer,
+                                                 args=args)
+            model = model.to(args.device)
+        elif args.model_type == ModelType.CONSTITUENCY:
+            parser_args = { x[len("constituency_"):]: y for x, y in vars(args).items() if x.startswith("constituency_") }
+            parser_args.update({
+                "wordvec_pretrain_file": args.wordvec_pretrain_file,
+                "charlm_forward_file": args.charlm_forward_file,
+                "charlm_backward_file": args.charlm_backward_file,
+                "bert_model": args.bert_model,
+            })
+            logger.info("Building constituency classifier using %s as the base model" % args.constituency_model)
+            tree_embedding = TreeEmbedding.from_parser_file(parser_args)
+            model = constituency_classifier.ConstituencyClassifier(tree_embedding=tree_embedding,
+                                                                   labels=labels,
+                                                                   args=args)
+            model = model.to(args.device)
+        else:
+            raise ValueError("Unhandled model type {}".format(args.model_type))
 
         optimizer = Trainer.build_optimizer(model, args)
 
