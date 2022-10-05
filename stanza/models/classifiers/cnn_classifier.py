@@ -254,6 +254,13 @@ class CNNClassifier(nn.Module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+                lines.append("%s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
+
     def build_char_reps(self, inputs, max_phrase_len, charlm, projection, begin_paddings, device):
         char_reps = charlm.build_char_representation(inputs)
         if projection is not None:

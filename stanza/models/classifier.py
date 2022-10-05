@@ -256,6 +256,8 @@ def build_parser():
 
     parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
+    parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
+
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 
@@ -457,7 +459,12 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         running_loss = 0.0
         epoch_loss = 0.0
         shuffled = data.shuffle_dataset(train_set_by_len)
+
         model.train()
+        logger.info("Starting epoch %d", trainer.epochs_trained)
+        if args.log_norms:
+            model.log_norms()
+
         random.shuffle(batch_starts)
         for batch_num, start_batch in enumerate(batch_starts):
             trainer.global_step += 1
