@@ -254,6 +254,9 @@ class CNNClassifier(nn.Module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
+    def is_unsaved_module(self, name):
+        return name.split('.')[0] in self.unsaved_modules
+
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         for name, param in self.named_parameters():
@@ -454,6 +457,22 @@ class CNNClassifier(nn.Module):
         # note that we return the raw logits rather than use a softmax
         # https://discuss.pytorch.org/t/multi-class-cross-entropy-loss-and-softmax-in-pytorch/24920/4
         return out
+
+    def get_params(self, skip_modules=True):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if self.is_unsaved_module(k)]
+            for k in skipped:
+                del model_state[k]
+
+        params = {
+            'model':        model_state,
+            'config':       self.config,
+            'labels':       self.labels,
+            'extra_vocab':  self.extra_vocab,
+        }
+        return params
 
 
 def label_text(model, text, batch_size=None):
