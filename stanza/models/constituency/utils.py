@@ -146,8 +146,8 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         learning_eps = args['learning_eps']
         learning_rate = args['learning_rate']
         learning_rho = args['learning_rho']
-        momentum = args['momentum']
-        weight_decay = args['weight_decay']
+        momentum = args['learning_momentum']
+        weight_decay = args['learning_weight_decay']
 
     parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
     if optim_type == 'sgd':
