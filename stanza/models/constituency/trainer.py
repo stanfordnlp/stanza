@@ -79,18 +79,12 @@ class Trainer:
         logger.info("Model saved to %s", filename)
 
     @staticmethod
-    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
+    def model_from_params(params, args, foundation_cache=None):
         """
-        Load back a model and possibly its optimizer.
-        """
-        try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
-        except BaseException:
-            logger.exception("Cannot load model from %s", filename)
-            raise
-        logger.debug("Loaded model from %s", filename)
+        Build a new model just from the saved params and some extra args
 
-        params = checkpoint['params']
+        Refactoring allows other processors to include a constituency parser as a module
+        """
         saved_args = dict(params['config'])
         # some parameters which change the structure of a model have
         # to be ignored, or the model will not function when it is
@@ -127,8 +121,24 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
+        return model
 
-        if saved_args['cuda']:
+    @staticmethod
+    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
+        """
+        Load back a model and possibly its optimizer.
+        """
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            logger.exception("Cannot load model from %s", filename)
+            raise
+        logger.debug("Loaded model from %s", filename)
+
+        params = checkpoint['params']
+        model = Trainer.model_from_params(params, args, foundation_cache)
+
+        if model.args['cuda']:
             model.cuda()
 
         epochs_trained = checkpoint['epochs_trained']
@@ -136,21 +146,21 @@ class Trainer:
         best_epoch = checkpoint['best_epoch']
 
         if load_optimizer:
-            # we use params['config'] here instead of the new args
+            # we use params['config'] here instead of model.args
             # because the args might have a different training
             # mechanism, but in order to reload the optimizer, we need
             # to match the optimizer we build with the one that was
             # used at training time
             build_simple_adadelta = params['config']['multistage'] and epochs_trained < params['config']['epochs'] // 2
             logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", params['config']['multistage'], epochs_trained, params['config']['epochs'], build_simple_adadelta)
-            optimizer = build_optimizer(saved_args, model, build_simple_adadelta)
+            optimizer = build_optimizer(model.args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-            scheduler = build_scheduler(saved_args, optimizer)
+            scheduler = build_scheduler(model.args, optimizer)
             if 'scheduler_state_dict' in checkpoint:
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
