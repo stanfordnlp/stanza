@@ -68,7 +68,6 @@ class Trainer:
         params = self.model.get_params()
         checkpoint = {
             'params': params,
-            'model_type': 'LSTM',
             'epochs_trained': self.epochs_trained,
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
@@ -84,9 +83,6 @@ class Trainer:
         """
         Load back a model and possibly its optimizer.
         """
-        if args is None:
-            args = {}
-
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -94,10 +90,12 @@ class Trainer:
             raise
         logger.debug("Loaded model from %s", filename)
 
-        saved_args = dict(checkpoint['params']['config'])
+        params = checkpoint['params']
+        saved_args = dict(params['config'])
         # some parameters which change the structure of a model have
         # to be ignored, or the model will not function when it is
         # reloaded from disk
+        if args is None: args = {}
         update_args = copy.deepcopy(args)
         update_args.pop("bert_hidden_layers", None)
         update_args.pop("constituent_stack", None)
@@ -106,9 +104,7 @@ class Trainer:
         update_args.pop("transition_stack", None)
         saved_args.update(args)
 
-        params = checkpoint['params']
-
-        model_type = checkpoint['model_type']
+        model_type = params['model_type']
         if model_type == 'LSTM':
             pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
@@ -135,15 +131,18 @@ class Trainer:
         if saved_args['cuda']:
             model.cuda()
 
-        # TODO: can remove these once everything is retrained?
-        epochs_trained = checkpoint.get('epochs_trained', 0)
-        best_f1 = checkpoint.get('best_f1', 0.0)
-        best_epoch = checkpoint.get('best_epoch', 0)
+        epochs_trained = checkpoint['epochs_trained']
+        best_f1 = checkpoint['best_f1']
+        best_epoch = checkpoint['best_epoch']
 
         if load_optimizer:
-            # need to match the optimizer we build with the one that was used at training time
-            build_simple_adadelta = checkpoint['params']['config']['multistage'] and epochs_trained < checkpoint['params']['config']['epochs'] // 2
-            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", checkpoint['params']['config']['multistage'], epochs_trained, checkpoint['params']['config']['epochs'], build_simple_adadelta)
+            # we use params['config'] here instead of the new args
+            # because the args might have a different training
+            # mechanism, but in order to reload the optimizer, we need
+            # to match the optimizer we build with the one that was
+            # used at training time
+            build_simple_adadelta = params['config']['multistage'] and epochs_trained < params['config']['epochs'] // 2
+            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", params['config']['multistage'], epochs_trained, params['config']['epochs'], build_simple_adadelta)
             optimizer = build_optimizer(saved_args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
