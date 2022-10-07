@@ -12,6 +12,7 @@ See the `train` method for the code block which starts from
 
 from collections import Counter
 from collections import namedtuple
+import copy
 from enum import Enum
 import logging
 import random
@@ -47,8 +48,7 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0, best_f1=0.0, best_epoch=0):
-        self.args = args
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, best_f1=0.0, best_epoch=0):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -59,7 +59,7 @@ class Trainer:
         self.best_epoch = best_epoch
 
     def uses_xpos(self):
-        return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
+        return self.model.args['retag_package'] is not None and self.model.args['retag_method'] == 'xpos'
 
     def save(self, filename, save_optimizer=True):
         """
@@ -67,7 +67,6 @@ class Trainer:
         """
         params = self.model.get_params()
         checkpoint = {
-            'args': self.args,
             'params': params,
             'model_type': 'LSTM',
             'epochs_trained': self.epochs_trained,
@@ -95,43 +94,19 @@ class Trainer:
             raise
         logger.debug("Loaded model from %s", filename)
 
-        saved_args = dict(checkpoint['args'])
+        saved_args = dict(checkpoint['params']['config'])
+        # some parameters which change the structure of a model have
+        # to be ignored, or the model will not function when it is
+        # reloaded from disk
+        update_args = copy.deepcopy(args)
+        update_args.pop("bert_hidden_layers", None)
+        update_args.pop("constituent_stack", None)
+        update_args.pop("num_tree_lstm_layers", None)
+        update_args.pop("transition_scheme", None)
+        update_args.pop("transition_stack", None)
         saved_args.update(args)
-        # TODO: remove when all models are updated
-        if 'transition_stack' not in checkpoint['args']:
-            saved_args['transition_stack'] = StackHistory.LSTM
-        if 'constituent_stack' not in checkpoint['args']:
-            saved_args['constituent_stack'] = StackHistory.LSTM
-        if 'num_tree_lstm_layers' not in saved_args:
-            saved_args['num_tree_lstm_layers'] = 1
-        if 'bert_hidden_layers' not in checkpoint['args']:
-            # TODO: no need to do this once the models have bert_hidden_layers in them
-            saved_args['bert_hidden_layers'] = None
 
         params = checkpoint['params']
-
-        # TODO: can remove when all models have been rearranged to use the refactored lstm_stacks
-        if 'transition_start_embedding' in params['model']:
-            params['model']['transition_stack.start_embedding']   = params['model']['transition_start_embedding']
-            params['model']['transition_stack.lstm.weight_ih_l0'] = params['model']['transition_lstm.weight_ih_l0']
-            params['model']['transition_stack.lstm.weight_hh_l0'] = params['model']['transition_lstm.weight_hh_l0']
-            params['model']['transition_stack.lstm.bias_ih_l0']   = params['model']['transition_lstm.bias_ih_l0']
-            params['model']['transition_stack.lstm.bias_hh_l0']   = params['model']['transition_lstm.bias_hh_l0']
-            params['model']['transition_stack.lstm.weight_ih_l1'] = params['model']['transition_lstm.weight_ih_l1']
-            params['model']['transition_stack.lstm.weight_hh_l1'] = params['model']['transition_lstm.weight_hh_l1']
-            params['model']['transition_stack.lstm.bias_ih_l1']   = params['model']['transition_lstm.bias_ih_l1']
-            params['model']['transition_stack.lstm.bias_hh_l1']   = params['model']['transition_lstm.bias_hh_l1']
-
-        if 'constituent_start_embedding' in params['model']:
-            params['model']['constituent_stack.start_embedding']   = params['model']['constituent_start_embedding']
-            params['model']['constituent_stack.lstm.weight_ih_l0'] = params['model']['constituent_lstm.weight_ih_l0']
-            params['model']['constituent_stack.lstm.weight_hh_l0'] = params['model']['constituent_lstm.weight_hh_l0']
-            params['model']['constituent_stack.lstm.bias_ih_l0']   = params['model']['constituent_lstm.bias_ih_l0']
-            params['model']['constituent_stack.lstm.bias_hh_l0']   = params['model']['constituent_lstm.bias_hh_l0']
-            params['model']['constituent_stack.lstm.weight_ih_l1'] = params['model']['constituent_lstm.weight_ih_l1']
-            params['model']['constituent_stack.lstm.weight_hh_l1'] = params['model']['constituent_lstm.weight_hh_l1']
-            params['model']['constituent_stack.lstm.bias_ih_l1']   = params['model']['constituent_lstm.bias_ih_l1']
-            params['model']['constituent_stack.lstm.bias_hh_l1']   = params['model']['constituent_lstm.bias_hh_l1']
 
         model_type = checkpoint['model_type']
         if model_type == 'LSTM':
@@ -167,8 +142,8 @@ class Trainer:
 
         if load_optimizer:
             # need to match the optimizer we build with the one that was used at training time
-            build_simple_adadelta = checkpoint['args']['multistage'] and epochs_trained < checkpoint['args']['epochs'] // 2
-            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", checkpoint['args']['multistage'], epochs_trained, checkpoint['args']['epochs'], build_simple_adadelta)
+            build_simple_adadelta = checkpoint['params']['config']['multistage'] and epochs_trained < checkpoint['params']['config']['epochs'] // 2
+            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", checkpoint['params']['config']['multistage'], epochs_trained, checkpoint['params']['config']['epochs'], build_simple_adadelta)
             optimizer = build_optimizer(saved_args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
@@ -187,7 +162,7 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, best_f1=best_f1, best_epoch=best_epoch)
+        return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, best_f1=best_f1, best_epoch=best_epoch)
 
 
 def load_pretrain_or_wordvec(args):
@@ -410,7 +385,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
-        trainer = Trainer(args, model, optimizer, scheduler)
+        trainer = Trainer(model, optimizer, scheduler)
     elif args['multistage']:
         # run adadelta over the model for half the time with no pattn or lattn
         # training then switches to a different optimizer for the rest
@@ -426,7 +401,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
             temp_model.cuda()
         temp_optim = build_optimizer(temp_args, temp_model, True)
         scheduler = build_scheduler(temp_args, temp_optim)
-        trainer = Trainer(temp_args, temp_model, temp_optim, scheduler)
+        trainer = Trainer(temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
@@ -436,7 +411,7 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
 
-        trainer = Trainer(args, model, optimizer, scheduler)
+        trainer = Trainer(model, optimizer, scheduler)
 
     add_grad_clipping(trainer, args['grad_clipping'])
 
@@ -629,7 +604,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             stage_pattn_layers, stage_uses_lattn = multistage_splits[epochs_trained]
 
             # when loading the model, let the saved model determine whether it has pattn or lattn
-            temp_args = dict(trainer.args)
+            temp_args = copy.deepcopy(model.args)
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
             # overwriting the old trainer & model will hopefully free memory
@@ -654,7 +629,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
             optimizer = build_optimizer(temp_args, new_model, False)
             scheduler = build_scheduler(temp_args, optimizer)
-            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained, trainer.best_f1, trainer.best_epoch)
+            trainer = Trainer(new_model, optimizer, scheduler, epochs_trained, trainer.best_f1, trainer.best_epoch)
             add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
