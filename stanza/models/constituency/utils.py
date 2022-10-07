@@ -137,7 +137,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     if build_simple_adadelta:
         optim_type = 'adadelta'
         learning_eps = DEFAULT_LEARNING_EPS['adadelta']
-        learning_rate = DEFAULT_LEARNING_RATES['adadelta']
+        learning_rate = args['stage1_learning_rate']
         learning_rho = DEFAULT_LEARNING_RHO
         weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
     else:

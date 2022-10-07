@@ -317,6 +317,8 @@ def parse_args(args=None):
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
 
+    parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
+
     parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
 
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
@@ -449,6 +451,9 @@ def parse_args(args=None):
         args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
     if args.learning_weight_decay is None:
         args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if args.stage1_learning_rate is None:
+        args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
 
     if args.num_tree_lstm_layers is None:
         if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):
