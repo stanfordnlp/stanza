@@ -248,8 +248,10 @@ def evaluate(args, model_file, retag_pipeline):
 
         if args['log_norms']:
             trainer.model.log_norms()
-        f1 = run_dev_set(trainer.model, treebank, args, evaluator)
+        f1, kbestF1 = run_dev_set(trainer.model, treebank, args, evaluator)
         logger.info("F1 score on %s: %f", args['eval_file'], f1)
+        if kbestF1 is not None:
+            logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
 
 def get_open_nodes(trees, args):
     """
@@ -580,7 +582,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
-        f1 = run_dev_set(model, dev_trees, args, evaluator)
+        f1, _ = run_dev_set(model, dev_trees, args, evaluator)
         if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
@@ -1034,4 +1036,5 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
     else:
         response = evaluator.process(full_results)
 
-    return response.f1
+    kbestF1 = response.kbestF1 if response.HasField("kbestF1") else None
+    return response.f1, kbestF1
