@@ -17,7 +17,8 @@ ScoredTree = namedtuple("ScoredTree", ['tree', 'score'])
 def build_request(treebank):
     """
     treebank should be a list of pairs:  [gold, predictions]
-      each predictions is a list of pairs (prediction, score)
+      each predictions is a list of tuples (prediction, score, state)
+      state is ignored and can be None
     Note that for now, only one tree is measured, but this may be extensible in the future
     Trees should be in the form of a Tree from parse_tree.py
     """
