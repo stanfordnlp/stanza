@@ -301,5 +301,7 @@ class TestTrainer:
         assert len(results) == 2
         assert len(results[0].predictions) == 1
         assert results[0].predictions[0].tree == test_tree[0]
+        assert results[0].state is not None
         assert len(results[1].predictions) == 1
         assert results[1].predictions[0].tree == test_tree[1]
+        assert results[1].state is not None

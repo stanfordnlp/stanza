@@ -864,7 +864,7 @@ class TransitionChoice(Enum):
     # useful for getting the scores of a model on a specific tree
     GOLD          = 3
 
-def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST):
+def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST, keep_state=False):
     """
     Repeat transitions to build a list of trees from the input batches.
 
@@ -905,7 +905,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition
                 predicted_tree = state.get_tree(model)
                 gold_tree = state.gold_tree
                 # TODO: put an actual score here?
-                treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)], state))
+                treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)], state if keep_state else None))
                 treebank_indices.append(batch_indices[idx])
                 remove.add(idx)
 
@@ -928,7 +928,7 @@ def parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition
     treebank = utils.unsort(treebank, treebank_indices)
     return treebank
 
-def parse_sentences_no_grad(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST):
+def parse_sentences_no_grad(data_iterator, build_batch_fn, batch_size, model, transition_choice=TransitionChoice.BEST, keep_state=False):
     """
     Given an iterator over the data and a method for building batches, returns a list of parse trees.
 
@@ -936,14 +936,17 @@ def parse_sentences_no_grad(data_iterator, build_batch_fn, batch_size, model, tr
     run faster and use less memory at inference time
     """
     with torch.no_grad():
-        return parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice)
+        return parse_sentences(data_iterator, build_batch_fn, batch_size, model, transition_choice, keep_state)
 
-def analyze_trees(model, trees, batch_size=None, use_tqdm=True):
+def analyze_trees(model, trees, batch_size=None, use_tqdm=True, keep_state=True):
     """
     Return a ParseResult for each tree in the trees list
 
     The transitions run will be the transitions represented by the tree
     The output layers will be available in result.state for each result
+
+    keep_state=True as a default here as a method which keeps the grad
+    is likely to want to keep the resulting state as well
     """
     if batch_size is None:
         batch_size = model.args['eval_batch_size']
@@ -951,10 +954,10 @@ def analyze_trees(model, trees, batch_size=None, use_tqdm=True):
         tree_iterator = iter(tqdm(trees))
     else:
         tree_iterator = iter(trees)
-    treebank = parse_sentences(tree_iterator, build_batch_from_trees_with_gold_sequence, batch_size, model, TransitionChoice.GOLD)
+    treebank = parse_sentences(tree_iterator, build_batch_from_trees_with_gold_sequence, batch_size, model, TransitionChoice.GOLD, keep_state)
     return treebank
 
-def parse_tagged_words(model, words, batch_size):
+def parse_tagged_words(model, words, batch_size, keep_state=False):
     """
     This parses tagged words and returns a list of trees.
 
@@ -967,7 +970,7 @@ def parse_tagged_words(model, words, batch_size):
     model.eval()
 
     sentence_iterator = iter(words)
-    treebank = parse_sentences_no_grad(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
+    treebank = parse_sentences_no_grad(sentence_iterator, build_batch_from_tagged_words, batch_size, model, keep_state=keep_state)
 
     results = [t.predictions[0].tree for t in treebank]
     return results
@@ -982,7 +985,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
     model.eval()
 
     tree_iterator = iter(tqdm(dev_trees))
-    treebank = parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model)
+    treebank = parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, keep_state=False)
     full_results = treebank
 
     if args['num_generate'] > 0:
@@ -990,7 +993,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
-            generated_treebanks.append(parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, TransitionChoice.WEIGHTED))
+            generated_treebanks.append(parse_sentences_no_grad(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, TransitionChoice.WEIGHTED, keep_state=False))
 
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None)
                         for parses in zip(*generated_treebanks)]
