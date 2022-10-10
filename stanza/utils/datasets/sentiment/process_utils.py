@@ -9,8 +9,8 @@ from collections import namedtuple
 from tqdm import tqdm
 
 import stanza
+from stanza.models.classifiers.data import SentimentDatum
 
-SentimentDatum = namedtuple('SentimentDatum', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
 SHARDS = ("train", "dev", "test")
@@ -108,11 +108,12 @@ def get_ptb_tokenized_phrases(dataset):
     phrases = [SentimentDatum(x.sentiment, y.split()) for x, y in zip(dataset, tokenized)]
     return phrases
 
-def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False):
+def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False, nlp=None):
     """
     Read in a single CSV file and return a list of SentimentDatums
     """
-    nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
+    if nlp is None:
+        nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
 
     with open(csv_filename, newline='') as fin:
         if skip_first_line:

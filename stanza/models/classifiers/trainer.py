@@ -42,17 +42,9 @@ class Trainer:
             epochs_trained = self.epochs_trained
         save_dir = os.path.split(filename)[0]
         os.makedirs(save_dir, exist_ok=True)
-        model_state = self.model.state_dict()
-        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
-        if skip_modules:
-            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.model.unsaved_modules]
-            for k in skipped:
-                del model_state[k]
+        model_params = self.model.get_params(skip_modules)
         params = {
-            'model':          model_state,
-            'config':         self.model.config,
-            'labels':         self.model.labels,
-            'extra_vocab':    self.model.extra_vocab,
+            'params':         model_params,
             'epochs_trained': epochs_trained,
             'global_step':    self.global_step,
             'best_score':     self.best_score,
@@ -80,29 +72,38 @@ class Trainer:
         global_step = checkpoint.get('global_step', 0)
         best_score = checkpoint.get('best_score', None)
 
-        model_type = checkpoint['config'].model_type
+        # TODO: can remove this block once all models are retrained
+        if 'params' not in checkpoint:
+            model_params = {
+                'model':        checkpoint['model'],
+                'config':       checkpoint['config'],
+                'labels':       checkpoint['labels'],
+                'extra_vocab':  checkpoint['extra_vocab'],
+            }
+        else:
+            model_params = checkpoint['params']
+        model_type = model_params['config'].model_type
 
         pretrain = Trainer.load_pretrain(args, foundation_cache)
         elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
         charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
         charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
 
-        bert_model = checkpoint['config'].bert_model
+        bert_model = model_params['config'].bert_model
         bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
         if model_type == 'CNNClassifier':
-            extra_vocab = checkpoint.get('extra_vocab', None)
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
-                                                 extra_vocab=extra_vocab,
-                                                 labels=checkpoint['labels'],
+                                                 extra_vocab=model_params['extra_vocab'],
+                                                 labels=model_params['labels'],
                                                  charmodel_forward=charmodel_forward,
                                                  charmodel_backward=charmodel_backward,
                                                  elmo_model=elmo_model,
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
-                                                 args=checkpoint['config'])
+                                                 args=model_params['config'])
         else:
             raise ValueError("Unknown model type {}".format(model_type))
-        model.load_state_dict(checkpoint['model'], strict=False)
+        model.load_state_dict(model_params['model'], strict=False)
 
         if args.cuda:
             model.cuda()

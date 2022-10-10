@@ -4,7 +4,7 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
+from stanza.models.classifiers.data import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 ArguanaSentimentDatum = namedtuple('ArguanaSentimentDatum', ['begin', 'end', 'rating'])

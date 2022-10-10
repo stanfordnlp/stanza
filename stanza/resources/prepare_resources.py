@@ -226,7 +226,15 @@ ner_charlms = {
 pos_pretrains = {
     "en": {
         "combined_bert": "combined",
-    }
+    },
+    "it": {
+        "combined_bert": "combined",
+        "vit_bert": "vit",
+    },
+    "vi": {
+        "vtb_phobert_base": "vtb",
+        "vtb_phobert_large": "vtb",
+    },
 }
 
 ner_pretrains = {

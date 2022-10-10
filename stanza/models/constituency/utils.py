@@ -137,7 +137,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     if build_simple_adadelta:
         optim_type = 'adadelta'
         learning_eps = DEFAULT_LEARNING_EPS['adadelta']
-        learning_rate = DEFAULT_LEARNING_RATES['adadelta']
+        learning_rate = args['stage1_learning_rate']
         learning_rho = DEFAULT_LEARNING_RHO
         weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
     else:
@@ -146,8 +146,8 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         learning_eps = args['learning_eps']
         learning_rate = args['learning_rate']
         learning_rho = args['learning_rho']
-        momentum = args['momentum']
-        weight_decay = args['weight_decay']
+        momentum = args['learning_momentum']
+        weight_decay = args['learning_weight_decay']
 
     parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
     if optim_type == 'sgd':

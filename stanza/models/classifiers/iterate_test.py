@@ -4,7 +4,6 @@ import glob
 import logging
 
 import stanza.models.classifier as classifier
-import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 from stanza.models.common import utils
 

@@ -13,9 +13,9 @@ from stanza.models.common import loss
 from stanza.models.common import utils
 from stanza.models.pos.vocab import CharVocab
 
-from stanza.models.classifiers.classifier_args import WVType, ExtraVectors
-from stanza.models.classifiers.trainer import Trainer
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.trainer import Trainer
+from stanza.models.classifiers.utils import WVType, ExtraVectors
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
@@ -256,6 +256,8 @@ def build_parser():
 
     parser.add_argument('--maxpool_width', type=int, default=1, help="Width of the maxpool kernel to use")
 
+    parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
+
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 
@@ -307,8 +309,8 @@ def confusion_dataset(model, dataset):
 
     for length in dataset_lengths.keys():
         batch = dataset_lengths[length]
-        text = [x[1] for x in batch]
-        expected_labels = [x[0] for x in batch]
+        text = [x.text for x in batch]
+        expected_labels = [x.sentiment for x in batch]
 
         output = model(text)
         for i in range(len(expected_labels)):
@@ -341,8 +343,8 @@ def score_dataset(model, dataset, label_map=None,
     for length in dataset_lengths.keys():
         # TODO: possibly break this up into smaller batches
         batch = dataset_lengths[length]
-        text = [x[1] for x in batch]
-        expected_labels = [label_map[x[0]] for x in batch]
+        text = [x.text for x in batch]
+        expected_labels = [label_map[x.sentiment] for x in batch]
 
         output = model(text)
 
@@ -457,15 +459,20 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         running_loss = 0.0
         epoch_loss = 0.0
         shuffled = data.shuffle_dataset(train_set_by_len)
+
         model.train()
+        logger.info("Starting epoch %d", trainer.epochs_trained)
+        if args.log_norms:
+            model.log_norms()
+
         random.shuffle(batch_starts)
         for batch_num, start_batch in enumerate(batch_starts):
             trainer.global_step += 1
             logger.debug("Starting batch: %d step %d", start_batch, trainer.global_step)
 
             batch = shuffled[start_batch:start_batch+args.batch_size]
-            text = [x[1] for x in batch]
-            label = torch.stack([label_tensors[x[0]] for x in batch])
+            text = [x.text for x in batch]
+            label = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
             optimizer.zero_grad()

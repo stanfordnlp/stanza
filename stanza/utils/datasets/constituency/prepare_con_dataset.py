@@ -124,9 +124,7 @@ def process_it_turin(paths):
 def process_it_vit(paths):
     # needs at least UD 2.11 or this will not work
     # in the meantime, the git version of VIT will suffice
-    ud_dir = os.path.join(paths["UDBASE_GIT"], "UD_Italian-VIT")
-    output_dir = paths["CONSTITUENCY_DATA_DIR"]
-    convert_it_vit(paths["CONSTITUENCY_BASE"], ud_dir, output_dir, "it_vit")
+    convert_it_vit(paths, "it_vit")
 
 def process_vlsp09(paths):
     """
@@ -148,7 +146,28 @@ def process_vlsp21(paths):
         raise FileNotFoundError("Could not find the 2021 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_file, paths["CONSTITUENCY_BASE"]))
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files([vlsp_file], tmp_output_path)
-        # This produces a tiny test set, just as a placeholder until the actual test set is released
+        # This produces a 0 length test set, just as a placeholder until the actual test set is released
+        vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name, train_size=0.9, dev_size=0.1)
+    _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], short_name)
+    with open(test_file, "w"):
+        # create an empty test file - currently we don't have actual test data for VLSP 21
+        pass
+
+
+def process_vlsp22(paths):
+    """
+    Processes the VLSP 2022 dataset, which is four separate files for some reason
+    """
+    short_name = "vi_vlsp22"
+    vlsp_dir = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", "VLSP_2022")
+    if not os.path.exists(vlsp_dir):
+        raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
+    vlsp_files = os.listdir(vlsp_dir)
+    vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files]
+    print("Procesing {}".format(vlsp_files))
+    with tempfile.TemporaryDirectory() as tmp_output_path:
+        vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True)
+        # This produces a 0 length test set, just as a placeholder until the actual test set is released
         vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], short_name, train_size=0.9, dev_size=0.1)
     _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], short_name)
     with open(test_file, "w"):
@@ -234,6 +253,8 @@ def main(dataset_name):
         process_vlsp09(paths)
     elif dataset_name == 'vi_vlsp21':
         process_vlsp21(paths)
+    elif dataset_name == 'vi_vlsp22':
+        process_vlsp22(paths)
     elif dataset_name == 'da_arboretum':
         process_arboretum(paths, dataset_name)
     elif dataset_name == 'tr_starlang':

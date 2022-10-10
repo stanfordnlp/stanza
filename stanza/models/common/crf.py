@@ -49,8 +49,7 @@ class CRFLoss(nn.Module):
             unary_scores: batch_size
         """
         flat_inputs = inputs.view(input_bs, -1)
-        flat_tag_indices = tag_indices + \
-                set_cuda(torch.arange(input_sl).long().unsqueeze(0) * input_nc, tag_indices.is_cuda)
+        flat_tag_indices = tag_indices + torch.arange(input_sl, device=tag_indices.device).long().unsqueeze(0) * input_nc
         unary_scores = torch.gather(flat_inputs, 1, flat_tag_indices).view(input_bs, -1)
         unary_scores.masked_fill_(masks, 0)
         return unary_scores.sum(dim=1)
@@ -140,8 +139,3 @@ def log_sum_exp(value, dim=None, keepdim=False):
             return m + math.log(sum_exp)
         else:
             return m + torch.log(sum_exp)
-
-def set_cuda(var, cuda):
-    if cuda:
-        return var.cuda()
-    return var

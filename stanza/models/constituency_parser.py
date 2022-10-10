@@ -296,7 +296,7 @@ def parse_args(args=None):
     #           0.001   - 0.8069
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
-    parser.add_argument('--momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
+    parser.add_argument('--learning_momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
     # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
@@ -307,7 +307,7 @@ def parse_args(args=None):
     #    0.015:   0.81721
     #    0.010:   0.81474348
     #    0.005:   0.81503
-    parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
+    parser.add_argument('--learning_weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--learning_rho', default=DEFAULT_LEARNING_RHO, type=float, help='Rho parameter in Adadelta')
     # A few experiments on beta2 didn't show much benefit from changing it
     #   On an experiment with training WSJ with default parameters
@@ -316,6 +316,8 @@ def parse_args(args=None):
     #   values lower than 0.995 all had a slight dropoff
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
     parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
+
+    parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
 
     parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
 
@@ -445,10 +447,13 @@ def parse_args(args=None):
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
     if args.learning_eps is None:
         args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
-    if args.momentum is None:
-        args.momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
-    if args.weight_decay is None:
-        args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+    if args.learning_momentum is None:
+        args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
+    if args.learning_weight_decay is None:
+        args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if args.stage1_learning_rate is None:
+        args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
 
     if args.num_tree_lstm_layers is None:
         if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):

@@ -23,6 +23,7 @@ def add_sentiment_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
+    parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
 
 ALTERNATE_DATASET = {
     "en_sst2":    "en_sst2roots",
@@ -32,7 +33,7 @@ ALTERNATE_DATASET = {
 def run_dataset(mode, paths, treebank, short_name,
                 temp_output_file, command_args, extra_args):
     sentiment_dir = paths["SENTIMENT_DATA_DIR"]
-    language, dataset = short_name.split("_")
+    language, dataset = short_name.split("_", 1)
 
     train_file = os.path.join(sentiment_dir, f"{short_name}.train.json")
 
@@ -55,7 +56,13 @@ def run_dataset(mode, paths, treebank, short_name,
     charlm_args = build_charlm_args(language, charlm, base_args=False)
 
     default_args = wordvec_args + charlm_args
-        
+
+    if command_args.use_bert and '--bert_model' not in extra_args:
+        if language in common.BERT:
+            default_args.extend(['--bert_model', common.BERT.get(language)])
+        else:
+            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % language)
+
     if mode == Mode.TRAIN:
         train_args = ['--save_name', "%s_classifier.pt" % short_name,
                       '--train_file', train_file,

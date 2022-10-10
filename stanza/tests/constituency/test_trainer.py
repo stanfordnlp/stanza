@@ -280,10 +280,28 @@ class TestTrainer:
                 assert isinstance(tr.optimizer, optim.AdamW)
 
 
-    def test_hooks(self, wordvec_pretrain_file):
+    def test_grad_clip_hooks(self, wordvec_pretrain_file):
         """
         Verify that grad clipping is not saved with the model, but is attached at training time
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             args = ['--grad_clipping', '25']
             self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
+    def test_analyze_trees(self, wordvec_pretrain_file):
+        test_str = "(ROOT (S (NP (PRP I)) (VP (VBP wan) (S (VP (TO na) (VP (VB lick) (NP (NP (NNP Sh'reyan) (POS 's)) (NNS antennae))))))))  (ROOT (S (NP (DT This) (NN interface)) (VP (VBZ sucks))))"
+
+        test_tree = tree_reader.read_trees(test_str)
+        assert len(test_tree) == 2
+
+        args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
+        tr = build_trainer(wordvec_pretrain_file, *args)
+
+        results = trainer.analyze_trees(tr.model, test_tree)
+        assert len(results) == 2
+        assert len(results[0].predictions) == 1
+        assert results[0].predictions[0].tree == test_tree[0]
+        assert results[0].state is not None
+        assert len(results[1].predictions) == 1
+        assert results[1].predictions[0].tree == test_tree[1]
+        assert results[1].state is not None

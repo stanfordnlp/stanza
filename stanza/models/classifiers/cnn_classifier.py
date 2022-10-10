@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.utils import ExtraVectors
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
@@ -123,12 +123,12 @@ class CNNClassifier(nn.Module):
         # replacing NBSP picks up a whole bunch of words for VI
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
 
-        if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is not ExtraVectors.NONE:
             if not extra_vocab:
                 raise ValueError("Should have had extra_vocab set for extra_wordvec_method {}".format(self.config.extra_wordvec_method))
             if not args.extra_wordvec_dim:
                 self.config.extra_wordvec_dim = self.embedding_dim
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            if self.config.extra_wordvec_method is ExtraVectors.SUM:
                 if self.config.extra_wordvec_dim != self.embedding_dim:
                     raise ValueError("extra_wordvec_dim must equal embedding_dim for {}".format(self.config.extra_wordvec_method))
 
@@ -150,11 +150,11 @@ class CNNClassifier(nn.Module):
 
         # Pytorch is "aware" of the existence of the nn.Modules inside
         # an nn.ModuleList in terms of parameters() etc
-        if self.config.extra_wordvec_method is classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is ExtraVectors.NONE:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+        elif self.config.extra_wordvec_method is ExtraVectors.SUM:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+        elif self.config.extra_wordvec_method is ExtraVectors.CONCAT:
             total_embedding_dim = self.embedding_dim + self.config.extra_wordvec_dim
         else:
             raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
@@ -253,6 +253,16 @@ class CNNClassifier(nn.Module):
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
+
+    def is_unsaved_module(self, name):
+        return name.split('.')[0] in self.unsaved_modules
+
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+                lines.append("%s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
 
     def build_char_reps(self, inputs, max_phrase_len, charlm, projection, begin_paddings, device):
         char_reps = charlm.build_char_representation(inputs)
@@ -379,9 +389,9 @@ class CNNClassifier(nn.Module):
         if self.extra_vocab:
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
             extra_input_vectors = self.extra_embedding(extra_batch_indices)
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+            if self.config.extra_wordvec_method is ExtraVectors.CONCAT:
                 all_inputs = [input_vectors, extra_input_vectors]
-            elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            elif self.config.extra_wordvec_method is ExtraVectors.SUM:
                 all_inputs = [input_vectors + extra_input_vectors]
             else:
                 raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
@@ -447,6 +457,22 @@ class CNNClassifier(nn.Module):
         # note that we return the raw logits rather than use a softmax
         # https://discuss.pytorch.org/t/multi-class-cross-entropy-loss-and-softmax-in-pytorch/24920/4
         return out
+
+    def get_params(self, skip_modules=True):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if self.is_unsaved_module(k)]
+            for k in skipped:
+                del model_state[k]
+
+        params = {
+            'model':        model_state,
+            'config':       self.config,
+            'labels':       self.labels,
+            'extra_vocab':  self.extra_vocab,
+        }
+        return params
 
 
 def label_text(model, text, batch_size=None):

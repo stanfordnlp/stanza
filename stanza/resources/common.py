@@ -188,7 +188,7 @@ def add_mwt(processors, resources, lang):
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
         processors[MWT] = value
 
-def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False):
+def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False, maybe_add_mwt=True):
     """
     Given a parsed resources file, language, and possible package
     and/or processors, expands the package to the list of processors
@@ -204,7 +204,7 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
-        if TOKENIZE in processors and MWT not in processors:
+        if maybe_add_mwt and TOKENIZE in processors and MWT not in processors:
             add_mwt(processors, resources, lang)
         for key, plist in processors.items():
             if not isinstance(key, str):

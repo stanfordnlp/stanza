@@ -225,11 +225,7 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
-        if (not kwargs.get("tokenize_pretokenized")
-            and TOKENIZE in processors
-            and MWT not in processors):
-            add_mwt(processors, resources, lang)
-        self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
+        self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized"))) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         if download_method is not DownloadMethod.NONE:
             # skip processors which aren't downloaded from our collection
