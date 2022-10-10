@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.data as data
-from stanza.models.classifiers.utils import ExtraVectors
+from stanza.models.classifiers.utils import ExtraVectors, ModelType
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
@@ -88,7 +88,7 @@ class CNNClassifier(nn.Module):
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       maxpool_width = args.maxpool_width,
-                                      model_type = 'CNNClassifier')
+                                      model_type = ModelType.CNN)
 
         self.char_lowercase = args.char_lowercase
 

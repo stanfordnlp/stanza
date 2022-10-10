@@ -20,3 +20,6 @@ class ExtraVectors(Enum):
     NONE = 1
     CONCAT = 2
     SUM = 3
+
+class ModelType(Enum):
+    CNN = 1

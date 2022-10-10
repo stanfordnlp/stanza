@@ -11,6 +11,7 @@ import torch.optim as optim
 
 import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
+from stanza.models.classifiers.utils import ModelType
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
 
@@ -91,7 +92,7 @@ class Trainer:
 
         bert_model = model_params['config'].bert_model
         bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
-        if model_type == 'CNNClassifier':
+        if model_type == ModelType.CNN:
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=model_params['extra_vocab'],
                                                  labels=model_params['labels'],

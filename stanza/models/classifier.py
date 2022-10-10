@@ -15,7 +15,7 @@ from stanza.models.pos.vocab import CharVocab
 
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
-from stanza.models.classifiers.utils import WVType, ExtraVectors
+from stanza.models.classifiers.utils import WVType, ExtraVectors, ModelType
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
@@ -171,6 +171,9 @@ def build_parser():
     parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
     parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
+
+    parser.add_argument('--model_type', type=lambda x: ModelType[x.upper()], default=ModelType.CNN,
+                        help='Model type to use.  Options: %s' % " ".join(x.name for x in ModelType))
 
     parser.add_argument('--filter_sizes', default=(3,4,5), type=ast.literal_eval, help='Filter sizes for the layer after the word vectors')
     parser.add_argument('--filter_channels', default=1000, type=ast.literal_eval, help='Number of channels for layers after the word vectors.  Int for same number of channels (scaled by width) for each filter, or tuple/list for exact lengths for each filter')
