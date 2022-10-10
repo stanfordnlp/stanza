@@ -582,6 +582,8 @@ def main(args=None):
 
         train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
 
+    if args.log_norms:
+        trainer.model.log_norms()
     test_set = data.read_dataset(args.test_file, args.wordvec_type, min_len=None)
     logger.info("Using test set: %s" % args.test_file)
     data.check_labels(trainer.model.labels, test_set)
