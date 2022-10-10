@@ -3,7 +3,6 @@ Processor for performing tokenization
 """
 
 import io
-import re
 import logging
 
 from stanza.models.tokenization.data import TokenizationDataset
@@ -85,10 +84,6 @@ class TokenizeProcessor(UDProcessor):
         
         max_seq_len = self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT)
 
-        # check for & remove long strings that may result in gpu memory issues later on
-        MAX_SEQ_LEN_RE = re.compile("\S{" + str(max_seq_len) + ",}")
-        raw_text = re.sub(MAX_SEQ_LEN_RE, "UNK", raw_text)
-
         # set up batches
         batches = TokenizationDataset(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
         # get dict data
@@ -97,6 +92,12 @@ class TokenizeProcessor(UDProcessor):
                                                orig_text=raw_text,
                                                no_ssplit=self.config.get('no_ssplit', False),
                                                num_workers = self.config.get('num_workers', 0))
+
+        # replace excessively long tokens with <UNK> to avoid downstream GPU memory issues in POS
+        for sentence in document:
+            for token in sentence:
+                if len(token['text']) > max_seq_len:
+                    token['text'] = "<UNK>"
 
         return doc.Document(document, raw_text)
 

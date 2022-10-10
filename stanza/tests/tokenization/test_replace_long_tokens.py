@@ -13,4 +13,4 @@ def test_replace_long_tokens():
 
     res = nlp(test_str)
 
-    assert res.sentences[0].words[1].text == "UNK"
+    assert res.sentences[0].words[1].text == "<UNK>"
