@@ -421,7 +421,7 @@ treebank_special_cases = {
     "UD_Chinese-HK": "zh-hant_hk",
     "UD_Chinese-CFL": "zh-hans_cfl",
     "UD_Chinese-PUD": "zh-hant_pud",
-    "UD_Norwegian-Bokmaal": "no_bokmaal",
+    "UD_Norwegian-Bokmaal": "nb_bokmaal",
     "UD_Norwegian-Nynorsk": "nn_nynorsk",
     "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
 }
