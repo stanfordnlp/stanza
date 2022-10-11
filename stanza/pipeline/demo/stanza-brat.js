@@ -1011,6 +1011,8 @@ $(document).ready(function() {
       $('#text').attr('placeholder', 'Z. B. sprang der schnelle braune Fuchs über den faulen Hund.');
     } else if ($('#language').val() === 'es') {
       $('#text').attr('placeholder', 'Por ejemplo, el rápido zorro marrón saltó sobre el perro perezoso.');
+    } else if ($('#language').val() === 'ur') {
+      $('#text').attr('placeholder', 'میرا نام علی ہے');
     } else {
       $('#text').attr('placeholder', 'Unknown language for placeholder query: ' + $('#language').val());
     }
@@ -1054,6 +1056,8 @@ $(document).ready(function() {
         currentQuery = 'Sprang der schnelle braune Fuchs über den faulen Hund.';
       } else if ($('#language').val() === 'es') {
         currentQuery = 'El rápido zorro marrón saltó sobre el perro perezoso.';
+      } else if ($('#language').val() === 'ur') {
+        currentQuery = 'میرا نام علی ہے';
       } else {
         currentQuery = 'Unknown language for default query: ' + $('#language').val();
       }
