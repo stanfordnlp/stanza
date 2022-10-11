@@ -154,6 +154,15 @@ class StackHistory(Enum):
 # for 400 iterations got dev scores of:
 #   TREE_LSTM_CX        0.9589
 #   MAX                 0.9593
+#
+# UNTIED_MAX has a different reduce_linear for each type of
+#   constituent in the model.  Similar to the different linear
+#   maps used in the CVG paper from Socher, Bauer, Manning, Ng
+# This is implemented as a large CxHxH parameter,
+#   with num_constituent layers of hidden-hidden transform,
+#   along with a CxH bias parameter.
+#   Essentially C Linears stacked on top of each other,
+#   but in a parameter so that indexing can be done quickly.
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
@@ -162,6 +171,7 @@ class ConstituencyComposition(Enum):
     BIGRAM                = 5
     ATTN                  = 6
     TREE_LSTM_CX          = 7
+    UNTIED_MAX            = 8
 
 class LSTMModel(BaseModel, nn.Module):
     def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
@@ -463,6 +473,13 @@ class LSTMModel(BaseModel, nn.Module):
             # transformation to turn several constituents into one new constituent
             self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
             initialize_linear(self.reduce_linear, self.args['nonlinearity'], self.hidden_size)
+        elif self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
+            # transformation to turn several constituents into one new constituent
+            self.register_parameter('reduce_linear_weight', torch.nn.Parameter(torch.randn(len(constituent_opens), self.hidden_size, self.hidden_size, requires_grad=True)))
+            self.register_parameter('reduce_linear_bias', torch.nn.Parameter(torch.randn(len(constituent_opens), self.hidden_size, requires_grad=True)))
+            for layer_idx in range(len(constituent_opens)):
+                nn.init.kaiming_normal_(self.reduce_linear_weight[layer_idx], nonlinearity=self.args['nonlinearity'])
+            nn.init.uniform_(self.reduce_linear_bias, 0, 1 / (self.hidden_size * 2) ** 0.5)
         elif self.constituency_composition == ConstituencyComposition.BIGRAM:
             self.reduce_linear = nn.Linear(self.hidden_size, self.hidden_size)
             self.reduce_bigram = nn.Linear(self.hidden_size * 2, self.hidden_size)
@@ -777,6 +794,26 @@ class LSTMModel(BaseModel, nn.Module):
             unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
             packed_hx = torch.stack(unpacked_hx, axis=1)
             hx = self.reduce_linear(packed_hx)
+            lstm_hx = self.nonlinearity(hx)
+            lstm_cx = None
+        elif self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
+            node_hx = [[child.value.tree_hx for child in children] for children in children_lists]
+            unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
+            # shape == len(labels),1,hidden_size after the stack
+            #packed_hx = torch.stack(unpacked_hx, axis=0)
+            label_indices = [self.constituent_open_map[label] for label in labels]
+            # we would like to stack the reduce_linear_weight calculations as follows:
+            #reduce_weight = self.reduce_linear_weight[label_indices]
+            #reduce_bias = self.reduce_linear_bias[label_indices]
+            # this would allow for faster vectorized operations.
+            # however, this runs out of memory on larger training examples,
+            # presumably because there are too many stacks in a row and each one
+            # has its own gradient kept for the entire calculation
+            # fortunately, this operation is not a huge part of the expense
+            hx = [torch.matmul(self.reduce_linear_weight[label_idx], hx_layer.squeeze(0)) + self.reduce_linear_bias[label_idx]
+                  for label_idx, hx_layer in zip(label_indices, unpacked_hx)]
+            hx = torch.stack(hx, axis=0)
+            hx = hx.unsqueeze(0)
             lstm_hx = self.nonlinearity(hx)
             lstm_cx = None
         elif self.constituency_composition == ConstituencyComposition.BIGRAM:
