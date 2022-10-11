@@ -97,7 +97,7 @@ class Trainer:
         update_args.pop("num_tree_lstm_layers", None)
         update_args.pop("transition_scheme", None)
         update_args.pop("transition_stack", None)
-        saved_args.update(args)
+        saved_args.update(update_args)
 
         model_type = params['model_type']
         if model_type == 'LSTM':
