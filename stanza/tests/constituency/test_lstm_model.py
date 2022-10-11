@@ -204,10 +204,10 @@ def test_forward_constituency_composition(pretrain_file):
     run_forward_checks(model, num_states=2)
 
     model = build_model(pretrain_file, '--constituency_composition', 'tree_lstm')
-    run_forward_checks(model)
+    run_forward_checks(model, num_states=2)
 
     model = build_model(pretrain_file, '--constituency_composition', 'tree_lstm_cx')
-    run_forward_checks(model)
+    run_forward_checks(model, num_states=2)
 
     model = build_model(pretrain_file, '--constituency_composition', 'bigram')
     run_forward_checks(model, num_states=2)
