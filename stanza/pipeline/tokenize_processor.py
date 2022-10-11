@@ -81,7 +81,7 @@ class TokenizeProcessor(UDProcessor):
             return self._variant.process(document)
 
         raw_text = '\n\n'.join(document) if isinstance(document, list) else document
-        
+
         max_seq_len = self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT)
 
         # set up batches
