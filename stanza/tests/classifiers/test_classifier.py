@@ -6,7 +6,6 @@ import pytest
 import numpy as np
 
 import stanza.models.classifier as classifier
-import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.common import pretrain
