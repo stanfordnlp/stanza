@@ -475,13 +475,13 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
 
             batch = shuffled[start_batch:start_batch+args.batch_size]
             text = [x.text for x in batch]
-            label = torch.stack([label_tensors[x.sentiment] for x in batch])
+            batch_labels = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             outputs = model(text)
-            batch_loss = loss_function(outputs, label)
+            batch_loss = loss_function(outputs, batch_labels)
             batch_loss.backward()
             optimizer.step()
 
