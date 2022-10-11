@@ -92,6 +92,7 @@ class Trainer:
         if args is None: args = {}
         update_args = copy.deepcopy(args)
         update_args.pop("bert_hidden_layers", None)
+        update_args.pop("constituency_composition", None)
         update_args.pop("constituent_stack", None)
         update_args.pop("num_tree_lstm_layers", None)
         update_args.pop("transition_scheme", None)
