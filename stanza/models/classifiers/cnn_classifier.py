@@ -257,6 +257,14 @@ class CNNClassifier(nn.Module):
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
 
+    def log_configuration(self):
+        """
+        Log some essential information about the model configuration to the training logger
+        """
+        tlogger.info("Filter sizes: %s" % str(self.config.filter_sizes))
+        tlogger.info("Filter channels: %s" % str(self.config.filter_channels))
+        tlogger.info("Intermediate layers: %s" % str(self.config.fc_shapes))
+
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         for name, param in self.named_parameters():

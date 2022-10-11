@@ -568,9 +568,7 @@ def main(args=None):
     else:
         trainer = Trainer.build_new_model(args, train_set)
 
-    logger.info("Filter sizes: %s" % str(trainer.model.config.filter_sizes))
-    logger.info("Filter channels: %s" % str(trainer.model.config.filter_channels))
-    logger.info("Intermediate layers: %s" % str(trainer.model.config.fc_shapes))
+    trainer.model.log_configuration()
 
     model_file = os.path.join(args.save_dir, save_name)
 
