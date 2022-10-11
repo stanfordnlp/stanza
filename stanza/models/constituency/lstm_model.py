@@ -519,6 +519,8 @@ class LSTMModel(BaseModel, nn.Module):
         This will rebuild the model in such a way that the outputs will be
         exactly the same as the previous model.
         """
+        if self.constituency_composition != other.constituency_composition:
+            raise ValueError("Models are incompatible: self.constituency_composition == {}, other.constituency_composition == {}".format(self.constituency_composition, other.constituency_composition))
         for name, other_parameter in other.named_parameters():
             if name.startswith('word_lstm.weight_ih_l0'):
                 # bottom layer shape may have changed from adding a new pattn / lattn block
