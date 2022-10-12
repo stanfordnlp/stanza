@@ -592,8 +592,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.best_f1 = f1
             trainer.best_epoch = trainer.epochs_trained
             trainer.save(args['save_name'], save_optimizer=False)
-        if args['checkpoint'] and args['checkpoint_save_name']:
-            trainer.save(args['checkpoint_save_name'], save_optimizer=True)
         if model_save_each_filename:
             trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
         if epoch_stats.nans > 0:
@@ -608,7 +606,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                     if watch_regex.search(n):
                         wandb.log({n: torch.linalg.norm(p)})
 
-        # don't redo the optimizer a second time if we're not changing the structure
+        # recreate the optimizer and alter the model as needed if we hit a new multistage split
         if args['multistage'] and trainer.epochs_trained in multistage_splits:
             # we may be loading a save model from an earlier epoch if the scores stopped increasing
             epochs_trained = trainer.epochs_trained
@@ -644,6 +642,12 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer = Trainer(new_model, optimizer, scheduler, epochs_trained, trainer.best_f1, trainer.best_epoch)
             add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
+
+        # checkpoint needs to be saved AFTER rebuilding the optimizer
+        # so that assumptions about the optimizer in the checkpoint
+        # can be made based on the end of the epoch
+        if args['checkpoint'] and args['checkpoint_save_name']:
+            trainer.save(args['checkpoint_save_name'], save_optimizer=True)
 
     return trainer
 
