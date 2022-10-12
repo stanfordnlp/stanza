@@ -583,8 +583,14 @@ class LSTMModel(BaseModel, nn.Module):
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
+        skip = set()
+        if self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
+            skip = {'reduce_linear_weight', 'reduce_linear_bias'}
+            lines.append("reduce_linear:")
+            for c_idx, c_open in enumerate(self.constituent_opens):
+                lines.append("  %s weight %.6g bias %.6g" % (c_open, torch.norm(self.reduce_linear_weight[c_idx]).item(), torch.norm(self.reduce_linear_bias[c_idx]).item()))
         for name, param in self.named_parameters():
-            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            if param.requires_grad and name not in skip and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
