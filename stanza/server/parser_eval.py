@@ -11,7 +11,7 @@ from stanza.server.java_protobuf_requests import send_request, build_tree, JavaP
 
 EVALUATE_JAVA = "edu.stanford.nlp.parser.metrics.EvaluateExternalParser"
 
-ParseResult = namedtuple("ParseResult", ['gold', 'predictions', 'state'])
+ParseResult = namedtuple("ParseResult", ['gold', 'predictions', 'state', 'constituents'])
 ScoredTree = namedtuple("ScoredTree", ['tree', 'score'])
 
 def build_request(treebank):
@@ -23,7 +23,9 @@ def build_request(treebank):
     Trees should be in the form of a Tree from parse_tree.py
     """
     request = EvaluateParserRequest()
-    for gold, predictions, _ in treebank:
+    for raw_result in treebank:
+        gold = raw_result.gold
+        predictions = raw_result.predictions
         parse_result = request.treebank.add()
         parse_result.gold.CopyFrom(build_tree(gold, None))
         for pred in predictions:
