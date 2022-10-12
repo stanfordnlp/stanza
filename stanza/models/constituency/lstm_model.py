@@ -588,8 +588,8 @@ class LSTMModel(BaseModel, nn.Module):
     def get_root_labels(self):
         return self.root_labels
 
-    def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+    def get_norms(self):
+        lines = []
         skip = set()
         if self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
             skip = {'reduce_linear_weight', 'reduce_linear_bias'}
@@ -599,6 +599,11 @@ class LSTMModel(BaseModel, nn.Module):
         for name, param in self.named_parameters():
             if param.requires_grad and name not in skip and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
+        return lines
+
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines.extend(self.get_norms())
         logger.info("\n".join(lines))
 
     def initial_word_queues(self, tagged_word_lists):
