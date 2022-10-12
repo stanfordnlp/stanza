@@ -436,6 +436,14 @@ def test_copy_with_new_structure_same(pretrain_file):
                          ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10'],
                          ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10'])
 
+def test_copy_with_new_structure_untied(pretrain_file):
+    """
+    Test that copying the structure with no changes works as expected
+    """
+    check_structure_test(pretrain_file,
+                         ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--constituency_composition', 'MAX'],
+                         ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--constituency_composition', 'UNTIED_MAX'])
+
 def test_copy_with_new_structure_pattn(pretrain_file):
     check_structure_test(pretrain_file,
                          ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10'],

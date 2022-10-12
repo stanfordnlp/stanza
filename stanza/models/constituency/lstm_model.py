@@ -519,10 +519,19 @@ class LSTMModel(BaseModel, nn.Module):
         This will rebuild the model in such a way that the outputs will be
         exactly the same as the previous model.
         """
-        if self.constituency_composition != other.constituency_composition:
+        if self.constituency_composition != other.constituency_composition and self.constituency_composition != ConstituencyComposition.UNTIED_MAX:
             raise ValueError("Models are incompatible: self.constituency_composition == {}, other.constituency_composition == {}".format(self.constituency_composition, other.constituency_composition))
         for name, other_parameter in other.named_parameters():
-            if name.startswith('word_lstm.weight_ih_l0'):
+            if name.startswith('reduce_linear') and self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
+                if name == 'reduce_linear.weight':
+                    my_parameter = self.reduce_linear_weight
+                elif name == 'reduce_linear.bias':
+                    my_parameter = self.reduce_linear_bias
+                else:
+                    raise ValueError("Unexpected other parameter name {}".format(name))
+                for idx in range(len(self.constituent_opens)):
+                    my_parameter[idx].data.copy_(other_parameter.data)
+            elif name.startswith('word_lstm.weight_ih_l0'):
                 # bottom layer shape may have changed from adding a new pattn / lattn block
                 my_parameter = self.get_parameter(name)
                 copy_size = min(other_parameter.data.shape[1], my_parameter.data.shape[1])
