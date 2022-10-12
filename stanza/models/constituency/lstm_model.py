@@ -522,7 +522,8 @@ class LSTMModel(BaseModel, nn.Module):
         if self.constituency_composition != other.constituency_composition and self.constituency_composition != ConstituencyComposition.UNTIED_MAX:
             raise ValueError("Models are incompatible: self.constituency_composition == {}, other.constituency_composition == {}".format(self.constituency_composition, other.constituency_composition))
         for name, other_parameter in other.named_parameters():
-            if name.startswith('reduce_linear') and self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
+            # this allows other.constituency_composition == UNTIED_MAX to fall through
+            if name.startswith('reduce_linear.') and self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
                 if name == 'reduce_linear.weight':
                     my_parameter = self.reduce_linear_weight
                 elif name == 'reduce_linear.bias':
