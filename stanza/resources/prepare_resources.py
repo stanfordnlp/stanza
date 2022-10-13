@@ -417,7 +417,7 @@ def get_ner_dependencies(lang, package):
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     if lang not in ner_charlms or package not in ner_charlms[lang]:
-        charlm_package = default_charlms[lang]
+        charlm_package = default_charlms.get(lang, None)
     else:
         charlm_package = ner_charlms[lang][package]
 
@@ -497,6 +497,8 @@ def process_defaults(args):
             raise AssertionError(f'{lang} not in default treebanks!!!')
         print(f'Preparing default models for language {lang}')
 
+        pretrains_needed = set()
+
         ud_package = default_treebanks[lang]
         os.chdir(os.path.join(args.output_dir, lang))
         default_processors = {}
@@ -505,23 +507,30 @@ def process_defaults(args):
         else:
             default_dependencies = {'pos': get_pos_dependencies(lang, ud_package),
                                     'depparse': [{'model': 'pretrain', 'package': ud_package}]}
+            pretrains_needed.add(ud_package)
 
         if lang in default_ners:
             ner_package = default_ners[lang]
-        if lang in default_charlms:
-            charlm_package = default_charlms[lang]
-        if lang in default_ners and lang in default_charlms:
             ner_dependencies = get_ner_dependencies(lang, ner_package)
             if ner_dependencies is not None:
                 default_dependencies['ner'] = ner_dependencies
+                pretrains_needed.update([dep['package'] for dep in ner_dependencies if dep['model'] == 'pretrain'])
+        if lang in default_charlms:
+            charlm_package = default_charlms[lang]
         if lang in default_sentiment:
             sentiment_package = default_sentiment[lang]
             sentiment_dependencies = get_sentiment_dependencies(lang, package)
             default_dependencies['sentiment'] = sentiment_dependencies
+            pretrains_needed.update([dep['package'] for dep in sentiment_dependencies if dep['model'] == 'pretrain'])
         if lang in default_constituency:
             constituency_package = default_constituency[lang]
-            default_dependencies['constituency'] = get_con_dependencies(lang, constituency_package)
+            constituency_dependencies = get_con_dependencies(lang, constituency_package)
+            default_dependencies['constituency'] = constituency_dependencies
+            pretrains_needed.update([dep['package'] for dep in constituency_dependencies if dep['model'] == 'pretrain'])
 
+        # pretrain doesn't really need to be here, but by putting it here,
+        # we preserve any existing default.zip files with no other changes
+        # when rebuilding the resources
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         if lang in default_ners:
             processors.append('ner')
@@ -538,6 +547,18 @@ def process_defaults(args):
 
         with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
+                if processor == 'pretrain':
+                    for package in pretrains_needed:
+                        filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+                        if os.path.exists(filename):
+                            print("   Model {} package {}: file {}".format(processor, package, filename))
+                            zipf.write(os.path.join(processor, package + '.pt'))
+                        else:
+                            raise FileNotFoundError(f"Pretrain package {package} needed for {lang} but cannot be found at {filename}")
+
+                    # done specifically with pretrains
+                    continue
+
                 if processor == 'ner': package = ner_package
                 elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
                 elif processor == 'sentiment': package = sentiment_package
@@ -561,12 +582,13 @@ def process_defaults(args):
                     # there might be a better way to encode that here
                     default_processors[processor] = "identity"
                     print(" --Model {} package {}: no file {}, assuming identity lemmatizer".format(processor, package, filename))
-                elif processor in ('mwt', 'pretrain'):
+                elif processor == 'mwt':
                     # some languages don't have MWT, so skip ig
                     # others have pos and depparse built with no pretrain
                     print(" --Model {} package {}: no file {}, skipping".format(processor, package, filename))
                 else:
                     raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
+
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'default.zip'))
         resources[lang]['default_processors'] = default_processors
         resources[lang]['default_dependencies'] = default_dependencies
