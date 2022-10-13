@@ -27,6 +27,9 @@ class SentimentDatum:
             return False
         return self.sentiment == other.sentiment and self.text == other.text and self.constituency == other.constituency
 
+    def __str__(self):
+        return str(self._asdict())
+
     def _asdict(self):
         if self.constituency is None:
             return {'sentiment': self.sentiment, 'text': self.text}
