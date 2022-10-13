@@ -202,6 +202,7 @@ def build_parser():
 
     parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
                         help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
+    parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
@@ -437,8 +438,12 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         logger.info("Creating weighted cross entropy loss w/ log")
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
     elif args.loss == Loss.FOCAL:
-        logger.info("Creating FocalLoss")
-        loss_function = loss.FocalLoss()
+        try:
+            from focal_loss.focal_loss import FocalLoss
+        except ImportError:
+            raise ImportError("focal_loss not installed.  Must `pip install focal_loss_torch` to use the --loss=focal feature")
+        logger.info("Creating FocalLoss with loss %f", args.loss_focal_gamma)
+        loss_function = FocalLoss(gamma=args.loss_focal_gamma)
     else:
         raise ValueError("Unknown loss function {}".format(args.loss))
     loss_function.to(device)

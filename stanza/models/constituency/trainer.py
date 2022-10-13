@@ -25,7 +25,6 @@ from torch import nn
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
-from stanza.models.common.loss import FocalLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -543,7 +542,11 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     if args['loss'] == 'cross':
         logger.info("Building CrossEntropyLoss(sum)")
         model_loss_function = nn.CrossEntropyLoss(reduction='sum')
-    else:
+    elif args['loss'] == 'focal':
+        try:
+            from focal_loss.focal_loss import FocalLoss
+        except ImportError:
+            raise ImportError("focal_loss not installed.  Must `pip install focal_loss_torch` to use the --loss=focal feature")
         logger.info("Building FocalLoss, gamma=%f", args['loss_focal_gamma'])
         model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
     if args['cuda']:
