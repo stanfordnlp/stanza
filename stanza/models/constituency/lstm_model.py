@@ -163,6 +163,13 @@ class StackHistory(Enum):
 #   along with a CxH bias parameter.
 #   Essentially C Linears stacked on top of each other,
 #   but in a parameter so that indexing can be done quickly.
+# Unfortunately this does not beat out MAX with one combined linear.
+#   On an experiment on WSJ with all the best settings as of early
+#   October 2022, such as a Bert model POS tagger:
+#   MAX                 0.9597
+#   UNTIED_MAX          0.9592
+# Furthermore, starting from a finished MAX model and restarting
+#   by splitting the MAX layer into multiple pieces did not improve.
 class ConstituencyComposition(Enum):
     BILSTM                = 1
     MAX                   = 2
