@@ -200,6 +200,12 @@ def test_forward_constituency_composition(pretrain_file):
     model = build_model(pretrain_file, '--constituency_composition', 'max')
     run_forward_checks(model, num_states=2)
 
+    model = build_model(pretrain_file, '--constituency_composition', 'key')
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pretrain_file, '--constituency_composition', 'untied_key')
+    run_forward_checks(model, num_states=2)
+
     model = build_model(pretrain_file, '--constituency_composition', 'untied_max')
     run_forward_checks(model, num_states=2)
 
@@ -217,6 +223,23 @@ def test_forward_constituency_composition(pretrain_file):
 
     model = build_model(pretrain_file, '--constituency_composition', 'attn')
     run_forward_checks(model, num_states=2)
+
+def test_forward_key_position(pretrain_file):
+    """
+    Test KEY and UNTIED_KEY either with or without reduce_position
+    """
+    model = build_model(pretrain_file, '--constituency_composition', 'untied_key', '--reduce_position', '0')
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pretrain_file, '--constituency_composition', 'untied_key', '--reduce_position', '32')
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pretrain_file, '--constituency_composition', 'key', '--reduce_position', '0')
+    run_forward_checks(model, num_states=2)
+
+    model = build_model(pretrain_file, '--constituency_composition', 'key', '--reduce_position', '32')
+    run_forward_checks(model, num_states=2)
+
 
 def test_forward_attn_hidden_size(pretrain_file):
     """

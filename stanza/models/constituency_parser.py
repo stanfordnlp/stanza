@@ -390,6 +390,7 @@ def parse_args(args=None):
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
                         help='How to build a new composition from its children.  {}'.format(", ".join(x.name for x in ConstituencyComposition)))
     parser.add_argument('--reduce_heads', default=8, type=int, help='Number of attn heads to use when reducing children into a parent tree (constituency_composition == attn)')
+    parser.add_argument('--reduce_position', default=None, type=int, help="Dimension of position vector to use when reducing children.  None means 1/4 hidden_size, 0 means don't use (constituency_composition == key | untied_key)")
 
     parser.add_argument('--relearn_structure', action='store_true', help='Starting from an existing checkpoint, add or remove pattn / lattn.  One thing that works well is to train an initial model using adadelta with no pattn, then add pattn with adamw')
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
@@ -461,6 +462,9 @@ def parse_args(args=None):
 
     if args.stage1_learning_rate is None:
         args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+
+    if args.reduce_position is None:
+        args.reduce_position = args.hidden_size // 4
 
     if args.num_tree_lstm_layers is None:
         if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):
