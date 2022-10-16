@@ -202,7 +202,7 @@ def build_parser():
 
     parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
                         help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
-    parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
+    parser.add_argument('--loss_focal_gamma', default=0.0, type=float, help='gamma value for a focal loss, if gamma is 0 it will behave as cross-entropy loss')
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
