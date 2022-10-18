@@ -19,7 +19,7 @@ or "turn the next input word into a constituent"
 
 from abc import ABC, abstractmethod
 
-from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 
@@ -154,6 +154,38 @@ class BaseModel(ABC):
         Whether or not this model is TOP_DOWN
         """
         return not self._transition_scheme is TransitionScheme.IN_ORDER
+
+    def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
+        """
+        what is passed in should be a list of list of preterminals
+        """
+        word_queues = self.initial_word_queues(preterminal_lists)
+        # this is the bottom of the TreeStack and will be the same for each State
+        transitions = self.initial_transitions()
+        constituents = self.initial_constituents()
+        states = [State(sentence_length=len(wq)-2,   # -2 because it starts and ends with a sentinel
+                        num_opens=0,
+                        word_queue=wq,
+                        gold_tree=None,
+                        gold_sequence=None,
+                        transitions=transitions,
+                        constituents=constituents,
+                        word_position=0)
+                  for idx, wq in enumerate(word_queues)]
+        if gold_trees:
+            states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
+        return states
+
+    def initial_state_from_words(self, word_lists):
+        preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
+                             for words in word_lists]
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None)
+
+    def initial_state_from_gold_trees(self, trees):
+        preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
+                              for pt in tree.yield_preterminals()]
+                             for tree in trees]
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees)
 
 class SimpleModel(BaseModel):
     """

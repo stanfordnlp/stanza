@@ -111,38 +111,6 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
-def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
-    """
-    what is passed in should be a list of list of preterminals
-    """
-    word_queues = model.initial_word_queues(preterminal_lists)
-    # this is the bottom of the TreeStack and will be the same for each State
-    transitions=model.initial_transitions()
-    constituents=model.initial_constituents()
-    states = [State(sentence_length=len(wq)-2,   # -2 because it starts and ends with a sentinel
-                    num_opens=0,
-                    word_queue=wq,
-                    gold_tree=None,
-                    gold_sequence=None,
-                    transitions=transitions,
-                    constituents=constituents,
-                    word_position=0)
-              for idx, wq in enumerate(word_queues)]
-    if gold_trees:
-        states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
-    return states
-
-def initial_state_from_words(word_lists, model):
-    preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
-                         for words in word_lists]
-    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=None)
-
-def initial_state_from_gold_trees(trees, model):
-    preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
-                          for pt in tree.yield_preterminals()]
-                         for tree in trees]
-    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
-
 @functools.total_ordering
 class Transition(ABC):
     """

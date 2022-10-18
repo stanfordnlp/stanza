@@ -15,7 +15,7 @@ def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER
     Starting from a tree and a list of transitions, build the tree caused by the transitions
     """
     model = SimpleModel(transition_scheme=transition_scheme, unary_limit=unary_limit)
-    states = parse_transitions.initial_state_from_gold_trees([tree], model)
+    states = model.initial_state_from_gold_trees([tree])
     assert(len(states)) == 1
     assert states[0].num_transitions() == 0
 
@@ -32,7 +32,7 @@ def check_reproduce_tree(transition_scheme):
 
     model = SimpleModel(transition_scheme)
     transitions = transition_sequence.build_sequence(trees[0], transition_scheme)
-    states = parse_transitions.initial_state_from_gold_trees(trees, model)
+    states = model.initial_state_from_gold_trees(trees)
     assert(len(states)) == 1
     state = states[0]
     assert state.num_transitions() == 0
@@ -92,7 +92,7 @@ def test_top_down_compound_unary():
     model = SimpleModel()
     transitions = transition_sequence.build_sequence(trees[0], transition_scheme=TransitionScheme.TOP_DOWN_COMPOUND)
 
-    states = parse_transitions.initial_state_from_gold_trees(trees, model)
+    states = model.initial_state_from_gold_trees(trees)
     assert len(states) == 1
     state = states[0]
 

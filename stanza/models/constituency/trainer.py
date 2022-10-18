@@ -204,7 +204,7 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit):
         data = tqdm(zip(trees, sequences), total=len(trees))
 
     for tree, sequence in data:
-        state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
+        state = model.initial_state_from_gold_trees([tree])[0]
         for idx, trans in enumerate(sequence):
             if not trans.is_legal(state, model):
                 raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(idx, trans, tree, sequence))
@@ -699,7 +699,7 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
     """
     # now we add the state to the trees in the batch
     # the state is build as a bulk operation
-    initial_states = parse_transitions.initial_state_from_preterminals([x.preterminals for x in batch], model, [x.tree for x in batch])
+    initial_states = model.initial_state_from_preterminals([x.preterminals for x in batch], [x.tree for x in batch])
     batch = [state._replace(gold_sequence=sequence)
              for (tree, sequence, _), state in zip(batch, initial_states)]
 
@@ -817,7 +817,7 @@ def build_batch_from_trees(batch_size, data_iterator, model):
         state_batch.append(gold_tree)
 
     if len(state_batch) > 0:
-        state_batch = parse_transitions.initial_state_from_gold_trees(state_batch, model)
+        state_batch = model.initial_state_from_gold_trees(state_batch)
     return state_batch
 
 def build_batch_from_trees_with_gold_sequence(batch_size, data_iterator, model):
@@ -828,7 +828,7 @@ def build_batch_from_trees_with_gold_sequence(batch_size, data_iterator, model):
     if len(state_batch) == 0:
         return state_batch
 
-    gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], model.args['transition_scheme'])
+    gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], model.transition_scheme())
     state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
     return state_batch
 
@@ -844,7 +844,7 @@ def build_batch_from_tagged_words(batch_size, data_iterator, model):
         state_batch.append(sentence)
 
     if len(state_batch) > 0:
-        state_batch = parse_transitions.initial_state_from_words(state_batch, model)
+        state_batch = model.initial_state_from_words(state_batch)
     return state_batch
 
 
