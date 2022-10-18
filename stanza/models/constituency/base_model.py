@@ -202,6 +202,13 @@ class BaseModel(ABC):
 class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
+
+    This class is primarily used for testing various operations which
+    don't need the NN's weights
+
+    Also, for rebuilding trees from transitions when verifying the
+    transitions in situations where the NN state is not relevant,
+    as this class will be faster than using the NN
     """
     def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT):
         super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit)
