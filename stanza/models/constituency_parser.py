@@ -655,6 +655,8 @@ def parse_args(args=None):
     parser.add_argument('--use_lattn', default=False, action='store_true', help='Use the lattn layers - currently turned off')
     parser.add_argument('--no_lattn_combined_input', dest='lattn_combined_input', action='store_false', help="Don't combine all inputs for the lattn, not just the pattn")
 
+    parser.add_argument('--secondary_model', default=None, type=str, help='Secondary model to extract tree embeddings from when parsing')
+
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 

@@ -210,7 +210,7 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, secondary_parser, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -375,6 +375,12 @@ class LSTMModel(BaseModel, nn.Module):
                 # (for historic reasons)
                 self.bert_layer_mix = None
             self.word_input_size = self.word_input_size + self.bert_dim
+
+        if secondary_parser is not None:
+            self.add_unsaved_module('secondary_parser', secondary_parser)
+            self.word_input_size += secondary_parser.output_size
+        else:
+            self.secondary_parser = None
 
         self.partitioned_transformer_module = None
         self.pattn_d_model = 0
@@ -652,6 +658,11 @@ class LSTMModel(BaseModel, nn.Module):
         if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
             for _, parameter in module.named_parameters():
                 parameter.requires_grad = False
+        elif module is not None and name == 'secondary_parser':
+            for param_name, parameter in module.named_parameters():
+                if param_name.startswith("secondary_parser.constituency_parser"):
+                    parameter.requires_grad = False
+
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
@@ -661,6 +672,9 @@ class LSTMModel(BaseModel, nn.Module):
 
     def get_norms(self):
         lines = []
+        if self.secondary_parser is not None:
+            lines = ["secondary_parser." + x for x in self.secondary_parser.get_norms()]
+        skip_prefix = {'secondary_parser'}
         skip = set()
         if self.constituency_composition == ConstituencyComposition.UNTIED_MAX:
             skip = {'reduce_linear_weight', 'reduce_linear_bias'}
@@ -668,7 +682,7 @@ class LSTMModel(BaseModel, nn.Module):
             for c_idx, c_open in enumerate(self.constituent_opens):
                 lines.append("  %s weight %.6g bias %.6g" % (c_open, torch.norm(self.reduce_linear_weight[c_idx]).item(), torch.norm(self.reduce_linear_bias[c_idx]).item()))
         for name, param in self.named_parameters():
-            if param.requires_grad and name not in skip:
+            if param.requires_grad and name not in skip and name.split(".")[0] not in skip_prefix:
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         return lines
 
@@ -753,6 +767,11 @@ class LSTMModel(BaseModel, nn.Module):
                 bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
 
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
+
+        if self.secondary_parser is not None:
+            # TODO: pay attention to SentenceBoundary
+            tree_embedding = self.secondary_parser.embed_tagged_words(tagged_word_lists)
+            all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, tree_embedding)]
 
         # Extract partitioned representation
         if self.partitioned_transformer_module is not None:
@@ -1038,15 +1057,7 @@ class LSTMModel(BaseModel, nn.Module):
         transition_node = transitions.value
         return transition_node.value
 
-    def forward(self, states):
-        """
-        Return logits for a prediction of what transition to make next
-
-        We've basically done all the work analyzing the state as
-        part of applying the transitions, so this method is very simple
-
-        return shape: (num_states, num_transitions)
-        """
+    def current_representation(self, states):
         word_hx = torch.stack([state.get_word(state.word_position).hx for state in states])
         transition_hx = torch.stack([self.transition_stack.output(state.transitions) for state in states])
         # this .output() is the output of the constituent stack, not the
@@ -1057,12 +1068,25 @@ class LSTMModel(BaseModel, nn.Module):
         constituent_hx = torch.stack([self.constituent_stack.output(state.constituents) for state in states])
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
+        return hx
+
+    def forward(self, states):
+        """
+        Return logits for a prediction of what transition to make next
+
+        We've basically done all the work analyzing the state as
+        part of applying the transitions, so this method is very simple
+
+        return shape: (num_states, num_transitions)
+        """
+        representation = self.current_representation(states)
+        hx = representation
         for idx, output_layer in enumerate(self.output_layers):
             hx = self.predict_dropout(hx)
             if not self.maxout_k and idx < len(self.output_layers) - 1:
                 hx = self.nonlinearity(hx)
             hx = output_layer(hx)
-        return hx
+        return hx, representation
 
     def predict(self, states, is_legal=True):
         """
@@ -1072,7 +1096,7 @@ class LSTMModel(BaseModel, nn.Module):
         This means returning None if there are no legal transitions.
         Hopefully the constraints prevent that from happening
         """
-        predictions = self.forward(states)
+        predictions, representation = self.forward(states)
         pred_max = torch.argmax(predictions, dim=1)
         scores = torch.take_along_dim(predictions, pred_max.unsqueeze(1), dim=1)
         pred_max = pred_max.detach().cpu()
@@ -1091,7 +1115,7 @@ class LSTMModel(BaseModel, nn.Module):
                         pred_trans[idx] = None
                         scores[idx] = None
 
-        return predictions, pred_trans, scores.squeeze(1)
+        return predictions, pred_trans, scores.squeeze(1), representation
 
     def weighted_choice(self, states):
         """
@@ -1099,7 +1123,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         TODO: pass in a temperature
         """
-        predictions = self.forward(states)
+        predictions, representation = self.forward(states)
         pred_trans = []
         all_scores = []
         for state, prediction in zip(states, predictions):
@@ -1114,17 +1138,17 @@ class LSTMModel(BaseModel, nn.Module):
             pred_trans.append(self.transitions[idx])
             all_scores.append(prediction[idx])
         all_scores = torch.stack(all_scores)
-        return predictions, pred_trans, all_scores
+        return predictions, pred_trans, all_scores, representation
 
     def predict_gold(self, states):
         """
         For each State, return the next item in the gold_sequence
         """
-        predictions = self.forward(states)
+        predictions, representation = self.forward(states)
         transitions = [y.gold_sequence[y.num_transitions()] for y in states]
         indices = torch.tensor([self.transition_map[t] for t in transitions], device=predictions.device)
         scores = torch.take_along_dim(predictions, indices.unsqueeze(1), dim=1)
-        return predictions, transitions, scores.squeeze(1)
+        return predictions, transitions, scores.squeeze(1), representation
 
     def get_params(self, skip_modules=True):
         """
@@ -1136,6 +1160,12 @@ class LSTMModel(BaseModel, nn.Module):
             skipped = [k for k in model_state.keys() if self.is_unsaved_module(k)]
             for k in skipped:
                 del model_state[k]
+
+        if self.secondary_parser:
+            secondary_parser_params = self.secondary_parser.get_params(skip_modules)
+        else:
+            secondary_parser_params = None
+
         params = {
             'model': model_state,
             'model_type': "LSTM",
@@ -1148,6 +1178,7 @@ class LSTMModel(BaseModel, nn.Module):
             'root_labels': self.root_labels,
             'constituent_opens': self.constituent_opens,
             'unary_limit': self.unary_limit(),
+            'secondary_parser': secondary_parser_params,
         }
 
         return params

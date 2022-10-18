@@ -51,7 +51,7 @@ class TransitionScheme(Enum):
     IN_ORDER_UNARY     = 6
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
+                                 'sentence_length', 'num_opens', 'word_position', 'score', 'shift_representations'])):
     """
     Represents a partially completed transition parse
 
@@ -79,6 +79,9 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
 
     The word_queue should have both a start and an end word.
     Those can be None in the case of the endpoints if they are unused.
+
+    shift_representations is the representation of the constituency
+    stack immediately after a shift has happened.
     """
     def empty_word_queue(self):
         # the first element of each stack is a sentinel with no value

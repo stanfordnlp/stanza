@@ -233,7 +233,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         momentum = args['learning_momentum']
         weight_decay = args['learning_weight_decay']
 
-    base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
+    base_parameters = [param for name, param in model.named_parameters() if param.requires_grad and not name.startswith("bert_model.")]
     parameters = [
         {'param_group_name': 'base', 'params': base_parameters},
     ]

@@ -26,7 +26,7 @@ import torch
 from stanza.models.common import utils
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
-from stanza.models.constituency.parse_transitions import State, TransitionScheme, CloseConstituent
+from stanza.models.constituency.parse_transitions import State, TransitionScheme, CloseConstituent, Shift
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.server.parser_eval import ParseResult, ScoredTree
@@ -183,7 +183,7 @@ class BaseModel(ABC):
             for trans, state in zip(transitions, states):
                 if not trans.is_legal(state, self):
                     raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions(), trans, state.gold_tree, state.gold_sequence))
-        return None, transitions, None
+        return None, transitions, None, None
 
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
         """
@@ -201,7 +201,8 @@ class BaseModel(ABC):
                         transitions=transitions,
                         constituents=constituents,
                         word_position=0,
-                        score=0.0)
+                        score=0.0,
+                        shift_representations=None)
                   for idx, wq in enumerate(word_queues)]
         if gold_trees:
             states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
@@ -291,8 +292,11 @@ class BaseModel(ABC):
         if keep_constituents:
             constituents = defaultdict(list)
 
+        if keep_state:
+            shift_representations = defaultdict(list)
+
         while len(state_batch) > 0:
-            pred_scores, transitions, scores = transition_choice(state_batch)
+            pred_scores, transitions, scores, representations = transition_choice(state_batch)
             if keep_scores and scores is not None:
                 state_batch = [state._replace(score=state.score + score) for state, score in zip(state_batch, scores)]
             state_batch = parse_transitions.bulk_apply(self, state_batch, transitions)
@@ -304,6 +308,12 @@ class BaseModel(ABC):
                         # constituents.value is the TreeStack node
                         # constituents.value.value is the Constituent itself (with the tree and the embedding)
                         constituents[batch_indices[t_idx]].append(state_batch[t_idx].constituents.value.value)
+
+            if keep_state:
+                for t_idx, transition in enumerate(transitions):
+                    if isinstance(transition, Shift):
+                        # TODO: make this smaller?  slice out the relevant portion, for example?
+                        shift_representations[t_idx].append(representations[t_idx, :])
 
             remove = set()
             for idx, state in enumerate(state_batch):
@@ -362,7 +372,15 @@ class BaseModel(ABC):
         treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores)
         return treebank
 
-    def parse_tagged_words(self, words, batch_size):
+    def analyze_tagged_words(self, sentences, batch_size=None, keep_state=True, keep_constituents=True):
+        if batch_size is None:
+            # TODO: refactor?
+            batch_size = self.args['eval_batch_size']
+        sentence_iterator = iter(sentences)
+        treebank = self.parse_sentences(sentence_iterator, self.build_batch_from_tagged_words, batch_size, self.predict, keep_state, keep_constituents)
+        return treebank
+
+    def parse_tagged_words(self, words, batch_size, keep_state=False, keep_constituents=False):
         """
         This parses tagged words and returns a list of trees.
 
