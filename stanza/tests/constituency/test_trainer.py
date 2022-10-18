@@ -297,7 +297,7 @@ class TestTrainer:
         args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
         tr = build_trainer(wordvec_pretrain_file, *args)
 
-        results = trainer.analyze_trees(tr.model, test_tree)
+        results = tr.model.analyze_trees(test_tree)
         assert len(results) == 2
         assert len(results[0].predictions) == 1
         assert results[0].predictions[0].tree == test_tree[0]

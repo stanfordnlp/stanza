@@ -18,14 +18,23 @@ or "turn the next input word into a constituent"
 """
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
+import logging
 
+import torch
+
+from stanza.models.common import utils
+from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
-from stanza.models.constituency.parse_transitions import State, TransitionScheme
+from stanza.models.constituency.parse_transitions import State, TransitionScheme, CloseConstituent
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
+from stanza.server.parser_eval import ParseResult, ScoredTree
 
 # default unary limit.  some treebanks may have longer chains (CTB, for example)
 UNARY_LIMIT = 4
+
+logger = logging.getLogger('stanza.constituency.trainer')
 
 class BaseModel(ABC):
     """
@@ -241,6 +250,121 @@ class BaseModel(ABC):
         if len(state_batch) > 0:
             state_batch = self.initial_state_from_words(state_batch)
         return state_batch
+
+
+    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False):
+        """
+        Repeat transitions to build a list of trees from the input batches.
+
+        The data_iterator should be anything which returns the data for a parse task via next()
+        build_batch_fn is a function that turns that data into State objects
+        This will be called to generate batches of size batch_size until the data is exhausted
+
+        The return is a list of tuples: (gold_tree, [(predicted, score) ...])
+        gold_tree will be left blank if the data did not include gold trees
+        currently score is always 1.0, but the interface may be expanded
+        to get a score from the result of the parsing
+
+        transition_choice: which method of the model to use for
+        choosing the next transition
+        """
+        treebank = []
+        treebank_indices = []
+        state_batch = build_batch_fn(batch_size, data_iterator)
+        batch_indices = list(range(len(state_batch)))
+        horizon_iterator = iter([])
+
+        if keep_constituents:
+            constituents = defaultdict(list)
+
+        while len(state_batch) > 0:
+            _, transitions = transition_choice(state_batch)
+            state_batch = parse_transitions.bulk_apply(self, state_batch, transitions)
+
+            if keep_constituents:
+                for t_idx, transition in enumerate(transitions):
+                    if isinstance(transition, CloseConstituent):
+                        # constituents is a TreeStack with information on how to build the next state of the LSTM or attn
+                        # constituents.value is the TreeStack node
+                        # constituents.value.value is the Constituent itself (with the tree and the embedding)
+                        constituents[batch_indices[t_idx]].append(state_batch[t_idx].constituents.value.value)
+
+            remove = set()
+            for idx, state in enumerate(state_batch):
+                if state.finished(self):
+                    predicted_tree = state.get_tree(self)
+                    gold_tree = state.gold_tree
+                    # TODO: put an actual score here?
+                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
+                    treebank_indices.append(batch_indices[idx])
+                    remove.add(idx)
+
+            if len(remove) > 0:
+                state_batch = [state for idx, state in enumerate(state_batch) if idx not in remove]
+                batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
+
+            for _ in range(batch_size - len(state_batch)):
+                horizon_state = next(horizon_iterator, None)
+                if not horizon_state:
+                    horizon_batch = build_batch_fn(batch_size, data_iterator)
+                    if len(horizon_batch) == 0:
+                        break
+                    horizon_iterator = iter(horizon_batch)
+                    horizon_state = next(horizon_iterator, None)
+
+                state_batch.append(horizon_state)
+                batch_indices.append(len(treebank) + len(state_batch))
+
+        treebank = utils.unsort(treebank, treebank_indices)
+        return treebank
+
+    def parse_sentences_no_grad(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False):
+        """
+        Given an iterator over the data and a method for building batches, returns a list of parse trees.
+
+        no_grad() is so that gradients aren't kept, which makes the model
+        run faster and use less memory at inference time
+        """
+        with torch.no_grad():
+            return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents)
+
+    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True):
+        """
+        Return a ParseResult for each tree in the trees list
+
+        The transitions run will be the transitions represented by the tree
+        The output layers will be available in result.state for each result
+
+        keep_state=True as a default here as a method which keeps the grad
+        is likely to want to keep the resulting state as well
+        """
+        if batch_size is None:
+            # TODO: refactor?
+            batch_size = self.args['eval_batch_size']
+        tree_iterator = iter(trees)
+        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents)
+        return treebank
+
+    def parse_tagged_words(self, words, batch_size, keep_state=False, keep_constituents=False):
+        """
+        This parses tagged words and returns a list of trees.
+
+        `parse_tagged_words` is useful at Pipeline time -
+          it takes words & tags and processes that into trees.
+
+        The tagged words should be represented:
+          one list per sentence
+            each sentence is a list of (word, tag)
+        The return value is a list of ParseTree objects
+        """
+        logger.debug("Processing %d sentences", len(words))
+        self.eval()
+
+        sentence_iterator = iter(words)
+        treebank = self.parse_sentences_no_grad(sentence_iterator, self.build_batch_from_tagged_words, batch_size, self.predict, keep_state=keep_state, keep_constituents=keep_constituents)
+
+        results = [t.predictions[0].tree for t in treebank]
+        return results
 
 class SimpleModel(BaseModel):
     """

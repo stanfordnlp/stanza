@@ -63,7 +63,7 @@ class ConstituencyProcessor(UDProcessor):
         if self._tqdm:
             words = tqdm(words)
 
-        trees = trainer.parse_tagged_words(self._model.model, words, self._batch_size)
+        trees = self._model.model.parse_tagged_words(words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
 
