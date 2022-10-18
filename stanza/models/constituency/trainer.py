@@ -283,14 +283,6 @@ def remove_optimizer(args, model_save_file, model_load_file):
     trainer = Trainer.load(model_load_file, args=load_args, load_optimizer=False)
     trainer.save(model_save_file)
 
-def convert_trees_to_sequences(trees, tree_type, transition_scheme):
-    logger.info("Building {} transition sequences".format(tree_type))
-    if logger.getEffectiveLevel() <= logging.INFO:
-        trees = tqdm(trees)
-    sequences = transition_sequence.build_treebank(trees, transition_scheme)
-    transitions = transition_sequence.all_transitions(sequences)
-    return sequences, transitions
-
 def add_grad_clipping(trainer, grad_clipping):
     """
     Adds a torch.clamp hook on each parameter if grad_clipping is not None
@@ -325,8 +317,8 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
 
     unary_limit = max(max(t.count_unary_depth() for t in train_trees),
                       max(t.count_unary_depth() for t in dev_trees)) + 1
-    train_sequences, train_transitions = convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
-    dev_sequences, dev_transitions = convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
+    train_sequences, train_transitions = transition_sequence.convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
+    dev_sequences, dev_transitions = transition_sequence.convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
     logger.info("Unique transitions in training set: %s", train_transitions)

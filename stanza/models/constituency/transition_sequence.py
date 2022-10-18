@@ -4,8 +4,15 @@ Build a transition sequence from parse trees.
 Supports multiple transition schemes - TOP_DOWN and variants, IN_ORDER
 """
 
+import logging
+
+from stanza.models.common import utils
 from stanza.models.constituency.parse_transitions import Shift, CompoundUnary, OpenConstituent, CloseConstituent, TransitionScheme
 from stanza.models.constituency.tree_reader import read_trees
+
+tqdm = utils.get_tqdm()
+
+logger = logging.getLogger('stanza.constituency.trainer')
 
 def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     """
@@ -93,6 +100,19 @@ def all_transitions(transition_lists):
     for trans_list in transition_lists:
         transitions.update(trans_list)
     return sorted(transitions)
+
+def convert_trees_to_sequences(trees, tree_type, transition_scheme):
+    """
+    Wrap both build_treebank and all_transitions, possibly with a tqdm
+
+    Converts trees to a list of sequences, then returns the list of known transitions
+    """
+    logger.info("Building {} transition sequences".format(tree_type))
+    if logger.getEffectiveLevel() <= logging.INFO:
+        trees = tqdm(trees)
+    sequences = build_treebank(trees, transition_scheme)
+    transitions = all_transitions(sequences)
+    return sequences, transitions
 
 def main():
     """
