@@ -155,6 +155,18 @@ class BaseModel(ABC):
         """
         return not self._transition_scheme is TransitionScheme.IN_ORDER
 
+    def predict(self, states, is_legal=True):
+        raise NotImplementedError("LSTMModel can predict, but SimpleModel cannot")
+
+    def weighted_choice(self, states):
+        raise NotImplementedError("LSTMModel can weighted_choice, but SimpleModel cannot")
+
+    def predict_gold(self, states):
+        """
+        For each State, return the next item in the gold_sequence
+        """
+        return None, [y.gold_sequence[y.num_transitions()] for y in states]
+
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
         """
         what is passed in should be a list of list of preterminals
