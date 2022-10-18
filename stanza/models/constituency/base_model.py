@@ -19,6 +19,7 @@ or "turn the next input word into a constituent"
 
 from abc import ABC, abstractmethod
 
+from stanza.models.constituency import transition_sequence
 from stanza.models.constituency.parse_transitions import State, TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.tree_stack import TreeStack
@@ -198,6 +199,48 @@ class BaseModel(ABC):
                               for pt in tree.yield_preterminals()]
                              for tree in trees]
         return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees)
+
+    def build_batch_from_trees(self, batch_size, data_iterator):
+        """
+        Read from the data_iterator batch_size trees and turn them into new parsing states
+        """
+        state_batch = []
+        for _ in range(batch_size):
+            gold_tree = next(data_iterator, None)
+            if gold_tree is None:
+                break
+            state_batch.append(gold_tree)
+
+        if len(state_batch) > 0:
+            state_batch = self.initial_state_from_gold_trees(state_batch)
+        return state_batch
+
+    def build_batch_from_trees_with_gold_sequence(self, batch_size, data_iterator):
+        """
+        Same as build_batch_from_trees, but use the model parameters to turn the trees into gold sequences and include the sequence
+        """
+        state_batch = self.build_batch_from_trees(batch_size, data_iterator)
+        if len(state_batch) == 0:
+            return state_batch
+
+        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme())
+        state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
+        return state_batch
+
+    def build_batch_from_tagged_words(self, batch_size, data_iterator):
+        """
+        Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
+        """
+        state_batch = []
+        for _ in range(batch_size):
+            sentence = next(data_iterator, None)
+            if sentence is None:
+                break
+            state_batch.append(sentence)
+
+        if len(state_batch) > 0:
+            state_batch = self.initial_state_from_words(state_batch)
+        return state_batch
 
 class SimpleModel(BaseModel):
     """
