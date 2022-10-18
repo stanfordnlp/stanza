@@ -18,11 +18,11 @@ class TreeEmbedding(nn.Module):
         super(TreeEmbedding, self).__init__()
 
         self.config = {
+            "all_words":   args["all_words"],
             "backprop":    args["backprop"],
-            "batch_norm":  args["batch_norm"],
+            #"batch_norm":  args["batch_norm"],
             "node_attn":   args["node_attn"],
             "top_layer":   args["top_layer"],
-            "use_words":   args["use_words"],
         }
 
         self.constituency_parser = constituency_parser
@@ -31,7 +31,9 @@ class TreeEmbedding(nn.Module):
         # transition_stack:  transition_hidden_size
         # constituent_stack: hidden_size
         self.hidden_size = self.constituency_parser.hidden_size + self.constituency_parser.transition_hidden_size
-        if self.config["use_words"]:
+        if self.config["all_words"]:
+            self.hidden_size += self.constituency_parser.hidden_size * self.constituency_parser.num_tree_lstm_layers
+        else:
             self.hidden_size += self.constituency_parser.hidden_size * self.constituency_parser.num_tree_lstm_layers * 2
 
         if self.config["node_attn"]:
@@ -39,17 +41,14 @@ class TreeEmbedding(nn.Module):
             self.key = nn.Linear(self.hidden_size, self.constituency_parser.hidden_size)
             self.value = nn.Linear(self.constituency_parser.hidden_size, self.constituency_parser.hidden_size)
 
-            self.output_size = self.constituency_parser.hidden_size
-            if self.config["use_words"]:
-                self.output_size += self.constituency_parser.hidden_size * self.constituency_parser.num_tree_lstm_layers * 2
+            # TODO: cat transition and constituent hx as well?
+            self.output_size = self.constituency_parser.hidden_size * self.constituency_parser.num_tree_lstm_layers
         else:
             self.output_size = self.hidden_size
 
-        # maybe have batch_norm, maybe use Identity
-        if self.config["batch_norm"]:
-            self.input_norm = nn.BatchNorm1d(self.output_size)
-        else:
-            self.input_norm = nn.Identity()
+        # TODO: maybe have batch_norm, maybe use Identity
+        #if self.config["batch_norm"]:
+        #    self.input_norm = nn.BatchNorm1d(self.output_size)
 
     def embed_trees(self, inputs):
         if self.config["backprop"]:
@@ -72,28 +71,27 @@ class TreeEmbedding(nn.Module):
         if self.config["top_layer"]:
             constituent_hx = torch.stack([self.constituency_parser.constituent_stack.output(state.constituents) for state in states])
         else:
-            constituent_hx = torch.cat([constituents[-2].tree_hx for constituents in constituent_lists], axis=0)
+            constituent_hx = torch.cat([constituents[-2].tree_hx for constituents in constituent_lists], dim=0)
 
-        if self.config["use_words"]:
-            key = torch.cat((word_begin_hx, word_end_hx, transition_hx, constituent_hx), axis=1)
+        if self.config["all_words"]:
+            # need B matrices of N x hidden_size
+            key = [torch.stack([torch.cat([word.hx, thx, chx]) for word in state.word_queue], dim=0)
+                   for state, thx, chx in zip(states, transition_hx, constituent_hx)]
         else:
-            key = torch.cat((transition_hx, constituent_hx), axis=1)
+            key = torch.cat((word_begin_hx, word_end_hx, transition_hx, constituent_hx), dim=1).unsqueeze(1)
 
         if not self.config["node_attn"]:
-            return self.input_norm(key)
-        key = self.key(key)
+            return key
+        key = [self.key(x) for x in key]
 
-        node_hx = [torch.stack([con.tree_hx for con in constituents], axis=0) for constituents in constituent_lists]
+        node_hx = [torch.stack([con.tree_hx for con in constituents], dim=0) for constituents in constituent_lists]
         queries = [self.query(nhx).reshape(nhx.shape[0], -1) for nhx in node_hx]
         values = [self.value(nhx).reshape(nhx.shape[0], -1) for nhx in node_hx]
         # TODO: could pad to make faster here
-        attn = [torch.matmul(q, k) for q, k in zip(queries, key)]
-        attn = [torch.softmax(x, dim=0).unsqueeze(0) for x in attn]
-        previous_layer = [torch.matmul(weight, value) for weight, value in zip(attn, values)]
-        previous_layer = torch.cat(previous_layer, dim=0)
-        if self.config["use_words"]:
-            previous_layer = torch.cat((previous_layer, word_begin_hx, word_end_hx), dim=1)
-        return self.input_norm(previous_layer)
+        attn = [torch.matmul(q, k.transpose(0, 1)) for q, k in zip(queries, key)]
+        attn = [torch.softmax(x, dim=0) for x in attn]
+        previous_layer = [torch.matmul(weight.transpose(0, 1), value) for weight, value in zip(attn, values)]
+        return previous_layer
 
     def forward(self, inputs):
         return embed_trees(self, inputs)

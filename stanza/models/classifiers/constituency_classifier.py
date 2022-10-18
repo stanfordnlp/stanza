@@ -27,7 +27,7 @@ class ConstituencyClassifier(nn.Module):
                                       constituency_batch_norm = args.constituency_batch_norm,
                                       constituency_node_attn = args.constituency_node_attn,
                                       constituency_top_layer = args.constituency_top_layer,
-                                      constituency_use_words = args.constituency_use_words,
+                                      constituency_all_words = args.constituency_all_words,
                                       model_type = ModelType.CONSTITUENCY)
 
         self.tree_embedding = tree_embedding
@@ -38,7 +38,7 @@ class ConstituencyClassifier(nn.Module):
     def log_configuration(self):
         tlogger.info("Backprop into parser: %s", self.config.constituency_backprop)
         tlogger.info("Batch norm: %s", self.config.constituency_batch_norm)
-        tlogger.info("Use start & end words: %s", self.config.constituency_use_words)
+        tlogger.info("Word positions used: %s", "all words" if self.config.constituency_all_words else "start and end words")
         tlogger.info("Attention over nodes: %s", self.config.constituency_node_attn)
         tlogger.info("Intermediate layers: %s", self.config.fc_shapes)
 
@@ -54,7 +54,8 @@ class ConstituencyClassifier(nn.Module):
     def forward(self, inputs):
         inputs = [x.constituency if isinstance(x, SentimentDatum) else x for x in inputs]
 
-        previous_layer = self.tree_embedding.embed_trees(inputs)
+        embedding = self.tree_embedding.embed_trees(inputs)
+        previous_layer = torch.stack([torch.max(x, dim=0)[0] for x in embedding], dim=0)
         previous_layer = self.dropout(previous_layer)
         for fc in self.fc_layers[:-1]:
             # relu cause many neuron die

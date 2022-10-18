@@ -269,8 +269,8 @@ def build_parser():
     parser.add_argument('--no_constituency_node_attn', dest='constituency_node_attn', action='store_false', help='True means to make an attn layer out of the tree, with the words as key and nodes as query')
     parser.add_argument('--constituency_top_layer', dest='constituency_top_layer', default=False, action='store_true', help='True means use the top (ROOT) layer of the constituents.  Otherwise, the next layer down (S, usually) will be used')
     parser.add_argument('--no_constituency_top_layer', dest='constituency_top_layer', action='store_false', help='True means use the top (ROOT) layer of the constituents.  Otherwise, the next layer down (S, usually) will be used')
-    parser.add_argument('--constituency_use_words', default=True, action='store_true', help='Use the start and end word embeddings as inputs to the constituency classifier')
-    parser.add_argument('--no_constituency_use_words', dest='constituency_use_words', default=True, action='store_false', help='Use the start and end word embeddings as inputs to the constituency classifier')
+    parser.add_argument('--constituency_all_words', default=False, action='store_true', help='Use all word positions in the constituency classifier')
+    parser.add_argument('--no_constituency_all_words', dest='constituency_all_words', default=False, action='store_false', help='Use the start and end word embeddings as inputs to the constituency classifier')
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
 
