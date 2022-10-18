@@ -171,6 +171,7 @@ def build_parser():
     parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
     parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--max_epochs', type=int, default=100)
+    parser.add_argument('--tick', type=int, default=2000)
 
     parser.add_argument('--model_type', type=lambda x: ModelType[x.upper()], default=ModelType.CNN,
                         help='Model type to use.  Options: %s' % " ".join(x.name for x in ModelType))
@@ -487,14 +488,12 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
 
             # print statistics
             running_loss += batch_loss.item()
-            if ((batch_num + 1) * args.batch_size) % 2000 < args.batch_size: # print every 2000 items
-                train_loss = running_loss / 2000
-                logger.info('[%d, %5d] Average loss: %.3f' %
-                            (trainer.epochs_trained + 1, ((batch_num + 1) * args.batch_size), train_loss))
+            if ((batch_num + 1) * args.batch_size) % args.tick < args.batch_size: # print every 2000 items
+                train_loss = running_loss / args.tick
+                logger.info('[%d, %5d] Average loss: %.3f', trainer.epochs_trained + 1, (batch_num + 1) * args.batch_size, train_loss)
                 if args.wandb:
                     wandb.log({'train_loss': train_loss}, step=trainer.global_step)
-                if (args.dev_eval_steps > 0 and
-                    ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size):
+                if args.dev_eval_steps > 0 and ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size:
                     logger.info('---- Interim analysis ----')
                     dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if args.wandb:
