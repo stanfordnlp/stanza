@@ -165,7 +165,8 @@ class SimpleModel(BaseModel):
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
         for tagged_words in tagged_word_lists:
-            word_queue = [tag_node for tag_node in tagged_words]
+            word_queue =  [None]
+            word_queue += [tag_node for tag_node in tagged_words]
             word_queue.append(None)
             word_queues.append(word_queue)
         return word_queues
@@ -180,7 +181,7 @@ class SimpleModel(BaseModel):
         return word_node
 
     def transform_word_to_constituent(self, state):
-        return state.word_queue[state.word_position]
+        return state.get_word(state.word_position)
 
     def dummy_constituent(self, dummy):
         return dummy

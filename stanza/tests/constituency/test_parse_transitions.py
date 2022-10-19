@@ -28,7 +28,7 @@ def test_initial_state(model=None):
     assert state.sentence_length == 3
     assert state.num_opens == 0
     # each stack has a sentinel value at the end
-    assert len(state.word_queue) == 4
+    assert len(state.word_queue) == 5
     assert len(state.constituents) == 1
     assert len(state.transitions) == 1
     assert state.word_position == 0
@@ -44,11 +44,11 @@ def test_shift(model=None):
     state = open_transition.apply(state, model)
     shift = parse_transitions.Shift()
     assert shift.is_legal(state, model)
-    assert len(state.word_queue) == 4
+    assert len(state.word_queue) == 5
     assert state.word_position == 0
 
     state = shift.apply(state, model)
-    assert len(state.word_queue) == 4
+    assert len(state.word_queue) == 5
     # 4 because of the dummy created by the opens
     assert len(state.constituents) == 4
     assert len(state.transitions) == 4
@@ -57,7 +57,7 @@ def test_shift(model=None):
     assert not state.empty_word_queue()
 
     state = shift.apply(state, model)
-    assert len(state.word_queue) == 4
+    assert len(state.word_queue) == 5
     assert len(state.constituents) == 5
     assert len(state.transitions) == 5
     assert shift.is_legal(state, model)
@@ -65,7 +65,7 @@ def test_shift(model=None):
     assert not state.empty_word_queue()
 
     state = shift.apply(state, model)
-    assert len(state.word_queue) == 4
+    assert len(state.word_queue) == 5
     assert len(state.constituents) == 6
     assert len(state.transitions) == 6
     assert not shift.is_legal(state, model)

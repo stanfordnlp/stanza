@@ -47,7 +47,7 @@ def check_reproduce_tree(transition_scheme):
     # the transition sequence should put all of the words
     # from the buffer onto the tree
     # one spot left for the sentinel value
-    assert len(state.word_queue) == 7
+    assert len(state.word_queue) == 8
     assert state.sentence_length == 6
     assert state.word_position == state.sentence_length
     assert len(state.transitions) == len(transitions) + 1

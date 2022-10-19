@@ -706,7 +706,7 @@ class LSTMModel(BaseModel, nn.Module):
         word_queues = []
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-                sentence_output = word_output[1:len(tagged_words)+2, sentence_idx, :]
+                sentence_output = word_output[:len(tagged_words)+2, sentence_idx, :]
             else:
                 sentence_output = word_output[:len(tagged_words), sentence_idx, :]
             sentence_output = self.word_to_constituent(sentence_output)
@@ -717,12 +717,14 @@ class LSTMModel(BaseModel, nn.Module):
             # transform the word_input to hidden_size in some way
             # and use that instead
             if self.sentence_boundary_vectors is not SentenceBoundary.NONE:
-                word_queue = [WordNode(tag_node, sentence_output[idx, :])
-                              for idx, tag_node in enumerate(tagged_words)]
-                word_queue.append(WordNode(None, sentence_output[len(tagged_words), :]))
+                word_queue =  [WordNode(None, sentence_output[0, :])]
+                word_queue += [WordNode(tag_node, sentence_output[idx+1, :])
+                               for idx, tag_node in enumerate(tagged_words)]
+                word_queue.append(WordNode(None, sentence_output[len(tagged_words)+1, :]))
             else:
-                word_queue = [WordNode(tag_node, sentence_output[idx, :])
-                              for idx, tag_node in enumerate(tagged_words)]
+                word_queue =  [WordNode(None, self.word_zeros)]
+                word_queue += [WordNode(tag_node, sentence_output[idx, :])
+                                   for idx, tag_node in enumerate(tagged_words)]
                 word_queue.append(WordNode(None, self.word_zeros))
 
             word_queues.append(word_queue)
@@ -745,7 +747,7 @@ class LSTMModel(BaseModel, nn.Module):
         return word_node.value
 
     def transform_word_to_constituent(self, state):
-        word_node = state.word_queue[state.word_position]
+        word_node = state.get_word(state.word_position)
         word = word_node.value
         if self.constituency_composition == ConstituencyComposition.TREE_LSTM:
             return Constituent(word, word_node.hx.view(self.num_tree_lstm_layers, self.hidden_size), self.word_zeros.view(self.num_tree_lstm_layers, self.hidden_size))
@@ -958,7 +960,7 @@ class LSTMModel(BaseModel, nn.Module):
         We've basically done all the work analyzing the state as
         part of applying the transitions, so this method is very simple
         """
-        word_hx = torch.stack([state.word_queue[state.word_position].hx for state in states])
+        word_hx = torch.stack([state.get_word(state.word_position).hx for state in states])
         transition_hx = torch.stack([self.transition_stack.output(state.transitions) for state in states])
         # note that we use lstm_hx instead of output from the constituents
         # this way, we can, as an option, NOT include the constituents to the left

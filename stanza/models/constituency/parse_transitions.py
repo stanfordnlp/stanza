@@ -48,6 +48,9 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
       manipulating the list itself.  this can be handled differently
       from transitions and constituents as it is processed once
       at the start of parsing
+
+    The word_queue should have both a start and an end word.
+    Those can be None in the case of the endpoints if they are unused.
     """
     def empty_word_queue(self):
         # the first element of each stack is a sentinel with no value
@@ -69,6 +72,11 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
     def num_transitions(self):
         # -1 for the sentinel value
         return len(self.transitions) - 1
+
+    def get_word(self, pos):
+        # +1 to handle the initial sentinel value
+        # (which you can actually get with pos=-1)
+        return self.word_queue[pos+1]
 
     def finished(self, model):
         return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
@@ -111,7 +119,7 @@ def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
     # this is the bottom of the TreeStack and will be the same for each State
     transitions=model.initial_transitions()
     constituents=model.initial_constituents()
-    states = [State(sentence_length=len(wq)-1,   # -1 because it ends with a sentinel
+    states = [State(sentence_length=len(wq)-2,   # -2 because it starts and ends with a sentinel
                     num_opens=0,
                     word_queue=wq,
                     gold_tree=None,
