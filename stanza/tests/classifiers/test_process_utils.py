@@ -61,3 +61,23 @@ def test_read_snippets(tmp_path):
     assert snippets == [SentimentDatum(sentiment=0, text=['This', 'is', 'a', 'test']),
                         SentimentDatum(sentiment=1, text=['This', 'is', 'a', 'second', 'sentence'])]
 
+def test_read_snippets_two_columns(tmp_path):
+    """
+    Test what happens when multiple columns are combined for the sentiment value
+    """
+    filename = tmp_path / "foo.csv"
+    with open(filename, "w", encoding="utf-8") as fout:
+        fout.write("FOO\tThis is a test\thappy\tfoo\n")
+        fout.write("FOO\tThis is a second sentence\tsad\tbar\n")
+        fout.write("FOO\tThis is a third sentence\tsad\tfoo\n")
+
+    nlp = stanza.Pipeline("en", dir=TEST_MODELS_DIR, processors="tokenize", download_method=None)
+
+    mapping = {("happy", "foo"): 0, ("sad", "bar"): 1, ("sad", "foo"): 2}
+
+    snippets = process_utils.read_snippets(filename, (2,3), 1, "en", mapping, nlp=nlp)
+    assert len(snippets) == 3
+    assert snippets == [SentimentDatum(sentiment=0, text=['This', 'is', 'a', 'test']),
+                        SentimentDatum(sentiment=1, text=['This', 'is', 'a', 'second', 'sentence']),
+                        SentimentDatum(sentiment=2, text=['This', 'is', 'a', 'third', 'sentence'])]
+

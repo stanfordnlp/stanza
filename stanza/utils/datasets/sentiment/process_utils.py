@@ -124,18 +124,21 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
     # Read in the data and parse it
     snippets = []
     for idx, line in enumerate(tqdm(lines)):
-        sentiment = line[sentiment_column]
+        if isinstance(sentiment_column, int):
+            sentiment = line[sentiment_column].lower()
+        else:
+            sentiment = tuple([line[x] for x in sentiment_column])
         text = line[text_column]
         doc = nlp(text.strip())
 
-        sentiment = mapping.get(sentiment.lower(), None)
-        if sentiment is None:
-            raise ValueError("Value {} not in mapping at line {} of {}".format(line[sentiment_column], idx, csv_filename))
+        converted_sentiment = mapping.get(sentiment, None)
+        if converted_sentiment is None:
+            raise ValueError("Value {} not in mapping at line {} of {}".format(sentiment, idx, csv_filename))
 
         text = []
         for sentence in doc.sentences:
             text.extend(token.text for token in sentence.tokens)
         text = clean_tokenized_tweet(text)
-        snippets.append(SentimentDatum(sentiment, text))
+        snippets.append(SentimentDatum(converted_sentiment, text))
     return snippets
 
