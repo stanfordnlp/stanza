@@ -37,7 +37,7 @@ REMAPPING = {
     '(SE-SPL':  '(S-SPL',
     '(SBARR':   '(SBAR',
     'PPADV':    'PP-ADV',
-    '(PR':      '(PP',
+    '(PR (':    '(PP (',
     '(PPP':     '(PP',
     'VP0ADV':   'VP-ADV',
     '(S1':      '(S',
@@ -106,9 +106,10 @@ def is_valid_line(line):
     return False
 
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
-WEIRD_LABELS = ["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP"]
+WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP"] + list(REMAPPING.keys())))
 
-def convert_file(orig_file, new_file):
+
+def convert_file(orig_file, new_file, fix_errors=True):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
@@ -157,7 +158,8 @@ def convert_file(orig_file, new_file):
                         errors["untagged_leaf"].append("Tree with non-preterminal leaves in {} line {}: {}".format(orig_file, line_idx, tree))
                         continue
                     # Unify the labels
-                    tree = unify_label(tree)
+                    if fix_errors:
+                        tree = unify_label(tree)
 
                     # TODO: this block eliminates 3 trees from VLSP-22
                     # maybe those trees can be salvaged?
@@ -186,14 +188,14 @@ def convert_file(orig_file, new_file):
 
     return errors
 
-def convert_files(file_list, new_dir, verbose=False):
+def convert_files(file_list, new_dir, verbose=False, fix_errors=True):
     errors = defaultdict(list)
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        new_errors = convert_file(filename, new_file_path)
+        new_errors = convert_file(filename, new_file_path, fix_errors)
         for e in new_errors:
             errors[e].extend(new_errors[e])
 
