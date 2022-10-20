@@ -124,10 +124,13 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
     # Read in the data and parse it
     snippets = []
     for idx, line in enumerate(tqdm(lines)):
-        if isinstance(sentiment_column, int):
-            sentiment = line[sentiment_column].lower()
-        else:
-            sentiment = tuple([line[x] for x in sentiment_column])
+        try:
+            if isinstance(sentiment_column, int):
+                sentiment = line[sentiment_column].lower()
+            else:
+                sentiment = tuple([line[x] for x in sentiment_column])
+        except IndexError as e:
+            raise IndexError("Columns {} did not exist at line {}: {}".format(sentiment_column, idx, line)) from e
         text = line[text_column]
         doc = nlp(text.strip())
 
