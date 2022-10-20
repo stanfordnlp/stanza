@@ -16,6 +16,7 @@ from collections import defaultdict
 from stanza.models.constituency.tree_reader import read_trees, MixedTreeError, UnlabeledTreeError
 
 REMAPPING = {
+    '(ADV-MDP': '(RP-MDP',
     '(MPD':     '(MDP',
     '(MP ':     '(NP ',
     '(MP(':     '(NP(',
@@ -46,6 +47,7 @@ REMAPPING = {
     'APPPD':    'AP-PPD',
     'APPRD':    'AP-PPD',
     'Np--H':    'Np-H',
+    '(WPNP':    '(WHNP',
     '(WHRPP':   '(WHRP',
     # the one mistagged PV is on a prepositional phrase
     # (the subtree there maybe needs an SBAR as well, but who's counting)
@@ -142,16 +144,6 @@ def convert_file(orig_file, new_file):
                 if parity < 0:
                     errors["extra_parens"].append("Extra parens at end of tree from {} line {} for having extra parens: {}".format(orig_file, line_idx, tree))
                     continue
-                # TODO: these blocks eliminate 11 trees
-                # maybe those trees can be salvaged?
-                bad_label = False
-                for weird_label in WEIRD_LABELS:
-                    if tree.find(weird_label) >= 0:
-                        bad_label = True
-                        errors[weird_label].append("Weird label {} from {} line {}: {}".format(weird_label, orig_file, line_idx, tree))
-                        break
-                if bad_label:
-                    continue
                 try:
                     # test that the tree can be read in properly
                     processed_trees = read_trees(tree)
@@ -166,6 +158,18 @@ def convert_file(orig_file, new_file):
                         continue
                     # Unify the labels
                     tree = unify_label(tree)
+
+                    # TODO: this block eliminates 3 trees from VLSP-22
+                    # maybe those trees can be salvaged?
+                    bad_label = False
+                    for weird_label in WEIRD_LABELS:
+                        if tree.find(weird_label) >= 0:
+                            bad_label = True
+                            errors[weird_label].append("Weird label {} from {} line {}: {}".format(weird_label, orig_file, line_idx, tree))
+                            break
+                    if bad_label:
+                        continue
+
                     writer.write(tree)
                     reading_tree = False
                     tree = ""
