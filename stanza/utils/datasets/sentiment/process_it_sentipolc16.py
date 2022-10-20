@@ -27,7 +27,12 @@ def main(in_dir, out_dir, short_name, *args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', default=Mode.COMBINED, type=lambda x: Mode[x.upper()],
                         help='How to handle mixed vs neutral.  {}'.format(", ".join(x.name for x in Mode)))
+    parser.add_argument('--name', default=None, type=str,
+                        help='Use a different name to save the dataset.  Useful for keeping POSITIVE & NEGATIVE separate')
     args = parser.parse_args(args=list(*args))
+
+    if args.name is not None:
+        short_name = args.name
 
     nlp = stanza.Pipeline("it", processors='tokenize')
 
@@ -61,6 +66,7 @@ def main(in_dir, out_dir, short_name, *args):
         }
 
     print("Using {} scheme to handle the 4 values.  Mapping: {}".format(args.mode, mapping))
+    print("Saving to {} using the short name {}".format(out_dir, short_name))
 
     test_filename = os.path.join(in_dir, "test_set_sentipolc16_gold2000.csv")
     test_snippets = process_utils.read_snippets(test_filename, (2,3), 8, "it", mapping, delimiter=",", skip_first_line=False, quotechar='"', nlp=nlp)
