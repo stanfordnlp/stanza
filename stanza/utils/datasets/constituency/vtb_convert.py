@@ -106,7 +106,7 @@ def is_valid_line(line):
     return False
 
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
-WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP"] + list(REMAPPING.keys())))
+WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
 
 def convert_file(orig_file, new_file, fix_errors=True):
