@@ -29,6 +29,7 @@ import random
 
 import stanza
 from stanza.models.common import utils
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.datasets.constituency import selftrain
 
 tqdm = utils.get_tqdm()
@@ -45,8 +46,17 @@ def parse_args():
         help='Path to the PaCCSS corpus and europarl corpus'
     )
 
+    parser.add_argument(
+        '--no_europarl',
+        default=True,
+        action='store_false',
+        dest='europarl',
+        help='Use the europarl dataset.  Turning this off makes the script a lot faster'
+    )
+
     parser.set_defaults(lang="it")
-    parser.set_defaults(models="saved_models/constituency/it_inorder.pt,saved_models/constituency/it_topdown.pt")
+    parser.set_defaults(package="vit")
+    parser.set_defaults(models="saved_models/constituency/it_best/it_vit_inorder_best.pt,saved_models/constituency/it_best/it_vit_topdown.pt")
     parser.set_defaults(output_file="data/constituency/it_silver.mrg")
 
     args = parser.parse_args()
@@ -88,15 +98,18 @@ def main():
     """
     args = parse_args()
 
+    foundation_cache = FoundationCache()
     ssplit_pipe = selftrain.build_ssplit_pipe(ssplit=True, lang=args.lang)
-    tag_pipe = selftrain.build_tag_pipe(ssplit=False, lang=args.lang)
-    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models)
+    tag_pipe = selftrain.build_tag_pipe(ssplit=False, lang=args.lang, foundation_cache=foundation_cache)
+    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models, package=args.package, foundation_cache=foundation_cache)
 
     docs = get_paccss(args.input_dir)
-    docs.extend(get_europarl(args.input_dir, ssplit_pipe))
+    if args.europarl:
+        docs.extend(get_europarl(args.input_dir, ssplit_pipe))
 
-    new_trees = selftrain.find_matching_trees(docs, args.num_sentences, set(), tag_pipe, parser_pipes, shuffle=False, chunk_size=100)
-    print("Found %d unique trees which are the same between models" % len(new_trees))
+    logger.info("Processing %d docs", len(docs))
+    new_trees = selftrain.find_matching_trees(docs, args.num_sentences, set(), tag_pipe, parser_pipes, shuffle=False, chunk_size=100, output_ptb=args.output_ptb)
+    logger.info("Found %d unique trees which are the same between models" % len(new_trees))
     with open(args.output_file, "w") as fout:
         for tree in sorted(new_trees):
             fout.write(tree)
