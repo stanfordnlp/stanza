@@ -95,6 +95,7 @@ pt_cintil
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset pt_cintil
 """
 
+import argparse
 import os
 import random
 import sys
@@ -166,13 +167,22 @@ def process_vlsp22(paths, dataset_name, *args):
     Processes the VLSP 2022 dataset, which is four separate files for some reason
     """
     assert dataset_name == 'vi_vlsp22'
-    vlsp_dir = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", "VLSP_2022")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
+    args = parser.parse_args(args=list(*args))
+
+    if os.path.exists(args.subdir):
+        vlsp_dir = args.subdir
+    else:
+        vlsp_dir = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", args.subdir)
     if not os.path.exists(vlsp_dir):
         raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
     vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if not x.endswith(".zip")]
     if len(vlsp_files) == 0:
         raise FileNotFoundError("No tree files found in {}".format(vlsp_dir))
+    print("Loaded files from {}".format(vlsp_dir))
     print("Procesing:\n  {}".format("\n  ".join(vlsp_files)))
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True, fix_errors=True)
