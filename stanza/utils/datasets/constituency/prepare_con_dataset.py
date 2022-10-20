@@ -163,8 +163,10 @@ def process_vlsp22(paths):
     if not os.path.exists(vlsp_dir):
         raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
-    vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files]
-    print("Procesing {}".format(vlsp_files))
+    vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if not x.endswith(".zip")]
+    if len(vlsp_files) == 0:
+        raise FileNotFoundError("No tree files found in {}".format(vlsp_dir))
+    print("Procesing:\n  {}".format("\n  ".join(vlsp_files)))
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True)
         # This produces a 0 length test set, just as a placeholder until the actual test set is released
