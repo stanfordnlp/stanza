@@ -1,19 +1,66 @@
+"""
+Process the SentiPolc dataset from Evalita
+
+Can be run as a standalone script or as a module from
+prepare_sentiment_dataset
+
+An option controls how to split up the positive/negative/neutral/mixed classes
+"""
+
+import argparse
+from enum import Enum
 import os
 import random
+import sys
 
 import stanza
 from stanza.utils.datasets.sentiment import process_utils
 import stanza.utils.default_paths as default_paths
 
-def main(in_dir, out_dir, short_name):
+class Mode(Enum):
+    COMBINED = 1
+    SEPARATE = 2
+    POSITIVE = 3
+    NEGATIVE = 4
+
+def main(in_dir, out_dir, short_name, *args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', default=Mode.COMBINED, type=lambda x: Mode[x.upper()],
+                        help='How to handle mixed vs neutral.  {}'.format(", ".join(x.name for x in Mode)))
+    args = parser.parse_args(args=list(*args))
+
     nlp = stanza.Pipeline("it", processors='tokenize')
 
-    mapping = {
-        ('0', '0'): "1", # neither negative nor positive: neutral
-        ('1', '0'): "2", # positive, not negative: positive
-        ('0', '1'): "0", # negative, not positive: negative
-        ('1', '1'): "1", # mixed?  neutral?  not sure what to do with this
-    }
+    if args.mode == Mode.COMBINED:
+        mapping = {
+            ('0', '0'): "1", # neither negative nor positive: neutral
+            ('1', '0'): "2", # positive, not negative: positive
+            ('0', '1'): "0", # negative, not positive: negative
+            ('1', '1'): "1", # mixed combined with neutral
+        }
+    elif args.mode == Mode.SEPARATE:
+        mapping = {
+            ('0', '0'): "1", # neither negative nor positive: neutral
+            ('1', '0'): "2", # positive, not negative: positive
+            ('0', '1'): "0", # negative, not positive: negative
+            ('1', '1'): "3", # mixed as a different class
+        }
+    elif args.mode == Mode.POSITIVE:
+        mapping = {
+            ('0', '0'): "0", # neutral -> not positive
+            ('1', '0'): "1", # positive -> positive
+            ('0', '1'): "0", # negative -> not positive
+            ('1', '1'): "1", # mixed -> positive
+        }
+    elif args.mode == Mode.NEGATIVE:
+        mapping = {
+            ('0', '0'): "0", # neutral -> not negative
+            ('1', '0'): "0", # positive -> not negative
+            ('0', '1'): "1", # negative -> negative
+            ('1', '1'): "1", # mixed -> negative
+        }
+
+    print("Using {} scheme to handle the 4 values.  Mapping: {}".format(args.mode, mapping))
 
     test_filename = os.path.join(in_dir, "test_set_sentipolc16_gold2000.csv")
     test_snippets = process_utils.read_snippets(test_filename, (2,3), 8, "it", mapping, delimiter=",", skip_first_line=False, quotechar='"', nlp=nlp)
@@ -36,4 +83,4 @@ if __name__ == '__main__':
 
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "italian", "sentipolc16")
     out_directory = paths['SENTIMENT_DATA_DIR']
-    main(in_directory, out_directory, "it_sentipolc16")
+    main(in_directory, out_directory, "it_sentipolc16", sys.argv[1:])

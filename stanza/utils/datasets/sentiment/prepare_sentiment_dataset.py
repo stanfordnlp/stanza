@@ -213,6 +213,8 @@ Italian
 it_sentipolc16
   from here:
   http://www.di.unito.it/~tutreeb/sentipolc-evalita16/data.html
+  paper describing the evaluation and the results:
+  http://ceur-ws.org/Vol-1749/paper_026.pdf
 
   download the training and test zip files to $SENTIMENT_BASE/italian/sentipolc16
   unzip them there
@@ -223,9 +225,14 @@ it_sentipolc16
 
   python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset it_sentipolc16
 
-  one caveat: there are "mixed sentiment" labels which we didn't do anything for
-  just treated as neutral
   this script splits the training data into dev & train, keeps the test the same
+
+  The conversion allows for 4 ways of handling the "mixed" class:
+    treat it as the same as neutral, treat it as a separate class,
+    only distinguish positive or not positive,
+    only distinguish negative or not negative
+  for more details:
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset it_sentipolc16 --help
 
 another option not implemented yet: absita18
   http://sag.art.uniroma2.it/absita/data/
@@ -263,25 +270,25 @@ def convert_sst_general(paths, dataset_name, version):
     dataset = [train_phrases, dev_phrases, test_phrases]
     process_utils.write_dataset(dataset, out_directory, dataset_name)
 
-def convert_sst2(paths, dataset_name):
+def convert_sst2(paths, dataset_name, *args):
     """
     Create a 2 class SST dataset (neutral items are dropped)
     """
     convert_sst_general(paths, dataset_name, "binary")
 
-def convert_sst2roots(paths, dataset_name):
+def convert_sst2roots(paths, dataset_name, *args):
     """
     Create a 2 class SST dataset using only the roots
     """
     convert_sst_general(paths, dataset_name, "binaryroot")
 
-def convert_sst3roots(paths, dataset_name):
+def convert_sst3roots(paths, dataset_name, *args):
     """
     Create a 3 class SST dataset using only the roots
     """
     convert_sst_general(paths, dataset_name, "threeclassroot")
 
-def convert_sstplus(paths, dataset_name):
+def convert_sstplus(paths, dataset_name, *args):
     """
     Create a 3 class SST dataset with a few other small datasets added
     """
@@ -304,7 +311,7 @@ def convert_sstplus(paths, dataset_name):
     dataset = [train_phrases, dev_phrases, test_phrases]
     process_utils.write_dataset(dataset, out_directory, dataset_name)
 
-def convert_meld(paths, dataset_name):
+def convert_meld(paths, dataset_name, *args):
     """
     Convert the MELD dataset to train/dev/test files
     """
@@ -312,18 +319,18 @@ def convert_meld(paths, dataset_name):
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_MELD.main(in_directory, out_directory, dataset_name)
 
-def convert_scare(paths, dataset_name):
+def convert_scare(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "german", "scare")
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_scare.main(in_directory, out_directory, dataset_name)
-    
 
-def convert_de_usage(paths, dataset_name):
+
+def convert_de_usage(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "USAGE")
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_usage_german.main(in_directory, out_directory, dataset_name)
 
-def convert_sb10k(paths, dataset_name):
+def convert_sb10k(paths, dataset_name, *args):
     """
     Essentially runs the sb10k script twice with different arguments to produce the de_sb10k dataset
 
@@ -343,12 +350,12 @@ def convert_sb10k(paths, dataset_name):
                         "--split", "train_dev",
                         *column_args])
 
-def convert_vi_vsfc(paths, dataset_name):
+def convert_vi_vsfc(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "vietnamese", "_UIT-VSFC")
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_vsfc_vietnamese.main(in_directory, out_directory, dataset_name)
 
-def convert_mr_l3cube(paths, dataset_name):
+def convert_mr_l3cube(paths, dataset_name, *args):
     # csv_filename = 'extern_data/sentiment/MarathiNLP/L3CubeMahaSent Dataset/tweets-train.csv'
     MAPPING = {"-1": "0", "0": "1", "1": "2"}
 
@@ -363,16 +370,16 @@ def convert_mr_l3cube(paths, dataset_name):
 
     process_utils.write_dataset(datasets, out_directory, dataset_name)
 
-def convert_es_tass2020(paths, dataset_name):
+def convert_es_tass2020(paths, dataset_name, *args):
     process_es_tass2020.convert_tass2020(paths['SENTIMENT_BASE'], paths['SENTIMENT_DATA_DIR'], dataset_name)
 
-def convert_it_sentipolc16(paths, dataset_name):
+def convert_it_sentipolc16(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "italian", "sentipolc16")
     out_directory = paths['SENTIMENT_DATA_DIR']
-    process_it_sentipolc16.main(in_directory, out_directory, dataset_name)
+    process_it_sentipolc16.main(in_directory, out_directory, dataset_name, *args)
 
 
-def convert_ren(paths, dataset_name):
+def convert_ren(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_ren_chinese.main(in_directory, out_directory, dataset_name)
@@ -399,16 +406,16 @@ DATASET_MAPPING = {
     "zh-hans_ren":  convert_ren,
 }
 
-def main(dataset_name):
+def main(dataset_name, *args):
     paths = default_paths.get_default_paths()
 
     random.seed(1234)
 
     if dataset_name in DATASET_MAPPING:
-        DATASET_MAPPING[dataset_name](paths, dataset_name)
+        DATASET_MAPPING[dataset_name](paths, dataset_name, *args)
     else:
         raise ValueError(f"dataset {dataset_name} currently not handled")
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2:])
 
