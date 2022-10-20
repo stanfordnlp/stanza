@@ -205,6 +205,30 @@ mr_l3cube
   git clone git@github.com:l3cube-pune/MarathiNLP.git
 
   python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset mr_l3cube
+
+
+Italian
+-------
+
+it_sentipolc16
+  from here:
+  http://www.di.unito.it/~tutreeb/sentipolc-evalita16/data.html
+
+  download the training and test zip files to $SENTIMENT_BASE/italian/sentipolc16
+  unzip them there
+
+  so you should have
+    $SENTIMENT_BASE/italian/sentipolc16/test_set_sentipolc16_gold2000.csv
+    $SENTIMENT_BASE/italian/sentipolc16/training_set_sentipolc16.csv
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset it_sentipolc16
+
+  one caveat: there are "mixed sentiment" labels which we didn't do anything for
+  just treated as neutral
+  this script splits the training data into dev & train, keeps the test the same
+
+another option not implemented yet: absita18
+  http://sag.art.uniroma2.it/absita/data/
 """
 
 import os
@@ -216,6 +240,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.sentiment import process_airline
 from stanza.utils.datasets.sentiment import process_arguana_xml
 from stanza.utils.datasets.sentiment import process_es_tass2020
+from stanza.utils.datasets.sentiment import process_it_sentipolc16
 from stanza.utils.datasets.sentiment import process_MELD
 from stanza.utils.datasets.sentiment import process_ren_chinese
 from stanza.utils.datasets.sentiment import process_sb10k
@@ -341,6 +366,12 @@ def convert_mr_l3cube(paths, dataset_name):
 def convert_es_tass2020(paths, dataset_name):
     process_es_tass2020.convert_tass2020(paths['SENTIMENT_BASE'], paths['SENTIMENT_DATA_DIR'], dataset_name)
 
+def convert_it_sentipolc16(paths, dataset_name):
+    in_directory = os.path.join(paths['SENTIMENT_BASE'], "italian", "sentipolc16")
+    out_directory = paths['SENTIMENT_DATA_DIR']
+    process_it_sentipolc16.main(in_directory, out_directory, dataset_name)
+
+
 def convert_ren(paths, dataset_name):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "chinese", "RenCECps")
     out_directory = paths['SENTIMENT_DATA_DIR']
@@ -358,6 +389,8 @@ DATASET_MAPPING = {
     "en_meld":      convert_meld,
 
     "es_tass2020":  convert_es_tass2020,
+
+    "it_sentipolc16": convert_it_sentipolc16,
 
     "mr_l3cube":    convert_mr_l3cube,
 
