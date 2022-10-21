@@ -170,6 +170,7 @@ def process_vlsp22(paths, dataset_name, *args):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
+    parser.add_argument('--no_convert_brackets', default=True, action='store_false', dest='convert_brackets', help="Don't convert the VLSP parens RKBT & LKBT to PTB parens")
     args = parser.parse_args(args=list(*args))
 
     if os.path.exists(args.subdir):
@@ -185,7 +186,7 @@ def process_vlsp22(paths, dataset_name, *args):
     print("Loaded files from {}".format(vlsp_dir))
     print("Procesing:\n  {}".format("\n  ".join(vlsp_files)))
     with tempfile.TemporaryDirectory() as tmp_output_path:
-        vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True, fix_errors=True)
+        vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
         # This produces a 0 length test set, just as a placeholder until the actual test set is released
         vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0.9, dev_size=0.1)
     _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], dataset_name)

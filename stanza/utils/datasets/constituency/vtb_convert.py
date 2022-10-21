@@ -109,7 +109,7 @@ def is_valid_line(line):
 WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
 
-def convert_file(orig_file, new_file, fix_errors=True):
+def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
@@ -145,6 +145,8 @@ def convert_file(orig_file, new_file, fix_errors=True):
                 if parity < 0:
                     errors["extra_parens"].append("Extra parens at end of tree from {} line {} for having extra parens: {}".format(orig_file, line_idx, tree))
                     continue
+                if convert_brackets:
+                    tree = tree.replace("RBKT", "-RRB-").replace("LBKT", "-LRB-")
                 try:
                     # test that the tree can be read in properly
                     processed_trees = read_trees(tree)
@@ -188,27 +190,30 @@ def convert_file(orig_file, new_file, fix_errors=True):
 
     return errors
 
-def convert_files(file_list, new_dir, verbose=False, fix_errors=True):
+def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False):
     errors = defaultdict(list)
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        new_errors = convert_file(filename, new_file_path, fix_errors)
+        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets)
         for e in new_errors:
             errors[e].extend(new_errors[e])
 
-    print("Found the following errors:")
-    keys = sorted(errors.keys())
-    if verbose:
-        for e in keys:
-            print("--------- %10s -------------" % e)
-            print("\n\n".join(errors[e]))
+    if len(errors.keys()) == 0:
+        print("All errors were fixed!")
+    else:
+        print("Found the following errors:")
+        keys = sorted(errors.keys())
+        if verbose:
+            for e in keys:
+                print("--------- %10s -------------" % e)
+                print("\n\n".join(errors[e]))
+                print()
             print()
-        print()
-    for e in keys:
-        print("%s: %d" % (e, len(errors[e])))
+        for e in keys:
+            print("%s: %d" % (e, len(errors[e])))
 
 def convert_dir(orig_dir, new_dir):
     file_list = os.listdir(orig_dir)
