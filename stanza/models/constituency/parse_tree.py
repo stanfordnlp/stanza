@@ -34,6 +34,7 @@ class TreePrintMethod(Enum):
     ONE_LINE          = 1  # (ROOT (S ...  ))
     LABELED_PARENS    = 2  # (_ROOT (_S ... )_S )_ROOT
     PRETTY            = 3  # multiple lines
+    VLSP              = 4  # <s> (S ... ) </s>
 
 
 class Tree(StanzaObject):
@@ -164,6 +165,7 @@ class Tree(StanzaObject):
           O      -> one line PTB format, which is the default anyway
           L      -> open and close brackets are labeled, spaces in the tokens are replaced with _
           P      -> pretty print over multiple lines
+          V      -> surround lines with <s>...</s>, don't print ROOT, and turn () into L/RBKT
           ?      -> spaces in the tokens are replaced with ? for any value of ? other than OLP
                     warning: this may be removed in the future
           ?{OLP} -> specific format AND a custom space replacement
@@ -186,19 +188,34 @@ class Tree(StanzaObject):
         elif spec and spec[-1] == 'P':
             print_format = TreePrintMethod.PRETTY
             space_replacement = spec[0]
+        elif spec == 'V':
+            print_format = TreePrintMethod.VLSP
+        elif spec and spec[-1] == 'V':
+            print_format = TreePrintMethod.VLSP
+            space_replacement = spec[0]
         elif spec:
             space_replacement = spec[0]
             warnings.warn("Use of a custom replacement without a format specifier is deprecated.  Please use {}O instead".format(space_replacement), stacklevel=2)
 
+        LRB = "LBKT" if print_format == TreePrintMethod.VLSP else "-LRB-"
+        RRB = "RBKT" if print_format == TreePrintMethod.VLSP else "-RRB-"
         def normalize(text):
-            return text.replace(" ", space_replacement).replace("(", "-LRB-").replace(")", "-RRB-")
+            return text.replace(" ", space_replacement).replace("(", LRB).replace(")", RRB)
 
         if print_format is TreePrintMethod.PRETTY:
             return self.pretty_print(normalize)
 
         with StringIO() as buf:
             stack = deque()
-            stack.append(self)
+            if print_format == TreePrintMethod.VLSP:
+                buf.write("<s>\n")
+                if len(self.children) == 0:
+                    raise ValueError("Cannot print an empty tree with V format")
+                elif len(self.children) > 1:
+                    raise ValueError("Cannot print a tree with %d branches with V format" % len(self.children))
+                stack.append(self.children[0])
+            else:
+                stack.append(self)
             while len(stack) > 0:
                 node = stack.pop()
 
@@ -210,7 +227,7 @@ class Tree(StanzaObject):
                         buf.write(normalize(node.label))
                     continue
 
-                if print_format is TreePrintMethod.ONE_LINE:
+                if print_format is TreePrintMethod.ONE_LINE or print_format is TreePrintMethod.VLSP:
                     buf.write(OPEN_PAREN)
                     if node.label is not None:
                         buf.write(normalize(node.label))
@@ -223,6 +240,8 @@ class Tree(StanzaObject):
                 for child in reversed(node.children):
                     stack.append(child)
                     stack.append(SPACE_SEPARATOR)
+            if print_format == TreePrintMethod.VLSP:
+                buf.write("\n</s>")
             buf.seek(0)
             return buf.read()
 
