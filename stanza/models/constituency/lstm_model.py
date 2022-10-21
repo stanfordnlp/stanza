@@ -986,6 +986,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         predictions = self.forward(states)
         pred_max = torch.argmax(predictions, axis=1)
+        pred_max = pred_max.detach().cpu()
 
         pred_trans = [self.transitions[pred_max[idx]] for idx in range(len(states))]
         if is_legal:
