@@ -13,9 +13,10 @@ from collections import namedtuple
 import copy
 from enum import Enum
 import logging
+from operator import itemgetter
+import os
 import random
 import re
-import os
 
 import torch
 from torch import nn
@@ -720,7 +721,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     # update all states using either the gold or predicted transition
     # any trees which are now finished are removed from the training cycle
     while len(current_batch) > 0:
-        outputs, pred_transitions = model.predict(current_batch, is_legal=False)
+        outputs, pred_transitions, _ = model.predict(current_batch, is_legal=False)
         gold_transitions = [x.gold_sequence[x.num_transitions()] for x in current_batch]
         trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
         all_errors.append(outputs)
@@ -812,8 +813,10 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
     logger.info("Processing %d trees from %s", len(dev_trees), args['eval_file'])
     model.eval()
 
+    keep_scores = args['num_generate'] > 0
+
     tree_iterator = iter(tqdm(dev_trees))
-    treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_state=False)
+    treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
     full_results = treebank
 
     if args['num_generate'] > 0:
@@ -821,7 +824,11 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
-            generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_state=False))
+            generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_scores=keep_scores))
+
+        #best_treebank = [ParseResult(parses[0].gold, [max([p.predictions[0] for p in parses], key=itemgetter(1))], None, None)
+        #                 for parses in zip(*generated_treebanks)]
+        #generated_treebanks = [best_treebank] + generated_treebanks
 
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
@@ -846,7 +853,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
             for i in range(args['num_generate']):
                 pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
                 with open(pred_file, 'w') as fout:
-                    for tree in generated_treebanks[i+1]:
+                    for tree in generated_treebanks[:-num_generate]:
                         fout.write(args['predict_format'].format(tree.predictions[0].tree))
                         fout.write("\n")
 

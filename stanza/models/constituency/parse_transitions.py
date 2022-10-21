@@ -23,7 +23,7 @@ class TransitionScheme(Enum):
     IN_ORDER           = 4
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position'])):
+                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
     """
     Represents a partially completed transition parse
 

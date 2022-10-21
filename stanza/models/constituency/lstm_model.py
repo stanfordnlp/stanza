@@ -988,7 +988,8 @@ class LSTMModel(BaseModel, nn.Module):
         Hopefully the constraints prevent that from happening
         """
         predictions = self.forward(states)
-        pred_max = torch.argmax(predictions, axis=1)
+        pred_max = torch.argmax(predictions, dim=1)
+        scores = torch.take_along_dim(predictions, pred_max.unsqueeze(1), dim=1)
         pred_max = pred_max.detach().cpu()
 
         pred_trans = [self.transitions[pred_max[idx]] for idx in range(len(states))]
@@ -999,11 +1000,13 @@ class LSTMModel(BaseModel, nn.Module):
                     for index in indices:
                         if self.transitions[index].is_legal(state, self):
                             pred_trans[idx] = self.transitions[index]
+                            scores[idx] = predictions[idx, index]
                             break
                     else: # yeah, else on a for loop, deal with it
                         pred_trans[idx] = None
+                        scores[idx] = None
 
-        return predictions, pred_trans
+        return predictions, pred_trans, scores.squeeze(1)
 
     def weighted_choice(self, states):
         """
@@ -1013,6 +1016,7 @@ class LSTMModel(BaseModel, nn.Module):
         """
         predictions = self.forward(states)
         pred_trans = []
+        all_scores = []
         for state, prediction in zip(states, predictions):
             legal_idx = [idx for idx in range(prediction.shape[0]) if self.transitions[idx].is_legal(state, self)]
             if len(legal_idx) == 0:
@@ -1023,7 +1027,19 @@ class LSTMModel(BaseModel, nn.Module):
             idx = torch.multinomial(scores, 1)
             idx = legal_idx[idx]
             pred_trans.append(self.transitions[idx])
-        return predictions, pred_trans
+            all_scores.append(prediction[idx])
+        all_scores = torch.stack(all_scores)
+        return predictions, pred_trans, all_scores
+
+    def predict_gold(self, states):
+        """
+        For each State, return the next item in the gold_sequence
+        """
+        predictions = self.forward(states)
+        transitions = [y.gold_sequence[y.num_transitions()] for y in states]
+        indices = torch.tensor([self.transition_map[t] for t in transitions], device=predictions.device)
+        scores = torch.take_along_dim(predictions, indices.unsqueeze(1), dim=1)
+        return predictions, transitions, scores.squeeze(1)
 
     def get_params(self, skip_modules=True):
         """

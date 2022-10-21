@@ -302,6 +302,8 @@ class TestTrainer:
         assert len(results[0].predictions) == 1
         assert results[0].predictions[0].tree == test_tree[0]
         assert results[0].state is not None
+        assert isinstance(results[0].state.score, torch.Tensor)
+        assert results[0].state.score.shape == torch.Size([])
         assert len(results[0].constituents) == 9
         assert results[0].constituents[-1].value == test_tree[0]
         # the way the results are built, the next-to-last entry
@@ -311,6 +313,8 @@ class TestTrainer:
         assert len(results[1].predictions) == 1
         assert results[1].predictions[0].tree == test_tree[1]
         assert results[1].state is not None
+        assert isinstance(results[1].state.score, torch.Tensor)
+        assert results[1].state.score.shape == torch.Size([])
         assert len(results[1].constituents) == 4
         assert results[1].constituents[-1].value == test_tree[1]
         assert results[1].constituents[-2].value == test_tree[1].children[0]
