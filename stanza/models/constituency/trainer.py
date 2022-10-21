@@ -822,7 +822,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
             generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_state=False))
 
-        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None)
+        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
 
     if len(treebank) < len(dev_trees):
