@@ -825,8 +825,8 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
 
-    if len(treebank) < len(dev_trees):
-        logger.warning("Only evaluating %d trees instead of %d", len(treebank), len(dev_trees))
+    if len(full_results) < len(dev_trees):
+        logger.warning("Only evaluating %d trees instead of %d", len(full_results), len(dev_trees))
 
     if args['mode'] == 'predict' and args['predict_file']:
         utils.ensure_dir(args['predict_dir'], verbose=False)
@@ -838,7 +838,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
             logger.warning("Cowardly refusing to overwrite {}".format(orig_file))
         else:
             with open(pred_file, 'w') as fout:
-                for tree in treebank:
+                for tree in full_results:
                     fout.write("{:_O}".format(tree.predictions[0].tree))
                     fout.write("\n")
 
@@ -850,7 +850,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
                         fout.write("\n")
 
             with open(orig_file, 'w') as fout:
-                for tree in treebank:
+                for tree in full_results:
                     fout.write("{:_O}".format(tree.gold))
                     fout.write("\n")
 
