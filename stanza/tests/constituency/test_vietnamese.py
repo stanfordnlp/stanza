@@ -78,7 +78,8 @@ def test_space_formatting():
     assert len(trees) == 1
     assert str(trees[0]) == text
 
-    assert "{:_}".format(trees[0]) == VI_TREEBANK_UNDERSCORE
+    assert "{}".format(trees[0]) == VI_TREEBANK
+    assert "{:_O}".format(trees[0]) == VI_TREEBANK_UNDERSCORE
 
 
 def test_language_formatting():
