@@ -17,7 +17,7 @@ def pretrain_file():
     return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
 def build_model(pretrain_file, *args):
-    args = ['--pattn_d_model', '256', '--hidden_size', '128'] + list(args)
+    args = ['--pattn_num_layers', '4', '--pattn_d_model', '256', '--hidden_size', '128', '--use_lattn'] + list(args)
     trainer = build_trainer(pretrain_file, *args)
     return trainer.model
 

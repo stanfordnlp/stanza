@@ -511,7 +511,7 @@ class LSTMModel(BaseModel, nn.Module):
 
     @staticmethod
     def uses_lattn(args):
-        return args.get('lattn_d_proj', 0) > 0 and args.get('lattn_d_l', 0) > 0
+        return args.get('use_lattn', True) and args.get('lattn_d_proj', 0) > 0 and args.get('lattn_d_l', 0) > 0
 
     @staticmethod
     def uses_pattn(args):

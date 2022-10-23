@@ -137,7 +137,7 @@ class TestTrainer:
 
     def training_args(self, wordvec_pretrain_file, tmpdirname, train_treebank_file, eval_treebank_file, *additional_args):
         # let's not make the model huge...
-        args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--pattn_d_model', '128', '--hidden_size', '20', '--delta_embedding_dim', '10',
+        args = ['--pattn_num_layers', '0', '--pattn_d_model', '128', '--lattn_d_proj', '0', '--use_lattn', '--hidden_size', '20', '--delta_embedding_dim', '10',
                 '--wordvec_pretrain_file', wordvec_pretrain_file, '--data_dir', tmpdirname, '--save_dir', tmpdirname, '--save_name', 'test.pt',
                 '--train_file', train_treebank_file, '--eval_file', eval_treebank_file,
                 '--epoch_size', '6', '--train_batch_size', '3',
