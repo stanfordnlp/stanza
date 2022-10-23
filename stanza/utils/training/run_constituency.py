@@ -65,6 +65,8 @@ def run_treebank(mode, paths, treebank, short_name,
     default_args = retag_args + wordvec_args + charlm_args
     if language in common.BERT:
         default_args.extend(['--bert_model', common.BERT.get(language)])
+        if language in common.BERT_LAYERS:
+            default_args.extend(['--bert_hidden_layers', str(common.BERT_LAYERS.get(language))])
 
     if mode == Mode.TRAIN:
         train_args = ['--train_file', train_file,

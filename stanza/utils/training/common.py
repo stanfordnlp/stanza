@@ -108,8 +108,11 @@ BERT = {
 
     # from https://github.com/VinAIResearch/PhoBERT
     # "vi": "vinai/phobert-base",
-    # another option is phobert-large, but that doesn't
-    # change the scores any
+    # using 6 or 7 layers of phobert-large is slightly
+    # more effective for constituency parsing than
+    # using 4 layers of phobert-base
+    # ... going beyond 4 layers of phobert-base
+    # does not help the scores
     "vi": "vinai/phobert-large",
 
     # https://github.com/ymcui/Chinese-BERT-wwm
@@ -123,6 +126,12 @@ BERT = {
     # herbert-large-cased (dev/test): 92.25/91.62
     # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
     "pl": "allegro/herbert-base-cased",
+}
+
+BERT_LAYERS = {
+    # not clear what the best number is without more experiments,
+    # but more than 4 is working better than just 4
+    "vi": 7,
 }
 
 def build_argparse():
