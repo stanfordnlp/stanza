@@ -959,6 +959,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         We've basically done all the work analyzing the state as
         part of applying the transitions, so this method is very simple
+
+        return shape: (num_states, num_transitions)
         """
         word_hx = torch.stack([state.get_word(state.word_position).hx for state in states])
         transition_hx = torch.stack([self.transition_stack.output(state.transitions) for state in states])
