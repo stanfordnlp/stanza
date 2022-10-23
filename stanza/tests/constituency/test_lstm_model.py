@@ -458,3 +458,22 @@ def test_copy_with_new_structure_lattn(pretrain_file):
     check_structure_test(pretrain_file,
                          ['--pattn_num_layers', '1', '--lattn_d_proj',  '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'],
                          ['--pattn_num_layers', '1', '--lattn_d_proj', '32', '--hidden_size', '20', '--delta_embedding_dim', '10', '--pattn_d_model', '20', '--pattn_num_heads', '2'])
+
+def test_parse_tagged_words(pretrain_file):
+    """
+    Small test which doesn't check results, just execution
+    """
+    model = build_model(pretrain_file)
+
+    sentence = [("I", "PRP"), ("am", "VBZ"), ("Luffa", "NNP")]
+
+    # we don't expect a useful tree out of a random model
+    # so we don't check the result
+    # just check that it works without crashing
+    result = model.parse_tagged_words([sentence], 10)
+    assert len(result) == 1
+    pts = [x for x in result[0].yield_preterminals()]
+
+    for word, pt in zip(sentence, pts):
+        assert pt.children[0].label == word[0]
+        assert pt.label == word[1]
