@@ -684,7 +684,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, model_loss_function, args):
     """
     Train the model for one batch
 
@@ -696,9 +696,10 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
     """
     # now we add the state to the trees in the batch
     # the state is build as a bulk operation
-    initial_states = model.initial_state_from_preterminals([x.preterminals for x in batch], [x.tree for x in batch])
-    batch = [state._replace(gold_sequence=sequence)
-             for (tree, sequence, _), state in zip(batch, initial_states)]
+    initial_states = model.initial_state_from_preterminals([x.preterminals for x in training_batch], [x.tree for x in training_batch])
+    initial_states = [state._replace(gold_sequence=sequence)
+                      for (tree, sequence, _), state in zip(training_batch, initial_states)]
+    current_batch = initial_states
 
     transitions_correct = Counter()
     transitions_incorrect = Counter()
@@ -718,16 +719,16 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
     #   or if we need to use teacher forcing
     # update all states using either the gold or predicted transition
     # any trees which are now finished are removed from the training cycle
-    while len(batch) > 0:
-        outputs, pred_transitions = model.predict(batch, is_legal=False)
-        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
+    while len(current_batch) > 0:
+        outputs, pred_transitions = model.predict(current_batch, is_legal=False)
+        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in current_batch]
         trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
         all_errors.append(outputs)
         all_answers.extend(trans_tensor)
 
         new_batch = []
         update_transitions = []
-        for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, batch):
+        for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, current_batch):
             if pred_transition == gold_transition:
                 transitions_correct[gold_transition.short_name()] += 1
                 if state.num_transitions() + 1 < len(state.gold_sequence):
@@ -769,9 +770,9 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
                 new_batch.append(state)
                 update_transitions.append(gold_transition)
 
-        if len(batch) > 0:
+        if len(current_batch) > 0:
             # bulk update states - significantly faster
-            batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
+            current_batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
 
     errors = torch.cat(all_errors)
     answers = torch.cat(all_answers)
