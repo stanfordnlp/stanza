@@ -856,7 +856,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
                     fout.write("\n")
 
     if len(full_results) == 0:
-        return 0.0
+        return 0.0, 0.0
     if evaluator is None:
         if args['num_generate'] > 0:
             kbest = max(len(fr.predictions) for fr in full_results)
