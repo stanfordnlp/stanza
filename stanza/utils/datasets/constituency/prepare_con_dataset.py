@@ -181,6 +181,7 @@ def process_vlsp22(paths, dataset_name, *args):
         raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
     vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if not x.endswith(".zip")]
+    vlsp_files.sort()
     if len(vlsp_files) == 0:
         raise FileNotFoundError("No tree files found in {}".format(vlsp_dir))
     print("Loaded files from {}".format(vlsp_dir))
