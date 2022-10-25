@@ -1,7 +1,10 @@
 import argparse
+import copy
 import math
 import os
 import random
+import time
+from types import SimpleNamespace
 from typing import Tuple
 
 import torch
@@ -13,24 +16,33 @@ from torch.utils.data import dataset
 
 from torchtext.vocab import build_vocab_from_iterator
 
-import copy
-import time
+from stanza.models.common import utils
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, vocab, d_model: int, nhead: int, d_hid: int,
-                 nlayers: int, dropout: float = 0.5):
+    def __init__(self, vocab, args):
         super().__init__()
         self.model_type = 'Transformer'
         self.vocab = vocab
 
-        self.ntokens = len(vocab)
-        self.pos_encoder = PositionalEncoding(d_model, dropout)
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Embedding(self.ntokens, d_model)
-        self.d_model = d_model
-        self.decoder = nn.Linear(d_model, self.ntokens)
+        self.config = SimpleNamespace(d_embedding = args.d_embedding,
+                                      d_hid = args.d_hid,
+                                      dropout = args.dropout,
+                                      n_heads = args.n_heads,
+                                      n_layers = args.n_layers)
+
+        # keep the criterion here so we can use it for the scoring as part of the model
+        self.criterion = nn.CrossEntropyLoss()
+        self.n_tokens = len(vocab)
+        self.pos_encoder = PositionalEncoding(self.config.d_embedding, self.config.dropout)
+        encoder_layers = TransformerEncoderLayer(self.config.d_embedding, self.config.n_heads, self.config.d_hid, self.config.dropout)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, self.config.n_layers)
+        self.encoder = nn.Embedding(self.n_tokens, self.config.d_embedding)
+        self.decoder = nn.Linear(self.config.d_embedding, self.n_tokens)
+
+        # we assume text is always whitespace separated
+        # that is the format of the trees used, after all
+        self.tokenizer = lambda x: x.strip().split()
 
         self.init_weights()
 
@@ -49,20 +61,59 @@ class TransformerModel(nn.Module):
         Returns:
             output Tensor of shape [seq_len, batch_size, ntoken]
         """
-        src = self.encoder(src) * math.sqrt(self.d_model)
+        src = self.encoder(src) * math.sqrt(self.config.d_embedding)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask, src_key_padding_mask=src_key_padding_mask)
         output = self.decoder(output)
         return output
 
+    def score(self, sentences, batch_size=10):
+        device = next(self.parameters()).device
+        if isinstance(sentences, str):
+            sentences = [sentences]
+        if len(sentences) == 0:
+            return []
+        with torch.no_grad():
+            data, indices = data_process(self.vocab, self.tokenizer, None, iter(sentences))
+            data = batchify(data, batch_size, None)
+
+            # TODO: save this mask
+            max_len = max(max(len(x) for x in y) for y in data)
+            src_mask = generate_square_subsequent_mask(max_len).to(device)
+
+            scores = []
+            for batch in data:
+                inputs, targets, masks, lengths = build_batch(device, batch)
+                seq_len = inputs.shape[0]
+                current_mask = src_mask[:seq_len, :seq_len]
+                output = self(inputs, current_mask, masks)
+                for idx, length in enumerate(lengths):
+                    loss = self.criterion(output[:length, idx, :], targets[:length, idx])
+                    scores.append(torch.sum(loss))
+            scores = utils.unsort(scores, indices)
+            scores = list(reversed(scores))
+            scores = torch.stack(scores)
+            return scores
+
+    def device(self):
+        return next(self.parameters()).device
+
     def save(self, filename):
         params = self.state_dict()
         checkpoint = {
+            'config': self.config,
             'params': params,
             'vocab': self.vocab,
         }
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
 
+    @staticmethod
+    def load(filename):
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        model = TransformerModel(checkpoint['vocab'],
+                                 checkpoint['config'])
+        model.load_state_dict(checkpoint['params'])
+        return model
 
 def generate_square_subsequent_mask(sz: int) -> Tensor:
     """Generates an upper-triangular matrix of -inf, with zeros on diag."""
@@ -70,7 +121,7 @@ def generate_square_subsequent_mask(sz: int) -> Tensor:
 
 
 class PositionalEncoding(nn.Module):
-
+    # TODO: use ours?
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -97,8 +148,7 @@ def data_process(vocab, tokenizer, max_len: int, raw_text_iter: dataset.Iterable
     data = filter(lambda t: t.numel() > 0, data)
     if max_len is not None:
         data = filter(lambda t: t.numel() <= max_len, data)
-    data = sorted(data, key=len)
-    return data
+    return utils.sort_with_indices(data, key=len)
 
 def build_batch(device, batch):
     bsz = len(batch)
@@ -119,7 +169,7 @@ def build_batch(device, batch):
         masks[line_idx, lengths[line_idx]:] = 1
     return (inputs, targets, masks, lengths)
 
-def batchify(data: Tensor, bsz: int) -> Tensor:
+def batchify(data: Tensor, bsz: int, max_len: int) -> Tensor:
     """Divides the data into bsz separate sequences, removing extra elements
     that wouldn't cleanly fit.
 
@@ -131,21 +181,26 @@ def batchify(data: Tensor, bsz: int) -> Tensor:
         Tensor of shape [N // bsz, bsz]
     """
     batches = []
-    for batch_start in range(0, len(data), bsz):
+    batch_start = 0
+    while batch_start < len(data):
         batch_end = batch_start + bsz
         if batch_end > len(data):
-            break
+            batch_end = len(data)
         batch = data[batch_start:batch_end]
+        if max_len is not None and max(len(x) for x in batch) > max_len / 2:
+            batch_end = max(batch_start + 1, (batch_end + batch_start) // 2)
+            batch = data[batch_start:batch_end]
         batches.append(batch)
+        batch_start = batch_end
 
     return batches
 
 def read_dataset(vocab, tokenizer, filename, batch_size, max_len=None):
-    data = data_process(vocab, tokenizer, max_len, open(filename))
-    data = batchify(data, batch_size)
+    data, _ = data_process(vocab, tokenizer, max_len, open(filename))
+    data = batchify(data, batch_size, max_len)
     return data
 
-def train(criterion, optimizer, scheduler, epoch, device, train_data, model: nn.Module) -> None:
+def train(optimizer, scheduler, epoch, device, train_data, model: nn.Module) -> None:
     model.train()  # turn on train mode
     total_loss = 0.
     log_interval = 50
@@ -164,7 +219,7 @@ def train(criterion, optimizer, scheduler, epoch, device, train_data, model: nn.
 
         # TODO: handle lengths in masks
         output = model(inputs, current_mask, masks)
-        loss = criterion(output.view(-1, model.ntokens), targets.view(-1))
+        loss = model.criterion(output.view(-1, model.n_tokens), targets.view(-1))
 
         optimizer.zero_grad()
         loss.backward()
@@ -183,7 +238,7 @@ def train(criterion, optimizer, scheduler, epoch, device, train_data, model: nn.
             total_loss = 0
             start_time = time.time()
 
-def evaluate(criterion, device, model: nn.Module, eval_data: Tensor) -> float:
+def evaluate(device, model: nn.Module, eval_data: Tensor) -> float:
     model.eval()  # turn on evaluation mode
     total_loss = 0.
     max_len = max(max(len(x) for x in y) for y in eval_data)
@@ -198,36 +253,49 @@ def evaluate(criterion, device, model: nn.Module, eval_data: Tensor) -> float:
 
             # TODO: handle lengths in masks
             output = model(inputs, current_mask, masks)
-            output_flat = output.view(-1, model.ntokens)
+            output_flat = output.view(-1, model.n_tokens)
             # TODO: sum the non-masked lengths rather than always multiple by seq_len
-            total_loss += seq_len * criterion(output_flat, targets.view(-1)).item()
-    return total_loss / (len(eval_data) - 1)
+            total_loss += seq_len * model.criterion(output_flat, targets.view(-1)).item()
+    return total_loss / len(eval_data)
 
-def main():
+def main(args=None):
     random.seed(1234)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=5, type=int, help='Num epochs to run')
+    parser.add_argument('--learning_rate', default=5.0, type=float, help='Initial learning rate')
+
     parser.add_argument('--data_dir', default="data/trans_lm", help='Where to find the data')
     parser.add_argument('--train_file', default="it_vit_train.lm", help='Where to find the data')
+    parser.add_argument('--dev_file', default="it_vit_dev.lm", help='Where to find the data')
+    parser.add_argument('--dev_pred_file', default="it_vit_dev_pred.lm", help='Where to find the data')
+    parser.add_argument('--no_dev_pred', action='store_const', const=None, dest='dev_pred_file', help="Don't use a val pred file")
+    parser.add_argument('--test_file', default="it_vit_test.lm", help='Where to find the data')
+    parser.add_argument('--test_pred_file', default="it_vit_test_pred.lm", help='Where to find the data')
+    parser.add_argument('--no_test_pred', action='store_const', const=None, dest='test_pred_file', help="Don't use a test pred file")
+
     parser.add_argument('--max_len', default=500, type=int, help='Max length of sentence to use')
     parser.add_argument('--no_max_len', action='store_const', const=None, dest='max_len', help='No max_len')
-    parser.add_argument('--dropout', default=0.4, type=float, help='Dropout')
-    parser.add_argument('--nheads', default=4, type=int, help='Number of heads to use')
-    parser.add_argument('--nlayers', default=4, type=int, help='Number of layers to use')
     parser.add_argument('--vocab_min_freq', default=5, type=int, help='Cut off words which appear fewer than # times')
+
+    parser.add_argument('--d_embedding', default=512, type=int, help='Dimension of the embedding at the bottom layer')
+    parser.add_argument('--d_hid', default=512, type=int, help='d_hid for the internal layers of the LM')
+    parser.add_argument('--dropout', default=0.4, type=float, help='Dropout')
+    parser.add_argument('--n_heads', default=8, type=int, help='Number of heads to use')
+    parser.add_argument('--n_layers', default=6, type=int, help='Number of layers to use')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/trans_lm', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
-    # TODO: make these options
     data_dir = args.data_dir
     train_file = os.path.join(data_dir, args.train_file)
-    val_file = os.path.join(data_dir, "it_vit_dev.lm")
-    val_pred_file = os.path.join(data_dir, "it_vit_dev_pred.lm")
-    test_file = os.path.join(data_dir, "it_vit_test.lm")
-    test_pred_file = os.path.join(data_dir, "it_vit_test_pred.lm")
+    dev_file = os.path.join(data_dir, args.dev_file)
+    test_file = os.path.join(data_dir, args.test_file)
+    if args.dev_pred_file:
+        dev_pred_file = os.path.join(data_dir, args.dev_pred_file)
+    if args.test_pred_file:
+        test_pred_file = os.path.join(data_dir, args.test_pred_file)
 
     train_iter = open(train_file)
     tokenizer = lambda x: x.strip().split()
@@ -235,6 +303,7 @@ def main():
     # so perhaps we don't need extra symbols
     # TODO: try to remove dependency on torchtext
     # also, make sure () tokens are not being cut off by vocab_min_freq
+    # putting () in the specials will fix that
     vocab = build_vocab_from_iterator(map(tokenizer, train_iter), min_freq=args.vocab_min_freq, specials=['<unk>'])
     vocab.set_default_index(vocab['<unk>'])
 
@@ -249,21 +318,17 @@ def main():
     eval_batch_size = 10
 
     train_data = read_dataset(vocab, tokenizer, train_file, batch_size, max_len=500)
-    val_data = read_dataset(vocab, tokenizer, val_file, eval_batch_size)
-    val_pred_data = read_dataset(vocab, tokenizer, val_pred_file, eval_batch_size)
+    dev_data = read_dataset(vocab, tokenizer, dev_file, eval_batch_size)
     test_data = read_dataset(vocab, tokenizer, test_file, eval_batch_size)
-    test_pred_data = read_dataset(vocab, tokenizer, test_pred_file, eval_batch_size)
+    if args.dev_pred_file:
+        dev_pred_data = read_dataset(vocab, tokenizer, dev_pred_file, eval_batch_size)
+    if args.test_pred_file:
+        test_pred_data = read_dataset(vocab, tokenizer, test_pred_file, eval_batch_size)
 
-    emsize = 200  # embedding dimension
-    d_hid = 200  # dimension of the feedforward network model in nn.TransformerEncoder
-    nlayers = args.nlayers  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-    nhead = args.nheads  # number of heads in nn.MultiheadAttention
-    dropout = args.dropout  # dropout probability
-    model = TransformerModel(vocab, emsize, nhead, d_hid, nlayers, dropout).to(device)
+    model = TransformerModel(vocab, args).to(device)
     print("Number of tokens in vocab: %s" % len(vocab))
 
-    criterion = nn.CrossEntropyLoss()
-    lr = 5.0  # learning rate
+    lr = args.learning_rate  # learning rate
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
@@ -273,14 +338,18 @@ def main():
 
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
-        train(criterion, optimizer, scheduler, epoch, device, train_data, model)
-        val_loss = evaluate(criterion, device, model, val_data)
-        val_pred_loss = evaluate(criterion, device, model, val_pred_data)
+        train(optimizer, scheduler, epoch, device, train_data, model)
+        val_loss = evaluate(device, model, dev_data)
+        if args.dev_pred_file:
+            val_pred_loss = evaluate(device, model, dev_pred_data)
         #val_ppl = math.exp(val_loss)
         elapsed = time.time() - epoch_start_time
         print('-' * 89)
         #print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | valid loss {val_loss:5.2f} | valid ppl {val_ppl:8.2f}')
-        print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | valid loss {val_loss:5.2f} | valid pred loss {val_pred_loss:5.2f}')
+        msg = f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | valid loss {val_loss:5.2f}'
+        if args.dev_pred_file:
+            msg += f' | valid pred loss {val_pred_loss:5.2f}'
+        print(msg)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -292,12 +361,18 @@ def main():
 
         scheduler.step()
 
-    test_loss = evaluate(criterion, device, model, test_data)
-    test_pred_loss = evaluate(criterion, device, model, test_pred_data)
+    test_loss = evaluate(device, model, test_data)
+    if args.test_pred_file:
+        test_pred_loss = evaluate(device, model, test_pred_data)
     print('=' * 89)
     #print(f'| End of training | test loss {test_loss:5.2f} | test ppl {test_ppl:8.2f}')
-    print(f'| End of training | test loss {test_loss:5.2f} | test pred loss {test_pred_loss:5.2f}')
+    msg = f'| End of training | test loss {test_loss:5.2f}'
+    if args.test_pred_file:
+        msg += f' | test pred loss {test_pred_loss:5.2f}'
+    print(msg)
     print('=' * 89)
+
+    return best_model
 
 if __name__ == '__main__':
     main()
