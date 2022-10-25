@@ -181,6 +181,7 @@ def parse_args(args=None):
     parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
     parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
     parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
+    parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')
 
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -452,6 +453,9 @@ def parse_args(args=None):
         args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
     if args.learning_weight_decay is None:
         args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if len(args.predict_format) <= 2:
+        args.predict_format = "{:" + args.predict_format + "}"
 
     if args.stage1_learning_rate is None:
         args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
