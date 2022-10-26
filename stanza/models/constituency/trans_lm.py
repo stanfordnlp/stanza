@@ -18,6 +18,8 @@ from torchtext.vocab import build_vocab_from_iterator
 
 from stanza.models.common import utils
 
+tqdm = utils.get_tqdm()
+
 class TransformerModel(nn.Module):
 
     def __init__(self, vocab, args):
@@ -67,7 +69,7 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def score(self, sentences, batch_size=10):
+    def score(self, sentences, batch_size=10, use_tqdm=False):
         device = next(self.parameters()).device
         if isinstance(sentences, str):
             sentences = [sentences]
@@ -76,6 +78,8 @@ class TransformerModel(nn.Module):
         with torch.no_grad():
             data, indices = data_process(self.vocab, self.tokenizer, None, iter(sentences))
             data = batchify(data, batch_size, None)
+            if use_tqdm:
+                data = tqdm(data, leave=False)
 
             # TODO: save this mask
             max_len = max(max(len(x) for x in y) for y in data)
