@@ -13,7 +13,7 @@ from stanza.utils.confusion import confusion_to_macro_f1
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 from stanza.utils.training.run_ner import build_pretrain_args
 
-pytestmark = pytest.mark.pipeline
+pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 EN_DOC = "Chris Manning is a good man. He works in Stanford University."
 
