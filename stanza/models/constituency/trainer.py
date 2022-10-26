@@ -33,6 +33,7 @@ from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.trans_lm import TransformerModel
 from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
@@ -924,7 +925,19 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
-def run_dev_set(model, dev_trees, args, evaluator=None):
+def score_treebank(reranker, treebank, batch_size):
+    # only scores the first prediction in the treebank
+    # meant to be called immediately after a call to parse_sentences
+    trees = [x.predictions[0].tree for x in treebank]
+
+    tree_format = "{:_L}"
+    tree_texts = [tree_format.format(t) for t in trees]
+
+    scores = reranker.score(tree_texts, batch_size, use_tqdm=True)
+    treebank = [x._replace(predictions=[x.predictions[0]._replace(score=score)]) for x, score in zip(treebank, scores.detach().cpu().numpy())]
+    return treebank
+
+def run_dev_set(model, dev_trees, args, evaluator=None, reranker=None):
     """
     This reparses a treebank and executes the CoreNLP Java EvalB code.
 
@@ -935,8 +948,15 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
 
     keep_scores = args['num_generate'] > 0
 
+    # TODO: do better
+    reranker = TransformerModel.load("saved_models/trans_lm/it_vit_train_efull.lm.pt")
+    reranker.eval()
+
+    eval_batch_size = args['eval_batch_size']
     tree_iterator = iter(tqdm(dev_trees))
-    treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
+    treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, eval_batch_size, model.predict, keep_state=False)
+    if reranker:
+        treebank = score_treebank(reranker, treebank, eval_batch_size)
     full_results = treebank
 
     if args['num_generate'] > 0:
@@ -944,11 +964,14 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
             tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
-            generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_scores=keep_scores))
+            treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, eval_batch_size, model.weighted_choice)
+            if reranker:
+                treebank = score_treebank(reranker, treebank, eval_batch_size)
+            generated_treebanks.append(treebank)
 
-        #best_treebank = [ParseResult(parses[0].gold, [max([p.predictions[0] for p in parses], key=itemgetter(1))], None, None)
-        #                 for parses in zip(*generated_treebanks)]
-        #generated_treebanks = [best_treebank] + generated_treebanks
+        best_treebank = [ParseResult(parses[0].gold, [max([p.predictions[0] for p in parses], key=itemgetter(1))], None, None)
+                         for parses in zip(*generated_treebanks)]
+        generated_treebanks = [best_treebank] + generated_treebanks
 
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
