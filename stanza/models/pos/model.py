@@ -63,7 +63,7 @@ class Tagger(nn.Module):
         if self.args['bert_model']:
             bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
             input_size += bert_model.config.hidden_size
-            if args['bert_hidden_layers']:
+            if args.get('bert_hidden_layers', False):
                 # The average will be offset by 1/N so that the default zeros
                 # repressents an average of the N layers
                 self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
