@@ -45,7 +45,7 @@ def main():
     else:
         lang = args['lang']
         package = args['retag_package']
-    retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
+    retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, package={"pos": package}, pos_tqdm=True)
 
     train_trees = tree_reader.read_treebank(args['input_file'])
     logger.info("Retagging %d trees using %s_%s", len(train_trees), lang, package)
