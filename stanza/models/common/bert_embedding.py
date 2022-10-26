@@ -145,7 +145,14 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # run only 1 time as the batch size seems to be 30
     for i in range(int(math.ceil(size/128))):
         with torch.no_grad():
-            feature = model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
+            padded_input = tokenized_sents_padded[128*i:128*i+128]
+            start_sentence = i * 128
+            end_sentence = start_sentence + padded_input.shape[0]
+            attention_mask = torch.zeros(end_sentence - start_sentence, padded_input.shape[1], device=device)
+            for sent_idx, sent in enumerate(tokenized_sents[start_sentence:end_sentence]):
+                attention_mask[sent_idx, :len(sent)] = 1
+            # TODO: is the clone().detach() necessary?
+            feature = model(padded_input.clone().detach().to(device), attention_mask=attention_mask, output_hidden_states=True)
             features += cloned_feature(feature, num_layers)
 
     assert len(features)==size
