@@ -104,6 +104,7 @@ The code breakdown is as follows:
   constituency/lstm_model.py: adds LSTM features to the constituents to predict what the
     correct transition to make is, allowing for predictions on previously unseen text
 
+  constituency/retagging.py: a couple utility methods specifically for retagging
   constituency/utils.py: a couple utility methods
 
   constituency/dyanmic_oracle.py: a dynamic oracle which currently
@@ -132,7 +133,7 @@ import torch
 
 from stanza import Pipeline
 from stanza.models.common import utils
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
@@ -393,10 +394,7 @@ def parse_args(args=None):
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
-    parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
-    parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
-    parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default')
-    parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
+    retagging.add_retag_args(parser)
 
     # Partitioned Attention
     parser.add_argument('--pattn_d_model', default=1024, type=int, help='Partitioned attention model dimensionality')
@@ -471,12 +469,7 @@ def parse_args(args=None):
 
     args = vars(args)
 
-    if args['retag_method'] == 'xpos':
-        args['retag_xpos'] = True
-    elif args['retag_method'] == 'upos':
-        args['retag_xpos'] = False
-    else:
-        raise ValueError("Unknown retag method {}".format(xpos))
+    retagging.postprocess_args(args)
 
     model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
 
@@ -520,26 +513,7 @@ def main(args=None):
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
 
-    if args['retag_package'] is not None and args['mode'] != 'remove_optimizer':
-        if '_' in args['retag_package']:
-            lang, package = args['retag_package'].split('_', 1)
-        else:
-            lang = args['lang']
-            package = args['retag_package']
-        retag_args = {"lang": lang,
-                      "processors": "tokenize, pos",
-                      "tokenize_pretokenized": True,
-                      "package": {"pos": package},
-                      "pos_tqdm": True}
-        if args['retag_model_path'] is not None:
-            retag_args['pos_model_path'] = args['retag_model_path']
-        retag_pipeline = Pipeline(**retag_args)
-        if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
-            logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
-            args['retag_xpos'] = False
-            args['retag_method'] = 'upos'
-    else:
-        retag_pipeline = None
+    retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
         trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
