@@ -549,7 +549,7 @@ def process_defaults(args):
         with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
                 if processor == 'pretrain':
-                    for package in pretrains_needed:
+                    for package in sorted(pretrains_needed):
                         filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
                         if os.path.exists(filename):
                             print("   Model {} package {}: file {}".format(processor, package, filename))
