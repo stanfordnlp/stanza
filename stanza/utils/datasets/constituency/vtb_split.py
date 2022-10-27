@@ -15,12 +15,11 @@ import random
 def create_shuffle_list(org_dir):
     """
     This function creates the random order with which we use to loop through the files
+
     :param org_dir: original directory storing the files that store the trees
     :return: list of file names randomly shuffled
     """
-    file_names = []
-    for filename in os.listdir(org_dir):
-        file_names.append(filename)
+    file_names = sorted(os.listdir(org_dir))
     random.shuffle(file_names)
 
     return file_names
@@ -29,6 +28,7 @@ def create_shuffle_list(org_dir):
 def create_paths(split_dir, short_name):
     """
     This function creates the necessary paths for the train/dev/test splits
+
     :param split_dir: directory that stores the splits
     :return: train path, dev path, test path
     """
@@ -47,6 +47,7 @@ def create_paths(split_dir, short_name):
 def get_num_samples(org_dir, file_names):
     """
     Function for obtaining the number of samples
+
     :param org_dir: original directory storing the tree files
     :param file_names: list of file names in the directory
     :return: number of samples
