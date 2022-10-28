@@ -60,7 +60,8 @@ def main():
                     text = sentence.text
                     if (text.find("|") >= 0 or text.find("_") >= 0 or
                         text.find("<") >= 0 or text.find(">") >= 0 or
-                        text.find("[") >= 0 or text.find("]") >= 0):
+                        text.find("[") >= 0 or text.find("]") >= 0 or
+                        text.find('—') >= 0):   # an em dash, seems to be part of lists
                         continue
                     # the VI tokenizer in particular doesn't split these well
                     if any(any(w.text.find(c) >= 0 and len(w.text) > 1 for w in sentence.words)
