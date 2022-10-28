@@ -240,6 +240,8 @@ class BaseModel(ABC):
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """
         Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
+
+        Expects a list of list of (word, tag)
         """
         state_batch = []
         for _ in range(batch_size):
