@@ -67,7 +67,7 @@ def get_num_samples(org_dir, file_names):
 
     return count
 
-def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
+def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15, rotation=None):
     os.makedirs(split_dir, exist_ok=True)
 
     if train_size + dev_size >= 1.0:
@@ -108,6 +108,9 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
             new_trees = [x.strip() for x in new_trees]
             new_trees = [x for x in new_trees if x]
             trees.extend(new_trees)
+    if rotation is not None and rotation[0] > 0:
+        rotation_start = len(trees) * rotation[0] // rotation[1]
+        trees = trees[rotation_start:] + trees[:rotation_start]
     tree_iter = iter(trees)
     for write_path, count_limit in zip(output_names, output_limits):
         with open(write_path, 'w', encoding='utf-8') as writer:
