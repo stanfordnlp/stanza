@@ -12,6 +12,7 @@ duplicated logic in predict() and parse_sentences()
 
 import argparse
 import logging
+import os
 
 import torch
 
@@ -22,7 +23,9 @@ from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.trainer import Trainer, run_dev_set
 from stanza.models.constituency.utils import retag_trees
+from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
+from stanza.utils.default_paths import get_default_paths
 
 logger = logging.getLogger('stanza.constituency.trainer')
 
@@ -176,13 +179,33 @@ class Ensemble:
         with torch.no_grad():
             return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents, keep_scores)
 
+DEFAULT_EVAL = {
+    "en": "en_wsj_dev.mrg",
+    "vi": "vi_vlsp22_dev.mrg",
+}
+
+DEFAULT_FORWARD = {
+    "en": os.path.join(DEFAULT_MODEL_DIR, "en/forward_charlm/1billion.pt"),
+    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/forward_charlm/conll17.pt"),
+}
+
+DEFAULT_BACKWARD = {
+    "en": os.path.join(DEFAULT_MODEL_DIR, "en/backward_charlm/1billion.pt"),
+    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/backward_charlm/conll17.pt"),
+}
+
+DEFAULT_PRETRAIN = {
+    "en": os.path.join(DEFAULT_MODEL_DIR, "en/pretrain/combined.pt"),
+    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/pretrain/vtb.pt"),
+}
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--eval_file', type=str, default="data/constituency/en_wsj_dev.mrg", help='Input file for data loader.')
-    parser.add_argument('--charlm_forward_file', type=str, default="/home/john/stanza_resources/en/forward_charlm/1billion.pt", help="Exact path to use for forward charlm")
-    parser.add_argument('--charlm_backward_file', type=str, default="/home/john/stanza_resources/en/backward_charlm/1billion.pt", help="Exact path to use for backward charlm")
-    parser.add_argument('--wordvec_pretrain_file', type=str, default="/home/john/stanza_resources/en/pretrain/combined.pt", help='Exact name of the pretrain file to read')
+    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
 
     parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
     parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
@@ -192,16 +215,29 @@ def parse_args(args=None):
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
     parser.add_argument('models', type=str, nargs='+', default=None, help="Which model(s) to load")
 
+    parser.add_argument('--mode', default='predict', choices=['predict'])
+
     retagging.add_retag_args(parser)
+    # TODO: get default method & package from run_constituency.py
     parser.set_defaults(retag_method='xpos')
 
     args = vars(parser.parse_args())
 
     retagging.postprocess_args(args)
     args['num_generate'] = 0
-    args['mode'] = 'predict'
     args['predict_file'] = None
     args['predict_dir'] = None
+
+    if not args['eval_file'] and args['lang'] in DEFAULT_EVAL:
+        paths = get_default_paths()
+        args['eval_file'] = os.path.join(paths["CONSTITUENCY_DATA_DIR"], DEFAULT_EVAL[args['lang']])
+    # TODO: try to download defaults if needed
+    if not args['charlm_forward_file'] and args['lang'] in DEFAULT_FORWARD:
+        args['charlm_forward_file'] = DEFAULT_FORWARD[args['lang']]
+    if not args['charlm_backward_file'] and args['lang'] in DEFAULT_BACKWARD:
+        args['charlm_backward_file'] = DEFAULT_BACKWARD[args['lang']]
+    if not args['wordvec_pretrain_file'] and args['lang'] in DEFAULT_PRETRAIN:
+        args['wordvec_pretrain_file'] = DEFAULT_PRETRAIN[args['lang']]
 
     return args
 
