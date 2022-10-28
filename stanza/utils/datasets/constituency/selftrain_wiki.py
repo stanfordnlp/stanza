@@ -50,6 +50,9 @@ def list_wikipedia_files(input_dir):
 
     Recursively traverse the directory, then sort
     """
+    if not os.path.isdir(input_dir) and os.path.split(input_dir)[1].startswith("wiki_"):
+        return [input_dir]
+
     wiki_files = []
 
     recursive_files = deque()
