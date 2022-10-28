@@ -99,28 +99,26 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     # We will switch to the next output file when we're written enough
     count = 0
 
-    filename_iter = iter(file_names)
-    tree_iter = iter([])
+    trees = []
+    for filename in file_names:
+        if not filename.endswith('.mrg'):
+            continue
+        with open(os.path.join(org_dir, filename), encoding='utf-8') as reader:
+            new_trees = reader.readlines()
+            new_trees = [x.strip() for x in new_trees]
+            new_trees = [x for x in new_trees if x]
+            trees.extend(new_trees)
+    tree_iter = iter(trees)
     for write_path, count_limit in zip(output_names, output_limits):
         with open(write_path, 'w', encoding='utf-8') as writer:
             # Loop through the files, which then loop through the trees and write to write_path
             while count < count_limit:
                 next_tree = next(tree_iter, None)
-                while next_tree is None:
-                    filename = next(filename_iter, None)
-                    if filename is None:
-                        raise RuntimeError("Ran out of trees before reading all of the expected trees")
-                    # Skip files that are not .mrg
-                    if not filename.endswith('.mrg'):
-                        continue
-                    # File is .mrg. Start processing
-                    file_dir = os.path.join(org_dir, filename)
-                    with open(file_dir, 'r', encoding='utf-8') as reader:
-                        content = reader.readlines()
-                        tree_iter = iter(content)
-                        next_tree = next(tree_iter, None)
+                if next_tree is None:
+                    raise RuntimeError("Ran out of trees before reading all of the expected trees")
                 # Write to write_dir
                 writer.write(next_tree)
+                writer.write("\n")
                 count += 1
 
 def main():
