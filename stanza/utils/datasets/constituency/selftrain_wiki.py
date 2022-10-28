@@ -17,6 +17,7 @@ import os
 import random
 
 from stanza.models.common import utils
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.datasets.constituency import selftrain
 
 tqdm = utils.get_tqdm()
@@ -91,7 +92,7 @@ def read_wiki_file(filename):
             line = line.replace("()", " ")
             line = line.replace("( )", " ")
             line = line.strip()
-            if line.find("&lt;") > 0 or line.find("&gt;") > 0:
+            if line.find("&lt;") >= 0 or line.find("&gt;") >= 0:
                 line = ""
             if line:
                 current_doc.append(line)
@@ -110,8 +111,9 @@ def main():
     if args.shuffle:
         random.shuffle(wiki_files)
 
-    tag_pipe = selftrain.build_tag_pipe(ssplit=True, lang=args.lang)
-    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models)
+    foundation_cache = FoundationCache()
+    tag_pipe = selftrain.build_tag_pipe(ssplit=True, lang=args.lang, foundation_cache=foundation_cache)
+    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models, foundation_cache=foundation_cache)
 
     # create a blank file.  we will append to this file so that partial results can be used
     with open(args.output_file, "w") as fout:
