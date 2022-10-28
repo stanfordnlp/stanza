@@ -8,9 +8,13 @@ so as to avoid unnecessary circular imports
 (eg, Pipeline imports constituency/trainer which imports this which imports Pipeline)
 """
 
+import logging
+
 from stanza import Pipeline
 
 from stanza.models.common.vocab import VOCAB_PREFIX
+
+logger = logging.getLogger('stanza')
 
 def add_retag_args(parser):
     """
