@@ -57,6 +57,7 @@ def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # TODO: build a fake embedding some other way?
     train_trees = tree_reader.read_trees(treebank)
     dev_trees = train_trees[-1:]
+    silver_trees = []
 
     args = ['--wordvec_pretrain_file', wordvec_pretrain_file] + list(args)
     args = constituency_parser.parse_args(args)
@@ -65,7 +66,7 @@ def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # might be None, unless we're testing loading an existing model
     model_load_name = args['load_name']
 
-    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_name)
+    model, _, _, _ = trainer.build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_name)
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
@@ -148,7 +149,7 @@ class TestTrainer:
         args['wandb'] = None
         return args
 
-    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None):
+    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None, use_silver=False):
         """
         Runs a test of the trainer for a few iterations.
 
@@ -160,6 +161,8 @@ class TestTrainer:
         extra_args += ['--epochs', '%d' % num_epochs]
 
         train_treebank_file, eval_treebank_file = self.write_treebanks(tmpdirname)
+        if use_silver:
+            extra_args += ['--silver_file', str(eval_treebank_file)]
         args = self.training_args(wordvec_pretrain_file, tmpdirname, train_treebank_file, eval_treebank_file, *extra_args)
 
         each_name = os.path.join(args['save_dir'], 'each_%02d.pt')
@@ -203,6 +206,16 @@ class TestTrainer:
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname)
+
+    def test_train_silver(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations on the fake data
+
+        This tests that it works if you give it a silver file, but
+        doesn't actually test that the silver file is being used
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=True)
 
     def run_multistage_tests(self, wordvec_pretrain_file, tmpdirname, use_lattn, extra_args=None):
             train_treebank_file, eval_treebank_file = self.write_treebanks(tmpdirname)

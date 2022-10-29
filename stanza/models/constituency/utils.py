@@ -78,6 +78,9 @@ def retag_trees(trees, pipeline, xpos=True):
 
     Returns a list of new trees
     """
+    if len(trees) == 0:
+        return trees
+
     sentences = []
     try:
         for idx, tree in enumerate(trees):

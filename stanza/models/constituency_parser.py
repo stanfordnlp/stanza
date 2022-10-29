@@ -177,6 +177,7 @@ def parse_args(args=None):
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
     parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
