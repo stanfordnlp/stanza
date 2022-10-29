@@ -10,7 +10,7 @@ import os
 from stanza.models import constituency_parser
 from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, default_pretrains
 
@@ -27,8 +27,7 @@ RETAG_METHOD = {
 }
 
 def add_constituency_args(parser):
-    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
-    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
+    add_charlm_args(parser)
 
     parser.add_argument('--parse_text', dest='mode', action='store_const', const="parse_text", help='Parse a text file')
 
