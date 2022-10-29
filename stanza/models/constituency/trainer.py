@@ -224,6 +224,7 @@ def load_model_parse_text(args, model_file, retag_pipeline):
     }
     trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
     model = trainer.model
+    model.eval()
     logger.info("Loaded model from %s", model_file)
 
     parse_text(args, model, retag_pipeline)
@@ -234,6 +235,7 @@ def parse_text(args, model, retag_pipeline):
 
     refactored so it can be used elsewhere, such as Ensemble
     """
+    model.eval()
     if args['tokenized_file']:
         with open(args['tokenized_file'], encoding='utf-8') as fin:
             lines = fin.readlines()
