@@ -246,14 +246,20 @@ def parse_text(args, model, retag_pipeline):
         lines = [x for x in lines if x and len(x) <= 100 and len(x) >= 10 and '—' not in x]
         docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
-        doc = retag_pipeline(docs)
-        logger.info("Retagging finished.  Parsing tagged text")
-        if args['retag_method'] == 'xpos':
-            words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
-        else:
-            words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]
-        assert len(words) == len(docs)
-        treebank = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
+        treebank = []
+        chunk_size = 10000
+        for chunk_start in range(0, len(docs), chunk_size):
+            chunk = docs[chunk_start:chunk_start+chunk_size]
+            logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
+            doc = retag_pipeline(chunk)
+            logger.info("Retagging finished.  Parsing tagged text")
+            if args['retag_method'] == 'xpos':
+                words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
+            else:
+                words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]
+            assert len(words) == len(chunk)
+            chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
+            treebank.extend(chunk_trees)
         if args['predict_file']:
             predict_file = args['predict_file']
             if args['predict_dir']:
