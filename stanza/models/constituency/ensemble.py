@@ -43,6 +43,7 @@ class Ensemble:
 
         if isinstance(filenames, str):
             filenames = [filenames]
+        logger.info("Models used for ensemble:\n  %s", "\n  ".join(filenames))
         self.models = [Trainer.load(filename, args, load_optimizer=False, foundation_cache=foundation_cache).model for filename in filenames]
 
         for model_idx, model in enumerate(self.models):

@@ -247,6 +247,7 @@ def parse_text(args, model, retag_pipeline):
         docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
         doc = retag_pipeline(docs)
+        logger.info("Retagging finished.  Parsing tagged text")
         if args['retag_method'] == 'xpos':
             words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
         else:
