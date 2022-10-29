@@ -199,3 +199,11 @@ def initialize_linear(linear, nonlinearity, bias):
     if nonlinearity in ('relu', 'leaky_relu'):
         nn.init.kaiming_normal_(linear.weight, nonlinearity=nonlinearity)
         nn.init.uniform_(linear.bias, 0, 1 / (bias * 2) ** 0.5)
+
+def add_predict_output_args(parser):
+    """
+    Args specifically for the output location of data
+    """
+    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
+    parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
+    parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')
