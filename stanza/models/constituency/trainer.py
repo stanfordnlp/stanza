@@ -211,6 +211,59 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit):
         if tree != result:
             raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
 
+def load_model_parse_text(args, model_file, retag_pipeline):
+    """
+    Load a model, then parse text and write it to stdout or args['predict_file']
+    """
+    foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+    load_args = {
+        'wordvec_pretrain_file': args['wordvec_pretrain_file'],
+        'charlm_forward_file': args['charlm_forward_file'],
+        'charlm_backward_file': args['charlm_backward_file'],
+        'cuda': args['cuda'],
+    }
+    trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
+    model = trainer.model
+    logger.info("Loaded model from %s", model_file)
+
+    parse_text(args, model, retag_pipeline)
+
+def parse_text(args, model, retag_pipeline):
+    """
+    Use the given model to parse text and write it
+
+    refactored so it can be used elsewhere, such as Ensemble
+    """
+    if args['tokenized_file']:
+        with open(args['tokenized_file'], encoding='utf-8') as fin:
+            lines = fin.readlines()
+        lines = [x.strip() for x in lines]
+        # a large chunk of VI wiki data was pretokenized with sentences too long
+        # or with the em-dash, so let's filter those for now
+        # TODO: remove later
+        lines = [x for x in lines if x and len(x) <= 100 and len(x) >= 10 and '—' not in x]
+        docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
+        logger.info("Processing %d lines", len(docs))
+        doc = retag_pipeline(docs)
+        if args['retag_method'] == 'xpos':
+            words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
+        else:
+            words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]
+        assert len(words) == len(docs)
+        treebank = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
+        if args['predict_file']:
+            predict_file = args['predict_file']
+            if args['predict_dir']:
+                predict_file = os.path.join(args['predict_dir'], predict_file)
+            with open(predict_file, "w", encoding="utf-8") as fout:
+                for result in treebank:
+                    fout.write(args['predict_format'].format(result.predictions[0].tree))
+                    fout.write("\n")
+        else:
+            for result in treebank:
+                print(args['predict_format'].format(result.predictions[0].tree))
+
+
 def evaluate(args, model_file, retag_pipeline):
     """
     Loads the given model file and tests the eval_file treebank.

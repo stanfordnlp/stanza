@@ -178,7 +178,8 @@ def parse_args(args=None):
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--mode', default='train', choices=['train', 'predict', 'remove_optimizer'])
+    parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
     parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
     parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
     parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
@@ -519,6 +520,8 @@ def main(args=None):
         trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
+    elif args['mode'] == 'parse_text':
+        trainer.load_model_parse_text(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
         trainer.remove_optimizer(args, args['save_name'], model_load_file)
 

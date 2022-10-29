@@ -30,6 +30,8 @@ def add_constituency_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
+    parser.add_argument('--parse_text', dest='mode', action='store_const', const="parse_text", help='Parse a text file')
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     constituency_dir = paths["CONSTITUENCY_DATA_DIR"]
@@ -93,7 +95,12 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         constituency_parser.main(test_args)
 
-
+    if mode == "parse_text":
+        text_args = ['--shorthand', short_name,
+                     '--mode', 'parse_text']
+        text_args = text_args + default_args + extra_args
+        logger.info("Processing text with args: {}".format(text_args))
+        constituency_parser.main(text_args)
 
 def main():
     common.main(run_treebank, "constituency", "constituency", add_constituency_args)
