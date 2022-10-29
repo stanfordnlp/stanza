@@ -57,9 +57,6 @@ class Trainer:
         self.best_f1 = best_f1
         self.best_epoch = best_epoch
 
-    def uses_xpos(self):
-        return self.model.args['retag_package'] is not None and self.model.args['retag_method'] == 'xpos'
-
     def save(self, filename, save_optimizer=True):
         """
         Save the model (and by default the optimizer) to the given path
@@ -253,7 +250,7 @@ def parse_text(args, model, retag_pipeline):
             logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
             doc = retag_pipeline(chunk)
             logger.info("Retagging finished.  Parsing tagged text")
-            if args['retag_method'] == 'xpos':
+            if model.uses_xpos():
                 words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
             else:
                 words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]

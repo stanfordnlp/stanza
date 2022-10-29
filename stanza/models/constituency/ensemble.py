@@ -55,10 +55,15 @@ class Ensemble:
                 raise ValueError("Models %s and %s are incompatible: different constituents" % (filenames[0], filenames[model_idx]))
             if self.models[0].root_labels != model.root_labels:
                 raise ValueError("Models %s and %s are incompatible: different root_labels" % (filenames[0], filenames[model_idx]))
+            if self.models[0].uses_xpos() != model.uses_xpos():
+                raise ValueError("Models %s and %s are incompatible: different uses_xpos" % (filenames[0], filenames[model_idx]))
 
     def eval(self):
         for model in self.models:
             model.eval()
+
+    def uses_xpos(self):
+        return self.models[0].uses_xpos()
 
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """

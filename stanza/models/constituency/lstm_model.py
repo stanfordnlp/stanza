@@ -573,6 +573,9 @@ class LSTMModel(BaseModel, nn.Module):
     def num_words_known(self, words):
         return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
 
+    def uses_xpos(self):
+        return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
+
     def add_unsaved_module(self, name, module):
         """
         Adds a module which will not be saved to disk
