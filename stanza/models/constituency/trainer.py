@@ -423,6 +423,9 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
     rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
+    # the silver words will just get UNK if they are not already known
+    # TODO: add words from the silver dataset?  perhaps just a fraction
+
     # also, it's not actually an error if there is a pattern of
     # compound unary or compound open nodes which doesn't exist in the
     # train set.  it just means we probably won't ever get that right
