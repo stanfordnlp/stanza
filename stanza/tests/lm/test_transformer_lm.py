@@ -31,6 +31,7 @@ def test_small_end_to_end(tmp_path):
     args = ["--train_file", str(train_filename),
             "--dev_file", str(dev_filename),
             "--test_file", str(test_filename),
+            "--lang", "test",
             "--d_embedding", "20",
             "--d_hid", "20",
             "--n_heads", "4",

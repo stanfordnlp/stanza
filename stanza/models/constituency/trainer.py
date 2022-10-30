@@ -949,7 +949,7 @@ def run_dev_set(model, dev_trees, args, evaluator=None, reranker=None):
     keep_scores = args['num_generate'] > 0
 
     # TODO: do better
-    reranker = TransformerModel.load("saved_models/trans_lm/it_vit_train_efull.lm.pt")
+    reranker = TransformerModel.load("saved_models/trans_lm/vi_vlsp22_full.lm.pt")
     reranker.eval()
 
     eval_batch_size = args['eval_batch_size']

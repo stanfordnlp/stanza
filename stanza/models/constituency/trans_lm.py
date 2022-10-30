@@ -265,19 +265,38 @@ def evaluate(device, model: nn.Module, eval_data: Tensor) -> float:
             total_loss += seq_len * model.criterion(output_flat, targets.view(-1)).item()
     return total_loss / len(eval_data)
 
+
+DEFAULT_FILES = {
+    'vi': {
+        'train_file': "vi_vlsp22_train.lm",
+        'dev_file': "vi_vlsp22_dev.lm",
+        'dev_pred_file': "vi_vlsp22_dev_pred.lm",
+        'test_file': "vi_vlsp22_test.lm",
+        'test_pred_file': "vi_vlsp22_test_pred.lm",
+    },
+    'it': {
+        'train_file': "it_vit_train_efull.lm",
+        'dev_file': "it_vit_dev.lm",
+        'dev_pred_file': "it_vit_dev_pred.lm",
+        'test_file': "it_vit_test.lm",
+        'test_pred_file': "it_vit_test_pred.lm",
+    },
+}
+
 def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=5, type=int, help='Num epochs to run')
     parser.add_argument('--learning_rate', default=5.0, type=float, help='Initial learning rate')
 
     parser.add_argument('--data_dir', default="data/trans_lm", help='Where to find the data')
-    parser.add_argument('--train_file', default="it_vit_train.lm", help='Where to find the data')
-    parser.add_argument('--dev_file', default="it_vit_dev.lm", help='Where to find the data')
-    parser.add_argument('--dev_pred_file', default="it_vit_dev_pred.lm", help='Where to find the data')
-    parser.add_argument('--no_dev_pred', action='store_const', const=None, dest='dev_pred_file', help="Don't use a val pred file")
-    parser.add_argument('--test_file', default="it_vit_test.lm", help='Where to find the data')
-    parser.add_argument('--test_pred_file', default="it_vit_test_pred.lm", help='Where to find the data')
-    parser.add_argument('--no_test_pred', action='store_const', const=None, dest='test_pred_file', help="Don't use a test pred file")
+    parser.add_argument('--lang', default='vi', help='Which language to train - sets defaults for the data files, for example')
+    parser.add_argument('--train_file', default=None, help='Where to find the data')
+    parser.add_argument('--dev_file', default=None, help='Where to find the data')
+    parser.add_argument('--dev_pred_file', default=None, help='Where to find the data')
+    parser.add_argument('--no_dev_pred', action='store_true', default=False, help="Don't use a val pred file")
+    parser.add_argument('--test_file', default=None, help='Where to find the data')
+    parser.add_argument('--test_pred_file', default=None, help='Where to find the data')
+    parser.add_argument('--no_test_pred', action='store_true', default=False, help="Don't use a test pred file")
 
     parser.add_argument('--max_len', default=500, type=int, help='Max length of sentence to use')
     parser.add_argument('--no_max_len', action='store_const', const=None, dest='max_len', help='No max_len')
@@ -292,6 +311,17 @@ def parse_args(args):
     parser.add_argument('--save_dir', type=str, default='saved_models/trans_lm', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     args = parser.parse_args(args=args)
+
+    if args.lang and args.lang in DEFAULT_FILES:
+        default_files = DEFAULT_FILES[args.lang]
+        for f_type, f_name in default_files.items():
+            if getattr(args, f_type) is None:
+                setattr(args, f_type, f_name)
+            if args.no_test_pred:
+                args.test_pred_file = None
+            if args.no_dev_pred:
+                args.dev_pred_file = None
+
     return args
 
 def main(args=None):
