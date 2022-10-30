@@ -1,5 +1,6 @@
 import argparse
 import copy
+import logging
 import math
 import os
 import random
@@ -19,6 +20,8 @@ from torchtext.vocab import build_vocab_from_iterator
 from stanza.models.common import utils
 
 tqdm = utils.get_tqdm()
+
+logger = logging.getLogger('stanza')
 
 class TransformerModel(nn.Module):
 
@@ -262,9 +265,7 @@ def evaluate(device, model: nn.Module, eval_data: Tensor) -> float:
             total_loss += seq_len * model.criterion(output_flat, targets.view(-1)).item()
     return total_loss / len(eval_data)
 
-def main(args=None):
-    random.seed(1234)
-
+def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=5, type=int, help='Num epochs to run')
     parser.add_argument('--learning_rate', default=5.0, type=float, help='Initial learning rate')
@@ -291,6 +292,13 @@ def main(args=None):
     parser.add_argument('--save_dir', type=str, default='saved_models/trans_lm', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     args = parser.parse_args(args=args)
+    return args
+
+def main(args=None):
+    random.seed(1234)
+
+    args = parse_args(args)
+    utils.log_training_args(args, logger)
 
     data_dir = args.data_dir
     train_file = os.path.join(data_dir, args.train_file)
