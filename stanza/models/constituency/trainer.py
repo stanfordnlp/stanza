@@ -423,8 +423,11 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
     rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
-    # the silver words will just get UNK if they are not already known
-    # TODO: add words from the silver dataset?  perhaps just a fraction
+    # rare/unknown silver words will just get UNK if they are not already known
+    if silver_trees and args['use_silver_words']:
+        logger.info("Getting silver words to add to the delta embedding")
+        silver_words = parse_tree.Tree.get_common_words(tqdm(silver_trees, postfix='Silver words'), len(words))
+        words = sorted(set(words + silver_words))
 
     # also, it's not actually an error if there is a pattern of
     # compound unary or compound open nodes which doesn't exist in the
