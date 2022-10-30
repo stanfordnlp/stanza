@@ -661,6 +661,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     if not args['epoch_size']:
         args['epoch_size'] = len(train_data)
+    if silver_data and not args['silver_epoch_size']:
+        args['silver_epoch_size'] = args['epoch_size']
 
     if args['multistage']:
         multistage_splits = {}
@@ -680,7 +682,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         if args['log_norms']:
             model.log_norms()
         leftover_training_data, epoch_data = next_epoch_data(leftover_training_data, train_data, args['epoch_size'])
-        leftover_silver_data, epoch_silver_data = next_epoch_data(leftover_silver_data, silver_data, args['epoch_size'])
+        leftover_silver_data, epoch_silver_data = next_epoch_data(leftover_silver_data, silver_data, args['silver_epoch_size'])
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 

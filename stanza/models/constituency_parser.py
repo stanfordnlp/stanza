@@ -204,6 +204,7 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
+    parser.add_argument('--silver_epoch_size', type=int, default=None, help="Runs this many trees in a silver 'epoch'.  If not set, will match --epoch_size")
 
     # AdaDelta warmup for the conparser.  Motivation: AdaDelta results in
     # higher scores overall, but learns 0s for the weights of the pattn and
