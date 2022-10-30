@@ -212,8 +212,9 @@ class TestTrainer:
         """
         Test the whole thing for a few iterations on the fake data
 
-        This tests that it works if you give it a silver file, but
-        doesn't actually test that the silver file is being used
+        This tests that it works if you give it a silver file
+        The check for the use of the silver data is that the
+        number of batches trained should go up
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=True)
