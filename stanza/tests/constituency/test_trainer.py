@@ -197,6 +197,7 @@ class TestTrainer:
             assert os.path.exists(model_name)
             tr = trainer.Trainer.load(model_name, load_optimizer=True)
             assert tr.epochs_trained == i
+            assert tr.batches_trained == (4 * i if use_silver else 2 * i)
 
         return args
 
