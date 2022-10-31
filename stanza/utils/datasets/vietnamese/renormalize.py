@@ -94,16 +94,16 @@ def convert_file(org_file, new_file):
 
 def convert_files(file_list, new_dir):
     for file_name in file_list:
-        base_name, _ = os.path.splitext(os.path.split(file_name)[-1])
-        new_path = os.path.join(new_dir, base_name)
-        new_file_path = f'{new_path}.txt'
+        base_name = os.path.split(file_name)[-1]
+        new_file_path = os.path.join(new_dir, base_name)
 
         convert_file(file_name, new_file_path)
 
 
-def convert_dir(org_dir, new_dir):
+def convert_dir(org_dir, new_dir, suffix):
+    os.makedirs(new_dir, exist_ok=True)
     file_list = os.listdir(org_dir)
-    file_list = [os.path.join(org_dir, f) for f in file_list if os.path.splitext(f)[1] == '.txt']
+    file_list = [os.path.join(org_dir, f) for f in file_list if os.path.splitext(f)[1] == suffix]
     convert_files(file_list, new_dir)
 
 
@@ -122,12 +122,19 @@ def main():
         help='The location of new directory'
     )
 
+    parser.add_argument(
+        '--suffix',
+        type=str,
+        default='.txt',
+        help='Which suffix to look for when renormalizing a directory'
+    )
+
     args = parser.parse_args()
 
     if os.path.isfile(args.orig):
         convert_file(args.orig, args.converted)
     else:
-        convert_dir(args.orig, args.converted)
+        convert_dir(args.orig, args.converted, args.suffix)
 
 
 if __name__ == '__main__':
