@@ -422,6 +422,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_pwff', default=True, action='store_true', help='Whether or not to use a Position-wise Feed-forward Layer')
     parser.add_argument('--lattn_q_as_matrix', default=False, action='store_true', help='Whether or not Label Attention uses learned query vectors. False means it does')
     parser.add_argument('--lattn_partitioned', default=True, action='store_true', help='Whether or not it is partitioned')
+    parser.add_argument('--no_lattn_partitioned', default=True, action='store_false', dest='lattn_partitioned', help='Whether or not it is partitioned')
     parser.add_argument('--lattn_combine_as_self', default=False, action='store_true', help='Whether or not the layer uses concatenation. False means it does')
     # currently unused - always assume 1/2 of pattn
     #parser.add_argument('--lattn_d_positional', default=512, type=int, help='Dimension for the positional embedding')

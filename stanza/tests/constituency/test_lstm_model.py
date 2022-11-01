@@ -254,6 +254,14 @@ def test_forward_labeled_attention(pretrain_file):
     model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_combined_input')
     run_forward_checks(model)
 
+def test_lattn_partitioned(pretrain_file):
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--lattn_partitioned')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file, '--lattn_d_proj', '64', '--lattn_d_l', '16', '--no_lattn_partitioned')
+    run_forward_checks(model)
+
+
 def test_lattn_projection(pretrain_file):
     """
     Test with & without labeled attention layers
