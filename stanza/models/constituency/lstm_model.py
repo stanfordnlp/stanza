@@ -542,10 +542,11 @@ class LSTMModel(BaseModel, nn.Module):
             elif name.startswith('word_lstm.weight_ih_l0'):
                 # bottom layer shape may have changed from adding a new pattn / lattn block
                 my_parameter = self.get_parameter(name)
-                copy_size = min(other_parameter.data.shape[1], my_parameter.data.shape[1])
+                # -1 so that it can be converted easier to a different parameter
+                copy_size = min(other_parameter.data.shape[-1], my_parameter.data.shape[-1])
                 #new_values = my_parameter.data.clone().detach()
                 new_values = torch.zeros_like(my_parameter.data)
-                new_values[:, :copy_size] = other_parameter.data[:, :copy_size]
+                new_values[..., :copy_size] = other_parameter.data[..., :copy_size]
                 my_parameter.data.copy_(new_values)
             else:
                 self.get_parameter(name).data.copy_(other_parameter.data)
