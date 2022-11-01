@@ -508,7 +508,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
         trainer = Trainer(model, optimizer, scheduler)
 
-    logger.info("Number of words in the training set found in the embedding: {} out of {}", trainer.model.num_words_known(words), len(words))
+    logger.info("Number of words in the training set found in the embedding: %d out of %d", trainer.model.num_words_known(words), len(words))
     add_grad_clipping(trainer, args['grad_clipping'])
 
     return trainer, train_sequences, silver_sequences, train_transitions
