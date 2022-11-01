@@ -668,7 +668,6 @@ class LabelAttentionModule(nn.Module):
         if not lattn_partitioned:
             self.lal_ff = PositionwiseFeedForward(self.ff_dim,
                                                   d_ff,
-                                                  self.d_positional,
                                                   relu_dropout,
                                                   residual_dropout)
         else:
