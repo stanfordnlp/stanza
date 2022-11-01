@@ -502,13 +502,13 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         if args['cuda']:
             model.cuda()
-        logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
 
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
 
         trainer = Trainer(model, optimizer, scheduler)
 
+    logger.info("Number of words in the training set found in the embedding: {} out of {}", trainer.model.num_words_known(words), len(words))
     add_grad_clipping(trainer, args['grad_clipping'])
 
     return trainer, train_sequences, silver_sequences, train_transitions
