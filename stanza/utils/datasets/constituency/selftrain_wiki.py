@@ -87,7 +87,10 @@ def read_wiki_file(filename):
             line = next(line_iterator, None)
         elif line.startswith("</doc"):
             if current_doc:
-                docs.append("\n\n".join(current_doc))
+                if len(current_doc) > 1:
+                    # a lot of single line documents are links to related documents
+                    # a single wikipedia can have tens of thousands of useless almost-duplicates
+                    docs.append("\n\n".join(current_doc))
                 current_doc = []
         else:
             # not the start or end of a doc

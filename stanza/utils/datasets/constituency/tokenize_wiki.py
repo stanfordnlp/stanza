@@ -39,6 +39,32 @@ def parse_args():
         default='extern_data/vietnamese/wikipedia/text/AA',
         help='Path to the wikipedia dump after processing by wikiextractor'
     )
+    parser.add_argument(
+        '--min_len',
+        default=5,
+        type=int,
+        help='Minimum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_min_len',
+        dest='min_len',
+        action='store_const',
+        const=None,
+        help='No minimum length'
+    )
+    parser.add_argument(
+        '--max_len',
+        default=100,
+        type=int,
+        help='Maximum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_max_len',
+        dest='max_len',
+        action='store_const',
+        const=None,
+        help='No maximum length'
+    )
     args = parser.parse_args()
     return args
 
@@ -57,6 +83,10 @@ def main():
 
             for doc in docs:
                 for sentence in doc.sentences:
+                    if args.min_len and len(sentence.words) < args.min_len:
+                        continue
+                    if args.max_len and len(sentence.words) > args.max_len:
+                        continue
                     text = sentence.text
                     if (text.find("|") >= 0 or text.find("_") >= 0 or
                         text.find("<") >= 0 or text.find(">") >= 0 or
