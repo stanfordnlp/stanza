@@ -47,6 +47,33 @@ def common_args(parser):
         help='Output trees in PTB brackets (default is a bracket language format)'
     )
 
+def add_length_args(parser):
+    parser.add_argument(
+        '--min_len',
+        default=5,
+        type=int,
+        help='Minimum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_min_len',
+        dest='min_len',
+        action='store_const',
+        const=None,
+        help='No minimum length'
+    )
+    parser.add_argument(
+        '--max_len',
+        default=100,
+        type=int,
+        help='Maximum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_max_len',
+        dest='max_len',
+        action='store_const',
+        const=None,
+        help='No maximum length'
+    )
 
 def build_ssplit_pipe(ssplit, lang):
     if ssplit:
@@ -106,6 +133,38 @@ def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=50, chunk_size=2000)
     logger.info("Split sentences: %d", raw_sentences)
     logger.info("Sentences filtered for length: %d", filtered_sentences)
     return new_docs
+
+def tokenize_docs(docs, pipe, min_len, max_len):
+    """
+    Turn the text in docs into a list of whitespace separated sentences
+
+    docs: a list of strings
+    pipe: a Stanza pipeline for tokenizing
+    min_len, max_len: can be None to not filter by this attribute
+    """
+    results = []
+    docs = [stanza.Document([], text=t) for t in docs]
+    pipe(docs)
+    for doc in docs:
+        for sentence in doc.sentences:
+            if min_len and len(sentence.words) < min_len:
+                continue
+            if max_len and len(sentence.words) > max_len:
+                continue
+            text = sentence.text
+            if (text.find("|") >= 0 or text.find("_") >= 0 or
+                text.find("<") >= 0 or text.find(">") >= 0 or
+                text.find("[") >= 0 or text.find("]") >= 0 or
+                text.find('—') >= 0):   # an em dash, seems to be part of lists
+                continue
+            # the VI tokenizer in particular doesn't split these well
+            if any(any(w.text.find(c) >= 0 and len(w.text) > 1 for w in sentence.words)
+                   for c in '"()'):
+                continue
+            text = [w.text.replace(" ", "_") for w in sentence.words]
+            text = " ".join(text)
+            results.append(text)
+    return results
 
 def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pipes, shuffle=True, chunk_size=10, max_len=140, min_len=10, output_ptb=False):
     """

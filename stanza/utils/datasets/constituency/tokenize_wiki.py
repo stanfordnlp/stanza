@@ -17,6 +17,7 @@ import argparse
 import stanza
 from stanza.models.common.utils import get_tqdm
 from stanza.utils.datasets.constituency import selftrain_wiki
+from stanza.utils.datasets.constituency.selftrain import add_length_args, tokenize_docs
 
 tqdm = get_tqdm()
 
@@ -39,35 +40,9 @@ def parse_args():
         default='extern_data/vietnamese/wikipedia/text/AA',
         help='Path to the wikipedia dump after processing by wikiextractor'
     )
-    parser.add_argument(
-        '--min_len',
-        default=5,
-        type=int,
-        help='Minimum length sentence to keep.  None = unlimited'
-    )
-    parser.add_argument(
-        '--no_min_len',
-        dest='min_len',
-        action='store_const',
-        const=None,
-        help='No minimum length'
-    )
-    parser.add_argument(
-        '--max_len',
-        default=100,
-        type=int,
-        help='Maximum length sentence to keep.  None = unlimited'
-    )
-    parser.add_argument(
-        '--no_max_len',
-        dest='max_len',
-        action='store_const',
-        const=None,
-        help='No maximum length'
-    )
+    add_length_args(parser)
     args = parser.parse_args()
     return args
-
 
 def main():
     args = parse_args()
@@ -78,29 +53,10 @@ def main():
     with open(args.output_file, "w", encoding="utf-8") as fout:
         for filename in tqdm(files):
             docs = selftrain_wiki.read_wiki_file(filename)
-            docs = [stanza.Document([], text=t) for t in docs]
-            pipe(docs)
-
-            for doc in docs:
-                for sentence in doc.sentences:
-                    if args.min_len and len(sentence.words) < args.min_len:
-                        continue
-                    if args.max_len and len(sentence.words) > args.max_len:
-                        continue
-                    text = sentence.text
-                    if (text.find("|") >= 0 or text.find("_") >= 0 or
-                        text.find("<") >= 0 or text.find(">") >= 0 or
-                        text.find("[") >= 0 or text.find("]") >= 0 or
-                        text.find('—') >= 0):   # an em dash, seems to be part of lists
-                        continue
-                    # the VI tokenizer in particular doesn't split these well
-                    if any(any(w.text.find(c) >= 0 and len(w.text) > 1 for w in sentence.words)
-                           for c in '"()'):
-                        continue
-                    text = [w.text.replace(" ", "_") for w in sentence.words]
-                    text = " ".join(text)
-                    fout.write(text)
-                    fout.write("\n")
+            text = tokenize_docs(docs, pipe, args.min_len, args.max_len)
+            for line in text:
+                fout.write(line)
+                fout.write("\n")
 
 if __name__ == '__main__':
     main()
