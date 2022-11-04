@@ -37,7 +37,8 @@ class TransformerModel(nn.Module):
                                       n_layers = args.n_layers)
 
         # keep the criterion here so we can use it for the scoring as part of the model
-        self.criterion = nn.CrossEntropyLoss()
+        # sum loss?  should penalize sentences which are too long for no reason
+        self.criterion = nn.CrossEntropyLoss(reduction='sum')
         self.n_tokens = len(vocab)
         self.pos_encoder = PositionalEncoding(self.config.d_embedding, self.config.dropout)
         encoder_layers = TransformerEncoderLayer(self.config.d_embedding, self.config.n_heads, self.config.d_hid, self.config.dropout)
@@ -224,9 +225,10 @@ def train(optimizer, scheduler, epoch, device, train_data, model: nn.Module) -> 
         seq_len = inputs.shape[0]
         current_mask = src_mask[:seq_len, :seq_len]
 
-        # TODO: handle lengths in masks
         output = model(inputs, current_mask, masks)
-        loss = model.criterion(output.view(-1, model.n_tokens), targets.view(-1))
+        loss = 0
+        for idx, length in enumerate(lengths):
+            loss = loss + model.criterion(output[:length, idx, :], targets[:length, idx])
 
         optimizer.zero_grad()
         loss.backward()
@@ -258,11 +260,9 @@ def evaluate(device, model: nn.Module, eval_data: Tensor) -> float:
             seq_len = inputs.shape[0]
             current_mask = src_mask[:seq_len, :seq_len]
 
-            # TODO: handle lengths in masks
             output = model(inputs, current_mask, masks)
-            output_flat = output.view(-1, model.n_tokens)
-            # TODO: sum the non-masked lengths rather than always multiple by seq_len
-            total_loss += seq_len * model.criterion(output_flat, targets.view(-1)).item()
+            for idx, length in enumerate(lengths):
+                total_loss += model.criterion(output[:length, idx, :], targets[:length, idx]).item()
     return total_loss / len(eval_data)
 
 
