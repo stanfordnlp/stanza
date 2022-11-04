@@ -240,10 +240,6 @@ def parse_text(args, model, retag_pipeline):
         with open(args['tokenized_file'], encoding='utf-8') as fin:
             lines = fin.readlines()
         lines = [x.strip() for x in lines]
-        # a large chunk of VI wiki data was pretokenized with sentences too long
-        # or with the em-dash, so let's filter those for now
-        # TODO: remove later
-        lines = [x for x in lines if x and len(x) <= 100 and len(x) >= 10 and '—' not in x]
         docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
         treebank = []
