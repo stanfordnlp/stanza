@@ -119,7 +119,7 @@ def test_unary(model=None):
 
 def test_unary_requires_root(model=None):
     if model is None:
-        model = SimpleModel()
+        model = SimpleModel(transition_scheme=TransitionScheme.TOP_DOWN_UNARY)
     state = build_initial_state(model)[0]
 
     open_transition = parse_transitions.OpenConstituent("S")
@@ -313,6 +313,7 @@ def test_too_many_unaries_open():
 def test_close(model=None):
     if model is None:
         model = SimpleModel()
+
     # this one actually tests an entire subtree building
     state = build_initial_state(model)[0]
 
@@ -346,6 +347,47 @@ def test_close(model=None):
     assert len(state.constituents) == 3
 
     assert state.all_transitions(model) == [shift, open_transition, shift, shift, close_transition]
+
+def test_in_order_compound_finalize(model=None):
+    """
+    Test the Finalize transition is only legal at the end of a sequence
+    """
+    if model is None:
+        model = SimpleModel(transition_scheme=TransitionScheme.IN_ORDER_COMPOUND)
+
+    state = build_initial_state(model)[0]
+
+    finalize = parse_transitions.Finalize("ROOT")
+
+    shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
+    assert not finalize.is_legal(state, model)
+    state = shift.apply(state, model)
+
+    open_transition = parse_transitions.OpenConstituent("NP")
+    assert open_transition.is_legal(state, model)
+    assert not finalize.is_legal(state, model)
+    state = open_transition.apply(state, model)
+    assert state.num_opens == 1
+
+    assert shift.is_legal(state, model)
+    assert not finalize.is_legal(state, model)
+    state = shift.apply(state, model)
+    assert shift.is_legal(state, model)
+    assert not finalize.is_legal(state, model)
+    state = shift.apply(state, model)
+
+    close_transition = parse_transitions.CloseConstituent()
+    assert close_transition.is_legal(state, model)
+    state = close_transition.apply(state, model)
+    assert state.num_opens == 0
+    assert not close_transition.is_legal(state, model)
+    assert finalize.is_legal(state, model)
+
+    state = finalize.apply(state, model)
+    assert not finalize.is_legal(state, model)
+    tree = model.get_top_constituent(state.constituents)
+    assert tree.label == 'ROOT'
 
 def test_hashes():
     transitions = set()

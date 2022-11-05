@@ -381,11 +381,16 @@ class Tree(StanzaObject):
         return sorted(set(x.label for x in trees))
 
     @staticmethod
-    def get_compound_constituents(trees):
+    def get_compound_constituents(trees, separate_root=False):
         constituents = set()
         stack = deque()
         for tree in trees:
-            stack.append(tree)
+            if separate_root:
+                constituents.add((tree.label,))
+                for child in tree.children:
+                    stack.append(child)
+            else:
+                stack.append(tree)
             while len(stack) > 0:
                 node = stack.pop()
                 if node.is_leaf() or node.is_preterminal():

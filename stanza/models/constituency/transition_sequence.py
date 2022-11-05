@@ -7,7 +7,7 @@ Supports multiple transition schemes - TOP_DOWN and variants, IN_ORDER
 import logging
 
 from stanza.models.common import utils
-from stanza.models.constituency.parse_transitions import Shift, CompoundUnary, OpenConstituent, CloseConstituent, TransitionScheme
+from stanza.models.constituency.parse_transitions import Shift, CompoundUnary, OpenConstituent, CloseConstituent, TransitionScheme, Finalize
 from stanza.models.constituency.tree_reader import read_trees
 
 tqdm = utils.get_tqdm()
@@ -77,12 +77,61 @@ def yield_in_order_sequence(tree):
 
     yield CloseConstituent()
 
+
+
+def yield_in_order_compound_sequence(tree, transition_scheme):
+    def helper(tree):
+        if tree.is_leaf():
+            return
+
+        labels = []
+        while len(tree.children) == 1 and not tree.is_preterminal():
+            labels.append(tree.label)
+            tree = tree.children[0]
+
+        if tree.is_preterminal():
+            yield Shift()
+            if len(labels) > 0:
+                yield CompoundUnary(*labels)
+            return
+
+        for transition in helper(tree.children[0]):
+            yield transition
+
+        if transition_scheme is TransitionScheme.IN_ORDER_UNARY:
+            yield OpenConstituent(tree.label)
+        else:
+            labels.append(tree.label)
+            yield OpenConstituent(*labels)
+
+        for child in tree.children[1:]:
+            for transition in helper(child):
+                yield transition
+
+        yield CloseConstituent()
+
+        if transition_scheme is TransitionScheme.IN_ORDER_UNARY and len(labels) > 0:
+            yield CompoundUnary(*labels)
+
+    if len(tree.children) == 0:
+        raise ValueError("Cannot build {} on an empty tree".format(transition_scheme))
+    if len(tree.children) != 1:
+        raise ValueError("Cannot build {} with a tree that has two top level nodes: {}".format(transition_scheme, tree))
+
+    for t in helper(tree.children[0]):
+        yield t
+
+    yield Finalize(tree.label)
+
 def build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     """
     Turn a single tree into a list of transitions based on the TransitionScheme
     """
     if transition_scheme is TransitionScheme.IN_ORDER:
         return list(yield_in_order_sequence(tree))
+    elif (transition_scheme is TransitionScheme.IN_ORDER_COMPOUND or
+          transition_scheme is TransitionScheme.IN_ORDER_UNARY):
+        return list(yield_in_order_compound_sequence(tree, transition_scheme))
     else:
         return list(yield_top_down_sequence(tree, transition_scheme))
 

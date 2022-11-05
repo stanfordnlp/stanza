@@ -322,6 +322,8 @@ def get_open_nodes(trees, args):
     """
     if args['transition_scheme'] is TransitionScheme.TOP_DOWN_COMPOUND:
         return parse_tree.Tree.get_compound_constituents(trees)
+    elif args['transition_scheme'] is TransitionScheme.IN_ORDER_COMPOUND:
+        return parse_tree.Tree.get_compound_constituents(trees, separate_root=True)
     else:
         return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
 

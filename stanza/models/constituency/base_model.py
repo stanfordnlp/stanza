@@ -157,7 +157,9 @@ class BaseModel(ABC):
         """
         Whether or not this model is TOP_DOWN
         """
-        return not self._transition_scheme is TransitionScheme.IN_ORDER
+        return (self._transition_scheme is TransitionScheme.TOP_DOWN or
+                self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
+                self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
 
     def predict(self, states, is_legal=True):
         raise NotImplementedError("LSTMModel can predict, but SimpleModel cannot")
