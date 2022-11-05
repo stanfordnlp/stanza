@@ -16,10 +16,14 @@ from stanza.models.constituency.parse_tree import Tree
 logger = logging.getLogger('stanza')
 
 class TransitionScheme(Enum):
+    # top down, so the open transition comes before any constituents
     TOP_DOWN           = 1
+    # unary transitions are modeled as one entire transition
     TOP_DOWN_COMPOUND  = 2
+    # unary is a separate transition.  doesn't help
     TOP_DOWN_UNARY     = 3
 
+    # open transition comes after the first constituent it cares about
     IN_ORDER           = 4
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
