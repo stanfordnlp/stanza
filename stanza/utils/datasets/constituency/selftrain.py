@@ -139,6 +139,7 @@ def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=50, chunk_size=2000)
 ZH_RE = re.compile(u'[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]', re.UNICODE)
 # https://stackoverflow.com/questions/6787716/regular-expression-for-japanese-characters
 JA_RE = re.compile(u'[一-龠ぁ-ゔァ-ヴー々〆〤ヶ]', re.UNICODE)
+DEV_RE = re.compile(u'[\u0900-\u097f]', re.UNICODE)
 
 def tokenize_docs(docs, pipe, min_len, max_len):
     """
@@ -153,6 +154,7 @@ def tokenize_docs(docs, pipe, min_len, max_len):
     pipe(docs)
     is_zh = pipe.lang and pipe.lang.startswith("zh")
     is_ja = pipe.lang and pipe.lang.startswith("ja")
+    is_vi = pipe.lang and pipe.lang.startswith("vi")
     for doc in docs:
         for sentence in doc.sentences:
             if min_len and len(sentence.words) < min_len:
@@ -182,6 +184,12 @@ def tokenize_docs(docs, pipe, min_len, max_len):
             if not is_ja and len(JA_RE.findall(text)) > 150:
                 # some Japanese sentences also show up in VI Wikipedia
                 # we want to eliminate ones which will choke the bert models
+                continue
+            if is_vi and len(DEV_RE.findall(text)) > 100:
+                # would need some list of languages that use
+                # Devanagari to eliminate sentences from all datasets.
+                # Otherwise we might accidentally throw away all the
+                # text from a language we need (although that would be obvious)
                 continue
             results.append(text)
     return results
