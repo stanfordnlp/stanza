@@ -112,62 +112,31 @@ NONLINEARITY = {
 # separating these out allows for backwards compatibility with earlier versions of pytorch
 # NOTE torch compatibility: if we ever *release* models with these
 # activation functions, we will need to break that compatibility
-if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = nn.SiLU
 
-if hasattr(nn, 'Mish'):
-    NONLINEARITY['mish'] = nn.Mish
+nonlinearity_list = [
+    'Mish',
+    'ELU',
+    'Hardshrink',
+    'Hardsigmoid',
+    'Hardtanh',
+    'Hardswish',
+    'LogSigmoid',
+    'PReLU',
+    'ReLU6',
+    'RReLU',
+    'SELU',
+    'CELU',
+    'SiLU',
+    'Softplus',
+    'Softshrink',
+    'Softsign',
+    'Tanhshrink',
+    'GLU'
+]
 
-if hasattr(nn, 'ELU'):
-    NONLINEARITY['elu'] = nn.ELU
-
-if hasattr(nn, 'Hardshrink'):
-    NONLINEARITY['hardshrink'] = nn.Hardshrink
-
-if hasattr(nn, 'Hardsigmoid'):
-    NONLINEARITY['hardsigmoid'] = nn.Hardsigmoid
-
-if hasattr(nn, 'Hardtanh'):
-    NONLINEARITY['hardtanh'] = nn.Hardtanh
-
-if hasattr(nn, 'Hardswish'):
-    NONLINEARITY['hardswish'] = nn.Hardswish
-
-if hasattr(nn, 'LogSigmoid'):
-    NONLINEARITY['logsigmoid'] = nn.LogSigmoid
-
-if hasattr(nn, 'PReLU'):
-    NONLINEARITY['prelu'] = nn.PReLU
-
-if hasattr(nn, 'ReLU6'):
-    NONLINEARITY['relu6'] = nn.ReLU6
-
-if hasattr(nn, 'RReLU'):
-    NONLINEARITY['rrelu'] = nn.RReLU
-
-if hasattr(nn, 'SELU'):
-    NONLINEARITY['selu'] = nn.SELU
-
-if hasattr(nn, 'CELU'):
-    NONLINEARITY['celu'] = nn.CELU
-
-if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = nn.SiLU
-
-if hasattr(nn, 'Softplus'):
-    NONLINEARITY['softplus'] = nn.Softplus
-
-if hasattr(nn, 'Softshrink'):
-    NONLINEARITY['softshrink'] = nn.Softshrink
-
-if hasattr(nn, 'Softsign'):
-    NONLINEARITY['softsign'] = nn.Softsign
-
-if hasattr(nn, 'Tanhshrink'):
-    NONLINEARITY['tanhshrink'] = nn.Tanhshrink
-
-if hasattr(nn, 'GLU'):
-    NONLINEARITY['GLU'] = nn.GLU
+for nonlinearity in nonlinearity_list:
+    if hasattr(nn, nonlinearity):
+        NONLINEARITY[nonlinearity.lower()] = getattr(nn, nonlinearity)
 
 def build_nonlinearity(nonlinearity):
     """
