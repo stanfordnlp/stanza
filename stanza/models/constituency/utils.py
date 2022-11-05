@@ -112,29 +112,31 @@ NONLINEARITY = {
 # separating these out allows for backwards compatibility with earlier versions of pytorch
 # NOTE torch compatibility: if we ever *release* models with these
 # activation functions, we will need to break that compatibility
-if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = getattr(nn, 'SiLU')
 
-if hasattr(nn, 'Mish'):
-    NONLINEARITY['mish'] = nn.Mish
+nonlinearity_list = [
+    'Mish',
+    'ELU',
+    'Hardshrink',
+    'Hardsigmoid',
+    'Hardtanh',
+    'Hardswish',
+    'LogSigmoid',
+    'PReLU',
+    'ReLU6',
+    'RReLU',
+    'SELU',
+    'CELU',
+    'SiLU',
+    'Softplus',
+    'Softshrink',
+    'Softsign',
+    'Tanhshrink',
+    'GLU'
+]
 
-if hasattr(nn, 'Hardsigmoid'):
-    NONLINEARITY['hardsigmoid'] = nn.Hardsigmoid
-
-if hasattr(nn, 'Hardswish'):
-    NONLINEARITY['hardswish'] = nn.Hardswish
-
-if hasattr(nn, 'PReLU'):
-    NONLINEARITY['prelu'] = nn.PReLU
-
-if hasattr(nn, 'ReLU6'):
-    NONLINEARITY['relu6'] = nn.ReLU6
-
-if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = nn.SiLU
-
-if hasattr(nn, 'Softplus'):
-    NONLINEARITY['softplus'] = nn.Softplus
+for nonlinearity in nonlinearity_list:
+    if hasattr(nn, nonlinearity):
+        NONLINEARITY[nonlinearity.lower()] = getattr(nn, nonlinearity)
     
 def build_nonlinearity(nonlinearity):
     """
