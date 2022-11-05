@@ -8,7 +8,8 @@ def get_default_paths():
     otherwise use "./data"
     individual paths can also be set in the environment
     """
-    DATA_ROOT = os.environ.get("DATA_ROOT", "data")
+    #DATA_ROOT = os.environ.get("DATA_ROOT", "data")
+    DATA_ROOT = '/nlp/scr/hung0411/new_data_vlsp_2022'
     defaults = {
         "TOKENIZE_DATA_DIR": DATA_ROOT + "/tokenize",
         "MWT_DATA_DIR": DATA_ROOT + "/mwt",
@@ -19,7 +20,8 @@ def get_default_paths():
         "NER_DATA_DIR": DATA_ROOT + "/ner",
         "CHARLM_DATA_DIR": DATA_ROOT + "/charlm",
         "SENTIMENT_DATA_DIR": DATA_ROOT + "/sentiment",
-        "CONSTITUENCY_DATA_DIR": DATA_ROOT + "/constituency",
+        #"CONSTITUENCY_DATA_DIR": DATA_ROOT + "/constituency",
+        "CONSTITUENCY_DATA_DIR": "DATA_ROOT",
 
         # Set directories to store external word vector data
         "WORDVEC_DIR": "extern_data/wordvec",
@@ -42,7 +44,7 @@ def get_default_paths():
         "BIO_UD_DIR": "extern_data/bio",
 
         # data root for other general input files, such as VI_VLSP
-        "EXTERN_DIR": "extern_data",
+        "EXTERN_DIR": "/nlp/scr/hung0411/",
     }
 
     paths = { "DATA_ROOT" : DATA_ROOT }

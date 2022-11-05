@@ -118,6 +118,24 @@ if hasattr(nn, 'SiLU'):
 if hasattr(nn, 'Mish'):
     NONLINEARITY['mish'] = nn.Mish
 
+if hasattr(nn, 'Hardsigmoid'):
+    NONLINEARITY['hardsigmoid'] = nn.Hardsigmoid
+
+if hasattr(nn, 'Hardswish'):
+    NONLINEARITY['hardswish'] = nn.Hardswish
+
+if hasattr(nn, 'PReLU'):
+    NONLINEARITY['prelu'] = nn.PReLU
+
+if hasattr(nn, 'ReLU6'):
+    NONLINEARITY['relu6'] = nn.ReLU6
+
+if hasattr(nn, 'SiLU'):
+    NONLINEARITY['silu'] = nn.SiLU
+
+if hasattr(nn, 'Softplus'):
+    NONLINEARITY['softplus'] = nn.Softplus
+    
 def build_nonlinearity(nonlinearity):
     """
     Look up "nonlinearity" in a map from function name to function, build the appropriate layer.

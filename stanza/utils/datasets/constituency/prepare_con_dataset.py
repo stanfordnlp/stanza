@@ -172,11 +172,13 @@ def process_vlsp22(paths, dataset_name, *args):
     parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
     parser.add_argument('--no_convert_brackets', default=True, action='store_false', dest='convert_brackets', help="Don't convert the VLSP parens RKBT & LKBT to PTB parens")
     args = parser.parse_args(args=list(*args))
-
+    '''
     if os.path.exists(args.subdir):
         vlsp_dir = args.subdir
     else:
         vlsp_dir = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", args.subdir)
+    '''
+    vlsp_dir = '/nlp/scr/hung0411/new_data_vlsp_2022/constituency'
     if not os.path.exists(vlsp_dir):
         raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
