@@ -137,6 +137,8 @@ def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=50, chunk_size=2000)
 
 # from https://stackoverflow.com/questions/2718196/find-all-chinese-text-in-a-string-using-python-and-regex
 ZH_RE = re.compile(u'[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]', re.UNICODE)
+# https://stackoverflow.com/questions/6787716/regular-expression-for-japanese-characters
+JA_RE = re.compile(u'[一-龠ぁ-ゔァ-ヴー々〆〤ヶ]', re.UNICODE)
 
 def tokenize_docs(docs, pipe, min_len, max_len):
     """
@@ -150,6 +152,7 @@ def tokenize_docs(docs, pipe, min_len, max_len):
     docs = [stanza.Document([], text=t) for t in docs]
     pipe(docs)
     is_zh = pipe.lang and pipe.lang.startswith("zh")
+    is_ja = pipe.lang and pipe.lang.startswith("ja")
     for doc in docs:
         for sentence in doc.sentences:
             if min_len and len(sentence.words) < min_len:
@@ -170,6 +173,10 @@ def tokenize_docs(docs, pipe, min_len, max_len):
             text = " ".join(text)
             if not is_zh and len(ZH_RE.findall(text)) > 250:
                 # some Chinese sentences show up in VI Wikipedia
+                # we want to eliminate ones which will choke the bert models
+                continue
+            if not is_ja and len(JA_RE.findall(text)) > 150:
+                # some Japanese sentences also show up in VI Wikipedia
                 # we want to eliminate ones which will choke the bert models
                 continue
             results.append(text)
