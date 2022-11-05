@@ -2,7 +2,7 @@ import pytest
 
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_transitions import TransitionScheme, Shift, CloseConstituent, OpenConstituent
 from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -411,3 +411,21 @@ def test_sort():
     transitions = set(expected)
     transitions = sorted(transitions)
     assert transitions == expected
+
+def test_check_transitions():
+    """
+    Test that check_transitions passes or fails a couple simple, small test cases
+    """
+    transitions = {Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("VP")}
+
+    other = {Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("VP")}
+    parse_transitions.check_transitions(transitions, other, "test")
+
+    # This will get a pass because it is a unary made out of existing unaries
+    other = {Shift(), CloseConstituent(), OpenConstituent("NP", "VP")}
+    parse_transitions.check_transitions(transitions, other, "test")
+
+    # This should fail
+    with pytest.raises(RuntimeError):
+        other = {Shift(), CloseConstituent(), OpenConstituent("NP", "ZP")}
+        parse_transitions.check_transitions(transitions, other, "test")

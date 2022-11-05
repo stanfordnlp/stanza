@@ -357,14 +357,6 @@ def check_constituents(train_constituents, trees, treebank_name):
         if con not in train_constituents:
             raise RuntimeError("Found label {} in the {} set which don't exist in the train set".format(con, treebank_name))
 
-def check_transitions(train_transitions, other_transitions, treebank_name):
-    """
-    Check that all the transitions in the other dataset are known in the train set
-    """
-    for trans in other_transitions:
-        if trans not in train_transitions:
-            raise RuntimeError("Found transition {} in the {} set which don't exist in the train set".format(trans, treebank_name))
-
 def check_root_labels(root_labels, other_trees, treebank_name):
     """
     Check that all the root states in the other dataset are known in the train set
@@ -404,9 +396,9 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
     logger.info("Unique transitions in training set: %s", train_transitions)
-    check_transitions(train_transitions, dev_transitions, "dev")
+    parse_transitions.check_transitions(train_transitions, dev_transitions, "dev")
     # theoretically could just train based on the items in the silver dataset
-    check_transitions(train_transitions, silver_transitions, "silver")
+    parse_transitions.check_transitions(train_transitions, silver_transitions, "silver")
 
     verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit)
     verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit)

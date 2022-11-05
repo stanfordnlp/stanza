@@ -157,6 +157,15 @@ class Transition(ABC):
         at parse time, the parser might choose a transition which cannot be made
         """
 
+    def components(self):
+        """
+        Return a list of transitions which could theoretically make up this transition
+
+        For example, an Open transition with multiple labels would
+        return a list of Opens with those labels
+        """
+        return [self]
+
     @abstractmethod
     def short_name(self):
         """
@@ -274,6 +283,9 @@ class CompoundUnary(Transition):
             return not is_root
         else:
             return is_root
+
+    def components(self):
+        return [CompoundUnary(label) for label in self.labels]
 
     def short_name(self):
         return "Unary"
@@ -403,6 +415,9 @@ class OpenConstituent(Transition):
                 return True
         return True
 
+    def components(self):
+        return [OpenConstituent(label) for label in self.label]
+
     def short_name(self):
         return "Open"
 
@@ -522,6 +537,27 @@ class CloseConstituent(Transition):
 
     def __hash__(self):
         return hash(93)
+
+def check_transitions(train_transitions, other_transitions, treebank_name):
+    """
+    Check that all the transitions in the other dataset are known in the train set
+
+    Weird nested unaries are warned rather than failed as long as the
+    components are all known
+
+    There is a tree in VLSP, for example, with three (!) nested NP nodes
+    If this is an unknown compound transition, we won't possibly get it
+    right when parsing, but at least we don't need to fail
+    """
+    unknown_transitions = set()
+    for trans in other_transitions:
+        if trans not in train_transitions:
+            for component in trans.components():
+                if component not in train_transitions:
+                    raise RuntimeError("Found transition {} in the {} set which don't exist in the train set".format(trans, treebank_name))
+            unknown_transitions.add(trans)
+    if len(unknown_transitions) > 0:
+        logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", unknown_transitions)
 
 def bulk_apply(model, state_batch, transitions, fail=False):
     """
