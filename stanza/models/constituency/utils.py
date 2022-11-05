@@ -113,7 +113,7 @@ NONLINEARITY = {
 # NOTE torch compatibility: if we ever *release* models with these
 # activation functions, we will need to break that compatibility
 if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = nn.SiLU
+    NONLINEARITY['silu'] = getattr(nn, 'SiLU')
 
 if hasattr(nn, 'Mish'):
     NONLINEARITY['mish'] = nn.Mish
