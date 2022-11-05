@@ -171,6 +171,10 @@ def tokenize_docs(docs, pipe, min_len, max_len):
                 continue
             text = [w.text.replace(" ", "_") for w in sentence.words]
             text = " ".join(text)
+            if any(len(w.text) >= 50 for w in sentence.words):
+                # skip sentences where some of the words are unreasonably long
+                # could make this an argument
+                continue
             if not is_zh and len(ZH_RE.findall(text)) > 250:
                 # some Chinese sentences show up in VI Wikipedia
                 # we want to eliminate ones which will choke the bert models
