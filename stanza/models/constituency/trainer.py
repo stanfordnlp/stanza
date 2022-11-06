@@ -421,6 +421,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # compound unary or compound open nodes which doesn't exist in the
     # train set.  it just means we probably won't ever get that right
     open_nodes = get_open_nodes(train_trees, args)
+    logger.info("Using the following open nodes:\n  %s", "\n  ".join(map(str, open_nodes)))
 
     # at this point we have:
     # pretrain
