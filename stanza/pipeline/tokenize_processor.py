@@ -65,8 +65,8 @@ class TokenizeProcessor(UDProcessor):
         return raw_text, document
 
     def process(self, document):
-        assert isinstance(document, str) or isinstance(document, doc.Document) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False)), \
-            "If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object."
+        if not (isinstance(document, str) or isinstance(document, doc.Document) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False))):
+            raise ValueError("If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object.  Got %s" % str(type(document)))
 
         if isinstance(document, doc.Document):
             if self.config.get('pretokenized'):
