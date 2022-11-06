@@ -65,7 +65,7 @@ def tokenize_manual(model_name, sent, tokenizer):
 
     return tokenized, tokenized_sent
 
-def filter_data(model_name, data, tokenizer = None):
+def filter_data(model_name, data, tokenizer = None, log_level=logging.INFO):
     """
     Filter out the (NER) data that is too long for BERT model.
     """
@@ -82,7 +82,7 @@ def filter_data(model_name, data, tokenizer = None):
 
         filtered_data.append(sent)
 
-    logger.info("Eliminated %d of %d datapoints because their length is over maximum size of BERT model. ", (len(data)-len(filtered_data)), len(data))
+    logger.log(log_level, "Eliminated %d of %d datapoints because their length is over maximum size of BERT model.", (len(data)-len(filtered_data)), len(data))
     
     return filtered_data
 
