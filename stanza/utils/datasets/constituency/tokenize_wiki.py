@@ -13,8 +13,10 @@ a natural _ in has already been discarded.
 """
 
 import argparse
+import logging
 
 import stanza
+from stanza.models.common.bert_embedding import load_tokenizer, filter_data
 from stanza.models.common.utils import get_tqdm
 from stanza.utils.datasets.constituency import selftrain_wiki
 from stanza.utils.datasets.constituency.selftrain import add_length_args, tokenize_docs
@@ -40,6 +42,11 @@ def parse_args():
         default='extern_data/vietnamese/wikipedia/text/AA',
         help='Path to the wikipedia dump after processing by wikiextractor'
     )
+    parser.add_argument(
+        '--bert_tokenizer',
+        default=None,
+        help='Which bert tokenizer (if any) to use to filter long sentences'
+    )
     add_length_args(parser)
     args = parser.parse_args()
     return args
@@ -48,12 +55,18 @@ def main():
     args = parse_args()
     files = selftrain_wiki.list_wikipedia_files(args.input_dir)
 
+    if args.bert_tokenizer:
+        tokenizer = load_tokenizer(args.bert_tokenizer)
+        print("Max model length: %d" % tokenizer.model_max_length)
     pipe = stanza.Pipeline(args.lang, processors="tokenize")
 
     with open(args.output_file, "w", encoding="utf-8") as fout:
         for filename in tqdm(files):
             docs = selftrain_wiki.read_wiki_file(filename)
             text = tokenize_docs(docs, pipe, args.min_len, args.max_len)
+            if args.bert_tokenizer:
+                filtered = filter_data(args.bert_tokenizer, [x.split() for x in text], tokenizer, logging.DEBUG)
+                text = [" ".join(x) for x in filtered]
             for line in text:
                 fout.write(line)
                 fout.write("\n")
