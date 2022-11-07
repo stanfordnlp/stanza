@@ -91,12 +91,6 @@ class BaseModel(ABC):
         """
 
     @abstractmethod
-    def unary_transform(self, constituents, labels):
-        """
-        Transform the top of the constituent stack using a unary transform to the new label
-        """
-
-    @abstractmethod
     def build_constituents(self, labels, children_lists):
         """
         Build multiple constituents at once.  This gives the opportunity for batching operations
@@ -407,12 +401,6 @@ class SimpleModel(BaseModel):
 
     def dummy_constituent(self, dummy):
         return dummy
-
-    def unary_transform(self, constituents, labels):
-        top_constituent = constituents.value
-        for label in reversed(labels):
-            top_constituent = Tree(label=label, children=[top_constituent])
-        return top_constituent
 
     def build_constituents(self, labels, children_lists):
         constituents = []

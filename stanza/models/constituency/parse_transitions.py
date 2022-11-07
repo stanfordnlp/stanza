@@ -263,13 +263,19 @@ class CompoundUnary(Transition):
             self.labels = tuple(labels)
 
     def update_state(self, state, model):
-        # remove the top constituent
-        # apply the labels
-        # put the constituent back on the state
+        """
+        Apply potentially multiple unary transitions to the same preterminal
+
+        It reuses the CloseConstituent machinery
+        """
+        # only the top constituent is meaningful here
         constituents = state.constituents
-        new_constituent = model.unary_transform(state.constituents, self.labels)
+        children = [constituents.value]
         constituents = constituents.pop()
-        return state.word_position, constituents, new_constituent, None
+        # unlike with CloseConstituent, our label is not on the stack.
+        # it is just our label
+        # ... but we do reuse CloseConstituent's update mechanism
+        return state.word_position, constituents, (self.labels, children), CloseConstituent
 
     def is_legal(self, state, model):
         """

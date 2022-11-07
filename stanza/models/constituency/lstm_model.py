@@ -773,19 +773,6 @@ class LSTMModel(BaseModel, nn.Module):
         # the cx doesn't matter: the dummy will be discarded when building a new constituent
         return Constituent(dummy, hx.unsqueeze(0), None)
 
-    def unary_transform(self, constituents, labels):
-        # TODO: this can be faster by stacking things
-        # the double dereference is because we expect the Constiuent
-        # wrapped in an LSTMTreeStack Node
-        top_constituent = constituents.value.value
-        for label in reversed(labels):
-            # double nested: the Constituent is in a list of just one child
-            # and there is just one item in the list (hence the stacking comment)
-            # the fake Constituent is because normally the Constituent
-            # items are wrapped from the LSTMTreeStack
-            top_constituent = self.build_constituents([(label,)], [[Constituent(top_constituent, None, None)]])[0]
-        return top_constituent
-
     def build_constituents(self, labels, children_lists):
         """
         Build new constituents with the given label from the list of children
