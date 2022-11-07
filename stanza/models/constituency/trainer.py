@@ -240,6 +240,7 @@ def parse_text(args, model, retag_pipeline):
         with open(args['tokenized_file'], encoding='utf-8') as fin:
             lines = fin.readlines()
         lines = [x.strip() for x in lines]
+        lines = [x for x in lines if x]
         docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
         treebank = []
