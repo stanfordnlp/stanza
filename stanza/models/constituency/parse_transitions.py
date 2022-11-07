@@ -17,13 +17,18 @@ logger = logging.getLogger('stanza')
 
 class TransitionScheme(Enum):
     # top down, so the open transition comes before any constituents
+    # score on vi_vlsp22 with 5 different sizes of bert layers,
+    # bert tagger, no silver dataset:   0.8171
     TOP_DOWN           = 1
     # unary transitions are modeled as one entire transition
+    # version that uses one transform per item,
+    # score on experiment described above: 0.8157
     TOP_DOWN_COMPOUND  = 2
     # unary is a separate transition.  doesn't help
     TOP_DOWN_UNARY     = 3
 
     # open transition comes after the first constituent it cares about
+    # score on experiment described above: 0.8205
     IN_ORDER           = 4
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
