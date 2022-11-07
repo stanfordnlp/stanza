@@ -23,9 +23,10 @@ class TransitionScheme(Enum):
     TOP_DOWN           = 1
     # unary transitions are modeled as one entire transition
     # version that uses one transform per item,
-    # score on experiment described above: 0.8157
+    # score on experiment described above:
+    #   0.8157
     # score using one combination step for an entire transition:
-    #   0.8174
+    #   0.8178
     TOP_DOWN_COMPOUND  = 2
     # unary is a separate transition.  doesn't help
     # score on experiment described above:
