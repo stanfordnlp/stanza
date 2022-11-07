@@ -259,13 +259,10 @@ class Shift(Transition):
 
 class CompoundUnary(Transition):
     # TODO: run experiments to see if this is actually useful
-    def __init__(self, labels):
+    def __init__(self, *label):
         # the FIRST label will be the top of the tree
         # so CompoundUnary that results in root will have root as labels[0], for example
-        if isinstance(labels, str):
-            self.labels = (labels,)
-        else:
-            self.labels = tuple(labels)
+        self.label = tuple(label)
 
     def update_state(self, state, model):
         """
@@ -280,7 +277,7 @@ class CompoundUnary(Transition):
         # unlike with CloseConstituent, our label is not on the stack.
         # it is just our label
         # ... but we do reuse CloseConstituent's update mechanism
-        return state.word_position, constituents, (self.labels, children), CloseConstituent
+        return state.word_position, constituents, (self.label, children), CloseConstituent
 
     def is_legal(self, state, model):
         """
@@ -293,32 +290,32 @@ class CompoundUnary(Transition):
         # and don't stack CompoundUnary transitions
         if isinstance(model.get_top_transition(state.transitions), (CompoundUnary, OpenConstituent)):
             return False
-        is_root = self.labels[0] in model.get_root_labels()
+        is_root = self.label[0] in model.get_root_labels()
         if not state.empty_word_queue() or not state.has_one_constituent():
             return not is_root
         else:
             return is_root
 
     def components(self):
-        return [CompoundUnary(label) for label in self.labels]
+        return [CompoundUnary(label) for label in self.label]
 
     def short_name(self):
         return "Unary"
 
     def __repr__(self):
-        return "CompoundUnary(%s)" % ",".join(self.labels)
+        return "CompoundUnary(%s)" % ",".join(self.label)
 
     def __eq__(self, other):
         if self is other:
             return True
         if not isinstance(other, CompoundUnary):
             return False
-        if self.labels == other.labels:
+        if self.label == other.label:
             return True
         return False
 
     def __hash__(self):
-        return hash(self.labels)
+        return hash(self.label)
 
 class Dummy():
     """
