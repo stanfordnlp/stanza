@@ -124,6 +124,9 @@ def retag_trees(trees, pipeline, xpos=True):
 # Hardtanh: 81.44
 # Celu: 81.43
 # Selu: 81.17
+#   TODO: need to redo the prelu experiment with
+#         possibly different numbers of parameters
+#         and proper weight decay
 # Prelu: 80.95 (terminated early)
 # Softplus: 80.94
 # Logsigmoid: 80.91
@@ -132,10 +135,23 @@ def retag_trees(trees, pipeline, xpos=True):
 # Hardshrink: failed
 # Softshrink: failed
 NONLINEARITY = {
-    'tanh':       nn.Tanh,
-    'relu':       nn.ReLU,
+    'celu':       nn.CELU,
+    'elu':        nn.ELU,
     'gelu':       nn.GELU,
+    'hardshrink': nn.Hardshrink,
+    'hardtanh':   nn.Hardtanh,
     'leaky_relu': nn.LeakyReLU,
+    'logsigmoid': nn.LogSigmoid,
+    'prelu':      nn.PReLU,
+    'relu':       nn.ReLU,
+    'relu6':      nn.ReLU6,
+    'rrelu':      nn.RReLU,
+    'selu':       nn.SELU,
+    'softplus':   nn.Softplus,
+    'softshrink': nn.Softshrink,
+    'softsign':   nn.Softsign,
+    'tanhshrink': nn.Tanhshrink,
+    'tanh':       nn.Tanh,
 }
 
 # separating these out allows for backwards compatibility with earlier versions of pytorch
@@ -143,24 +159,11 @@ NONLINEARITY = {
 # activation functions, we will need to break that compatibility
 
 nonlinearity_list = [
-    'CELU',
-    'ELU',
     'GLU',
-    'Hardshrink',
     'Hardsigmoid',
     'Hardswish',
-    'Hardtanh',
-    'LogSigmoid',
     'Mish',
-    'PReLU',
-    'ReLU6',
-    'RReLU',
-    'SELU',
     'SiLU',
-    'Softplus',
-    'Softshrink',
-    'Softsign',
-    'Tanhshrink',
 ]
 
 for nonlinearity in nonlinearity_list:
