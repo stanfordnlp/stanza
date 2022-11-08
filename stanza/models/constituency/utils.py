@@ -102,6 +102,35 @@ def retag_trees(trees, pipeline, xpos=True):
             raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
     return new_trees
 
+
+# experimental results on nonlinearities
+# this is on a VI dataset, VLSP_22, using 1/10th of the data as a dev set
+# (no released test set at the time of the experiment)
+# original non-Bert tagger, with 1 iteration each instead of averaged over 5
+# considering the number of experiments and the length of time they would take
+#
+# Gelu has the highest score, which tracks with other experiments run.
+# Note that publicly released models have typically used Relu
+# on account of the runtime speed improvement
+#
+# Gelu: 82.32
+# Relu: 82.14
+# Mish: 81.95
+# Relu6: 81.91
+# Silu: 81.90
+# ELU: 81.73
+# Hardswish: 81.67
+# Softsign: 81.63
+# Hardtanh: 81.44
+# Celu: 81.43
+# Selu: 81.17
+# Prelu: 80.95 (terminated early)
+# Softplus: 80.94
+# Logsigmoid: 80.91
+# Hardsigmoid: 79.03
+# RReLU: 77.00
+# Hardshrink: failed
+# Softshrink: failed
 NONLINEARITY = {
     'tanh':       nn.Tanh,
     'relu':       nn.ReLU,
