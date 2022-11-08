@@ -114,24 +114,24 @@ NONLINEARITY = {
 # activation functions, we will need to break that compatibility
 
 nonlinearity_list = [
-    'Mish',
+    'CELU',
     'ELU',
+    'GLU',
     'Hardshrink',
     'Hardsigmoid',
-    'Hardtanh',
     'Hardswish',
+    'Hardtanh',
     'LogSigmoid',
+    'Mish',
     'PReLU',
     'ReLU6',
     'RReLU',
     'SELU',
-    'CELU',
     'SiLU',
     'Softplus',
     'Softshrink',
     'Softsign',
     'Tanhshrink',
-    'GLU'
 ]
 
 for nonlinearity in nonlinearity_list:
