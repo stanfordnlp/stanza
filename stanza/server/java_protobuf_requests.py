@@ -192,7 +192,7 @@ class JavaProtobufContext(object):
         self.pipe.stdin.flush()
         response_length = self.pipe.stdout.read(4)
         if len(response_length) < 4:
-            raise RuntimeError("Could not communicate with java process!")
+            raise BrokenPipeError("Could not communicate with java process!")
         response_length = int.from_bytes(response_length, "big")
         response_text = self.pipe.stdout.read(response_length)
         response = self.build_response()
