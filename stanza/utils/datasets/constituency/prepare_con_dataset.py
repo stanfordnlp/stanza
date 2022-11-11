@@ -194,15 +194,18 @@ def process_vlsp22(paths, dataset_name, *args):
             dev_size = 1.0 / args.n_splits
             train_size = 1.0 - dev_size
             for rotation in range(args.n_splits):
-                rotation_name = "%s-%d" % (dataset_name, rotation)
+                rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
                 vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=train_size, dev_size=dev_size, rotation=(rotation, args.n_splits))
                 _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], rotation_name)
+                with open(test_file, "w"):
+                    # create an empty test file - currently we don't have actual test data for VLSP 21
+                    pass
         else:
             vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0.9, dev_size=0.1)
             _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], dataset_name)
-    with open(test_file, "w"):
-        # create an empty test file - currently we don't have actual test data for VLSP 21
-        pass
+            with open(test_file, "w"):
+                # create an empty test file - currently we don't have actual test data for VLSP 21
+                pass
 
 def process_arboretum(paths, dataset_name, *args):
     """
