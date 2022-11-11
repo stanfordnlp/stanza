@@ -45,7 +45,9 @@ class SinusoidalEncoding(nn.Module):
 
 class AddSinusoidalEncoding(nn.Module):
     """
-    Uses sine & cosine to represent position
+    Uses sine & cosine to represent position.  Adds the position to the given matrix
+
+    Default behavior is batch_first
     """
     def __init__(self, d_model=256, max_len=512):
         super().__init__()
@@ -69,7 +71,9 @@ class AddSinusoidalEncoding(nn.Module):
 
 class ConcatSinusoidalEncoding(nn.Module):
     """
-    Uses sine & cosine to represent position
+    Uses sine & cosine to represent position.  Concats the position and returns a larger object
+
+    Default behavior is batch_first
     """
     def __init__(self, d_model=256, max_len=512):
         super().__init__()
