@@ -123,9 +123,14 @@ def retag_trees(trees, pipeline, xpos=True):
 # original non-Bert tagger, with 1 iteration each instead of averaged over 5
 # considering the number of experiments and the length of time they would take
 #
-# Gelu has the highest score, which tracks with other experiments run.
+# Gelu had the highest score, which tracks with other experiments run.
 # Note that publicly released models have typically used Relu
 # on account of the runtime speed improvement
+#
+# Anyway, a larger experiment of 5x models on gelu or relu, using the
+# Roberta POS tagger and a corpus of silver trees, resulted in 0.8270
+# for relu and 0.8248 for gelu.  So it is not even clear that
+# switching to gelu would be an accuracy improvement.
 #
 # Gelu: 82.32
 # Relu: 82.14
