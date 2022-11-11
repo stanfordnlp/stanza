@@ -55,8 +55,7 @@ def build_retag_pipeline(args):
         retag_args = {"lang": lang,
                       "processors": "tokenize, pos",
                       "tokenize_pretokenized": True,
-                      "package": {"pos": package},
-                      "pos_tqdm": True}
+                      "package": {"pos": package}}
         if args['retag_model_path'] is not None:
             retag_args['pos_model_path'] = args['retag_model_path']
         retag_pipeline = Pipeline(**retag_args)

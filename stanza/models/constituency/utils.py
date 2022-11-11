@@ -10,6 +10,9 @@ import torch.nn as nn
 from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
+from stanza.models.common.utils import get_tqdm
+
+tqdm = get_tqdm()
 
 DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
@@ -81,28 +84,36 @@ def retag_trees(trees, pipeline, xpos=True):
     if len(trees) == 0:
         return trees
 
-    sentences = []
-    try:
-        for idx, tree in enumerate(trees):
-            tokens = [{TEXT: pt.children[0].label} for pt in tree.yield_preterminals()]
-            sentences.append(tokens)
-    except ValueError as e:
-        raise ValueError("Unable to process tree %d" % idx) from e
-
-    doc = Document(sentences)
-    doc = pipeline(doc)
-    if xpos:
-        tag_lists = [[x.xpos for x in sentence.words] for sentence in doc.sentences]
-    else:
-        tag_lists = [[x.upos for x in sentence.words] for sentence in doc.sentences]
-
     new_trees = []
-    for tree_idx, (tree, tags) in enumerate(zip(trees, tag_lists)):
-        try:
-            new_tree = replace_tags(tree, tags)
-            new_trees.append(new_tree)
-        except ValueError as e:
-            raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
+    chunk_size = 1000
+    with tqdm(total=len(trees)) as pbar:
+        for chunk_start in range(0, len(trees), chunk_size):
+            chunk_end = min(chunk_start + chunk_size, len(trees))
+            chunk = trees[chunk_start:chunk_end]
+            sentences = []
+            try:
+                for idx, tree in enumerate(chunk):
+                    tokens = [{TEXT: pt.children[0].label} for pt in tree.yield_preterminals()]
+                    sentences.append(tokens)
+            except ValueError as e:
+                raise ValueError("Unable to process tree %d" % (idx + chunk_start)) from e
+
+            doc = Document(sentences)
+            doc = pipeline(doc)
+            if xpos:
+                tag_lists = [[x.xpos for x in sentence.words] for sentence in doc.sentences]
+            else:
+                tag_lists = [[x.upos for x in sentence.words] for sentence in doc.sentences]
+
+            for tree_idx, (tree, tags) in enumerate(zip(chunk, tag_lists)):
+                try:
+                    new_tree = replace_tags(tree, tags)
+                    new_trees.append(new_tree)
+                    pbar.update(1)
+                except ValueError as e:
+                    raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
+    if len(new_trees) != len(trees):
+        raise AssertionError("Retagged tree counts did not match: {} vs {}".format(len(new_trees), len(trees)))
     return new_trees
 
 
