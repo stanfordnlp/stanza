@@ -149,6 +149,8 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0
         return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps)
     elif name == 'adamax':
         return torch.optim.Adamax(parameters) # use default lr
+    elif name == 'adadelta':
+        return torch.optim.Adadelta(parameters) # use default lr
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
 

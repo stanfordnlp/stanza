@@ -81,7 +81,7 @@ def parse_args(args=None):
     parser.set_defaults(share_hid=False)
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
-    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamax, or adadelta.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--beta2', type=float, default=0.95)
 
