@@ -131,7 +131,7 @@ class Tagger(nn.Module):
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         for name, param in self.named_parameters():
-            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'charmodel_forward.', 'charmodel_backward.'):
                 lines.append("  %s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
