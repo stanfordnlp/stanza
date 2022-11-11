@@ -93,6 +93,7 @@ def parse_args(args=None):
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
+    parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
@@ -224,6 +225,8 @@ def train(args):
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 logger.info(format_str.format(global_step, max_steps, loss, duration, current_lr))
+                if args['log_norms']:
+                    trainer.model.log_norms()
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
