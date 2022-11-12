@@ -26,6 +26,7 @@ from stanza.models.common import utils
 from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
@@ -83,6 +84,7 @@ def parse_args(args=None):
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamw, adamax, or adadelta.  madgrad as an optional dependency')
     parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')
+    parser.add_argument('--second_optim_reload', default=False, action='store_true', help='Reload the best model instead of continuing from current model if the first optimizer stalls out.  This does not seem to help, but might be useful for further experiments')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=None, help='Alternate learning rate for the second optimizer')
     parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
@@ -201,7 +203,8 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training tagger...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    foundation_cache = FoundationCache()
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'], foundation_cache=foundation_cache)
 
     global_step = 0
     max_steps = args['max_steps']
@@ -264,9 +267,11 @@ def train(args):
             if global_step - last_best_step >= args['max_steps_before_stop']:
                 if not using_amsgrad:
                     logger.info("Switching to second optimizer: {}".format(args['second_optim']))
+                    if args['second_optim_reload']:
+                        logger.info('Reloading best model to continue from current local optimum')
+                        trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain, model_file=model_file, use_cuda=args['cuda'], foundation_cache=foundation_cache)
                     last_best_step = global_step
                     using_amsgrad = True
-                    # TODO: reload the best saved model to continue from those weights?
                     lr = args['second_lr']
                     if lr is None:
                         lr = args['lr']
