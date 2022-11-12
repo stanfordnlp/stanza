@@ -82,6 +82,7 @@ def parse_args(args=None):
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamax, or adadelta.  madgrad as an optional dependency')
+    parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
     parser.add_argument('--second_weight_decay', type=float, default=None, help='Optimizer weight decay for the second optimizer')
@@ -261,10 +262,11 @@ def train(args):
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
                 if not using_amsgrad:
-                    logger.info("Switching to AMSGrad")
+                    logger.info("Switching to second optimizer: {}".format(args['second_optim']))
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6, weight_decay=self.args['second_weight_decay'])
+                    # TODO: reload the best saved model to continue from those weights?
+                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model.parameters(), lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
                 else:
                     logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True
