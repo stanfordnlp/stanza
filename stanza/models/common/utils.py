@@ -146,6 +146,8 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0
         extra_args["weight_decay"] = weight_decay
     if name == 'amsgrad':
         return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'amsgradw':
+        return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'sgd':
         return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
     elif name == 'adagrad':
