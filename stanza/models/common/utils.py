@@ -154,6 +154,12 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
         return torch.optim.Adadelta(parameters, **extra_args) # use default lr
+    elif name == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
 
