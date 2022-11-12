@@ -152,6 +152,8 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0
         return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
     elif name == 'adam':
         return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'adamw':
+        return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
