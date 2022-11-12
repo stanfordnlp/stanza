@@ -83,6 +83,8 @@ def parse_args(args=None):
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamax, or adadelta.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
+    parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
+    parser.add_argument('--second_weight_decay', type=float, default=None, help='Optimizer weight decay for the second optimizer')
     parser.add_argument('--beta2', type=float, default=0.95)
 
     parser.add_argument('--max_steps', type=int, default=50000)
@@ -262,7 +264,7 @@ def train(args):
                     logger.info("Switching to AMSGrad")
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
+                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6, weight_decay=self.args['second_weight_decay'])
                 else:
                     logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True
