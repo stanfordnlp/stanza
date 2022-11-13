@@ -2,7 +2,7 @@
 Collects a few of the conparser utility methods which don't belong elsewhere
 """
 
-from collections import deque
+from collections import Counter, deque
 import copy
 import logging
 
@@ -75,7 +75,28 @@ def replace_tags(tree, tags):
     return new_tree
 
 
-def retag_trees(trees, pipeline, xpos=True):
+def retag_tags(doc, pipelines, xpos):
+    """
+    Returns a list of list of tags for the items in doc
+
+    doc can be anything which feeds into the pipeline(s)
+    pipelines are a list of 1 or more retag pipelines
+    if multiple pipelines are given, majority vote wins
+    """
+    tag_lists = []
+    for pipeline in pipelines:
+        doc = pipeline(doc)
+        tag_lists.append([[x.xpos if xpos else x.upos for x in sentence.words] for sentence in doc.sentences])
+    # tag_lists: for N pipeline, S sentences
+    # we now have N lists of S sentences each
+    # for sentence in zip(*tag_lists): N lists of |s| tags for this given sentence s
+    # for tag in zip(*sentence): N predicted tags.
+    # most common one in the Counter will be chosen
+    tag_lists = [[Counter(tag).most_common(1)[0][0] for tag in zip(*sentence)]
+                 for sentence in zip(*tag_lists)]
+    return tag_lists
+
+def retag_trees(trees, pipelines, xpos=True):
     """
     Retag all of the trees using the given processor
 
@@ -99,11 +120,7 @@ def retag_trees(trees, pipeline, xpos=True):
                 raise ValueError("Unable to process tree %d" % (idx + chunk_start)) from e
 
             doc = Document(sentences)
-            doc = pipeline(doc)
-            if xpos:
-                tag_lists = [[x.xpos for x in sentence.words] for sentence in doc.sentences]
-            else:
-                tag_lists = [[x.upos for x in sentence.words] for sentence in doc.sentences]
+            tag_lists = retag_tags(doc, pipelines, xpos)
 
             for tree_idx, (tree, tags) in enumerate(zip(chunk, tag_lists)):
                 try:

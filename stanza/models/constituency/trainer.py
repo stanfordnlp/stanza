@@ -33,7 +33,7 @@ from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
-from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
+from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 
@@ -215,7 +215,7 @@ def load_model_parse_text(args, model_file, retag_pipeline):
     """
     Load a model, then parse text and write it to stdout or args['predict_file']
     """
-    foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
     load_args = {
         'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
@@ -248,12 +248,11 @@ def parse_text(args, model, retag_pipeline):
         for chunk_start in range(0, len(docs), chunk_size):
             chunk = docs[chunk_start:chunk_start+chunk_size]
             logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
-            doc = retag_pipeline(chunk)
+
+            tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
+            words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
             logger.info("Retagging finished.  Parsing tagged text")
-            if model.uses_xpos():
-                words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
-            else:
-                words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]
+
             assert len(words) == len(chunk)
             chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
             treebank.extend(chunk_trees)
@@ -288,7 +287,7 @@ def evaluate(args, model_file, retag_pipeline):
         kbest = None
 
     with EvaluateParser(kbest=kbest) as evaluator:
-        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         load_args = {
             'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
@@ -579,7 +578,7 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
             silver_trees = retag_trees(silver_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, silver_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file)
 
         trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_file, evaluator)

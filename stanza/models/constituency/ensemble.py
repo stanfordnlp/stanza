@@ -269,7 +269,7 @@ def parse_args(args=None):
 def main():
     args = parse_args()
     retag_pipeline = retagging.build_retag_pipeline(args)
-    foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
 
     ensemble = Ensemble(args['models'], args, foundation_cache)
     ensemble.eval()

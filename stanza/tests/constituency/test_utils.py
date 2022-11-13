@@ -24,7 +24,7 @@ def test_xpos_retag(pipeline):
 
     trees = tree_reader.read_trees(text)
 
-    new_trees = utils.retag_trees(trees, pipeline, xpos=True)
+    new_trees = utils.retag_trees(trees, [pipeline], xpos=True)
     assert new_trees == tree_reader.read_trees(expected)
 
 
@@ -38,7 +38,7 @@ def test_upos_retag(pipeline):
 
     trees = tree_reader.read_trees(text)
 
-    new_trees = utils.retag_trees(trees, pipeline, xpos=False)
+    new_trees = utils.retag_trees(trees, [pipeline], xpos=False)
     assert new_trees == tree_reader.read_trees(expected)
 
 
