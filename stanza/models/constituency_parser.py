@@ -295,6 +295,55 @@ def parse_args(args=None):
     #           0.0003  - 0.8050
     #           0.0005  - 0.8076
     #           0.001   - 0.8069
+    # Numbers on the VLSP Dataset, with --multistage and default learning rates and adabelief optimizer 
+    # Gelu: 82.32
+    # Mish: 81.95
+    # ELU: 81.73
+    # Hardshrink: 0.3
+    # Hardsigmoid: 79.03
+    # Hardtanh: 81.44
+    # Hardswish: 81.67
+    # Logsigmoid: 80.91
+    # Prelu: 80.95 (terminated early)
+    # Relu6: 81.91
+    # RReLU: 77.00
+    # Selu: 81.17
+    # Celu: 81.43
+    # Silu: 81.90
+    # Softplus: 80.94
+    # Softshrink: 0.3
+    # Softsign: 81.63
+    # Softshrink: 13.74
+    
+    # Tests with no_charlm, --multitstage 
+    # Gelu
+    # 0.00002 0.819746
+    # 0.00005 0.818
+    # 0.0001 0.818566
+    # 0.0002 0.819111
+    # 0.001 0.815609
+    
+    # Mish
+    # 0.00002 0.816898
+    # 0.00005 0.821085
+    # 0.0001 0.817821
+    # 0.0002 0.818806
+    # 0.001 0.816494
+    
+    # Relu
+    # 0.00002 0.818402
+    # 0.00005 0.819019
+    # 0.0001 0.821625
+    # 0.0002 0.820633
+    # 0.001 0.814315
+    
+    # Relu6
+    # 0.00002 0.819719
+    # 0.00005 0.819871
+    # 0.0001 0.819018
+    # 0.0002 0.819506
+    # 0.001 0.819018
+    
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
     parser.add_argument('--learning_momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
