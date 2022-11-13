@@ -53,7 +53,7 @@ class AddSinusoidalEncoding(nn.Module):
         super().__init__()
         self.encoding = SinusoidalEncoding(d_model, max_len)
 
-    def forward(self, x):
+    def forward(self, x, scale=1.0):
         """
         Adds the positional encoding to the input tensor
 
@@ -63,10 +63,9 @@ class AddSinusoidalEncoding(nn.Module):
         if len(x.shape) == 3:
             timing = self.encoding(torch.arange(x.shape[1], device=x.device))
             timing = timing.expand(x.shape[0], -1, -1)
-            return x + timing
         elif len(x.shape) == 2:
             timing = self.encoding(torch.arange(x.shape[0], device=x.device))
-            return x + timing
+        return x + timing * scale
 
 
 class ConcatSinusoidalEncoding(nn.Module):
