@@ -573,7 +573,8 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
         if args['silver_file']:
             silver_trees = tree_reader.read_treebank(args['silver_file'])
             logger.info("Read %d trees for the silver training set", len(silver_trees))
-            silver_trees = remove_duplicates(silver_trees, "silver")
+            if args['silver_remove_duplicates']:
+                silver_trees = remove_duplicates(silver_trees, "silver")
 
         if retag_pipeline is not None:
             logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])

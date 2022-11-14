@@ -178,6 +178,7 @@ def parse_args(args=None):
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
+    parser.add_argument('--silver_remove_duplicates', default=False, action='store_true', help="Do/don't remove duplicates from the silver training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
     parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
