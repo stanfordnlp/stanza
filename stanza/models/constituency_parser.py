@@ -104,6 +104,7 @@ The code breakdown is as follows:
   constituency/lstm_model.py: adds LSTM features to the constituents to predict what the
     correct transition to make is, allowing for predictions on previously unseen text
 
+  constituency/retagging.py: a couple utility methods specifically for retagging
   constituency/utils.py: a couple utility methods
 
   constituency/dyanmic_oracle.py: a dynamic oracle which currently
@@ -132,11 +133,11 @@ import torch
 
 from stanza import Pipeline
 from stanza.models.common import utils
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args
 
 logger = logging.getLogger('stanza')
 
@@ -176,12 +177,12 @@ def parse_args(args=None):
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--mode', default='train', choices=['train', 'predict', 'remove_optimizer'])
+    parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
     parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
-    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
-    parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
-    parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')
+    add_predict_output_args(parser)
 
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -203,6 +204,7 @@ def parse_args(args=None):
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
+    parser.add_argument('--silver_epoch_size', type=int, default=None, help="Runs this many trees in a silver 'epoch'.  If not set, will match --epoch_size")
 
     # AdaDelta warmup for the conparser.  Motivation: AdaDelta results in
     # higher scores overall, but learns 0s for the weights of the pattn and
@@ -295,6 +297,56 @@ def parse_args(args=None):
     #           0.0003  - 0.8050
     #           0.0005  - 0.8076
     #           0.001   - 0.8069
+    
+    # Numbers on the VLSP Dataset, with --multistage and default learning rates and adabelief optimizer 
+    # Gelu: 82.32
+    # Mish: 81.95
+    # ELU: 81.73
+    # Hardshrink: 0.3
+    # Hardsigmoid: 79.03
+    # Hardtanh: 81.44
+    # Hardswish: 81.67
+    # Logsigmoid: 80.91
+    # Prelu: 80.95 (terminated early)
+    # Relu6: 81.91
+    # RReLU: 77.00
+    # Selu: 81.17
+    # Celu: 81.43
+    # Silu: 81.90
+    # Softplus: 80.94
+    # Softshrink: 0.3
+    # Softsign: 81.63
+    # Softshrink: 13.74
+
+    # Tests with no_charlm, --multitstage 
+    # Gelu
+    # 0.00002 0.819746
+    # 0.00005 0.818
+    # 0.0001 0.818566
+    # 0.0002 0.819111
+    # 0.001 0.815609
+
+    # Mish
+    # 0.00002 0.816898
+    # 0.00005 0.821085
+    # 0.0001 0.817821
+    # 0.0002 0.818806
+    # 0.001 0.816494
+
+    # Relu
+    # 0.00002 0.818402
+    # 0.00005 0.819019
+    # 0.0001 0.821625
+    # 0.0002 0.820633
+    # 0.001 0.814315
+
+    # Relu6
+    # 0.00002 0.819719
+    # 0.00005 0.819871
+    # 0.0001 0.819018
+    # 0.0002 0.819506
+    # 0.001 0.819018
+
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
     parser.add_argument('--learning_momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
@@ -373,6 +425,8 @@ def parse_args(args=None):
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
     parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
 
+    parser.add_argument('--use_silver_words', default=True, dest='use_silver_words', action='store_true', help="Use/don't use words from the silver dataset")
+    parser.add_argument('--no_use_silver_words', default=True, dest='use_silver_words', action='store_false', help="Use/don't use words from the silver dataset")
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
     parser.add_argument('--tag_unknown_frequency', default=0.001, type=float, help='How often to replace a tag with UNK when training')
@@ -386,6 +440,7 @@ def parse_args(args=None):
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
                         help='How to build a new composition from its children.  {}'.format(", ".join(x.name for x in ConstituencyComposition)))
     parser.add_argument('--reduce_heads', default=8, type=int, help='Number of attn heads to use when reducing children into a parent tree (constituency_composition == attn)')
+    parser.add_argument('--reduce_position', default=None, type=int, help="Dimension of position vector to use when reducing children.  None means 1/4 hidden_size, 0 means don't use (constituency_composition == key | untied_key)")
 
     parser.add_argument('--relearn_structure', action='store_true', help='Starting from an existing checkpoint, add or remove pattn / lattn.  One thing that works well is to train an initial model using adadelta with no pattn, then add pattn with adamw')
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
@@ -393,10 +448,7 @@ def parse_args(args=None):
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
-    parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
-    parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
-    parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default')
-    parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
+    retagging.add_retag_args(parser)
 
     # Partitioned Attention
     parser.add_argument('--pattn_d_model', default=1024, type=int, help='Partitioned attention model dimensionality')
@@ -421,6 +473,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_pwff', default=True, action='store_true', help='Whether or not to use a Position-wise Feed-forward Layer')
     parser.add_argument('--lattn_q_as_matrix', default=False, action='store_true', help='Whether or not Label Attention uses learned query vectors. False means it does')
     parser.add_argument('--lattn_partitioned', default=True, action='store_true', help='Whether or not it is partitioned')
+    parser.add_argument('--no_lattn_partitioned', default=True, action='store_false', dest='lattn_partitioned', help='Whether or not it is partitioned')
     parser.add_argument('--lattn_combine_as_self', default=False, action='store_true', help='Whether or not the layer uses concatenation. False means it does')
     # currently unused - always assume 1/2 of pattn
     #parser.add_argument('--lattn_d_positional', default=512, type=int, help='Dimension for the positional embedding')
@@ -454,11 +507,14 @@ def parse_args(args=None):
     if args.learning_weight_decay is None:
         args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
-    if len(args.predict_format) <= 2:
+    if len(args.predict_format) <= 2 or (len(args.predict_format) <= 3 and args.predict_format.endswith("Vi")):
         args.predict_format = "{:" + args.predict_format + "}"
 
     if args.stage1_learning_rate is None:
         args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+
+    if args.reduce_position is None:
+        args.reduce_position = args.hidden_size // 4
 
     if args.num_tree_lstm_layers is None:
         if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):
@@ -471,12 +527,7 @@ def parse_args(args=None):
 
     args = vars(args)
 
-    if args['retag_method'] == 'xpos':
-        args['retag_xpos'] = True
-    elif args['retag_method'] == 'upos':
-        args['retag_xpos'] = False
-    else:
-        raise ValueError("Unknown retag method {}".format(xpos))
+    retagging.postprocess_args(args)
 
     model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
 
@@ -520,31 +571,14 @@ def main(args=None):
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
 
-    if args['retag_package'] is not None and args['mode'] != 'remove_optimizer':
-        if '_' in args['retag_package']:
-            lang, package = args['retag_package'].split('_', 1)
-        else:
-            lang = args['lang']
-            package = args['retag_package']
-        retag_args = {"lang": lang,
-                      "processors": "tokenize, pos",
-                      "tokenize_pretokenized": True,
-                      "package": {"pos": package},
-                      "pos_tqdm": True}
-        if args['retag_model_path'] is not None:
-            retag_args['pos_model_path'] = args['retag_model_path']
-        retag_pipeline = Pipeline(**retag_args)
-        if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
-            logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
-            args['retag_xpos'] = False
-            args['retag_method'] = 'upos'
-    else:
-        retag_pipeline = None
+    retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
         trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
+    elif args['mode'] == 'parse_text':
+        trainer.load_model_parse_text(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
         trainer.remove_optimizer(args, args['save_name'], model_load_file)
 

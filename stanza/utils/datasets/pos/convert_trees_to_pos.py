@@ -11,6 +11,7 @@ To run this:
   python3 stanza/utils/training/run_pos.py vi_vlsp22
 """
 
+import argparse
 import os
 import shutil
 import sys
@@ -61,6 +62,8 @@ def convert_treebank(short_name, paths):
             raise FileNotFoundError("Cannot find expected datafile %s" % in_file)
 
     out_dir = paths["POS_DATA_DIR"]
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
     out_files = [os.path.join(out_dir, "%s.%s.in.conllu" % (short_name, shard)) for shard in SHARDS]
     gold_files = [os.path.join(out_dir, "%s.%s.gold.conllu" % (short_name, shard)) for shard in SHARDS]
 
@@ -70,6 +73,10 @@ def convert_treebank(short_name, paths):
         shutil.copy2(out_file, gold_file)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dataset", help="Which dataset to process from trees to POS")
+    args = parser.parse_args()
+
     paths = default_paths.get_default_paths()
 
-    convert_treebank(sys.argv[1], paths)
+    convert_treebank(args.dataset, paths)

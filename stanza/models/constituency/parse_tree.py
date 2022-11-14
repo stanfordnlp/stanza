@@ -162,13 +162,14 @@ class Tree(StanzaObject):
         Otherwise, a tree too deep might blow up the call stack
 
         There is a type specific format:
-          O      -> one line PTB format, which is the default anyway
-          L      -> open and close brackets are labeled, spaces in the tokens are replaced with _
-          P      -> pretty print over multiple lines
-          V      -> surround lines with <s>...</s>, don't print ROOT, and turn () into L/RBKT
-          ?      -> spaces in the tokens are replaced with ? for any value of ? other than OLP
-                    warning: this may be removed in the future
-          ?{OLP} -> specific format AND a custom space replacement
+          O       -> one line PTB format, which is the default anyway
+          L       -> open and close brackets are labeled, spaces in the tokens are replaced with _
+          P       -> pretty print over multiple lines
+          V       -> surround lines with <s>...</s>, don't print ROOT, and turn () into L/RBKT
+          ?       -> spaces in the tokens are replaced with ? for any value of ? other than OLP
+                     warning: this may be removed in the future
+          ?{OLPV} -> specific format AND a custom space replacement
+          Vi      -> add an ID to the <s> in the V format.  Also works with ?Vi
         """
         space_replacement = " "
         print_format = TreePrintMethod.ONE_LINE
@@ -188,11 +189,13 @@ class Tree(StanzaObject):
         elif spec and spec[-1] == 'P':
             print_format = TreePrintMethod.PRETTY
             space_replacement = spec[0]
-        elif spec == 'V':
+        elif spec and spec[0] == 'V':
             print_format = TreePrintMethod.VLSP
-        elif spec and spec[-1] == 'V':
+            use_tree_id = spec[-1] == 'i'
+        elif spec and len(spec) > 1 and spec[1] == 'V':
             print_format = TreePrintMethod.VLSP
             space_replacement = spec[0]
+            use_tree_id = spec[-1] == 'i'
         elif spec:
             space_replacement = spec[0]
             warnings.warn("Use of a custom replacement without a format specifier is deprecated.  Please use {}O instead".format(space_replacement), stacklevel=2)
@@ -208,7 +211,10 @@ class Tree(StanzaObject):
         with StringIO() as buf:
             stack = deque()
             if print_format == TreePrintMethod.VLSP:
-                buf.write("<s>\n")
+                if use_tree_id:
+                    buf.write("<s id={}>\n".format(self.tree_id))
+                else:
+                    buf.write("<s>\n")
                 if len(self.children) == 0:
                     raise ValueError("Cannot print an empty tree with V format")
                 elif len(self.children) > 1:

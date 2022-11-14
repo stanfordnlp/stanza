@@ -56,7 +56,7 @@ class ConstituencyProcessor(UDProcessor):
     def process(self, document):
         sentences = document.sentences
 
-        if self._model.uses_xpos():
+        if self._model.model.uses_xpos():
             words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
         else:
             words = [[(w.text, w.upos) for w in s.words] for s in sentences]

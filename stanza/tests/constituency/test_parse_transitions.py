@@ -2,7 +2,7 @@ import pytest
 
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_transitions import TransitionScheme, Shift, CloseConstituent, OpenConstituent
 from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -85,9 +85,11 @@ def test_initial_unary(model=None):
         model = SimpleModel()
 
     state = build_initial_state(model)[0]
-    unary = parse_transitions.CompoundUnary(['ROOT', 'VP'])
+    unary = parse_transitions.CompoundUnary('ROOT', 'VP')
+    assert unary.label == ('ROOT', 'VP',)
     assert not unary.is_legal(state, model)
-    unary = parse_transitions.CompoundUnary(['VP'])
+    unary = parse_transitions.CompoundUnary('VP')
+    assert unary.label == ('VP',)
     assert not unary.is_legal(state, model)
 
 
@@ -100,7 +102,7 @@ def test_unary(model=None):
     state = shift.apply(state, model)
 
     # this is technically the wrong parse but we're being lazy
-    unary = parse_transitions.CompoundUnary(['S', 'VP'])
+    unary = parse_transitions.CompoundUnary('S', 'VP')
     assert unary.is_legal(state, model)
     state = unary.apply(state, model)
     assert not unary.is_legal(state, model)
@@ -364,17 +366,12 @@ def test_hashes():
     transitions.add(unary)
     assert unary in transitions
 
-    unary = parse_transitions.CompoundUnary(["asdf", "zzzz"])
+    unary = parse_transitions.CompoundUnary("asdf", "zzzz")
     assert unary not in transitions
     transitions.add(unary)
     transitions.add(unary)
     transitions.add(unary)
-    unary = parse_transitions.CompoundUnary(["asdf", "zzzz"])
-    assert unary in transitions
-
-    # check that the str and the list constructors result in the same item
-    assert len(transitions) == 3
-    unary = parse_transitions.CompoundUnary(["asdf"])
+    unary = parse_transitions.CompoundUnary("asdf", "zzzz")
     assert unary in transitions
 
     oc = parse_transitions.OpenConstituent("asdf")
@@ -402,8 +399,8 @@ def test_sort():
 
     expected.append(parse_transitions.Shift())
     expected.append(parse_transitions.CloseConstituent())
-    expected.append(parse_transitions.CompoundUnary(["NP"]))
-    expected.append(parse_transitions.CompoundUnary(["NP", "VP"]))
+    expected.append(parse_transitions.CompoundUnary("NP"))
+    expected.append(parse_transitions.CompoundUnary("NP", "VP"))
     expected.append(parse_transitions.OpenConstituent("mox"))
     expected.append(parse_transitions.OpenConstituent("opal"))
     expected.append(parse_transitions.OpenConstituent("unban"))
@@ -411,3 +408,21 @@ def test_sort():
     transitions = set(expected)
     transitions = sorted(transitions)
     assert transitions == expected
+
+def test_check_transitions():
+    """
+    Test that check_transitions passes or fails a couple simple, small test cases
+    """
+    transitions = {Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("VP")}
+
+    other = {Shift(), CloseConstituent(), OpenConstituent("NP"), OpenConstituent("VP")}
+    parse_transitions.check_transitions(transitions, other, "test")
+
+    # This will get a pass because it is a unary made out of existing unaries
+    other = {Shift(), CloseConstituent(), OpenConstituent("NP", "VP")}
+    parse_transitions.check_transitions(transitions, other, "test")
+
+    # This should fail
+    with pytest.raises(RuntimeError):
+        other = {Shift(), CloseConstituent(), OpenConstituent("NP", "ZP")}
+        parse_transitions.check_transitions(transitions, other, "test")

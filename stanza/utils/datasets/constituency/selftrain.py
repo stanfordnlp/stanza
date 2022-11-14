@@ -5,6 +5,7 @@ Common methods for the various self-training data collection scripts
 import logging
 import os
 import random
+import re
 
 import stanza
 from stanza.models.common import utils
@@ -47,6 +48,33 @@ def common_args(parser):
         help='Output trees in PTB brackets (default is a bracket language format)'
     )
 
+def add_length_args(parser):
+    parser.add_argument(
+        '--min_len',
+        default=5,
+        type=int,
+        help='Minimum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_min_len',
+        dest='min_len',
+        action='store_const',
+        const=None,
+        help='No minimum length'
+    )
+    parser.add_argument(
+        '--max_len',
+        default=100,
+        type=int,
+        help='Maximum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_max_len',
+        dest='max_len',
+        action='store_const',
+        const=None,
+        help='No maximum length'
+    )
 
 def build_ssplit_pipe(ssplit, lang):
     if ssplit:
@@ -106,6 +134,65 @@ def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=50, chunk_size=2000)
     logger.info("Split sentences: %d", raw_sentences)
     logger.info("Sentences filtered for length: %d", filtered_sentences)
     return new_docs
+
+# from https://stackoverflow.com/questions/2718196/find-all-chinese-text-in-a-string-using-python-and-regex
+ZH_RE = re.compile(u'[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]', re.UNICODE)
+# https://stackoverflow.com/questions/6787716/regular-expression-for-japanese-characters
+JA_RE = re.compile(u'[一-龠ぁ-ゔァ-ヴー々〆〤ヶ]', re.UNICODE)
+DEV_RE = re.compile(u'[\u0900-\u097f]', re.UNICODE)
+
+def tokenize_docs(docs, pipe, min_len, max_len):
+    """
+    Turn the text in docs into a list of whitespace separated sentences
+
+    docs: a list of strings
+    pipe: a Stanza pipeline for tokenizing
+    min_len, max_len: can be None to not filter by this attribute
+    """
+    results = []
+    docs = [stanza.Document([], text=t) for t in docs]
+    pipe(docs)
+    is_zh = pipe.lang and pipe.lang.startswith("zh")
+    is_ja = pipe.lang and pipe.lang.startswith("ja")
+    is_vi = pipe.lang and pipe.lang.startswith("vi")
+    for doc in docs:
+        for sentence in doc.sentences:
+            if min_len and len(sentence.words) < min_len:
+                continue
+            if max_len and len(sentence.words) > max_len:
+                continue
+            text = sentence.text
+            if (text.find("|") >= 0 or text.find("_") >= 0 or
+                text.find("<") >= 0 or text.find(">") >= 0 or
+                text.find("[") >= 0 or text.find("]") >= 0 or
+                text.find('—') >= 0):   # an em dash, seems to be part of lists
+                continue
+            # the VI tokenizer in particular doesn't split these well
+            if any(any(w.text.find(c) >= 0 and len(w.text) > 1 for w in sentence.words)
+                   for c in '"()'):
+                continue
+            text = [w.text.replace(" ", "_") for w in sentence.words]
+            text = " ".join(text)
+            if any(len(w.text) >= 50 for w in sentence.words):
+                # skip sentences where some of the words are unreasonably long
+                # could make this an argument
+                continue
+            if not is_zh and len(ZH_RE.findall(text)) > 250:
+                # some Chinese sentences show up in VI Wikipedia
+                # we want to eliminate ones which will choke the bert models
+                continue
+            if not is_ja and len(JA_RE.findall(text)) > 150:
+                # some Japanese sentences also show up in VI Wikipedia
+                # we want to eliminate ones which will choke the bert models
+                continue
+            if is_vi and len(DEV_RE.findall(text)) > 100:
+                # would need some list of languages that use
+                # Devanagari to eliminate sentences from all datasets.
+                # Otherwise we might accidentally throw away all the
+                # text from a language we need (although that would be obvious)
+                continue
+            results.append(text)
+    return results
 
 def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pipes, shuffle=True, chunk_size=10, max_len=140, min_len=10, output_ptb=False):
     """

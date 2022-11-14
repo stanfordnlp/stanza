@@ -65,7 +65,7 @@ def tokenize_manual(model_name, sent, tokenizer):
 
     return tokenized, tokenized_sent
 
-def filter_data(model_name, data, tokenizer = None):
+def filter_data(model_name, data, tokenizer = None, log_level=logging.INFO):
     """
     Filter out the (NER) data that is too long for BERT model.
     """
@@ -74,7 +74,7 @@ def filter_data(model_name, data, tokenizer = None):
     filtered_data = []
     #eliminate all the sentences that are too long for bert model
     for sent in data:
-        sentence = [word[0] for word in sent]
+        sentence = [word if isinstance(word, str) else word[0] for word in sent]
         _, tokenized_sent = tokenize_manual(model_name, sentence, tokenizer)
         
         if len(tokenized_sent) > tokenizer.model_max_length - 2:
@@ -82,7 +82,7 @@ def filter_data(model_name, data, tokenizer = None):
 
         filtered_data.append(sent)
 
-    logger.info("Eliminated {} datapoints because their length is over maximum size of BERT model. ".format(len(data)-len(filtered_data)))
+    logger.log(log_level, "Eliminated %d of %d datapoints because their length is over maximum size of BERT model.", (len(data)-len(filtered_data)), len(data))
     
     return filtered_data
 

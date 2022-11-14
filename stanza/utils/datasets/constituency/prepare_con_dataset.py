@@ -171,6 +171,7 @@ def process_vlsp22(paths, dataset_name, *args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
     parser.add_argument('--no_convert_brackets', default=True, action='store_false', dest='convert_brackets', help="Don't convert the VLSP parens RKBT & LKBT to PTB parens")
+    parser.add_argument('--n_splits', default=None, type=int, help='Split the data into this many pieces.  Relevant as there is no set training/dev split and no official test data yet, so this allows for N models on N different dev sets')
     args = parser.parse_args(args=list(*args))
 
     if os.path.exists(args.subdir):
@@ -189,11 +190,22 @@ def process_vlsp22(paths, dataset_name, *args):
     with tempfile.TemporaryDirectory() as tmp_output_path:
         vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
         # This produces a 0 length test set, just as a placeholder until the actual test set is released
-        vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0.9, dev_size=0.1)
-    _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], dataset_name)
-    with open(test_file, "w"):
-        # create an empty test file - currently we don't have actual test data for VLSP 21
-        pass
+        if args.n_splits:
+            dev_size = 1.0 / args.n_splits
+            train_size = 1.0 - dev_size
+            for rotation in range(args.n_splits):
+                rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
+                vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=train_size, dev_size=dev_size, rotation=(rotation, args.n_splits))
+                _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], rotation_name)
+                with open(test_file, "w"):
+                    # create an empty test file - currently we don't have actual test data for VLSP 21
+                    pass
+        else:
+            vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0.9, dev_size=0.1)
+            _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], dataset_name)
+            with open(test_file, "w"):
+                # create an empty test file - currently we don't have actual test data for VLSP 21
+                pass
 
 def process_arboretum(paths, dataset_name, *args):
     """

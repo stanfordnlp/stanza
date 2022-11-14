@@ -91,12 +91,6 @@ class BaseModel(ABC):
         """
 
     @abstractmethod
-    def unary_transform(self, constituents, labels):
-        """
-        Transform the top of the constituent stack using a unary transform to the new label
-        """
-
-    @abstractmethod
     def build_constituents(self, labels, children_lists):
         """
         Build multiple constituents at once.  This gives the opportunity for batching operations
@@ -175,7 +169,7 @@ class BaseModel(ABC):
         """
         For each State, return the next item in the gold_sequence
         """
-        return None, [y.gold_sequence[y.num_transitions()] for y in states]
+        return None, [y.gold_sequence[y.num_transitions()] for y in states], None
 
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
         """
@@ -192,7 +186,8 @@ class BaseModel(ABC):
                         gold_sequence=None,
                         transitions=transitions,
                         constituents=constituents,
-                        word_position=0)
+                        word_position=0,
+                        score=0.0)
                   for idx, wq in enumerate(word_queues)]
         if gold_trees:
             states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
@@ -239,6 +234,8 @@ class BaseModel(ABC):
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """
         Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
+
+        Expects a list of list of (word, tag)
         """
         state_batch = []
         for _ in range(batch_size):
@@ -252,7 +249,7 @@ class BaseModel(ABC):
         return state_batch
 
 
-    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False):
+    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
         """
         Repeat transitions to build a list of trees from the input batches.
 
@@ -278,7 +275,9 @@ class BaseModel(ABC):
             constituents = defaultdict(list)
 
         while len(state_batch) > 0:
-            _, transitions = transition_choice(state_batch)
+            pred_scores, transitions, scores = transition_choice(state_batch)
+            if keep_scores and scores is not None:
+                state_batch = [state._replace(score=state.score + score) for state, score in zip(state_batch, scores)]
             state_batch = parse_transitions.bulk_apply(self, state_batch, transitions)
 
             if keep_constituents:
@@ -294,8 +293,7 @@ class BaseModel(ABC):
                 if state.finished(self):
                     predicted_tree = state.get_tree(self)
                     gold_tree = state.gold_tree
-                    # TODO: put an actual score here?
-                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, 1.0)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
+                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, state.score)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
                     treebank_indices.append(batch_indices[idx])
                     remove.add(idx)
 
@@ -318,7 +316,7 @@ class BaseModel(ABC):
         treebank = utils.unsort(treebank, treebank_indices)
         return treebank
 
-    def parse_sentences_no_grad(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False):
+    def parse_sentences_no_grad(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
         """
         Given an iterator over the data and a method for building batches, returns a list of parse trees.
 
@@ -326,9 +324,9 @@ class BaseModel(ABC):
         run faster and use less memory at inference time
         """
         with torch.no_grad():
-            return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents)
+            return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents, keep_scores)
 
-    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True):
+    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True, keep_scores=True):
         """
         Return a ParseResult for each tree in the trees list
 
@@ -342,10 +340,10 @@ class BaseModel(ABC):
             # TODO: refactor?
             batch_size = self.args['eval_batch_size']
         tree_iterator = iter(trees)
-        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents)
+        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=True)
         return treebank
 
-    def parse_tagged_words(self, words, batch_size, keep_state=False, keep_constituents=False):
+    def parse_tagged_words(self, words, batch_size):
         """
         This parses tagged words and returns a list of trees.
 
@@ -361,7 +359,7 @@ class BaseModel(ABC):
         self.eval()
 
         sentence_iterator = iter(words)
-        treebank = self.parse_sentences_no_grad(sentence_iterator, self.build_batch_from_tagged_words, batch_size, self.predict, keep_state=keep_state, keep_constituents=keep_constituents)
+        treebank = self.parse_sentences_no_grad(sentence_iterator, self.build_batch_from_tagged_words, batch_size, self.predict, keep_state=False, keep_constituents=False)
 
         results = [t.predictions[0].tree for t in treebank]
         return results
@@ -403,12 +401,6 @@ class SimpleModel(BaseModel):
 
     def dummy_constituent(self, dummy):
         return dummy
-
-    def unary_transform(self, constituents, labels):
-        top_constituent = constituents.value
-        for label in reversed(labels):
-            top_constituent = Tree(label=label, children=[top_constituent])
-        return top_constituent
 
     def build_constituents(self, labels, children_lists):
         constituents = []

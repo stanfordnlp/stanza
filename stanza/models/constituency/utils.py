@@ -2,7 +2,7 @@
 Collects a few of the conparser utility methods which don't belong elsewhere
 """
 
-from collections import deque
+from collections import Counter, deque
 import copy
 import logging
 
@@ -10,6 +10,9 @@ import torch.nn as nn
 from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
+from stanza.models.common.utils import get_tqdm
+
+tqdm = get_tqdm()
 
 DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 , "mirror_madgrad": 0.00005 }
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
@@ -72,51 +75,136 @@ def replace_tags(tree, tags):
     return new_tree
 
 
-def retag_trees(trees, pipeline, xpos=True):
+def retag_tags(doc, pipelines, xpos):
+    """
+    Returns a list of list of tags for the items in doc
+
+    doc can be anything which feeds into the pipeline(s)
+    pipelines are a list of 1 or more retag pipelines
+    if multiple pipelines are given, majority vote wins
+    """
+    tag_lists = []
+    for pipeline in pipelines:
+        doc = pipeline(doc)
+        tag_lists.append([[x.xpos if xpos else x.upos for x in sentence.words] for sentence in doc.sentences])
+    # tag_lists: for N pipeline, S sentences
+    # we now have N lists of S sentences each
+    # for sentence in zip(*tag_lists): N lists of |s| tags for this given sentence s
+    # for tag in zip(*sentence): N predicted tags.
+    # most common one in the Counter will be chosen
+    tag_lists = [[Counter(tag).most_common(1)[0][0] for tag in zip(*sentence)]
+                 for sentence in zip(*tag_lists)]
+    return tag_lists
+
+def retag_trees(trees, pipelines, xpos=True):
     """
     Retag all of the trees using the given processor
 
     Returns a list of new trees
     """
-    sentences = []
-    try:
-        for idx, tree in enumerate(trees):
-            tokens = [{TEXT: pt.children[0].label} for pt in tree.yield_preterminals()]
-            sentences.append(tokens)
-    except ValueError as e:
-        raise ValueError("Unable to process tree %d" % idx) from e
-
-    doc = Document(sentences)
-    doc = pipeline(doc)
-    if xpos:
-        tag_lists = [[x.xpos for x in sentence.words] for sentence in doc.sentences]
-    else:
-        tag_lists = [[x.upos for x in sentence.words] for sentence in doc.sentences]
+    if len(trees) == 0:
+        return trees
 
     new_trees = []
-    for tree_idx, (tree, tags) in enumerate(zip(trees, tag_lists)):
-        try:
-            new_tree = replace_tags(tree, tags)
-            new_trees.append(new_tree)
-        except ValueError as e:
-            raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
+    chunk_size = 1000
+    with tqdm(total=len(trees)) as pbar:
+        for chunk_start in range(0, len(trees), chunk_size):
+            chunk_end = min(chunk_start + chunk_size, len(trees))
+            chunk = trees[chunk_start:chunk_end]
+            sentences = []
+            try:
+                for idx, tree in enumerate(chunk):
+                    tokens = [{TEXT: pt.children[0].label} for pt in tree.yield_preterminals()]
+                    sentences.append(tokens)
+            except ValueError as e:
+                raise ValueError("Unable to process tree %d" % (idx + chunk_start)) from e
+
+            doc = Document(sentences)
+            tag_lists = retag_tags(doc, pipelines, xpos)
+
+            for tree_idx, (tree, tags) in enumerate(zip(chunk, tag_lists)):
+                try:
+                    new_tree = replace_tags(tree, tags)
+                    new_trees.append(new_tree)
+                    pbar.update(1)
+                except ValueError as e:
+                    raise ValueError("Failed to properly retag tree #{}: {}".format(tree_idx, tree)) from e
+    if len(new_trees) != len(trees):
+        raise AssertionError("Retagged tree counts did not match: {} vs {}".format(len(new_trees), len(trees)))
     return new_trees
 
+
+# experimental results on nonlinearities
+# this is on a VI dataset, VLSP_22, using 1/10th of the data as a dev set
+# (no released test set at the time of the experiment)
+# original non-Bert tagger, with 1 iteration each instead of averaged over 5
+# considering the number of experiments and the length of time they would take
+#
+# Gelu had the highest score, which tracks with other experiments run.
+# Note that publicly released models have typically used Relu
+# on account of the runtime speed improvement
+#
+# Anyway, a larger experiment of 5x models on gelu or relu, using the
+# Roberta POS tagger and a corpus of silver trees, resulted in 0.8270
+# for relu and 0.8248 for gelu.  So it is not even clear that
+# switching to gelu would be an accuracy improvement.
+#
+# Gelu: 82.32
+# Relu: 82.14
+# Mish: 81.95
+# Relu6: 81.91
+# Silu: 81.90
+# ELU: 81.73
+# Hardswish: 81.67
+# Softsign: 81.63
+# Hardtanh: 81.44
+# Celu: 81.43
+# Selu: 81.17
+#   TODO: need to redo the prelu experiment with
+#         possibly different numbers of parameters
+#         and proper weight decay
+# Prelu: 80.95 (terminated early)
+# Softplus: 80.94
+# Logsigmoid: 80.91
+# Hardsigmoid: 79.03
+# RReLU: 77.00
+# Hardshrink: failed
+# Softshrink: failed
 NONLINEARITY = {
-    'tanh':       nn.Tanh,
-    'relu':       nn.ReLU,
+    'celu':       nn.CELU,
+    'elu':        nn.ELU,
     'gelu':       nn.GELU,
+    'hardshrink': nn.Hardshrink,
+    'hardtanh':   nn.Hardtanh,
     'leaky_relu': nn.LeakyReLU,
+    'logsigmoid': nn.LogSigmoid,
+    'prelu':      nn.PReLU,
+    'relu':       nn.ReLU,
+    'relu6':      nn.ReLU6,
+    'rrelu':      nn.RReLU,
+    'selu':       nn.SELU,
+    'softplus':   nn.Softplus,
+    'softshrink': nn.Softshrink,
+    'softsign':   nn.Softsign,
+    'tanhshrink': nn.Tanhshrink,
+    'tanh':       nn.Tanh,
 }
 
 # separating these out allows for backwards compatibility with earlier versions of pytorch
 # NOTE torch compatibility: if we ever *release* models with these
 # activation functions, we will need to break that compatibility
-if hasattr(nn, 'SiLU'):
-    NONLINEARITY['silu'] = nn.SiLU
 
-if hasattr(nn, 'Mish'):
-    NONLINEARITY['mish'] = nn.Mish
+nonlinearity_list = [
+    'GLU',
+    'Hardsigmoid',
+    'Hardswish',
+    'Mish',
+    'SiLU',
+]
+
+for nonlinearity in nonlinearity_list:
+    if hasattr(nn, nonlinearity):
+        NONLINEARITY[nonlinearity.lower()] = getattr(nn, nonlinearity)
 
 def build_nonlinearity(nonlinearity):
     """
@@ -203,3 +291,11 @@ def initialize_linear(linear, nonlinearity, bias):
     if nonlinearity in ('relu', 'leaky_relu'):
         nn.init.kaiming_normal_(linear.weight, nonlinearity=nonlinearity)
         nn.init.uniform_(linear.bias, 0, 1 / (bias * 2) ** 0.5)
+
+def add_predict_output_args(parser):
+    """
+    Args specifically for the output location of data
+    """
+    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
+    parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
+    parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')

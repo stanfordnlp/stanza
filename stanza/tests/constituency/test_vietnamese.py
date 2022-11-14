@@ -24,6 +24,8 @@ VI_TREEBANK_SIMPLE        = '(ROOT (S (NP (" ") (N Đảo) (Np Đài Loan) (" ")
 
 VI_TREEBANK_PAREN         = '(ROOT (S-TTL (NP (PUNCT -LRB-) (N-H Đảo) (Np Đài Loan) (PUNCT -RRB-) (PP (E-H ở) (NP (N-H đồng bằng) (NP (N-H sông) (Np Cửu Long))))) (. .)))'
 VI_TREEBANK_VLSP          = '<s>\n(S-TTL (NP (PUNCT LBKT) (N-H Đảo) (Np Đài_Loan) (PUNCT RBKT) (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .))\n</s>'
+VI_TREEBANK_VLSP_50       = '<s id=50>\n(S-TTL (NP (PUNCT LBKT) (N-H Đảo) (Np Đài_Loan) (PUNCT RBKT) (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .))\n</s>'
+VI_TREEBANK_VLSP_100      = '<s id=100>\n(S-TTL (NP (PUNCT LBKT) (N-H Đảo) (Np Đài_Loan) (PUNCT RBKT) (PP (E-H ở) (NP (N-H đồng_bằng) (NP (N-H sông) (Np Cửu_Long))))) (. .))\n</s>'
 
 EXPECTED_LABELED_BRACKETS = '(_ROOT (_S (_NP (_" " )_" (_N Đảo )_N (_Np Đài_Loan )_Np (_" " )_" (_PP (_E ở )_E (_NP (_N đồng_bằng )_N (_NP (_N sông )_N (_Np Cửu_Long )_Np )_NP )_NP )_PP )_NP (_. . )_. )_S )_ROOT'
 
@@ -91,6 +93,10 @@ def test_vlsp_formatting():
     assert str(trees[0]) == text
 
     assert "{:_V}".format(trees[0]) == VI_TREEBANK_VLSP
+    trees[0].tree_id = 50
+    assert "{:_Vi}".format(trees[0]) == VI_TREEBANK_VLSP_50
+    trees[0].tree_id = 100
+    assert "{:_Vi}".format(trees[0]) == VI_TREEBANK_VLSP_100
 
     empty = tree_reader.read_trees("(ROOT)")[0]
     with pytest.raises(ValueError):

@@ -140,17 +140,34 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0):
-    if name == 'sgd':
-        return torch.optim.SGD(parameters, lr=lr, momentum=momentum)
+def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None):
+    extra_args = {}
+    if weight_decay is not None:
+        extra_args["weight_decay"] = weight_decay
+    if name == 'amsgrad':
+        return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'amsgradw':
+        return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'sgd':
+        return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
     elif name == 'adagrad':
-        return torch.optim.Adagrad(parameters, lr=lr)
+        return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps)
+        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'adamw':
+        return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'adamax':
-        return torch.optim.Adamax(parameters) # use default lr
+        return torch.optim.Adamax(parameters, **extra_args) # use default lr
+    elif name == 'adadelta':
+        return torch.optim.Adadelta(parameters, **extra_args) # use default lr
+    elif name == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
-        raise Exception("Unsupported optimizer: {}".format(name))
+        raise ValueError("Unsupported optimizer: {}".format(name))
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:

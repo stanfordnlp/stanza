@@ -26,6 +26,7 @@ from stanza.models.common import utils
 from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
@@ -81,8 +82,13 @@ def parse_args(args=None):
     parser.set_defaults(share_hid=False)
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
-    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamw, adamax, or adadelta.  madgrad as an optional dependency')
+    parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')
+    parser.add_argument('--second_optim_reload', default=False, action='store_true', help='Reload the best model instead of continuing from current model if the first optimizer stalls out.  This does not seem to help, but might be useful for further experiments')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
+    parser.add_argument('--second_lr', type=float, default=None, help='Alternate learning rate for the second optimizer')
+    parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
+    parser.add_argument('--second_weight_decay', type=float, default=None, help='Optimizer weight decay for the second optimizer')
     parser.add_argument('--beta2', type=float, default=0.95)
 
     parser.add_argument('--max_steps', type=int, default=50000)
@@ -93,6 +99,7 @@ def parse_args(args=None):
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
+    parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
@@ -196,7 +203,8 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training tagger...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    foundation_cache = FoundationCache()
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'], foundation_cache=foundation_cache)
 
     global_step = 0
     max_steps = args['max_steps']
@@ -224,6 +232,8 @@ def train(args):
             if global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 logger.info(format_str.format(global_step, max_steps, loss, duration, current_lr))
+                if args['log_norms']:
+                    trainer.model.log_norms()
 
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
@@ -256,10 +266,16 @@ def train(args):
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
                 if not using_amsgrad:
-                    logger.info("Switching to AMSGrad")
+                    logger.info("Switching to second optimizer: {}".format(args['second_optim']))
+                    if args['second_optim_reload']:
+                        logger.info('Reloading best model to continue from current local optimum')
+                        trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain, model_file=model_file, use_cuda=args['cuda'], foundation_cache=foundation_cache)
                     last_best_step = global_step
                     using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
+                    lr = args['second_lr']
+                    if lr is None:
+                        lr = args['lr']
+                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model.parameters(), lr=lr, betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
                 else:
                     logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True

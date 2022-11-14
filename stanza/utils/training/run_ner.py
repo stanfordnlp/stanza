@@ -71,6 +71,8 @@ def run_treebank(mode, paths, treebank, short_name,
     dev_file   = os.path.join(ner_dir, f"{short_name}.dev.json")
     test_file  = os.path.join(ner_dir, f"{short_name}.test.json")
 
+    # if any files are missing, try to rebuild the dataset
+    # if that still doesn't work, we have to throw an error
     missing_file = [x for x in (train_file, dev_file, test_file) if not os.path.exists(x)]
     if len(missing_file) > 0:
         logger.warning(f"The data for {short_name} is missing or incomplete.  Cannot find {missing_file}  Attempting to rebuild...")

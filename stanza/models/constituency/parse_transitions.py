@@ -16,14 +16,30 @@ from stanza.models.constituency.parse_tree import Tree
 logger = logging.getLogger('stanza')
 
 class TransitionScheme(Enum):
+    # top down, so the open transition comes before any constituents
+    # score on vi_vlsp22 with 5 different sizes of bert layers,
+    # bert tagger, no silver dataset:
+    #   0.8171
     TOP_DOWN           = 1
+    # unary transitions are modeled as one entire transition
+    # version that uses one transform per item,
+    # score on experiment described above:
+    #   0.8157
+    # score using one combination step for an entire transition:
+    #   0.8178
     TOP_DOWN_COMPOUND  = 2
+    # unary is a separate transition.  doesn't help
+    # score on experiment described above:
+    #   0.8128
     TOP_DOWN_UNARY     = 3
 
+    # open transition comes after the first constituent it cares about
+    # score on experiment described above:
+    #   0.8205
     IN_ORDER           = 4
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position'])):
+                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
     """
     Represents a partially completed transition parse
 
@@ -157,6 +173,15 @@ class Transition(ABC):
         at parse time, the parser might choose a transition which cannot be made
         """
 
+    def components(self):
+        """
+        Return a list of transitions which could theoretically make up this transition
+
+        For example, an Open transition with multiple labels would
+        return a list of Opens with those labels
+        """
+        return [self]
+
     @abstractmethod
     def short_name(self):
         """
@@ -241,22 +266,25 @@ class Shift(Transition):
 
 class CompoundUnary(Transition):
     # TODO: run experiments to see if this is actually useful
-    def __init__(self, labels):
+    def __init__(self, *label):
         # the FIRST label will be the top of the tree
         # so CompoundUnary that results in root will have root as labels[0], for example
-        if isinstance(labels, str):
-            self.labels = (labels,)
-        else:
-            self.labels = tuple(labels)
+        self.label = tuple(label)
 
     def update_state(self, state, model):
-        # remove the top constituent
-        # apply the labels
-        # put the constituent back on the state
+        """
+        Apply potentially multiple unary transitions to the same preterminal
+
+        It reuses the CloseConstituent machinery
+        """
+        # only the top constituent is meaningful here
         constituents = state.constituents
-        new_constituent = model.unary_transform(state.constituents, self.labels)
+        children = [constituents.value]
         constituents = constituents.pop()
-        return state.word_position, constituents, new_constituent, None
+        # unlike with CloseConstituent, our label is not on the stack.
+        # it is just our label
+        # ... but we do reuse CloseConstituent's update mechanism
+        return state.word_position, constituents, (self.label, children), CloseConstituent
 
     def is_legal(self, state, model):
         """
@@ -269,29 +297,32 @@ class CompoundUnary(Transition):
         # and don't stack CompoundUnary transitions
         if isinstance(model.get_top_transition(state.transitions), (CompoundUnary, OpenConstituent)):
             return False
-        is_root = self.labels[0] in model.get_root_labels()
+        is_root = self.label[0] in model.get_root_labels()
         if not state.empty_word_queue() or not state.has_one_constituent():
             return not is_root
         else:
             return is_root
 
+    def components(self):
+        return [CompoundUnary(label) for label in self.label]
+
     def short_name(self):
         return "Unary"
 
     def __repr__(self):
-        return "CompoundUnary(%s)" % ",".join(self.labels)
+        return "CompoundUnary(%s)" % ",".join(self.label)
 
     def __eq__(self, other):
         if self is other:
             return True
         if not isinstance(other, CompoundUnary):
             return False
-        if self.labels == other.labels:
+        if self.label == other.label:
             return True
         return False
 
     def __hash__(self):
-        return hash(self.labels)
+        return hash(self.label)
 
 class Dummy():
     """
@@ -402,6 +433,9 @@ class OpenConstituent(Transition):
                     return False
                 return True
         return True
+
+    def components(self):
+        return [OpenConstituent(label) for label in self.label]
 
     def short_name(self):
         return "Open"
@@ -522,6 +556,27 @@ class CloseConstituent(Transition):
 
     def __hash__(self):
         return hash(93)
+
+def check_transitions(train_transitions, other_transitions, treebank_name):
+    """
+    Check that all the transitions in the other dataset are known in the train set
+
+    Weird nested unaries are warned rather than failed as long as the
+    components are all known
+
+    There is a tree in VLSP, for example, with three (!) nested NP nodes
+    If this is an unknown compound transition, we won't possibly get it
+    right when parsing, but at least we don't need to fail
+    """
+    unknown_transitions = set()
+    for trans in other_transitions:
+        if trans not in train_transitions:
+            for component in trans.components():
+                if component not in train_transitions:
+                    raise RuntimeError("Found transition {} in the {} set which don't exist in the train set".format(trans, treebank_name))
+            unknown_transitions.add(trans)
+    if len(unknown_transitions) > 0:
+        logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", unknown_transitions)
 
 def bulk_apply(model, state_batch, transitions, fail=False):
     """

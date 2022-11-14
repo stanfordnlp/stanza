@@ -1,5 +1,6 @@
 from collections import defaultdict
 import logging
+import pathlib
 import tempfile
 
 import pytest
@@ -57,6 +58,7 @@ def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # TODO: build a fake embedding some other way?
     train_trees = tree_reader.read_trees(treebank)
     dev_trees = train_trees[-1:]
+    silver_trees = []
 
     args = ['--wordvec_pretrain_file', wordvec_pretrain_file] + list(args)
     args = constituency_parser.parse_args(args)
@@ -65,7 +67,7 @@ def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # might be None, unless we're testing loading an existing model
     model_load_name = args['load_name']
 
-    model, _, _ = trainer.build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_name)
+    model, _, _, _ = trainer.build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_name)
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
@@ -138,7 +140,8 @@ class TestTrainer:
     def training_args(self, wordvec_pretrain_file, tmpdirname, train_treebank_file, eval_treebank_file, *additional_args):
         # let's not make the model huge...
         args = ['--pattn_num_layers', '0', '--pattn_d_model', '128', '--lattn_d_proj', '0', '--use_lattn', '--hidden_size', '20', '--delta_embedding_dim', '10',
-                '--wordvec_pretrain_file', wordvec_pretrain_file, '--data_dir', tmpdirname, '--save_dir', tmpdirname, '--save_name', 'test.pt',
+                '--wordvec_pretrain_file', wordvec_pretrain_file, '--data_dir', tmpdirname,
+                '--save_dir', tmpdirname, '--save_name', 'test.pt', '--save_each_name', os.path.join(tmpdirname, 'each_%02d.pt'),
                 '--train_file', train_treebank_file, '--eval_file', eval_treebank_file,
                 '--epoch_size', '6', '--train_batch_size', '3',
                 '--shorthand', 'en_test']
@@ -148,7 +151,7 @@ class TestTrainer:
         args['wandb'] = None
         return args
 
-    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None):
+    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None, use_silver=False, exists_ok=False):
         """
         Runs a test of the trainer for a few iterations.
 
@@ -160,12 +163,15 @@ class TestTrainer:
         extra_args += ['--epochs', '%d' % num_epochs]
 
         train_treebank_file, eval_treebank_file = self.write_treebanks(tmpdirname)
+        if use_silver:
+            extra_args += ['--silver_file', str(eval_treebank_file)]
         args = self.training_args(wordvec_pretrain_file, tmpdirname, train_treebank_file, eval_treebank_file, *extra_args)
 
-        each_name = os.path.join(args['save_dir'], 'each_%02d.pt')
-        assert not os.path.exists(args['save_name'])
-        retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True)
-        tr = trainer.train(args, None, each_name, retag_pipeline)
+        each_name = args['save_each_name']
+        if not exists_ok:
+            assert not os.path.exists(args['save_name'])
+        retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR)
+        tr = trainer.train(args, None, each_name, [retag_pipeline])
         # check that hooks are in the model if expected
         for p in tr.model.parameters():
             if p.requires_grad:
@@ -194,6 +200,7 @@ class TestTrainer:
             assert os.path.exists(model_name)
             tr = trainer.Trainer.load(model_name, load_optimizer=True)
             assert tr.epochs_trained == i
+            assert tr.batches_trained == (4 * i if use_silver else 2 * i)
 
         return args
 
@@ -203,6 +210,43 @@ class TestTrainer:
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname)
+
+    def test_train_silver(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations on the fake data
+
+        This tests that it works if you give it a silver file
+        The check for the use of the silver data is that the
+        number of batches trained should go up
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=True)
+
+    def test_train_checkpoint(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations, then restart
+
+        This tests that the 5th iteration save file is not rewritten
+        and that the iterations continue to 10
+
+        TODO: could make it more robust by verifying that only 5 more
+        epochs are trained.  Perhaps a "most recent epochs" could be
+        saved in the trainer
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=False)
+            save_5 = args['save_each_name'] % 5
+            save_10 = args['save_each_name'] % 10
+            assert os.path.exists(save_5)
+            assert not os.path.exists(save_10)
+
+            save_5_stat = pathlib.Path(save_5).stat()
+
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=10, use_silver=False, exists_ok=True)
+            assert os.path.exists(save_5)
+            assert os.path.exists(save_10)
+
+            assert pathlib.Path(save_5).stat().st_mtime == save_5_stat.st_mtime
 
     def run_multistage_tests(self, wordvec_pretrain_file, tmpdirname, use_lattn, extra_args=None):
             train_treebank_file, eval_treebank_file = self.write_treebanks(tmpdirname)
@@ -302,6 +346,8 @@ class TestTrainer:
         assert len(results[0].predictions) == 1
         assert results[0].predictions[0].tree == test_tree[0]
         assert results[0].state is not None
+        assert isinstance(results[0].state.score, torch.Tensor)
+        assert results[0].state.score.shape == torch.Size([])
         assert len(results[0].constituents) == 9
         assert results[0].constituents[-1].value == test_tree[0]
         # the way the results are built, the next-to-last entry
@@ -311,6 +357,8 @@ class TestTrainer:
         assert len(results[1].predictions) == 1
         assert results[1].predictions[0].tree == test_tree[1]
         assert results[1].state is not None
+        assert isinstance(results[1].state.score, torch.Tensor)
+        assert results[1].state.score.shape == torch.Size([])
         assert len(results[1].constituents) == 4
         assert results[1].constituents[-1].value == test_tree[1]
         assert results[1].constituents[-2].value == test_tree[1].children[0]

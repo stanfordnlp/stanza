@@ -39,7 +39,7 @@ def yield_top_down_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UN
                 tree = tree.children[0]
             for transition in yield_top_down_sequence(tree, transition_scheme):
                 yield transition
-            yield CompoundUnary(labels)
+            yield CompoundUnary(*labels)
             return
 
     if transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND:

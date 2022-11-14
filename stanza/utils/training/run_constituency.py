@@ -10,7 +10,7 @@ import os
 from stanza.models import constituency_parser
 from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
 from stanza.resources.prepare_resources import default_charlms, default_pretrains
 
@@ -27,8 +27,9 @@ RETAG_METHOD = {
 }
 
 def add_constituency_args(parser):
-    parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
-    parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
+    add_charlm_args(parser)
+
+    parser.add_argument('--parse_text', dest='mode', action='store_const', const="parse_text", help='Parse a text file')
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -93,7 +94,12 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         constituency_parser.main(test_args)
 
-
+    if mode == "parse_text":
+        text_args = ['--shorthand', short_name,
+                     '--mode', 'parse_text']
+        text_args = text_args + default_args + extra_args
+        logger.info("Processing text with args: {}".format(text_args))
+        constituency_parser.main(text_args)
 
 def main():
     common.main(run_treebank, "constituency", "constituency", add_constituency_args)
