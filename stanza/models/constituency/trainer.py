@@ -33,7 +33,7 @@ from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
-from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
+from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 
@@ -215,7 +215,7 @@ def load_model_parse_text(args, model_file, retag_pipeline):
     """
     Load a model, then parse text and write it to stdout or args['predict_file']
     """
-    foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
     load_args = {
         'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
@@ -248,12 +248,11 @@ def parse_text(args, model, retag_pipeline):
         for chunk_start in range(0, len(docs), chunk_size):
             chunk = docs[chunk_start:chunk_start+chunk_size]
             logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
-            doc = retag_pipeline(chunk)
+
+            tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
+            words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
             logger.info("Retagging finished.  Parsing tagged text")
-            if model.uses_xpos():
-                words = [[(w.text, w.xpos) for w in s.words] for s in doc.sentences]
-            else:
-                words = [[(w.text, w.upos) for w in s.words] for s in doc.sentences]
+
             assert len(words) == len(chunk)
             chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
             treebank.extend(chunk_trees)
@@ -262,12 +261,16 @@ def parse_text(args, model, retag_pipeline):
             if args['predict_dir']:
                 predict_file = os.path.join(args['predict_dir'], predict_file)
             with open(predict_file, "w", encoding="utf-8") as fout:
-                for result in treebank:
-                    fout.write(args['predict_format'].format(result.predictions[0].tree))
+                for tree_idx, result in enumerate(treebank):
+                    tree = result.predictions[0].tree
+                    tree.tree_id = tree_idx + 1
+                    fout.write(args['predict_format'].format(tree))
                     fout.write("\n")
         else:
-            for result in treebank:
-                print(args['predict_format'].format(result.predictions[0].tree))
+            for tree_idx, result in enumerate(treebank):
+                tree = result.predictions[0].tree
+                tree.tree_id = tree_idx + 1
+                print(args['predict_format'].format(tree))
 
 
 def evaluate(args, model_file, retag_pipeline):
@@ -288,7 +291,7 @@ def evaluate(args, model_file, retag_pipeline):
         kbest = None
 
     with EvaluateParser(kbest=kbest) as evaluator:
-        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         load_args = {
             'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
@@ -302,12 +305,12 @@ def evaluate(args, model_file, retag_pipeline):
 
         if retag_pipeline is not None:
             logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-            treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+            retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
         if args['log_norms']:
             trainer.model.log_norms()
-        f1, kbestF1 = run_dev_set(trainer.model, treebank, args, evaluator)
+        f1, kbestF1 = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
         logger.info("F1 score on %s: %f", args['eval_file'], f1)
         if kbestF1 is not None:
             logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
@@ -579,7 +582,7 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
             silver_trees = retag_trees(silver_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, silver_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file)
 
         trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_file, evaluator)
@@ -682,7 +685,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, args)
 
         # print statistics
-        f1, _ = run_dev_set(model, dev_trees, args, evaluator)
+        # by now we've forgotten about the original tags on the trees,
+        # but it doesn't matter for hill climbing
+        f1, _ = run_dev_set(model, dev_trees, dev_trees, args, evaluator)
         if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
@@ -914,18 +919,18 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
-def run_dev_set(model, dev_trees, args, evaluator=None):
+def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     """
     This reparses a treebank and executes the CoreNLP Java EvalB code.
 
     It only works if CoreNLP 4.3.0 or higher is in the classpath.
     """
-    logger.info("Processing %d trees from %s", len(dev_trees), args['eval_file'])
+    logger.info("Processing %d trees from %s", len(retagged_trees), args['eval_file'])
     model.eval()
 
     keep_scores = args['num_generate'] > 0
 
-    tree_iterator = iter(tqdm(dev_trees))
+    tree_iterator = iter(tqdm(retagged_trees))
     treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
     full_results = treebank
 
@@ -933,18 +938,21 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
         logger.info("Generating %d random analyses", args['num_generate'])
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
-            tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
+            tree_iterator = iter(tqdm(retagged_trees, leave=False, postfix="tb%03d" % i))
             generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_scores=keep_scores))
 
         #best_treebank = [ParseResult(parses[0].gold, [max([p.predictions[0] for p in parses], key=itemgetter(1))], None, None)
         #                 for parses in zip(*generated_treebanks)]
         #generated_treebanks = [best_treebank] + generated_treebanks
 
+        # TODO: if the model is dropping trees, this will not work
         full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
 
-    if len(full_results) < len(dev_trees):
-        logger.warning("Only evaluating %d trees instead of %d", len(full_results), len(dev_trees))
+    if len(full_results) < len(retagged_trees):
+        logger.warning("Only evaluating %d trees instead of %d", len(full_results), len(retagged_trees))
+    else:
+        full_results = [x._replace(gold=gold) for x, gold in zip(full_results, original_trees)]
 
     if args['mode'] == 'predict' and args['predict_file']:
         utils.ensure_dir(args['predict_dir'], verbose=False)

@@ -507,7 +507,7 @@ def parse_args(args=None):
     if args.learning_weight_decay is None:
         args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
-    if len(args.predict_format) <= 2:
+    if len(args.predict_format) <= 2 or (len(args.predict_format) <= 3 and args.predict_format.endswith("Vi")):
         args.predict_format = "{:" + args.predict_format + "}"
 
     if args.stage1_learning_rate is None:

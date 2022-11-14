@@ -269,7 +269,7 @@ def parse_args(args=None):
 def main():
     args = parse_args()
     retag_pipeline = retagging.build_retag_pipeline(args)
-    foundation_cache = retag_pipeline.foundation_cache if retag_pipeline else FoundationCache()
+    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
 
     ensemble = Ensemble(args['models'], args, foundation_cache)
     ensemble.eval()
@@ -281,10 +281,10 @@ def main():
 
             if retag_pipeline is not None:
                 logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-                treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+                retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
                 logger.info("Retagging finished")
 
-            f1, kbestF1 = run_dev_set(ensemble, treebank, args, evaluator)
+            f1, kbestF1 = run_dev_set(ensemble, retagged_treebank, treebank, args, evaluator)
             logger.info("F1 score on %s: %f", args['eval_file'], f1)
             if kbestF1 is not None:
                 logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
