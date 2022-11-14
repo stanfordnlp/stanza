@@ -11,10 +11,10 @@ from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 
-DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 }
+DEFAULT_LEARNING_RATES = { "adamw": 0.0002, "adadelta": 1.0, "sgd": 0.001, "adabelief": 0.00005, "madgrad": 0.0000007 , "mirror_madgrad": 0.00005}
 DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
-DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
+DEFAULT_MOMENTUM = { "madgrad": 0.9, "mirror_madgrad": 0.9, "sgd": 0.9 }
 
 logger = logging.getLogger('stanza')
 
@@ -32,7 +32,7 @@ logger = logging.getLogger('stanza')
 #  0.000003.out: 0.9594974271553495
 #  0.000004.out: 0.9596665982603754
 #  0.000005.out: 0.9591620720706487
-DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
+DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6, "mirror_madgrad": 2e-6 }
 
 class TextTooLongError(ValueError):
     """
@@ -187,13 +187,17 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         logger.info("Building AdaBelief with lr=%f, eps=%f, weight_decay=%f", learning_rate, learning_eps, weight_decay)
         # TODO: make these args
         optimizer = AdaBelief(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, weight_decouple=False, rectify=False)
-    elif optim_type == 'madgrad':
+    elif optim_type == 'madgrad' or optim_type == 'mirror_madgrad':
         try:
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        logger.info("Building madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
-        optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
+        if optim_type == 'madgrad': 
+            logger.info("Building madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
+            optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
+        else:
+            logger.info(f"Building mirror madgrad with lr={learning_rate}, weight_decay={weight_decay}, momentum={momentum}")
+            optimizer = madgrad.MirrorMADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
     else:
         raise ValueError("Unknown optimizer: %s" % optim)
     return optimizer
