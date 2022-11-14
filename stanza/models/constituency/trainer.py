@@ -261,12 +261,16 @@ def parse_text(args, model, retag_pipeline):
             if args['predict_dir']:
                 predict_file = os.path.join(args['predict_dir'], predict_file)
             with open(predict_file, "w", encoding="utf-8") as fout:
-                for result in treebank:
-                    fout.write(args['predict_format'].format(result.predictions[0].tree))
+                for tree_idx, result in enumerate(treebank):
+                    tree = result.predictions[0].tree
+                    tree.tree_id = tree_idx + 1
+                    fout.write(args['predict_format'].format(tree))
                     fout.write("\n")
         else:
-            for result in treebank:
-                print(args['predict_format'].format(result.predictions[0].tree))
+            for tree_idx, result in enumerate(treebank):
+                tree = result.predictions[0].tree
+                tree.tree_id = tree_idx + 1
+                print(args['predict_format'].format(tree))
 
 
 def evaluate(args, model_file, retag_pipeline):
