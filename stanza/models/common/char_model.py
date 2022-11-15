@@ -1,3 +1,21 @@
+"""
+Based on
+
+@inproceedings{akbik-etal-2018-contextual,
+    title = "Contextual String Embeddings for Sequence Labeling",
+    author = "Akbik, Alan  and
+      Blythe, Duncan  and
+      Vollgraf, Roland",
+    booktitle = "Proceedings of the 27th International Conference on Computational Linguistics",
+    month = aug,
+    year = "2018",
+    address = "Santa Fe, New Mexico, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/C18-1139",
+    pages = "1638--1649",
+}
+"""
+
 from collections import Counter
 from operator import itemgetter
 import os
