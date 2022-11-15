@@ -137,7 +137,7 @@ from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
 
 logger = logging.getLogger('stanza')
 
@@ -508,9 +508,6 @@ def parse_args(args=None):
     if args.learning_weight_decay is None:
         args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
-    if len(args.predict_format) <= 2 or (len(args.predict_format) <= 3 and args.predict_format.endswith("Vi")):
-        args.predict_format = "{:" + args.predict_format + "}"
-
     if args.stage1_learning_rate is None:
         args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
 
@@ -529,6 +526,7 @@ def parse_args(args=None):
     args = vars(args)
 
     retagging.postprocess_args(args)
+    postprocess_predict_output_args(args)
 
     model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
 

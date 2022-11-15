@@ -299,3 +299,7 @@ def add_predict_output_args(parser):
     parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
     parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
     parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')
+
+def postprocess_predict_output_args(args):
+    if len(args['predict_format']) <= 2 or (len(args['predict_format']) <= 3 and args['predict_format'].endswith("Vi")):
+        args['predict_format'] = "{:" + args['predict_format'] + "}"

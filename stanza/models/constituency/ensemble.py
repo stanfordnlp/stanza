@@ -22,7 +22,7 @@ from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text
-from stanza.models.constituency.utils import add_predict_output_args, retag_trees
+from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
 from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
 from stanza.utils.default_paths import get_default_paths
@@ -251,6 +251,7 @@ def parse_args(args=None):
     args = vars(parser.parse_args())
 
     retagging.postprocess_args(args)
+    postprocess_predict_output_args(args)
     args['num_generate'] = 0
 
     if not args['eval_file'] and args['lang'] in DEFAULT_EVAL:
