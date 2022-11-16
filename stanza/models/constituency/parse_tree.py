@@ -413,6 +413,19 @@ class Tree(StanzaObject):
         new_children = [child.simplify_labels(pattern) for child in self.children]
         return Tree(new_label, new_children)
 
+    def reverse(self):
+        """
+        Flip a tree backwards
+
+        The intent is to train a parser backwards to see if the
+        forward and backwards parsers can augment each other
+        """
+        if self.is_leaf():
+            return Tree(self.label)
+
+        new_children = [child.reverse() for child in reversed(self.children)]
+        return Tree(self.label, new_children)
+
     def remap_constituent_labels(self, label_map):
         """
         Copies the tree with some labels replaced.
