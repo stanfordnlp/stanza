@@ -46,8 +46,8 @@ def process_treebank(treebank, paths, args):
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "test", "gold")
 
         for shard in ("train", "dev", "test"):
-            source_filename = prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, shard)
-            dest_filename = prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, shard)
+            source_filename = common.mwt_name(tokenizer_dir, short_name, shard)
+            dest_filename = common.mwt_name(mwt_dir, short_name, shard)
             print("Copying from %s to %s" % (source_filename, dest_filename))
             shutil.copyfile(source_filename, dest_filename)
 
