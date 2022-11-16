@@ -20,6 +20,23 @@ import stanza.models.common.seq2seq_constant as constant
 """
 
 
+# TORCH COMPATIBILITY
+#
+# Here we special case trunc division
+# torch < 1.8.0 has no rounding_model='trunc' argument for torch.div
+# however, there were several versions in a row where // would loudly
+# proclaim it was buggy, and users complained about that
+# this hopefully maintains compatibility for torch
+try:
+    a = torch.tensor([1.])
+    b = torch.tensor([2.])
+    c = torch.div(a, b, rounding_mode='trunc')
+    def trunc_division(a, b):
+        return torch.div(a, b, rounding_mode='trunc')
+except TypeError:
+    def trunc_division(a, b):
+        return a // b
+
 class Beam(object):
     def __init__(self, size, cuda=False):
 
@@ -83,7 +100,7 @@ class Beam(object):
         # word and beam each score came from
         # bestScoreId is the integer ids, and numWords is the integer length.
         # Need to do integer division
-        prevK = torch.div(bestScoresId, numWords, rounding_mode='trunc')
+        prevK = trunc_division(bestScoresId, numWords)
         self.prevKs.append(prevK)
         self.nextYs.append(bestScoresId - prevK * numWords)
         if copy_indices is not None:
