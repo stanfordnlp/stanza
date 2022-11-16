@@ -194,6 +194,9 @@ def process_vlsp22(paths, dataset_name, *args):
             dev_size = 1.0 / args.n_splits
             train_size = 1.0 - dev_size
             for rotation in range(args.n_splits):
+                # there is a shuffle inside the split routine,
+                # so we need to reset the random seed each time
+                random.seed(1234)
                 rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
                 vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=train_size, dev_size=dev_size, rotation=(rotation, args.n_splits))
                 _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], rotation_name)
