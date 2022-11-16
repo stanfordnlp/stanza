@@ -74,6 +74,7 @@ default_treebanks = {
     "fro":     "srcmf",
     "fa":      "perdt",
     "my":      "ucsy",
+    "myv":     "jr",
     "pl":      "pdb",
     "pt":      "bosque",
     "ro":      "rrt",
@@ -123,6 +124,7 @@ no_pretrain_languages = set([
 default_pretrains = dict(default_treebanks)
 for lang in no_pretrain_languages:
     default_pretrains.pop(lang, None)
+default_pretrains["myv"] = "mokha"
 
 # default ner for languages
 default_ners = {
@@ -233,12 +235,17 @@ pos_pretrains = {
         "combined_bert": "combined",
         "vit_bert": "vit",
     },
+    "myv": {
+        "jr": "mokha",
+    },
     "vi": {
         "vlsp22_phobert_large": "vtb",
         "vtb_phobert_base": "vtb",
         "vtb_phobert_large": "vtb",
     },
 }
+
+depparse_pretrains = pos_pretrains
 
 ner_pretrains = {
     "ar": {
@@ -407,6 +414,16 @@ def get_pos_dependencies(lang, package):
 
     return dependencies
 
+def get_depparse_dependencies(lang, package):
+    if lang in no_pretrain_languages:
+        dependencies = []
+    elif lang not in depparse_pretrains or package not in depparse_pretrains[lang]:
+        dependencies = [{'model': 'pretrain', 'package': package}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': depparse_pretrains[lang][package]}]
+
+    return dependencies
+
 def get_ner_dependencies(lang, package):
     dependencies = []
 
@@ -467,8 +484,7 @@ def process_dirs(args):
             # maintain dependencies
             dependencies = None
             if processor == 'depparse':
-                if lang not in no_pretrain_languages:
-                    dependencies = [{'model': 'pretrain', 'package': package}]
+                dependencies = get_depparse_dependencies(lang, package)
             elif processor == 'pos':
                 dependencies = get_pos_dependencies(lang, package)
             elif processor == 'ner':
@@ -507,8 +523,9 @@ def process_defaults(args):
             default_dependencies = {}
         else:
             default_dependencies = {'pos': get_pos_dependencies(lang, ud_package),
-                                    'depparse': [{'model': 'pretrain', 'package': ud_package}]}
-            pretrains_needed.add(ud_package)
+                                    'depparse': get_depparse_dependencies(lang, ud_package)}
+            pretrains_needed.update([dep['package'] for dep in default_dependencies['pos'] if dep['model'] == 'pretrain'])
+            pretrains_needed.update([dep['package'] for dep in default_dependencies['depparse'] if dep['model'] == 'pretrain'])
 
         if lang in default_ners:
             ner_package = default_ners[lang]

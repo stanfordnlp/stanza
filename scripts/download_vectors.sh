@@ -28,6 +28,20 @@ FASTTEXT_BASE_URL="https://dl.fbaipublicfiles.com/fasttext/vectors-wiki"
 # These vectors improved F1 by about 1 on various tasks for Armenian
 # and had much better coverage of Western Armenian
 
+# For Eryza, we use word vectors available here:
+# https://github.com/mokha/semantics
+# @incollection{Alnajjar_2021,
+#   doi = {10.31885/9789515150257.24},
+#   url = {https://doi.org/10.31885%2F9789515150257.24},
+#   year = 2021,
+#   month = {mar},
+#   publisher = {University of Helsinki},
+#   pages = {275--288},
+#   author = {Khalid Alnajjar},
+#   title = {When Word Embeddings Become Endangered},
+#   booktitle = {Multilingual Facilitation}
+# }
+
 declare -a FASTTEXT_LANG=("Afrikaans" "Breton" "Buryat" "Chinese" "Faroese" "Gothic" "Kurmanji" "North_Sami" "Serbian" "Upper_Sorbian")
 declare -a FASTTEXT_CODE=("af" "br" "bxr" "zh" "fo" "got" "ku" "se" "sr" "hsb")
 declare -a LOCAL_CODE=("af" "br" "bxr" "zh" "fo" "got" "kmr" "sme" "sr" "hsb")
