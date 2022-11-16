@@ -108,9 +108,12 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
             new_trees = [x.strip() for x in new_trees]
             new_trees = [x for x in new_trees if x]
             trees.extend(new_trees)
+    # rotate the train & dev sections, leave the test section the same
     if rotation is not None and rotation[0] > 0:
         rotation_start = len(trees) * rotation[0] // rotation[1]
-        trees = trees[rotation_start:] + trees[:rotation_start]
+        rotation_end = stop_dev
+        # if there are no test trees, rotation_end: will be empty anyway
+        trees = trees[rotation_start:rotation_end] + trees[:rotation_start] + trees[rotation_end:]
     tree_iter = iter(trees)
     for write_path, count_limit in zip(output_names, output_limits):
         with open(write_path, 'w', encoding='utf-8') as writer:
