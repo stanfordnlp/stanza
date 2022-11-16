@@ -28,8 +28,8 @@ with open(output_name, "w") as fout:
         if short_name.startswith("zh_"):
             short_name = "zh-hans_" + short_name[3:]
             fout.write(line_format % ("'" + short_name + "':", ud_name))
-        elif short_name == 'no_bokmaal':
-            short_name = 'nb_bokmaal'
+        elif short_name == 'nb_bokmaal':
+            short_name = 'no_bokmaal'
             fout.write(line_format % ("'" + short_name + "':", ud_name))
 
     fout.write("}\n")
