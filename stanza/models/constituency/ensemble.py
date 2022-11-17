@@ -269,6 +269,7 @@ def parse_args(args=None):
 
 def main():
     args = parse_args()
+    utils.log_training_args(args, logger, name="ensemble")
     retag_pipeline = retagging.build_retag_pipeline(args)
     foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
 
