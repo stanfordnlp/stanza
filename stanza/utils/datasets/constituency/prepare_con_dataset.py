@@ -80,10 +80,13 @@ ja_alt
 pt_cintil
   CINTIL treebank for Portuguese, available at ELRA:
     https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/
-  Produced at U Lisbon
-    António, Branco; João, Silva; Francisco, Costa; Sérgio, Castro
-    CINTIL TreeBank Handbook: Design options for the representation of syntactic constituency
+  It can also be obtained from here:
     https://hdl.handle.net/21.11129/0000-000B-D2FE-A
+  Produced at U Lisbon
+    António Branco; João Silva; Francisco Costa; Sérgio Castro
+      CINTIL TreeBank Handbook: Design options for the representation of syntactic constituency
+    Silva, João; António Branco; Sérgio Castro; Ruben Reis
+      Out-of-the-Box Robust Parsing of Portuguese
     https://portulanclarin.net/repository/extradocs/CINTIL-Treebank.pdf
     http://www.di.fc.ul.pt/~ahb/pubs/2011bBrancoSilvaCostaEtAl.pdf
   If at Stanford, ask John Bauer or Chris Manning for the data
