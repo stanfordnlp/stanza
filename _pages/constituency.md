@@ -91,10 +91,19 @@ Note that the following scores are slight underestimates.  They use the CoreNLP 
 | Italian | [Turin](http://www.di.unito.it/~tutreeb/treebanks.html) | 89.42 | 92.76 | Test scores are on [Evalita](http://www.di.unito.it/~tutreeb/evalita-parsingtask-11.html) |
 | Italian | VIT | 78.52 | 82.43 | Split based on UD VIT (some trees dropped) |
 | Japanese | [ALT](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/) | 91.03 | --- | Transformers were not used - required a separate tokenizer |
-| Portuguese | [Cintil](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/) | 90.98 | 93.61 | |
+| Portuguese | [Cintil](https://hdl.handle.net/21.11129/0000-000B-D2FE-A) | 90.98 | 93.61 | |
 | Spanish | AnCora + LDC | ??? | ??? | Compared against a combination of the test sets |
 | Turkish | Starlang | 73.04 | 75.7 | |
 
 As of Stanza 1.3.0, there was an English model trained on PTB.
 It achieved a test score of 91.5 using the inorder transition scheme.
+
+
+## Other links
+
+Cintil can also be purchased from [ELRA](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/)
+
+## Citations
+
+Silva, João, António Branco, Sérgio Castro and Ruben Reis, 2010, "Out-of-the-Box Robust Parsing of Portuguese". In Proceedings of the 9th International Conference on the Computational Processing of Portuguese (PROPOR2010), Lecture Notes in Artificial Intelligence, 6001, Berlin, Springer, pp.75–85.
 
