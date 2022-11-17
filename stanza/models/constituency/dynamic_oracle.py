@@ -400,7 +400,6 @@ class RepairType(Enum):
         obj.fn = fn
         return obj
         
-    CORRECT                = None
     # The first section is a sequence of repairs when the parser
     # should have chosen NTx but instead chose NTy
 
@@ -481,9 +480,11 @@ class RepairType(Enum):
     # versions to make sure those also fail, though
     # CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift,)
 
+    CORRECT                = None
+
     UNKNOWN                = None
 
-def oracle_inorder_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def oracle_inorder_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, oracle_level):
     """
     Return which error has been made, if any, along with an updated transition list
 
@@ -498,6 +499,8 @@ def oracle_inorder_error(gold_transition, pred_transition, gold_sequence, gold_i
 
     for repair_type in RepairType:
         if repair_type.fn is None:
+            continue
+        if oracle_level is not None and repair_type.value > oracle_level:
             continue
         repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, root_labels)
         if repair is not None:
