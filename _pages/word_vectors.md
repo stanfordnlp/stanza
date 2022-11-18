@@ -114,7 +114,9 @@ https://doi.org/10.31885/9789515150257
 
 ### Armenian and Western Armenian
 
-Glove vectors specifically for Armenian improved POS and depparse F1 by about 1.
+Glove vectors specifically for Armenian improved POS and depparse F1
+by about 1.  They also had much better coverage of Western Armenian,
+for which there is a separate UD dataset.
 
 https://github.com/ispras-texterra/word-embeddings-eval-hy
 
