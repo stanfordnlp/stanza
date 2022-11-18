@@ -102,11 +102,10 @@ mentioned above, some languages use specific word vector packages.
 
 ### Erzya
 
-For Erzya, we used vectors trained by Khalid Alnajjar as part of a project to preserve endangered languages:
+For Erzya, we used [vectors trained by Khalid Alnajjar](https://github.com/mokha/semantics) as part of a project to preserve endangered languages:
 
-https://github.com/mokha/semantics
-
-Alnajjar, K. (2021). When Word Embeddings Become Endangered.
+Alnajjar, K. (2021).
+[When Word Embeddings Become Endangered](https://arxiv.org/abs/2103.13275).
 In M. Hämäläinen, N. Partanen, & K. Alnajjar (Eds.),
 Multilingual Facilitation (pp. 275-288).
 University of Helsinki.
@@ -114,21 +113,18 @@ https://doi.org/10.31885/9789515150257
 
 ### Armenian and Western Armenian
 
-Glove vectors specifically for Armenian improved POS and depparse F1
-by about 1.  They also had much better coverage of Western Armenian,
+[Glove vectors specifically for Armenian](https://github.com/ispras-texterra/word-embeddings-eval-hy)
+improved POS and depparse F1 by about 1.  They also had much better coverage of Western Armenian,
 for which there is a separate UD dataset.
 
-https://github.com/ispras-texterra/word-embeddings-eval-hy
-
 Avetisyan, Karen and Ghukasyan, Tsolak (2019).
-Word Embeddings for the Armenian Language: Intrinsic and Extrinsic Evaluation.
-https://arxiv.org/abs/1906.03134
+[Word Embeddings for the Armenian Language: Intrinsic and Extrinsic Evaluation](https://arxiv.org/abs/1906.03134).
 
 ### Myanmar
 
 Word vectors were kindly provided to us from UCSY in Myanmar.
 
 Aye Mya Hlaing and Win Pa Pa (2020).
-Word Representations for Neural Network Based Myanmar Text-to-Speech System.
+[Word Representations for Neural Network Based Myanmar Text-to-Speech System](http://oaji.net/articles/2020/3603-1582708892.pdf).
 in International Journal of Intelligent Engineering and Systems, volume 13, pp 239-349.
-http://oaji.net/articles/2020/3603-1582708892.pdf
+
