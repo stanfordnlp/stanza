@@ -131,6 +131,13 @@ def split_sentences(sentences, train_split=0.8, dev_split=0.1):
 
 def find_dataset_files(input_path, token_prefix, sentence_prefix):
     files = os.listdir(input_path)
+    print("Found %d files in %s" % (len(files), input_path))
+    if len(files) > 0:
+        if len(files) < 20:
+            print("Files:", end="\n  ")
+        else:
+            print("First few files:", end="\n  ")
+        print("\n  ".join(files[:20]))
     token_files = {}
     sentence_files = {}
     text_files = []
