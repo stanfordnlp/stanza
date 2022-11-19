@@ -187,6 +187,7 @@ def main():
     sentences = extract_sentences(dataset_files)
     splits = split_sentences(sentences)
 
+    os.makedirs(args.output_path, exist_ok=True)
     for dataset, shard in zip(splits, SHARDS):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, shard)
         common.write_sentences_to_conllu(output_conllu, dataset)
