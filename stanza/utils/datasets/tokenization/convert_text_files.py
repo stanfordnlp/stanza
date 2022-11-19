@@ -152,9 +152,9 @@ def find_dataset_files(input_path, token_prefix, sentence_prefix):
     dataset_files = []
     for filename in text_files:
         if filename not in token_files:
-            raise FileNotFoundError("Found %s as a text file, but did not find a corresponding tokens file at %s_%s" % (filename, token_prefix, filename))
+            raise FileNotFoundError("When looking in %s, found %s as a text file, but did not find a corresponding tokens file at %s_%s  Please give an input directory which has only the text files, tokens files, and sentences files" % (input_path, filename, token_prefix, filename))
         if filename not in sentence_files:
-            raise FileNotFoundError("Found %s as a text file, but did not find a corresponding sentences file at %s_%s" % (filename, sentence_prefix, filename))
+            raise FileNotFoundError("When looking in %s, found %s as a text file, but did not find a corresponding sentences file at %s_%s  Please give an input directory which has only the text files, tokens files, and sentences files" % (input_path, filename, sentence_prefix, filename))
         text_file = os.path.join(input_path, filename)
         token_file = os.path.join(input_path, token_files[filename])
         sentence_file = os.path.join(input_path, sentence_files[filename])
