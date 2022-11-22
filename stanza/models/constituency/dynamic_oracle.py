@@ -390,7 +390,7 @@ class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
     """
-    def __new__(cls, fn):
+    def __new__(cls, fn, correct=False):
         """
         Enumerate values as normal, but also keep a pointer to a function which repairs that kind of error
         """
@@ -398,8 +398,12 @@ class RepairType(Enum):
         obj = object.__new__(cls)
         obj._value_ = value + 1
         obj.fn = fn
+        obj.correct = correct
         return obj
-        
+
+    def is_correct(self):
+        return self.correct
+
     # The first section is a sequence of repairs when the parser
     # should have chosen NTx but instead chose NTy
 
@@ -480,7 +484,7 @@ class RepairType(Enum):
     # versions to make sure those also fail, though
     # CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift,)
 
-    CORRECT                = None
+    CORRECT                = (None, True)
 
     UNKNOWN                = None
 

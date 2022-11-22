@@ -29,7 +29,7 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
+from stanza.models.constituency.dynamic_oracle import oracle_inorder_error
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
@@ -880,7 +880,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
             repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels(), args['oracle_level'])
             # we can only reach here on an error
-            assert repair_type != RepairType.CORRECT
+            assert not repair_type.is_correct()
             repairs_used[repair_type] += 1
             if new_sequence is not None and random.random() < args['oracle_frequency']:
                 new_batch.append(state._replace(gold_sequence=new_sequence))
