@@ -222,7 +222,7 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
                     logger.debug(f'Found {key}: {value}.')
                     processor_list[key].append(value)
                 # allow values to be default in some cases
-                elif key in resources[lang]['default_processors'] and value == 'default':
+                elif key in resources[lang].get('default_processors', {}) and value == 'default':
                     logger.debug(
                         f'Found {key}: {resources[lang]["default_processors"][key]}.'
                     )
@@ -290,7 +290,7 @@ def add_dependencies(resources, lang, processor_list):
     [['pos', (ModelSpecification(processor='pos', package='gsd', dependencies=(('pretrain', 'gsd'),)),)],
      ['depparse', (ModelSpecification(processor='depparse', package='gsd', dependencies=(('pretrain', 'gsd'),)),)]]
     """
-    default_dependencies = resources[lang]['default_dependencies']
+    default_dependencies = resources[lang].get('default_dependencies', {})
     for item in processor_list:
         processor, model_specs = item
         new_model_specs = []
