@@ -87,6 +87,11 @@ The code breakdown is as follows:
 
   this file: main interface for training or evaluating models
   constituency/trainer.py: contains the training & evaluation code
+  constituency/ensemble.py: evaluation code specifically for letting multiple models
+    vote on the correct next transition.  a modest improvement.
+  constituency/evaluate_treebanks.py: specifically to evaluate multiple parsed treebanks
+    against a gold.  in particular, reports whether the theoretical best from those
+    parsed treebanks is an improvement (eg, the k-best score as reported by CoreNLP)
 
   constituency/parse_tree.py: a data structure for representing a parse tree and utility methods
   constituency/tree_reader.py: a module which can read trees from a string or input file
@@ -94,6 +99,10 @@ The code breakdown is as follows:
   constituency/tree_stack.py: a linked list which can branch in
     different directions, which will be useful when implementing beam
     search or a dynamic oracle
+  constituency/lstm_tree_stack.py: an LSTM over the elements of a TreeStack
+  constituency/transformer_tree_stack.py: attempts to run attention over the nodes
+    of a tree_stack.  not as effective as the lstm_tree_stack in the initial experiments.
+    perhaps it could be refined to work better, though
 
   constituency/parse_transitions.py: transitions and a State data structure to store them
   constituency/transition_sequence.py: turns ParseTree objects into
@@ -113,11 +122,17 @@ The code breakdown is as follows:
     the parser makes an error.
 
   constituency/partitioned_transformer.py: implementation of a transformer for self-attention.
-     including attention noticeably improves model scores
-  constituency/label_attention: an even fancier form of transformer based on labeled attention:
+     presumably this should help, but we have yet to find a model structure where
+     this makes the scores go up.
+  constituency/label_attention.py: an even fancier form of transformer based on labeled attention:
      https://arxiv.org/abs/1911.03875
+  constituency/positional_encoding.py: so far, just the sinusoidal is here.
+     a trained encoding is in partitioned_transformer.py.
+     this should probably be refactored to common, especially if used elsewhere.
 
   stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
+
+  stanza/utils/datasets/constituency: various scripts and tools for processing constituency datasets
 
 Some alternate optimizer methods:
   adabelief: https://github.com/juntang-zhuang/Adabelief-Optimizer

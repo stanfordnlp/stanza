@@ -1,3 +1,12 @@
+"""
+Based on
+
+Transition-based Parsing with Stack-Transformers
+Ramon Fernandez Astudillo, Miguel Ballesteros, Tahira Naseem,
+  Austin Blodget, and Radu Florian
+https://aclanthology.org/2020.findings-emnlp.89.pdf
+"""
+
 from collections import namedtuple
 
 import torch
