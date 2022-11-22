@@ -360,9 +360,20 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
             forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
             backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
         except FileNotFoundError as e:
+            # if we couldn't find sd_isra when training an SD model,
+            # for example, but isra exists, we try to download the
+            # shorter model name
             if charlm.startswith(language + "_"):
-                raise ValueError("Could not find charlm with name %s  This name looks like the language is appended to the beginning.  Please try without the language name instead: %s" % (charlm, charlm[len(language)+1:])) from e
-            raise
+                short_charlm = charlm[len(language)+1:]
+                try:
+                    forward = find_charlm_file('forward', language, short_charlm, model_dir=model_dir)
+                    backward = find_charlm_file('backward', language, short_charlm, model_dir=model_dir)
+                except FileNotFoundError as e2:
+                    raise FileNotFoundError("Tried to find charlm %s, which doesn't exist.  Also tried %s, but didn't find that either" % (charlm, short_charlm)) from e
+                logger.warning("Was asked to find charlm %s, which does not exist.  Did find %s though", charlm, short_charlm)
+            else:
+                raise
+
         char_args = ['--charlm_forward_file', forward,
                      '--charlm_backward_file', backward]
         if not base_args:
