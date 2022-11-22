@@ -347,8 +347,7 @@ def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
             logger.info(f'Downloaded model, using model {resource_path} for {direction} charlm')
             return resource_path
     except ValueError as e:
-        # we're about to throw an error anyway
-        pass
+        raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work") from e
 
     raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work")
 
@@ -357,8 +356,13 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
     If specified, return forward and backward charlm args
     """
     if charlm:
-        forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
-        backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
+        try:
+            forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
+            backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
+        except FileNotFoundError as e:
+            if charlm.startswith(language + "_"):
+                raise ValueError("Could not find charlm with name %s  This name looks like the language is appended to the beginning.  Please try without the language name instead: %s" % (charlm, charlm[len(language)+1:])) from e
+            raise
         char_args = ['--charlm_forward_file', forward,
                      '--charlm_backward_file', backward]
         if not base_args:
