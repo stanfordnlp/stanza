@@ -223,7 +223,7 @@ def parse_args(args=None):
     # Improvement on the WSJ dev set can be seen from 94.8 to 95.3
     # when 4 layers of pattn are trained this way.
     # More experiments to follow.
-    parser.add_argument('--multistage', action='store_true', help='1/2 epochs with adadelta no pattn or lattn, 1/4 with no lattn, 1/4 full model')
+    parser.add_argument('--multistage', default=True, action='store_true', help='1/2 epochs with adadelta no pattn or lattn, 1/4 with chosen optim and no lattn, 1/4 full model')
     parser.add_argument('--no_multistage', dest='multistage', action='store_false', help="don't do the multistage learning")
 
     # 1 seems to be the most effective, but we should cross-validate
@@ -370,7 +370,7 @@ def parse_args(args=None):
     #   0.999, 0.997, 0.995 all wound up with 0.9588
     #   values lower than 0.995 all had a slight dropoff
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
+    parser.add_argument('--optim', default=None, help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
 
     parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
 
@@ -500,17 +500,34 @@ def parse_args(args=None):
         args.lang = args.shorthand.split("_")[0]
     if args.cpu:
         args.cuda = False
-    if args.learning_rate is None:
-        args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
-    if args.learning_eps is None:
-        args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
-    if args.learning_momentum is None:
-        args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
-    if args.learning_weight_decay is None:
-        args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
 
-    if args.stage1_learning_rate is None:
-        args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+    if args.optim is None and args.mode == 'train':
+        if not args.multistage:
+            # this seemed to work the best when not doing multistage
+            args.optim = "adadelta"
+        else:
+            # if MADGRAD exists, use it
+            # otherwise, adamw
+            try:
+                import madgrad
+                args.optim = "madgrad"
+                logger.info("Multistage training is set, optimizer is not chosen, and MADGRAD is available.  Will use MADGRAD as the second stage optimizer.")
+            except ModuleNotFoundError as e:
+                logger.warning("Multistage training is set.  Best models are with MADGRAD, but it is not installed.  Will use AdamW for the second stage optimizer.  Consider installing MADGRAD")
+                args.optim = "adamw"
+
+    if args.mode == 'train':
+        if args.learning_rate is None:
+            args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
+        if args.learning_eps is None:
+            args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
+        if args.learning_momentum is None:
+            args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
+        if args.learning_weight_decay is None:
+            args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+        if args.stage1_learning_rate is None:
+            args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
 
     if args.reduce_position is None:
         args.reduce_position = args.hidden_size // 4
