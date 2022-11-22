@@ -80,6 +80,7 @@ default_treebanks = {
     "ro":      "rrt",
     "ru":      "syntagrus",
     "sa":      "vedic",
+    "sd":      "isra",
     "sr":      "set",
     "sk":      "snk",
     "sl":      "ssj",
@@ -149,6 +150,7 @@ default_ners = {
     "nn": "norne",
     "pl": "nkjp",
     "ru": "wikiner",
+    "sd": "siner",
     "sv": "suc3shuffle",
     "th": "lst20",
     "tr": "starlang",
@@ -180,6 +182,7 @@ default_charlms = {
     "nl": "ccwiki",
     "pl": "oscar",
     "ru": "newswiki",
+    "sd": "isra",
     "sv": "conll17",
     "te": "oscar2022",
     "th": "oscar",
@@ -327,6 +330,8 @@ allowed_empty_languages = [
     "th",
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
+    # currently only tokenize and NER for SD as well
+    "sd",
 ]
 
 # map processor name to file ending
