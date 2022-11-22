@@ -317,26 +317,41 @@ def test_close(model=None):
     # this one actually tests an entire subtree building
     state = build_initial_state(model)[0]
 
+    open_transition_vp = parse_transitions.OpenConstituent("VP")
+    assert open_transition_vp.is_legal(state, model)
+    state = open_transition_vp.apply(state, model)
+    assert state.num_opens == 1
+
     shift = parse_transitions.Shift()
+    assert shift.is_legal(state, model)
     state = shift.apply(state, model)
 
-    open_transition = parse_transitions.OpenConstituent("NP")
-    assert open_transition.is_legal(state, model)
-    state = open_transition.apply(state, model)
-    assert state.num_opens == 1
+    open_transition_np = parse_transitions.OpenConstituent("NP")
+    assert open_transition_np.is_legal(state, model)
+    state = open_transition_np.apply(state, model)
+    assert state.num_opens == 2
 
+    assert shift.is_legal(state, model)
     state = shift.apply(state, model)
+    assert shift.is_legal(state, model)
     state = shift.apply(state, model)
-    assert state.num_opens == 1
+    assert not shift.is_legal(state, model)
+    assert state.num_opens == 2
     # now should have "mox", "opal" on the constituents
 
     close_transition = parse_transitions.CloseConstituent()
+    assert close_transition.is_legal(state, model)
+    state = close_transition.apply(state, model)
+    assert state.num_opens == 1
     assert close_transition.is_legal(state, model)
     state = close_transition.apply(state, model)
     assert state.num_opens == 0
     assert not close_transition.is_legal(state, model)
 
     tree = model.get_top_constituent(state.constituents)
+    assert tree.label == 'VP'
+    assert len(tree.children) == 2
+    tree = tree.children[1]
     assert tree.label == 'NP'
     assert len(tree.children) == 2
     assert tree.children[0].is_preterminal()
@@ -344,9 +359,10 @@ def test_close(model=None):
     assert tree.children[0].children[0].label == 'Mox'
     assert tree.children[1].children[0].label == 'Opal'
 
-    assert len(state.constituents) == 3
+    # extra one for None at the start of the TreeStack
+    assert len(state.constituents) == 2
 
-    assert state.all_transitions(model) == [shift, open_transition, shift, shift, close_transition]
+    assert state.all_transitions(model) == [open_transition_vp, shift, open_transition_np, shift, shift, close_transition, close_transition]
 
 def test_in_order_compound_finalize(model=None):
     """
