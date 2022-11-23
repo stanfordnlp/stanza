@@ -319,9 +319,8 @@ SiNER is a Sindhi NER dataset
     Wazir Ali, Junyu Lu, Zenglin Xu
   - It is available via git repository
     https://github.com/AliWazir/SiNER-dataset
-    Temporarily (September 2022) there is a pull request which
-    fixes a few tag errors, but the code should compensate for
-    that regardless
+    As of Nov. 2022, there were a few changes to the dataset
+    to update a couple instances of broken tags & tokenization
   - Clone the repo to $NERBASE/sindhi
     mkdir $NERBASE/sindhi
     cd $NERBASE/sindhi
