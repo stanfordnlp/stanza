@@ -29,7 +29,7 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.in_order_oracle import oracle_inorder_error
+from stanza.models.constituency.in_order_oracle import InOrderOracle
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
@@ -670,6 +670,10 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         if LSTMModel.uses_lattn(args):
             multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
 
+    oracle = None
+    if args['transition_scheme'] is TransitionScheme.IN_ORDER:
+        oracle = InOrderOracle(model.root_labels, args['oracle_level'])
+
     leftover_training_data = []
     leftover_silver_data = []
     if trainer.best_epoch > 0:
@@ -685,7 +689,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, oracle, args)
 
         # print statistics
         # by now we've forgotten about the original tags on the trees,
@@ -759,7 +763,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     return trainer
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, oracle, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
@@ -771,7 +775,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, oracle, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -803,7 +807,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, model_loss_function, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, model_loss_function, oracle, args):
     """
     Train the model for one batch
 
@@ -848,13 +852,16 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
         new_batch = []
         update_transitions = []
         for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, current_batch):
+            # forget teacher forcing vs scheduled sampling
+            # we're going with idiot forcing
             if pred_transition == gold_transition:
                 transitions_correct[gold_transition.short_name()] += 1
                 if state.num_transitions() + 1 < len(state.gold_sequence):
-                    if args['transition_scheme'] is TransitionScheme.IN_ORDER and random.random() < args['oracle_forced_errors']:
+                    if oracle is not None and random.random() < args['oracle_forced_errors']:
+                        # TODO: could randomly choose from the legal transitions
                         fake_transition = random.choice(model.transitions)
                         if fake_transition.is_legal(state, model):
-                            _, new_sequence = oracle_inorder_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels(), args['oracle_level'])
+                            _, new_sequence = oracle.fix_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions())
                             if new_sequence is not None:
                                 new_batch.append(state._replace(gold_sequence=new_sequence))
                                 update_transitions.append(fake_transition)
@@ -873,12 +880,12 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             if state.num_transitions() + 1 >= len(state.gold_sequence):
                 continue
 
-            if epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
+            if oracle is None or epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model):
                 new_batch.append(state)
                 update_transitions.append(gold_transition)
                 continue
 
-            repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels(), args['oracle_level'])
+            repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions())
             # we can only reach here on an error
             assert not repair_type.is_correct()
             repairs_used[repair_type] += 1

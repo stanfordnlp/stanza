@@ -1,5 +1,6 @@
 from enum import Enum, auto
 
+from stanza.models.constituency.dynamic_oracle import DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
@@ -488,26 +489,31 @@ class RepairType(Enum):
 
     UNKNOWN                = None
 
-def oracle_inorder_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, oracle_level):
-    """
-    Return which error has been made, if any, along with an updated transition list
+class InOrderOracle(DynamicOracle):
+    def __init__(self, root_labels, oracle_level):
+        self.root_labels = root_labels
+        self.oracle_level = oracle_level
 
-    We assume the transition sequence builds a correct tree, meaning
-    that there will always be a CloseConstituent sometime after an
-    OpenConstituent, for example
-    """
-    assert gold_sequence[gold_index] == gold_transition
+    def fix_error(self, gold_transition, pred_transition, gold_sequence, gold_index):
+        """
+        Return which error has been made, if any, along with an updated transition list
 
-    if gold_transition == pred_transition:
-        return RepairType.CORRECT, None
+        We assume the transition sequence builds a correct tree, meaning
+        that there will always be a CloseConstituent sometime after an
+        OpenConstituent, for example
+        """
+        assert gold_sequence[gold_index] == gold_transition
 
-    for repair_type in RepairType:
-        if repair_type.fn is None:
-            continue
-        if oracle_level is not None and repair_type.value > oracle_level:
-            continue
-        repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, root_labels)
-        if repair is not None:
-            return repair_type, repair
+        if gold_transition == pred_transition:
+            return RepairType.CORRECT, None
 
-    return RepairType.UNKNOWN, None
+        for repair_type in RepairType:
+            if repair_type.fn is None:
+                continue
+            if self.oracle_level is not None and repair_type.value > self.oracle_level:
+                continue
+            repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, self.root_labels)
+            if repair is not None:
+                return repair_type, repair
+
+        return RepairType.UNKNOWN, None
