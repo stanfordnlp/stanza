@@ -1,17 +1,29 @@
-from abc import ABC, abstractmethod
+class DynamicOracle():
+    def __init__(self, root_labels, oracle_level, repair_types):
+        self.root_labels = root_labels
+        self.oracle_level = oracle_level
+        self.repair_types = repair_types
 
-class DynamicOracle(ABC):
-    @abstractmethod
     def fix_error(self, gold_transition, pred_transition, gold_sequence, gold_index):
         """
-        If this oracle can fix this error, return the error type and the new sequnce
+        Return which error has been made, if any, along with an updated transition list
 
-        gold_transition: expected transition
-        pred_transition: what was predicted instead
-        gold_sequence: the entire sequence of gold transitions
-        gold_index: where we are in the sequence
-
-        return: an enum describing the repair, and a replacement for gold_sequence
-          None for gold_sequence means no repair was possible
-            (or needed, in the case of a correct pred_transition)
+        We assume the transition sequence builds a correct tree, meaning
+        that there will always be a CloseConstituent sometime after an
+        OpenConstituent, for example
         """
+        assert gold_sequence[gold_index] == gold_transition
+
+        if gold_transition == pred_transition:
+            return self.repair_types.CORRECT, None
+
+        for repair_type in self.repair_types:
+            if repair_type.fn is None:
+                continue
+            if self.oracle_level is not None and repair_type.value > self.oracle_level:
+                continue
+            repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, self.root_labels)
+            if repair is not None:
+                return repair_type, repair
+
+        return self.repair_types.UNKNOWN, None
