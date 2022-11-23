@@ -270,6 +270,9 @@ ner_pretrains = {
         "s800":         "craft",
 
         "ontonotes":    "fasttextcrawl",
+        # the stanza-train sample NER model should use the default NER pretrain
+        # for English, that is the same as ontonotes
+        "sample":       "fasttextcrawl",
 
         "conll03":      "glove",
 
