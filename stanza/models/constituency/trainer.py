@@ -29,7 +29,7 @@ from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.dynamic_oracle import oracle_inorder_error
+from stanza.models.constituency.in_order_oracle import oracle_inorder_error
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree

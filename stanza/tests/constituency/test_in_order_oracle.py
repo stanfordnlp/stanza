@@ -1,11 +1,10 @@
 import itertools
 import pytest
 
-from stanza.models.constituency import dynamic_oracle
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel
-from stanza.models.constituency.dynamic_oracle import *
+from stanza.models.constituency.in_order_oracle import *
 from stanza.models.constituency.parse_transitions import CloseConstituent, OpenConstituent, Shift, TransitionScheme
 from stanza.models.constituency.transition_sequence import build_treebank
 
