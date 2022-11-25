@@ -646,7 +646,18 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     # Various experiments generally show about 0.5 F1 loss on various
     # datasets when using 'mean' instead of 'sum' for reduction
     # (Remember to adjust the weight decay when rerunning that experiment)
-    model_loss_function = nn.CrossEntropyLoss(reduction='sum')
+    if args['loss'] == 'cross':
+        logger.info("Building CrossEntropyLoss(sum)")
+        process_outputs = lambda x: x
+        model_loss_function = nn.CrossEntropyLoss(reduction='sum')
+    elif args['loss'] == 'focal':
+        try:
+            from focal_loss.focal_loss import FocalLoss
+        except ImportError:
+            raise ImportError("focal_loss not installed.  Must `pip install focal_loss_torch` to use the --loss=focal feature")
+        logger.info("Building FocalLoss, gamma=%f", args['loss_focal_gamma'])
+        process_outputs = lambda x: torch.softmax(x, dim=1)
+        model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
     if args['cuda']:
         model_loss_function.cuda()
 
@@ -689,7 +700,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, model_loss_function, epoch_data, oracle, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args)
 
         # print statistics
         # by now we've forgotten about the original tags on the trees,
@@ -763,7 +774,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     return trainer
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, oracle, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
@@ -775,7 +786,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, oracle, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -807,7 +818,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, model_loss_function, oracle, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, oracle, args):
     """
     Train the model for one batch
 
@@ -903,6 +914,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     errors = torch.cat(all_errors)
     answers = torch.cat(all_answers)
 
+    errors = process_outputs(errors)
     tree_loss = model_loss_function(errors, answers)
     tree_loss.backward()
     if args['watch_regex']:

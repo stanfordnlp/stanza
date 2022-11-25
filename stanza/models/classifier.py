@@ -24,6 +24,7 @@ class Loss(Enum):
     CROSS = 1
     WEIGHTED_CROSS = 2
     LOG_CROSS = 3
+    FOCAL = 4
 
 class DevScoring(Enum):
     ACCURACY = 'ACC'
@@ -202,6 +203,7 @@ def build_parser():
 
     parser.add_argument('--loss', type=lambda x: Loss[x.upper()], default=Loss.CROSS,
                         help="Whether to use regular cross entropy or scale it by 1/log(quantity)")
+    parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
     parser.add_argument('--min_train_len', type=int, default=0,
                         help="Filter sentences less than this length")
 
@@ -427,12 +429,24 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
     label_tensors = {x: torch.tensor(y, requires_grad=False, device=device)
                      for (y, x) in enumerate(labels)}
 
+    process_outputs = lambda x: x
     if args.loss == Loss.CROSS:
+        logger.info("Creating CrossEntropyLoss")
         loss_function = nn.CrossEntropyLoss()
     elif args.loss == Loss.WEIGHTED_CROSS:
+        logger.info("Creating weighted cross entropy loss w/o log")
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=False)
     elif args.loss == Loss.LOG_CROSS:
+        logger.info("Creating weighted cross entropy loss w/ log")
         loss_function = loss.weighted_cross_entropy_loss([label_map[x[0]] for x in train_set], log_dampened=True)
+    elif args.loss == Loss.FOCAL:
+        try:
+            from focal_loss.focal_loss import FocalLoss
+        except ImportError:
+            raise ImportError("focal_loss not installed.  Must `pip install focal_loss_torch` to use the --loss=focal feature")
+        logger.info("Creating FocalLoss with loss %f", args.loss_focal_gamma)
+        process_outputs = lambda x: torch.softmax(x, dim=1)
+        loss_function = FocalLoss(gamma=args.loss_focal_gamma)
     else:
         raise ValueError("Unknown loss function {}".format(args.loss))
     loss_function.to(device)
@@ -482,6 +496,7 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
             optimizer.zero_grad()
 
             outputs = model(text)
+            outputs = process_outputs(outputs)
             batch_loss = loss_function(outputs, batch_labels)
             batch_loss.backward()
             optimizer.step()
