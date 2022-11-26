@@ -394,7 +394,10 @@ def parse_args(args=None):
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
 
-    parser.add_argument('--loss', default='cross', help='cross or focal.  Focal requires `pip install focal_loss_torch`')
+    # Large Margin is from Large Margin In Softmax Cross-Entropy Loss
+    # it did not help on an Italian VIT test
+    # scores went from 0.8252 to 0.8248
+    parser.add_argument('--loss', default='cross', help='cross, large_margin, or focal.  Focal requires `pip install focal_loss_torch`')
     parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
 
     # When using word_dropout and predict_dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:

@@ -24,6 +24,7 @@ from torch import nn
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
+from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
@@ -659,6 +660,12 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         logger.info("Building FocalLoss, gamma=%f", args['loss_focal_gamma'])
         process_outputs = lambda x: torch.softmax(x, dim=1)
         model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
+    elif args['loss'] == 'large_margin':
+        logger.info("Building LargeMarginInSoftmaxLoss(sum)")
+        process_outputs = lambda x: x
+        model_loss_function = LargeMarginInSoftmaxLoss(reduction='sum')
+    else:
+        raise ValueError("Unexpected loss term: %s" % args['loss'])
     if args['cuda']:
         model_loss_function.cuda()
 
