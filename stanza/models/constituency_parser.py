@@ -447,6 +447,15 @@ def parse_args(args=None):
     # trading places in terms of accuracy over those ~500 iterations.
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
     parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
+    # In one experiment on an Italian dataset, VIT, we got the following:
+    #  0.8254 with relu as the nonlinearity   (10 trials)
+    #  0.8265 with maxout, k = 2              (15)
+    #  0.8253 with maxout, k = 3              (5)
+    # The speed in terms of trees/second might be slightly slower with maxout.
+    #  51.4 it/s on a Titan Xp with maxout 2 and 51.9 it/s with relu
+    # It might also be worth running some experiments with bigger
+    # output layers to see if that makes up for the difference in score.
+    parser.add_argument('--maxout_k', default=None, type=int, help="Use maxout layers instead of a nonlinearity for the output layers")
 
     parser.add_argument('--use_silver_words', default=True, dest='use_silver_words', action='store_true', help="Use/don't use words from the silver dataset")
     parser.add_argument('--no_use_silver_words', default=True, dest='use_silver_words', action='store_false', help="Use/don't use words from the silver dataset")

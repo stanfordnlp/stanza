@@ -37,6 +37,7 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
+from stanza.models.common.maxout_linear import MaxoutLinear
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
@@ -553,7 +554,9 @@ class LSTMModel(BaseModel, nn.Module):
 
         # matrix for predicting the next transition using word/constituent/transition queues
         # word size + constituency size + transition size
-        self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions))
+        # TODO: .get() is only necessary until all models rebuilt with this param
+        self.maxout_k = self.args.get('maxout_k', 0)
+        self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions), self.maxout_k)
 
     @staticmethod
     def uses_lattn(args):
@@ -597,7 +600,7 @@ class LSTMModel(BaseModel, nn.Module):
             else:
                 self.get_parameter(name).data.copy_(other_parameter.data)
 
-    def build_output_layers(self, num_output_layers, final_layer_size):
+    def build_output_layers(self, num_output_layers, final_layer_size, maxout_k):
         """
         Build a ModuleList of Linear transformations for the given num_output_layers
 
@@ -611,10 +614,14 @@ class LSTMModel(BaseModel, nn.Module):
         # constituent_stack: hidden_size
         predict_input_size = [self.hidden_size + self.hidden_size * self.num_tree_lstm_layers + self.transition_hidden_size] + [self.hidden_size] * middle_layers
         predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
-        output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
-                                       for input_size, output_size in zip(predict_input_size, predict_output_size)])
-        for output_layer, input_size in zip(output_layers, predict_input_size):
-            initialize_linear(output_layer, self.args['nonlinearity'], input_size)
+        if not maxout_k:
+            output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
+                                           for input_size, output_size in zip(predict_input_size, predict_output_size)])
+            for output_layer, input_size in zip(output_layers, predict_input_size):
+                initialize_linear(output_layer, self.args['nonlinearity'], input_size)
+        else:
+            output_layers = nn.ModuleList([MaxoutLinear(input_size, output_size, maxout_k)
+                                           for input_size, output_size in zip(predict_input_size, predict_output_size)])
         return output_layers
 
     def num_words_known(self, words):
@@ -1035,7 +1042,7 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
             hx = self.predict_dropout(hx)
-            if idx < len(self.output_layers) - 1:
+            if not self.maxout_k and idx < len(self.output_layers) - 1:
                 hx = self.nonlinearity(hx)
             hx = output_layer(hx)
         return hx

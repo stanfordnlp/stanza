@@ -417,6 +417,24 @@ def test_lstm_tree_cx_forward(pretrain_file):
     model = build_model(pretrain_file, '--num_tree_lstm_layers', '3', '--constituency_composition', 'tree_lstm_cx')
     run_forward_checks(model)
 
+def test_maxout(pretrain_file):
+    """
+    Test with and without maxout layers for output
+    """
+    model = build_model(pretrain_file, '--maxout_k', '0')
+    run_forward_checks(model)
+    # check the output size & implicitly check the type
+    # to check for a particularly silly bug
+    assert model.output_layers[-1].weight.shape[0] == len(model.transitions)
+
+    model = build_model(pretrain_file, '--maxout_k', '2')
+    run_forward_checks(model)
+    assert model.output_layers[-1].linear.weight.shape[0] == len(model.transitions) * 2
+
+    model = build_model(pretrain_file, '--maxout_k', '3')
+    run_forward_checks(model)
+    assert model.output_layers[-1].linear.weight.shape[0] == len(model.transitions) * 3
+
 def check_structure_test(pretrain_file, args1, args2):
     """
     Test that the "copy" method copies the parameters from one model to another
