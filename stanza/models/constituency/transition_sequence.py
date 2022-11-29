@@ -150,13 +150,13 @@ def all_transitions(transition_lists):
         transitions.update(trans_list)
     return sorted(transitions)
 
-def convert_trees_to_sequences(trees, tree_type, transition_scheme):
+def convert_trees_to_sequences(trees, treebank_name, transition_scheme):
     """
     Wrap both build_treebank and all_transitions, possibly with a tqdm
 
     Converts trees to a list of sequences, then returns the list of known transitions
     """
-    logger.info("Building {} transition sequences".format(tree_type))
+    logger.info("Building {} transition sequences".format(treebank_name))
     if logger.getEffectiveLevel() <= logging.INFO:
         trees = tqdm(trees)
     sequences = build_treebank(trees, transition_scheme)
