@@ -672,7 +672,7 @@ def check_transitions(train_transitions, other_transitions, treebank_name):
                     raise RuntimeError("Found transition {} in the {} set which don't exist in the train set".format(trans, treebank_name))
             unknown_transitions.add(trans)
     if len(unknown_transitions) > 0:
-        logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", unknown_transitions)
+        logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", sorted(unknown_transitions))
 
 def bulk_apply(model, state_batch, transitions, fail=False):
     """
