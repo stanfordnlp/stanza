@@ -342,7 +342,7 @@ class BaseModel(ABC):
             # TODO: refactor?
             batch_size = self.args['eval_batch_size']
         tree_iterator = iter(trees)
-        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=True)
+        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores)
         return treebank
 
     def parse_tagged_words(self, words, batch_size):
