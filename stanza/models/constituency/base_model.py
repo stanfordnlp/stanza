@@ -46,11 +46,12 @@ class BaseModel(ABC):
     The constructor forwards all unused arguments to other classes in the
     constructor sequence, so put this before other classes such as nn.Module
     """
-    def __init__(self, transition_scheme, unary_limit, *args, **kwargs):
+    def __init__(self, transition_scheme, unary_limit, reverse_sentence, *args, **kwargs):
         super().__init__(*args, **kwargs)  # forwards all unused arguments
 
         self._transition_scheme = transition_scheme
         self._unary_limit = unary_limit
+        self._reverse_sentence = reverse_sentence
 
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
@@ -161,6 +162,12 @@ class BaseModel(ABC):
                 self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
                 self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
 
+    def reverse_sentence(self):
+        """
+        Whether or not this model is built to parse backwards
+        """
+        return self._reverse_sentence
+
     def predict(self, states, is_legal=True):
         raise NotImplementedError("LSTMModel can predict, but SimpleModel cannot")
 
@@ -234,7 +241,7 @@ class BaseModel(ABC):
         if len(state_batch) == 0:
             return state_batch
 
-        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme())
+        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme(), self.reverse_sentence())
         state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
         return state_batch
 
@@ -300,6 +307,8 @@ class BaseModel(ABC):
             for idx, state in enumerate(state_batch):
                 if state.finished(self):
                     predicted_tree = state.get_tree(self)
+                    if self.reverse_sentence():
+                        predicted_tree = predicted_tree.reverse()
                     gold_tree = state.gold_tree
                     treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, state.score)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
                     treebank_indices.append(batch_indices[idx])
@@ -383,8 +392,8 @@ class SimpleModel(BaseModel):
     transitions in situations where the NN state is not relevant,
     as this class will be faster than using the NN
     """
-    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT):
-        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit)
+    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT, reverse_sentence=False):
+        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse_sentence)
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
@@ -392,6 +401,8 @@ class SimpleModel(BaseModel):
             word_queue =  [None]
             word_queue += [tag_node for tag_node in tagged_words]
             word_queue.append(None)
+            if self.reverse_sentence():
+                word_queue.reverse()
             word_queues.append(word_queue)
         return word_queues
 

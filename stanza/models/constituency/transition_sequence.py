@@ -135,11 +135,14 @@ def build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
     else:
         return list(yield_top_down_sequence(tree, transition_scheme))
 
-def build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY):
+def build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, reverse=False):
     """
     Turn each of the trees in the treebank into a list of transitions based on the TransitionScheme
     """
-    return [build_sequence(tree, transition_scheme) for tree in trees]
+    if reverse:
+        return [build_sequence(tree.reverse(), transition_scheme) for tree in trees]
+    else:
+        return [build_sequence(tree, transition_scheme) for tree in trees]
 
 def all_transitions(transition_lists):
     """
@@ -150,7 +153,7 @@ def all_transitions(transition_lists):
         transitions.update(trans_list)
     return sorted(transitions)
 
-def convert_trees_to_sequences(trees, treebank_name, transition_scheme):
+def convert_trees_to_sequences(trees, treebank_name, transition_scheme, reverse=False):
     """
     Wrap both build_treebank and all_transitions, possibly with a tqdm
 
@@ -159,7 +162,7 @@ def convert_trees_to_sequences(trees, treebank_name, transition_scheme):
     logger.info("Building {} transition sequences".format(treebank_name))
     if logger.getEffectiveLevel() <= logging.INFO:
         trees = tqdm(trees)
-    sequences = build_treebank(trees, transition_scheme)
+    sequences = build_treebank(trees, transition_scheme, reverse)
     transitions = all_transitions(sequences)
     return sequences, transitions
 

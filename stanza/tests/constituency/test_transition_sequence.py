@@ -10,20 +10,23 @@ from stanza.tests.constituency.test_parse_tree import CHINESE_LONG_LIST_TREE
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
-def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER, unary_limit=UNARY_LIMIT):
+def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER, unary_limit=UNARY_LIMIT, reverse=False):
     """
     Starting from a tree and a list of transitions, build the tree caused by the transitions
     """
-    model = SimpleModel(transition_scheme=transition_scheme, unary_limit=unary_limit)
+    model = SimpleModel(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse)
     states = model.initial_state_from_gold_trees([tree])
     assert(len(states)) == 1
     assert states[0].num_transitions() == 0
 
+    # TODO: could fold this into parse_sentences (similar to verify_transitions in trainer.py)
     for idx, t in enumerate(sequence):
         assert t.is_legal(states[0], model), "Transition {} not legal at step {} in sequence {}".format(t, idx, sequence)
         states = parse_transitions.bulk_apply(model, states, [t])
 
     result_tree = states[0].constituents.value
+    if reverse:
+        result_tree = result_tree.reverse()
     return result_tree
 
 def check_reproduce_tree(transition_scheme):
@@ -123,3 +126,31 @@ def test_chinese_tree():
 
     redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER, unary_limit=6)
     assert redone == trees[0]
+
+
+def test_chinese_tree_reversed():
+    """
+    test that the reversed transitions also work
+    """
+    trees = tree_reader.read_trees(CHINESE_LONG_LIST_TREE)
+
+    transitions = transition_sequence.build_treebank(trees, transition_scheme=TransitionScheme.TOP_DOWN, reverse=True)
+    redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.TOP_DOWN, reverse=True)
+    assert redone == trees[0]
+
+    with pytest.raises(AssertionError):
+        # turn off reverse - it should fail to rebuild the tree
+        redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.TOP_DOWN)
+        assert redone == trees[0]
+
+    transitions = transition_sequence.build_treebank(trees, transition_scheme=TransitionScheme.IN_ORDER, reverse=True)
+    with pytest.raises(AssertionError):
+        redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER, reverse=True)
+
+    redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER, unary_limit=6, reverse=True)
+    assert redone == trees[0]
+
+    with pytest.raises(AssertionError):
+        # turn off reverse - it should fail to rebuild the tree
+        redone = reconstruct_tree(trees[0], transitions[0], transition_scheme=TransitionScheme.IN_ORDER, unary_limit=6)
+        assert redone == trees[0]

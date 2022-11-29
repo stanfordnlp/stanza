@@ -428,6 +428,8 @@ def parse_args(args=None):
     parser.add_argument('--transition_scheme', default=TransitionScheme.IN_ORDER, type=lambda x: TransitionScheme[x.upper()],
                         help='Transition scheme to use.  {}'.format(", ".join(x.name for x in TransitionScheme)))
 
+    parser.add_argument('--reversed', default=False, action='store_true', help='Do the transition sequence reversed')
+
     # combining dummy and open node embeddings might be a slight improvement
     # for example, after 550 iterations, one experiment had
     # True:     0.9154
