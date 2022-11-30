@@ -100,6 +100,8 @@ It achieved a test score of 91.5 using the inorder transition scheme.
 
 ## Treebank descriptions
 
+### English
+
 For English, the default model uses
 [Penn Treebank](https://aclanthology.org/J93-2004).
 However, there are a couple updates to this.  The first is the addition of NML,
@@ -107,6 +109,22 @@ However, there are a couple updates to this.  The first is the addition of NML,
 There are also tokenization changes from the original, such as
 "New York-based" becoming 4 tokens, "New York - based".
 
+### Italian
+
+We provide models for two Italian treebanks.
+
+The default is the Turin University Parallel Treebank.  It is smaller than VIT, but has more human readable annotations.
+
+A larger dataset with more recent edits to ensure accuracy is VIT.
+The constituents built in that treebank
+[are described in the original paper](https://www.researchgate.net/publication/28584827_VIT_-_Venice_Italian_Treebank_Syntactic_and_Quantitative_Features).
+There were no official train/dev/test splits for VIT, but we aligned the trees with the
+[UD translation of the treebank](https://github.com/UniversalDependencies/UD_Italian-VIT)
+and used that as the split for building the model.
+
+### Japanese
+
+An annotation guideline for Japanese ALT is available on the [ALT homepage](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/)
 
 ## Other links
 
@@ -118,5 +136,19 @@ Mitchell P. Marcus, Beatrice Santorini, Mary Ann Marcinkiewicz, 1993,
 ["Building a Large Annotated Corpus of English: The Penn Treebank"](https://aclanthology.org/J93-2004).
 Computational Linguistics, 19(2):313–330.
 
-Silva, João, António Branco, Sérgio Castro and Ruben Reis, 2010, "Out-of-the-Box Robust Parsing of Portuguese". In Proceedings of the 9th International Conference on the Computational Processing of Portuguese (PROPOR2010), Lecture Notes in Artificial Intelligence, 6001, Berlin, Springer, pp.75–85.
+Sanguinetti M., Bosco C. (2014)
+"PartTUT: The Turin University Parallel Treebank".
+In Basili, Bosco, Delmonte, Moschitti, Simi (editors)
+Harmonization and development of resources and tools for Italian Natural Language Processing within the PARLI project, LNCS, Springer Verlag
 
+Rodolfo Delmonte, Antonella Bristot, and Sara Tonelli (2007).
+"VIT - Venice Italian Treebank: Syntactic and Quantitative Features".
+In Proc. Sixth International Workshop on Treebanks and Linguistic Theories.
+
+Silva, João, António Branco, Sérgio Castro and Ruben Reis, 2010,
+"Out-of-the-Box Robust Parsing of Portuguese".
+In Proceedings of the 9th International Conference on the Computational Processing of Portuguese (PROPOR2010),
+Lecture Notes in Artificial Intelligence, 6001, Berlin, Springer, pp.75–85.
+
+Ye Kyaw Thu, Win Pa Pa, Masao Utiyama, Andrew Finch and Eiichiro Sumita. (2016)
+["Introducing the Asian Language Treebank (ALT)"](http://www.lrec-conf.org/proceedings/lrec2016/pdf/435_Paper.pdf). LREC.
