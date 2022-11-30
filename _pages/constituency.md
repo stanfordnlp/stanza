@@ -105,9 +105,11 @@ It achieved a test score of 91.5 using the inorder transition scheme.
 For English, the default model uses
 [Penn Treebank](https://aclanthology.org/J93-2004).
 However, there are a couple updates to this.  The first is the addition of NML,
-[as described here](https://www.cis.upenn.edu/~bies/bioie/TBguidelines-addendum.pdf).
+which marks a noun-based "adjective phrase" under an NP.
 There are also tokenization changes from the original, such as
 "New York-based" becoming 4 tokens, "New York - based".
+These changes are described in
+[an update to PTB](https://www.ldc.upenn.edu/sites/www.ldc.upenn.edu/files/etb-supplementary-guidelines-2009-addendum.pdf)
 
 ### Italian
 
