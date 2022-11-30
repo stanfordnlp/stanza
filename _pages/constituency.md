@@ -98,12 +98,25 @@ Note that the following scores are slight underestimates.  They use the CoreNLP 
 As of Stanza 1.3.0, there was an English model trained on PTB.
 It achieved a test score of 91.5 using the inorder transition scheme.
 
+## Treebank descriptions
+
+For English, the default model uses
+[Penn Treebank](https://aclanthology.org/J93-2004).
+However, there are a couple updates to this.  The first is the addition of NML,
+[as described here](https://www.cis.upenn.edu/~bies/bioie/TBguidelines-addendum.pdf).
+There are also tokenization changes from the original, such as
+"New York-based" becoming 4 tokens, "New York - based".
+
 
 ## Other links
 
 Cintil can also be purchased from [ELRA](https://catalogue.elra.info/en-us/repository/browse/ELRA-W0055/)
 
 ## Citations
+
+Mitchell P. Marcus, Beatrice Santorini, Mary Ann Marcinkiewicz, 1993,
+["Building a Large Annotated Corpus of English: The Penn Treebank"](https://aclanthology.org/J93-2004).
+Computational Linguistics, 19(2):313–330.
 
 Silva, João, António Branco, Sérgio Castro and Ruben Reis, 2010, "Out-of-the-Box Robust Parsing of Portuguese". In Proceedings of the 9th International Conference on the Computational Processing of Portuguese (PROPOR2010), Lecture Notes in Artificial Intelligence, 6001, Berlin, Springer, pp.75–85.
 
