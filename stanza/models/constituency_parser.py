@@ -446,6 +446,7 @@ def parse_args(args=None):
     # after the same clock time on the same hardware.  the two had been
     # trading places in terms of accuracy over those ~500 iterations.
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
+    # See constituency/utils.py for more extensive comments on nonlinearity options
     parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
     # In one experiment on an Italian dataset, VIT, we got the following:
     #  0.8254 with relu as the nonlinearity   (10 trials)
