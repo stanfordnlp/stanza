@@ -37,16 +37,6 @@ logger = logging.getLogger('stanza')
 #  0.000005.out: 0.9591620720706487
 DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6, "mirror_madgrad": 2e-6 }
 
-class TextTooLongError(ValueError):
-    """
-    A text was too long for the underlying model (possibly BERT)
-    """
-    def __init__(self, length, max_len, line_num, text):
-        super().__init__("Found a text of length %d (possibly after tokenizing).  Maximum handled length is %d  Error occurred at line %d" % (length, max_len, line_num))
-        self.line_num = line_num
-        self.text = text
-
-
 def replace_tags(tree, tags):
     if tree.is_leaf():
         raise ValueError("Must call replace_tags with non-leaf")

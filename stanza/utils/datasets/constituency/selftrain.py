@@ -9,7 +9,7 @@ import re
 
 import stanza
 from stanza.models.common import utils
-from stanza.models.constituency.utils import TextTooLongError
+from stanza.models.common.bert_embedding import TextTooLongError
 
 logger = logging.getLogger('stanza')
 tqdm = utils.get_tqdm()

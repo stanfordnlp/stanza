@@ -13,6 +13,16 @@ BERT_ARGS = {
     "vinai/phobert-large": { "use_fast": True },
 }
 
+class TextTooLongError(ValueError):
+    """
+    A text was too long for the underlying model (possibly BERT)
+    """
+    def __init__(self, length, max_len, line_num, text):
+        super().__init__("Found a text of length %d (possibly after tokenizing).  Maximum handled length is %d  Error occurred at line %d" % (length, max_len, line_num))
+        self.line_num = line_num
+        self.text = text
+
+
 def update_max_length(model_name, tokenizer):
     if model_name == 'google/muril-base-cased' or model_name == 'airesearch/wangchanberta-base-att-spm-uncased':
         tokenizer.model_max_length = 512

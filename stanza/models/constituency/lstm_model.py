@@ -49,7 +49,7 @@ from stanza.models.constituency.partitioned_transformer import PartitionedTransf
 from stanza.models.constituency.positional_encoding import ConcatSinusoidalEncoding
 from stanza.models.constituency.transformer_tree_stack import TransformerTreeStack
 from stanza.models.constituency.tree_stack import TreeStack
-from stanza.models.constituency.utils import build_nonlinearity, initialize_linear, TextTooLongError
+from stanza.models.constituency.utils import build_nonlinearity, initialize_linear
 
 logger = logging.getLogger('stanza')
 
