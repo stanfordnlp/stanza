@@ -160,7 +160,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
 
         if len(tokenized_sent) > tokenizer.model_max_length:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), data[idx])
-            #raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
+            raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
         #add to tokenized_sents
         tokenized_sents.append(torch.tensor(tokenized_sent).detach())
