@@ -14,12 +14,9 @@ from stanza.models.pos.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:8]]
-    else:
-        inputs = batch[:8]
+    inputs = [b.to(device) if b is not None else None for b in batch[:8]]
     orig_idx = batch[8]
     word_orig_idx = batch[9]
     sentlens = batch[10]
@@ -30,7 +27,6 @@ def unpack_batch(batch, use_cuda):
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False, foundation_cache=None):
-        self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args=args, foundation_cache=foundation_cache)
@@ -40,14 +36,15 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if self.use_cuda:
+        if use_cuda:
             self.model.cuda()
         else:
             self.model.cpu()
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None))
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         if eval:
@@ -66,7 +63,8 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
 
         self.model.eval()
