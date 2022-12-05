@@ -29,7 +29,27 @@ BERT = {
     # "da": "Maltehb/danish-bert-botxo",
     #
     # the multilingual bert is a marginal improvement for conparse
-    "da": "bert-base-multilingual-cased",
+    #
+    # December 2022 update:
+    # there are quite a few Danish transformers available on HuggingFace
+    # here are the results of training a constituency parser with adadelta/adamw
+    # on each of them:
+    #
+    # no bert                              0.8245    0.8230
+    # alexanderfalk/danbert-small-cased    0.8236    0.8286
+    # Geotrend/distilbert-base-da-cased    0.8268    0.8306
+    # sarnikowski/convbert-small-da-cased  0.8322    0.8341
+    # bert-base-multilingual-cased         0.8341    0.8342
+    # vesteinn/ScandiBERT-no-faroese       0.8373    0.8408
+    # Maltehb/danish-bert-botxo            0.8383    0.8408
+    # vesteinn/ScandiBERT                  0.8421    0.8475
+    #
+    # Also, two models have token windows too short for use with the
+    # Danish dataset:
+    #  jonfd/electra-small-nordic
+    #  Maltehb/aelaectra-danish-electra-small-cased
+    #
+    "da": "vesteinn/ScandiBERT",
 
     # As of April 2022, the bert models available have a weird
     # tokenizer issue where soft hyphen causes it to crash.
