@@ -597,7 +597,7 @@ def main(args=None):
     """
     args = parse_args(args=args)
 
-    utils.set_random_seed(args['seed'], args['cuda'])
+    utils.set_random_seed(args['seed'])
 
     logger.info("Running constituency parser in %s mode", args['mode'])
     logger.debug("Using GPU: %s", args['cuda'])

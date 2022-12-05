@@ -542,7 +542,7 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
 
 def main(args=None):
     args = parse_args(args)
-    seed = utils.set_random_seed(args.seed, args.cuda)
+    seed = utils.set_random_seed(args.seed)
     logger.info("Using random seed: %d" % seed)
 
     utils.ensure_dir(args.save_dir)

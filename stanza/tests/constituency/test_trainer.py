@@ -108,7 +108,7 @@ class TestTrainer:
         """
 
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-            set_random_seed(1000, False)
+            set_random_seed(1000)
             args = ['--pattn_num_layers', '0', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10']
             tr = build_trainer(wordvec_pretrain_file, *args)
 
@@ -116,7 +116,7 @@ class TestTrainer:
             filename = os.path.join(tmpdirname, "parser.pt")
             tr.save(filename)
 
-            set_random_seed(1001, False)
+            set_random_seed(1001)
             args = ['--pattn_num_layers', '1', '--lattn_d_proj', '0', '--hidden_size', '20', '--delta_embedding_dim', '10', '--relearn_structure', '--load_name', filename]
             tr2 = build_trainer(wordvec_pretrain_file, *args)
 

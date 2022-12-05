@@ -34,7 +34,7 @@ def parse_args():
     return args
 
 args = parse_args()
-seed = utils.set_random_seed(args.seed, args.cuda)
+seed = utils.set_random_seed(args.seed)
 
 model_files = []
 for glob_piece in args.glob.split():

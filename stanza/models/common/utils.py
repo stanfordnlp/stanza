@@ -343,7 +343,7 @@ def tensor_unsort(sorted_tensor, oidx):
     return sorted_tensor[backidx]
 
 
-def set_random_seed(seed, cuda):
+def set_random_seed(seed):
     """
     Set a random seed on all of the things which might need it.
     torch, np, python random, and torch.cuda
@@ -354,7 +354,7 @@ def set_random_seed(seed, cuda):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    if cuda:
+    if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
     return seed
 

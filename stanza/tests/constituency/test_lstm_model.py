@@ -441,11 +441,11 @@ def check_structure_test(pretrain_file, args1, args2):
 
     Also check that the copied models produce the same results
     """
-    set_random_seed(1000, False)
+    set_random_seed(1000)
     other = build_model(pretrain_file, *args1)
     other.eval()
 
-    set_random_seed(1001, False)
+    set_random_seed(1001)
     model = build_model(pretrain_file, *args2)
     model.eval()
 

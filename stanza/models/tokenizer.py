@@ -104,7 +104,7 @@ def main(args=None):
 
     if args.cpu:
         args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args.seed)
 
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
