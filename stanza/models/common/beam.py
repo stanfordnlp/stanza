@@ -38,22 +38,19 @@ except TypeError:
         return a // b
 
 class Beam(object):
-    def __init__(self, size, cuda=False):
-
+    def __init__(self, size, device=None):
         self.size = size
         self.done = False
 
-        self.tt = torch.cuda if cuda else torch
-
         # The score for each translation on the beam.
-        self.scores = self.tt.FloatTensor(size).zero_()
+        self.scores = torch.zeros(size, dtype=torch.float32, device=device)
         self.allScores = []
 
         # The backpointers at each time-step.
         self.prevKs = []
 
         # The outputs at each time-step.
-        self.nextYs = [self.tt.LongTensor(size).fill_(constant.PAD_ID)]
+        self.nextYs = [torch.zeros(size, dtype=torch.int64, device=device).fill_(constant.PAD_ID)]
         self.nextYs[0][0] = constant.SOS_ID
 
         # The copy indices for each time

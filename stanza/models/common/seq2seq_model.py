@@ -29,7 +29,6 @@ class Seq2SeqModel(nn.Module):
         self.dropout = args['dropout']
         self.pad_token = constant.PAD_ID
         self.max_dec_len = args['max_dec_len']
-        self.use_cuda = use_cuda
         self.top = args.get('top', 1e10)
         self.args = args
         self.emb_matrix = emb_matrix
@@ -71,7 +70,8 @@ class Seq2SeqModel(nn.Module):
             self.copy_gate = nn.Linear(self.dec_hidden_dim, 1)
 
         self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
-        self.SOS_tensor = self.SOS_tensor.cuda() if self.use_cuda else self.SOS_tensor
+        # TODO: this call to cuda() should not be necessary
+        self.SOS_tensor = self.SOS_tensor.cuda() if use_cuda else self.SOS_tensor
 
         self.init_weights()
 
@@ -98,14 +98,6 @@ class Seq2SeqModel(nn.Module):
         # initialize pos embeddings
         if self.use_pos:
             self.pos_embedding.weight.data.uniform_(-init_range, init_range)
-
-    def cuda(self):
-        super().cuda()
-        self.use_cuda = True
-
-    def cpu(self):
-        super().cpu()
-        self.use_cuda = False
 
     def zero_state(self, inputs):
         batch_size = inputs.size(0)
@@ -272,7 +264,8 @@ class Seq2SeqModel(nn.Module):
             # repeat decoder hidden states
             hn = hn.data.repeat(beam_size, 1)
             cn = cn.data.repeat(beam_size, 1)
-        beam = [Beam(beam_size, self.use_cuda) for _ in range(batch_size)]
+        device = self.SOS_tensor.device
+        beam = [Beam(beam_size, device) for _ in range(batch_size)]
 
         def update_state(states, idx, positions, beam_size):
             """ Select the states according to back pointers. """
