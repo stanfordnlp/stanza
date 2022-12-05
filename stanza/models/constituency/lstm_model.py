@@ -244,7 +244,7 @@ class LSTMModel(BaseModel, nn.Module):
         # replacing NBSP picks up a whole bunch of words for VI
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
         # precompute tensors for the word indices
-        # the tensors should be put on the GPU if needed with a call to cuda()
+        # the tensors should be put on the GPU if needed by calling to(device)
         self.register_buffer('vocab_tensors', torch.tensor(range(len(pretrain.vocab)), requires_grad=False))
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]

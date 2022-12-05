@@ -667,10 +667,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         model_loss_function = LargeMarginInSoftmaxLoss(reduction='sum')
     else:
         raise ValueError("Unexpected loss term: %s" % args['loss'])
-    if args['cuda']:
-        model_loss_function.cuda()
 
     device = next(model.parameters()).device
+    model_loss_function.to(device)
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
                           for (y, x) in enumerate(model.transitions)}
     model.train()
@@ -765,8 +764,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
             bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
             new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
-            if args['cuda']:
-                new_model.cuda()
+            new_model.to(device)
             new_model.copy_with_new_structure(model)
 
             optimizer = build_optimizer(temp_args, new_model, False)
