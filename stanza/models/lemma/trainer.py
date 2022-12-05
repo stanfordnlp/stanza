@@ -10,6 +10,7 @@ import logging
 import torch
 from torch import nn
 import torch.nn.init as init
+import warnings
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.seq2seq_model import Seq2SeqModel
@@ -31,11 +32,11 @@ class Trainer(object):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
-            self.load(model_file, use_cuda)
+            self.load(model_file)
         else:
             # build model from scratch
             self.args = args
-            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix, use_cuda=use_cuda)
+            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
             self.vocab = vocab
             # dict-based components
             self.word_dict = dict()
@@ -194,7 +195,9 @@ class Trainer(object):
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
-    def load(self, filename, use_cuda=False):
+    def load(self, filename, use_cuda=None):
+        if use_cuda is not None:
+            warnings.warn("use_cuda when loading an MWT trainer is no longer used.  this will be removed in an upcoming version")
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -203,8 +206,10 @@ class Trainer(object):
         self.args = checkpoint['config']
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args, use_cuda=use_cuda)
-            self.model.load_state_dict(checkpoint['model'])
+            self.model = Seq2SeqModel(self.args)
+            # could remove strict=False after rebuilding all models,
+            # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
+            self.model.load_state_dict(checkpoint['model'], strict=False)
         else:
             self.model = None
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])

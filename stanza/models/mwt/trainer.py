@@ -9,6 +9,7 @@ import logging
 import torch
 from torch import nn
 import torch.nn.init as init
+import warnings
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.trainer import Trainer as BaseTrainer
@@ -33,7 +34,7 @@ class Trainer(BaseTrainer):
         self.use_cuda = use_cuda
         if model_file is not None:
             # load from file
-            self.load(model_file, use_cuda)
+            self.load(model_file)
         else:
             self.args = args
             self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
@@ -136,7 +137,9 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, use_cuda=False):
+    def load(self, filename, use_cuda=None):
+        if use_cuda is not None:
+            warnings.warn("use_cuda when loading an MWT trainer is no longer used.  this will be removed in an upcoming version")
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -145,8 +148,10 @@ class Trainer(BaseTrainer):
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args, use_cuda=use_cuda)
-            self.model.load_state_dict(checkpoint['model'])
+            self.model = Seq2SeqModel(self.args)
+            # could remove strict=False after rebuilding all models,
+            # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
+            self.model.load_state_dict(checkpoint['model'], strict=False)
         else:
             self.model = None
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])

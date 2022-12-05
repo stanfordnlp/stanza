@@ -19,7 +19,7 @@ class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
     """
-    def __init__(self, args, emb_matrix=None, use_cuda=False):
+    def __init__(self, args, emb_matrix=None):
         super().__init__()
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
@@ -69,9 +69,8 @@ class Seq2SeqModel(nn.Module):
         if self.copy:
             self.copy_gate = nn.Linear(self.dec_hidden_dim, 1)
 
-        self.SOS_tensor = torch.LongTensor([constant.SOS_ID])
-        # TODO: this call to cuda() should not be necessary
-        self.SOS_tensor = self.SOS_tensor.cuda() if use_cuda else self.SOS_tensor
+        SOS_tensor = torch.LongTensor([constant.SOS_ID])
+        self.register_buffer('SOS_tensor', SOS_tensor)
 
         self.init_weights()
 
