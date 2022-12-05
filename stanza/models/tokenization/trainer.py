@@ -14,7 +14,6 @@ logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, use_cuda=False):
-        self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file)

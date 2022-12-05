@@ -10,7 +10,6 @@ import logging
 import torch
 from torch import nn
 import torch.nn.init as init
-import warnings
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.seq2seq_model import Seq2SeqModel
@@ -29,7 +28,6 @@ def unpack_batch(batch, device):
 class Trainer(object):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
-        self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file)
@@ -195,9 +193,7 @@ class Trainer(object):
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
-    def load(self, filename, use_cuda=None):
-        if use_cuda is not None:
-            warnings.warn("use_cuda when loading an MWT trainer is no longer used.  this will be removed in an upcoming version")
+    def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:

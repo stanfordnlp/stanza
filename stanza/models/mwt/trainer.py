@@ -9,7 +9,6 @@ import logging
 import torch
 from torch import nn
 import torch.nn.init as init
-import warnings
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.trainer import Trainer as BaseTrainer
@@ -135,9 +134,7 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, use_cuda=None):
-        if use_cuda is not None:
-            warnings.warn("use_cuda when loading an MWT trainer is no longer used.  this will be removed in an upcoming version")
+    def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
