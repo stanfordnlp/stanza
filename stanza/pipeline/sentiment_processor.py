@@ -38,7 +38,7 @@ class SentimentProcessor(UDProcessor):
         # transformers downloads bert etc
         # however, elmo in general is not as good as using a
         # transformer, so it is unlikely we will ever fix this
-        args = SimpleNamespace(cuda = use_gpu,
+        args = SimpleNamespace(device = "cuda" if use_gpu else "cpu",
                                charlm_forward_file = forward_charlm_path,
                                charlm_backward_file = backward_charlm_path,
                                wordvec_pretrain_file = pretrain_path,

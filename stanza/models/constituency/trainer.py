@@ -122,6 +122,9 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
+        # model will stay on CPU if device==None
+        # can be moved elsewhere later, of course
+        model = model.to(args.get('device', None))
         return model
 
     @staticmethod
@@ -138,9 +141,6 @@ class Trainer:
 
         params = checkpoint['params']
         model = Trainer.model_from_params(params, args, foundation_cache)
-
-        if model.args['cuda']:
-            model.cuda()
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
@@ -222,7 +222,7 @@ def load_model_parse_text(args, model_file, retag_pipeline):
         'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
         'charlm_backward_file': args['charlm_backward_file'],
-        'cuda': args['cuda'],
+        'device': args['device'],
     }
     trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
     model = trainer.model
@@ -298,7 +298,7 @@ def evaluate(args, model_file, retag_pipeline):
             'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
             'charlm_backward_file': args['charlm_backward_file'],
-            'cuda': args['cuda'],
+            'device': args['device'],
         }
         trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
 
@@ -342,7 +342,7 @@ def remove_optimizer(args, model_save_file, model_load_file):
         'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
         'charlm_backward_file': args['charlm_backward_file'],
-        'cuda': False,
+        'device': args['device'],
     }
     trainer = Trainer.load(model_load_file, args=load_args, load_optimizer=False)
     trainer.save(model_save_file)
@@ -474,8 +474,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # dataset is the same or smaller
         # TODO: handle a larger dataset as well
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
-        if args['cuda']:
-            model.cuda()
+        model = model.to(args['device'])
         model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
@@ -491,15 +490,13 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         temp_args['lattn_d_proj'] = 0
 
         temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
-        if args['cuda']:
-            temp_model.cuda()
+        temp_model = temp_model.to(args['device'])
         temp_optim = build_optimizer(temp_args, temp_model, True)
         scheduler = build_scheduler(temp_args, temp_optim)
         trainer = Trainer(temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
-        if args['cuda']:
-            model.cuda()
+        model = model.to(args['device'])
 
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)

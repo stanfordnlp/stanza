@@ -233,8 +233,7 @@ def parse_args(args=None):
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
 
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--lang', default='en', help='Language to use')
 

@@ -104,8 +104,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
 
@@ -123,8 +122,6 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args['cpu']:
-        args['cuda'] = False
     utils.set_random_seed(args['seed'])
 
     logger.info("Running tagger in {} mode".format(args['mode']))
@@ -204,7 +201,7 @@ def train(args):
 
     logger.info("Training tagger...")
     foundation_cache = FoundationCache()
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'], foundation_cache=foundation_cache)
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'], foundation_cache=foundation_cache)
 
     global_step = 0
     max_steps = args['max_steps']
@@ -269,7 +266,7 @@ def train(args):
                     logger.info("Switching to second optimizer: {}".format(args['second_optim']))
                     if args['second_optim_reload']:
                         logger.info('Reloading best model to continue from current local optimum')
-                        trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain, model_file=model_file, use_cuda=args['cuda'], foundation_cache=foundation_cache)
+                        trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain, model_file=model_file, device=args['device'], foundation_cache=foundation_cache)
                     last_best_step = global_step
                     using_amsgrad = True
                     lr = args['second_lr']
@@ -315,8 +312,7 @@ def evaluate(args):
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda, args=load_args)
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

@@ -26,7 +26,7 @@ def unpack_batch(batch, device):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None):
         if model_file is not None:
             # load from file
             self.load(model_file)
@@ -36,14 +36,9 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.expansion_dict = dict()
         if not self.args['dict_only']:
-            self.crit = loss.SequenceLoss(self.vocab.size)
+            self.model = self.model.to(device)
+            self.crit = loss.SequenceLoss(self.vocab.size).to(device)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-            if use_cuda:
-                self.model.cuda()
-                self.crit.cuda()
-            else:
-                self.model.cpu()
-                self.crit.cpu()
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):

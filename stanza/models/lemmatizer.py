@@ -74,8 +74,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -89,9 +88,6 @@ def parse_args(args=None):
 
 def main(args=None):
     args = parse_args(args=args)
-
-    if args.cpu:
-        args.cuda = False
 
     utils.set_random_seed(args.seed)
 
@@ -134,7 +130,7 @@ def train(args):
     # start training
     # train a dictionary-based lemmatizer
     logger.info("Building lemmatizer in %s", model_file)
-    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("[Training dictionary-based lemmatizer...]")
     trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
     logger.info("Evaluating on dev set...")
@@ -236,8 +232,7 @@ def evaluate(args):
         model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
 
     # load model
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(model_file=model_file, device=args['device'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:

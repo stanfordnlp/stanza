@@ -30,7 +30,7 @@ class LangIDProcessor(UDProcessor):
 
     def _set_up_model(self, config, pipeline, use_gpu):
         batch_size = config.get("batch_size", 64)
-        self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu,
+        self._model = LangIDBiLSTM.load(path=config["model_path"], device="cuda" if use_gpu else "cpu",
                                         batch_size=batch_size, lang_subset=config.get("lang_subset"))
         self._char_index = self._model.char_to_idx
         self._clean_text = config.get("clean_text")

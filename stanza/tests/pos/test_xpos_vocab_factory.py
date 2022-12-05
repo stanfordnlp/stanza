@@ -150,7 +150,7 @@ class TestXPOSVocabFactory:
             vocab = train_batch.vocab
             assert isinstance(vocab['xpos'], expected_vocab)
 
-            trainer = Trainer(args=args, vocab=vocab, pretrain=pt, use_cuda=False)
+            trainer = Trainer(args=args, vocab=vocab, pretrain=pt, device="cpu")
 
             model_file = os.path.join(tmpdirname, "foo.pt")
             trainer.save(model_file)

@@ -36,7 +36,7 @@ class LemmaProcessor(UDProcessor):
             self.config['batch_size'] = LemmaProcessor.DEFAULT_BATCH_SIZE
         else:
             self._use_identity = False
-            self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
+            self._trainer = Trainer(model_file=config['model_path'], device="cuda" if use_gpu else "cpu")
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged', None)

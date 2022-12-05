@@ -96,8 +96,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -106,8 +105,6 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
-    if args.cpu:
-        args.cuda = False
 
     args = vars(args)
     return args
@@ -205,7 +202,7 @@ def train(args):
 
     logger.info("Training tagger...")
     if trainer is None: # init if model was not loaded previously from file
-        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'],
+        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
                           train_classifier_only=args['train_classifier_only'])
     logger.info(trainer.model)
 
@@ -351,14 +348,13 @@ def evaluate(args):
 
 def load_model(args, model_file):
     # load model
-    use_cuda = args['cuda'] and not args['cpu']
     charlm_args = {}
     if 'charlm_forward_file' in args:
         charlm_args['charlm_forward_file'] = args['charlm_forward_file']
     if 'charlm_backward_file' in args:
         charlm_args['charlm_backward_file'] = args['charlm_backward_file']
     pretrain = load_pretrain(args)
-    trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, device=args['device'], train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
