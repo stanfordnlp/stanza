@@ -83,7 +83,7 @@ setup(
         'protobuf', 
         'requests', 
         'six', 
-        'torch>=1.3.0', 
+        'torch>=1.3.0',
         'tqdm',
     ],
 
