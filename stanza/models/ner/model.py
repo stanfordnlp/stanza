@@ -17,10 +17,9 @@ from stanza.models.common.bert_embedding import extract_bert_embeddings
 logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, bert_model=None, bert_tokenizer=None, use_cuda=False):
+    def __init__(self, args, vocab, emb_matrix=None, bert_model=None, bert_tokenizer=None):
         super().__init__()
 
-        self.use_cuda = use_cuda
         self.vocab = vocab
         self.args = args
         self.unsaved_modules = []
@@ -122,7 +121,8 @@ class NERTagger(nn.Module):
         self.word_emb.weight.data.copy_(emb_matrix)
 
     def forward(self, sentences, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
-        
+        device = next(self.parameters()).device
+
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
         
@@ -133,17 +133,15 @@ class NERTagger(nn.Module):
             #extract static embeddings
             static_words, word_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['word'])
 
-            if self.use_cuda:
-                word_mask = word_mask.cuda()
-                static_words = static_words.cuda()
+            word_mask = word_mask.to(device)
+            static_words = static_words.to(device)
                 
             word_static_emb = self.word_emb(static_words)
 
             if 'delta' in self.vocab and self.delta_emb is not None:
                 # masks should be the same
                 delta_words, _ = self.extract_static_embeddings(self.args, sentences, self.vocab['delta'])
-                if self.use_cuda:
-                    delta_words = delta_words.cuda()
+                delta_words = delta_words.to(device)
                 # unclear whether to treat words in the main embedding
                 # but not in delta as unknown
                 # simple heuristic though - treating them as not

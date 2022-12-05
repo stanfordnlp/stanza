@@ -19,19 +19,15 @@ from stanza.models.mwt.vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:4]]
-    else:
-        inputs = [b if b is not None else None for b in batch[:4]]
+    inputs = [b.to(device) if b is not None else None for b in batch[:4]]
     orig_idx = batch[4]
     return inputs, orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
-        self.use_cuda = use_cuda
         if model_file is not None:
             # load from file
             self.load(model_file)
@@ -52,7 +48,8 @@ class Trainer(BaseTrainer):
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out = inputs
 
         if eval:
@@ -72,7 +69,8 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()

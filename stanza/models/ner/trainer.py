@@ -17,13 +17,10 @@ from stanza.models.common.crf import viterbi_decode
 
 logger = logging.getLogger('stanza')
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    if use_cuda:
-        inputs = [batch[0]]
-        inputs += [b.cuda() if b is not None else None for b in batch[1:5]]
-    else:
-        inputs = batch[:5]
+    inputs = [batch[0]]
+    inputs += [b.to(device) if b is not None else None for b in batch[1:5]]
     orig_idx = batch[5]
     word_orig_idx = batch[6]
     char_orig_idx = batch[7]
@@ -65,7 +62,6 @@ class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
                  train_classifier_only=False, foundation_cache=None):
-        self.use_cuda = use_cuda
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args, foundation_cache)
@@ -75,7 +71,7 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.bert_model, self.bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer, use_cuda = self.use_cuda)
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer)
 
         if train_classifier_only:
             logger.info('Disabling gradient for non-classifier layers')
@@ -84,14 +80,15 @@ class Trainer(BaseTrainer):
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if self.use_cuda:
+        if use_cuda:
             self.model.cuda()
         else:
             self.model.cpu()
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, device)
         word, wordchars, wordchars_mask, chars, tags = inputs
 
         if eval:
@@ -110,7 +107,8 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx, word_orig_idx, char_orig_idx, sentlens, wordlens, charlens, charoffsets = unpack_batch(batch, device)
         word, wordchars, wordchars_mask, chars, tags = inputs
 
         self.model.eval()
@@ -167,7 +165,7 @@ class Trainer(BaseTrainer):
         if pretrain is not None:
             emb_matrix = pretrain.emb
 
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model=self.bert_model, bert_tokenizer=self.bert_tokenizer, use_cuda=self.use_cuda)
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model=self.bert_model, bert_tokenizer=self.bert_tokenizer)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.
