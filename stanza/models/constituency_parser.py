@@ -275,8 +275,7 @@ def parse_args(args=None):
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     # Numbers are on a VLSP dataset, before adding attn or other improvements
     # baseline is an 80.6 model that occurs when trained using adadelta, lr 1.0
@@ -529,8 +528,6 @@ def parse_args(args=None):
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
-    if args.cpu:
-        args.cuda = False
 
     if args.optim is None and args.mode == 'train':
         if not args.multistage:
@@ -600,7 +597,7 @@ def main(args=None):
     utils.set_random_seed(args['seed'])
 
     logger.info("Running constituency parser in %s mode", args['mode'])
-    logger.debug("Using GPU: %s", args['cuda'])
+    logger.debug("Using device: %s", args['device'])
 
     model_save_each_file = None
     if args['save_each_name']:

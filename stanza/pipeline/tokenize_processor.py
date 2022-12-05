@@ -37,7 +37,7 @@ class TokenizeProcessor(UDProcessor):
         if config.get('pretokenized'):
             self._trainer = None
         else:
-            self._trainer = Trainer(model_file=config['model_path'], use_cuda=use_gpu)
+            self._trainer = Trainer(model_file=config['model_path'], device="cuda" if use_gpu else "cpu")
 
     def process_pre_tokenized_text(self, input_src):
         """

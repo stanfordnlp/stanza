@@ -83,8 +83,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
 
@@ -101,8 +100,6 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
     utils.set_random_seed(args.seed)
 
     args = vars(args)
@@ -173,7 +170,7 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training parser...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
 
     global_step = 0
     max_steps = args['max_steps']
@@ -270,8 +267,7 @@ def evaluate(args):
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

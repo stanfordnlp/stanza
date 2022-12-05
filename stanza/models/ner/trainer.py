@@ -60,7 +60,7 @@ def fix_singleton_tags(tags):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False,
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None,
                  train_classifier_only=False, foundation_cache=None):
         if model_file is not None:
             # load everything from file
@@ -80,10 +80,7 @@ class Trainer(BaseTrainer):
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if use_cuda:
-            self.model.cuda()
-        else:
-            self.model.cpu()
+        self.model = self.model.to(device)
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):

@@ -269,8 +269,7 @@ def build_parser():
 
     parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
 
-    parser.add_argument('--cuda', action='store_true', help='Use CUDA for training/testing', default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_false', help='Ignore CUDA.', dest='cuda')
+    utils.add_device_args(parser)
 
     return parser
 

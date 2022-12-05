@@ -26,7 +26,7 @@ def unpack_batch(batch, device):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, use_cuda=False, foundation_cache=None):
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None, foundation_cache=None):
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args=args, foundation_cache=foundation_cache)
@@ -36,10 +36,7 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if use_cuda:
-            self.model.cuda()
-        else:
-            self.model.cpu()
+        self.model = self.model.to(device)
         self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None))
 
     def update(self, batch, eval=False):

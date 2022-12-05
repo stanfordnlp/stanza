@@ -105,9 +105,7 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(model_params['model'], strict=False)
-
-        if args.cuda:
-            model.cuda()
+        model = model.to(args.device)
 
         logger.debug("-- MODEL CONFIG --")
         for k in model.config.__dict__:
@@ -178,9 +176,7 @@ class Trainer:
                                              bert_model=bert_model,
                                              bert_tokenizer=bert_tokenizer,
                                              args=args)
-
-        if args.cuda:
-            model.cuda()
+        model = model.to(args.device)
 
         optimizer = Trainer.build_optimizer(model, args)
 

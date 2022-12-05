@@ -46,7 +46,7 @@ class NERProcessor(UDProcessor):
             pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
             args = {'charlm_forward_file': charlm_forward,
                     'charlm_backward_file': charlm_backward}
-            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, use_cuda=use_gpu, foundation_cache=pipeline.foundation_cache)
+            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, device="cuda" if use_gpu else "cpu", foundation_cache=pipeline.foundation_cache)
             self.trainers.append(trainer)
 
         self._trainer = self.trainers[0]

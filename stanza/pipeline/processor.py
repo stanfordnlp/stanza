@@ -213,7 +213,7 @@ class UDProcessor(Processor):
     @staticmethod
     def filter_out_option(option):
         """ Filter out non-processor configurations """
-        options_to_filter = ['cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
+        options_to_filter = ['device', 'cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
         if option.endswith('_file') or option.endswith('_dir'):
             return True
         elif option in options_to_filter:

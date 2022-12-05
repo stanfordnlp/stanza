@@ -36,7 +36,7 @@ class ConstituencyProcessor(UDProcessor):
             "wordvec_pretrain_file": config.get('pretrain_path', None),
             "charlm_forward_file": config.get('forward_charlm_path', None),
             "charlm_backward_file": config.get('backward_charlm_path', None),
-            "cuda": use_gpu,
+            "device": "cuda" if use_gpu else "cpu",
         }
         trainer = Trainer.load(filename=config['model_path'],
                                args=args,
