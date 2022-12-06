@@ -101,8 +101,7 @@ def parse_args(args=None):
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--summary', action='store_true', help='Use summary writer to record progress.')
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
+    utils.add_device_args(parser)
     parser.add_argument('--seed', type=int, default=1234)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
@@ -119,8 +118,6 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args['cpu']:
-        args['cuda'] = False
     utils.set_random_seed(args['seed'])
 
     logger.info("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
@@ -330,8 +327,7 @@ def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
-    model = CharacterLanguageModel.load(model_file)
-    if args['cuda']: model = model.cuda()
+    model = CharacterLanguageModel.load(model_file).to(args['device'])
     vocab = model.vocab
     data = load_data(args['eval_file'], vocab, args['direction'])
     criterion = torch.nn.CrossEntropyLoss()

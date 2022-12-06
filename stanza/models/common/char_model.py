@@ -278,7 +278,7 @@ class CharacterLanguageModelTrainer():
     @classmethod
     def from_new_model(cls, args, vocab):
         model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
-        if args['cuda']: model = model.cuda()
+        model = model.to(args['device'])
         params = [param for param in model.parameters() if param.requires_grad]
         optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
         criterion = torch.nn.CrossEntropyLoss()
@@ -296,7 +296,7 @@ class CharacterLanguageModelTrainer():
         """
         state = torch.load(filename, lambda storage, loc: storage)
         model = CharacterLanguageModel.from_full_state(state['model'], finetune)
-        if args['cuda']: model = model.cuda()
+        model = model.to(args['device'])
 
         params = [param for param in model.parameters() if param.requires_grad]
         optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
