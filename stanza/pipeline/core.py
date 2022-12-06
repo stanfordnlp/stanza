@@ -15,6 +15,7 @@ from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.models.common.foundation_cache import FoundationCache
+from stanza.models.common.utils import default_device
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza.pipeline.langid_processor import LangIDProcessor
@@ -177,7 +178,7 @@ class Pipeline:
                  processors={},
                  logging_level=None,
                  verbose=None,
-                 use_gpu=True,
+                 use_gpu=None,
                  model_dir=None,
                  download_method=DownloadMethod.DOWNLOAD_RESOURCES,
                  resources_url=DEFAULT_RESOURCES_URL,
@@ -185,6 +186,7 @@ class Pipeline:
                  resources_version=DEFAULT_RESOURCES_VERSION,
                  proxies=None,
                  foundation_cache=None,
+                 device=None,
                  **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
@@ -256,8 +258,16 @@ class Pipeline:
 
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
-        self.use_gpu = torch.cuda.is_available() and use_gpu
-        logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
+
+        if device is None:
+            if use_gpu is None or use_gpu == True:
+                device = default_device()
+            else:
+                device = 'cpu'
+            if use_gpu == True and device == 'cpu':
+                logger.warning("GPU requested, but is not available!")
+        self.device = device
+        logger.info("Using device: {}".format(self.device))
 
         # set up processors
         pipeline_reqs_exceptions = []
@@ -277,7 +287,7 @@ class Pipeline:
                 # try to build processor, throw an exception if there is a requirements issue
                 self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
                                                                                           pipeline=self,
-                                                                                          use_gpu=self.use_gpu)
+                                                                                          device=self.device)
             except ProcessorRequirementsException as e:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)

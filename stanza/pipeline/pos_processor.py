@@ -20,13 +20,13 @@ class POSProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         # get pretrained word vectors
         self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                 'charlm_backward_file': config.get('backward_charlm_path', None)}
         # set up trainer
-        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], device="cuda" if use_gpu else "cpu", args=args, foundation_cache=pipeline.foundation_cache)
+        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], device=device, args=args, foundation_cache=pipeline.foundation_cache)
         self._tqdm = 'tqdm' in config and config['tqdm']
 
     def __str__(self):

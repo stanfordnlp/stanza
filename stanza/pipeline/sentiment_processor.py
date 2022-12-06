@@ -28,7 +28,7 @@ class SentimentProcessor(UDProcessor):
     # default batch size, measured in words per batch
     DEFAULT_BATCH_SIZE = 5000
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         # get pretrained word vectors
         pretrain_path = config.get('pretrain_path', None)
         forward_charlm_path = config.get('forward_charlm_path', None)
@@ -38,7 +38,7 @@ class SentimentProcessor(UDProcessor):
         # transformers downloads bert etc
         # however, elmo in general is not as good as using a
         # transformer, so it is unlikely we will ever fix this
-        args = SimpleNamespace(device = "cuda" if use_gpu else "cpu",
+        args = SimpleNamespace(device = device,
                                charlm_forward_file = forward_charlm_path,
                                charlm_backward_file = backward_charlm_path,
                                wordvec_pretrain_file = pretrain_path,

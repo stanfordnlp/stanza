@@ -20,9 +20,9 @@ class DepparseProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE, POS, LEMMA])
 
-    def __init__(self, config, pipeline, use_gpu):
+    def __init__(self, config, pipeline, device):
         self._pretagged = None
-        super().__init__(config, pipeline, use_gpu)
+        super().__init__(config, pipeline, device)
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged')
@@ -31,9 +31,9 @@ class DepparseProcessor(UDProcessor):
         else:
             self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
-        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], device="cuda" if use_gpu else "cpu")
+        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], device=device)
 
     def get_known_relations(self):
         """
