@@ -8,6 +8,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import Document
 
 from stanza.tests import *
+from stanza.tests.pipeline.pipeline_device_tests import check_on_gpu, check_on_cpu
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -222,3 +223,16 @@ class TestEnglishPipeline:
         nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency")
         doc = nlp("This is a test")
         assert str(doc.sentences[0].constituency) == '(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))'
+
+    def test_on_gpu(self, pipeline):
+        """
+        The default pipeline should have all the models on the GPU
+        """
+        check_on_gpu(pipeline)
+
+    def test_on_cpu(self):
+        """
+        Create a pipeline on the CPU, check that all the models on CPU
+        """
+        pipeline = stanza.Pipeline("en", dir=TEST_MODELS_DIR, use_gpu=False)
+        check_on_cpu(pipeline)
