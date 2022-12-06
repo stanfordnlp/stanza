@@ -117,7 +117,7 @@ def main(args=None):
     logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
-        train(args)
+        return train(args)
     else:
         evaluate(args)
 
@@ -294,6 +294,8 @@ def train(args):
     else:
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
+
+    return trainer
 
 def write_ner_results(filename, batch, preds):
     if len(batch.tags) != len(preds):
