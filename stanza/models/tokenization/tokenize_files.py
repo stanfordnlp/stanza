@@ -18,7 +18,7 @@ import zipfile
 import torch
 
 import stanza
-from stanza.models.common.utils import get_tqdm, open_read_text
+from stanza.models.common.utils import get_tqdm, open_read_text, default_device
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
@@ -56,7 +56,7 @@ def main(args=None):
     if args.tokenize_model_path:
         config = { "model_path": args.tokenize_model_path,
                    "check_requirements": False }
-        tokenizer = TokenizeProcessor(config, pipeline=None, use_gpu=torch.cuda.is_available())
+        tokenizer = TokenizeProcessor(config, pipeline=None, device=default_device())
     else:
         pipe = stanza.Pipeline(lang=args.lang, processors="tokenize", model_dir=args.model_dir)
         tokenizer = pipe.processors["tokenize"]

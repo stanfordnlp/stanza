@@ -17,8 +17,8 @@ class MWTProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE])
 
-    def _set_up_model(self, config, pipeline, use_gpu):
-        self._trainer = Trainer(model_file=config['model_path'], device="cuda" if use_gpu else "cpu")
+    def _set_up_model(self, config, pipeline, device):
+        self._trainer = Trainer(model_file=config['model_path'], device=device)
 
     def process(self, document):
         batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)

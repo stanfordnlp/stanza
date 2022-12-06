@@ -9,6 +9,7 @@ import copy
 import logging
 
 from stanza.models.common.doc import Document
+from stanza.models.common.utils import default_device
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline._constants import *
 from stanza.resources.common import DEFAULT_MODEL_DIR
@@ -30,6 +31,7 @@ class MultilingualPipeline:
         max_cache_size: int = 10,
         use_gpu: bool = None,
         restrict: bool = False,
+        device: str = None,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
@@ -57,14 +59,16 @@ class MultilingualPipeline:
                 self.lang_id_config['langid_lang_subset'] = known_langs
 
         # set use_gpu
-        if use_gpu is None:
-            self.use_gpu = torch.cuda.is_available()
-        else:
-            self.use_gpu = use_gpu
+        if device is None:
+            if use_gpu is None or use_gpu == True:
+                device = default_device()
+            else:
+                device = 'cpu'
+        self.device = device
         
         # build language id pipeline
         self.lang_id_pipeline = Pipeline(dir=self.model_dir, lang='multilingual', processors="langid", 
-                                         use_gpu=self.use_gpu, **self.lang_id_config)
+                                         device=self.device, **self.lang_id_config)
 
     def _update_pipeline_cache(self, lang):
         """
@@ -86,7 +90,7 @@ class MultilingualPipeline:
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
                 self.pipeline_cache.popitem(last=False)
-            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
+            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, device=self.device, **self.lang_configs[lang])
 
     def process(self, doc):
         """

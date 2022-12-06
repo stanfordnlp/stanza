@@ -19,24 +19,24 @@ class LemmaProcessor(UDProcessor):
     # default batch size
     DEFAULT_BATCH_SIZE = 5000
 
-    def __init__(self, config, pipeline, use_gpu):
+    def __init__(self, config, pipeline, device):
         # run lemmatizer in identity mode
         self._use_identity = None
         self._pretagged = None
-        super().__init__(config, pipeline, use_gpu)
+        super().__init__(config, pipeline, device)
 
     @property
     def use_identity(self):
         return self._use_identity
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         if config.get('use_identity') in ['True', True]:
             self._use_identity = True
             self._config = config
             self.config['batch_size'] = LemmaProcessor.DEFAULT_BATCH_SIZE
         else:
             self._use_identity = False
-            self._trainer = Trainer(model_file=config['model_path'], device="cuda" if use_gpu else "cpu")
+            self._trainer = Trainer(model_file=config['model_path'], device=device)
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged', None)
