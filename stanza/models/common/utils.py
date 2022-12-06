@@ -455,9 +455,9 @@ def add_device_args(parser):
     """
     Add args which specify cpu, cuda, or arbitrary device
     """
+    parser.add_argument('--device', type=str, default=default_device(), help='Which device to run on - use a torch device string name')
     parser.add_argument('--cuda', dest='device', action='store_const', const='cuda', help='Run on CUDA')
     parser.add_argument('--cpu', dest='device', action='store_const', const='cpu', help='Ignore CUDA and run on CPU')
-    parser.add_argument('--device', default=default_device(), help='Which device to run on - use a torch device string name')
 
 def load_elmo(elmo_model):
     # This import is here so that Elmo integration can be treated
