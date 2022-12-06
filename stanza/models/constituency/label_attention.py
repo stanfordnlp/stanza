@@ -594,7 +594,6 @@ class LabelAttention(nn.Module):
         outputs = outputs_padded[output_mask]
         # outputs: (d_l * len_inp) x d_kv or LAL: (d_l * len_inp) x d_kv
         # output_mask: (d_l * batch_size) x max_len
-        torch.cuda.empty_cache()
         outputs = self.combine_v(outputs)
         #print(f"outputs shape: {outputs.shape}")
         # outputs: len_inp x d_l x d_model, whereas a normal self-attention layer gets len_inp x d_model
