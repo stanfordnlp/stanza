@@ -90,13 +90,10 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
     if args.cpu:
         args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+
+    utils.set_random_seed(args.seed)
 
     args = vars(args)
     logger.info("Running lemmatizer in {} mode".format(args['mode']))
