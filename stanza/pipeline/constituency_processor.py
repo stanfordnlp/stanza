@@ -2,7 +2,7 @@
 Processor that attaches a constituency tree to a sentence
 """
 
-import stanza.models.constituency.trainer as trainer
+from stanza.models.constituency.trainer import Trainer
 
 from stanza.models.common import doc
 from stanza.models.common.utils import get_tqdm
@@ -38,10 +38,11 @@ class ConstituencyProcessor(UDProcessor):
             "charlm_backward_file": config.get('backward_charlm_path', None),
             "cuda": use_gpu,
         }
-        self._model = trainer.Trainer.load(filename=config['model_path'],
-                                           args=args,
-                                           foundation_cache=pipeline.foundation_cache)
-        self._model.model.eval()
+        trainer = Trainer.load(filename=config['model_path'],
+                               args=args,
+                               foundation_cache=pipeline.foundation_cache)
+        self._model = trainer.model
+        self._model.eval()
         # batch size counted as sentences
         self._batch_size = int(config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE))
         self._tqdm = 'tqdm' in config and config['tqdm']
@@ -49,14 +50,14 @@ class ConstituencyProcessor(UDProcessor):
     def process(self, document):
         sentences = document.sentences
 
-        if self._model.model.uses_xpos():
+        if self._model.uses_xpos():
             words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
         else:
             words = [[(w.text, w.upos) for w in s.words] for s in sentences]
         if self._tqdm:
             words = tqdm(words)
 
-        trees = self._model.model.parse_tagged_words(words, self._batch_size)
+        trees = self._model.parse_tagged_words(words, self._batch_size)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
 
@@ -67,4 +68,4 @@ class ConstituencyProcessor(UDProcessor):
         For a pipeline, this can be queried with
           pipeline.processors["constituency"].get_constituents()
         """
-        return set(self._model.model.constituents)
+        return set(self._model.constituents)
