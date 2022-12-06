@@ -55,13 +55,13 @@ class LangIDBiLSTM(nn.Module):
         # dropout layer
         self.dropout = nn.Dropout(p=self.dropout_prob)
 
-    def build_lang_mask(self, use_gpu=None):
+    def build_lang_mask(self):
         """
         Build language mask if a lang subset is specified (e.g. ["en", "fr"])
 
         The mask will be added to the results to set the prediction scores of illegal languages to -inf
         """
-        device = torch.device("cuda") if use_gpu else None
+        device = next(self.parameters()).device
         if self.lang_subset:
             lang_mask_list = [0.0 if lang in self.lang_subset else -float('inf') for lang in self.idx_to_tag]
             self.lang_mask = torch.tensor(lang_mask_list, device=device, dtype=torch.float)
@@ -121,6 +121,6 @@ class LangIDBiLSTM(nn.Module):
         model.load_state_dict(checkpoint["model_state_dict"])
         if use_cuda:
             model.to(torch.device("cuda"))
-        model.build_lang_mask(use_gpu=use_cuda)
+        model.build_lang_mask()
         return model
 
