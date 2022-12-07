@@ -11,7 +11,7 @@ class Tokenizer(nn.Module):
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
 
-        self.rnn = nn.LSTM(emb_dim + feat_dim, hidden_dim, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
+        self.rnn = nn.LSTM(emb_dim + feat_dim, hidden_dim, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=False, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
 
         if self.args['conv_res'] is not None:
             self.conv_res = nn.ModuleList()
@@ -30,7 +30,7 @@ class Tokenizer(nn.Module):
 
         if args['hierarchical']:
             in_dim = hidden_dim * 2
-            self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
+            self.rnn2 = nn.LSTM(in_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=False)
             self.tok_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
             self.sent_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
             if self.args['use_mwt']:
@@ -46,10 +46,10 @@ class Tokenizer(nn.Module):
         emb = self.dropout(emb)
         feats = self.dropout_feat(feats)
 
-
         emb = torch.cat([emb, feats], 2)
 
-        inp, _ = self.rnn(emb)
+        inp, _ = self.rnn(emb.transpose(0, 1))
+        inp = inp.transpose(0, 1)
 
         if self.args['conv_res'] is not None:
             conv_input = emb.transpose(1, 2).contiguous()
@@ -74,9 +74,11 @@ class Tokenizer(nn.Module):
 
         if self.args['hierarchical']:
             if self.args['hier_invtemp'] > 0:
-                inp2, _ = self.rnn2(inp * (1 - self.toknoise(torch.sigmoid(-tok0 * self.args['hier_invtemp']))))
+                inp2 = inp * (1 - self.toknoise(torch.sigmoid(-tok0 * self.args['hier_invtemp'])))
             else:
-                inp2, _ = self.rnn2(inp)
+                inp2 = inp
+            inp2, _ = self.rnn2(inp2.transpose(0, 1))
+            inp2 = inp2.transpose(0, 1)
 
             inp2 = self.dropout(inp2)
 
