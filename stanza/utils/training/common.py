@@ -64,6 +64,12 @@ BERT = {
     "de": "dbmdz/bert-base-german-cased",
 
     # https://huggingface.co/roberta-base
+    # an experiment with the constituency parser
+    # to compare roberta-base vs roberta-large had
+    # better results with roberta-large
+    # this was true even with more than 4 layers of roberta-large
+    # roberta-base:  0.9591
+    # roberta-large: 0.9577
     "en": "roberta-base",
 
     # NER scores for a couple Persian options:
