@@ -247,7 +247,7 @@ def augment_telugu(sents):
     return sents + new_sents
 
 COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
-def augment_comma_separations(sents):
+def augment_comma_separations(sents, ratio=0.03):
     """Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
 
     This leaves the tokens and all of the other data the same.  The
@@ -283,7 +283,7 @@ def augment_comma_separations(sents):
             continue
 
         match = COMMA_SEPARATED_RE.search(sentence[text_idx])
-        if match and random.random() < 0.03:
+        if match and random.random() < ratio:
             for idx, word in enumerate(sentence):
                 if word.startswith("#"):
                     continue
@@ -292,7 +292,7 @@ def augment_comma_separations(sents):
                     continue
                 if sentence[idx+1].split("\t")[1] != ',':
                     continue
-                if sentence[idx+2].split("\t")[2] != match.group(2):
+                if sentence[idx+2].split("\t")[1] != match.group(2):
                     continue
                 break
             if idx == len(sentence) - 1:

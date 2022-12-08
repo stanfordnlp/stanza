@@ -366,3 +366,29 @@ def test_augment_space_final_punct():
     doc2 = prepare_tokenizer_treebank.augment_move_comma(doc, ratio=1.0)
     expected = read_test_doc(ENGLISH_COMMA_SWAP_RESULT)
     assert doc2 == expected
+
+COMMA_SEP_TEST_CASE = """
+# text = Fuzzy people, floating people
+1	Fuzzy	fuzzy	ADJ	JJ	Degree=Pos	2	amod	2:amod	_
+2	people	people	NOUN	NNS	Number=Plur	0	root	0:root	SpaceAfter=No
+3	,	,	PUNCT	,	_	2	punct	2:punct	_
+4	floating	float	VERB	VBG	VerbForm=Ger	5	amod	5:amod	_
+5	people	people	NOUN	NNS	Number=Plur	2	appos	2:appos	_
+"""
+
+COMMA_SEP_TEST_EXPECTED = """
+# text = Fuzzy people,floating people
+1	Fuzzy	fuzzy	ADJ	JJ	Degree=Pos	2	amod	2:amod	_
+2	people	people	NOUN	NNS	Number=Plur	0	root	0:root	SpaceAfter=No
+3	,	,	PUNCT	,	_	2	punct	2:punct	SpaceAfter=No
+4	floating	float	VERB	VBG	VerbForm=Ger	5	amod	5:amod	_
+5	people	people	NOUN	NNS	Number=Plur	2	appos	2:appos	_
+"""
+
+def test_augment_comma_separations():
+    doc = read_test_doc(COMMA_SEP_TEST_CASE)
+    doc2 = prepare_tokenizer_treebank.augment_comma_separations(doc, ratio=1.0)
+
+    assert len(doc2) == 2
+    expected = read_test_doc(COMMA_SEP_TEST_EXPECTED)
+    assert doc2[1] == expected[0]
