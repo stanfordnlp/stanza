@@ -22,7 +22,7 @@ PARAGRAPH_BREAK = re.compile(r'\n\s*\n')
 def is_para_break(index, text):
     """ Detect if a paragraph break can be found, and return the length of the paragraph break sequence. """
     if text[index] == '\n':
-        para_break = PARAGRAPH_BREAK.match(text[index:])
+        para_break = PARAGRAPH_BREAK.match(text, index)
         if para_break:
             break_len = len(para_break.group(0))
             return True, break_len
