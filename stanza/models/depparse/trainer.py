@@ -22,7 +22,8 @@ def unpack_batch(batch, device):
     word_orig_idx = batch[12]
     sentlens = batch[13]
     wordlens = batch[14]
-    return inputs, orig_idx, word_orig_idx, sentlens, wordlens
+    text = batch[15]
+    return inputs, orig_idx, word_orig_idx, sentlens, wordlens, text
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -41,7 +42,7 @@ class Trainer(BaseTrainer):
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, device)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
         if eval:
@@ -49,7 +50,7 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -61,12 +62,12 @@ class Trainer(BaseTrainer):
 
     def predict(self, batch, unsort=True):
         device = next(self.model.parameters()).device
-        inputs, orig_idx, word_orig_idx, sentlens, wordlens = unpack_batch(batch, device)
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens)
+        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
         deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
 
