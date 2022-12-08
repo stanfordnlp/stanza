@@ -135,6 +135,7 @@ class DataLoader:
             processed_sent += [[ROOT_ID] + vocab['lemma'].map([w[4] for w in sent])]
             processed_sent += [[to_int(w[5], ignore_error=self.eval) for w in sent]]
             processed_sent += [vocab['deprel'].map([w[6] for w in sent])]
+            processed_sent.append([w[0] for w in sent])
             processed.append(processed_sent)
         return processed
 
@@ -150,7 +151,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 9
+        assert len(batch) == 10
 
         # sort sentences by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -178,7 +179,8 @@ class DataLoader:
         lemma = get_long_tensor(batch[6], batch_size)
         head = get_long_tensor(batch[7], batch_size)
         deprel = get_long_tensor(batch[8], batch_size)
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, orig_idx, word_orig_idx, sentlens, word_lens
+        text = batch[9]
+        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, orig_idx, word_orig_idx, sentlens, word_lens, text
 
     def load_doc(self, doc):
         data = doc.get([TEXT, UPOS, XPOS, FEATS, LEMMA, HEAD, DEPREL], as_sentences=True)
