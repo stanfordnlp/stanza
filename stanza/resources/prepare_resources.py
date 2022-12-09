@@ -204,6 +204,13 @@ pos_charlms = {
     },
 }
 
+# TODO: retrain all of the depparse models with the charlm
+depparse_charlms = {
+    "en": {
+        "combined": "1billion",
+    }
+}
+
 ner_charlms = {
     "en": {
         "conll03": "1billion",
@@ -429,6 +436,18 @@ def get_depparse_dependencies(lang, package):
         dependencies = [{'model': 'pretrain', 'package': package}]
     else:
         dependencies = [{'model': 'pretrain', 'package': depparse_pretrains[lang][package]}]
+
+    if lang in depparse_charlms and package in depparse_charlms[lang]:
+        charlm_package = depparse_charlms[lang][package]
+    else:
+        charlm_package = None
+        # TODO: when all depparse models are retrained,
+        # use the default charlms here
+        # charlm_package = default_charlms.get(lang, None)
+
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
 
     return dependencies
 
