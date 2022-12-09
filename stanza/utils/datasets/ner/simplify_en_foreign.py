@@ -1,5 +1,7 @@
 import argparse
 import os
+import tempfile
+
 import stanza
 from stanza.models.common.utils import get_tqdm
 from stanza.utils.default_paths import get_default_paths
@@ -24,21 +26,26 @@ def isfloat(num):
 
 def process_label(line, is_start=False):
     """
-    converting our stuff to conll labels:
+    Converts our stuff to conll labels
+
     event, product, work of art, norp -> MISC
     take out dates - can use Stanza to identify them as dates and eliminate them
     money requires some special care
     facility -> location  (there are examples of Bridge and Hospital in the data)
     the version of conll we used to train CoreNLP NER is here:
+
     Overall plan:
     Collapse Product, NORP, Money (extract only the symbols), into misc.
     Collapse Facilities into LOC
     Deletes Dates
+
     Rule for currency is that we take out labels for the numbers that return True for isfloat()
     Take out words that categorize money (Million, Billion, Trillion, Thousand, Hundred, Ten, Nine, Eight, Seven, Six, Five,
     Four, Three, Two, One)
     Take out punctuation characters
+
     If we remove the 'B' tag, then move it to the first remaining tag.
+
     Replace tags with 'O'
     is_start parameter signals whether or not this current line is the new start of a tag. Needed for when
     the previous line analyzed is the start of a MONEY tag but is removed because it is a non symbol- need to
@@ -135,24 +142,24 @@ def main():
 
     BASE_PATH = args.base_path
 
-    # Condense Labels
-    input_dir = os.path.join(BASE_PATH, "input")
-    output_dir = os.path.join(BASE_PATH, "output")
-    final_dir = os.path.join(BASE_PATH, "final")
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(final_dir, exist_ok=True)
-    for root, dirs, files in os.walk(input_dir):
-        if root[-6:] == "REVIEW":
-            batch_files = os.listdir(root)
-            for filename in batch_files:
-                file_path = os.path.join(root, filename)
-                write_new_file(output_dir, file_path, filename)
+    with tempfile.TemporaryDirectory(dir=BASE_PATH) as tempdir:
+        # Condense Labels
+        input_dir = os.path.join(BASE_PATH, "input")
+        final_dir = os.path.join(BASE_PATH, "4class")
+        os.makedirs(tempdir, exist_ok=True)
+        os.makedirs(final_dir, exist_ok=True)
+        for root, dirs, files in os.walk(input_dir):
+            if root[-6:] == "REVIEW":
+                batch_files = os.listdir(root)
+                for filename in batch_files:
+                    file_path = os.path.join(root, filename)
+                    write_new_file(tempdir, file_path, filename)
 
-    # REMOVE DATES
-    batch_files = os.listdir(output_dir)
-    pipe = stanza.Pipeline("en", processors="tokenize,ner", tokenize_pretokenized=True)
-    for filename in tqdm(batch_files):
-        write_file_stanza(pipe, output_dir, final_dir, filename)
+        # REMOVE DATES
+        batch_files = os.listdir(tempdir)
+        pipe = stanza.Pipeline("en", processors="tokenize,ner", tokenize_pretokenized=True)
+        for filename in tqdm(batch_files):
+            write_file_stanza(pipe, tempdir, final_dir, filename)
 
 if __name__ == '__main__':
     main()
