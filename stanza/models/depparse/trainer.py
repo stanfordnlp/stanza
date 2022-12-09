@@ -27,10 +27,10 @@ def unpack_batch(batch, device):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None):
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None, foundation_cache=None):
         if model_file is not None:
             # load everything from file
-            self.load(model_file, pretrain)
+            self.load(model_file, pretrain, args, foundation_cache)
         else:
             # build model from scratch
             self.args = args
@@ -94,7 +94,7 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, pretrain):
+    def load(self, filename, pretrain, args=None, foundation_cache=None):
         """
         Load a model from file, with preloaded pretrain embeddings. Here we allow the pretrain to be None or a dummy input,
         and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
@@ -105,11 +105,12 @@ class Trainer(BaseTrainer):
             logger.error("Cannot load model from {}".format(filename))
             raise
         self.args = checkpoint['config']
+        if args is not None: self.args.update(args)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
         if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
             emb_matrix = pretrain.emb
-        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix)
+        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
