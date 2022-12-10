@@ -10,11 +10,20 @@ from stanza.utils.datasets.ner.utils import read_tsv
 tqdm = get_tqdm()
 
 PUNCTUATION = """!"#%&'()*+, -./:;<=>?@[\]^_`{|}~"""
-LABELS_TO_MISC = {"Product", "NORP"}  # Doesn't include Money but this case is handled explicitly for processing
 MONEY_WORDS = {"million", "billion", "trillion", "millions", "billions", "trillions", "hundred", "hundreds",
                "lakh", "crore", # south asian english
                "tens", "of", "ten", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "couple"}
 
+# Doesn't include Money but this case is handled explicitly for processing
+LABEL_TRANSLATION = {
+    "Misc":         "MISC",
+    "Product":      "MISC",
+    "NORP":         "MISC",
+    "Facility":     "LOC",
+    "Location":     "LOC",
+    "Person":       "PER",
+    "Organization": "ORG",
+}
 
 def isfloat(num):
     try:
@@ -63,14 +72,17 @@ def process_label(line, is_start=False):
             is_start = True
             position = ""
         else:  # keep money tag
+            label_name = "MISC"
             if is_start:
                 position = "B-"
                 is_start = False
 
-    elif label_name in LABELS_TO_MISC:
-        label_name = "Misc"
-    elif label_name == "Facility":
-        label_name = "Location"
+    elif not label_name or label_name == "O":
+        pass
+    elif label_name in LABEL_TRANSLATION:
+        label_name = LABEL_TRANSLATION[label_name]
+    else:
+        raise ValueError("Oops, missed a label: %s" % label_name)
     return [token, position + label_name, is_start]
 
 
@@ -87,7 +99,10 @@ def write_new_file(save_dir, input_path, old_file):
                     fout.write("\n")
                     continue
                 label = line.split("\t")
-                edited = process_label(label, is_start=starts_b)  # processed label line labels
+                try:
+                    edited = process_label(label, is_start=starts_b)  # processed label line labels
+                except ValueError as e:
+                    raise ValueError("Error in %s at line %d" % (input_path, i)) from e
                 assert edited
                 starts_b = edited[-1]
                 fout.write("\t".join(edited[:-1]))
@@ -112,7 +127,7 @@ def write_file_stanza(pipe, input_dir, output_dir, file_name):
             tokens = [token for token, _ in segment]
             labels = [label for _, label in segment]
 
-            if any(x.endswith("Misc") for x in labels):
+            if any(x.endswith("MISC") for x in labels):
                 stanza_tags = ner_tags(pipe, tokens)
                 just_removed = False
                 for i, stanza_tag in enumerate(stanza_tags):
