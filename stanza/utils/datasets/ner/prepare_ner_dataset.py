@@ -328,6 +328,11 @@ SiNER is a Sindhi NER dataset
   - Then, prepare the dataset with this script:
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
 
+en_foreign-4class is an English non-US newswire dataset
+  - currently WIP.  annotated by MLTwist, collected at Stanford
+  - the 4 class version is converted to the 4 classes in conll,
+    then split into train/dev/test
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -365,7 +370,7 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_files
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -963,6 +968,11 @@ def process_sd_siner(paths, short_name):
             raise FileNotFoundError("Found an SiNER directory at %s but the directory did not contain the dataset" % in_directory)
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
+def process_en_foreign_4class(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
+    out_directory = paths["NER_DATA_DIR"]
+    random_shuffle_files(in_directory, out_directory, short_name)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -970,6 +980,7 @@ DATASET_MAPPING = {
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
+    "en_foreign-4class": process_en_foreign_4class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,
