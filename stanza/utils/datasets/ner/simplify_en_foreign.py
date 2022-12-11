@@ -144,7 +144,7 @@ def write_file_stanza(pipe, input_dir, output_dir, file_name):
             fout.write("\n")
 
 
-def main():
+def main(args=None):
     BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
     if not os.path.exists(BASE_PATH):
         paths = get_default_paths()
@@ -153,13 +153,13 @@ def main():
     # TODO: use a temp dir for the intermediate files
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
     BASE_PATH = args.base_path
 
     with tempfile.TemporaryDirectory(dir=BASE_PATH) as tempdir:
         # Condense Labels
-        input_dir = os.path.join(BASE_PATH, "input")
+        input_dir = os.path.join(BASE_PATH, "en-foreign-newswire")
         final_dir = os.path.join(BASE_PATH, "4class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)

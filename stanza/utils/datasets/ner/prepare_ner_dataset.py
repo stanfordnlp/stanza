@@ -332,6 +332,8 @@ en_foreign-4class is an English non-US newswire dataset
   - currently WIP.  annotated by MLTwist, collected at Stanford
   - the 4 class version is converted to the 4 classes in conll,
     then split into train/dev/test
+  - clone https://github.com/stanfordnlp/en-foreign-newswire
+    into $NERBASE/en_foreign
 
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
@@ -368,6 +370,7 @@ import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
+import stanza.utils.datasets.ner.simplify_en_foreign as simplify_en_foreign
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_files
@@ -969,6 +972,8 @@ def process_sd_siner(paths, short_name):
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
 def process_en_foreign_4class(paths, short_name):
+    # TODO: simplify to a temp directory?
+    simplify_en_foreign.main(args=[])
     in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
     out_directory = paths["NER_DATA_DIR"]
     random_shuffle_files(in_directory, out_directory, short_name)
