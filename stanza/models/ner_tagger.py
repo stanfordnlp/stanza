@@ -135,10 +135,20 @@ def load_pretrain(args):
         pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
     return pretrain
 
+# TODO: refactor with the same thing in tagger.py and elsewhere
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_nertagger.pt"
+
+    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
+        return save_name
+    return os.path.join(args['save_dir'], save_name)
+
 def train(args):
-    utils.ensure_dir(args['save_dir'])
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
-        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
 
     pretrain = None
     vocab = None
@@ -317,8 +327,7 @@ def write_ner_results(filename, batch, preds):
 
 def evaluate(args):
     # file paths
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
-        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
 
     loaded_args, trainer, vocab = load_model(args, model_file)
     logger.debug("Loaded model for eval from %s", model_file)
