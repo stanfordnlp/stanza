@@ -26,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("output_pt", default=None, help="Where to write the converted PT file")
     parser.add_argument("input_vec", default=None, help="Unconverted vectors file")
-    parser.add_argument("max_vocab", default=-1, nargs="?", help="How many vectors to convert.  -1 means convert them all")
+    parser.add_argument("max_vocab", type=int, default=-1, nargs="?", help="How many vectors to convert.  -1 means convert them all")
     args = parser.parse_args()
 
     if os.path.exists(args.output_pt):
