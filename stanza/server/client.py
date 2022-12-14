@@ -590,6 +590,7 @@ class CoreNLPClient(RobustService):
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
         """
         Send a regex-related request to the CoreNLP server.
+
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
         :param (str | unicode) pattern: regex pattern
