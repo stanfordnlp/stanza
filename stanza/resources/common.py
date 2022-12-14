@@ -531,7 +531,8 @@ def download(
         resources_branch=None,
         resources_version=DEFAULT_RESOURCES_VERSION,
         model_url=DEFAULT_MODEL_URL,
-        proxies=None
+        proxies=None,
+        download_json=True
     ):
     # set global logging level
     set_logging_level(logging_level, verbose)
@@ -540,7 +541,11 @@ def download(
         lang, model_dir, package, processors
     )
 
-    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
+        if not download_json:
+            logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
+        download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+
     resources = load_resources_json(model_dir)
     if lang not in resources:
         raise UnknownLanguageError(lang)
