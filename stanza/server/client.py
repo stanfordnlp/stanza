@@ -579,7 +579,9 @@ class CoreNLPClient(RobustService):
         # so we may need to manually override the annotators
         # to include parse in order for tregex to do anything
         if annotators is None and self.annotators is not None:
-            if "parse" not in self.annotators:
+            assert isinstance(self.annotators, str)
+            pieces = self.annotators.split(",")
+            if "parse" not in pieces:
                 annotators = self.annotators + ",parse"
         else:
             annotators = "tokenize,ssplit,pos,parse"

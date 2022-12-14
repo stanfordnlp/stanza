@@ -143,6 +143,19 @@ class TestCoreNLPClient:
                 },
                 "sentence": 0,}]
 
+    def test_tregex(self, corenlp_client):
+        # the PP should be easy to parse
+        pattern = 'PP < NP'
+        matches = corenlp_client.tregex(TEXT, pattern)
+        print(matches)
+        assert matches == {
+            'sentences': [
+                {'0': {'sentIndex': 0, 'characterOffsetBegin': 45, 'codepointOffsetBegin': 45, 'characterOffsetEnd': 66, 'codepointOffsetEnd': 66,
+                       'match': '(PP (IN with)\n  (NP (NNP Stanford) (NNP CoreNLP)))\n',
+                       'spanString': 'with Stanford CoreNLP', 'namedNodes': []}}
+            ]
+        }
+
 
     def test_external_server_legacy_start_server(self):
         """ Test starting up an external server and accessing with a client with start_server=False """
