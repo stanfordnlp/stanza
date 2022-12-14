@@ -33,7 +33,7 @@ def short_confusion():
     return confusion
 
 EXPECTED_SIMPLE_OUTPUT = """
-     t/p      O B-ORG E-ORG B-PER E-PER
+     t\\p      O B-ORG E-ORG B-PER E-PER
         O     4     0     0     0     0
     B-ORG     0     1     0     1     0
     E-ORG     0     0     1     0     1
@@ -42,7 +42,7 @@ EXPECTED_SIMPLE_OUTPUT = """
 """[1:-1]  # don't want to strip
 
 EXPECTED_SHORT_OUTPUT = """
-     t/p      O     A B-ORG B-PER E-ORG E-PER
+     t\\p      O     A B-ORG B-PER E-ORG E-PER
         O     4     0     0     0     0     0
         A     0     0     1     0     0     0
     B-ORG     0     0     0     1     0     0
