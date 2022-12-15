@@ -12,6 +12,7 @@ import shlex
 import subprocess
 import time
 
+from stanza.models.constituency import tree_reader
 from stanza.tests import *
 
 # set the marker for this module
@@ -153,6 +154,22 @@ class TestCoreNLPClient:
                 {'0': {'sentIndex': 0, 'characterOffsetBegin': 45, 'codepointOffsetBegin': 45, 'characterOffsetEnd': 66, 'codepointOffsetEnd': 66,
                        'match': '(PP (IN with)\n  (NP (NNP Stanford) (NNP CoreNLP)))\n',
                        'spanString': 'with Stanford CoreNLP', 'namedNodes': []}}
+            ]
+        }
+
+    def ztest_tregex_trees(self, corenlp_client):
+        """
+        Test the results of tregex run on trees w/o parsing
+
+        TODO: this needs a CoreNLP more recent than 4.5.1
+        """
+        trees = tree_reader.read_trees("(ROOT (S (NP (NNP Jennifer)) (VP (VBZ has) (NP (JJ blue) (NN skin)))))   (ROOT (S (NP (PRP I)) (VP (VBP like) (NP (PRP$ her) (NNS antennae)))))")
+        pattern = "VP < NP"
+        matches = corenlp_client.tregex(pattern=pattern, trees=trees)
+        assert matches == {
+            'sentences': [
+                {'0': {'sentIndex': 0, 'match': '(VP (VBZ has)\n  (NP (JJ blue) (NN skin)))\n', 'spanString': 'has blue skin', 'namedNodes': []}},
+                {'0': {'sentIndex': 1, 'match': '(VP (VBP like)\n  (NP (PRP$ her) (NNS antennae)))\n', 'spanString': 'like her antennae', 'namedNodes': []}}
             ]
         }
 
