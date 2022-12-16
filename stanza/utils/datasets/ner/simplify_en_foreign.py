@@ -63,8 +63,8 @@ def process_label(line, is_start=False):
     if not line:
         return []
     token = line[0]
-    outermost_label = line[-1]
-    position, label_name = outermost_label[:2], outermost_label[2:]
+    biggest_label = line[1]
+    position, label_name = biggest_label[:2], biggest_label[2:]
 
     if label_name == "Money":
         if token.lower() in MONEY_WORDS or token in PUNCTUATION or isfloat(token):  # remove this tag
