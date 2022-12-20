@@ -130,7 +130,7 @@ def train(args):
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
-    doc.set_mwt_expansions(dev_preds)
+    doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
     CoNLL.write_doc2conll(doc, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
@@ -179,7 +179,7 @@ def train(args):
                 logger.info("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt_expansions(dev_preds)
+            doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
             CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -214,7 +214,7 @@ def train(args):
             logger.info("[Ensembling dict with seq2seq model...]")
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt_expansions(dev_preds)
+            doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
             CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             logger.info("Ensemble dev F1 = {:.2f}".format(dev_score*100))
@@ -260,7 +260,7 @@ def evaluate(args):
 
     # write to file and score
     doc = copy.deepcopy(batch.doc)
-    doc.set_mwt_expansions(preds)
+    doc.set_mwt_expansions(preds, fake_dependencies=True)
     CoNLL.write_doc2conll(doc, system_pred_file)
 
     if gold_file is not None:

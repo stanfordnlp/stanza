@@ -287,7 +287,7 @@ class Document(StanzaObject):
                             setattr(unit, field, content)
                     cidx += 1
 
-    def set_mwt_expansions(self, expansions):
+    def set_mwt_expansions(self, expansions, fake_dependencies=False):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
         will be expected for each multi-word token.
         """
@@ -324,7 +324,10 @@ class Document(StanzaObject):
                     word.parent = token
                     sentence.words.append(word)
 
-            sentence.rebuild_dependencies()
+            if fake_dependencies:
+                sentence.build_fake_dependencies()
+            else:
+                sentence.rebuild_dependencies()
 
         self._count_words() # update number of words & tokens
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
@@ -613,6 +616,14 @@ class Sentence(StanzaObject):
                 if word.head != head.id:
                     raise ValueError("Dependency tree is incorrectly constructed")
             self.dependencies.append((head, word.deprel, word))
+
+    def build_fake_dependencies(self):
+        self.dependencies = []
+        for word_idx, word in enumerate(self.words):
+            word.head = word_idx   # note that this goes one previous to the index
+            word.deprel = "root" if word_idx == 0 else "dep"
+            word.deps = "%d:%s" % (word.head, word.deprel)
+            self.dependencies.append((word_idx, word.deprel, word))
 
     def print_dependencies(self, file=None):
         """ Print the dependencies for this sentence. """
