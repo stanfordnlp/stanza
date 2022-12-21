@@ -47,20 +47,14 @@ def test_dict_to_conll():
 def test_dict_to_doc_and_doc_to_dict():
     """
     Test the conversion from raw dict to Document and back
+
     This code path will first turn start_char|end_char into start_char & end_char fields in the Document
     That version to a dict will have separate fields for each of those
     Finally, the conversion from that dict to a list of conll entries should convert that back to misc
     """
     doc = Document(DICT)
     dicts = doc.to_dict()
-    dicts_tupleid = []
-    for sentence in dicts:
-        items = []
-        for item in sentence:
-            item['id'] = item['id'] if isinstance(item['id'], tuple) else (item['id'], )
-            items.append(item)
-        dicts_tupleid.append(items)
-    conll = CoNLL.convert_dict(DICT)
+    conll = CoNLL.convert_dict(dicts)
     assert conll == CONLL
 
 # sample is two sentences long so that the tests check multiple sentences
