@@ -113,8 +113,7 @@ EN_DOC_CONLLU_GOLD = """
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O
-
-""".lstrip()
+""".strip()
 
 EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # text = Barack Obama was born in Hawaii.
@@ -143,8 +142,7 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O
-
-""".lstrip()
+""".strip()
 
 class TestEnglishPipeline:
     @pytest.fixture(scope="class")
@@ -161,7 +159,7 @@ class TestEnglishPipeline:
 
 
     def test_conllu(self, processed_doc):
-        assert CoNLL.doc2conll_text(processed_doc) == EN_DOC_CONLLU_GOLD
+        assert "{:C}".format(processed_doc) == EN_DOC_CONLLU_GOLD
 
 
     def test_tokens(self, processed_doc):
@@ -189,7 +187,7 @@ class TestEnglishPipeline:
 
 
     def test_conllu_multidoc(self, processed_multidoc):
-        assert "".join([CoNLL.doc2conll_text(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
     def test_tokens_multidoc(self, processed_multidoc):
         assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
