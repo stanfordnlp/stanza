@@ -121,6 +121,37 @@ def check_russian_doc(doc):
     assert lines[1] == sentence[1]
     assert lines[2] == sentence[2]
 
+    # assert that the weird deprel=list:goeswith was properly handled
+    assert doc.sentences[0].words[2].head == 1
+    assert doc.sentences[0].words[2].deprel == "list:goeswith"
+
+def test_write_russian_doc(tmp_path):
+    """
+    Specifically test the write_doc2conll method
+    """
+    filename = tmp_path / "russian.conll"
+    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
+    check_russian_doc(doc)
+    CoNLL.write_doc2conll(doc, filename)
+
+    with open(filename) as fin:
+        text = fin.read()
+
+    # the conll docs have to end with \n\n
+    assert text.endswith("\n\n")
+
+    # but to compare against the original, strip off the whitespace
+    text = text.strip()
+
+    # we skip the first sentence because the "deprel=list:goeswith" is weird
+    # note that the deprel itself is checked in check_russian_doc
+    text = text[text.find("# sent_id = 4"):]
+    sample = RUSSIAN_SAMPLE[RUSSIAN_SAMPLE.find("# sent_id = 4"):]
+    assert text == sample
+
+    doc2 = CoNLL.conll2doc(filename)
+    check_russian_doc(doc2)
+
 def test_doc_with_comments():
     """
     Test that a doc with comments gets converted back with comments
