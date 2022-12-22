@@ -30,6 +30,10 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 
+# field indices when converting the document to conll
+FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
+FIELD_NUM = len(FIELD_TO_IDX)
+
 def _readonly_setter(self, name):
     full_classname = self.__class__.__module__
     if full_classname is None:
@@ -376,6 +380,14 @@ class Document(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+    def __format__(self, spec):
+        if spec == 'c':
+            return "\n\n".join("{:c}".format(s) for s in self.sentences)
+        elif spec == 'C':
+            return "\n\n".join("{:C}".format(s) for s in self.sentences)
+        else:
+            return str(self)
+
     def to_serialized(self):
         """ Dumps the whole document including text to a byte array containing a list of list of dictionaries for each token in each sentence in the doc.
         """
@@ -669,6 +681,18 @@ class Sentence(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+    def __format__(self, spec):
+        if spec == 'c':
+            return "\n".join(token.to_conll_text() for token in self.tokens)
+        elif spec == 'C':
+            tokens = "\n".join(token.to_conll_text() for token in self.tokens)
+            if len(self.comments) > 0:
+                text = "\n".join(self.comments)
+                return text + "\n" + tokens
+            return tokens
+        else:
+            return str(self)
+
 def init_from_misc(unit):
     """Create attributes by parsing from the `misc` field.
 
@@ -694,6 +718,35 @@ def init_from_misc(unit):
                 continue
         remaining_values.append(item)
     unit._misc = "|".join(remaining_values)
+
+
+def dict_to_conll_text(token_dict):
+    token_conll = ['_' for i in range(FIELD_NUM)]
+    misc = []
+    for key in token_dict:
+        if key == START_CHAR or key == END_CHAR:
+            misc.append("{}={}".format(key, token_dict[key]))
+        elif key == NER:
+            # TODO: potentially need to escape =|\ in the NER
+            misc.append("{}={}".format(key, token_dict[key]))
+        elif key == MISC:
+            # avoid appending a blank misc entry.
+            # otherwise the resulting misc field in the conll doc will wind up being blank text
+            # TODO: potentially need to escape =|\ in the MISC as well
+            if token_dict[key]:
+                misc.append(token_dict[key])
+        elif key == ID:
+            token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
+        elif key in FIELD_TO_IDX:
+            token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+    if misc:
+        token_conll[FIELD_TO_IDX[MISC]] = "|".join(misc)
+    else:
+        token_conll[FIELD_TO_IDX[MISC]] = '_'
+    # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
+    if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
+        token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
+    return "\t".join(token_conll)
 
 
 class Token(StanzaObject):
@@ -804,6 +857,17 @@ class Token(StanzaObject):
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+
+    def __format__(self, spec):
+        if spec == 'C':
+            return "\n".join(self.to_conll_text())
+        elif spec == 'P':
+            return self.pretty_print()
+        else:
+            return str(self)
+
+    def to_conll_text(self):
+        return "\n".join(dict_to_conll_text(x) for x in self.to_dict())
 
     def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER]):
         """ Dumps the token into a list of dictionary for this token with its extended words
@@ -1009,6 +1073,21 @@ class Word(StanzaObject):
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+
+    def __format__(self, spec):
+        if spec == 'C':
+            return self.to_conll_text()
+        elif spec == 'P':
+            return self.pretty_print()
+        else:
+            return str(self)
+
+    def to_conll_text(self):
+        """
+        Turn a word into a conll representation (10 column tab separated)
+        """
+        token_dict = self.to_dict()
+        return dict_to_conll_text(token_dict)
 
     def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
         """ Dumps the word into a dictionary.
