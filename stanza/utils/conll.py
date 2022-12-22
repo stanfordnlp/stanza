@@ -3,6 +3,7 @@ Utility functions for the loading and conversion of CoNLL-format files.
 """
 import os
 import io
+import warnings
 from zipfile import ZipFile
 
 from stanza.models.common.doc import Document
@@ -119,11 +120,12 @@ class CoNLL:
         Input: dictionary format data, which is a list of list of dictionaries for each token in each sentence in the data.
         Output: CoNLL-U format data, which is a list of list of list for each token in each sentence in the data.
 
-        TODO: deprecate this and then remove it in a future release
+        TODO: remove in the next release
         """
         doc = Document(doc_dict)
         doc_conll = CoNLL.doc2conll(doc, include_comments=False)
         doc_conll = [[x.split("\t") for x in sentence] for sentence in doc_conll]
+        warnings.warn('convert_dict is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
         return doc_conll
 
     @staticmethod
@@ -131,13 +133,14 @@ class CoNLL:
         """
         Dump the loaded CoNLL-U format list data to string.
 
-        TODO: deprecate and remove
+        TODO: remove in the next release
         """
         return_string = ""
         for sent in doc:
             for ln in sent:
                 return_string += ("\t".join(ln)+"\n")
             return_string += "\n"
+        warnings.warn('conll_as_string is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
         return return_string
 
     @staticmethod
@@ -145,11 +148,8 @@ class CoNLL:
         """
         Convert the dictionary format input data to the CoNLL-U format output data and write to a file.
         """
-        doc_conll = CoNLL.convert_dict(doc_dict)
-        conll_string = CoNLL.conll_as_string(doc_conll)
-        with open(filename, 'w', encoding='utf-8') as outfile:
-            outfile.write(conll_string)
-        return
+        doc = Document(doc_dict)
+        write_doc2conll(doc, filename)
 
 
     @staticmethod
@@ -159,7 +159,7 @@ class CoNLL:
 
         Each sentence is represented by a list of strings: first the comments, then the converted tokens
 
-        TODO: deprecate and remove
+        TODO: remove in the next release
         """
         doc_conll = []
         for sentence in doc.sentences:
@@ -168,6 +168,7 @@ class CoNLL:
                 sent_conll.extend(token.to_conll_text().split("\n"))
             doc_conll.append(sent_conll)
 
+        warnings.warn('doc2conll is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
         return doc_conll
 
     @staticmethod
@@ -175,8 +176,9 @@ class CoNLL:
         """
         Convert a Document to a big block of text.
 
-        TODO: deprecate and remove
+        TODO: remove in the next release
         """
+        warnings.warn('doc2conll_text is deprecated.  Please use "{:C}".format(doc)', stacklevel=2)
         return "{:C}".format(doc)
 
     @staticmethod
