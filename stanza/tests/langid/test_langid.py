@@ -6,6 +6,7 @@ import pytest
 
 from stanza.models.common.doc import Document
 from stanza.pipeline.core import Pipeline
+from stanza.pipeline.langid_processor import LangIDProcessor
 from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -568,6 +569,14 @@ def test_text_cleaning(basic_multilingual, clean_multilingual):
     assert clean_multilingual.processors["langid"]._clean_text
     clean_multilingual(docs)
     assert [doc.lang for doc in docs] == ["fr", "fr"]
+
+def test_emoji_cleaning():
+    TEXT = ["Sh'reyan has nice antennae :thumbs_up:",
+            "This is🐱 a cat"]
+    EXPECTED = ["Sh'reyan has nice antennae",
+                "This is  a cat"]
+    for text, expected in zip(TEXT, EXPECTED):
+        assert LangIDProcessor.clean_text(text) == expected
 
 def test_lang_subset(basic_multilingual, enfr_multilingual, en_multilingual):
     """
