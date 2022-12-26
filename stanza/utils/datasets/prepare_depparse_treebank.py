@@ -85,7 +85,11 @@ def process_treebank(treebank, paths, args) -> None:
         base_args = base_args + ['--save_dir', tagger_dir, '--save_name', tagger_name]
 
         # word vector file for POS
-        base_args = base_args + wordvec_args(short_language, dataset, args)
+        if args.wordvec_pretrain_file:
+            base_args += ["--wordvec_pretrain_file", args.wordvec_pretrain_file]
+        else:
+            base_args = base_args + wordvec_args(short_language, dataset, [])
+
 
         # charlm for POS
         charlm = choose_charlm(short_language, dataset, args.charlm, default_charlms, pos_charlms)
