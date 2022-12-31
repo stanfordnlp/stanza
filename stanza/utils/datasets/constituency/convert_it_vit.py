@@ -600,9 +600,8 @@ def convert_it_vit(paths, dataset_name, debug_sentence=None):
     # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
 
     # needs at least UD 2.11 or this will not work
-    # in the meantime, the git version of VIT will suffice
     con_directory = paths["CONSTITUENCY_BASE"]
-    ud_directory = os.path.join(paths["UDBASE_GIT"], "UD_Italian-VIT")
+    ud_directory = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
     output_directory = paths["CONSTITUENCY_DATA_DIR"]
 
     con_filename = os.path.join(con_directory, "italian", "it_vit", "VITwritten", "VITconstsyntNumb")
