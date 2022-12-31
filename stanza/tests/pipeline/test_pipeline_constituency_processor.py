@@ -26,6 +26,20 @@ def test_sorted_big_batch(foundation_cache):
     doc = pipe(TEST_TEXT)
     check_results(doc)
 
+def test_comments(foundation_cache):
+    """
+    Test that the pipeline is creating constituency comments
+    """
+    pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", foundation_cache=foundation_cache)
+    doc = pipe(TEST_TEXT)
+    check_results(doc)
+    for sentence in doc.sentences:
+        assert any(x.startswith("# constituency = ") for x in sentence.comments)
+    doc.sentences[0].constituency = "asdf"
+    assert "# constituency = asdf" in doc.sentences[0].comments
+    for sentence in doc.sentences:
+        assert len([x for x in sentence.comments if x.startswith("# constituency")]) == 1
+
 def test_illegal_batch_size(foundation_cache):
     stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos", constituency_batch_size="zzz", foundation_cache=foundation_cache)
     with pytest.raises(ValueError):
