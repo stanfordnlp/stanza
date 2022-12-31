@@ -29,6 +29,7 @@ START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
+CONSTITUENCY = 'constituency'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
@@ -591,6 +592,30 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+
+    @property
+    def constituency(self):
+        """ Returns the constituency tree for this sentence """
+        return self._constituency
+
+    @constituency.setter
+    def constituency(self, value):
+        """
+        Set the constituency tree
+
+        This incidentally updates the #constituency comment if it already exists,
+        or otherwise creates a new comment # constituency = ...
+        """
+        self._constituency = value
+        constituency_comment = "# constituency = " + str(value)
+        constituency_comment = constituency_comment.replace("\n", "*NL*").replace("\r", "")
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# constituency = "):
+                self._comments[comment_idx] = constituency_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(constituency_comment)
+
 
     @property
     def comments(self):

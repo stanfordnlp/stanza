@@ -2,7 +2,7 @@ import pytest
 
 import stanza
 from stanza.tests import *
-from stanza.models.common.doc import Document, ID, TEXT, NER
+from stanza.models.common.doc import Document, ID, TEXT, NER, CONSTITUENCY
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -54,4 +54,33 @@ def test_set_tokens(doc):
     result = doc.get(NER, from_token=True)
     assert result == ner_contents
 
+
+def test_constituency_comment(doc):
+    """
+    Test that setting the constituency tree on a doc sets the constituency comment
+    """
+    for sentence in doc.sentences:
+        assert len([x for x in sentence.comments if x.startswith("# constituency")]) == 0
+
+    # currently nothing is checking that the items are actually trees
+    trees = ["asdf", "zzzz"]
+    doc.set(fields=CONSTITUENCY,
+            contents=trees,
+            to_sentence=True)
+
+    for sentence, expected in zip(doc.sentences, trees):
+        constituency_comments = [x for x in sentence.comments if x.startswith("# constituency")]
+        assert len(constituency_comments) == 1
+        assert constituency_comments[0].endswith(expected)
+
+    # Test that if we replace the trees with an updated tree, the comment is also replaced
+    trees = ["zzzz", "asdf"]
+    doc.set(fields=CONSTITUENCY,
+            contents=trees,
+            to_sentence=True)
+
+    for sentence, expected in zip(doc.sentences, trees):
+        constituency_comments = [x for x in sentence.comments if x.startswith("# constituency")]
+        assert len(constituency_comments) == 1
+        assert constituency_comments[0].endswith(expected)
 

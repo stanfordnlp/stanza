@@ -89,6 +89,7 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 EN_DOC_CONLLU_GOLD = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
+# constituency = (ROOT (S (NP (NNP Barack) (NNP Obama)) (VP (VBD was) (VP (VBN born) (PP (IN in) (NP (NNP Hawaii))))) (. .)))
 1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
 2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
@@ -99,6 +100,7 @@ EN_DOC_CONLLU_GOLD = """
 
 # text = He was elected president in 2008.
 # sent_id = 1
+# constituency = (ROOT (S (NP (PRP He)) (VP (VBD was) (VP (VBN elected) (S (NP (NN president))) (PP (IN in) (NP (CD 2008))))) (. .)))
 1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=34|end_char=36|ner=O
 2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=37|end_char=40|ner=O
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48|ner=O
@@ -109,6 +111,7 @@ EN_DOC_CONLLU_GOLD = """
 
 # text = Obama attended Harvard.
 # sent_id = 2
+# constituency = (ROOT (S (NP (NNP Obama)) (VP (VBD attended) (NP (NNP Harvard))) (. .)))
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
@@ -118,6 +121,7 @@ EN_DOC_CONLLU_GOLD = """
 EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
+# constituency = (ROOT (S (NP (NNP Barack) (NNP Obama)) (VP (VBD was) (VP (VBN born) (PP (IN in) (NP (NNP Hawaii))))) (. .)))
 1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
 2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
@@ -128,6 +132,7 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 # text = He was elected president in 2008.
 # sent_id = 1
+# constituency = (ROOT (S (NP (PRP He)) (VP (VBD was) (VP (VBN elected) (S (NP (NN president))) (PP (IN in) (NP (CD 2008))))) (. .)))
 1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=0|end_char=2|ner=O
 2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=3|end_char=6|ner=O
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=7|end_char=14|ner=O
@@ -138,6 +143,7 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 # text = Obama attended Harvard.
 # sent_id = 2
+# constituency = (ROOT (S (NP (NNP Obama)) (VP (VBD attended) (NP (NNP Harvard))) (. .)))
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
