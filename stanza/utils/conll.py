@@ -149,7 +149,7 @@ class CoNLL:
         Convert the dictionary format input data to the CoNLL-U format output data and write to a file.
         """
         doc = Document(doc_dict)
-        write_doc2conll(doc, filename)
+        CoNLL.write_doc2conll(doc, filename)
 
 
     @staticmethod
