@@ -433,13 +433,22 @@ class Sentence(StanzaObject):
                 entry[ID] = (i+1, )
             if isinstance(entry[ID], int):
                 entry[ID] = (entry[ID], )
-            m = (len(entry.get(ID)) > 1)
-            n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
-            if m or n: # if this token is a multi-word token
-                if m: st, en = entry[ID]
+            if len(entry.get(ID)) > 1: # if this token is a multi-word token
+                st, en = entry[ID]
                 self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
+                if len(self.words) > 0 and self.words[-1].id == new_word.id:
+                    # this can happen in the following context:
+                    # a document was created with MWT=Yes to mark that a token should be split
+                    # and then there was an MWT "expansion" with a single word after that token
+                    # we replace the Word in the Token assuming that the expansion token might
+                    # have more information than the Token dict did
+                    # note that a single word MWT like that can be detected with something like
+                    #   multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None)
+                    self.words[-1] = new_word
+                    self.tokens[-1].words[-1] = new_word
+                    continue
                 self.words.append(new_word)
                 idx = entry.get(ID)[0]
                 if idx <= en:
