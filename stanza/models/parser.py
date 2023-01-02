@@ -312,6 +312,9 @@ def evaluate(args):
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if gold_file is not None:
+        gold_doc = CoNLL.conll2doc(input_file=gold_file)
+
+        scorer.score_named_dependencies(batch.doc, gold_doc)
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("Parser score:")
