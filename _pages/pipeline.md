@@ -86,6 +86,11 @@ class CoolLemmatizer(ProcessorVariant):
 
 This lemmatizer will replace all of the functionality of the Stanza lemmatizer when it's used in the pipeline, and lemmatize every single word to "cool".
 
+{% include alerts.html %}
+{{ note }}
+{{ "It is essential to import the file where the variant is defined to trigger the `@register_processor_variant`" | markdownify }}
+{{ end }}
+
 ### Building your own Processors and using them in the neural pipeline
 
 New in v1.1
