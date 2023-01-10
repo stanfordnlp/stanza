@@ -60,7 +60,8 @@ class Processor(ABC):
         self._set_up_variants(config, device)
         # run set up process
         # set up what annotations are required based on config
-        self._set_up_requires()
+        if not self._set_up_variant_requires():
+            self._set_up_requires()
         # set up what annotations are provided based on config
         self._set_up_provides()
         # given pipeline constructing this processor, check if requirements are met, throw exception if not
@@ -103,6 +104,23 @@ class Processor(ABC):
     def _set_up_requires(self):
         """ Set up requirements for this processor.  Default is to use a class defined list. """
         self._requires = self.__class__.REQUIRES_DEFAULT
+
+    def _set_up_variant_requires(self):
+        """
+        If this has a variant with its own requirements, use those instead
+
+        Returns True iff the _requires is set from the _variant
+        """
+        if not hasattr(self, '_variant'):
+            return False
+        if hasattr(self._variant, '_set_up_requires'):
+            self._variant._set_up_requires()
+            self._requires = self._variant._requires
+            return True
+        if hasattr(self._variant.__class__, 'REQUIRES_DEFAULT'):
+            self._requires = self._variant.__class__.REQUIRES_DEFAULT
+            return True
+        return False
 
     def _set_up_variants(self, config, device):
         processor_name = list(self.__class__.PROVIDES_DEFAULT)[0]
