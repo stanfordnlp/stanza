@@ -45,6 +45,9 @@ class DepparseProcessor(UDProcessor):
         return keys
 
     def process(self, document):
+        if hasattr(self, '_variant'):
+            return self._variant.process(document)
+
         if any(word.upos is None and word.xpos is None for sentence in document.sentences for word in sentence.words):
             raise ValueError("POS not run before depparse!")
         try:
