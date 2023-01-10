@@ -23,9 +23,9 @@ from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
 from stanza.pipeline.lemma_processor import LemmaProcessor
+from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
-from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
