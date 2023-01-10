@@ -10,6 +10,9 @@ from stanza.models.depparse.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+# these imports trigger the "register_variant" decorations
+from stanza.pipeline.external.corenlp_converter_depparse import ConverterDepparse
+
 DEFAULT_SEPARATE_BATCH=150
 
 @register_processor(name=DEPPARSE)
