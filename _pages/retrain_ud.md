@@ -241,9 +241,9 @@ The path to the tagger model can also be manually specified with the `--tagger_m
 
 `prepare_depparse_treebank` flags:
 
-| Flag                      | Behavior                                                                                              |
-| :------                   | :-------                                                                                              |
-| `--predicted`             | Turn on retagging for the depparse dataset (default)                                                  |
-| `--gold`                  | Turn off retagging for the depparse dataset                                                           |
-| `--tagger_model`          | Where to find the POS tagger.  An attempt will be made to find it if not specified                    |
-| `--wordvec_pretrain_file` | Word vectors to use for the POS tagger when retagging.  A default will be downloaded if not specified |
+| Flag                       | Behavior                                                                                              |
+| :------                    | :-------                                                                                              |
+| `--predicted`              | Turn on retagging for the depparse dataset (default)                                                  |
+| `--gold`                   | Turn off retagging for the depparse dataset                                                           |
+| `——tagger_model`           | Where to find the POS tagger.  An attempt will be made to find it if not specified                    |
+| `--⁠wordvec_pretrain_file` | Word vectors to use for the POS tagger when retagging.  A default will be downloaded if not specified |
