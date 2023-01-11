@@ -84,3 +84,22 @@ def test_constituency_comment(doc):
         assert len(constituency_comments) == 1
         assert constituency_comments[0].endswith(expected)
 
+@pytest.fixture(scope="module")
+def pipeline():
+    return stanza.Pipeline(dir=TEST_MODELS_DIR)
+
+def test_serialized(pipeline):
+    """
+    Brief test of the serialized format
+
+    Checks that NER entities are correctly set.
+    TODO: need to update sentiment and constituency as well
+    """
+    text = "John works at Stanford"
+    doc = pipeline(text)
+    assert len(doc.ents) == 2
+    serialized = doc.to_serialized()
+    doc2 = Document.from_serialized(serialized)
+    assert len(doc2.sentences) == 1
+    assert len(doc2.ents) == 2
+    assert doc2.text == text
