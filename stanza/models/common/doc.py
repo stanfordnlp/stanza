@@ -400,6 +400,7 @@ class Sentence(StanzaObject):
         self._ents = []
         self._doc = doc
         self._constituency = None
+        self._sentiment = None
         # comments are a list of comment lines occurring before the
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
@@ -581,6 +582,13 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+        sentiment_comment = "# sentiment = " + str(value)
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# sentiment = "):
+                self._comments[comment_idx] = sentiment_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(sentiment_comment)
 
     @property
     def constituency(self):
@@ -625,6 +633,11 @@ class Sentence(StanzaObject):
                 raise ValueError("Multiple constituency trees for one sentence: %s" % tree_text)
             self._constituency = tree[0]
             self._comments = [x for x in self._comments if not x.startswith("# constituency =")]
+        elif comment.startswith("# sentiment ="):
+            _, sentiment = comment.split("=", 1)
+            sentiment = int(sentiment.strip())
+            self._sentiment = sentiment
+            self._comments = [x for x in self._comments if not x.startswith("# sentiment =")]
         self._comments.append(comment)
 
     def rebuild_dependencies(self):
