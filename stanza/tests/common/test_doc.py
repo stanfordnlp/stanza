@@ -102,4 +102,4 @@ def test_serialized(pipeline):
     doc2 = Document.from_serialized(serialized)
     assert len(doc2.sentences) == 1
     assert len(doc2.ents) == 2
-    assert doc2.text == text
+    assert doc.sentences[0].constituency == doc2.sentences[0].constituency

@@ -9,7 +9,7 @@ import itertools
 import re
 import warnings
 
-from stanza.models.common.doc import StanzaObject
+from stanza.models.common.stanza_object import StanzaObject
 
 # useful more for the "is" functionality than the time savings
 CLOSE_PAREN = ')'

@@ -8,7 +8,9 @@ import json
 import pickle
 import warnings
 
+from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
+from stanza.models.constituency import tree_reader
 
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")
@@ -34,37 +36,6 @@ CONSTITUENCY = 'constituency'
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 FIELD_NUM = len(FIELD_TO_IDX)
-
-def _readonly_setter(self, name):
-    full_classname = self.__class__.__module__
-    if full_classname is None:
-        full_classname = self.__class__.__qualname__
-    else:
-        full_classname += '.' + self.__class__.__qualname__
-    raise ValueError(f'Property "{name}" of "{full_classname}" is read-only.')
-
-class StanzaObject(object):
-    """
-    Base class for all Stanza data objects that allows for some flexibility handling annotations
-    """
-
-    @classmethod
-    def add_property(cls, name, default=None, getter=None, setter=None):
-        """
-        Add a property accessible through self.{name} with underlying variable self._{name}.
-        Optionally setup a setter as well.
-        """
-
-        if hasattr(cls, name):
-            raise ValueError(f'Property by the name of {name} already exists in {cls}. Maybe you want to find another name?')
-
-        setattr(cls, f'_{name}', default)
-        if getter is None:
-            getter = lambda self: getattr(self, f'_{name}')
-        if setter is None:
-            setter = lambda self, value: _readonly_setter(self, name)
-
-        setattr(cls, name, property(getter, setter))
 
 class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -428,6 +399,7 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
+        self._constituency = None
         # comments are a list of comment lines occurring before the
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
@@ -646,6 +618,13 @@ class Sentence(StanzaObject):
         """
         if not comment.startswith("#"):
             comment = "#" + comment
+        if comment.startswith("# constituency ="):
+            _, tree_text = comment.split("=", 1)
+            tree = tree_reader.read_trees(tree_text)
+            if len(tree) > 1:
+                raise ValueError("Multiple constituency trees for one sentence: %s" % tree_text)
+            self._constituency = tree[0]
+            self._comments = [x for x in self._comments if not x.startswith("# constituency =")]
         self._comments.append(comment)
 
     def rebuild_dependencies(self):
