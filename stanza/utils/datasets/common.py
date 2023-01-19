@@ -90,6 +90,12 @@ def maybe_add_fake_dependencies(lines):
     The conllu scripts need the dependencies column filled out, so in
     the case of models we build without dependency data, we need to
     add those fake dependencies in order to use the eval script etc
+
+    lines: a list of strings with 10 tab separated columns
+      comments are allowed (they will be skipped)
+
+    returns: the same strings, but with fake dependencies added
+      if columns 6 and 7 were empty
     """
     new_lines = []
     root_idx = None
