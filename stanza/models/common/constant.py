@@ -27,6 +27,7 @@ lcode2lang_raw = [
     ("hbo", "Ancient_Hebrew"),
     ("apu", "Apurina"),
     ("ar",  "Arabic"),
+    ("arz", "Egyptian_Arabic"),
     ("an",  "Aragonese"),
     ("hy",  "Armenian"),
     ("as",  "Assamese"),
