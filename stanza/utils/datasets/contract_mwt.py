@@ -1,6 +1,12 @@
 import sys
 
 def contract_mwt(infile, outfile, ignore_gapping=True):
+    """
+    Simplify the gold tokenizer data for use as MWT processor test files
+
+    The simplifications are to remove the expanded MWTs, and in the
+    case of ignore_gapping=True, remove any copy words for the dependencies
+    """
     with open(outfile, 'w') as fout:
         with open(infile, 'r') as fin:
             idx = 0
