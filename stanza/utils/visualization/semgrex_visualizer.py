@@ -90,7 +90,7 @@ def process_sentence_html(orig_html, semgrex_sentence):
     tracker = {}  # keep track of which words have multiple labels
     DEFAULT_TSPAN_COUNT = 2  # the original displacy html assigns two <tspan> objects per <text> object
     CLOSING_TSPAN_LEN = 8  # </tspan> is 8 chars long
-    colors = ['red', 'blue', 'purple', 'orange', 'brown', 'green']  # Colors to highlight with
+    colors = ['#4477AA', '#66CCEE', '#228833', '#CCBB44', '#EE6677', '#AA3377', '#BBBBBB']  # colorblind-friendly scheme
     css_bolded_class = "<style> .bolded{font-weight: bold;} </style>\n"
     found_index = orig_html.find("\n")  # returns index where the opening <svg> ends
     # insert the new style class into html string
