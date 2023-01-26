@@ -51,7 +51,7 @@ def track_tasks(input_path, worker_map=None):
 
 def main():
     # sample from completed labeling job
-    print(track_tasks('C:\\Users\\Alex\\Desktop\\awscli-labeling', worker_map={
+    print(track_tasks('.\\aws_labeling_copy', worker_map={
         "7efc17ac-3397-4472-afe5-89184ad145d0": "Worker1",
         "afce8c28-969c-4e73-a20f-622ef122f585": "Worker2",
         "91f6236e-63c6-4a84-8fd6-1efbab6dedab": "Worker3",
@@ -60,7 +60,7 @@ def main():
         }
     ))
     # sample from completed labeling job -- no worker map provided
-    print(track_tasks('C:\\Users\\Alex\\Desktop\\awscli-labeling'))
+    print(track_tasks('.\\aws_labeling_copy'))
     return
 
 
