@@ -314,6 +314,26 @@ def edit_dep_arrow(arrow_html):
     return arrow_html[:first_d_idx] + first_d + " " + arrow_html[first_fill_start_idx:second_d_idx] + second_d + " " + arrow_html[second_fill_start_idx:]
 
 
+def edit_html_overflow(html_string):
+    """
+    Adds to the SVG header to visualize overflowing HTML renderings in the streamlit app.
+
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" id="fa9446a525de4862b233007f26dbbecb-0" class="displacy" width="850" height="242.0" direction="ltr" style="max-width: none; height: 242.0px; color: #000000; background: #ffffff; font-family: Arial; direction: ltr">
+<style> .bolded{font-weight: bold;} </style>
+<text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
+    <tspan class="bolded" fill="#66CCEE" x="50">Banning</tspan>
+
+   <tspan class="displacy-tag" dy="2em" fill="currentColor" x="50">VERB</tspan>
+  <tspan class="displacy-word" dy="2em" fill="#66CCEE" x=50>Act.</tspan>
+</text>
+    """
+    BUFFER_LEN = 14  # length of 'direction: ltr"'
+    editing_start_idx = find_nth(html_string, "direction: ltr", n=1)
+    SVG_HEADER_ADDITION =  "overflow: visible; display: block"
+    return html_string[:editing_start_idx] + "; " + SVG_HEADER_ADDITION + html_string[editing_start_idx + BUFFER_LEN:]
+
+
+
 def main():
     nlp = stanza.Pipeline("en", processors="tokenize,pos,lemma,depparse")
 
@@ -323,9 +343,9 @@ def main():
     queries = ["{pos:NN}=object <obl {}=action",
                "{cpos:NOUN}=thing <obj {cpos:VERB}=action"]
     res = visualize_search_doc(doc, queries, "en")
-    print(res[0])  # see the first sentence's deprel visualization HTML
-    print("---------------------------------------")
-    print(res[1])  # second sentence's deprel visualization HTML
+    # print(res[0])  # see the first sentence's deprel visualization HTML
+    # print("---------------------------------------")
+    # print(res[1])  # second sentence's deprel visualization HTML
     return
 
 
