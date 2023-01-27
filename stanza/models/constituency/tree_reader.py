@@ -115,6 +115,7 @@ def read_single_tree(token_iterator, broken_ok):
 
 LINE_SPLIT_RE = re.compile(r"([()])")
 
+
 class TokenIterator:
     """
     A specific iterator for reading trees from a tree file
@@ -123,18 +124,15 @@ class TokenIterator:
     we are processing, so that an error can be logged
     from the correct line
     """
-    def __init__(self, text):
-        self.lines = text.split("\n")
-        self.num_lines = len(self.lines)
-        self.line_num = -1
-        if self.num_lines > 1000:
-            self.line_iterator = iter(tqdm(self.lines))
-        else:
-            self.line_iterator = iter(self.lines)
+    def __init__(self):
         self.token_iterator = iter([])
+        self.line_num = -1
         self.mark = None
 
     def set_mark(self):
+        """
+        The mark is used for determining where the start of a tree occurs for an error
+        """
         self.mark = self.line_num
 
     def get_mark(self):
@@ -165,14 +163,21 @@ class TokenIterator:
 
         return n
 
-def read_trees(text, broken_ok=False, tree_callback=None):
-    """
-    Reads multiple trees from the text
 
-    TODO: some of the error cases we hit can be recovered from
-    """
+class TextTokenIterator(TokenIterator):
+    def __init__(self, text):
+        super().__init__()
+
+        self.lines = text.split("\n")
+        self.num_lines = len(self.lines)
+        if self.num_lines > 1000:
+            self.line_iterator = iter(tqdm(self.lines))
+        else:
+            self.line_iterator = iter(self.lines)
+
+
+def read_token_iterator(token_iterator, broken_ok, tree_callback):
     trees = []
-    token_iterator = TokenIterator(text)
     token = next(token_iterator, None)
     while token:
         if token == OPEN_PAREN:
@@ -191,6 +196,16 @@ def read_trees(text, broken_ok=False, tree_callback=None):
 
     if tree_callback is None:
         return trees
+
+
+def read_trees(text, broken_ok=False, tree_callback=None):
+    """
+    Reads multiple trees from the text
+
+    TODO: some of the error cases we hit can be recovered from
+    """
+    token_iterator = TextTokenIterator(text)
+    return read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
 
 def read_tree_file(filename, tree_callback=None):
     """
