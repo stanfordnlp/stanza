@@ -175,6 +175,28 @@ class TextTokenIterator(TokenIterator):
             self.line_iterator = iter(self.lines)
 
 
+class FileTokenIterator(TokenIterator):
+    def __init__(self, filename):
+        super().__init__()
+        self.filename = filename
+
+    def __enter__(self):
+        # TODO: use the file_size instead of counting the lines
+        # file_size = Path(self.filename).stat().st_size
+        with open(self.filename) as fin:
+            num_lines = sum(1 for _ in fin)
+
+        self.file_obj = open(self.filename)
+        if num_lines > 1000:
+            self.line_iterator = iter(tqdm(self.file_obj, total=num_lines))
+        else:
+            self.line_iterator = iter(self.file_obj)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if self.file_obj:
+            self.file_obj.close()
+
 def read_token_iterator(token_iterator, broken_ok, tree_callback):
     trees = []
     token = next(token_iterator, None)
@@ -206,12 +228,12 @@ def read_trees(text, broken_ok=False, tree_callback=None):
     token_iterator = TextTokenIterator(text)
     return read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
 
-def read_tree_file(filename, tree_callback=None):
+def read_tree_file(filename, broken_ok=False, tree_callback=None):
     """
     Read all of the trees in the given file
     """
-    with open(filename) as fin:
-        trees = read_trees(fin.read(), tree_callback=tree_callback)
+    with FileTokenIterator(filename) as token_iterator:
+        trees = read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
     return trees
 
 def read_treebank(filename, tree_callback=None):
