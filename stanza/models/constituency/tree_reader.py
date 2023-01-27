@@ -165,7 +165,7 @@ class TokenIterator:
 
         return n
 
-def read_trees(text, broken_ok=False):
+def read_trees(text, broken_ok=False, tree_callback=None):
     """
     Reads multiple trees from the text
 
@@ -179,29 +179,33 @@ def read_trees(text, broken_ok=False):
             next_tree = read_single_tree(token_iterator, broken_ok=broken_ok)
             if next_tree is None:
                 raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
-            trees.append(next_tree)
+            if tree_callback is not None:
+                tree_callback(next_tree)
+            else:
+                trees.append(next_tree)
             token = next(token_iterator, None)
         elif token == CLOSE_PAREN:
             raise ExtraCloseTreeError(token_iterator.line_num)
         else:
             raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
 
-    return trees
+    if tree_callback is None:
+        return trees
 
-def read_tree_file(filename):
+def read_tree_file(filename, tree_callback=None):
     """
     Read all of the trees in the given file
     """
     with open(filename) as fin:
-        trees = read_trees(fin.read())
+        trees = read_trees(fin.read(), tree_callback=tree_callback)
     return trees
 
-def read_treebank(filename):
+def read_treebank(filename, tree_callback=None):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
     """
     logger.info("Reading trees from %s", filename)
-    trees = read_tree_file(filename)
+    trees = read_tree_file(filename, tree_callback=tree_callback)
     trees = [t.prune_none().simplify_labels() for t in trees]
 
     illegal_trees = [t for t in trees if len(t.children) > 1]
