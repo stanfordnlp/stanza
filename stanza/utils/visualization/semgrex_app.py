@@ -1,265 +1,232 @@
 import streamlit as st
-from IPython.display import display, HTML
-from tkinter import font
 import streamlit.components.v1 as components
 from semgrex_visualizer import visualize_search_str
 from semgrex_visualizer import edit_html_overflow
+from io import StringIO
 import os
-
-os.environ['CLASSPATH'] = "C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*"
-
-st.title("Displaying Semgrex Queries")
-
-SAMPLE_HTML = '''
-<!DOCTYPE html>
-<html>
+import stanza
+import typing
+from typing import List, Tuple, Any
+import argparse
 
 
-<body>
+def get_text_and_query() -> Tuple[str, str]:
+    """
+    Gets user input for the Semgrex text and queries to process.
 
-<div class={min-height:100%}>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" id="9f9bcae06920463e98e7992840fd8b54-0" class="displacy" width="850" height="402" direction="ltr" style="max-width: none; height: 402px; color: #000000; background: #ffffff; font-family: Arial; direction: ltr; overflow: visible; display: block">
-    <style> .bolded{font-weight: bold;} </style>
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="bolded" fill="#66CCEE" x="50">Banning</tspan>
-
-       <tspan class="displacy-tag" dy="2em" fill="currentColor" x="50">VERB</tspan>
-      <tspan class="displacy-word" dy="2em" fill="#66CCEE" x=50>Act.</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="bolded" fill="#66CCEE" x="150">opal</tspan>
-
-       <tspan class="displacy-tag" dy="2em" fill="currentColor" x="150">NOUN</tspan>
-      <tspan class="displacy-word" dy="2em" fill="#66CCEE" x=150>Thi.</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="bolded" fill="#4477AA" x="250">removed</tspan>
-
-       <tspan class="displacy-tag" dy="2em" fill="currentColor" x="250">VERB</tspan>
-      <tspan class="displacy-word" dy="2em" fill="#4477AA" x=250>Act.</tspan>
-      <tspan class="displacy-word" dy="2em" fill="#4477AA" x=250>Act.</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="displacy-word" fill="currentColor" x="350">artifact</tspan>
-        <tspan class="displacy-tag" dy="2em" fill="currentColor" x="350">NOUN</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="bolded" fill="#4477AA" x="450">decks</tspan>
-
-       <tspan class="displacy-tag" dy="2em" fill="currentColor" x="450">NOUN</tspan>
-      <tspan class="displacy-word" dy="4em" fill="#4477AA" x=450>Thi.</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="displacy-word" fill="currentColor" x="550">from</tspan>
-        <tspan class="displacy-tag" dy="2em" fill="currentColor" x="550">ADP</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="displacy-word" fill="currentColor" x="650">the</tspan>
-        <tspan class="displacy-tag" dy="2em" fill="currentColor" x="650">DET</tspan>
-    </text>
-
-    <text class="displacy-token" fill="currentColor" text-anchor="middle" y="182.0">
-        <tspan class="bolded" fill="#4477AA" x="750">meta .</tspan>
-
-       <tspan class="displacy-tag" dy="2em" fill="currentColor" x="750">NOUN</tspan>
-      <tspan class="displacy-word" dy="2em" fill="#4477AA" x=750>Obj.</tspan>
-    </text>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-0" stroke-width="2px" d="M50,152.0 50,118.66666666666666 245.0,118.66666666666666 245.0,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-0" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">csubj</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M50,154.0 L46,146.0 54,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-1" stroke-width="2px" d="M70,152.0 70,135.33333333333334 150,135.33333333333334 150,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-1" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obj</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M150,154.0 L146,146.0 154,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-2" stroke-width="2px" d="M350,152.0 350,135.33333333333334 440.0,135.33333333333334 440.0,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-2" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">compound</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M350,154.0 L346,146.0 354,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-3" stroke-width="2px" d="M270,152.0 270,118.66666666666666 450,118.66666666666666 450,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-3" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obj</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M450,154.0 L446,146.0 454,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-4" stroke-width="2px" d="M550,152.0 550,118.66666666666666 745.0,118.66666666666666 745.0,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-4" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">case</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M550,154.0 L546,146.0 554,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-5" stroke-width="2px" d="M650,152.0 650,135.33333333333334 740.0,135.33333333333334 740.0,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-5" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">det</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M650,154.0 L646,146.0 654,146.0"  fill="currentColor"/>
-    </g>
-
-    <g class="displacy-arrow">
-        <path class="displacy-arc" id="arrow-9f9bcae06920463e98e7992840fd8b54-0-6" stroke-width="2px" d="M270,152.0 270,102.0 750,102.0 750,152.0"  fill="none" stroke="currentColor"/>
-        <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-            <textPath xlink:href="#arrow-9f9bcae06920463e98e7992840fd8b54-0-6" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obl</textPath>
-        </text>
-        <path class="displacy-arrowhead" d="M750,154.0 L746,146.0 754,146.0"  fill="currentColor"/>
-    </g>
-    </svg>
-</div>
-</body>
-</html>
-'''
-SECOND_SAMPLE_SVG = '''
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" id="c5c065bab8a9425abeb6c747a5231a07-0" class="displacy" width="750" height="402.0" direction="ltr" style="max-width: none; height: 402.0px; color: #000000; background: #ffffff; font-family: Arial; direction: ltr; display: block; overflow: visible">
-<style> .bolded{font-weight: bold;} </style>
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="bolded" fill="#66CCEE" x="50">Banning</tspan>
-
-   <tspan class="displacy-tag" dy="2em" fill="currentColor" x="50">VERB</tspan>
-  <tspan class="displacy-word" dy="2em" fill="#66CCEE" x=50>Act.</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="bolded" fill="#66CCEE" x="150">tennis</tspan>
-
-   <tspan class="displacy-tag" dy="2em" fill="currentColor" x="150">NOUN</tspan>
-  <tspan class="displacy-word" dy="2em" fill="#66CCEE" x=150>Thi.</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="displacy-word" fill="currentColor" x="250">resulted</tspan>
-    <tspan class="displacy-tag" dy="2em" fill="currentColor" x="250">VERB</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="displacy-word" fill="currentColor" x="350">in</tspan>
-    <tspan class="displacy-tag" dy="2em" fill="currentColor" x="350">ADP</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="displacy-word" fill="currentColor" x="450">players</tspan>
-    <tspan class="displacy-tag" dy="2em" fill="currentColor" x="450">NOUN</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="bolded" fill="#4477AA" x="550">banning</tspan>
-
-   <tspan class="displacy-tag" dy="2em" fill="currentColor" x="550">VERB</tspan>
-  <tspan class="displacy-word" dy="2em" fill="#4477AA" x=550>Act.</tspan>
-</text>
-
-<text class="displacy-token" fill="currentColor" text-anchor="middle" y="132.0">
-    <tspan class="bolded" fill="#4477AA" x="650">people .</tspan>
-
-   <tspan class="displacy-tag" dy="2em" fill="currentColor" x="650">NOUN</tspan>
-  <tspan class="displacy-word" dy="2em" fill="#4477AA" x=650>Thi.</tspan>
-</text>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-0" stroke-width="2px" d="M50,102.0 50,68.66666666666666 250.0,68.66666666666666 250.0,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-0" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">csubj</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M50,104.0 L46,96.0 54,96.0"  fill="currentColor"/>
-</g>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-1" stroke-width="2px" d="M70,102.0 70,85.33333333333333 150,85.33333333333333 150,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-1" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obj</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M150,104.0 L146,96.0 154,96.0"  fill="currentColor"/>
-</g>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-2" stroke-width="2px" d="M350,102.0 350,85.33333333333333 445.0,85.33333333333333 445.0,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-2" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">case</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M350,104.0 L346,96.0 354,96.0"  fill="currentColor"/>
-</g>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-3" stroke-width="2px" d="M270,102.0 270,68.66666666666666 450,68.66666666666666 450,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-3" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obl</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M450,104.0 L446,96.0 454,96.0"  fill="currentColor"/>
-</g>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-4" stroke-width="2px" d="M470,102.0 470,85.33333333333333 550,85.33333333333333 550,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-4" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">acl</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M550,104.0 L546,96.0 554,96.0"  fill="currentColor"/>
-</g>
-
-<g class="displacy-arrow">
-    <path class="displacy-arc" id="arrow-c5c065bab8a9425abeb6c747a5231a07-0-5" stroke-width="2px" d="M570,102.0 570,85.33333333333333 650,85.33333333333333 650,102.0"  fill="none" stroke="currentColor"/>
-    <text dy="1.25em" style="font-size: 0.8em; letter-spacing: 1px">
-        <textPath xlink:href="#arrow-c5c065bab8a9425abeb6c747a5231a07-0-5" class="displacy-label" startOffset="50%" side="left" fill="currentColor" text-anchor="middle">obj</textPath>
-    </text>
-    <path class="displacy-arrowhead" d="M650,104.0 L646,96.0 654,96.0"  fill="currentColor"/>
-</g>
-</svg>
-'''
-# FIXED_HTML = html.escape(SAMPLE_HTML)
-html_string = "<h3>Enter a text below, along with your Semgrex query of choice.</h3>"
-st.markdown(html_string, unsafe_allow_html=True)
-input_txt = st.text_area('Text to analyze', '''''', placeholder="Banning opal removed artifact decks from the meta.")
-input_queries = st.text_area('Semgrex search queries (separate each query with a comma)', placeholder='''{pos:NN}=object <obl {}=action, {cpos:NOUN}=thing <obj {cpos:VERB}=action''')
-
-clicked = st.button("Load Semgrex search visualization")  # use the on_click param
-
-if clicked:
-    # components.html(SAMPLE_HTML, height=400, width=1000, scrolling=True)
-    # components.html(SECOND_SAMPLE_SVG, height=400, width=1000, scrolling=True)
-    if not input_txt:
-        st.error("Please provide a text input.")
-    elif not input_queries:
-        st.error("Please provide a set of Semgrex queries.")
-    else:   # no input errors
-        try:
-            with st.spinner('Processing...'):
-                queries = [query.strip() for query in input_queries.split(",")]
-                html_strings = visualize_search_str(input_txt, queries, 'en')
-
-                if len(html_strings) == 0:
-                    st.write("No Semgrex match hits!")
-
-                for s in html_strings:
-                    s_no_overflow = edit_html_overflow(s)
-                    components.html(s_no_overflow, height=300, width=1000, scrolling=True)
-
-                if len(html_strings) == 1:
-                    st.success(f'Completed! Visualized {len(html_strings)} Semgrex search hit.')
-                else:
-                    st.success(f'Completed! Visualized {len(html_strings)} Semgrex search hits.')
-        except OSError:
-            st.error("Your text input or your provided Semgrex queries are incorrect. Please try again.")
+    @return: A tuple containing the user's input text and their input queries
+    """
+    input_txt = st.text_area(
+        "Text to analyze",
+        """Banning opal removed artifact decks from the meta.""",
+        placeholder="Banning opal removed artifact decks from the meta.",
+    )
+    input_queries = st.text_area(
+        "Semgrex search queries (separate each query with a comma)",
+        "{pos:NN}=object <obl {}=action, {cpos:NOUN}=thing <obj {cpos:VERB}=action",
+        placeholder="""{pos:NN}=object <obl {}=action, {cpos:NOUN}=thing <obj {cpos:VERB}=action""",
+    )
+    return input_txt, input_queries
 
 
+def get_file_input() -> List[str]:
+    """
+    Allows user to submit files for analysis.
 
+    @return: List of strings containing the file contents of each submitted file. The i-th element of res is the
+    string representing the i-th file uploaded.
+    """
+    st.markdown("""**Alternatively, upload file(s) to analyze.**""")
+    uploaded_files = st.file_uploader(
+        "button_label", accept_multiple_files=True, label_visibility="collapsed"
+    )
+    res = []
+    for file in uploaded_files:
+        stringio = StringIO(file.getvalue().decode("utf-8"))
+        string_data = stringio.read()
+        res.append(string_data)
+    return res
+
+
+def get_window_input() -> Tuple[bool, int, int]:
+    """
+    Allows user to specify a specific window of Semgrex hits to visualize. Works similar to Python splicing.
+
+    @return: A tuple containing a bool representing whether or not the user wants to visualize a splice of
+    the visualizations, and two ints representing the start and end indices of the splice.
+    """
+    show_window = st.checkbox(
+        "Visualize a specific window of Semgrex search hits?",
+        help="""If you want to visualize all search results, leave this unmarked.""",
+    )
+    start_window, end_window = None, None
+    if show_window:
+        start_window = st.number_input(
+            "Which search hit should visualizations start from?",
+            help="""If you want to visualize the first 10 search results, set this to 0.""",
+            min_value=0,
+        )
+        end_window = st.number_input(
+            "Which search hit should visualizations stop on?",
+            help="""If you want to visualize the first 10 search results, set this to 11.
+                                     The 11th result will NOT be displayed.""",
+            value=11,
+            min_value=start_window + 1,
+        )
+    return show_window, start_window, end_window
+
+
+def get_input() -> Tuple[str, str, List[str], Tuple[bool, int, int]]:
+    input_txt, input_queries = get_text_and_query()
+    client_files = get_file_input()  # this is already converted to string format
+    window_input = get_window_input()
+    return input_txt, input_queries, client_files, window_input
+
+
+def run_semgrex_process(
+    input_txt: str,
+    input_queries: str,
+    client_files: List[str],
+    show_window: bool,
+    clicked: bool,
+    pipe: Any,
+    start_window: int,
+    end_window: int,
+) -> None:
+    """
+    Run Semgrex search on the input text/files with input query and serve the HTML on the app.
+
+    @param input_txt: Text to analyze and draw sentences from.
+    @param input_queries: Semgrex queries to parse the input with.
+    @param client_files: Alternative to input text, we can parse the content of files for scaled analysis.
+    @param show_window: Whether or not the user wants a splice of the visualizations
+    @param clicked: Whether or not the button has been clicked to run Semgrex search
+    @param pipe: NLP pipeline to process input with
+    @param start_window: If displaying a splice of visualizations, this is the start idx
+    @param end_window: If displaying a splice of visualizations, this is the end idx
+
+    """
+
+    if clicked:
+        if not input_txt and not client_files:
+            st.error("Please provide a text input or upload files for analysis.")
+        elif input_txt and client_files:
+            st.error(
+                "Please only choose to visualize your input text or your uploaded files, not both."
+            )
+        elif not input_queries:
+            st.error("Please provide a set of Semgrex queries.")
+        else:  # no input errors
+            try:
+                with st.spinner("Processing..."):
+                    queries = [
+                        query.strip() for query in input_queries.split(",")
+                    ]  # separate queries into individual parts
+                    if client_files:
+                        html_strings, begin_viz_idx, end_viz_idx = [], 0, float("inf")
+                        if show_window:
+                            begin_viz_idx, end_viz_idx = (
+                                start_window - 1,
+                                end_window - 1,
+                            )
+                        for client_file in client_files:
+                            client_file_html_strings = visualize_search_str(
+                                client_file,
+                                queries,
+                                "en",
+                                start_match=begin_viz_idx,
+                                end_match=end_viz_idx,
+                                pipe=pipe,
+                            )
+                            html_strings += client_file_html_strings
+                    else:  # just input text, no files
+                        if show_window:
+                            html_strings = visualize_search_str(
+                                input_txt,
+                                queries,
+                                "en",
+                                start_match=start_window - 1,
+                                end_match=end_window - 1,
+                                pipe=pipe,
+                            )
+                        else:
+                            html_strings = visualize_search_str(
+                                input_txt,
+                                queries,
+                                "en",
+                                end_match=float("inf"),
+                                pipe=pipe,
+                            )
+
+                    if len(html_strings) == 0:
+                        st.write("No Semgrex match hits!")
+
+                    for s in html_strings:
+                        s_no_overflow = edit_html_overflow(s)
+                        components.html(
+                            s_no_overflow, height=300, width=1000, scrolling=True
+                        )
+
+                    if len(html_strings) == 1:
+                        st.success(
+                            f"Completed! Visualized {len(html_strings)} Semgrex search hit."
+                        )
+                    else:
+                        st.success(
+                            f"Completed! Visualized {len(html_strings)} Semgrex search hits."
+                        )
+            except OSError:
+                st.error(
+                    "Your text input or your provided Semgrex queries are incorrect. Please try again."
+                )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--CLASSPATH",
+        type=str,
+        default="C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*",
+        help="""Path to your CoreNLP directory.""",
+    )
+    args = parser.parse_args()
+    CLASSPATH = args.CLASSPATH
+
+    os.environ["CLASSPATH"] = CLASSPATH
+
+    if "pipeline" not in st.session_state:  # run pipeline once per user session
+        en_nlp_stanza = stanza.Pipeline(
+            "en", processors="tokenize, pos, lemma, depparse"
+        )
+        st.session_state["pipeline"] = en_nlp_stanza
+
+    st.title("Displaying Semgrex Queries")
+
+    html_string = (
+        "<h3>Enter a text below, along with your Semgrex query of choice.</h3>"
+    )
+    st.markdown(html_string, unsafe_allow_html=True)
+    input_txt, input_queries, client_files, window_input = get_input()
+
+    show_window, start_window, end_window = window_input
+
+    clicked = st.button(
+        "Load Semgrex search visualization",
+        help="""Semgrex search visualizations only display 
+    sentences with a query match. Non-matching sentences are not shown.""",
+    )  # use the on_click param
+
+    run_semgrex_process(
+        input_txt=input_txt,
+        input_queries=input_queries,
+        client_files=client_files,
+        show_window=show_window,
+        clicked=clicked,
+        pipe=st.session_state["pipeline"],
+        start_window=start_window,
+        end_window=end_window,
+    )
+
+
+if __name__ == "__main__":
+    main()
