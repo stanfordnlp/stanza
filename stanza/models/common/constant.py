@@ -78,6 +78,7 @@ lcode2lang_raw = [
     ("eo",  "Esperanto"),
     ("et",  "Estonian"),
     ("ee",  "Ewe"),
+    ("ext", "Extremaduran")
     ("fo",  "Faroese"),
     ("fj",  "Fijian"),
     ("fi",  "Finnish"),
