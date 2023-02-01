@@ -14,6 +14,7 @@ import os
 import shutil
 import tempfile
 
+from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 
@@ -25,7 +26,7 @@ def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     shutil.copyfile(input_conllu_tokenizer, input_conllu_mwt)
 
 def process_treebank(treebank, paths, args):
-    short_name = common.project_to_short_name(treebank)
+    short_name = treebank_to_short_name(treebank)
 
     mwt_dir = paths["MWT_DATA_DIR"]
     os.makedirs(mwt_dir, exist_ok=True)
@@ -45,8 +46,8 @@ def process_treebank(treebank, paths, args):
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "test", "gold")
 
         for shard in ("train", "dev", "test"):
-            source_filename = prepare_tokenizer_treebank.mwt_name(tokenizer_dir, short_name, shard)
-            dest_filename = prepare_tokenizer_treebank.mwt_name(mwt_dir, short_name, shard)
+            source_filename = common.mwt_name(tokenizer_dir, short_name, shard)
+            dest_filename = common.mwt_name(mwt_dir, short_name, shard)
             print("Copying from %s to %s" % (source_filename, dest_filename))
             shutil.copyfile(source_filename, dest_filename)
 

@@ -7,16 +7,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
+from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.biaffine import BiaffineScorer
+from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
-from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+from stanza.models.common.char_model import CharacterModel
 
 logger = logging.getLogger('stanza')
 
 class Tagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None):
         super().__init__()
 
         self.vocab = vocab
@@ -46,8 +48,8 @@ class Tagger(nn.Module):
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
                     raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
                 logger.debug("POS model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
-                add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
-                add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
+                add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 bidirectional = args.get('char_bidirectional', False)
@@ -57,6 +59,24 @@ class Tagger(nn.Module):
                 else:
                     self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
                 input_size += self.args['transformed_dim']
+
+        if self.args['bert_model']:
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+            input_size += bert_model.config.hidden_size
+            if args.get('bert_hidden_layers', False):
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
+        else:
+            bert_model = None
+            bert_tokenizer = None
+        add_unsaved_module('bert_model', bert_model)
+        add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
@@ -108,6 +128,13 @@ class Tagger(nn.Module):
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'charmodel_forward', 'charmodel_backward'):
+                lines.append("  %s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
+
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
         
         def pack(x):
@@ -139,6 +166,21 @@ class Tagger(nn.Module):
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
                 char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
                 inputs += [char_reps]
+
+        if self.bert_model is not None:
+            device = next(self.parameters()).device
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=False,
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+
+            if self.bert_layer_mix is not None:
+                # add the average so that the default behavior is to
+                # take an average of the N layers, and anything else
+                # other than that needs to be learned
+                # TODO: refactor this
+                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
+
+            processed_bert = pad_sequence(processed_bert, batch_first=True)
+            inputs += [pack(processed_bert)]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
         lstm_inputs = self.worddrop(lstm_inputs, self.drop_replacement)

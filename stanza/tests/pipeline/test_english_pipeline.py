@@ -8,6 +8,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import Document
 
 from stanza.tests import *
+from stanza.tests.pipeline.pipeline_device_tests import check_on_gpu, check_on_cpu
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -88,6 +89,8 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 EN_DOC_CONLLU_GOLD = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
+# constituency = (ROOT (S (NP (NNP Barack) (NNP Obama)) (VP (VBD was) (VP (VBN born) (PP (IN in) (NP (NNP Hawaii))))) (. .)))
+# sentiment = 1
 1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
 2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
@@ -98,6 +101,8 @@ EN_DOC_CONLLU_GOLD = """
 
 # text = He was elected president in 2008.
 # sent_id = 1
+# constituency = (ROOT (S (NP (PRP He)) (VP (VBD was) (VP (VBN elected) (S (NP (NN president))) (PP (IN in) (NP (CD 2008))))) (. .)))
+# sentiment = 1
 1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=34|end_char=36|ner=O
 2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=37|end_char=40|ner=O
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48|ner=O
@@ -108,16 +113,19 @@ EN_DOC_CONLLU_GOLD = """
 
 # text = Obama attended Harvard.
 # sent_id = 2
+# constituency = (ROOT (S (NP (NNP Obama)) (VP (VBD attended) (NP (NNP Harvard))) (. .)))
+# sentiment = 1
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O
-
-""".lstrip()
+""".strip()
 
 EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # text = Barack Obama was born in Hawaii.
 # sent_id = 0
+# constituency = (ROOT (S (NP (NNP Barack) (NNP Obama)) (VP (VBD was) (VP (VBN born) (PP (IN in) (NP (NNP Hawaii))))) (. .)))
+# sentiment = 1
 1	Barack	Barack	PROPN	NNP	Number=Sing	4	nsubj:pass	_	start_char=0|end_char=6|ner=B-PERSON
 2	Obama	Obama	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=12|ner=E-PERSON
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
@@ -128,6 +136,8 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 # text = He was elected president in 2008.
 # sent_id = 1
+# constituency = (ROOT (S (NP (PRP He)) (VP (VBD was) (VP (VBN elected) (S (NP (NN president))) (PP (IN in) (NP (CD 2008))))) (. .)))
+# sentiment = 1
 1	He	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	3	nsubj:pass	_	start_char=0|end_char=2|ner=O
 2	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	3	aux:pass	_	start_char=3|end_char=6|ner=O
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=7|end_char=14|ner=O
@@ -138,12 +148,13 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 
 # text = Obama attended Harvard.
 # sent_id = 2
+# constituency = (ROOT (S (NP (NNP Obama)) (VP (VBD attended) (NP (NNP Harvard))) (. .)))
+# sentiment = 1
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
 3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
 4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O
-
-""".lstrip()
+""".strip()
 
 class TestEnglishPipeline:
     @pytest.fixture(scope="class")
@@ -160,7 +171,7 @@ class TestEnglishPipeline:
 
 
     def test_conllu(self, processed_doc):
-        assert CoNLL.doc2conll_text(processed_doc) == EN_DOC_CONLLU_GOLD
+        assert "{:C}".format(processed_doc) == EN_DOC_CONLLU_GOLD
 
 
     def test_tokens(self, processed_doc):
@@ -188,7 +199,7 @@ class TestEnglishPipeline:
 
 
     def test_conllu_multidoc(self, processed_multidoc):
-        assert "".join([CoNLL.doc2conll_text(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
     def test_tokens_multidoc(self, processed_multidoc):
         assert "\n\n".join([sent.tokens_string() for processed_doc in processed_multidoc for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
@@ -222,3 +233,16 @@ class TestEnglishPipeline:
         nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency")
         doc = nlp("This is a test")
         assert str(doc.sentences[0].constituency) == '(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))'
+
+    def test_on_gpu(self, pipeline):
+        """
+        The default pipeline should have all the models on the GPU
+        """
+        check_on_gpu(pipeline)
+
+    def test_on_cpu(self):
+        """
+        Create a pipeline on the CPU, check that all the models on CPU
+        """
+        pipeline = stanza.Pipeline("en", dir=TEST_MODELS_DIR, use_gpu=False)
+        check_on_cpu(pipeline)

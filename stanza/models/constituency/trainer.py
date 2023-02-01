@@ -6,16 +6,17 @@ already-trained parser.
 See the `train` method for the code block which starts from
   raw treebank and returns a new parser.
 `evaluate` reads a treebank and gives a score for those trees.
-`parse_tagged_words` is useful at Pipeline time -
-  it takes words & tags and processes that into trees.
 """
 
 from collections import Counter
 from collections import namedtuple
+import copy
+from enum import Enum
 import logging
+from operator import itemgetter
+import os
 import random
 import re
-import os
 
 import torch
 from torch import nn
@@ -23,18 +24,19 @@ from torch import nn
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
+from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
-from stanza.models.constituency.dynamic_oracle import RepairType, oracle_inorder_error
-from stanza.models.constituency.lstm_model import LSTMModel
-from stanza.models.constituency.parse_transitions import State, TransitionScheme
+from stanza.models.constituency.in_order_oracle import InOrderOracle
+from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
+from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
-from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler
+from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
-from stanza.server.parser_eval import EvaluateParser
+from stanza.server.parser_eval import EvaluateParser, ParseResult
 
 tqdm = utils.get_tqdm()
 
@@ -46,17 +48,16 @@ class Trainer:
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, args, model, optimizer=None, scheduler=None, epochs_trained=0):
-        self.args = args
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
         # keeping track of the epochs trained will be useful
         # for adjusting the learning scheme
         self.epochs_trained = epochs_trained
-
-    def uses_xpos(self):
-        return self.args['retag_package'] is not None and self.args['retag_method'] == 'xpos'
+        self.batches_trained = batches_trained
+        self.best_f1 = best_f1
+        self.best_epoch = best_epoch
 
     def save(self, filename, save_optimizer=True):
         """
@@ -64,10 +65,11 @@ class Trainer:
         """
         params = self.model.get_params()
         checkpoint = {
-            'args': self.args,
             'params': params,
-            'model_type': 'LSTM',
             'epochs_trained': self.epochs_trained,
+            'batches_trained': self.batches_trained,
+            'best_f1': self.best_f1,
+            'best_epoch': self.best_epoch,
         }
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
@@ -76,36 +78,28 @@ class Trainer:
         logger.info("Model saved to %s", filename)
 
     @staticmethod
-    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
+    def model_from_params(params, args, foundation_cache=None):
         """
-        Load back a model and possibly its optimizer.
+        Build a new model just from the saved params and some extra args
+
+        Refactoring allows other processors to include a constituency parser as a module
         """
-        if args is None:
-            args = {}
+        saved_args = dict(params['config'])
+        # some parameters which change the structure of a model have
+        # to be ignored, or the model will not function when it is
+        # reloaded from disk
+        if args is None: args = {}
+        update_args = copy.deepcopy(args)
+        update_args.pop("bert_hidden_layers", None)
+        update_args.pop("constituency_composition", None)
+        update_args.pop("constituent_stack", None)
+        update_args.pop("num_tree_lstm_layers", None)
+        update_args.pop("transition_scheme", None)
+        update_args.pop("transition_stack", None)
+        update_args.pop("maxout_k", None)
+        saved_args.update(update_args)
 
-        try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
-        except BaseException:
-            logger.exception("Cannot load model from %s", filename)
-            raise
-        logger.debug("Loaded model from %s", filename)
-
-        saved_args = dict(checkpoint['args'])
-        saved_args.update(args)
-        # TODO: remove when all models are rebuilt
-        if 'lattn_combined_input' not in saved_args:
-            saved_args['lattn_combined_input'] = False
-        if 'lattn_d_input_proj' not in saved_args:
-            saved_args['lattn_d_input_proj'] = 0
-        params = checkpoint['params']
-        # this is because galaxy brain decided it was worth the effort
-        # of moving the layer norm from inside the positional encoding
-        if 'partitioned_transformer_module.add_timing.norm.weight' in params['model']:
-            params['model']['partitioned_transformer_module.transformer_input_norm.weight'] = params['model']['partitioned_transformer_module.add_timing.norm.weight']
-        if 'partitioned_transformer_module.add_timing.norm.bias' in params['model']:
-            params['model']['partitioned_transformer_module.transformer_input_norm.bias'] = params['model']['partitioned_transformer_module.add_timing.norm.bias']
-
-        model_type = checkpoint['model_type']
+        model_type = params['model_type']
         if model_type == 'LSTM':
             pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
             bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
@@ -128,19 +122,47 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
+        # model will stay on CPU if device==None
+        # can be moved elsewhere later, of course
+        model = model.to(args.get('device', None))
+        return model
 
-        if saved_args['cuda']:
-            model.cuda()
+    @staticmethod
+    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
+        """
+        Load back a model and possibly its optimizer.
+        """
+        try:
+            checkpoint = torch.load(filename, lambda storage, loc: storage)
+        except BaseException:
+            logger.exception("Cannot load model from %s", filename)
+            raise
+        logger.debug("Loaded model from %s", filename)
+
+        params = checkpoint['params']
+        model = Trainer.model_from_params(params, args, foundation_cache)
+
+        epochs_trained = checkpoint['epochs_trained']
+        batches_trained = checkpoint.get('batches_trained', 0)
+        best_f1 = checkpoint['best_f1']
+        best_epoch = checkpoint['best_epoch']
 
         if load_optimizer:
-            optimizer = build_optimizer(saved_args, model)
+            # we use params['config'] here instead of model.args
+            # because the args might have a different training
+            # mechanism, but in order to reload the optimizer, we need
+            # to match the optimizer we build with the one that was
+            # used at training time
+            build_simple_adadelta = params['config']['multistage'] and epochs_trained < params['config']['epochs'] // 2
+            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", params['config']['multistage'], epochs_trained, params['config']['epochs'], build_simple_adadelta)
+            optimizer = build_optimizer(model.args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-            scheduler = build_scheduler(saved_args, optimizer)
+            scheduler = build_scheduler(model.args, optimizer)
             if 'scheduler_state_dict' in checkpoint:
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
@@ -151,9 +173,7 @@ class Trainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        epochs_trained = checkpoint.get('epochs_trained', -1)
-
-        return Trainer(args=saved_args, model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained)
+        return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
 
 
 def load_pretrain_or_wordvec(args):
@@ -184,7 +204,7 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit):
         data = tqdm(zip(trees, sequences), total=len(trees))
 
     for tree, sequence in data:
-        state = parse_transitions.initial_state_from_gold_trees([tree], model)[0]
+        state = model.initial_state_from_gold_trees([tree])[0]
         for idx, trans in enumerate(sequence):
             if not trans.is_legal(state, model):
                 raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(idx, trans, tree, sequence))
@@ -192,6 +212,68 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit):
         result = model.get_top_constituent(state.constituents)
         if tree != result:
             raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
+
+def load_model_parse_text(args, model_file, retag_pipeline):
+    """
+    Load a model, then parse text and write it to stdout or args['predict_file']
+    """
+    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
+    load_args = {
+        'wordvec_pretrain_file': args['wordvec_pretrain_file'],
+        'charlm_forward_file': args['charlm_forward_file'],
+        'charlm_backward_file': args['charlm_backward_file'],
+        'device': args['device'],
+    }
+    trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
+    model = trainer.model
+    model.eval()
+    logger.info("Loaded model from %s", model_file)
+
+    parse_text(args, model, retag_pipeline)
+
+def parse_text(args, model, retag_pipeline):
+    """
+    Use the given model to parse text and write it
+
+    refactored so it can be used elsewhere, such as Ensemble
+    """
+    model.eval()
+    if args['tokenized_file']:
+        with open(args['tokenized_file'], encoding='utf-8') as fin:
+            lines = fin.readlines()
+        lines = [x.strip() for x in lines]
+        lines = [x for x in lines if x]
+        docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
+        logger.info("Processing %d lines", len(docs))
+        treebank = []
+        chunk_size = 10000
+        for chunk_start in range(0, len(docs), chunk_size):
+            chunk = docs[chunk_start:chunk_start+chunk_size]
+            logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
+
+            tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
+            words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
+            logger.info("Retagging finished.  Parsing tagged text")
+
+            assert len(words) == len(chunk)
+            chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
+            treebank.extend(chunk_trees)
+        if args['predict_file']:
+            predict_file = args['predict_file']
+            if args['predict_dir']:
+                predict_file = os.path.join(args['predict_dir'], predict_file)
+            with open(predict_file, "w", encoding="utf-8") as fout:
+                for tree_idx, result in enumerate(treebank):
+                    tree = result.predictions[0].tree
+                    tree.tree_id = tree_idx + 1
+                    fout.write(args['predict_format'].format(tree))
+                    fout.write("\n")
+        else:
+            for tree_idx, result in enumerate(treebank):
+                tree = result.predictions[0].tree
+                tree.tree_id = tree_idx + 1
+                print(args['predict_format'].format(tree))
+
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -209,27 +291,31 @@ def evaluate(args, model_file, retag_pipeline):
         kbest = args['num_generate'] + 1
     else:
         kbest = None
+
     with EvaluateParser(kbest=kbest) as evaluator:
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         load_args = {
             'wordvec_pretrain_file': args['wordvec_pretrain_file'],
             'charlm_forward_file': args['charlm_forward_file'],
             'charlm_backward_file': args['charlm_backward_file'],
-            'cuda': args['cuda'],
+            'device': args['device'],
         }
-        trainer = Trainer.load(model_file, args=load_args)
+        trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
 
         treebank = tree_reader.read_treebank(args['eval_file'])
         logger.info("Read %d trees for evaluation", len(treebank))
 
         if retag_pipeline is not None:
             logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-            treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+            retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
         if args['log_norms']:
             trainer.model.log_norms()
-        f1 = run_dev_set(trainer.model, treebank, args, evaluator)
+        f1, kbestF1 = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
         logger.info("F1 score on %s: %f", args['eval_file'], f1)
+        if kbestF1 is not None:
+            logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
 
 def get_open_nodes(trees, args):
     """
@@ -238,16 +324,10 @@ def get_open_nodes(trees, args):
     """
     if args['transition_scheme'] is TransitionScheme.TOP_DOWN_COMPOUND:
         return parse_tree.Tree.get_compound_constituents(trees)
+    elif args['transition_scheme'] is TransitionScheme.IN_ORDER_COMPOUND:
+        return parse_tree.Tree.get_compound_constituents(trees, separate_root=True)
     else:
         return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
-
-def log_args(args):
-    """
-    For record keeping purposes, log the arguments when training
-    """
-    keys = sorted(args.keys())
-    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
-    logger.info('ARGS USED AT TRAINING TIME:\n%s\n', '\n'.join(log_lines))
 
 def remove_optimizer(args, model_save_file, model_load_file):
     """
@@ -262,29 +342,45 @@ def remove_optimizer(args, model_save_file, model_load_file):
         'wordvec_pretrain_file': args['wordvec_pretrain_file'],
         'charlm_forward_file': args['charlm_forward_file'],
         'charlm_backward_file': args['charlm_backward_file'],
-        'cuda': False,
+        'device': args['device'],
     }
     trainer = Trainer.load(model_load_file, args=load_args, load_optimizer=False)
     trainer.save(model_save_file)
 
-def convert_trees_to_sequences(trees, tree_type, transition_scheme):
-    logger.info("Building {} transition sequences".format(tree_type))
-    if logger.getEffectiveLevel() <= logging.INFO:
-        trees = tqdm(trees)
-    sequences = transition_sequence.build_treebank(trees, transition_scheme)
-    transitions = transition_sequence.all_transitions(sequences)
-    return sequences, transitions
+def add_grad_clipping(trainer, grad_clipping):
+    """
+    Adds a torch.clamp hook on each parameter if grad_clipping is not None
+    """
+    if grad_clipping is not None:
+        for p in trainer.model.parameters():
+            if p.requires_grad:
+                p.register_hook(lambda grad: torch.clamp(grad, -grad_clipping, grad_clipping))
 
-def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file):
+def check_constituents(train_constituents, trees, treebank_name):
+    """
+    Check that all the constituents in the other dataset are known in the train set
+    """
+    constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
+    for con in constituents:
+        if con not in train_constituents:
+            raise RuntimeError("Found label {} in the {} set which don't exist in the train set".format(con, treebank_name))
+
+def check_root_labels(root_labels, other_trees, treebank_name):
+    """
+    Check that all the root states in the other dataset are known in the train set
+    """
+    for root_state in parse_tree.Tree.get_root_labels(other_trees):
+        if root_state not in root_labels:
+            raise RuntimeError("Found root state {} in the {} set which is not a ROOT state in the train set".format(root_state, treebank_name))
+
+def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
     train_constituents = parse_tree.Tree.get_unique_constituent_labels(train_trees)
-    dev_constituents = parse_tree.Tree.get_unique_constituent_labels(dev_trees)
     logger.info("Unique constituents in training set: %s", train_constituents)
-    for con in dev_constituents:
-        if con not in train_constituents:
-            raise RuntimeError("Found label {} in the dev set which don't exist in the train set".format(con))
+    check_constituents(train_constituents, dev_trees, "dev")
+    check_constituents(train_constituents, silver_trees, "silver")
     constituent_counts = parse_tree.Tree.get_constituent_counts(train_trees)
     logger.info("Constituent node counts: %s", constituent_counts)
 
@@ -300,31 +396,41 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
 
     unary_limit = max(max(t.count_unary_depth() for t in train_trees),
                       max(t.count_unary_depth() for t in dev_trees)) + 1
-    train_sequences, train_transitions = convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
-    dev_sequences, dev_transitions = convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
+    if silver_trees:
+        unary_limit = max(unary_limit, max(t.count_unary_depth() for t in silver_trees))
+    train_sequences, train_transitions = transition_sequence.convert_trees_to_sequences(train_trees, "training", args['transition_scheme'])
+    dev_sequences, dev_transitions = transition_sequence.convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'])
+    silver_sequences, silver_transitions = transition_sequence.convert_trees_to_sequences(silver_trees, "silver", args['transition_scheme'])
 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
     logger.info("Unique transitions in training set: %s", train_transitions)
-    for trans in dev_transitions:
-        if trans not in train_transitions:
-            raise RuntimeError("Found transition {} in the dev set which don't exist in the train set".format(trans))
+    expanded_train_transitions = set(train_transitions + [x for trans in train_transitions for x in trans.components()])
+    parse_transitions.check_transitions(expanded_train_transitions, dev_transitions, "dev")
+    # theoretically could just train based on the items in the silver dataset
+    parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
 
     verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit)
     verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit)
 
     root_labels = parse_tree.Tree.get_root_labels(train_trees)
-    for root_state in parse_tree.Tree.get_root_labels(dev_trees):
-        if root_state not in root_labels:
-            raise RuntimeError("Found root state {} in the dev set which is not a ROOT state in the train set".format(root_state))
+    check_root_labels(root_labels, dev_trees, "dev")
+    check_root_labels(root_labels, silver_trees, "silver")
 
     # we don't check against the words in the dev set as it is
     # expected there will be some UNK words
     words = parse_tree.Tree.get_unique_words(train_trees)
     rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
+    # rare/unknown silver words will just get UNK if they are not already known
+    if silver_trees and args['use_silver_words']:
+        logger.info("Getting silver words to add to the delta embedding")
+        silver_words = parse_tree.Tree.get_common_words(tqdm(silver_trees, postfix='Silver words'), len(words))
+        words = sorted(set(words + silver_words))
+
     # also, it's not actually an error if there is a pattern of
     # compound unary or compound open nodes which doesn't exist in the
     # train set.  it just means we probably won't ever get that right
     open_nodes = get_open_nodes(train_trees, args)
+    logger.info("Using the following open nodes:\n  %s", "\n  ".join(map(str, open_nodes)))
 
     # at this point we have:
     # pretrain
@@ -337,59 +443,70 @@ def build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_fil
     backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
     bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
 
-    if args['finetune'] or (args['maybe_finetune'] and os.path.exists(model_load_file)):
-        logger.info("Loading model to continue training from %s", model_load_file)
+    trainer = None
+    if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
+        logger.info("Found checkpoint to continue training: %s", args['checkpoint_save_name'])
+        trainer = Trainer.load(args['checkpoint_save_name'], args, load_optimizer=True, foundation_cache=foundation_cache)
+        # grad clipping is not saved with the rest of the model
+        add_grad_clipping(trainer, args['grad_clipping'])
+
+        # TODO: turn finetune, relearn_structure, multistage into an enum?
+        # finetune just means continue learning, so checkpoint is sufficient
+        # relearn_structure is essentially a one stage multistage
+        # multistage with a checkpoint will have the proper optimizer for that epoch
+        # and no special learning mode means we are training a new model and should continue
+        return trainer, train_sequences, silver_sequences, train_transitions
+
+    if args['finetune']:
+        logger.info("Loading model to finetune: %s", model_load_file)
         trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=foundation_cache)
+        # a new finetuning will start with a new epochs_trained count
+        trainer.epochs_trained = 0
     elif args['relearn_structure']:
         logger.info("Loading model to continue training with new structure from %s", model_load_file)
         temp_args = dict(args)
         # remove the pattn & lattn layers unless the saved model had them
         temp_args.pop('pattn_num_layers', None)
         temp_args.pop('lattn_d_proj', None)
-        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False)
+        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
 
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
-        if args['cuda']:
-            model.cuda()
+        # using the model's current values works for if the new
+        # dataset is the same or smaller
+        # TODO: handle a larger dataset as well
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
+        model = model.to(args['device'])
         model.copy_with_new_structure(trainer.model)
-        optimizer = build_optimizer(args, model)
+        optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
-        trainer = Trainer(args, model, optimizer, scheduler)
+        trainer = Trainer(model, optimizer, scheduler)
     elif args['multistage']:
         # run adadelta over the model for half the time with no pattn or lattn
         # training then switches to a different optimizer for the rest
         # this works surprisingly well
         logger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
         temp_args = dict(args)
-        temp_args['optim'] = 'adadelta'
-        temp_args['learning_rate'] = DEFAULT_LEARNING_RATES['adadelta']
-        temp_args['learning_eps'] = DEFAULT_LEARNING_EPS['adadelta']
-        temp_args['learning_rho'] = DEFAULT_LEARNING_RHO
-        temp_args['weight_decay'] = DEFAULT_WEIGHT_DECAY['adadelta']
-        temp_args['epochs'] = args['epochs'] // 2
-        temp_args['learning_rate_warmup'] = 0
         # remove the attention layers for the temporary model
         temp_args['pattn_num_layers'] = 0
         temp_args['lattn_d_proj'] = 0
 
         temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
-        if args['cuda']:
-            temp_model.cuda()
-        temp_optim = build_optimizer(temp_args, temp_model)
-        scheduler = build_scheduler(args, temp_optim)
-        trainer = Trainer(temp_args, temp_model, temp_optim, scheduler)
+        temp_model = temp_model.to(args['device'])
+        temp_optim = build_optimizer(temp_args, temp_model, True)
+        scheduler = build_scheduler(temp_args, temp_optim)
+        trainer = Trainer(temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
-        if args['cuda']:
-            model.cuda()
-        logger.info("Number of words in the training set found in the embedding: {} out of {}".format(model.num_words_known(words), len(words)))
+        model = model.to(args['device'])
 
-        optimizer = build_optimizer(args, model)
+        optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
 
-        trainer = Trainer(args, model, optimizer, scheduler)
+        trainer = Trainer(model, optimizer, scheduler)
 
-    return trainer, train_sequences, train_transitions
+    logger.info("Number of words in the training set found in the embedding: %d out of %d", trainer.model.num_words_known(words), len(words))
+    add_grad_clipping(trainer, args['grad_clipping'])
+
+    return trainer, train_sequences, silver_sequences, train_transitions
 
 def remove_duplicates(trees, dataset):
     """
@@ -419,11 +536,11 @@ def remove_no_tags(trees):
         logger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
     return new_trees
 
-def train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline):
+def train(args, model_load_file, model_save_each_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
     """
-    log_args(args)
+    utils.log_training_args(args, logger)
 
     # we create the Evaluator here because otherwise the transformers
     # library constantly complains about forking the process
@@ -454,33 +571,64 @@ def train(args, model_save_file, model_load_file, model_save_latest_file, model_
         logger.info("Read %d trees for the dev set", len(dev_trees))
         dev_trees = remove_duplicates(dev_trees, "dev")
 
+        silver_trees = []
+        if args['silver_file']:
+            silver_trees = tree_reader.read_treebank(args['silver_file'])
+            logger.info("Read %d trees for the silver training set", len(silver_trees))
+            if args['silver_remove_duplicates']:
+                silver_trees = remove_duplicates(silver_trees, "silver")
+
         if retag_pipeline is not None:
             logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
             train_trees = retag_trees(train_trees, retag_pipeline, args['retag_xpos'])
             dev_trees = retag_trees(dev_trees, retag_pipeline, args['retag_xpos'])
+            silver_trees = retag_trees(silver_trees, retag_pipeline, args['retag_xpos'])
             logger.info("Retagging finished")
 
-        foundation_cache = FoundationCache()
-        trainer, train_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, foundation_cache, model_load_file)
+        foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
+        trainer, train_sequences, silver_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file)
 
-        iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, foundation_cache, model_save_file, model_save_latest_file, model_save_each_file, evaluator)
+        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_file, evaluator)
 
     if args['wandb']:
         wandb.finish()
 
+    return trainer
+
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
-class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used'])):
+class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'nans'])):
     def __add__(self, other):
         transitions_correct = self.transitions_correct + other.transitions_correct
         transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
         repairs_used = self.repairs_used + other.repairs_used
         fake_transitions_used = self.fake_transitions_used + other.fake_transitions_used
         epoch_loss = self.epoch_loss + other.epoch_loss
-        return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
+        nans = self.nans + other.nans
+        return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
 
-def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, foundation_cache, model_filename, model_latest_filename, model_save_each_filename, evaluator):
+def compose_train_data(trees, sequences):
+    preterminal_lists = [[Tree(label=preterminal.label, children=Tree(label=preterminal.children[0].label))
+                          for preterminal in tree.yield_preterminals()]
+                         for tree in trees]
+    data = [TrainItem(*x) for x in zip(trees, sequences, preterminal_lists)]
+    return data
+
+def next_epoch_data(leftover_training_data, train_data, epoch_size):
+    if not train_data:
+        return [], []
+
+    epoch_data = leftover_training_data
+    while len(epoch_data) < epoch_size:
+        random.shuffle(train_data)
+        epoch_data.extend(train_data)
+    leftover_training_data = epoch_data[epoch_size:]
+    epoch_data = epoch_data[:epoch_size]
+
+    return leftover_training_data, epoch_data
+
+def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -491,9 +639,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         batch predict the model's interpretation of the current states
         add the errors to the list of things to backprop
         advance the parsing state for each of the trees
-
-    Currently the only method implemented for advancing the parsing state
-    is to use the gold transition.
     """
     model = trainer.model
 
@@ -501,23 +646,38 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     # Various experiments generally show about 0.5 F1 loss on various
     # datasets when using 'mean' instead of 'sum' for reduction
     # (Remember to adjust the weight decay when rerunning that experiment)
-    model_loss_function = nn.CrossEntropyLoss(reduction='sum')
-    if args['cuda']:
-        model_loss_function.cuda()
+    if args['loss'] == 'cross':
+        logger.info("Building CrossEntropyLoss(sum)")
+        process_outputs = lambda x: x
+        model_loss_function = nn.CrossEntropyLoss(reduction='sum')
+    elif args['loss'] == 'focal':
+        try:
+            from focal_loss.focal_loss import FocalLoss
+        except ImportError:
+            raise ImportError("focal_loss not installed.  Must `pip install focal_loss_torch` to use the --loss=focal feature")
+        logger.info("Building FocalLoss, gamma=%f", args['loss_focal_gamma'])
+        process_outputs = lambda x: torch.softmax(x, dim=1)
+        model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
+    elif args['loss'] == 'large_margin':
+        logger.info("Building LargeMarginInSoftmaxLoss(sum)")
+        process_outputs = lambda x: x
+        model_loss_function = LargeMarginInSoftmaxLoss(reduction='sum')
+    else:
+        raise ValueError("Unexpected loss term: %s" % args['loss'])
 
     device = next(model.parameters()).device
+    model_loss_function.to(device)
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
-                          for (y, x) in enumerate(transitions)}
-
+                          for (y, x) in enumerate(model.transitions)}
     model.train()
 
-    preterminal_lists = [[Tree(label=preterminal.label, children=Tree(label=preterminal.children[0].label))
-                          for preterminal in tree.yield_preterminals()]
-                         for tree in train_trees]
-    train_data = [TrainItem(*x) for x in zip(train_trees, train_sequences, preterminal_lists)]
+    train_data = compose_train_data(train_trees, train_sequences)
+    silver_data = compose_train_data(silver_trees, silver_sequences)
 
     if not args['epoch_size']:
         args['epoch_size'] = len(train_data)
+    if silver_data and not args['silver_epoch_size']:
+        args['silver_epoch_size'] = args['epoch_size']
 
     if args['multistage']:
         multistage_splits = {}
@@ -526,65 +686,69 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         if LSTMModel.uses_lattn(args):
             multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
 
+    oracle = None
+    if args['transition_scheme'] is TransitionScheme.IN_ORDER:
+        oracle = InOrderOracle(model.root_labels, args['oracle_level'])
+
     leftover_training_data = []
-    best_f1 = 0.0
-    best_epoch = 0
-    for epoch in range(1, args['epochs']+1):
+    leftover_silver_data = []
+    if trainer.best_epoch > 0:
+        logger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
+    # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
+    for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
-        logger.info("Starting epoch %d", epoch)
+        logger.info("Starting epoch %d", trainer.epochs_trained)
         if args['log_norms']:
             model.log_norms()
-        epoch_data = leftover_training_data
-        while len(epoch_data) < args['epoch_size']:
-            random.shuffle(train_data)
-            epoch_data.extend(train_data)
-        leftover_training_data = epoch_data[args['epoch_size']:]
-        epoch_data = epoch_data[:args['epoch_size']]
+        leftover_training_data, epoch_data = next_epoch_data(leftover_training_data, train_data, args['epoch_size'])
+        leftover_silver_data, epoch_silver_data = next_epoch_data(leftover_silver_data, silver_data, args['silver_epoch_size'])
+        epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args)
 
         # print statistics
-        f1 = run_dev_set(model, dev_trees, args, evaluator)
-        if f1 > best_f1 or best_epoch == 0:
+        # by now we've forgotten about the original tags on the trees,
+        # but it doesn't matter for hill climbing
+        f1, _ = run_dev_set(model, dev_trees, dev_trees, args, evaluator)
+        if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
             # very simple model didn't learn anything
-            logger.info("New best dev score: %.5f > %.5f", f1, best_f1)
-            best_f1 = f1
-            best_epoch = epoch
-            trainer.save(model_filename, save_optimizer=True)
-        if model_latest_filename:
-            trainer.save(model_latest_filename, save_optimizer=True)
+            logger.info("New best dev score: %.5f > %.5f", f1, trainer.best_f1)
+            trainer.best_f1 = f1
+            trainer.best_epoch = trainer.epochs_trained
+            trainer.save(args['save_name'], save_optimizer=False)
         if model_save_each_filename:
-            trainer.save(model_save_each_filename % epoch, save_optimizer=True)
-        logger.info("Epoch {} finished\nTransitions correct: {}  Transitions incorrect: {}\n  Total loss for epoch: {}\n  Dev score      ({:5}): {}\n  Best dev score ({:5}): {}".format(epoch, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, epoch, f1, best_epoch, best_f1))
+            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+        if epoch_stats.nans > 0:
+            logger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
+        logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
 
         if args['wandb']:
-            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=epoch)
+            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
             if args['wandb_norm_regex']:
                 watch_regex = re.compile(args['wandb_norm_regex'])
                 for n, p in model.named_parameters():
                     if watch_regex.search(n):
                         wandb.log({n: torch.linalg.norm(p)})
 
-        # don't redo the optimizer a second time if we're not changing the structure
-        if args['multistage'] and epoch in multistage_splits:
-            # TODO: start counting epoch from trainer.epochs_trained for a previously trained model?
-
+        # recreate the optimizer and alter the model as needed if we hit a new multistage split
+        if args['multistage'] and trainer.epochs_trained in multistage_splits:
             # we may be loading a save model from an earlier epoch if the scores stopped increasing
             epochs_trained = trainer.epochs_trained
+            batches_trained = trainer.batches_trained
 
-            stage_pattn_layers, stage_uses_lattn = multistage_splits[epoch]
+            stage_pattn_layers, stage_uses_lattn = multistage_splits[epochs_trained]
 
             # when loading the model, let the saved model determine whether it has pattn or lattn
-            temp_args = dict(trainer.args)
+            temp_args = copy.deepcopy(model.args)
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
             # overwriting the old trainer & model will hopefully free memory
-            trainer = Trainer.load(model_filename, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
+            trainer = Trainer.load(args['save_name'], temp_args, load_optimizer=False, foundation_cache=foundation_cache)
             model = trainer.model
-            logger.info("Finished stage at epoch %d.  Restarting optimizer", epoch)
+            logger.info("Finished stage at epoch %d.  Restarting optimizer", epochs_trained)
             logger.info("Previous best model was at epoch %d", trainer.epochs_trained)
 
             temp_args = dict(args)
@@ -597,16 +761,24 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
             bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
             new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
-            if args['cuda']:
-                new_model.cuda()
+            new_model.to(device)
             new_model.copy_with_new_structure(model)
 
-            optimizer = build_optimizer(temp_args, new_model)
+            optimizer = build_optimizer(temp_args, new_model, False)
             scheduler = build_scheduler(temp_args, optimizer)
-            trainer = Trainer(temp_args, new_model, optimizer, scheduler, epochs_trained)
+            trainer = Trainer(new_model, optimizer, scheduler, epochs_trained, batches_trained, trainer.best_f1, trainer.best_epoch)
+            add_grad_clipping(trainer, args['grad_clipping'])
             model = new_model
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_function, epoch_data, args):
+        # checkpoint needs to be saved AFTER rebuilding the optimizer
+        # so that assumptions about the optimizer in the checkpoint
+        # can be made based on the end of the epoch
+        if args['checkpoint'] and args['checkpoint_save_name']:
+            trainer.save(args['checkpoint_save_name'], save_optimizer=True)
+
+    return trainer
+
+def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
@@ -614,24 +786,29 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
     optimizer = trainer.optimizer
     scheduler = trainer.scheduler
 
-    epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0)
+    epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0, 0)
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
+        trainer.batches_trained += 1
 
-        optimizer.step()
+        # Early in the training, some trees will be degenerate in a
+        # way that results in layers going up the tree amplifying the
+        # weights until they overflow.  Generally that problem
+        # resolves itself in a few iterations, so for now we just
+        # ignore those batches, but report how often it happens
+        if batch_stats.nans == 0:
+            optimizer.step()
         optimizer.zero_grad()
-
         epoch_stats = epoch_stats + batch_stats
+
 
     old_lr = scheduler.get_last_lr()[0]
     scheduler.step()
     new_lr = scheduler.get_last_lr()[0]
     if old_lr != new_lr:
         logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
-
-    trainer.epochs_trained += 1
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
@@ -645,7 +822,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, model_loss_functio
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, model_loss_function, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, oracle, args):
     """
     Train the model for one batch
 
@@ -657,9 +834,10 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
     """
     # now we add the state to the trees in the batch
     # the state is build as a bulk operation
-    initial_states = parse_transitions.initial_state_from_preterminals([x.preterminals for x in batch], model, [x.tree for x in batch])
-    batch = [state._replace(gold_sequence=sequence)
-             for (tree, sequence, _), state in zip(batch, initial_states)]
+    initial_states = model.initial_state_from_preterminals([x.preterminals for x in training_batch], [x.tree for x in training_batch])
+    initial_states = [state._replace(gold_sequence=sequence)
+                      for (tree, sequence, _), state in zip(training_batch, initial_states)]
+    current_batch = initial_states
 
     transitions_correct = Counter()
     transitions_incorrect = Counter()
@@ -679,23 +857,26 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
     #   or if we need to use teacher forcing
     # update all states using either the gold or predicted transition
     # any trees which are now finished are removed from the training cycle
-    while len(batch) > 0:
-        outputs, pred_transitions = model.predict(batch, is_legal=False)
-        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in batch]
+    while len(current_batch) > 0:
+        outputs, pred_transitions, _ = model.predict(current_batch, is_legal=False)
+        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in current_batch]
         trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
         all_errors.append(outputs)
         all_answers.extend(trans_tensor)
 
         new_batch = []
         update_transitions = []
-        for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, batch):
+        for pred_transition, gold_transition, state in zip(pred_transitions, gold_transitions, current_batch):
+            # forget teacher forcing vs scheduled sampling
+            # we're going with idiot forcing
             if pred_transition == gold_transition:
                 transitions_correct[gold_transition.short_name()] += 1
                 if state.num_transitions() + 1 < len(state.gold_sequence):
-                    if args['transition_scheme'] is TransitionScheme.IN_ORDER and random.random() < args['oracle_forced_errors']:
+                    if oracle is not None and random.random() < args['oracle_forced_errors']:
+                        # TODO: could randomly choose from the legal transitions
                         fake_transition = random.choice(model.transitions)
                         if fake_transition.is_legal(state, model):
-                            _, new_sequence = oracle_inorder_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+                            _, new_sequence = oracle.fix_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions())
                             if new_sequence is not None:
                                 new_batch.append(state._replace(gold_sequence=new_sequence))
                                 update_transitions.append(fake_transition)
@@ -714,14 +895,14 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
             if state.num_transitions() + 1 >= len(state.gold_sequence):
                 continue
 
-            if epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model) or args['transition_scheme'] is not TransitionScheme.IN_ORDER:
+            if oracle is None or epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model):
                 new_batch.append(state)
                 update_transitions.append(gold_transition)
                 continue
 
-            repair_type, new_sequence = oracle_inorder_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions(), model.get_root_labels())
+            repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions())
             # we can only reach here on an error
-            assert repair_type != RepairType.CORRECT
+            assert not repair_type.is_correct()
             repairs_used[repair_type] += 1
             if new_sequence is not None and random.random() < args['oracle_frequency']:
                 new_batch.append(state._replace(gold_sequence=new_sequence))
@@ -730,13 +911,14 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
                 new_batch.append(state)
                 update_transitions.append(gold_transition)
 
-        if len(batch) > 0:
+        if len(current_batch) > 0:
             # bulk update states - significantly faster
-            batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
+            current_batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
 
     errors = torch.cat(all_errors)
     answers = torch.cat(all_answers)
 
+    errors = process_outputs(errors)
     tree_loss = model_loss_function(errors, answers)
     tree_loss.backward()
     if args['watch_regex']:
@@ -746,150 +928,57 @@ def train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, mo
         for n, p in model.named_parameters():
             if watch_regex.search(n):
                 matched = True
-                logger.info("  %s norm: %f grad: %f", n, torch.linalg.norm(p), torch.linalg.norm(p.grad))
+                if p.requires_grad and p.grad is not None:
+                    logger.info("  %s norm: %f grad: %f", n, torch.linalg.norm(p), torch.linalg.norm(p.grad))
+                elif p.requires_grad:
+                    logger.info("  %s norm: %f grad required, but is None!", n, torch.linalg.norm(p))
+                else:
+                    logger.info("  %s norm: %f grad not required", n, torch.linalg.norm(p))
         if not matched:
             logger.info("  (none found!)")
-    batch_loss = tree_loss.item()
-
-    return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used)
-
-def build_batch_from_trees(batch_size, data_iterator, model):
-    """
-    Read from the data_iterator batch_size trees and turn them into new parsing states
-    """
-    tree_batch = []
-    for _ in range(batch_size):
-        gold_tree = next(data_iterator, None)
-        if gold_tree is None:
-            break
-        tree_batch.append(gold_tree)
-
-    if len(tree_batch) > 0:
-        tree_batch = parse_transitions.initial_state_from_gold_trees(tree_batch, model)
-    return tree_batch
-
-def build_batch_from_tagged_words(batch_size, data_iterator, model):
-    """
-    Read from the data_iterator batch_size tagged sentences and turn them into new parsing states
-    """
-    tree_batch = []
-    for _ in range(batch_size):
-        sentence = next(data_iterator, None)
-        if sentence is None:
-            break
-        tree_batch.append(sentence)
-
-    if len(tree_batch) > 0:
-        tree_batch = parse_transitions.initial_state_from_words(tree_batch, model)
-    return tree_batch
-
-ParseResult = namedtuple("ParseResult", ['gold', 'predictions'])
-ParsePrediction = namedtuple("ParsePrediction", ['tree', 'score'])
-
-@torch.no_grad()
-def parse_sentences(data_iterator, build_batch_fn, batch_size, model, best=True):
-    """
-    Given an iterator over the data and a method for building batches, returns a bunch of parse trees.
-
-    The data_iterator should be anything which returns the data for a parse task via next()
-    build_batch_fn is a function that turns that data into State objects
-    This will be called to generate batches of size batch_size until the data is exhausted
-
-    The return is a list of tuples: (gold_tree, [(predicted, score) ...])
-    gold_tree will be left blank if the data did not include gold trees
-    currently score is always 1.0, but the interface may be expanded
-    to get a score from the result of the parsing
-
-    no_grad() is so that gradients aren't kept, which makes the model
-    run faster and use less memory at inference time
-    """
-    treebank = []
-    treebank_indices = []
-    tree_batch = build_batch_fn(batch_size, data_iterator, model)
-    batch_indices = list(range(len(tree_batch)))
-    horizon_iterator = iter([])
-
-    if best:
-        predict = model.predict
+    if torch.any(torch.isnan(tree_loss)):
+        batch_loss = 0.0
+        nans = 1
     else:
-        predict = model.weighted_choice
+        batch_loss = tree_loss.item()
+        nans = 0
 
-    while len(tree_batch) > 0:
-        _, transitions = predict(tree_batch)
-        tree_batch = parse_transitions.bulk_apply(model, tree_batch, transitions)
+    return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
-        remove = set()
-        for idx, tree in enumerate(tree_batch):
-            if tree.finished(model):
-                predicted_tree = tree.get_tree(model)
-                gold_tree = tree.gold_tree
-                # TODO: put an actual score here?
-                treebank.append(ParseResult(gold_tree, [ParsePrediction(predicted_tree, 1.0)]))
-                treebank_indices.append(batch_indices[idx])
-                remove.add(idx)
-
-        if len(remove) > 0:
-            tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
-            batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
-
-        for _ in range(batch_size - len(tree_batch)):
-            horizon_tree = next(horizon_iterator, None)
-            if not horizon_tree:
-                horizon_batch = build_batch_fn(batch_size, data_iterator, model)
-                if len(horizon_batch) == 0:
-                    break
-                horizon_iterator = iter(horizon_batch)
-                horizon_tree = next(horizon_iterator, None)
-
-            tree_batch.append(horizon_tree)
-            batch_indices.append(len(treebank) + len(tree_batch))
-
-    treebank = utils.unsort(treebank, treebank_indices)
-    return treebank
-
-def parse_tagged_words(model, words, batch_size):
-    """
-    This parses tagged words and returns a list of trees.
-
-    The tagged words should be represented:
-      one list per sentence
-        each sentence is a list of (word, tag)
-    The return value is a list of ParseTree objects
-    """
-    logger.debug("Processing %d sentences", len(words))
-    model.eval()
-
-    sentence_iterator = iter(words)
-    treebank = parse_sentences(sentence_iterator, build_batch_from_tagged_words, batch_size, model)
-
-    results = [t.predictions[0].tree for t in treebank]
-    return results
-
-def run_dev_set(model, dev_trees, args, evaluator=None):
+def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     """
     This reparses a treebank and executes the CoreNLP Java EvalB code.
 
     It only works if CoreNLP 4.3.0 or higher is in the classpath.
     """
-    logger.info("Processing %d trees from %s", len(dev_trees), args['eval_file'])
+    logger.info("Processing %d trees from %s", len(retagged_trees), args['eval_file'])
     model.eval()
 
-    tree_iterator = iter(tqdm(dev_trees))
-    treebank = parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model)
+    keep_scores = args['num_generate'] > 0
+
+    tree_iterator = iter(tqdm(retagged_trees))
+    treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
     full_results = treebank
 
     if args['num_generate'] > 0:
         logger.info("Generating %d random analyses", args['num_generate'])
         generated_treebanks = [treebank]
         for i in tqdm(range(args['num_generate'])):
-            tree_iterator = iter(tqdm(dev_trees, leave=False, postfix="tb%03d" % i))
-            generated_treebanks.append(parse_sentences(tree_iterator, build_batch_from_trees, args['eval_batch_size'], model, best=False))
+            tree_iterator = iter(tqdm(retagged_trees, leave=False, postfix="tb%03d" % i))
+            generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_scores=keep_scores))
 
-        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses])
+        #best_treebank = [ParseResult(parses[0].gold, [max([p.predictions[0] for p in parses], key=itemgetter(1))], None, None)
+        #                 for parses in zip(*generated_treebanks)]
+        #generated_treebanks = [best_treebank] + generated_treebanks
+
+        # TODO: if the model is dropping trees, this will not work
+        full_results = [ParseResult(parses[0].gold, [p.predictions[0] for p in parses], None, None)
                         for parses in zip(*generated_treebanks)]
 
-    if len(treebank) < len(dev_trees):
-        logger.warning("Only evaluating %d trees instead of %d", len(treebank), len(dev_trees))
+    if len(full_results) < len(retagged_trees):
+        logger.warning("Only evaluating %d trees instead of %d", len(full_results), len(retagged_trees))
+    else:
+        full_results = [x._replace(gold=gold) for x, gold in zip(full_results, original_trees)]
 
     if args['mode'] == 'predict' and args['predict_file']:
         utils.ensure_dir(args['predict_dir'], verbose=False)
@@ -901,24 +990,24 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
             logger.warning("Cowardly refusing to overwrite {}".format(orig_file))
         else:
             with open(pred_file, 'w') as fout:
-                for tree in treebank:
-                    fout.write("{:_}".format(tree.predictions[0].tree))
+                for tree in full_results:
+                    fout.write(args['predict_format'].format(tree.predictions[0].tree))
                     fout.write("\n")
 
             for i in range(args['num_generate']):
                 pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
                 with open(pred_file, 'w') as fout:
-                    for tree in generated_treebanks[i+1]:
-                        fout.write("{:_}".format(tree.predictions[0].tree))
+                    for tree in generated_treebanks[:-num_generate]:
+                        fout.write(args['predict_format'].format(tree.predictions[0].tree))
                         fout.write("\n")
 
             with open(orig_file, 'w') as fout:
-                for tree in treebank:
-                    fout.write("{:_}".format(tree.gold))
+                for tree in full_results:
+                    fout.write(args['predict_format'].format(tree.gold))
                     fout.write("\n")
 
     if len(full_results) == 0:
-        return 0.0
+        return 0.0, 0.0
     if evaluator is None:
         if args['num_generate'] > 0:
             kbest = max(len(fr.predictions) for fr in full_results)
@@ -929,4 +1018,5 @@ def run_dev_set(model, dev_trees, args, evaluator=None):
     else:
         response = evaluator.process(full_results)
 
-    return response.f1
+    kbestF1 = response.kbestF1 if response.HasField("kbestF1") else None
+    return response.f1, kbestF1

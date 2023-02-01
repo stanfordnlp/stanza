@@ -18,7 +18,7 @@ import sys
 
 import stanza
 
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
+from stanza.models.classifiers.data import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 def main(in_directory, out_directory, short_name):

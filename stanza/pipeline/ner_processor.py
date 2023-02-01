@@ -30,7 +30,7 @@ class NERProcessor(UDProcessor):
             dependencies = [x.get(dep_name) for x in config.get('dependencies', [])]
         return dependencies
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         # set up trainer
         model_paths = config.get('model_path')
         if isinstance(model_paths, str):
@@ -46,7 +46,7 @@ class NERProcessor(UDProcessor):
             pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
             args = {'charlm_forward_file': charlm_forward,
                     'charlm_backward_file': charlm_backward}
-            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, use_cuda=use_gpu, foundation_cache=pipeline.foundation_cache)
+            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, device=device, foundation_cache=pipeline.foundation_cache)
             self.trainers.append(trainer)
 
         self._trainer = self.trainers[0]
@@ -104,10 +104,11 @@ class NERProcessor(UDProcessor):
             doc.build_ents()
         return docs
 
-    def get_known_tags(self):
+    def get_known_tags(self, model_idx=0):
         """
         Return the tags known by this model
 
         Removes the S-, B-, etc, and does not include O
+        Specify model_idx if the processor  has more than one model
         """        
-        return self._trainer.get_known_tags()
+        return self.trainers[model_idx].get_known_tags()

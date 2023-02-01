@@ -5,10 +5,11 @@ Common methods for the various self-training data collection scripts
 import logging
 import os
 import random
+import re
 
 import stanza
 from stanza.models.common import utils
-from stanza.models.constituency.utils import TextTooLongError
+from stanza.models.common.bert_embedding import TextTooLongError
 
 logger = logging.getLogger('stanza')
 tqdm = utils.get_tqdm()
@@ -35,6 +36,45 @@ def common_args(parser):
         default='saved_models/constituency/vi_vlsp21_inorder.pt',
         help='What models to use for parsing.  comma-separated'
     )
+    parser.add_argument(
+        '--package',
+        default='default',
+        help='Which package to load pretrain & charlm from for the parsers'
+    )
+    parser.add_argument(
+        '--output_ptb',
+        default=False,
+        action='store_true',
+        help='Output trees in PTB brackets (default is a bracket language format)'
+    )
+
+def add_length_args(parser):
+    parser.add_argument(
+        '--min_len',
+        default=5,
+        type=int,
+        help='Minimum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_min_len',
+        dest='min_len',
+        action='store_const',
+        const=None,
+        help='No minimum length'
+    )
+    parser.add_argument(
+        '--max_len',
+        default=100,
+        type=int,
+        help='Maximum length sentence to keep.  None = unlimited'
+    )
+    parser.add_argument(
+        '--no_max_len',
+        dest='max_len',
+        action='store_const',
+        const=None,
+        help='No maximum length'
+    )
 
 def build_ssplit_pipe(ssplit, lang):
     if ssplit:
@@ -42,28 +82,30 @@ def build_ssplit_pipe(ssplit, lang):
     else:
         return stanza.Pipeline(lang, processors="tokenize", tokenize_no_ssplit=True)
 
-def build_tag_pipe(ssplit, lang):
+def build_tag_pipe(ssplit, lang, foundation_cache=None):
     if ssplit:
-        return stanza.Pipeline(lang, processors="tokenize,pos")
+        return stanza.Pipeline(lang, processors="tokenize,pos", foundation_cache=foundation_cache)
     else:
-        return stanza.Pipeline(lang, processors="tokenize,pos", tokenize_no_ssplit=True)
+        return stanza.Pipeline(lang, processors="tokenize,pos", tokenize_no_ssplit=True, foundation_cache=foundation_cache)
 
-def build_parser_pipes(lang, models):
+def build_parser_pipes(lang, models, package="default", foundation_cache=None):
     """
     Build separate pipelines for each parser model we want to use
+
+    It is highly recommended to pass in a FoundationCache to reuse bottom layers
     """
     parser_pipes = []
     for model_name in models.split(","):
         if os.path.exists(model_name):
             # if the model name exists as a file, treat it as the path to the model
-            pipe = stanza.Pipeline(lang, processors="constituency", constituency_model_path=model_name, constituency_pretagged=True)
+            pipe = stanza.Pipeline(lang, processors="constituency", package=package, constituency_model_path=model_name, constituency_pretagged=True, foundation_cache=foundation_cache)
         else:
             # otherwise, assume it is a package name?
-            pipe = stanza.Pipeline(lang, processors={"constituency": model_name}, constituency_pretagged=True, package=None)
+            pipe = stanza.Pipeline(lang, processors={"constituency": model_name}, constituency_pretagged=True, package=None, foundation_cache=foundation_cache)
         parser_pipes.append(pipe)
     return parser_pipes
 
-def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=100, chunk_size=2000):
+def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=50, chunk_size=2000):
     """
     Using the ssplit pipeline, break up the documents into sentences
 
@@ -93,7 +135,66 @@ def split_docs(docs, ssplit_pipe, max_len=140, max_word_len=100, chunk_size=2000
     logger.info("Sentences filtered for length: %d", filtered_sentences)
     return new_docs
 
-def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pipes, shuffle=True, chunk_size=10, max_len=140):
+# from https://stackoverflow.com/questions/2718196/find-all-chinese-text-in-a-string-using-python-and-regex
+ZH_RE = re.compile(u'[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]', re.UNICODE)
+# https://stackoverflow.com/questions/6787716/regular-expression-for-japanese-characters
+JA_RE = re.compile(u'[一-龠ぁ-ゔァ-ヴー々〆〤ヶ]', re.UNICODE)
+DEV_RE = re.compile(u'[\u0900-\u097f]', re.UNICODE)
+
+def tokenize_docs(docs, pipe, min_len, max_len):
+    """
+    Turn the text in docs into a list of whitespace separated sentences
+
+    docs: a list of strings
+    pipe: a Stanza pipeline for tokenizing
+    min_len, max_len: can be None to not filter by this attribute
+    """
+    results = []
+    docs = [stanza.Document([], text=t) for t in docs]
+    pipe(docs)
+    is_zh = pipe.lang and pipe.lang.startswith("zh")
+    is_ja = pipe.lang and pipe.lang.startswith("ja")
+    is_vi = pipe.lang and pipe.lang.startswith("vi")
+    for doc in docs:
+        for sentence in doc.sentences:
+            if min_len and len(sentence.words) < min_len:
+                continue
+            if max_len and len(sentence.words) > max_len:
+                continue
+            text = sentence.text
+            if (text.find("|") >= 0 or text.find("_") >= 0 or
+                text.find("<") >= 0 or text.find(">") >= 0 or
+                text.find("[") >= 0 or text.find("]") >= 0 or
+                text.find('—') >= 0):   # an em dash, seems to be part of lists
+                continue
+            # the VI tokenizer in particular doesn't split these well
+            if any(any(w.text.find(c) >= 0 and len(w.text) > 1 for w in sentence.words)
+                   for c in '"()'):
+                continue
+            text = [w.text.replace(" ", "_") for w in sentence.words]
+            text = " ".join(text)
+            if any(len(w.text) >= 50 for w in sentence.words):
+                # skip sentences where some of the words are unreasonably long
+                # could make this an argument
+                continue
+            if not is_zh and len(ZH_RE.findall(text)) > 250:
+                # some Chinese sentences show up in VI Wikipedia
+                # we want to eliminate ones which will choke the bert models
+                continue
+            if not is_ja and len(JA_RE.findall(text)) > 150:
+                # some Japanese sentences also show up in VI Wikipedia
+                # we want to eliminate ones which will choke the bert models
+                continue
+            if is_vi and len(DEV_RE.findall(text)) > 100:
+                # would need some list of languages that use
+                # Devanagari to eliminate sentences from all datasets.
+                # Otherwise we might accidentally throw away all the
+                # text from a language we need (although that would be obvious)
+                continue
+            results.append(text)
+    return results
+
+def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pipes, shuffle=True, chunk_size=10, max_len=140, min_len=10, output_ptb=False):
     """
     Find trees where all the parsers in parser_pipes agree
 
@@ -102,11 +203,19 @@ def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pi
 
     num_sentences > 0 gives an upper limit on how many sentences to extract.
       If < 0, all possible sentences are extracted
+
+    accepted_trees is a running tally of all the trees already built,
+      so that we don't reuse the same sentence if we see it again
     """
     if num_sentences < 0:
         tqdm_total = len(docs)
     else:
         tqdm_total = num_sentences
+
+    if output_ptb:
+        output_format = "{}"
+    else:
+        output_format = "{:L}"
 
     with tqdm(total=tqdm_total, leave=False) as pbar:
         if shuffle:
@@ -115,6 +224,11 @@ def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pi
         for chunk_start in range(0, len(docs), chunk_size):
             chunk = docs[chunk_start:chunk_start+chunk_size]
             chunk = [stanza.Document([], text=t) for t in chunk]
+
+            if num_sentences < 0:
+                pbar.update(len(chunk))
+
+            # first, retag the sentences
             tag_pipe(chunk)
 
             chunk = [d for d in chunk if len(d.sentences) > 0]
@@ -128,15 +242,13 @@ def find_matching_trees(docs, num_sentences, accepted_trees, tag_pipe, parser_pi
             try:
                 for pipe in parser_pipes:
                     pipe(chunk)
-                    trees = ["{:L}".format(sent.constituency) for doc in chunk for sent in doc.sentences]
+                    trees = [output_format.format(sent.constituency) for doc in chunk for sent in doc.sentences if len(sent.words) >= min_len]
                     parses.append(trees)
             except TextTooLongError as e:
                 # easiest is to skip this chunk - could theoretically save the other sentences
                 continue
 
             for tree in zip(*parses):
-                if num_sentences < 0:
-                    pbar.update(1)
                 if len(set(tree)) != 1:
                     continue
                 tree = tree[0]

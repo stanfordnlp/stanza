@@ -13,6 +13,16 @@ BERT_ARGS = {
     "vinai/phobert-large": { "use_fast": True },
 }
 
+class TextTooLongError(ValueError):
+    """
+    A text was too long for the underlying model (possibly BERT)
+    """
+    def __init__(self, length, max_len, line_num, text):
+        super().__init__("Found a text of length %d (possibly after tokenizing).  Maximum handled length is %d  Error occurred at line %d" % (length, max_len, line_num))
+        self.line_num = line_num
+        self.text = text
+
+
 def update_max_length(model_name, tokenizer):
     if model_name == 'google/muril-base-cased' or model_name == 'airesearch/wangchanberta-base-att-spm-uncased':
         tokenizer.model_max_length = 512
@@ -65,7 +75,7 @@ def tokenize_manual(model_name, sent, tokenizer):
 
     return tokenized, tokenized_sent
 
-def filter_data(model_name, data, tokenizer = None):
+def filter_data(model_name, data, tokenizer = None, log_level=logging.INFO):
     """
     Filter out the (NER) data that is too long for BERT model.
     """
@@ -74,7 +84,7 @@ def filter_data(model_name, data, tokenizer = None):
     filtered_data = []
     #eliminate all the sentences that are too long for bert model
     for sent in data:
-        sentence = [word[0] for word in sent]
+        sentence = [word if isinstance(word, str) else word[0] for word in sent]
         _, tokenized_sent = tokenize_manual(model_name, sentence, tokenizer)
         
         if len(tokenized_sent) > tokenizer.model_max_length - 2:
@@ -82,12 +92,65 @@ def filter_data(model_name, data, tokenizer = None):
 
         filtered_data.append(sent)
 
-    logger.info("Eliminated {} datapoints because their length is over maximum size of BERT model. ".format(len(data)-len(filtered_data)))
+    logger.log(log_level, "Eliminated %d of %d datapoints because their length is over maximum size of BERT model.", (len(data)-len(filtered_data)), len(data))
     
     return filtered_data
 
 
-def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+def cloned_feature(feature, num_layers):
+    """
+    Clone & detach the feature, keeping the last N layers (or averaging -2,-3,-4 if not specified)
+
+    averaging 3 of the last 4 layers worked well for non-VI languages
+    """
+    # feature[2] is the same for bert, but it didn't work for
+    # older versions of transformers for xlnet
+    # feature = feature[2]
+    feature = feature.hidden_states
+    if num_layers is None:
+        feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+    else:
+        feature = torch.stack(feature[-num_layers:], axis=3)
+    return feature.clone().detach()
+
+def extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers):
+    """
+    Handles vi-bart.  May need testing before using on other bart
+
+    https://github.com/VinAIResearch/BARTpho
+    """
+    processed = [] # final product, returns the list of list of word representation
+
+    sentences = [" ".join([word.replace(" ", "_") for word in sentence]) for sentence in data]
+    tokenized = tokenizer(sentences, return_tensors='pt', padding=True, return_attention_mask=True)
+    input_ids = tokenized['input_ids'].to(device)
+    attention_mask = tokenized['attention_mask'].to(device)
+
+    for i in range(int(math.ceil(len(sentences)/128))):
+        with torch.no_grad():
+            start_sentence = i * 128
+            end_sentence = min(start_sentence + 128, len(sentences))
+            input_ids = input_ids[start_sentence:end_sentence]
+            attention_mask = attention_mask[start_sentence:end_sentence]
+
+            features = model(input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            features = features.decoder_hidden_states
+            if num_layers is None:
+                features = torch.stack(features[-4:-1], axis=3).sum(axis=3) / 4
+            else:
+                features = torch.stack(features[-num_layers:], axis=3)
+            features = features.clone().detach()
+
+            for feature, sentence in zip(features, data):
+                # +2 for the endpoints
+                feature = feature[:len(sentence)+2]
+                if not keep_endpoints:
+                    feature = feature[1:-1]
+                processed.append(feature)
+
+    return processed
+
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers):
     """
     Extract transformer embeddings using a method specifically for phobert
 
@@ -107,7 +170,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
 
         if len(tokenized_sent) > tokenizer.model_max_length:
             logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(tokenized_sent), data[idx])
-            #raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
+            raise TextTooLongError(len(tokenized_sent), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
         #add to tokenized_sents
         tokenized_sents.append(torch.tensor(tokenized_sent).detach())
@@ -128,11 +191,15 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # run only 1 time as the batch size seems to be 30
     for i in range(int(math.ceil(size/128))):
         with torch.no_grad():
-            feature = model(tokenized_sents_padded[128*i:128*i+128].clone().detach().to(device), output_hidden_states=True)
-            # averaging the last four layers worked well for non-VI languages
-            feature = feature[2]
-            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach()
+            padded_input = tokenized_sents_padded[128*i:128*i+128]
+            start_sentence = i * 128
+            end_sentence = start_sentence + padded_input.shape[0]
+            attention_mask = torch.zeros(end_sentence - start_sentence, padded_input.shape[1], device=device)
+            for sent_idx, sent in enumerate(tokenized_sents[start_sentence:end_sentence]):
+                attention_mask[sent_idx, :len(sent)] = 1
+            # TODO: is the clone().detach() necessary?
+            feature = model(padded_input.clone().detach().to(device), attention_mask=attention_mask, output_hidden_states=True)
+            features += cloned_feature(feature, num_layers)
 
     assert len(features)==size
     assert len(features)==len(processed)
@@ -170,25 +237,96 @@ def fix_german_tokens(tokenizer, data):
     for sentence in data:
         tokenized = tokenizer(sentence, is_split_into_words=False).input_ids
         new_sentence = [word if len(token) > 2 else "-" for word, token in zip(sentence, tokenized)]
-        #print(new_sentence)
         new_data.append(new_sentence)
     return new_data
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints):
+def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers):
+    # using attention masks makes contextual embeddings much more useful for downstream tasks
+    tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
+    #tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
+
+    list_offsets = [[None] * (len(sentence)+2) for sentence in data]
+    for idx in range(len(data)):
+        offsets = tokenized.word_ids(batch_index=idx)
+        list_offsets[idx][0] = 0
+        for pos, offset in enumerate(offsets):
+            if offset is None:
+                break
+            # this uses the last token piece for any offset by overwriting the previous value
+            # this will be one token earlier
+            # we will add a <pad> to the start of each sentence for the endpoints
+            list_offsets[idx][offset+1] = pos + 1
+        list_offsets[idx][-1] = list_offsets[idx][-2] + 1
+        if any(x is None for x in list_offsets[idx]):
+            raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
+
+        if len(offsets) > tokenizer.model_max_length - 2:
+            logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
+            raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
+
+    features = []
+    for i in range(int(math.ceil(len(data)/128))):
+        with torch.no_grad():
+            # TODO: find a suitable representation for attention masks for xlnet
+            # xlnet base on WSJ:
+            # sep_token_id at beginning, cls_token_id at end:     0.9441
+            # bos_token_id at beginning, eos_token_id at end:     0.9463
+            # bos_token_id at beginning, sep_token_id at end:     0.9459
+            # bos_token_id at beginning, cls_token_id at end:     0.9457
+            # bos_token_id at beginning, sep/cls at end:          0.9454
+            # use the xlnet tokenization with words at end,
+            # begin token is last pad, end token is sep, no mask: 0.9463
+            # same, but with masks:                               0.9440
+            input_ids = [[tokenizer.bos_token_id] + x[:-2] + [tokenizer.eos_token_id] for x in tokenized['input_ids'][128*i:128*i+128]]
+            max_len = max(len(x) for x in input_ids)
+            attention_mask = torch.zeros(len(input_ids), max_len, dtype=torch.long, device=device)
+            for idx, input_row in enumerate(input_ids):
+                attention_mask[idx, :len(input_row)] = 1
+                if len(input_row) < max_len:
+                    input_row.extend([tokenizer.pad_token_id] * (max_len - len(input_row)))
+            id_tensor = torch.tensor(input_ids, device=device)
+            feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
+            # feature[2] is the same for bert, but it didn't work for
+            # older versions of transformers for xlnet
+            # feature = feature[2]
+            features += cloned_feature(feature, num_layers)
+
+    processed = []
+    #process the output
+    if not keep_endpoints:
+        #remove the bos and eos tokens
+        list_offsets = [sent[1:-1] for sent in list_offsets]
+    for feature, offsets in zip(features, list_offsets):
+        new_sent = feature[offsets]
+        processed.append(new_sent)
+
+    return processed
+
+
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None):
     """
     Extract transformer embeddings using a generic roberta extraction
+
     data: list of list of string (the text tokens)
+    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
     """
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
+
+    if model_name == "vinai/bartpho-word":
+        # not sure this works with any other Bart
+        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
+
+    if isinstance(data, tuple):
+        data = list(data)
+
+    if model_name.startswith("xlnet"):
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
     if model_name in BAD_TOKENIZERS:
         data = fix_german_tokens(tokenizer, data)
 
-    is_xlnet = model_name.startswith("xlnet")
     #add add_prefix_space = True for RoBerTa-- error if not
-    if isinstance(data, tuple):
-        data = list(data)
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
     list_offsets = [[None] * (len(sentence)+2) for sentence in data]
@@ -198,17 +336,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             if offset is None:
                 continue
             # this uses the last token piece for any offset by overwriting the previous value
-            if is_xlnet:
-                # this will be one token earlier
-                # we will add a <pad> to the start of each sentence for the endpoints
-                if offset == 0 and list_offsets[idx][offset+1] is None:
-                    list_offsets[idx][offset] = pos
-                list_offsets[idx][offset+1] = pos + 1
-            else:
-                list_offsets[idx][offset+1] = pos
+            list_offsets[idx][offset+1] = pos
+        list_offsets[idx][0] = 0
         list_offsets[idx][-1] = list_offsets[idx][-2] + 1
-        if not is_xlnet:
-            list_offsets[idx][0] = 0
         #print(list_offsets[idx])
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
@@ -220,21 +350,10 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     features = []
     for i in range(int(math.ceil(len(data)/128))):
         with torch.no_grad():
-            if is_xlnet:
-                # TODO: find a suitable representation for attention masks for xlnet
-                input_ids = [[tokenizer.pad_token_id] + x for x in tokenized['input_ids'][128*i:128*i+128]]
-                attention_mask = None
-            else:
-                input_ids = tokenized['input_ids'][128*i:128*i+128]
-                attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
-            id_tensor = torch.tensor(input_ids, device=device)
+            attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
+            id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
             feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
-            # feature[2] is the same for bert, but it didn't work for
-            # older versions of transformers for xlnet
-            # feature = feature[2]
-            feature = feature.hidden_states
-            feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
-            features += feature.clone().detach()
+            features += cloned_feature(feature, num_layers)
 
     processed = []
     #process the output

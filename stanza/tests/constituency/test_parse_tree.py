@@ -350,3 +350,10 @@ def test_pretty_print():
     assert "{:P}".format(trees[1]) == expected
 
     assert text == "{:O} {:O}".format(*trees)
+
+def test_reverse():
+    text = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB lick) (NP (NP (NNP Jennifer) (POS 's)) (NNS antennae))))))))"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    reversed_tree = trees[0].reverse()
+    assert str(reversed_tree) == "(ROOT (S (VP (S (VP (VP (NP (NNS antennae) (NP (POS 's) (NNP Jennifer))) (VB lick)) (TO to))) (VBP want)) (NP (PRP I))))"

@@ -87,6 +87,11 @@ The code breakdown is as follows:
 
   this file: main interface for training or evaluating models
   constituency/trainer.py: contains the training & evaluation code
+  constituency/ensemble.py: evaluation code specifically for letting multiple models
+    vote on the correct next transition.  a modest improvement.
+  constituency/evaluate_treebanks.py: specifically to evaluate multiple parsed treebanks
+    against a gold.  in particular, reports whether the theoretical best from those
+    parsed treebanks is an improvement (eg, the k-best score as reported by CoreNLP)
 
   constituency/parse_tree.py: a data structure for representing a parse tree and utility methods
   constituency/tree_reader.py: a module which can read trees from a string or input file
@@ -94,6 +99,10 @@ The code breakdown is as follows:
   constituency/tree_stack.py: a linked list which can branch in
     different directions, which will be useful when implementing beam
     search or a dynamic oracle
+  constituency/lstm_tree_stack.py: an LSTM over the elements of a TreeStack
+  constituency/transformer_tree_stack.py: attempts to run attention over the nodes
+    of a tree_stack.  not as effective as the lstm_tree_stack in the initial experiments.
+    perhaps it could be refined to work better, though
 
   constituency/parse_transitions.py: transitions and a State data structure to store them
   constituency/transition_sequence.py: turns ParseTree objects into
@@ -104,6 +113,7 @@ The code breakdown is as follows:
   constituency/lstm_model.py: adds LSTM features to the constituents to predict what the
     correct transition to make is, allowing for predictions on previously unseen text
 
+  constituency/retagging.py: a couple utility methods specifically for retagging
   constituency/utils.py: a couple utility methods
 
   constituency/dyanmic_oracle.py: a dynamic oracle which currently
@@ -112,11 +122,17 @@ The code breakdown is as follows:
     the parser makes an error.
 
   constituency/partitioned_transformer.py: implementation of a transformer for self-attention.
-     including attention noticeably improves model scores
-  constituency/label_attention: an even fancier form of transformer based on labeled attention:
+     presumably this should help, but we have yet to find a model structure where
+     this makes the scores go up.
+  constituency/label_attention.py: an even fancier form of transformer based on labeled attention:
      https://arxiv.org/abs/1911.03875
+  constituency/positional_encoding.py: so far, just the sinusoidal is here.
+     a trained encoding is in partitioned_transformer.py.
+     this should probably be refactored to common, especially if used elsewhere.
 
   stanza/pipeline/constituency_processor.py: interface between this model and the Pipeline
+
+  stanza/utils/datasets/constituency: various scripts and tools for processing constituency datasets
 
 Some alternate optimizer methods:
   adabelief: https://github.com/juntang-zhuang/Adabelief-Optimizer
@@ -132,11 +148,11 @@ import torch
 
 from stanza import Pipeline
 from stanza.models.common import utils
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
-from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary
+from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
 
 logger = logging.getLogger('stanza')
 
@@ -161,6 +177,8 @@ def parse_args(args=None):
     # for VI, for example, use vinai/phobert-base
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
@@ -174,22 +192,35 @@ def parse_args(args=None):
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
+    parser.add_argument('--silver_remove_duplicates', default=False, action='store_true', help="Do/don't remove duplicates from the silver training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--mode', default='train', choices=['train', 'predict', 'remove_optimizer'])
+    parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
     parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
-    parser.add_argument('--predict_dir', type=str, default=".", help='Where to write the predictions during --mode predict.  Pred and orig files will be written - the orig file will be retagged if that is requested.  Writing the orig file is useful for removing None and retagging')
-    parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
+    add_predict_output_args(parser)
 
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_size', type=int, default=20, help="Embedding size for transition stack")
+    parser.add_argument('--transition_stack', default=StackHistory.LSTM, type=lambda x: StackHistory[x.upper()],
+                        help='How to track transitions over a parse.  {}'.format(", ".join(x.name for x in StackHistory)))
+    parser.add_argument('--transition_heads', default=4, type=int, help="How many heads to use in MHA *if* the transition_stack is Attention")
+
+    parser.add_argument('--constituent_stack', default=StackHistory.LSTM, type=lambda x: StackHistory[x.upper()],
+                        help='How to track transitions over a parse.  {}'.format(", ".join(x.name for x in StackHistory)))
+    parser.add_argument('--constituent_heads', default=8, type=int, help="How many heads to use in MHA *if* the transition_stack is Attention")
+
     # larger was more effective, up to a point
-    parser.add_argument('--hidden_size', type=int, default=128, help="Size of the output layers for constituency stack and word queue")
+    # substantially smaller, such as 128,
+    # is fine if bert & charlm are not available
+    parser.add_argument('--hidden_size', type=int, default=512, help="Size of the output layers for constituency stack and word queue")
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--epoch_size', type=int, default=5000, help="Runs this many trees in an 'epoch' instead of going through the training dataset exactly once.  Set to 0 to do the whole training set")
+    parser.add_argument('--silver_epoch_size', type=int, default=None, help="Runs this many trees in a silver 'epoch'.  If not set, will match --epoch_size")
 
     # AdaDelta warmup for the conparser.  Motivation: AdaDelta results in
     # higher scores overall, but learns 0s for the weights of the pattn and
@@ -207,13 +238,14 @@ def parse_args(args=None):
     # Improvement on the WSJ dev set can be seen from 94.8 to 95.3
     # when 4 layers of pattn are trained this way.
     # More experiments to follow.
-    parser.add_argument('--multistage', action='store_true', help='1/2 epochs with adadelta no pattn or lattn, 1/4 with no lattn, 1/4 full model')
+    parser.add_argument('--multistage', default=True, action='store_true', help='1/2 epochs with adadelta no pattn or lattn, 1/4 with chosen optim and no lattn, 1/4 full model')
     parser.add_argument('--no_multistage', dest='multistage', action='store_false', help="don't do the multistage learning")
 
     # 1 seems to be the most effective, but we should cross-validate
     parser.add_argument('--oracle_initial_epoch', type=int, default=1, help="Epoch where we start using the dynamic oracle to let the parser keep going with wrong decisions")
     parser.add_argument('--oracle_frequency', type=float, default=0.8, help="How often to use the oracle vs how often to force the correct transition")
     parser.add_argument('--oracle_forced_errors', type=float, default=0.001, help="Occasionally have the model randomly walk through the state space to try to learn how to recover")
+    parser.add_argument('--oracle_level', type=int, default=None, help='Restrict oracle transitions to this level or lower.  0 means off.  None means use all oracle transitions.')
 
     # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
@@ -240,12 +272,10 @@ def parse_args(args=None):
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
-    parser.add_argument('--save_latest_name', type=str, default=None, help="Save the latest model here regardless of score.  Useful for restarting training")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     # Numbers are on a VLSP dataset, before adding attn or other improvements
     # baseline is an 80.6 model that occurs when trained using adadelta, lr 1.0
@@ -283,8 +313,59 @@ def parse_args(args=None):
     #           0.0003  - 0.8050
     #           0.0005  - 0.8076
     #           0.001   - 0.8069
+
+    # Numbers on the VLSP Dataset, with --multistage and default learning rates and adabelief optimizer
+    # Gelu: 82.32
+    # Mish: 81.95
+    # ELU: 81.73
+    # Hardshrink: 0.3
+    # Hardsigmoid: 79.03
+    # Hardtanh: 81.44
+    # Hardswish: 81.67
+    # Logsigmoid: 80.91
+    # Prelu: 80.95 (terminated early)
+    # Relu6: 81.91
+    # RReLU: 77.00
+    # Selu: 81.17
+    # Celu: 81.43
+    # Silu: 81.90
+    # Softplus: 80.94
+    # Softshrink: 0.3
+    # Softsign: 81.63
+    # Softshrink: 13.74
+    #
+    # Tests with no_charlm, --multitstage
+    # Gelu
+    # 0.00002 0.819746
+    # 0.00005 0.818
+    # 0.0001 0.818566
+    # 0.0002 0.819111
+    # 0.001 0.815609
+    #
+    # Mish
+    # 0.00002 0.816898
+    # 0.00005 0.821085
+    # 0.0001 0.817821
+    # 0.0002 0.818806
+    # 0.001 0.816494
+    #
+    # Relu
+    # 0.00002 0.818402
+    # 0.00005 0.819019
+    # 0.0001 0.821625
+    # 0.0002 0.820633
+    # 0.001 0.814315
+    #
+    # Relu6
+    # 0.00002 0.819719
+    # 0.00005 0.819871
+    # 0.0001 0.819018
+    # 0.0002 0.819506
+    # 0.001 0.819018
+
     parser.add_argument('--learning_rate', default=None, type=float, help='Learning rate for the optimizer.  Reasonable values are 1.0 for adadelta or 0.001 for SGD.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_RATES))
     parser.add_argument('--learning_eps', default=None, type=float, help='eps value to use in the optimizer.  None uses a default for the given optimizer: {}'.format(DEFAULT_LEARNING_EPS))
+    parser.add_argument('--learning_momentum', default=None, type=float, help='Momentum.  None uses a default for the given optimizer: {}'.format(DEFAULT_MOMENTUM))
     # weight decay values other than adadelta have not been thoroughly tested.
     # When using adadelta, weight_decay of 0.01 to 0.001 had the best results.
     # 0.1 was very clearly too high. 0.0001 might have been okay.
@@ -295,8 +376,7 @@ def parse_args(args=None):
     #    0.015:   0.81721
     #    0.010:   0.81474348
     #    0.005:   0.81503
-    parser.add_argument('--weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
-    parser.add_argument('--optim', default='Adadelta', help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
+    parser.add_argument('--learning_weight_decay', default=None, type=float, help='Weight decay (eg, l2 reg) to use in the optimizer')
     parser.add_argument('--learning_rho', default=DEFAULT_LEARNING_RHO, type=float, help='Rho parameter in Adadelta')
     # A few experiments on beta2 didn't show much benefit from changing it
     #   On an experiment with training WSJ with default parameters
@@ -304,8 +384,20 @@ def parse_args(args=None):
     #   0.999, 0.997, 0.995 all wound up with 0.9588
     #   values lower than 0.995 all had a slight dropoff
     parser.add_argument('--learning_beta2', default=0.999, type=float, help='Beta2 argument for AdamW')
+    parser.add_argument('--optim', default=None, help='Optimizer type: SGD, AdamW, Adadelta, AdaBelief, Madgrad')
+
+    parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
 
     parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
+
+    parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
+    parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
+
+    # Large Margin is from Large Margin In Softmax Cross-Entropy Loss
+    # it did not help on an Italian VIT test
+    # scores went from 0.8252 to 0.8248
+    parser.add_argument('--loss', default='cross', help='cross, large_margin, or focal.  Focal requires `pip install focal_loss_torch`')
+    parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
 
     # When using word_dropout and predict_dropout in conjunction with relu, one particular experiment produced the following dev scores after 300 iterations:
     # 0.0: 0.9085
@@ -353,13 +445,26 @@ def parse_args(args=None):
     # after the same clock time on the same hardware.  the two had been
     # trading places in terms of accuracy over those ~500 iterations.
     # leaky_relu was not an improvement - a full run on WSJ led to 0.9181 f1 instead of 0.919
+    # See constituency/utils.py for more extensive comments on nonlinearity options
     parser.add_argument('--nonlinearity', default='relu', choices=NONLINEARITY.keys(), help='Nonlinearity to use in the model.  relu is a noticeable improvement over tanh')
+    # In one experiment on an Italian dataset, VIT, we got the following:
+    #  0.8254 with relu as the nonlinearity   (10 trials)
+    #  0.8265 with maxout, k = 2              (15)
+    #  0.8253 with maxout, k = 3              (5)
+    # The speed in terms of trees/second might be slightly slower with maxout.
+    #  51.4 it/s on a Titan Xp with maxout 2 and 51.9 it/s with relu
+    # It might also be worth running some experiments with bigger
+    # output layers to see if that makes up for the difference in score.
+    parser.add_argument('--maxout_k', default=None, type=int, help="Use maxout layers instead of a nonlinearity for the output layers")
 
+    parser.add_argument('--use_silver_words', default=True, dest='use_silver_words', action='store_true', help="Use/don't use words from the silver dataset")
+    parser.add_argument('--no_use_silver_words', default=True, dest='use_silver_words', action='store_false', help="Use/don't use words from the silver dataset")
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
     parser.add_argument('--tag_unknown_frequency', default=0.001, type=float, help='How often to replace a tag with UNK when training')
 
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
+    parser.add_argument('--num_tree_lstm_layers', default=None, type=int, help='How many layers to use in the TREE_LSTMs, if used.  This also increases the width of the word outputs to match the tree lstm inputs.  Default 2 if TREE_LSTM or TREE_LSTM_CX, 1 otherwise')
     parser.add_argument('--num_output_layers', default=3, type=int, help='How many layers to use at the prediction level')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
@@ -367,15 +472,15 @@ def parse_args(args=None):
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
                         help='How to build a new composition from its children.  {}'.format(", ".join(x.name for x in ConstituencyComposition)))
     parser.add_argument('--reduce_heads', default=8, type=int, help='Number of attn heads to use when reducing children into a parent tree (constituency_composition == attn)')
+    parser.add_argument('--reduce_position', default=None, type=int, help="Dimension of position vector to use when reducing children.  None means 1/4 hidden_size, 0 means don't use (constituency_composition == key | untied_key)")
 
     parser.add_argument('--relearn_structure', action='store_true', help='Starting from an existing checkpoint, add or remove pattn / lattn.  One thing that works well is to train an initial model using adadelta with no pattn, then add pattn with adamw')
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path')
-    parser.add_argument('--maybe_finetune', action='store_true', help='Load existing model during `train` mode from `load_name` path if it exists.  Useful for running in situations where a job is frequently being preempted')
+    parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
+    parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
 
-    parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
-    parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
-    parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
+    retagging.add_retag_args(parser)
 
     # Partitioned Attention
     parser.add_argument('--pattn_d_model', default=1024, type=int, help='Partitioned attention model dimensionality')
@@ -387,7 +492,7 @@ def parse_args(args=None):
     parser.add_argument('--pattn_relu_dropout', default=0.1, type=float, help='ReLU dropout probability in feed-forward sublayer')
     parser.add_argument('--pattn_residual_dropout', default=0.2, type=float, help='Residual dropout probability for all residual connections')
     parser.add_argument('--pattn_attention_dropout', default=0.2, type=float, help='Attention dropout probability')
-    parser.add_argument('--pattn_num_layers', default=12, type=int, help='Number of layers for the Partitioned Attention')
+    parser.add_argument('--pattn_num_layers', default=0, type=int, help='Number of layers for the Partitioned Attention.  Currently turned off')
     parser.add_argument('--pattn_bias', default=False, action='store_true', help='Whether or not to learn an additive bias')
     # Results seem relatively similar with learned position embeddings or sin/cos position embeddings
     parser.add_argument('--pattn_timing', default='sin', choices=['learned', 'sin'], help='Use a learned embedding or a sin embedding')
@@ -400,6 +505,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_pwff', default=True, action='store_true', help='Whether or not to use a Position-wise Feed-forward Layer')
     parser.add_argument('--lattn_q_as_matrix', default=False, action='store_true', help='Whether or not Label Attention uses learned query vectors. False means it does')
     parser.add_argument('--lattn_partitioned', default=True, action='store_true', help='Whether or not it is partitioned')
+    parser.add_argument('--no_lattn_partitioned', default=True, action='store_false', dest='lattn_partitioned', help='Whether or not it is partitioned')
     parser.add_argument('--lattn_combine_as_self', default=False, action='store_true', help='Whether or not the layer uses concatenation. False means it does')
     # currently unused - always assume 1/2 of pattn
     #parser.add_argument('--lattn_d_positional', default=512, type=int, help='Dimension for the positional embedding')
@@ -409,6 +515,7 @@ def parse_args(args=None):
     parser.add_argument('--lattn_relu_dropout', default=0.2, type=float, help='Relu dropout for the label attention')
     parser.add_argument('--lattn_residual_dropout', default=0.2, type=float, help='Residual dropout for the label attention')
     parser.add_argument('--lattn_combined_input', default=True, action='store_true', help='Combine all inputs for the lattn, not just the pattn')
+    parser.add_argument('--use_lattn', default=False, action='store_true', help='Use the lattn layers - currently turned off')
     parser.add_argument('--no_lattn_combined_input', dest='lattn_combined_input', action='store_false', help="Don't combine all inputs for the lattn, not just the pattn")
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
@@ -421,29 +528,61 @@ def parse_args(args=None):
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
-    if args.cpu:
-        args.cuda = False
-    if args.learning_rate is None:
-        args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
-    if args.learning_eps is None:
-        args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
-    if args.weight_decay is None:
-        args.weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+    if args.optim is None and args.mode == 'train':
+        if not args.multistage:
+            # this seemed to work the best when not doing multistage
+            args.optim = "adadelta"
+        else:
+            # if MADGRAD exists, use it
+            # otherwise, adamw
+            try:
+                import madgrad
+                args.optim = "madgrad"
+                logger.info("Multistage training is set, optimizer is not chosen, and MADGRAD is available.  Will use MADGRAD as the second stage optimizer.")
+            except ModuleNotFoundError as e:
+                logger.warning("Multistage training is set.  Best models are with MADGRAD, but it is not installed.  Will use AdamW for the second stage optimizer.  Consider installing MADGRAD")
+                args.optim = "adamw"
+
+    if args.mode == 'train':
+        if args.learning_rate is None:
+            args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim.lower(), None)
+        if args.learning_eps is None:
+            args.learning_eps = DEFAULT_LEARNING_EPS.get(args.optim.lower(), None)
+        if args.learning_momentum is None:
+            args.learning_momentum = DEFAULT_MOMENTUM.get(args.optim.lower(), None)
+        if args.learning_weight_decay is None:
+            args.learning_weight_decay = DEFAULT_WEIGHT_DECAY.get(args.optim.lower(), None)
+
+        if args.stage1_learning_rate is None:
+            args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+
+    if args.reduce_position is None:
+        args.reduce_position = args.hidden_size // 4
+
+    if args.num_tree_lstm_layers is None:
+        if args.constituency_composition in (ConstituencyComposition.TREE_LSTM, ConstituencyComposition.TREE_LSTM_CX):
+            args.num_tree_lstm_layers = 2
+        else:
+            args.num_tree_lstm_layers = 1
 
     if args.wandb_name or args.wandb_norm_regex:
         args.wandb = True
 
     args = vars(args)
 
-    if args['retag_method'] == 'xpos':
-        args['retag_xpos'] = True
-    elif args['retag_method'] == 'upos':
-        args['retag_xpos'] = False
-    else:
-        raise ValueError("Unknown retag method {}".format(xpos))
+    retagging.postprocess_args(args)
+    postprocess_predict_output_args(args)
 
-    if args['multistage'] and (args['finetune'] or args['maybe_finetune'] or args['relearn_structure']):
-        raise ValueError('Learning multistage from a previously started model is not yet implemented.  TODO')
+    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+
+    if args['checkpoint']:
+        args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
+
+    model_dir = os.path.split(model_save_file)[0]
+    if model_dir != args['save_dir']:
+        model_save_file = os.path.join(args['save_dir'], model_save_file)
+    args['save_name'] = model_save_file
 
     return args
 
@@ -455,17 +594,10 @@ def main(args=None):
     """
     args = parse_args(args=args)
 
-    utils.set_random_seed(args['seed'], args['cuda'])
+    utils.set_random_seed(args['seed'])
 
     logger.info("Running constituency parser in %s mode", args['mode'])
-    logger.debug("Using GPU: %s", args['cuda'])
-
-    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
-    model_save_file = os.path.join(args['save_dir'], model_save_file)
-
-    model_save_latest_file = None
-    if args['save_latest_name']:
-        model_save_latest_file = os.path.join(args['save_dir'], args['save_latest_name'])
+    logger.debug("Using device: %s", args['device'])
 
     model_save_each_file = None
     if args['save_each_name']:
@@ -477,35 +609,23 @@ def main(args=None):
             pieces = os.path.splitext(model_save_each_file)
             model_save_each_file = pieces[0] + "_%4d" + pieces[1]
 
-    model_load_file = model_save_file
+    model_load_file = args['save_name']
     if args['load_name']:
         if os.path.exists(args['load_name']):
             model_load_file = args['load_name']
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
-    elif args['mode'] == 'train' and args['save_latest_name']:
-        model_load_file = model_save_latest_file
 
-    if args['retag_package'] is not None and args['mode'] != 'remove_optimizer':
-        if '_' in args['retag_package']:
-            lang, package = args['retag_package'].split('_', 1)
-        else:
-            lang = args['lang']
-            package = args['retag_package']
-        retag_pipeline = Pipeline(lang=lang, processors="tokenize, pos", tokenize_pretokenized=True, pos_package=package, pos_tqdm=True)
-        if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
-            logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
-            args['retag_xpos'] = False
-            args['retag_method'] = 'upos'
-    else:
-        retag_pipeline = None
+    retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
-        trainer.train(args, model_save_file, model_load_file, model_save_latest_file, model_save_each_file, retag_pipeline)
+        trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
+    elif args['mode'] == 'parse_text':
+        trainer.load_model_parse_text(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
-        trainer.remove_optimizer(args, model_save_file, model_load_file)
+        trainer.remove_optimizer(args, args['save_name'], model_load_file)
 
 if __name__ == '__main__':
     main()

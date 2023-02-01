@@ -1,5 +1,5 @@
 """
-Utils and wrappers for scoring lemmatizers.
+Utils and wrappers for scoring MWT
 """
 from stanza.models.common.utils import ud_scores
 

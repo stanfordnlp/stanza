@@ -54,7 +54,7 @@ class LowercaseProcessor(Processor):
     _requires = set(['tokenize'])
     _provides = set(['lowercase'])
 
-    def __init__(self, config, pipeline, use_gpu):
+    def __init__(self, config, pipeline, device):
         pass
 
     def _set_up_model(self, *args):

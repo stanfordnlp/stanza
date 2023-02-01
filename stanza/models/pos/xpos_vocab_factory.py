@@ -83,6 +83,7 @@ XPOS_DESCRIPTIONS = {
     'got_proiel'     : XPOSDescription(XPOSType.WORD, None),
     'grc_proiel'     : XPOSDescription(XPOSType.WORD, None),
     'hbo_ptnk'       : XPOSDescription(XPOSType.WORD, None),
+    'he_combined'    : XPOSDescription(XPOSType.WORD, None),
     'he_htb'         : XPOSDescription(XPOSType.WORD, None),
     'he_iahltwiki'   : XPOSDescription(XPOSType.WORD, None),
     'hi_hdtb'        : XPOSDescription(XPOSType.WORD, None),
@@ -165,5 +166,7 @@ def xpos_vocab_factory(data, shorthand):
             # log instead of throw
             # otherwise, updating datasets would be unpleasant
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
+    else:
+        logger.warning("Chose %s for the xpos factory for %s", desc, shorthand)
     return build_xpos_vocab(desc, data, shorthand)
 

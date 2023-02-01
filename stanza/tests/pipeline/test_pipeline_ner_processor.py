@@ -58,13 +58,13 @@ class TestNERProcessor:
         """
         return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner")
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def processed_doc(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
-        return [pipeline(text) for text in  EN_DOCS]
+        return [pipeline(text) for text in EN_DOCS]
 
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def processed_bulk(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
         docs = [Document([], text=t) for t in EN_DOCS]
@@ -142,3 +142,6 @@ class TestMultiNERProcessor:
         multi_ner = [[token.multi_ner for token in sentence.tokens] for sentence in doc.sentences]
         assert multi_ner == EXPECTED_MULTI_NER
 
+    def test_known_tags(self, pipeline):
+        assert pipeline.processors["ner"].get_known_tags() == ["DISEASE"]
+        assert len(pipeline.processors["ner"].get_known_tags(1)) == 18

@@ -49,6 +49,9 @@ HiNER is another Hindi dataset option
     hi_hinercollapsed and hi_hiner
   The collapsed version has just PER, LOC, ORG
   - convert data as follows:
+    cd $NERBASE
+    mkdir hindi
+    cd hindi
     git clone git@github.com:cfiltnlp/HiNER.git
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hiner
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hinercollapsed
@@ -258,6 +261,15 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+NKJP is a Polish NER dataset
+  - http://nkjp.pl/index.php?page=0&lang=1
+    About the Project
+  - http://zil.ipipan.waw.pl/DistrNKJP
+    Wikipedia subcorpus used to train charlm model
+  - http://clip.ipipan.waw.pl/NationalCorpusOfPolish?action=AttachFile&do=view&target=NKJP-PodkorpusMilionowy-1.2.tar.gz
+    Annotated subcorpus to train NER model.
+    Download and extract to $NERBASE/Polish-NKJP or leave the gzip in $NERBASE/polish/...
+
 kk_kazNERD is a Kazakh dataset published in 2021
   - https://github.com/IS2AI/KazNERD
   - https://arxiv.org/abs/2111.13419
@@ -301,6 +313,28 @@ Masakhane NER is a set of NER datasets for African languages
     the 2 letter code for lcode.  The tool will throw an error
     if the language is not supported in Masakhane.
 
+SiNER is a Sindhi NER dataset
+  - https://aclanthology.org/2020.lrec-1.361/
+    SiNER: A Large Dataset for Sindhi Named Entity Recognition
+    Wazir Ali, Junyu Lu, Zenglin Xu
+  - It is available via git repository
+    https://github.com/AliWazir/SiNER-dataset
+    As of Nov. 2022, there were a few changes to the dataset
+    to update a couple instances of broken tags & tokenization
+  - Clone the repo to $NERBASE/sindhi
+    mkdir $NERBASE/sindhi
+    cd $NERBASE/sindhi
+    git clone git@github.com:AliWazir/SiNER-dataset.git
+  - Then, prepare the dataset with this script:
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
+
+en_foreign-4class is an English non-US newswire dataset
+  - currently WIP.  annotated by MLTwist, collected at Stanford
+  - the 4 class version is converted to the 4 classes in conll,
+    then split into train/dev/test
+  - clone https://github.com/stanfordnlp/en-foreign-newswire
+    into $NERBASE/en_foreign
+
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -333,10 +367,13 @@ import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
+import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
+import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
+import stanza.utils.datasets.ner.simplify_en_foreign as simplify_en_foreign
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_files
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -838,11 +875,11 @@ def process_de_germeval2014(paths, short_name):
     write_dataset(datasets, base_output_path, short_name)
 
 def process_hiner(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "original")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "original")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_hinercollapsed(paths, short_name):
-    in_directory = os.path.join(paths["NERBASE"], "HiNER", "data", "collapsed")
+    in_directory = os.path.join(paths["NERBASE"], "hindi", "HiNER", "data", "collapsed")
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], short_name, suffix="conll", shard_names=("train", "validation", "test"))
 
 def process_lst20(paths, short_name, include_space_char=True):
@@ -864,6 +901,18 @@ def process_bn_daffodil(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "bangla", "Bengali-NER")
     out_directory = paths["NER_DATA_DIR"]
     convert_bn_daffodil.convert_dataset(in_directory, out_directory)
+
+def process_pl_nkjp(paths, short_name):
+    out_directory = paths["NER_DATA_DIR"]
+    candidates = [os.path.join(paths["NERBASE"], "Polish-NKJP"),
+                  os.path.join(paths["NERBASE"], "polish", "Polish-NKJP"),
+                  os.path.join(paths["NERBASE"], "polish", "NKJP-PodkorpusMilionowy-1.2.tar.gz"),]
+    for in_path in candidates:
+        if os.path.exists(in_path):
+            break
+    else:
+        raise FileNotFoundError("Could not find %s  Looked in %s" % (short_name, " ".join(candidates)))
+    convert_nkjp.convert_nkjp(in_path, out_directory)
 
 def process_kk_kazNERD(paths, short_name):
     in_directory = os.path.join(paths["NERBASE"], "kazakh", "KazNERD", "KazNERD")
@@ -911,6 +960,24 @@ def process_masakhane(paths, dataset_name):
         raise UnknownDatasetError(dataset_name, "Found the Masakhane repo, but there was no %s in the repo at path %s" % (dataset_name, in_directory))
     convert_bio_to_json(in_directory, paths["NER_DATA_DIR"], "%s_masakhane" % lcode, "txt")
 
+def process_sd_siner(paths, short_name):
+    in_directory = os.path.join(paths["NERBASE"], "sindhi", "SiNER-dataset")
+    if not os.path.exists(in_directory):
+        raise FileNotFoundError("Cannot find SiNER checkout in $NERBASE/sindhi  Please git clone to repo in that directory")
+    in_filename = os.path.join(in_directory, "SiNER-dataset.txt")
+    if not os.path.exists(in_filename):
+        in_filename = os.path.join(in_directory, "SiNER dataset.txt")
+        if not os.path.exists(in_filename):
+            raise FileNotFoundError("Found an SiNER directory at %s but the directory did not contain the dataset" % in_directory)
+    convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
+
+def process_en_foreign_4class(paths, short_name):
+    # TODO: simplify to a temp directory?
+    simplify_en_foreign.main(args=[])
+    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
+    out_directory = paths["NER_DATA_DIR"]
+    random_shuffle_files(in_directory, out_directory, short_name)
+
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
@@ -918,6 +985,7 @@ DATASET_MAPPING = {
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
+    "en_foreign-4class": process_en_foreign_4class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,
@@ -930,6 +998,8 @@ DATASET_MAPPING = {
     "kk_kazNERD":        process_kk_kazNERD,
     "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
+    "pl_nkjp":           process_pl_nkjp,
+    "sd_siner":          process_sd_siner,
     "sv_suc3licensed":   process_sv_suc3licensed,
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,

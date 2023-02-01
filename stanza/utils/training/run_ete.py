@@ -28,9 +28,12 @@ from stanza.models import parser
 from stanza.models import tagger
 from stanza.models import tokenizer
 
-from stanza.utils.datasets.common import project_to_short_name
+from stanza.models.common.constant import treebank_to_short_name
+
+from stanza.resources.prepare_resources import default_charlms, pos_charlms
+
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm
 from stanza.utils.training.run_lemma import check_lemmas
 from stanza.utils.training.run_mwt import check_mwt
 from stanza.utils.training.run_pos import wordvec_args
@@ -42,9 +45,10 @@ RESULTS_STRING = "End to end results for"
 
 def add_args(parser):
     parser.add_argument('--test_data', default=None, type=str, help='Which data to test on, if not using the default data for this model')
+    common.add_charlm_args(parser)
 
 def run_ete(paths, dataset, short_name, command_args, extra_args):
-    short_language = short_name.split("_")[0]
+    short_language, package = short_name.split("_")
 
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
     mwt_dir      = paths["MWT_DATA_DIR"]
@@ -62,7 +66,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     # value of command_args.save_output
 
     if command_args and command_args.test_data:
-        test_short_name = project_to_short_name(command_args.test_data)
+        test_short_name = treebank_to_short_name(command_args.test_data)
     else:
         test_short_name = short_name
 
@@ -109,7 +113,13 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                 '--lang', short_name,
                 '--shorthand', short_name,
                 '--mode', 'predict']
-    pos_args = pos_args + wordvec_args(short_language) + extra_args
+
+    # TODO: refactor these args.  Possibly just put this in common as a single function call,
+    # build_charlm_args_pos or something like that
+    charlm = choose_charlm(short_language, package, command_args.charlm, default_charlms, pos_charlms)
+    charlm_args = build_charlm_args(short_language, charlm)
+
+    pos_args = pos_args + wordvec_args(short_language, package, extra_args) + charlm_args + extra_args
     logger.info("Running pos step with args: {}".format(pos_args))
     tagger.main(pos_args)
 
@@ -145,7 +155,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                      '--lang', short_name,
                      '--shorthand', short_name,
                      '--mode', 'predict']
-    depparse_args = depparse_args + wordvec_args(short_language) + extra_args
+    depparse_args = depparse_args + wordvec_args(short_language, package, extra_args) + extra_args
     logger.info("Running depparse step with args: {}".format(depparse_args))
     parser.main(depparse_args)
 
@@ -174,7 +184,7 @@ def run_treebank(mode, paths, treebank, short_name,
         run_ete(paths, dataset, short_name, command_args, extra_args)
 
 def main():
-    common.main(run_treebank, "lemma", "lemmatizer", add_args)
+    common.main(run_treebank, "ete", "ete", add_args)
 
 if __name__ == "__main__":
     main()

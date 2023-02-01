@@ -4,10 +4,12 @@ Class for running multilingual pipelines
 
 import torch
 
+from collections import OrderedDict
 import copy
 import logging
 
 from stanza.models.common.doc import Document
+from stanza.models.common.utils import default_device
 from stanza.pipeline.core import Pipeline
 from stanza.pipeline._constants import *
 from stanza.resources.common import DEFAULT_MODEL_DIR
@@ -29,14 +31,17 @@ class MultilingualPipeline:
         max_cache_size: int = 10,
         use_gpu: bool = None,
         restrict: bool = False,
+        device: str = None,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
         self.lang_id_config = {} if lang_id_config is None else copy.deepcopy(lang_id_config)
         self.lang_configs = {} if lang_configs is None else copy.deepcopy(lang_configs)
         self.max_cache_size = max_cache_size
-        self.pipeline_cache = {}
-        self.lang_request_history = []
+        # OrderedDict so we can use it as a LRU cache
+        # most recent Pipeline goes to the end, pop the oldest one
+        # when we run out of space
+        self.pipeline_cache = OrderedDict()
 
         # if lang is not in any of the lang_configs, update them to
         # include the lang parameter.  otherwise, the default language
@@ -54,14 +59,16 @@ class MultilingualPipeline:
                 self.lang_id_config['langid_lang_subset'] = known_langs
 
         # set use_gpu
-        if use_gpu is None:
-            self.use_gpu = torch.cuda.is_available()
-        else:
-            self.use_gpu = use_gpu
+        if device is None:
+            if use_gpu is None or use_gpu == True:
+                device = default_device()
+            else:
+                device = 'cpu'
+        self.device = device
         
         # build language id pipeline
         self.lang_id_pipeline = Pipeline(dir=self.model_dir, lang='multilingual', processors="langid", 
-                                         use_gpu=self.use_gpu, **self.lang_id_config)
+                                         device=self.device, **self.lang_id_config)
 
     def _update_pipeline_cache(self, lang):
         """
@@ -70,9 +77,8 @@ class MultilingualPipeline:
         """
 
         # update request history
-        if lang in self.lang_request_history:
-            self.lang_request_history.remove(lang)
-        self.lang_request_history.append(lang)
+        if lang in self.pipeline_cache:
+            self.pipeline_cache.move_to_end(lang, last=True)
 
         # update language configs
         if lang not in self.lang_configs:
@@ -83,10 +89,8 @@ class MultilingualPipeline:
             logger.debug("Loading unknown language in MultilingualPipeline: %s", lang)
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
-                lru_lang = self.lang_request_history[0]
-                self.pipeline_cache.remove(lru_lang)
-                self.lang_request_history.remove(lru_lang)
-            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
+                self.pipeline_cache.popitem(last=False)
+            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, device=self.device, **self.lang_configs[lang])
 
     def process(self, doc):
         """

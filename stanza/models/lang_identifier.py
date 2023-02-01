@@ -10,6 +10,7 @@ import random
 import torch
 
 from datetime import datetime
+from stanza.models.common import utils
 from stanza.models.langid.data import DataLoader
 from stanza.models.langid.trainer import Trainer
 from tqdm import tqdm
@@ -34,9 +35,8 @@ def parse_args(args=None):
                         action="store_true")
     parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
     parser.add_argument("--save-name", help="where to save model", default=None)
-    parser.add_argument("--use-cpu", help="use cpu", action="store_true") 
+    utils.add_device_args(parser)
     args = parser.parse_args(args=args)
-    args.use_gpu = True if torch.cuda.is_available() and not args.use_cpu else False
     return args
 
 
@@ -84,11 +84,11 @@ def train_model(args):
     # set up indexes
     tag_to_idx, char_to_idx = build_indexes(args)
     # load training data
-    train_data = DataLoader()
+    train_data = DataLoader(args['device'])
     train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
     train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
     # load dev data
-    dev_data = DataLoader()
+    dev_data = DataLoader(args['device'])
     dev_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "dev" in x]
     dev_data.load_data(args.batch_size, dev_files, char_to_idx, tag_to_idx, randomize=False, 
                        max_length=args.eval_length)
@@ -103,7 +103,7 @@ def train_model(args):
     if args.load_model:
         trainer_config["load_model"] = args.load_model
         logger.info(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, load_model=args.load_model, use_gpu=args.use_gpu)
+    trainer = Trainer(trainer_config, load_model=args.load_model, device=args['device'])
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
@@ -150,9 +150,9 @@ def eval_model(args):
         "load_model": args.load_model,
         "batch_size": args.batch_size
     }
-    trainer = Trainer(trainer_config, load_model=True, use_gpu=args.use_gpu)
+    trainer = Trainer(trainer_config, load_model=True, device=args['device'])
     # load test data
-    test_data = DataLoader()
+    test_data = DataLoader(args['device'])
     test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if args.eval_set in x]
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
                         randomize=False, max_length=args.eval_length)

@@ -23,6 +23,7 @@ import logging
 import os
 
 from stanza.models import ner_tagger
+from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
@@ -41,6 +42,21 @@ DATASET_EXTRA_ARGS = {
 
 logger = logging.getLogger('stanza')
 
+def build_pretrain_args(language, dataset, charlm="default", extra_args=None, model_dir=DEFAULT_MODEL_DIR):
+    """
+    Returns one list with the args for this language & dataset's charlm and pretrained embedding
+    """
+    charlm = choose_charlm(language, dataset, charlm, default_charlms, ner_charlms)
+    charlm_args = build_charlm_args(language, charlm, model_dir=model_dir)
+
+    wordvec_args = []
+    if extra_args is None or '--wordvec_pretrain_file' not in extra_args:
+        # will throw an error if the pretrain can't be found
+        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains, ner_pretrains, dataset, model_dir=model_dir)
+        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+
+    return charlm_args + wordvec_args
+
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
 # However, to keep the naming consistent, we leave the
@@ -55,6 +71,8 @@ def run_treebank(mode, paths, treebank, short_name,
     dev_file   = os.path.join(ner_dir, f"{short_name}.dev.json")
     test_file  = os.path.join(ner_dir, f"{short_name}.test.json")
 
+    # if any files are missing, try to rebuild the dataset
+    # if that still doesn't work, we have to throw an error
     missing_file = [x for x in (train_file, dev_file, test_file) if not os.path.exists(x)]
     if len(missing_file) > 0:
         logger.warning(f"The data for {short_name} is missing or incomplete.  Cannot find {missing_file}  Attempting to rebuild...")
@@ -63,14 +81,7 @@ def run_treebank(mode, paths, treebank, short_name,
         except Exception as e:
             raise FileNotFoundError(f"An exception occurred while trying to build the data for {short_name}  At least one portion of the data was missing: {missing_file}  Please correctly build these files and then try again.") from e
 
-    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, ner_charlms)
-    charlm_args = build_charlm_args(language, charlm)
-
-    wordvec_args = []
-    if '--wordvec_pretrain_file' not in extra_args:
-        # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains, ner_pretrains, dataset)
-        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+    pretrain_args = build_pretrain_args(language, dataset, command_args.charlm, extra_args)
 
     if mode == Mode.TRAIN:
         # VI example arguments:
@@ -93,7 +104,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'train']
-        train_args = train_args + charlm_args + bert_args + dataset_args + wordvec_args + extra_args
+        train_args = train_args + pretrain_args + bert_args + dataset_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         ner_tagger.main(train_args)
 
@@ -102,7 +113,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        dev_args = dev_args + charlm_args + wordvec_args + extra_args
+        dev_args = dev_args + pretrain_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         ner_tagger.main(dev_args)
 
@@ -111,7 +122,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       '--lang', language,
                       '--shorthand', short_name,
                       '--mode', 'predict']
-        test_args = test_args + charlm_args + wordvec_args + extra_args
+        test_args = test_args + pretrain_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         ner_tagger.main(test_args)
 

@@ -15,6 +15,7 @@ from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.doc import Document
 from stanza.models.common.foundation_cache import FoundationCache
+from stanza.models.common.utils import default_device
 from stanza.pipeline.processor import Processor, ProcessorRequirementsException
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
 from stanza.pipeline.langid_processor import LangIDProcessor
@@ -22,9 +23,9 @@ from stanza.pipeline.tokenize_processor import TokenizeProcessor
 from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
 from stanza.pipeline.lemma_processor import LemmaProcessor
+from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
-from stanza.pipeline.constituency_processor import ConstituencyProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.utils.helper_func import make_table
@@ -177,13 +178,15 @@ class Pipeline:
                  processors={},
                  logging_level=None,
                  verbose=None,
-                 use_gpu=True,
+                 use_gpu=None,
                  model_dir=None,
                  download_method=DownloadMethod.DOWNLOAD_RESOURCES,
                  resources_url=DEFAULT_RESOURCES_URL,
                  resources_branch=None,
                  resources_version=DEFAULT_RESOURCES_VERSION,
                  proxies=None,
+                 foundation_cache=None,
+                 device=None,
                  **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
@@ -194,7 +197,10 @@ class Pipeline:
 
         # processors can use this to save on the effort of loading
         # large sub-models, such as pretrained embeddings, bert, etc
-        self.foundation_cache = FoundationCache()
+        if foundation_cache is None:
+            self.foundation_cache = FoundationCache()
+        else:
+            self.foundation_cache = foundation_cache
 
         download_method = normalize_download_method(download_method)
         if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
@@ -221,11 +227,7 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
-        if (not kwargs.get("tokenize_pretokenized")
-            and TOKENIZE in processors
-            and MWT not in processors):
-            add_mwt(processors, resources, lang)
-        self.load_list = maintain_processor_list(resources, lang, package, processors) if lang in resources else []
+        self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized"))) if lang in resources else []
         self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
         if download_method is not DownloadMethod.NONE:
             # skip processors which aren't downloaded from our collection
@@ -256,8 +258,16 @@ class Pipeline:
 
         # configs that are the same for all processors
         pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
-        self.use_gpu = torch.cuda.is_available() and use_gpu
-        logger.info("Use device: {}".format("gpu" if self.use_gpu else "cpu"))
+
+        if device is None:
+            if use_gpu is None or use_gpu == True:
+                device = default_device()
+            else:
+                device = 'cpu'
+            if use_gpu == True and device == 'cpu':
+                logger.warning("GPU requested, but is not available!")
+        self.device = device
+        logger.info("Using device: {}".format(self.device))
 
         # set up processors
         pipeline_reqs_exceptions = []
@@ -277,7 +287,7 @@ class Pipeline:
                 # try to build processor, throw an exception if there is a requirements issue
                 self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
                                                                                           pipeline=self,
-                                                                                          use_gpu=self.use_gpu)
+                                                                                          device=self.device)
             except ProcessorRequirementsException as e:
                 # if there was a requirements issue, add it to list which will be printed at end
                 pipeline_reqs_exceptions.append(e)

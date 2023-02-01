@@ -2,6 +2,7 @@
 Utility functions.
 """
 
+import argparse
 from collections import Counter
 from contextlib import contextmanager
 import gzip
@@ -139,17 +140,34 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0):
-    if name == 'sgd':
-        return torch.optim.SGD(parameters, lr=lr, momentum=momentum)
+def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None):
+    extra_args = {}
+    if weight_decay is not None:
+        extra_args["weight_decay"] = weight_decay
+    if name == 'amsgrad':
+        return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'amsgradw':
+        return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'sgd':
+        return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
     elif name == 'adagrad':
-        return torch.optim.Adagrad(parameters, lr=lr)
+        return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps)
+        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'adamw':
+        return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'adamax':
-        return torch.optim.Adamax(parameters) # use default lr
+        return torch.optim.Adamax(parameters, **extra_args) # use default lr
+    elif name == 'adadelta':
+        return torch.optim.Adadelta(parameters, **extra_args) # use default lr
+    elif name == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
-        raise Exception("Unsupported optimizer: {}".format(name))
+        raise ValueError("Unsupported optimizer: {}".format(name))
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:
@@ -161,11 +179,6 @@ def flatten_indices(seq_lens, width):
         for j in range(l):
             flat.append(i * width + j)
     return flat
-
-def set_cuda(var, cuda):
-    if cuda:
-        return var.cuda()
-    return var
 
 def keep_partial_grad(grad, topk):
     """
@@ -330,7 +343,7 @@ def tensor_unsort(sorted_tensor, oidx):
     return sorted_tensor[backidx]
 
 
-def set_random_seed(seed, cuda):
+def set_random_seed(seed):
     """
     Set a random seed on all of the things which might need it.
     torch, np, python random, and torch.cuda
@@ -341,7 +354,7 @@ def set_random_seed(seed, cuda):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    if cuda:
+    if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
     return seed
 
@@ -429,3 +442,38 @@ def checkpoint_name(save_dir, save_name, checkpoint_name):
         return save_name[:-3] + "_checkpoint.pt"
 
     return save_name + "_checkpoint"
+
+def default_device():
+    """
+    Pick a default device based on what's available on this system
+    """
+    if torch.cuda.is_available():
+        return 'cuda'
+    return 'cpu'
+
+def add_device_args(parser):
+    """
+    Add args which specify cpu, cuda, or arbitrary device
+    """
+    parser.add_argument('--device', type=str, default=default_device(), help='Which device to run on - use a torch device string name')
+    parser.add_argument('--cuda', dest='device', action='store_const', const='cuda', help='Run on CUDA')
+    parser.add_argument('--cpu', dest='device', action='store_const', const='cpu', help='Ignore CUDA and run on CPU')
+
+def load_elmo(elmo_model):
+    # This import is here so that Elmo integration can be treated
+    # as an optional feature
+    import elmoformanylangs
+
+    logger.info("Loading elmo: %s" % elmo_model)
+    elmo_model = elmoformanylangs.Embedder(elmo_model)
+    return elmo_model
+
+def log_training_args(args, args_logger, name="training"):
+    """
+    For record keeping purposes, log the arguments when training
+    """
+    if isinstance(args, argparse.Namespace):
+        args = vars(args)
+    keys = sorted(args.keys())
+    log_lines = ['%s: %s' % (k, args[k]) for k in keys]
+    args_logger.info('ARGS USED AT %s TIME:\n%s\n', name.upper(), '\n'.join(log_lines))

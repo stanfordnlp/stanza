@@ -27,7 +27,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 from stanza.models import _training_logging
 
-from stanza.utils.confusion import format_confusion
+from stanza.utils.confusion import confusion_to_weighted_f1, format_confusion
 
 logger = logging.getLogger('stanza')
 
@@ -39,6 +39,7 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--eval_output_file', type=str, default=None, help='Where to write results: text, gold, pred.  If None, no results file printed')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--finetune', action='store_true', help='Load existing model during `train` mode from `save_dir` path')
@@ -95,8 +96,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -106,20 +106,18 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running NER tagger in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
-        train(args)
+        return train(args)
     else:
         evaluate(args)
 
@@ -137,10 +135,20 @@ def load_pretrain(args):
         pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
     return pretrain
 
+# TODO: refactor with the same thing in tagger.py and elsewhere
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_nertagger.pt"
+
+    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
+        return save_name
+    return os.path.join(args['save_dir'], save_name)
+
 def train(args):
-    utils.ensure_dir(args['save_dir'])
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
-        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
 
     pretrain = None
     vocab = None
@@ -204,7 +212,7 @@ def train(args):
 
     logger.info("Training tagger...")
     if trainer is None: # init if model was not loaded previously from file
-        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'],
+        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
                           train_classifier_only=args['train_classifier_only'])
     logger.info(trainer.model)
 
@@ -218,6 +226,8 @@ def train(args):
 
     # LR scheduling
     if args['lr_decay'] > 0:
+        # learning rate changes on plateau -- no improvement on model for patience number of epochs
+        # change is made as a factor of the learning rate decay
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'], \
             patience=args['patience'], verbose=True, min_lr=args['min_lr'])
     else:
@@ -295,10 +305,29 @@ def train(args):
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
 
+    return trainer
+
+def write_ner_results(filename, batch, preds):
+    if len(batch.tags) != len(preds):
+        raise ValueError("Unexpected batch vs pred lengths: %d vs %d" % (len(batch.tags), len(preds)))
+
+    with open(filename, "w", encoding="utf-8") as fout:
+        tag_idx = 0
+        for b in batch:
+            # b[0] is words, b[5] is orig_idx
+            # a namedtuple would make this cleaner without being much slower
+            text = utils.unsort(b[0], b[5])
+            for sentence in text:
+                sentence_gold = batch.tags[tag_idx]
+                sentence_pred = preds[tag_idx]
+                tag_idx += 1
+                for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
+                    fout.write("%s\t%s\t%s\n" % (word, gold, pred))
+                fout.write("\n")
+
 def evaluate(args):
     # file paths
-    model_file = os.path.join(args['save_dir'], args['save_name']) if args['save_name'] \
-        else '{}/{}_nertagger.pt'.format(args['save_dir'], args['shorthand'])
+    model_file = model_file_name(args)
 
     loaded_args, trainer, vocab = load_model(args, model_file)
     logger.debug("Loaded model for eval from %s", model_file)
@@ -317,22 +346,26 @@ def evaluate(args):
     gold_tags = batch.tags
     _, _, score = scorer.score_by_entity(preds, gold_tags)
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags)
+    logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
     logger.info("NER tagger score:")
     logger.info("{} {:.2f}".format(args['shorthand'], score*100))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
+    if args['eval_output_file']:
+        write_ner_results(args['eval_output_file'], batch, preds)
+
+    return confusion
 
 def load_model(args, model_file):
     # load model
-    use_cuda = args['cuda'] and not args['cpu']
     charlm_args = {}
     if 'charlm_forward_file' in args:
         charlm_args['charlm_forward_file'] = args['charlm_forward_file']
     if 'charlm_backward_file' in args:
         charlm_args['charlm_backward_file'] = args['charlm_backward_file']
     pretrain = load_pretrain(args)
-    trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, use_cuda=use_cuda, train_classifier_only=args['train_classifier_only'])
+    trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, device=args['device'], train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

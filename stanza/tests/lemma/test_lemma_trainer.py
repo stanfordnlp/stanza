@@ -13,7 +13,7 @@ from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def english_model():
     models_path = os.path.join(TEST_MODELS_DIR, "en", "lemma", "*")
     models = glob.glob(models_path)

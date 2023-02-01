@@ -61,10 +61,13 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 ('.', 2, 'punct')
 """.strip()
 
+@pytest.fixture(scope="module")
+def en_depparse_pipeline():
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,pos,lemma,depparse')
+    return nlp
 
-def test_depparse():
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en')
-    doc = nlp(EN_DOC)
+def test_depparse(en_depparse_pipeline):
+    doc = en_depparse_pipeline(EN_DOC)
     assert EN_DOC_DEPENDENCY_PARSES_GOLD == '\n\n'.join([sent.dependencies_string() for sent in doc.sentences])
 
 

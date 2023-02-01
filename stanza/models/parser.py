@@ -63,7 +63,14 @@ def parse_args(args=None):
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
     parser.add_argument('--char_rec_dropout', type=float, default=0, help="Recurrent dropout")
+
     parser.add_argument('--no_char', dest='char', action='store_false', help="Turn off character model.")
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_save_dir', type=str, default='saved_models/charlm', help="Root dir for pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
     parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
@@ -83,8 +90,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
 
@@ -101,9 +107,7 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args.seed)
 
     args = vars(args)
     logger.info("Running parser in {} mode".format(args['mode']))
@@ -141,6 +145,16 @@ def train(args):
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
 
+    # TODO: refactor.  the exact same thing is done in the tagger
+    if args['charlm']:
+        if args['charlm_shorthand'] is None:
+            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
+        logger.info('Using pretrained contextualized char embedding')
+        if not args['charlm_forward_file']:
+            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        if not args['charlm_backward_file']:
+            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
@@ -173,7 +187,7 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training parser...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
 
     global_step = 0
     max_steps = args['max_steps']
@@ -270,8 +284,7 @@ def evaluate(args):
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
@@ -299,6 +312,9 @@ def evaluate(args):
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if gold_file is not None:
+        gold_doc = CoNLL.conll2doc(input_file=gold_file)
+
+        scorer.score_named_dependencies(batch.doc, gold_doc)
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("Parser score:")

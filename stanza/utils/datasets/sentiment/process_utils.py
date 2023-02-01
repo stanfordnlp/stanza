@@ -9,8 +9,8 @@ from collections import namedtuple
 from tqdm import tqdm
 
 import stanza
+from stanza.models.classifiers.data import SentimentDatum
 
-SentimentDatum = namedtuple('SentimentDatum', ['sentiment', 'text'])
 Split = namedtuple('Split', ['filename', 'weight'])
 
 SHARDS = ("train", "dev", "test")
@@ -108,11 +108,12 @@ def get_ptb_tokenized_phrases(dataset):
     phrases = [SentimentDatum(x.sentiment, y.split()) for x, y in zip(dataset, tokenized)]
     return phrases
 
-def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False):
+def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False, nlp=None):
     """
     Read in a single CSV file and return a list of SentimentDatums
     """
-    nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
+    if nlp is None:
+        nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
 
     with open(csv_filename, newline='') as fin:
         if skip_first_line:
@@ -123,18 +124,24 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
     # Read in the data and parse it
     snippets = []
     for idx, line in enumerate(tqdm(lines)):
-        sentiment = line[sentiment_column]
+        try:
+            if isinstance(sentiment_column, int):
+                sentiment = line[sentiment_column].lower()
+            else:
+                sentiment = tuple([line[x] for x in sentiment_column])
+        except IndexError as e:
+            raise IndexError("Columns {} did not exist at line {}: {}".format(sentiment_column, idx, line)) from e
         text = line[text_column]
         doc = nlp(text.strip())
 
-        sentiment = mapping.get(sentiment.lower(), None)
-        if sentiment is None:
-            raise ValueError("Value {} not in mapping at line {} of {}".format(line[sentiment_column], idx, csv_filename))
+        converted_sentiment = mapping.get(sentiment, None)
+        if converted_sentiment is None:
+            raise ValueError("Value {} not in mapping at line {} of {}".format(sentiment, idx, csv_filename))
 
         text = []
         for sentence in doc.sentences:
             text.extend(token.text for token in sentence.tokens)
         text = clean_tokenized_tweet(text)
-        snippets.append(SentimentDatum(sentiment, text))
+        snippets.append(SentimentDatum(converted_sentiment, text))
     return snippets
 

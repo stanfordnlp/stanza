@@ -9,7 +9,7 @@ from stanza.resources.prepare_resources import no_pretrain_languages
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, pos_charlms, default_pretrains
+from stanza.resources.prepare_resources import default_charlms, pos_charlms, pos_pretrains, default_pretrains
 
 logger = logging.getLogger('stanza')
 
@@ -26,7 +26,10 @@ def wordvec_args(short_language, dataset, extra_args):
     else:
         # for POS and depparse, there is a separate copy of the pretrain for each of the datasets
         # TODO: unify those into one pretrain
-        dataset_pretrains = {short_language: {dataset: dataset}}
+        if short_language in pos_pretrains and dataset in pos_pretrains[short_language]:
+            dataset_pretrains = pos_pretrains
+        else:
+            dataset_pretrains = {short_language: {dataset: dataset}}
         wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
         return ["--wordvec_pretrain_file", wordvec_pretrain]
 
@@ -42,7 +45,7 @@ def pos_batch_size(short_name):
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
-    short_language, dataset = short_name.split("_")
+    short_language, dataset = short_name.split("_", 1)
 
     pos_dir        = paths["POS_DATA_DIR"]
     train_file     = f"{pos_dir}/{short_name}.train.in.conllu"

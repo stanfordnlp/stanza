@@ -29,13 +29,14 @@ def repackage_hidden(h):
     else:
         return tuple(repackage_hidden(v) for v in h)
 
-def batchify(data, bsz):
+def batchify(data, bsz, device):
     # Work out how cleanly we can divide the dataset into bsz parts.
     nbatch = data.size(0) // bsz
     # Trim off any extra elements that wouldn't cleanly fit (remainders).
     data = data.narrow(0, 0, nbatch * bsz)
     # Evenly divide the data across the bsz batches.
     data = data.view(bsz, -1) # batch_first is True
+    data = data.to(device)
     return data
 
 def get_batch(source, i, seq_len):
@@ -100,8 +101,7 @@ def parse_args(args=None):
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--save_dir', type=str, default='saved_models/charlm', help="Directory to save models in")
     parser.add_argument('--summary', action='store_true', help='Use summary writer to record progress.')
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
+    utils.add_device_args(parser)
     parser.add_argument('--seed', type=int, default=1234)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
@@ -118,9 +118,7 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args['cpu']:
-        args['cuda'] = False
-    utils.set_random_seed(args['seed'], args['cuda'])
+    utils.set_random_seed(args['seed'])
 
     logger.info("Running {} character-level language model in {} mode".format(args['direction'], args['mode']))
     
@@ -136,20 +134,18 @@ def evaluate_epoch(args, vocab, data, model, criterion):
     Run an evaluation over entire dataset.
     """
     model.eval()
+    device = next(model.parameters()).device
     hidden = None
     total_loss = 0
     if isinstance(data, GeneratorType):
         data = list(data)
         assert len(data) == 1, 'Only support single dev/test file'
         data = data[0]
-    batches = batchify(data, args['batch_size'])
+    batches = batchify(data, args['batch_size'], device)
     with torch.no_grad():
         for i in range(0, batches.size(1) - 1, args['bptt_size']):
             data, target = get_batch(batches, i, args['bptt_size'])
             lens = [data.size(1) for i in range(data.size(0))]
-            if args['cuda']:
-                data = data.cuda()
-                target = target.cuda()
 
             output, hidden, decoded = model.forward(data, lens, hidden)
             loss = criterion(decoded.view(-1, len(vocab['char'])), target)
@@ -196,6 +192,7 @@ def load_char_vocab(vocab_file):
     return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
 
 def train(args):
+    utils.log_training_args(args, logger)
     if args['save_name']:
         save_name = args['save_name']
     else:
@@ -244,6 +241,8 @@ def train(args):
         wandb.run.define_metric('best_loss', summary='min')
         wandb.run.define_metric('ppl', summary='min')
 
+    device = next(trainer.model.parameters()).device
+
     best_loss = None
     start_epoch = trainer.epoch  # will default to 1 for a new trainer
     for trainer.epoch in range(start_epoch, args['epochs']+1):
@@ -257,7 +256,7 @@ def train(args):
 
         # run over entire training set
         for data_chunk in train_data:
-            batches = batchify(data_chunk, args['batch_size'])
+            batches = batchify(data_chunk, args['batch_size'], device)
             hidden = None
             total_loss = 0.0
             total_batches = math.ceil((batches.size(1) - 1) / args['bptt_size'])
@@ -274,9 +273,6 @@ def train(args):
                 seq_len = min(seq_len, int(args['bptt_size'] * 1.2))
                 data, target = get_batch(batches, i, seq_len)
                 lens = [data.size(1) for i in range(data.size(0))]
-                if args['cuda']:
-                    data = data.cuda()
-                    target = target.cuda()
                 
                 trainer.optimizer.zero_grad()
                 output, hidden, decoded = trainer.model.forward(data, lens, hidden)
@@ -331,8 +327,7 @@ def evaluate(args):
     model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
         else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
 
-    model = CharacterLanguageModel.load(model_file)
-    if args['cuda']: model = model.cuda()
+    model = CharacterLanguageModel.load(model_file).to(args['device'])
     vocab = model.vocab
     data = load_data(args['eval_file'], vocab, args['direction'])
     criterion = torch.nn.CrossEntropyLoss()

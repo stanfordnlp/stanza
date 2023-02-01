@@ -5,7 +5,8 @@ Also produces the resources.json file.
 
 For example, on the cluster, you can do this:
 
-python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models --output_dir /u/nlp/software/stanza/models/1.3.1b > resources.out 2>&1
+python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models-1.5.0 --output_dir /u/nlp/software/stanza/models/1.5.0 > resources.out 2>&1
+nlprun -q john "python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models-1.5.0 --output_dir /u/nlp/software/stanza/models/1.5.0" -o resources.out
 """
 
 import json
@@ -20,8 +21,8 @@ from stanza.models.common.constant import lcode2lang, two_to_three_letters
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/current-models", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
-    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/built-models", help='Output dir for various models.')
+    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/current-models-1.5.0", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
+    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/1.5.0", help='Output dir for various models.')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -53,7 +54,7 @@ default_treebanks = {
     "de":      "gsd",
     "got":     "proiel",
     "el":      "gdt",
-    "he":      "htb",
+    "he":      "combined",
     "hi":      "hdtb",
     "hu":      "szeged",
     "id":      "gsd",
@@ -73,11 +74,13 @@ default_treebanks = {
     "fro":     "srcmf",
     "fa":      "perdt",
     "my":      "ucsy",
+    "myv":     "jr",
     "pl":      "pdb",
     "pt":      "bosque",
     "ro":      "rrt",
     "ru":      "syntagrus",
     "sa":      "vedic",
+    "sd":      "isra",
     "sr":      "set",
     "sk":      "snk",
     "sl":      "ssj",
@@ -122,6 +125,7 @@ no_pretrain_languages = set([
 default_pretrains = dict(default_treebanks)
 for lang in no_pretrain_languages:
     default_pretrains.pop(lang, None)
+default_pretrains["myv"] = "mokha"
 
 # default ner for languages
 default_ners = {
@@ -144,7 +148,9 @@ default_ners = {
     "nb": "norne",
     "nl": "conll02",
     "nn": "norne",
+    "pl": "nkjp",
     "ru": "wikiner",
+    "sd": "siner",
     "sv": "suc3shuffle",
     "th": "lst20",
     "tr": "starlang",
@@ -165,6 +171,8 @@ default_charlms = {
     "fa": "conll17",
     "fi": "conll17",
     "fr": "newswiki",
+    "he": "oscar",
+    "hi": "oscar",
     "it": "conll17",
     "ja": "conll17",
     "kk": "oscar",
@@ -172,8 +180,11 @@ default_charlms = {
     "my": "oscar",
     "nb": "conll17",
     "nl": "ccwiki",
+    "pl": "oscar",
     "ru": "newswiki",
+    "sd": "isra",
     "sv": "conll17",
+    "te": "oscar2022",
     "th": "oscar",
     "tr": "conll17",
     "uk": "conll17",
@@ -191,6 +202,13 @@ pos_charlms = {
     "tr": {   # no idea why, but this particular one goes down in dev score
         "boun": None,
     },
+}
+
+# TODO: retrain all of the depparse models with the charlm
+depparse_charlms = {
+    "en": {
+        "combined": "1billion",
+    }
 }
 
 ner_charlms = {
@@ -216,6 +234,29 @@ ner_charlms = {
     },
 }
 
+# TODO: eventually we want to
+#   - rename all the pretrains to indicate where they are from
+#   - only have special / unique names for the few which need it, such as the bio pretrains
+pos_pretrains = {
+    "en": {
+        "combined_bert": "combined",
+    },
+    "it": {
+        "combined_bert": "combined",
+        "vit_bert": "vit",
+    },
+    "myv": {
+        "jr": "mokha",
+    },
+    "vi": {
+        "vlsp22_phobert_large": "vtb",
+        "vtb_phobert_base": "vtb",
+        "vtb_phobert_large": "vtb",
+    },
+}
+
+depparse_pretrains = pos_pretrains
+
 ner_pretrains = {
     "ar": {
         "aqmar": "fasttextwiki",
@@ -236,6 +277,9 @@ ner_pretrains = {
         "s800":         "craft",
 
         "ontonotes":    "fasttextcrawl",
+        # the stanza-train sample NER model should use the default NER pretrain
+        # for English, that is the same as ontonotes
+        "sample":       "fasttextcrawl",
 
         "conll03":      "glove",
 
@@ -268,6 +312,8 @@ ner_pretrains = {
 default_sentiment = {
     "en": "sstplus",
     "de": "sb10k",
+    "es": "tass2020",
+    "mr": "l3cube",
     "vi": "vsfc",
     "zh-hans": "ren",
 }
@@ -294,6 +340,8 @@ allowed_empty_languages = [
     "th",
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
+    # currently only tokenize and NER for SD as well
+    "sd",
 ]
 
 # map processor name to file ending
@@ -365,13 +413,37 @@ def get_pos_dependencies(lang, package):
     # pretrains we have floating around
     if lang in no_pretrain_languages:
         dependencies = []
-    else:
+    elif lang not in pos_pretrains or package not in pos_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': package}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': pos_pretrains[lang][package]}]
 
     if lang in pos_charlms and package in pos_charlms[lang]:
         charlm_package = pos_charlms[lang][package]
     else:
         charlm_package = default_charlms.get(lang, None)
+
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
+
+def get_depparse_dependencies(lang, package):
+    if lang in no_pretrain_languages:
+        dependencies = []
+    elif lang not in depparse_pretrains or package not in depparse_pretrains[lang]:
+        dependencies = [{'model': 'pretrain', 'package': package}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': depparse_pretrains[lang][package]}]
+
+    if lang in depparse_charlms and package in depparse_charlms[lang]:
+        charlm_package = depparse_charlms[lang][package]
+    else:
+        charlm_package = None
+        # TODO: when all depparse models are retrained,
+        # use the default charlms here
+        # charlm_package = default_charlms.get(lang, None)
 
     if charlm_package is not None:
         dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
@@ -390,7 +462,7 @@ def get_ner_dependencies(lang, package):
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     if lang not in ner_charlms or package not in ner_charlms[lang]:
-        charlm_package = default_charlms[lang]
+        charlm_package = default_charlms.get(lang, None)
     else:
         charlm_package = ner_charlms[lang][package]
 
@@ -398,6 +470,26 @@ def get_ner_dependencies(lang, package):
         dependencies = dependencies + [{'model': 'forward_charlm', 'package': charlm_package},
                                        {'model': 'backward_charlm', 'package': charlm_package}]
     return dependencies
+
+def get_sentiment_dependencies(lang, package):
+    """
+    Return a list of dependencies for the sentiment model
+
+    Generally this will be pretrain, forward & backward charlm
+    So far, this invariant is true:
+    sentiment models use the default pretrain for the language
+    also, they all use the default charlm for a language
+    """
+    pretrain_package = default_treebanks[lang]
+    dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+
+    charlm_package = default_charlms.get(lang, None)
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
+
 
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
@@ -419,17 +511,13 @@ def process_dirs(args):
             # maintain dependencies
             dependencies = None
             if processor == 'depparse':
-                if lang not in no_pretrain_languages:
-                    dependencies = [{'model': 'pretrain', 'package': package}]
+                dependencies = get_depparse_dependencies(lang, package)
             elif processor == 'pos':
                 dependencies = get_pos_dependencies(lang, package)
             elif processor == 'ner':
                 dependencies = get_ner_dependencies(lang, package)
             elif processor == 'sentiment':
-                # so far, this invariant is true:
-                # sentiment models use the default pretrain for the language
-                pretrain_package = default_treebanks[lang]
-                dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+                dependencies = get_sentiment_dependencies(lang, package)
             elif processor == 'constituency':
                 dependencies = get_con_dependencies(lang, package)
             # maintain resources
@@ -446,9 +534,14 @@ def process_dirs(args):
 def process_defaults(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     for lang in resources:
+        if all(k in ("backward_charlm", "forward_charlm", "pretrain") for k in resources[lang].keys()):
+            print(f'Skipping empty resources for language {lang}')
+            continue
         if lang not in default_treebanks: 
             raise AssertionError(f'{lang} not in default treebanks!!!')
         print(f'Preparing default models for language {lang}')
+
+        pretrains_needed = set()
 
         ud_package = default_treebanks[lang]
         os.chdir(os.path.join(args.output_dir, lang))
@@ -457,27 +550,32 @@ def process_defaults(args):
             default_dependencies = {}
         else:
             default_dependencies = {'pos': get_pos_dependencies(lang, ud_package),
-                                    'depparse': [{'model': 'pretrain', 'package': ud_package}]}
+                                    'depparse': get_depparse_dependencies(lang, ud_package)}
+            pretrains_needed.update([dep['package'] for dep in default_dependencies['pos'] if dep['model'] == 'pretrain'])
+            pretrains_needed.update([dep['package'] for dep in default_dependencies['depparse'] if dep['model'] == 'pretrain'])
 
         if lang in default_ners:
             ner_package = default_ners[lang]
+            ner_dependencies = get_ner_dependencies(lang, ner_package)
+            if ner_dependencies is not None:
+                default_dependencies['ner'] = ner_dependencies
+                pretrains_needed.update([dep['package'] for dep in ner_dependencies if dep['model'] == 'pretrain'])
         if lang in default_charlms:
             charlm_package = default_charlms[lang]
         if lang in default_sentiment:
             sentiment_package = default_sentiment[lang]
+            sentiment_dependencies = get_sentiment_dependencies(lang, package)
+            default_dependencies['sentiment'] = sentiment_dependencies
+            pretrains_needed.update([dep['package'] for dep in sentiment_dependencies if dep['model'] == 'pretrain'])
         if lang in default_constituency:
             constituency_package = default_constituency[lang]
+            constituency_dependencies = get_con_dependencies(lang, constituency_package)
+            default_dependencies['constituency'] = constituency_dependencies
+            pretrains_needed.update([dep['package'] for dep in constituency_dependencies if dep['model'] == 'pretrain'])
 
-        if lang in default_ners and lang in default_charlms:
-            ner_dependencies = get_ner_dependencies(lang, ner_package)
-            if ner_dependencies is not None:
-                default_dependencies['ner'] = ner_dependencies
-        if lang in default_sentiment:
-            # All of the sentiment models created so far have used the default pretrain
-            default_dependencies['sentiment'] = [{'model': 'pretrain', 'package': ud_package}]
-        if lang in default_constituency:
-            default_dependencies['constituency'] = get_con_dependencies(lang, constituency_package)
-
+        # pretrain doesn't really need to be here, but by putting it here,
+        # we preserve any existing default.zip files with no other changes
+        # when rebuilding the resources
         processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
         if lang in default_ners:
             processors.append('ner')
@@ -494,6 +592,18 @@ def process_defaults(args):
 
         with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
+                if processor == 'pretrain':
+                    for package in sorted(pretrains_needed):
+                        filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+                        if os.path.exists(filename):
+                            print("   Model {} package {}: file {}".format(processor, package, filename))
+                            zipf.write(os.path.join(processor, package + '.pt'))
+                        else:
+                            raise FileNotFoundError(f"Pretrain package {package} needed for {lang} but cannot be found at {filename}")
+
+                    # done specifically with pretrains
+                    continue
+
                 if processor == 'ner': package = ner_package
                 elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
                 elif processor == 'sentiment': package = sentiment_package
@@ -517,12 +627,13 @@ def process_defaults(args):
                     # there might be a better way to encode that here
                     default_processors[processor] = "identity"
                     print(" --Model {} package {}: no file {}, assuming identity lemmatizer".format(processor, package, filename))
-                elif processor in ('mwt', 'pretrain'):
+                elif processor == 'mwt':
                     # some languages don't have MWT, so skip ig
                     # others have pos and depparse built with no pretrain
                     print(" --Model {} package {}: no file {}, skipping".format(processor, package, filename))
                 else:
                     raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
+
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'default.zip'))
         resources[lang]['default_processors'] = default_processors
         resources[lang]['default_dependencies'] = default_dependencies

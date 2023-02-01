@@ -14,21 +14,13 @@ class DataLoader:
     Data format is same as LSTM_langid
     """
 
-    def __init__(self, use_gpu=None):
+    def __init__(self, device=None):
         self.batches = None
         self.batches_iter = None
         self.tag_to_idx = None
         self.idx_to_tag = None
         self.lang_weights = None
-        # set self.use_gpu and self.device
-        if use_gpu is None:
-            self.use_gpu = torch.cuda.is_available()
-        else:
-            self.use_gpu = use_gpu
-        if self.use_gpu:
-            self.device = torch.device("cuda")
-        else:
-            self.device = None
+        self.device = device
 
     def load_data(self, batch_size, data_files, char_index, tag_index, randomize=False, randomize_range=(5,20),
                   max_length=None):

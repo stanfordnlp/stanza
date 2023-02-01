@@ -41,26 +41,23 @@ def test_conll_to_dict():
     assert dicts == DICT
 
 def test_dict_to_conll():
-    conll = CoNLL.convert_dict(DICT)
+    document = Document(DICT)
+    # :c = no comments
+    conll = [[sentence.split("\t") for sentence in doc.split("\n")] for doc in "{:c}".format(document).split("\n\n")]
     assert conll == CONLL
 
 def test_dict_to_doc_and_doc_to_dict():
     """
     Test the conversion from raw dict to Document and back
+
     This code path will first turn start_char|end_char into start_char & end_char fields in the Document
     That version to a dict will have separate fields for each of those
     Finally, the conversion from that dict to a list of conll entries should convert that back to misc
     """
-    doc = Document(DICT)
-    dicts = doc.to_dict()
-    dicts_tupleid = []
-    for sentence in dicts:
-        items = []
-        for item in sentence:
-            item['id'] = item['id'] if isinstance(item['id'], tuple) else (item['id'], )
-            items.append(item)
-        dicts_tupleid.append(items)
-    conll = CoNLL.convert_dict(DICT)
+    document = Document(DICT)
+    dicts = document.to_dict()
+    document = Document(dicts)
+    conll = [[sentence.split("\t") for sentence in doc.split("\n")] for doc in "{:c}".format(document).split("\n\n")]
     assert conll == CONLL
 
 # sample is two sentences long so that the tests check multiple sentences
@@ -112,14 +109,46 @@ def check_russian_doc(doc):
         assert sent_idx == sentence.index
         assert len(sentence.comments) == 3
 
-    sentences = CoNLL.doc2conll(doc)
+    sentences = "{:C}".format(doc)
+    sentences = sentences.split("\n\n")
     assert len(sentences) == 2
 
-    sentence = sentences[0]
+    sentence = sentences[0].split("\n")
     assert len(sentence) == 14
     assert lines[0] == sentence[0]
     assert lines[1] == sentence[1]
     assert lines[2] == sentence[2]
+
+    # assert that the weird deprel=list:goeswith was properly handled
+    assert doc.sentences[0].words[2].head == 1
+    assert doc.sentences[0].words[2].deprel == "list:goeswith"
+
+def test_write_russian_doc(tmp_path):
+    """
+    Specifically test the write_doc2conll method
+    """
+    filename = tmp_path / "russian.conll"
+    doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
+    check_russian_doc(doc)
+    CoNLL.write_doc2conll(doc, filename)
+
+    with open(filename) as fin:
+        text = fin.read()
+
+    # the conll docs have to end with \n\n
+    assert text.endswith("\n\n")
+
+    # but to compare against the original, strip off the whitespace
+    text = text.strip()
+
+    # we skip the first sentence because the "deprel=list:goeswith" is weird
+    # note that the deprel itself is checked in check_russian_doc
+    text = text[text.find("# sent_id = 4"):]
+    sample = RUSSIAN_SAMPLE[RUSSIAN_SAMPLE.find("# sent_id = 4"):]
+    assert text == sample
+
+    doc2 = CoNLL.conll2doc(filename)
+    check_russian_doc(doc2)
 
 def test_doc_with_comments():
     """
@@ -134,11 +163,12 @@ def test_unusual_misc():
     (the below test would fail)
     """
     doc = CoNLL.conll2doc(input_str=RUSSIAN_SAMPLE)
-    sentences = CoNLL.doc2conll(doc)
+    sentences = "{:C}".format(doc).split("\n\n")
     assert len(sentences) == 2
-    assert len(sentences[0]) == 14
+    sentence = sentences[0].split("\n")
+    assert len(sentence) == 14
 
-    for word in sentences[0]:
+    for word in sentence:
         pieces = word.split("\t")
         assert len(pieces) == 1 or len(pieces) == 10
         if len(pieces) == 10:
@@ -198,8 +228,8 @@ def test_simple_ner_conversion():
         # they should also not reach the word's misc field
         assert not token.words[0].misc
 
-    conll = CoNLL.doc2conll(doc)
-    assert "\n".join(conll[0]) == SIMPLE_NER
+    conll = "{:C}".format(doc)
+    assert conll == SIMPLE_NER
 
 MWT_NER = """
 # text = This makes John's headache worse
@@ -234,5 +264,5 @@ def test_mwt_ner_conversion():
         # they should also not reach the word's misc field
         assert not token.words[0].misc
 
-    conll = CoNLL.doc2conll(doc)
-    assert "\n".join(conll[0]) == MWT_NER
+    conll = "{:C}".format(doc)
+    assert conll == MWT_NER

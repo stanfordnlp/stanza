@@ -137,7 +137,7 @@ class Pretrain:
 
         Skips the first row
         """
-        logger.info("Reading pretrained vectors from csv file %s...", filename)
+        logger.info("Reading pretrained vectors from csv file %s ...", filename)
         with open_read_text(filename) as fin:
             csv_reader = csv.reader(fin)
             # the header of the thai csv vector file we have is just the number of columns
@@ -160,7 +160,7 @@ class Pretrain:
         """
         Open a vector file using the provided function and read from it.
         """
-        logger.info("Reading pretrained vectors from %s...", filename)
+        logger.info("Reading pretrained vectors from %s ...", filename)
 
         # some vector files, such as Google News, use tabs
         tab_space_pattern = re.compile(r"[ \t]+")

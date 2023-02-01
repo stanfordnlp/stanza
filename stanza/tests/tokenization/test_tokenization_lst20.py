@@ -6,7 +6,7 @@ import pytest
 import stanza
 from stanza.tests import *
 
-from stanza.utils.datasets.prepare_tokenizer_treebank import convert_conllu_to_txt
+from stanza.utils.datasets.common import convert_conllu_to_txt
 from stanza.utils.datasets.tokenization.convert_th_lst20 import read_document
 from stanza.utils.datasets.tokenization.process_thai_tokenization import write_section
 

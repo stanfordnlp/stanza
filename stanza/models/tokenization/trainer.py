@@ -13,8 +13,7 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, use_cuda=False):
-        self.use_cuda = use_cuda
+    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None):
         if model_file is not None:
             # load everything from file
             self.load(model_file)
@@ -25,13 +24,8 @@ class Trainer(BaseTrainer):
             self.lexicon = lexicon
             self.dictionary = dictionary
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
-        self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
-        if use_cuda:
-            self.model.cuda()
-            self.criterion.cuda()
-        else:
-            self.model.cpu()
-            self.criterion.cpu()
+        self.model = self.model.to(device)
+        self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.optimizer = optim.Adam(self.parameters, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
@@ -41,10 +35,10 @@ class Trainer(BaseTrainer):
         self.model.train()
         units, labels, features, _ = inputs
 
-        if self.use_cuda:
-            units = units.cuda()
-            labels = labels.cuda()
-            features = features.cuda()
+        device = next(self.model.parameters()).device
+        units = units.to(device)
+        labels = labels.to(device)
+        features = features.to(device)
 
         pred = self.model(units, features)
 
@@ -62,9 +56,9 @@ class Trainer(BaseTrainer):
         self.model.eval()
         units, _, features, _ = inputs
 
-        if self.use_cuda:
-            units = units.cuda()
-            features = features.cuda()
+        device = next(self.model.parameters()).device
+        units = units.to(device)
+        features = features.to(device)
 
         pred = self.model(units, features)
 

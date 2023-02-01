@@ -8,7 +8,9 @@ import json
 import pickle
 import warnings
 
+from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
+from stanza.models.constituency import tree_reader
 
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")
@@ -29,37 +31,11 @@ START_CHAR = 'start_char'
 END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
+CONSTITUENCY = 'constituency'
 
-def _readonly_setter(self, name):
-    full_classname = self.__class__.__module__
-    if full_classname is None:
-        full_classname = self.__class__.__qualname__
-    else:
-        full_classname += '.' + self.__class__.__qualname__
-    raise ValueError(f'Property "{name}" of "{full_classname}" is read-only.')
-
-class StanzaObject(object):
-    """
-    Base class for all Stanza data objects that allows for some flexibility handling annotations
-    """
-
-    @classmethod
-    def add_property(cls, name, default=None, getter=None, setter=None):
-        """
-        Add a property accessible through self.{name} with underlying variable self._{name}.
-        Optionally setup a setter as well.
-        """
-
-        if hasattr(cls, name):
-            raise ValueError(f'Property by the name of {name} already exists in {cls}. Maybe you want to find another name?')
-
-        setattr(cls, f'_{name}', default)
-        if getter is None:
-            getter = lambda self: getattr(self, f'_{name}')
-        if setter is None:
-            setter = lambda self, value: _readonly_setter(self, name)
-
-        setattr(cls, name, property(getter, setter))
+# field indices when converting the document to conll
+FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
+FIELD_NUM = len(FIELD_TO_IDX)
 
 class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -75,13 +51,14 @@ class Document(StanzaObject):
         """
         self._sentences = []
         self._lang = None
-        self._text = None
+        self._text = text
         self._num_tokens = 0
         self._num_words = 0
 
-        self.text = text
         self._process_sentences(sentences, comments)
         self._ents = []
+        if self._text is not None:
+            self.build_ents()
 
     @property
     def lang(self):
@@ -156,7 +133,10 @@ class Document(StanzaObject):
     def _process_sentences(self, sentences, comments=None):
         self.sentences = []
         for sent_idx, tokens in enumerate(sentences):
-            sentence = Sentence(tokens, doc=self)
+            try:
+                sentence = Sentence(tokens, doc=self)
+            except ValueError as e:
+                raise ValueError("Could not process document at sentence %d: %s" % (sent_idx, str(e))) from e
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
@@ -284,7 +264,7 @@ class Document(StanzaObject):
                             setattr(unit, field, content)
                     cidx += 1
 
-    def set_mwt_expansions(self, expansions):
+    def set_mwt_expansions(self, expansions, fake_dependencies=False):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
         will be expected for each multi-word token.
         """
@@ -321,7 +301,10 @@ class Document(StanzaObject):
                     word.parent = token
                     sentence.words.append(word)
 
-            sentence.rebuild_dependencies()
+            if fake_dependencies:
+                sentence.build_fake_dependencies()
+            else:
+                sentence.rebuild_dependencies()
 
         self._count_words() # update number of words & tokens
         assert idx_e == len(expansions), "{} {}".format(idx_e, len(expansions))
@@ -362,6 +345,10 @@ class Document(StanzaObject):
         for s in self.sentences:
             yield from s.tokens
 
+    def sentence_comments(self):
+        """ Returns a list of list of comments for the sentences """
+        return [[comment for comment in sentence.comments] for sentence in self.sentences]
+
     def to_dict(self):
         """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
         """
@@ -370,22 +357,33 @@ class Document(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+    def __format__(self, spec):
+        if spec == 'c':
+            return "\n\n".join("{:c}".format(s) for s in self.sentences)
+        elif spec == 'C':
+            return "\n\n".join("{:C}".format(s) for s in self.sentences)
+        else:
+            return str(self)
+
     def to_serialized(self):
         """ Dumps the whole document including text to a byte array containing a list of list of dictionaries for each token in each sentence in the doc.
         """
-        return pickle.dumps((self.text, self.to_dict()))
+        return pickle.dumps((self.text, self.to_dict(), self.sentence_comments()))
 
     @classmethod
     def from_serialized(cls, serialized_string):
         """ Create and initialize a new document from a serialized string generated by Document.to_serialized_string():
         """
-        try:
+        stuff = pickle.loads(serialized_string)
+        if not isinstance(stuff, tuple):
+            raise TypeError("Serialized data was not a tuple when building a Document")
+        if len(stuff) == 2:
             text, sentences = pickle.loads(serialized_string)
             doc = cls(sentences, text)
-            doc.build_ents()
-            return doc
-        except:
-            raise Exception(f"Could not create new Document from serialised string.")
+        else:
+            text, sentences, comments = pickle.loads(serialized_string)
+            doc = cls(sentences, text, comments)
+        return doc
 
 
 class Sentence(StanzaObject):
@@ -401,6 +399,8 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
+        self._constituency = None
+        self._sentiment = None
         # comments are a list of comment lines occurring before the
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
@@ -415,13 +415,22 @@ class Sentence(StanzaObject):
                 entry[ID] = (i+1, )
             if isinstance(entry[ID], int):
                 entry[ID] = (entry[ID], )
-            m = (len(entry.get(ID)) > 1)
-            n = multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None) is not None else None
-            if m or n: # if this token is a multi-word token
-                if m: st, en = entry[ID]
+            if len(entry.get(ID)) > 1: # if this token is a multi-word token
+                st, en = entry[ID]
                 self.tokens.append(Token(entry))
             else: # else this token is a word
                 new_word = Word(entry)
+                if len(self.words) > 0 and self.words[-1].id == new_word.id:
+                    # this can happen in the following context:
+                    # a document was created with MWT=Yes to mark that a token should be split
+                    # and then there was an MWT "expansion" with a single word after that token
+                    # we replace the Word in the Token assuming that the expansion token might
+                    # have more information than the Token dict did
+                    # note that a single word MWT like that can be detected with something like
+                    #   multi_word_token_misc.match(entry.get(MISC)) if entry.get(MISC, None)
+                    self.words[-1] = new_word
+                    self.tokens[-1].words[-1] = new_word
+                    continue
                 self.words.append(new_word)
                 idx = entry.get(ID)[0]
                 if idx <= en:
@@ -573,6 +582,37 @@ class Sentence(StanzaObject):
     def sentiment(self, value):
         """ Set the sentiment value """
         self._sentiment = value
+        sentiment_comment = "# sentiment = " + str(value)
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# sentiment = "):
+                self._comments[comment_idx] = sentiment_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(sentiment_comment)
+
+    @property
+    def constituency(self):
+        """ Returns the constituency tree for this sentence """
+        return self._constituency
+
+    @constituency.setter
+    def constituency(self, value):
+        """
+        Set the constituency tree
+
+        This incidentally updates the #constituency comment if it already exists,
+        or otherwise creates a new comment # constituency = ...
+        """
+        self._constituency = value
+        constituency_comment = "# constituency = " + str(value)
+        constituency_comment = constituency_comment.replace("\n", "*NL*").replace("\r", "")
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# constituency = "):
+                self._comments[comment_idx] = constituency_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(constituency_comment)
+
 
     @property
     def comments(self):
@@ -586,6 +626,18 @@ class Sentence(StanzaObject):
         """
         if not comment.startswith("#"):
             comment = "#" + comment
+        if comment.startswith("# constituency ="):
+            _, tree_text = comment.split("=", 1)
+            tree = tree_reader.read_trees(tree_text)
+            if len(tree) > 1:
+                raise ValueError("Multiple constituency trees for one sentence: %s" % tree_text)
+            self._constituency = tree[0]
+            self._comments = [x for x in self._comments if not x.startswith("# constituency =")]
+        elif comment.startswith("# sentiment ="):
+            _, sentiment = comment.split("=", 1)
+            sentiment = int(sentiment.strip())
+            self._sentiment = sentiment
+            self._comments = [x for x in self._comments if not x.startswith("# sentiment =")]
         self._comments.append(comment)
 
     def rebuild_dependencies(self):
@@ -607,8 +659,17 @@ class Sentence(StanzaObject):
             else:
                 # id is index in words list + 1
                 head = self.words[word.head - 1]
-                assert(word.head == head.id)
+                if word.head != head.id:
+                    raise ValueError("Dependency tree is incorrectly constructed")
             self.dependencies.append((head, word.deprel, word))
+
+    def build_fake_dependencies(self):
+        self.dependencies = []
+        for word_idx, word in enumerate(self.words):
+            word.head = word_idx   # note that this goes one previous to the index
+            word.deprel = "root" if word_idx == 0 else "dep"
+            word.deps = "%d:%s" % (word.head, word.deprel)
+            self.dependencies.append((word_idx, word.deprel, word))
 
     def print_dependencies(self, file=None):
         """ Print the dependencies for this sentence. """
@@ -654,6 +715,18 @@ class Sentence(StanzaObject):
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
+    def __format__(self, spec):
+        if spec == 'c':
+            return "\n".join(token.to_conll_text() for token in self.tokens)
+        elif spec == 'C':
+            tokens = "\n".join(token.to_conll_text() for token in self.tokens)
+            if len(self.comments) > 0:
+                text = "\n".join(self.comments)
+                return text + "\n" + tokens
+            return tokens
+        else:
+            return str(self)
+
 def init_from_misc(unit):
     """Create attributes by parsing from the `misc` field.
 
@@ -681,6 +754,35 @@ def init_from_misc(unit):
     unit._misc = "|".join(remaining_values)
 
 
+def dict_to_conll_text(token_dict):
+    token_conll = ['_' for i in range(FIELD_NUM)]
+    misc = []
+    for key in token_dict:
+        if key == START_CHAR or key == END_CHAR:
+            misc.append("{}={}".format(key, token_dict[key]))
+        elif key == NER:
+            # TODO: potentially need to escape =|\ in the NER
+            misc.append("{}={}".format(key, token_dict[key]))
+        elif key == MISC:
+            # avoid appending a blank misc entry.
+            # otherwise the resulting misc field in the conll doc will wind up being blank text
+            # TODO: potentially need to escape =|\ in the MISC as well
+            if token_dict[key]:
+                misc.append(token_dict[key])
+        elif key == ID:
+            token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
+        elif key in FIELD_TO_IDX:
+            token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+    if misc:
+        token_conll[FIELD_TO_IDX[MISC]] = "|".join(misc)
+    else:
+        token_conll[FIELD_TO_IDX[MISC]] = '_'
+    # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
+    if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
+        token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
+    return "\t".join(token_conll)
+
+
 class Token(StanzaObject):
     """ A token class that stores attributes of a token and carries a list of words. A token corresponds to a unit in the raw
     text. In some languages such as English, a token has a one-to-one mapping to a word, while in other languages such as French,
@@ -692,7 +794,8 @@ class Token(StanzaObject):
         """
         self._id = token_entry.get(ID)
         self._text = token_entry.get(TEXT)
-        assert self._id and self._text, 'id and text should be included for the token'
+        if not self._id or not self._text:
+            raise ValueError('id and text should be included for the token')
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._multi_ner = token_entry.get(MULTI_NER, None)
@@ -788,6 +891,17 @@ class Token(StanzaObject):
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+
+    def __format__(self, spec):
+        if spec == 'C':
+            return "\n".join(self.to_conll_text())
+        elif spec == 'P':
+            return self.pretty_print()
+        else:
+            return str(self)
+
+    def to_conll_text(self):
+        return "\n".join(dict_to_conll_text(x) for x in self.to_dict())
 
     def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER]):
         """ Dumps the token into a list of dictionary for this token with its extended words
@@ -993,6 +1107,21 @@ class Word(StanzaObject):
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+
+    def __format__(self, spec):
+        if spec == 'C':
+            return self.to_conll_text()
+        elif spec == 'P':
+            return self.pretty_print()
+        else:
+            return str(self)
+
+    def to_conll_text(self):
+        """
+        Turn a word into a conll representation (10 column tab separated)
+        """
+        token_dict = self.to_dict()
+        return dict_to_conll_text(token_dict)
 
     def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
         """ Dumps the word into a dictionary.

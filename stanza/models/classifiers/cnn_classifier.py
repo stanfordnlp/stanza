@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import stanza.models.classifiers.classifier_args as classifier_args
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
@@ -52,7 +52,7 @@ tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(nn.Module):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, bert_model, bert_tokenizer,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -82,11 +82,13 @@ class CNNClassifier(nn.Module):
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
+                                      use_elmo = args.use_elmo,
+                                      elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       maxpool_width = args.maxpool_width,
-                                      model_type = 'CNNClassifier')
+                                      model_type = ModelType.CNN)
 
         self.char_lowercase = args.char_lowercase
 
@@ -94,6 +96,7 @@ class CNNClassifier(nn.Module):
 
         emb_matrix = pretrain.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.add_unsaved_module('elmo_model', elmo_model)
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
@@ -120,12 +123,12 @@ class CNNClassifier(nn.Module):
         # replacing NBSP picks up a whole bunch of words for VI
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
 
-        if self.config.extra_wordvec_method is not classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is not ExtraVectors.NONE:
             if not extra_vocab:
                 raise ValueError("Should have had extra_vocab set for extra_wordvec_method {}".format(self.config.extra_wordvec_method))
             if not args.extra_wordvec_dim:
                 self.config.extra_wordvec_dim = self.embedding_dim
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            if self.config.extra_wordvec_method is ExtraVectors.SUM:
                 if self.config.extra_wordvec_dim != self.embedding_dim:
                     raise ValueError("extra_wordvec_dim must equal embedding_dim for {}".format(self.config.extra_wordvec_method))
 
@@ -147,11 +150,11 @@ class CNNClassifier(nn.Module):
 
         # Pytorch is "aware" of the existence of the nn.Modules inside
         # an nn.ModuleList in terms of parameters() etc
-        if self.config.extra_wordvec_method is classifier_args.ExtraVectors.NONE:
+        if self.config.extra_wordvec_method is ExtraVectors.NONE:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+        elif self.config.extra_wordvec_method is ExtraVectors.SUM:
             total_embedding_dim = self.embedding_dim
-        elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+        elif self.config.extra_wordvec_method is ExtraVectors.CONCAT:
             total_embedding_dim = self.embedding_dim + self.config.extra_wordvec_dim
         else:
             raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
@@ -171,6 +174,19 @@ class CNNClassifier(nn.Module):
             else:
                 self.charmodel_backward_projection = None
                 total_embedding_dim += charmodel_backward.hidden_dim()
+
+        if self.config.use_elmo:
+            if elmo_model is None:
+                raise ValueError("Model requires elmo, but elmo_model not passed in")
+            elmo_dim = elmo_model.sents2elmo([["Test"]])[0].shape[1]
+
+            # this mapping will combine 3 layers of elmo to 1 layer of features
+            self.elmo_combine_layers = nn.Linear(in_features=3, out_features=1, bias=False)
+            if self.config.elmo_projection:
+                self.elmo_projection = nn.Linear(in_features=elmo_dim, out_features=self.config.elmo_projection)
+                total_embedding_dim = total_embedding_dim + self.config.elmo_projection
+            else:
+                total_embedding_dim = total_embedding_dim + elmo_dim
 
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -193,19 +209,26 @@ class CNNClassifier(nn.Module):
         self.fc_input_size = 0
         self.conv_layers = nn.ModuleList()
         self.max_window = 0
-        for filter_size in self.config.filter_sizes:
+        for filter_idx, filter_size in enumerate(self.config.filter_sizes):
             if isinstance(filter_size, int):
                 self.max_window = max(self.max_window, filter_size)
-                fc_delta = self.config.filter_channels // self.config.maxpool_width
-                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, self.config.filter_channels, fc_delta)
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = self.config.filter_channels
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
+                fc_delta = filter_channels // self.config.maxpool_width
+                tlogger.debug("Adding full width filter %d.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
                 self.conv_layers.append(nn.Conv2d(in_channels=1,
-                                                  out_channels=self.config.filter_channels,
+                                                  out_channels=filter_channels,
                                                   kernel_size=(filter_size, conv_input_dim)))
             elif isinstance(filter_size, tuple) and len(filter_size) == 2:
                 filter_height, filter_width = filter_size
                 self.max_window = max(self.max_window, filter_width)
-                filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                if isinstance(self.config.filter_channels, int):
+                    filter_channels = max(1, self.config.filter_channels // (conv_input_dim // filter_width))
+                else:
+                    filter_channels = self.config.filter_channels[filter_idx]
                 fc_delta = filter_channels * (conv_input_dim // filter_width) // self.config.maxpool_width
                 tlogger.debug("Adding filter %s.  Output channels: %d -> %d", filter_size, filter_channels, fc_delta)
                 self.fc_input_size += fc_delta
@@ -217,19 +240,31 @@ class CNNClassifier(nn.Module):
                 raise ValueError("Expected int or 2d tuple for conv size")
 
         tlogger.debug("Input dim to FC layers: %d", self.fc_input_size)
-        fc_layers = []
-        previous_layer_size = self.fc_input_size
-        for shape in self.config.fc_shapes:
-            fc_layers.append(nn.Linear(previous_layer_size, shape))
-            previous_layer_size = shape
-        fc_layers.append(nn.Linear(previous_layer_size, self.config.num_classes))
-        self.fc_layers = nn.ModuleList(fc_layers)
+        self.fc_layers = build_output_layers(self.fc_input_size, self.config.fc_shapes, self.config.num_classes)
 
         self.dropout = nn.Dropout(self.config.dropout)
 
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
+
+    def is_unsaved_module(self, name):
+        return name.split('.')[0] in self.unsaved_modules
+
+    def log_configuration(self):
+        """
+        Log some essential information about the model configuration to the training logger
+        """
+        tlogger.info("Filter sizes: %s" % str(self.config.filter_sizes))
+        tlogger.info("Filter channels: %s" % str(self.config.filter_channels))
+        tlogger.info("Intermediate layers: %s" % str(self.config.fc_shapes))
+
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+                lines.append("%s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
 
     def build_char_reps(self, inputs, max_phrase_len, charlm, projection, begin_paddings, device):
         char_reps = charlm.build_char_representation(inputs)
@@ -277,6 +312,9 @@ class CNNClassifier(nn.Module):
         extra_batch_indices = []
         begin_paddings = []
         end_paddings = []
+
+        elmo_batch_words = []
+
         for phrase in inputs:
             # we use random at training time to try to learn different
             # positions of padding.  at test time, though, we want to
@@ -325,6 +363,13 @@ class CNNClassifier(nn.Module):
                 extra_sentence_indices.extend([PAD_ID] * end_pad_width)
                 extra_batch_indices.append(extra_sentence_indices)
 
+            if self.config.use_elmo:
+                elmo_phrase_words = [""] * begin_pad_width
+                for word in phrase:
+                    elmo_phrase_words.append(word)
+                elmo_phrase_words.extend([""] * end_pad_width)
+                elmo_batch_words.append(elmo_phrase_words)
+
         # creating a single large list with all the indices lets us
         # create a single tensor, which is much faster than creating
         # many tiny tensors
@@ -346,9 +391,9 @@ class CNNClassifier(nn.Module):
         if self.extra_vocab:
             extra_batch_indices = torch.tensor(extra_batch_indices, requires_grad=False, device=device)
             extra_input_vectors = self.extra_embedding(extra_batch_indices)
-            if self.config.extra_wordvec_method is classifier_args.ExtraVectors.CONCAT:
+            if self.config.extra_wordvec_method is ExtraVectors.CONCAT:
                 all_inputs = [input_vectors, extra_input_vectors]
-            elif self.config.extra_wordvec_method is classifier_args.ExtraVectors.SUM:
+            elif self.config.extra_wordvec_method is ExtraVectors.SUM:
                 all_inputs = [input_vectors + extra_input_vectors]
             else:
                 raise ValueError("unable to handle {}".format(self.config.extra_wordvec_method))
@@ -362,6 +407,25 @@ class CNNClassifier(nn.Module):
         if self.backward_charlm is not None:
             char_reps_backward = self.build_char_reps(inputs, max_phrase_len, self.backward_charlm, self.charmodel_backward_projection, begin_paddings, device)
             all_inputs.append(char_reps_backward)
+
+        if self.config.use_elmo:
+            # this will be N arrays of 3xMx1024 where M is the number of words
+            # and N is the number of sentences (and 1024 is actually the number of weights)
+            elmo_arrays = self.elmo_model.sents2elmo(elmo_batch_words, output_layer=-2)
+            elmo_tensors = [torch.tensor(x).to(device=device) for x in elmo_arrays]
+            # elmo_tensor will now be Nx3xMx1024
+            elmo_tensor = torch.stack(elmo_tensors)
+            # Nx1024xMx3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 3)
+            # NxMx1024x3
+            elmo_tensor = torch.transpose(elmo_tensor, 1, 2)
+            # NxMx1024x1
+            elmo_tensor = self.elmo_combine_layers(elmo_tensor)
+            # NxMx1024
+            elmo_tensor = elmo_tensor.squeeze(3)
+            if self.config.elmo_projection:
+                elmo_tensor = self.elmo_projection(elmo_tensor)
+            all_inputs.append(elmo_tensor)
 
         if self.bert_model is not None:
             bert_embeddings = self.extract_bert_embeddings(inputs, max_phrase_len, begin_paddings, device)
@@ -378,7 +442,6 @@ class CNNClassifier(nn.Module):
 
         conv_outs = []
         for conv, filter_size in zip(self.conv_layers, self.config.filter_sizes):
-            # TODO: non-int filter sizes
             if isinstance(filter_size, int):
                 conv_out = self.dropout(F.relu(conv(x).squeeze(3)))
                 conv_outs.append(conv_out)
@@ -397,71 +460,21 @@ class CNNClassifier(nn.Module):
         # https://discuss.pytorch.org/t/multi-class-cross-entropy-loss-and-softmax-in-pytorch/24920/4
         return out
 
+    def get_params(self, skip_modules=True):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if self.is_unsaved_module(k)]
+            for k in skipped:
+                del model_state[k]
 
-# TODO: make some of the following methods part of the class
-
-# TODO: all this code is basically the same as for POS and NER.  Should refactor
-def save(filename, model, skip_modules=True):
-    save_dir = os.path.split(filename)[0]
-    os.makedirs(save_dir, exist_ok=True)
-    model_state = model.state_dict()
-    # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
-    if skip_modules:
-        skipped = [k for k in model_state.keys() if k.split('.')[0] in model.unsaved_modules]
-        for k in skipped:
-            del model_state[k]
-    params = {
-        'model': model_state,
-        'config': model.config,
-        'labels': model.labels,
-        'extra_vocab': model.extra_vocab,
-    }
-    torch.save(params, filename, _use_new_zipfile_serialization=False)
-    logger.info("Model saved to {}".format(filename))
-
-def load(filename, pretrain, charmodel_forward, charmodel_backward, foundation_cache=None):
-    try:
-        checkpoint = torch.load(filename, lambda storage, loc: storage)
-    except BaseException:
-        logger.exception("Cannot load model from {}".format(filename))
-        raise
-    logger.debug("Loaded model {}".format(filename))
-
-    # TODO: should not be needed when all models have this value set
-    setattr(checkpoint['config'], 'char_lowercase', getattr(checkpoint['config'], 'char_lowercase', False))
-    setattr(checkpoint['config'], 'charlm_projection', getattr(checkpoint['config'], 'charlm_projection', None))
-    setattr(checkpoint['config'], 'bert_model', getattr(checkpoint['config'], 'bert_model', None))
-    setattr(checkpoint['config'], 'bilstm', getattr(checkpoint['config'], 'bilstm', False))
-    setattr(checkpoint['config'], 'bilstm_hidden_dim', getattr(checkpoint['config'], 'bilstm_hidden_dim', 0))
-    setattr(checkpoint['config'], 'maxpool_width', getattr(checkpoint['config'], 'maxpool_width', 1))
-
-    # TODO: the getattr is not needed when all models have this baked into the config
-    model_type = getattr(checkpoint['config'], 'model_type', 'CNNClassifier')
-
-    bert_model = checkpoint['config'].bert_model
-    bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
-    if model_type == 'CNNClassifier':
-        extra_vocab = checkpoint.get('extra_vocab', None)
-        model = CNNClassifier(pretrain=pretrain,
-                              extra_vocab=extra_vocab,
-                              labels=checkpoint['labels'],
-                              charmodel_forward=charmodel_forward,
-                              charmodel_backward=charmodel_backward,
-                              bert_model=bert_model,
-                              bert_tokenizer=bert_tokenizer,
-                              args=checkpoint['config'])
-    else:
-        raise ValueError("Unknown model type {}".format(model_type))
-    model.load_state_dict(checkpoint['model'], strict=False)
-
-    logger.debug("-- MODEL CONFIG --")
-    for k in model.config.__dict__:
-        logger.debug("  --{}: {}".format(k, model.config.__dict__[k]))
-
-    logger.debug("-- MODEL LABELS --")
-    logger.debug("  {}".format(" ".join(model.labels)))
-
-    return model
+        params = {
+            'model':        model_state,
+            'config':       self.config,
+            'labels':       self.labels,
+            'extra_vocab':  self.extra_vocab,
+        }
+        return params
 
 
 def label_text(model, text, batch_size=None):

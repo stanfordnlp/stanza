@@ -14,6 +14,7 @@ import logging
 import os
 
 from stanza.models import tagger
+from stanza.models.common.constant import treebank_to_short_name
 from stanza.resources.common import download, DEFAULT_MODEL_DIR
 from stanza.resources.prepare_resources import default_charlms, pos_charlms
 import stanza.utils.datasets.common as common
@@ -67,7 +68,7 @@ def process_treebank(treebank, paths, args) -> None:
     if args.tag_method is Tags.GOLD:
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
-        short_name = common.project_to_short_name(treebank)
+        short_name = treebank_to_short_name(treebank)
         short_language, dataset = short_name.split("_")
 
         # fmt: off
@@ -84,7 +85,11 @@ def process_treebank(treebank, paths, args) -> None:
         base_args = base_args + ['--save_dir', tagger_dir, '--save_name', tagger_name]
 
         # word vector file for POS
-        base_args = base_args + wordvec_args(short_language, dataset, args)
+        if args.wordvec_pretrain_file:
+            base_args += ["--wordvec_pretrain_file", args.wordvec_pretrain_file]
+        else:
+            base_args = base_args + wordvec_args(short_language, dataset, [])
+
 
         # charlm for POS
         charlm = choose_charlm(short_language, dataset, args.charlm, default_charlms, pos_charlms)

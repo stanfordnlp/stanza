@@ -11,11 +11,12 @@ The script requires two arguments:
 import argparse
 import os
 
-from collections import Counter
+from collections import defaultdict
 
-from stanza.models.constituency.tree_reader import read_trees, MixedTreeError
+from stanza.models.constituency.tree_reader import read_trees, MixedTreeError, UnlabeledTreeError
 
 REMAPPING = {
+    '(ADV-MDP': '(RP-MDP',
     '(MPD':     '(MDP',
     '(MP ':     '(NP ',
     '(MP(':     '(NP(',
@@ -36,7 +37,7 @@ REMAPPING = {
     '(SE-SPL':  '(S-SPL',
     '(SBARR':   '(SBAR',
     'PPADV':    'PP-ADV',
-    '(PR':      '(PP',
+    '(PR (':    '(PP (',
     '(PPP':     '(PP',
     'VP0ADV':   'VP-ADV',
     '(S1':      '(S',
@@ -46,6 +47,7 @@ REMAPPING = {
     'APPPD':    'AP-PPD',
     'APPRD':    'AP-PPD',
     'Np--H':    'Np-H',
+    '(WPNP':    '(WHNP',
     '(WHRPP':   '(WHRP',
     # the one mistagged PV is on a prepositional phrase
     # (the subtree there maybe needs an SBAR as well, but who's counting)
@@ -73,7 +75,7 @@ def unify_label(tree):
     return tree
 
 
-def is_closed_tree(tree):
+def count_paren_parity(tree):
     """
     Checks if the tree is properly closed
     :param tree: tree as a string
@@ -85,7 +87,7 @@ def is_closed_tree(tree):
             count += 1
         elif char == ')':
             count -= 1
-    return count == 0
+    return count
 
 
 def is_valid_line(line):
@@ -104,15 +106,16 @@ def is_valid_line(line):
     return False
 
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
-WEIRD_LABELS = ["WP", "YP", "SNP", "STC", "UPC", "(TP"]
+WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
-def convert_file(orig_file, new_file):
+
+def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
     This function writes new trees to the corresponding files in new_file
     """
-    errors = Counter()
+    errors = defaultdict(list)
     with open(orig_file, 'r', encoding='utf-8') as reader, open(new_file, 'w', encoding='utf-8') as writer:
         content = reader.readlines()
         # Tree string will only be written if the currently read
@@ -120,7 +123,7 @@ def convert_file(orig_file, new_file):
         # does not have a '(' that signifies the presence of constituents
         tree = ""
         reading_tree = False
-        for line in content:
+        for line_idx, line in enumerate(content):
             line = ' '.join(line.split())
             if line == '':
                 continue
@@ -132,58 +135,85 @@ def convert_file(orig_file, new_file):
                 # one tree in 25432.prd is not valid because
                 # it is just a bunch of blank lines
                 if tree.strip() == '(ROOT':
-                    tree = ""
-                    errors["empty"] += 1
+                    errors["empty"].append("Empty tree in {} line {}".format(orig_file, line_idx))
                     continue
                 tree += ')\n'
-                if not is_closed_tree(tree):
-                    #print("Rejecting the following tree from {} for being unclosed: |{}|".format(orig_file, tree))
-                    tree = ""
-                    errors["unclosed"] += 1
+                parity = count_paren_parity(tree)
+                if parity > 0:
+                    errors["unclosed"].append("Unclosed tree from {} line {}: |{}|".format(orig_file, line_idx, tree))
                     continue
-                # TODO: these blocks eliminate 11 trees
-                # maybe those trees can be salvaged?
-                bad_label = False
-                for weird_label in WEIRD_LABELS:
-                    if tree.find(weird_label) >= 0:
-                        bad_label = True
-                        errors[weird_label] += 1
-                        break
-                if bad_label:
+                if parity < 0:
+                    errors["extra_parens"].append("Extra parens at end of tree from {} line {} for having extra parens: {}".format(orig_file, line_idx, tree))
                     continue
+                if convert_brackets:
+                    tree = tree.replace("RBKT", "-RRB-").replace("LBKT", "-LRB-")
                 try:
                     # test that the tree can be read in properly
-                    read_trees(tree)
+                    processed_trees = read_trees(tree)
+                    if len(processed_trees) > 1:
+                        errors["multiple"].append("Multiple trees in one xml annotation from {} line {}".format(orig_file, line_idx))
+                        continue
+                    if len(processed_trees) == 0:
+                        errors["empty"].append("Empty tree in {} line {}".format(orig_file, line_idx))
+                        continue
+                    if not processed_trees[0].all_leaves_are_preterminals():
+                        errors["untagged_leaf"].append("Tree with non-preterminal leaves in {} line {}: {}".format(orig_file, line_idx, tree))
+                        continue
                     # Unify the labels
-                    tree = unify_label(tree)
+                    if fix_errors:
+                        tree = unify_label(tree)
+
+                    # TODO: this block eliminates 3 trees from VLSP-22
+                    # maybe those trees can be salvaged?
+                    bad_label = False
+                    for weird_label in WEIRD_LABELS:
+                        if tree.find(weird_label) >= 0:
+                            bad_label = True
+                            errors[weird_label].append("Weird label {} from {} line {}: {}".format(weird_label, orig_file, line_idx, tree))
+                            break
+                    if bad_label:
+                        continue
+
                     writer.write(tree)
                     reading_tree = False
                     tree = ""
                 except MixedTreeError:
-                    #print("Skipping an illegal tree: {}".format(tree))
-                    errors["illegal"] += 1
+                    errors["mixed"].append("Mixed leaves and constituents from {} line {}: {}".format(orig_file, line_idx, tree))
+                except UnlabeledTreeError:
+                    errors["unlabeled"].append("Unlabeled nodes in tree from {} line {}: {}".format(orig_file, line_idx, tree))
             else:  # content line
                 if is_valid_line(line) and reading_tree:
                     tree += line
                 elif reading_tree:
-                    errors["invalid"] += 1
-                    #print("Invalid tree error in {}: |{}|, rejected because of line |{}|".format(orig_file, tree, line))
-                    tree = ""
+                    errors["invalid"].append("Invalid tree error in {} line {}: |{}|, rejected because of line |{}|".format(orig_file, line_idx, tree, line))
                     reading_tree = False
 
     return errors
 
-def convert_files(file_list, new_dir):
-    errors = Counter()
+def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False):
+    errors = defaultdict(list)
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        errors += convert_file(filename, new_file_path)
+        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets)
+        for e in new_errors:
+            errors[e].extend(new_errors[e])
 
-    errors = "\n  ".join(sorted(["%s: %s" % x for x in  errors.items()]))
-    print("Found the following error counts:\n  {}".format(errors))
+    if len(errors.keys()) == 0:
+        print("All errors were fixed!")
+    else:
+        print("Found the following errors:")
+        keys = sorted(errors.keys())
+        if verbose:
+            for e in keys:
+                print("--------- %10s -------------" % e)
+                print("\n\n".join(errors[e]))
+                print()
+            print()
+        for e in keys:
+            print("%s: %d" % (e, len(errors[e])))
 
 def convert_dir(orig_dir, new_dir):
     file_list = os.listdir(orig_dir)

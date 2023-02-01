@@ -27,6 +27,7 @@ lcode2lang_raw = [
     ("hbo", "Ancient_Hebrew"),
     ("apu", "Apurina"),
     ("ar",  "Arabic"),
+    ("arz", "Egyptian_Arabic"),
     ("an",  "Aragonese"),
     ("hy",  "Armenian"),
     ("as",  "Assamese"),
@@ -77,6 +78,7 @@ lcode2lang_raw = [
     ("eo",  "Esperanto"),
     ("et",  "Estonian"),
     ("ee",  "Ewe"),
+    ("ext", "Extremaduran"),
     ("fo",  "Faroese"),
     ("fj",  "Fijian"),
     ("fi",  "Finnish"),
@@ -88,6 +90,7 @@ lcode2lang_raw = [
     ("lg",  "Ganda"),
     ("ka",  "Georgian"),
     ("de",  "German"),
+    ("aln", "Gheg"),
     ("bbj", "Ghomálá'"),
     ("got", "Gothic"),
     ("el",  "Greek"),
@@ -143,12 +146,14 @@ lcode2lang_raw = [
     ("kj",  "Kwanyama"),
     ("lad", "Ladino"),
     ("lo",  "Lao"),
+    ("ltg", "Latgalian"),
     ("la",  "Latin"),
     ("lv",  "Latvian"),
     ("lij", "Ligurian"),
     ("li",  "Limburgish"),
     ("ln",  "Lingala"),
     ("lt",  "Lithuanian"),
+    ("liv", "Livonian"),
     ("olo", "Livvi"),
     ("nds", "Low_Saxon"),
     ("lu",  "Luba_Katanga"),
@@ -188,6 +193,7 @@ lcode2lang_raw = [
     ("nap", "Neapolitan"),
     ("ne",  "Nepali"),
     ("new", "Newar"),
+    ("yrl", "Nheengatu"),
     ("nyn", "Nkore"),
     ("frr", "North_Frisian"),
     ("nd",  "North_Ndebele"),
@@ -288,13 +294,16 @@ lcode2lang_raw = [
     ("cy",  "Welsh"),
     ("hyw", "Western_Armenian"),
     ("fy",  "Western_Frisian"),
+    ("nhi", "Western_Sierra_Puebla_Nahuatl"),
     ("wo",  "Wolof"),
+    ("xav", "Xavante"),
     ("xh",  "Xhosa"),
     ("sjo", "Xibe"),
     ("sah", "Yakut"),
     ("yi",  "Yiddish"),
     ("yo",  "Yoruba"),
     ("ess", "Yupik"),
+    ("say", "Zaar"),
     ("zza", "Zazaki"),
     ("zea", "Zeelandic"),
     ("za",  "Zhuang"),
@@ -421,12 +430,12 @@ treebank_special_cases = {
     "UD_Chinese-HK": "zh-hant_hk",
     "UD_Chinese-CFL": "zh-hans_cfl",
     "UD_Chinese-PUD": "zh-hant_pud",
-    "UD_Norwegian-Bokmaal": "no_bokmaal",
+    "UD_Norwegian-Bokmaal": "nb_bokmaal",
     "UD_Norwegian-Nynorsk": "nn_nynorsk",
     "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
 }
 
-SHORTNAME_RE = re.compile("[a-z-]+_[a-z0-9]+")
+SHORTNAME_RE = re.compile("^[a-z-]+_[a-z0-9-_]+$")
 
 def lang_to_langcode(lang):
     if lang in lang2lcode:
@@ -457,7 +466,7 @@ def treebank_to_short_name(treebank):
     if treebank in treebank_special_cases:
         return treebank_special_cases.get(treebank)
     if SHORTNAME_RE.match(treebank):
-        lang, corpus = treebank.split("_")
+        lang, corpus = treebank.split("_", 1)
         lang = lang_to_langcode(lang)
         return lang + "_" + corpus
 

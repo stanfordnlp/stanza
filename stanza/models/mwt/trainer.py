@@ -18,40 +18,32 @@ from stanza.models.mwt.vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
-def unpack_batch(batch, use_cuda):
+def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    if use_cuda:
-        inputs = [b.cuda() if b is not None else None for b in batch[:4]]
-    else:
-        inputs = [b if b is not None else None for b in batch[:4]]
+    inputs = [b.to(device) if b is not None else None for b in batch[:4]]
     orig_idx = batch[4]
     return inputs, orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, use_cuda=False):
-        self.use_cuda = use_cuda
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None):
         if model_file is not None:
             # load from file
-            self.load(model_file, use_cuda)
+            self.load(model_file)
         else:
             self.args = args
             self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
             self.vocab = vocab
             self.expansion_dict = dict()
         if not self.args['dict_only']:
-            self.crit = loss.SequenceLoss(self.vocab.size)
+            self.model = self.model.to(device)
+            self.crit = loss.SequenceLoss(self.vocab.size).to(device)
             self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-            if use_cuda:
-                self.model.cuda()
-                self.crit.cuda()
-            else:
-                self.model.cpu()
-                self.crit.cpu()
             self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
 
     def update(self, batch, eval=False):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out = inputs
 
         if eval:
@@ -71,7 +63,8 @@ class Trainer(BaseTrainer):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        inputs, orig_idx = unpack_batch(batch, self.use_cuda)
+        device = next(self.model.parameters()).device
+        inputs, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()
@@ -136,7 +129,7 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, use_cuda=False):
+    def load(self, filename):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -145,8 +138,10 @@ class Trainer(BaseTrainer):
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args, use_cuda=use_cuda)
-            self.model.load_state_dict(checkpoint['model'])
+            self.model = Seq2SeqModel(self.args)
+            # could remove strict=False after rebuilding all models,
+            # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
+            self.model.load_state_dict(checkpoint['model'], strict=False)
         else:
             self.model = None
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])

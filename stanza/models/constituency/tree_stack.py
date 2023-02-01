@@ -45,6 +45,11 @@ class TreeStack(namedtuple('TreeStack', ['value', 'parent', 'length'])):
             stack = stack.parent
         yield stack.value
 
+    def __reversed__(self):
+        items = list(iter(self))
+        for item in reversed(items):
+            yield item
+
     def __str__(self):
         return "TreeStack(%s)" % ", ".join([str(x) for x in self])
 

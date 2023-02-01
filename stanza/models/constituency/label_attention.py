@@ -594,7 +594,6 @@ class LabelAttention(nn.Module):
         outputs = outputs_padded[output_mask]
         # outputs: (d_l * len_inp) x d_kv or LAL: (d_l * len_inp) x d_kv
         # output_mask: (d_l * batch_size) x max_len
-        torch.cuda.empty_cache()
         outputs = self.combine_v(outputs)
         #print(f"outputs shape: {outputs.shape}")
         # outputs: len_inp x d_l x d_model, whereas a normal self-attention layer gets len_inp x d_model
@@ -642,12 +641,15 @@ class LabelAttentionModule(nn.Module):
         super().__init__()
         self.ff_dim = d_proj * d_l
 
-        self.d_positional = d_positional if d_positional else 0
+        if not lattn_partitioned:
+            self.d_positional = 0
+        else:
+            self.d_positional = d_positional if d_positional else 0
 
         if d_input_proj:
-            if d_input_proj <= d_positional:
-                raise ValueError("Illegal argument for d_input_proj: d_input_proj %d is smaller than d_positional %d" % (d_input_proj, d_positional))
-            self.input_projection = nn.Linear(d_model - d_positional, d_input_proj - d_positional, bias=False)
+            if d_input_proj <= self.d_positional:
+                raise ValueError("Illegal argument for d_input_proj: d_input_proj %d is smaller than d_positional %d" % (d_input_proj, self.d_positional))
+            self.input_projection = nn.Linear(d_model - self.d_positional, d_input_proj - self.d_positional, bias=False)
             d_input = d_input_proj
         else:
             self.input_projection = None
@@ -668,7 +670,6 @@ class LabelAttentionModule(nn.Module):
         if not lattn_partitioned:
             self.lal_ff = PositionwiseFeedForward(self.ff_dim,
                                                   d_ff,
-                                                  self.d_positional,
                                                   relu_dropout,
                                                   residual_dropout)
         else:
@@ -680,9 +681,12 @@ class LabelAttentionModule(nn.Module):
 
     def forward(self, word_embeddings, tagged_word_lists):
         if self.input_projection:
-            word_embeddings = [torch.cat((self.input_projection(sentence[:, :-self.d_positional]),
-                                          sentence[:, -self.d_positional:]), dim=1)
-                               for sentence in word_embeddings]
+            if self.d_positional > 0:
+                word_embeddings = [torch.cat((self.input_projection(sentence[:, :-self.d_positional]),
+                                              sentence[:, -self.d_positional:]), dim=1)
+                                   for sentence in word_embeddings]
+            else:
+                word_embeddings = [self.input_projection(sentence) for sentence in word_embeddings]
         # Extract Labeled Representation
         packed_len = sum(sentence.shape[0] for sentence in word_embeddings)
         batch_idxs = np.zeros(packed_len, dtype=int)

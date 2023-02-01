@@ -55,13 +55,12 @@ class LangIDBiLSTM(nn.Module):
         # dropout layer
         self.dropout = nn.Dropout(p=self.dropout_prob)
 
-    def build_lang_mask(self, use_gpu=None):
+    def build_lang_mask(self, device):
         """
         Build language mask if a lang subset is specified (e.g. ["en", "fr"])
 
         The mask will be added to the results to set the prediction scores of illegal languages to -inf
         """
-        device = torch.device("cuda") if use_gpu else None
         if self.lang_subset:
             lang_mask_list = [0.0 if lang in self.lang_subset else -float('inf') for lang in self.idx_to_tag]
             self.lang_mask = torch.tensor(lang_mask_list, device=device, dtype=torch.float)
@@ -107,20 +106,15 @@ class LangIDBiLSTM(nn.Module):
         torch.save(checkpoint, path)
     
     @classmethod
-    def load(cls, path, use_cuda=False, batch_size=64, lang_subset=None):
+    def load(cls, path, device=None, batch_size=64, lang_subset=None):
         """ Load a serialized model located at path """
-        if use_cuda:
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        else:
-            device = torch.device("cpu")
         checkpoint = torch.load(path, map_location=torch.device("cpu"))
         weights = checkpoint["model_state_dict"]["loss_train.weight"]
         model = cls(checkpoint["char_to_idx"], checkpoint["tag_to_idx"], checkpoint["num_layers"],
                     checkpoint["embedding_dim"], checkpoint["hidden_dim"], batch_size=batch_size, weights=weights,
                     lang_subset=lang_subset)
         model.load_state_dict(checkpoint["model_state_dict"])
-        if use_cuda:
-            model.to(torch.device("cuda"))
-        model.build_lang_mask(use_gpu=use_cuda)
+        model = model.to(device)
+        model.build_lang_mask(device)
         return model
 

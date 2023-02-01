@@ -82,8 +82,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA and run on CPU.')
+    utils.add_device_args(parser)
     parser.add_argument('--seed', type=int, default=1234)
 
     parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
@@ -102,9 +101,7 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    if args.cpu:
-        args.cuda = False
-    utils.set_random_seed(args.seed, args.cuda)
+    utils.set_random_seed(args.seed)
 
     args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
@@ -154,7 +151,7 @@ def train(args):
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'])
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])
@@ -224,12 +221,11 @@ def train(args):
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=args['load_name'] or args['save_name'], use_cuda=use_cuda)
+    trainer = Trainer(model_file=args['load_name'] or args['save_name'], device=args['device'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in loaded_args:
-        if not k.endswith('_file') and k not in ['cuda', 'mode', 'save_dir', 'load_name', 'save_name']:
+        if not k.endswith('_file') and k not in ['device', 'mode', 'save_dir', 'load_name', 'save_name']:
             args[k] = loaded_args[k]
     
     eval_input_files = {

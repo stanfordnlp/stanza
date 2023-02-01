@@ -16,14 +16,42 @@ from stanza.models.constituency.parse_tree import Tree
 logger = logging.getLogger('stanza')
 
 class TransitionScheme(Enum):
+    # top down, so the open transition comes before any constituents
+    # score on vi_vlsp22 with 5 different sizes of bert layers,
+    # bert tagger, no silver dataset:
+    #   0.8171
     TOP_DOWN           = 1
+    # unary transitions are modeled as one entire transition
+    # version that uses one transform per item,
+    # score on experiment described above:
+    #   0.8157
+    # score using one combination step for an entire transition:
+    #   0.8178
     TOP_DOWN_COMPOUND  = 2
+    # unary is a separate transition.  doesn't help
+    # score on experiment described above:
+    #   0.8128
     TOP_DOWN_UNARY     = 3
 
+    # open transition comes after the first constituent it cares about
+    # score on experiment described above:
+    #   0.8205
+    # note that this is with an oracle, whereas IN_ORDER_COMPOUND does
+    # not have a dynamic oracle, so there may be room for improvement
     IN_ORDER           = 4
 
+    # in order, with unaries after preterminals represented as a single
+    # transition after the preterminal
+    # and unaries elsewhere tied to the rest of the constituent
+    # score: 0.8186
+    IN_ORDER_COMPOUND  = 5
+
+    # in order, with CompoundUnary on both preterminals and internal nodes
+    # score: 0.8166
+    IN_ORDER_UNARY     = 6
+
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position'])):
+                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
     """
     Represents a partially completed transition parse
 
@@ -48,6 +76,9 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
       manipulating the list itself.  this can be handled differently
       from transitions and constituents as it is processed once
       at the start of parsing
+
+    The word_queue should have both a start and an end word.
+    Those can be None in the case of the endpoints if they are unused.
     """
     def empty_word_queue(self):
         # the first element of each stack is a sentinel with no value
@@ -69,6 +100,11 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
     def num_transitions(self):
         # -1 for the sentinel value
         return len(self.transitions) - 1
+
+    def get_word(self, pos):
+        # +1 to handle the initial sentinel value
+        # (which you can actually get with pos=-1)
+        return self.word_queue[pos+1]
 
     def finished(self, model):
         return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
@@ -102,38 +138,6 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
 
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
-
-def initial_state_from_preterminals(preterminal_lists, model, gold_trees):
-    """
-    what is passed in should be a list of list of preterminals
-    """
-    word_queues = model.initial_word_queues(preterminal_lists)
-    # this is the bottom of the TreeStack and will be the same for each State
-    transitions=model.initial_transitions()
-    constituents=model.initial_constituents()
-    states = [State(sentence_length=len(wq)-1,   # -1 because it ends with a sentinel
-                    num_opens=0,
-                    word_queue=wq,
-                    gold_tree=None,
-                    gold_sequence=None,
-                    transitions=transitions,
-                    constituents=constituents,
-                    word_position=0)
-              for idx, wq in enumerate(word_queues)]
-    if gold_trees:
-        states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
-    return states
-
-def initial_state_from_words(word_lists, model):
-    preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
-                         for words in word_lists]
-    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=None)
-
-def initial_state_from_gold_trees(trees, model):
-    preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
-                          for pt in tree.yield_preterminals()]
-                         for tree in trees]
-    return initial_state_from_preterminals(preterminal_lists, model, gold_trees=trees)
 
 @functools.total_ordering
 class Transition(ABC):
@@ -180,6 +184,15 @@ class Transition(ABC):
 
         at parse time, the parser might choose a transition which cannot be made
         """
+
+    def components(self):
+        """
+        Return a list of transitions which could theoretically make up this transition
+
+        For example, an Open transition with multiple labels would
+        return a list of Opens with those labels
+        """
+        return [self]
 
     @abstractmethod
     def short_name(self):
@@ -264,58 +277,72 @@ class Shift(Transition):
         return hash(37)
 
 class CompoundUnary(Transition):
-    # TODO: run experiments to see if this is actually useful
-    def __init__(self, labels):
+    def __init__(self, *label):
         # the FIRST label will be the top of the tree
         # so CompoundUnary that results in root will have root as labels[0], for example
-        if isinstance(labels, str):
-            self.labels = (labels,)
-        else:
-            self.labels = tuple(labels)
+        self.label = tuple(label)
 
     def update_state(self, state, model):
-        # remove the top constituent
-        # apply the labels
-        # put the constituent back on the state
+        """
+        Apply potentially multiple unary transitions to the same preterminal
+
+        It reuses the CloseConstituent machinery
+        """
+        # only the top constituent is meaningful here
         constituents = state.constituents
-        new_constituent = model.unary_transform(state.constituents, self.labels)
+        children = [constituents.value]
         constituents = constituents.pop()
-        return state.word_position, constituents, new_constituent, None
+        # unlike with CloseConstituent, our label is not on the stack.
+        # it is just our label
+        # ... but we do reuse CloseConstituent's update mechanism
+        return state.word_position, constituents, (self.label, children), CloseConstituent
 
     def is_legal(self, state, model):
         """
         Disallow consecutive CompoundUnary transitions, force final transition to go to ROOT
         """
         # can't unary transition nothing
-        if model.get_top_constituent(state.constituents) is None:
+        tree = model.get_top_constituent(state.constituents)
+        if tree is None:
             return False
         # don't unary transition a dummy, dummy
         # and don't stack CompoundUnary transitions
         if isinstance(model.get_top_transition(state.transitions), (CompoundUnary, OpenConstituent)):
             return False
-        is_root = self.labels[0] in model.get_root_labels()
+        # if we are doing IN_ORDER_COMPOUND, then we are only using these
+        # transitions to model changes from a tag node to a sequence of
+        # unary nodes.  can only occur at preterminals
+        if model.transition_scheme() is TransitionScheme.IN_ORDER_COMPOUND:
+            return tree.is_preterminal()
+        if model.transition_scheme() is not TransitionScheme.TOP_DOWN_UNARY:
+            return True
+
+        is_root = self.label[0] in model.get_root_labels()
         if not state.empty_word_queue() or not state.has_one_constituent():
             return not is_root
         else:
             return is_root
 
+    def components(self):
+        return [CompoundUnary(label) for label in self.label]
+
     def short_name(self):
         return "Unary"
 
     def __repr__(self):
-        return "CompoundUnary(%s)" % ",".join(self.labels)
+        return "CompoundUnary(%s)" % ",".join(self.label)
 
     def __eq__(self, other):
         if self is other:
             return True
         if not isinstance(other, CompoundUnary):
             return False
-        if self.labels == other.labels:
+        if self.label == other.label:
             return True
         return False
 
     def __hash__(self):
-        return hash(self.labels)
+        return hash(self.label)
 
 class Dummy():
     """
@@ -323,6 +350,9 @@ class Dummy():
     """
     def __init__(self, label):
         self.label = label
+
+    def is_preterminal(self):
+        return False
 
     def __str__(self):
         return "Dummy({})".format(self.label)
@@ -400,6 +430,13 @@ class OpenConstituent(Transition):
             if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # consecutive Opens don't make sense in the context of in-order
                 return False
+            if (model.transition_scheme() is TransitionScheme.IN_ORDER_UNARY or
+                model.transition_scheme() is TransitionScheme.IN_ORDER_COMPOUND):
+                # if compound unary opens are used
+                # or the unary transitions are via CompoundUnary
+                # can always open as long as the word queue isn't empty
+                # if the word queue is empty, only close is allowed
+                return not state.empty_word_queue()
             # one other restriction - we assume all parse trees
             # start with (ROOT (first_real_con ...))
             # therefore ROOT can only occur via Open after everything
@@ -427,6 +464,9 @@ class OpenConstituent(Transition):
                 return True
         return True
 
+    def components(self):
+        return [OpenConstituent(label) for label in self.label]
+
     def short_name(self):
         return "Open"
 
@@ -444,6 +484,57 @@ class OpenConstituent(Transition):
 
     def __hash__(self):
         return hash(self.label)
+
+class Finalize(Transition):
+    """
+    Specifically applies at the end of a parse sequence to add a ROOT
+
+    Seemed like the simplest way to remove ROOT from the
+    in_order_compound transitions while still using the mechanism of
+    the transitions to build the parse tree
+    """
+    def __init__(self, *label):
+        self.label = tuple(label)
+
+    def update_state(self, state, model):
+        """
+        Apply potentially multiple unary transitions to the same preterminal
+
+        Only applies to preterminals
+        It reuses the CloseConstituent machinery
+        """
+        # only the top constituent is meaningful here
+        constituents = state.constituents
+        children = [constituents.value]
+        constituents = constituents.pop()
+        # unlike with CloseConstituent, our label is not on the stack.
+        # it is just our label
+        label = self.label
+
+        # ... but we do reuse CloseConstituent's update
+        return state.word_position, constituents, (label, children), CloseConstituent
+
+    def is_legal(self, state, model):
+        """
+        Legal if & only if there is one tree, no more words, and no ROOT yet
+        """
+        return state.empty_word_queue() and state.has_one_constituent() and not state.finished(model)
+
+    def short_name(self):
+        return "Finalize"
+
+    def __repr__(self):
+        return "Finalize(%s)" % ",".join(self.label)
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Finalize):
+            return False
+        return other.label == self.label
+
+    def __hash__(self):
+        return hash((53, self.label))
 
 class CloseConstituent(Transition):
     def delta_opens(self):
@@ -489,6 +580,7 @@ class CloseConstituent(Transition):
     def is_legal(self, state, model):
         """
         Disallow if there is no Open on the stack yet
+
         in TOP_DOWN, if the previous transition was the Open (nothing built yet)
         in IN_ORDER, previous transition does not matter, except for one small corner case
         """
@@ -511,10 +603,17 @@ class CloseConstituent(Transition):
                 # under the ROOT open if unary transitions are not possible
                 if state.num_opens == 2 and not state.empty_word_queue():
                     return False
-        else:
+        elif model.transition_scheme() == TransitionScheme.IN_ORDER:
             if not isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # we're not stuck in a loop of unaries
                 return True
+            # in both of these cases, we cannot do open/close
+            # IN_ORDER_COMPOUND will use compound opens and preterminal unaries
+            # IN_ORDER_UNARY will use compound unaries
+            if (isinstance(model.get_top_transition(state.transitions), OpenConstituent) and
+                (model.transition_scheme() is TransitionScheme.IN_ORDER_UNARY or
+                 model.transition_scheme() is TransitionScheme.IN_ORDER_COMPOUND)):
+                return False
             if state.num_opens > 1 or state.empty_word_queue():
                 # in either of these cases, the corresponding Open should be eliminated
                 # if we're stuck in a loop of unaries
@@ -528,6 +627,13 @@ class CloseConstituent(Transition):
                 #   option once there are no opens left will be an open
                 # this means we'll be stuck having to open again if we do close
                 # this node, so instead we make the Close illegal
+                return False
+        elif model.transition_scheme() == TransitionScheme.IN_ORDER_COMPOUND:
+            # the only restriction here is that we can't close
+            # immediately after an open
+            # internal unaries are handled by the opens being compound
+            # preterminal unaries are handled with CompoundUnary
+            if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 return False
         return True
 
@@ -547,13 +653,34 @@ class CloseConstituent(Transition):
     def __hash__(self):
         return hash(93)
 
-def bulk_apply(model, tree_batch, transitions, fail=False):
+def check_transitions(train_transitions, other_transitions, treebank_name):
+    """
+    Check that all the transitions in the other dataset are known in the train set
+
+    Weird nested unaries are warned rather than failed as long as the
+    components are all known
+
+    There is a tree in VLSP, for example, with three (!) nested NP nodes
+    If this is an unknown compound transition, we won't possibly get it
+    right when parsing, but at least we don't need to fail
+    """
+    unknown_transitions = set()
+    for trans in other_transitions:
+        if trans not in train_transitions:
+            for component in trans.components():
+                if component not in train_transitions:
+                    raise RuntimeError("Found transition {} in the {} set which don't exist in the train set".format(trans, treebank_name))
+            unknown_transitions.add(trans)
+    if len(unknown_transitions) > 0:
+        logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", sorted(unknown_transitions))
+
+def bulk_apply(model, state_batch, transitions, fail=False):
     """
     Apply the given list of Transitions to the given list of States, using the model as a reference
 
     model: SimpleModel, LSTMModel, or any other form of model
-    tree_batch: list of States (legacy name)
-    transitions: list of transitions
+    state_batch: list of States
+    transitions: list of transitions, one per state
     fail: throw an exception on a failed transition, as opposed to skipping the tree
     """
     remove = set()
@@ -563,7 +690,7 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
     new_constituents = []
     callbacks = defaultdict(list)
 
-    for idx, (tree, transition) in enumerate(zip(tree_batch, transitions)):
+    for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
         if not transition:
             error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
             if fail:
@@ -604,20 +731,20 @@ def bulk_apply(model, tree_batch, transitions, fail=False):
         for idx, constituent in zip(idxs, callback_constituents):
             new_constituents[idx] = constituent
 
-    tree_batch = [tree for idx, tree in enumerate(tree_batch) if idx not in remove]
+    state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
     transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
 
-    if len(tree_batch) == 0:
-        return tree_batch
+    if len(state_batch) == 0:
+        return state_batch
 
-    new_transitions = model.push_transitions([tree.transitions for tree in tree_batch], transitions)
+    new_transitions = model.push_transitions([tree.transitions for tree in state_batch], transitions)
     new_constituents = model.push_constituents(constituents, new_constituents)
 
-    tree_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
+    state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
                                  word_position=word_position,
                                  transitions=transition_stack,
                                  constituents=constituents)
                   for (state, transition, word_position, transition_stack, constituents)
-                  in zip(tree_batch, transitions, word_positions, new_transitions, new_constituents)]
+                  in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
 
-    return tree_batch
+    return state_batch

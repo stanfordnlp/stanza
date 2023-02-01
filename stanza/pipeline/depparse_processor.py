@@ -10,6 +10,9 @@ from stanza.models.depparse.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+# these imports trigger the "register_variant" decorations
+from stanza.pipeline.external.corenlp_converter_depparse import ConverterDepparse
+
 DEFAULT_SEPARATE_BATCH=150
 
 @register_processor(name=DEPPARSE)
@@ -20,9 +23,9 @@ class DepparseProcessor(UDProcessor):
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([TOKENIZE, POS, LEMMA])
 
-    def __init__(self, config, pipeline, use_gpu):
+    def __init__(self, config, pipeline, device):
         self._pretagged = None
-        super().__init__(config, pipeline, use_gpu)
+        super().__init__(config, pipeline, device)
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged')
@@ -31,9 +34,11 @@ class DepparseProcessor(UDProcessor):
         else:
             self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
-        self._trainer = Trainer(pretrain=self.pretrain, model_file=config['model_path'], use_cuda=use_gpu)
+        args = {'charlm_forward_file': config.get('forward_charlm_path', None),
+                'charlm_backward_file': config.get('backward_charlm_path', None)}
+        self._trainer = Trainer(args=args, pretrain=self.pretrain, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
 
     def get_known_relations(self):
         """
@@ -43,6 +48,9 @@ class DepparseProcessor(UDProcessor):
         return keys
 
     def process(self, document):
+        if hasattr(self, '_variant'):
+            return self._variant.process(document)
+
         if any(word.upos is None and word.xpos is None for sentence in document.sentences for word in sentence.words):
             raise ValueError("POS not run before depparse!")
         try:

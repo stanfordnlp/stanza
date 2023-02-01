@@ -28,11 +28,10 @@ class LangIDProcessor(UDProcessor):
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
-    def _set_up_model(self, config, pipeline, use_gpu):
+    def _set_up_model(self, config, pipeline, device):
         batch_size = config.get("batch_size", 64)
-        self._model = LangIDBiLSTM.load(path=config["model_path"], use_cuda=use_gpu,
+        self._model = LangIDBiLSTM.load(path=config["model_path"], device=device,
                                         batch_size=batch_size, lang_subset=config.get("lang_subset"))
-        self._device = torch.device("cuda") if use_gpu else None
         self._char_index = self._model.char_to_idx
         self._clean_text = config.get("clean_text")
 
@@ -41,11 +40,12 @@ class LangIDProcessor(UDProcessor):
         Map list of strings to batch tensor. Assumed all docs are same length.
         """
 
+        device = next(self._model.parameters()).device
         all_docs = []
         for doc in docs:
             doc_chars = [self._char_index.get(c, self._char_index["UNK"]) for c in list(doc)]
             all_docs.append(doc_chars)
-        return torch.tensor(all_docs, device=self._device, dtype=torch.long)
+        return torch.tensor(all_docs, device=device, dtype=torch.long)
 
     def _id_langs(self, batch_tensor):
         """
@@ -73,7 +73,8 @@ class LangIDProcessor(UDProcessor):
         for regex in LangIDProcessor.all_regexes:
             text = regex.sub(" ", text)
 
-        text = emoji.get_emoji_regexp().sub(" ", text)
+        text = emoji.emojize(text)
+        text = emoji.replace_emoji(text, replace=' ')
 
         if text.strip():
             text = text.strip()

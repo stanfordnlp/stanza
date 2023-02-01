@@ -15,12 +15,11 @@ import random
 def create_shuffle_list(org_dir):
     """
     This function creates the random order with which we use to loop through the files
+
     :param org_dir: original directory storing the files that store the trees
     :return: list of file names randomly shuffled
     """
-    file_names = []
-    for filename in os.listdir(org_dir):
-        file_names.append(filename)
+    file_names = sorted(os.listdir(org_dir))
     random.shuffle(file_names)
 
     return file_names
@@ -29,6 +28,7 @@ def create_shuffle_list(org_dir):
 def create_paths(split_dir, short_name):
     """
     This function creates the necessary paths for the train/dev/test splits
+
     :param split_dir: directory that stores the splits
     :return: train path, dev path, test path
     """
@@ -47,6 +47,7 @@ def create_paths(split_dir, short_name):
 def get_num_samples(org_dir, file_names):
     """
     Function for obtaining the number of samples
+
     :param org_dir: original directory storing the tree files
     :param file_names: list of file names in the directory
     :return: number of samples
@@ -66,7 +67,7 @@ def get_num_samples(org_dir, file_names):
 
     return count
 
-def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15):
+def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.15, rotation=None):
     os.makedirs(split_dir, exist_ok=True)
 
     if train_size + dev_size >= 1.0:
@@ -98,28 +99,32 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     # We will switch to the next output file when we're written enough
     count = 0
 
-    filename_iter = iter(file_names)
-    tree_iter = iter([])
+    trees = []
+    for filename in file_names:
+        if not filename.endswith('.mrg'):
+            continue
+        with open(os.path.join(org_dir, filename), encoding='utf-8') as reader:
+            new_trees = reader.readlines()
+            new_trees = [x.strip() for x in new_trees]
+            new_trees = [x for x in new_trees if x]
+            trees.extend(new_trees)
+    # rotate the train & dev sections, leave the test section the same
+    if rotation is not None and rotation[0] > 0:
+        rotation_start = len(trees) * rotation[0] // rotation[1]
+        rotation_end = stop_dev
+        # if there are no test trees, rotation_end: will be empty anyway
+        trees = trees[rotation_start:rotation_end] + trees[:rotation_start] + trees[rotation_end:]
+    tree_iter = iter(trees)
     for write_path, count_limit in zip(output_names, output_limits):
         with open(write_path, 'w', encoding='utf-8') as writer:
             # Loop through the files, which then loop through the trees and write to write_path
             while count < count_limit:
                 next_tree = next(tree_iter, None)
-                while next_tree is None:
-                    filename = next(filename_iter, None)
-                    if filename is None:
-                        raise RuntimeError("Ran out of trees before reading all of the expected trees")
-                    # Skip files that are not .mrg
-                    if not filename.endswith('.mrg'):
-                        continue
-                    # File is .mrg. Start processing
-                    file_dir = os.path.join(org_dir, filename)
-                    with open(file_dir, 'r', encoding='utf-8') as reader:
-                        content = reader.readlines()
-                        tree_iter = iter(content)
-                        next_tree = next(tree_iter, None)
+                if next_tree is None:
+                    raise RuntimeError("Ran out of trees before reading all of the expected trees")
                 # Write to write_dir
                 writer.write(next_tree)
+                writer.write("\n")
                 count += 1
 
 def main():

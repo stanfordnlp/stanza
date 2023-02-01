@@ -1,8 +1,17 @@
 """
 Converts a .json file from AMT to a .bio format and then a .json file
+
+To ignore Facility and Product, turn NORP into miscellaneous:
+
+ python3 stanza/utils/datasets/ner/convert_amt.py --input_path /u/nlp/data/ner/stanza/en_amt/output.manifest --ignore Product,Facility --remap NORP=Miscellaneous
+
+To turn all labels into the 4 class used in conll03:
+
+  python3 stanza/utils/datasets/ner/convert_amt.py --input_path /u/nlp/data/ner/stanza/en_amt/output.manifest --ignore Product,Facility --remap NORP=MISC,Miscellaneous=MISC,Location=LOC,Person=PER,Organization=ORG
 """
 
 import argparse
+import copy
 import json
 from operator import itemgetter
 import sys
@@ -18,6 +27,10 @@ def read_json(input_filename):
     Read the json file and extract the NER labels
 
     Will not return lines which are not labeled
+
+    Return format is a list of lines
+    where each line is a tuple: (text, labels)
+    labels is a list of maps, {'label':..., 'startOffset':..., 'endOffset':...}
     """
     docs = []
     blank = 0
@@ -65,6 +78,37 @@ def read_json(input_filename):
 
     print("Found %d labeled lines.  %d lines were blank, %d lines were broken, and %d lines were unlabeled" % (len(docs), blank, broken, unlabeled))
     return docs
+
+def remove_ignored_labels(docs, ignored):
+    if not ignored:
+        return docs
+
+    ignored = set(ignored.split(","))
+    # drop all labels which match something in ignored
+    # otherwise leave everything the same
+    new_docs = [(doc[0], [x for x in doc[1] if x['label'] not in ignored])
+                for doc in docs]
+    return new_docs
+
+def remap_labels(docs, remap):
+    if not remap:
+        return docs
+
+    remappings = {}
+    for remapping in remap.split(","):
+        pieces = remapping.split("=")
+        remappings[pieces[0]] = pieces[1]
+
+    print(remappings)
+
+    new_docs = []
+    for doc in docs:
+        entities = copy.deepcopy(doc[1])
+        for entity in entities:
+            entity['label'] = remappings.get(entity['label'], entity['label'])
+        new_doc = (doc[0], entities)
+        new_docs.append(new_doc)
+    return new_docs
 
 def remove_nesting(docs):
     """
@@ -133,6 +177,9 @@ def process_doc(source, labels, pipe):
                 if token.start_char >= end_offset and token_idx > 0:
                     end_token = sentence.tokens[token_idx-1]
                     break
+                if token.end_char == end_offset and token_idx > 0 and token.text in (',', '.'):
+                    end_token = sentence.tokens[token_idx-1]
+                    break
                 token.ner = "I-" + ner
             if token.end_char >= end_offset and end_token is None:
                 end_token = token
@@ -157,6 +204,8 @@ def main(args):
         print("Error: no documents found in the input file!")
         return
 
+    docs = remove_ignored_labels(docs, args.ignore)
+    docs = remap_labels(docs, args.remap)
     docs = remove_nesting(docs)
 
     pipe = stanza.Pipeline(args.language, processors="tokenize")
@@ -180,6 +229,8 @@ if __name__ == "__main__":
     parser.add_argument('--input_path', type=str, default="output.manifest", help="Where to find the files")
     parser.add_argument('--output_path', type=str, default="data/ner/en_amt.test.bio", help="Where to output the results")
     parser.add_argument('--json_output_path', type=str, default=None, help="Where to output .json.  Best guess will be made if there is no .json file")
+    parser.add_argument('--ignore', type=str, default=None, help="Ignore these labels: comma separated list without B- or I-")
+    parser.add_argument('--remap', type=str, default=None, help="Remap labels: comma separated list of X=Y")
     args = parser.parse_args()
 
     main(args)

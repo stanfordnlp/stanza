@@ -10,6 +10,7 @@ import stanza
 from stanza.models.common.doc import Document
 
 from stanza.tests import *
+from stanza.tests.pipeline.pipeline_device_tests import check_on_gpu, check_on_cpu
 
 pytestmark = pytest.mark.pipeline
 
@@ -95,7 +96,7 @@ EXPECTED_RESULT = """
       "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 3,
-      "deprel": "obl:mod",
+      "deprel": "obl:arg",
       "start_char": 30,
       "end_char": 36
     },
@@ -310,7 +311,7 @@ EXPECTED_RESULT = """
 class TestFrenchPipeline:
     @pytest.fixture(scope="class")
     def pipeline(self):
-        """ Document created by running full English pipeline on a few sentences """
+        """ Create a pipeline with French models """
         pipeline = stanza.Pipeline(processors='tokenize,mwt,pos,lemma,depparse', dir=TEST_MODELS_DIR, lang='fr')
         return pipeline
 
@@ -331,3 +332,16 @@ class TestFrenchPipeline:
             assert len(doc.sentences) == 1
             assert doc.num_words == 26
             assert doc.num_tokens == 24
+
+    def test_on_gpu(self, pipeline):
+        """
+        The default pipeline should have all the models on the GPU
+        """
+        check_on_gpu(pipeline)
+
+    def test_on_cpu(self):
+        """
+        Create a pipeline on the CPU, check that all the models on CPU
+        """
+        pipeline = stanza.Pipeline("fr", dir=TEST_MODELS_DIR, use_gpu=False)
+        check_on_cpu(pipeline)

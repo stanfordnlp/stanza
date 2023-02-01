@@ -13,7 +13,7 @@ import sys
 from tqdm import tqdm
 
 import stanza
-from stanza.utils.datasets.sentiment.process_utils import SentimentDatum
+from stanza.models.classifiers.data import SentimentDatum
 import stanza.utils.datasets.sentiment.process_utils as process_utils
 
 import stanza.utils.default_paths as default_paths

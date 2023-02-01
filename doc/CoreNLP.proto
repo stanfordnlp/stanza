@@ -758,3 +758,42 @@ message TsurgeonRequest {
 message TsurgeonResponse {
   repeated FlattenedParseTree      trees          = 1;
 }
+
+// Sent in Morphology requests - a stream of sentences with tagged words
+message MorphologyRequest {
+  message TaggedWord {
+    required string                word           = 1;
+    optional string                xpos           = 2;
+  }
+
+  repeated TaggedWord              words          = 1;
+}
+
+// Sent back from the Morphology request - the words and their tags
+message MorphologyResponse {
+  message WordTagLemma {
+    required string                word           = 1;
+    optional string                xpos           = 2;
+    required string                lemma          = 3;
+  }
+
+  repeated WordTagLemma            words          = 1;
+}
+
+
+// A request for converting constituency trees to dependency graphs
+message DependencyConverterRequest {
+  repeated FlattenedParseTree      trees          = 1;
+}
+
+// The result of using the CoreNLP dependency converter.
+// One graph per tree
+message DependencyConverterResponse {
+  message DependencyConversion {
+    required DependencyGraph       graph          = 1;
+    optional FlattenedParseTree    tree           = 2;
+  }
+
+  repeated DependencyConversion    conversions         = 1;
+}
+

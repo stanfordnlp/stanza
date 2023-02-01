@@ -52,15 +52,16 @@ class ProcessorRequirementsException(Exception):
 class Processor(ABC):
     """ Base class for all processors """
 
-    def __init__(self, config, pipeline, use_gpu):
+    def __init__(self, config, pipeline, device):
         # overall config for the processor
         self._config = config
         # pipeline building this processor (presently processors are only meant to exist in one pipeline)
         self._pipeline = pipeline
-        self._set_up_variants(config, use_gpu)
+        self._set_up_variants(config, device)
         # run set up process
         # set up what annotations are required based on config
-        self._set_up_requires()
+        if not self._set_up_variant_requires():
+            self._set_up_requires()
         # set up what annotations are provided based on config
         self._set_up_provides()
         # given pipeline constructing this processor, check if requirements are met, throw exception if not
@@ -104,7 +105,24 @@ class Processor(ABC):
         """ Set up requirements for this processor.  Default is to use a class defined list. """
         self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_variants(self, config, use_gpu):
+    def _set_up_variant_requires(self):
+        """
+        If this has a variant with its own requirements, use those instead
+
+        Returns True iff the _requires is set from the _variant
+        """
+        if not hasattr(self, '_variant'):
+            return False
+        if hasattr(self._variant, '_set_up_requires'):
+            self._variant._set_up_requires()
+            self._requires = self._variant._requires
+            return True
+        if hasattr(self._variant.__class__, 'REQUIRES_DEFAULT'):
+            self._requires = self._variant.__class__.REQUIRES_DEFAULT
+            return True
+        return False
+
+    def _set_up_variants(self, config, device):
         processor_name = list(self.__class__.PROVIDES_DEFAULT)[0]
         if any(config.get(f'with_{variant}', False) for variant in PROCESSOR_VARIANTS[processor_name]):
             self._trainer = None
@@ -131,6 +149,8 @@ class Processor(ABC):
 
     def _check_requirements(self):
         """ Given a list of fulfilled requirements, check if all of this processor's requirements are met or not. """
+        if not self.config.get("check_requirements", True):
+            return
         provided_reqs = set.union(*[processor.provides for processor in self.pipeline.loaded_processors]+[set([])])
         if self.requires - provided_reqs:
             load_names = [item[0] for item in self.pipeline.load_list]
@@ -162,21 +182,21 @@ class ProcessorVariant(ABC):
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment,constituency) """
 
-    def __init__(self, config, pipeline, use_gpu):
-        super().__init__(config, pipeline, use_gpu)
+    def __init__(self, config, pipeline, device):
+        super().__init__(config, pipeline, device)
 
         # UD model resources, set up is processor specific
         self._pretrain = None
         self._trainer = None
         self._vocab = None
         if not hasattr(self, '_variant'):
-            self._set_up_model(config, pipeline, use_gpu)
+            self._set_up_model(config, pipeline, device)
 
         # build the final config for the processor
         self._set_up_final_config(config)
 
     @abstractmethod
-    def _set_up_model(self, config, pipeline, gpu):
+    def _set_up_model(self, config, pipeline, device):
         pass
 
     def _set_up_final_config(self, config):
@@ -211,7 +231,7 @@ class UDProcessor(Processor):
     @staticmethod
     def filter_out_option(option):
         """ Filter out non-processor configurations """
-        options_to_filter = ['cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
+        options_to_filter = ['device', 'cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
         if option.endswith('_file') or option.endswith('_dir'):
             return True
         elif option in options_to_filter:

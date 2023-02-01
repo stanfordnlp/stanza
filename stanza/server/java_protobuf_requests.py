@@ -167,6 +167,7 @@ class JavaProtobufContext(object):
         if extra_args is None:
             extra_args = []
         self.extra_args = extra_args
+        self.pipe = None
 
     def open_pipe(self):
         self.pipe = subprocess.Popen(["java", "-cp", self.classpath, self.java_main, "-multiple"] + self.extra_args,
@@ -177,6 +178,7 @@ class JavaProtobufContext(object):
         if self.pipe.poll() is None:
             self.pipe.stdin.write((0).to_bytes(4, 'big'))
             self.pipe.stdin.flush()
+            self.pipe = None
 
     def __enter__(self):
         self.open_pipe()
@@ -186,13 +188,16 @@ class JavaProtobufContext(object):
         self.close_pipe()
 
     def process_request(self, request):
+        if self.pipe is None:
+            raise RuntimeError("Pipe to java process is not open or was closed")
+
         text = request.SerializeToString()
         self.pipe.stdin.write(len(text).to_bytes(4, 'big'))
         self.pipe.stdin.write(text)
         self.pipe.stdin.flush()
         response_length = self.pipe.stdout.read(4)
         if len(response_length) < 4:
-            raise RuntimeError("Could not communicate with java process!")
+            raise BrokenPipeError("Could not communicate with java process!")
         response_length = int.from_bytes(response_length, "big")
         response_text = self.pipe.stdout.read(response_length)
         response = self.build_response()

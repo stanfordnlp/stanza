@@ -70,8 +70,7 @@ def parse_args(args=None):
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
-    parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
-    parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
+    utils.add_device_args(parser)
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -86,13 +85,7 @@ def parse_args(args=None):
 def main(args=None):
     args = parse_args(args=args)
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
-    if args.cpu:
-        args.cuda = False
-    elif args.cuda:
-        torch.cuda.manual_seed(args.seed)
+    utils.set_random_seed(args.seed)
 
     args = vars(args)
     logger.info("Running MWT expander in {} mode".format(args['mode']))
@@ -131,13 +124,13 @@ def train(args):
         args['dict_only'] = True
 
     # train a dictionary-based MWT expander
-    trainer = Trainer(args=args, vocab=vocab, use_cuda=args['cuda'])
+    trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("Training dictionary-based MWT expander...")
     trainer.train_dict(train_batch.doc.get_mwt_expansions(evaluation=False))
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
-    doc.set_mwt_expansions(dev_preds)
+    doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
     CoNLL.write_doc2conll(doc, system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
@@ -186,7 +179,7 @@ def train(args):
                 logger.info("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt_expansions(dev_preds)
+            doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
             CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -221,7 +214,7 @@ def train(args):
             logger.info("[Ensembling dict with seq2seq model...]")
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
-            doc.set_mwt_expansions(dev_preds)
+            doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
             CoNLL.write_doc2conll(doc, system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
             logger.info("Ensemble dev F1 = {:.2f}".format(dev_score*100))
@@ -235,8 +228,7 @@ def evaluate(args):
     model_file = os.path.join(args['save_dir'], save_name)
 
     # load model
-    use_cuda = args['cuda'] and not args['cpu']
-    trainer = Trainer(model_file=model_file, use_cuda=use_cuda)
+    trainer = Trainer(model_file=model_file, device=args['device'])
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
@@ -268,7 +260,7 @@ def evaluate(args):
 
     # write to file and score
     doc = copy.deepcopy(batch.doc)
-    doc.set_mwt_expansions(preds)
+    doc.set_mwt_expansions(preds, fake_dependencies=True)
     CoNLL.write_doc2conll(doc, system_pred_file)
 
     if gold_file is not None:

@@ -115,6 +115,7 @@ def read_single_tree(token_iterator, broken_ok):
 
 LINE_SPLIT_RE = re.compile(r"([()])")
 
+
 class TokenIterator:
     """
     A specific iterator for reading trees from a tree file
@@ -123,18 +124,15 @@ class TokenIterator:
     we are processing, so that an error can be logged
     from the correct line
     """
-    def __init__(self, text):
-        self.lines = text.split("\n")
-        self.num_lines = len(self.lines)
-        self.line_num = -1
-        if self.num_lines > 1000:
-            self.line_iterator = iter(tqdm(self.lines))
-        else:
-            self.line_iterator = iter(self.lines)
+    def __init__(self):
         self.token_iterator = iter([])
+        self.line_num = -1
         self.mark = None
 
     def set_mark(self):
+        """
+        The mark is used for determining where the start of a tree occurs for an error
+        """
         self.mark = self.line_num
 
     def get_mark(self):
@@ -149,11 +147,10 @@ class TokenIterator:
         n = next(self.token_iterator, None)
         while n is None:
             self.line_num = self.line_num + 1
-            if self.line_num >= self.num_lines:
-                next(self.line_iterator, "")
+            line = next(self.line_iterator)
+            if line is None:
                 raise StopIteration
-
-            line = next(self.line_iterator, "").strip()
+            line = line.strip()
             if not line:
                 continue
 
@@ -165,43 +162,86 @@ class TokenIterator:
 
         return n
 
-def read_trees(text, broken_ok=False):
-    """
-    Reads multiple trees from the text
 
-    TODO: some of the error cases we hit can be recovered from
-    """
+class TextTokenIterator(TokenIterator):
+    def __init__(self, text):
+        super().__init__()
+
+        self.lines = text.split("\n")
+        self.num_lines = len(self.lines)
+        if self.num_lines > 1000:
+            self.line_iterator = iter(tqdm(self.lines))
+        else:
+            self.line_iterator = iter(self.lines)
+
+
+class FileTokenIterator(TokenIterator):
+    def __init__(self, filename):
+        super().__init__()
+        self.filename = filename
+
+    def __enter__(self):
+        # TODO: use the file_size instead of counting the lines
+        # file_size = Path(self.filename).stat().st_size
+        with open(self.filename) as fin:
+            num_lines = sum(1 for _ in fin)
+
+        self.file_obj = open(self.filename)
+        if num_lines > 1000:
+            self.line_iterator = iter(tqdm(self.file_obj, total=num_lines))
+        else:
+            self.line_iterator = iter(self.file_obj)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if self.file_obj:
+            self.file_obj.close()
+
+def read_token_iterator(token_iterator, broken_ok, tree_callback):
     trees = []
-    token_iterator = TokenIterator(text)
     token = next(token_iterator, None)
     while token:
         if token == OPEN_PAREN:
             next_tree = read_single_tree(token_iterator, broken_ok=broken_ok)
             if next_tree is None:
                 raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
-            trees.append(next_tree)
+            if tree_callback is not None:
+                tree_callback(next_tree)
+            else:
+                trees.append(next_tree)
             token = next(token_iterator, None)
         elif token == CLOSE_PAREN:
             raise ExtraCloseTreeError(token_iterator.line_num)
         else:
             raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
 
-    return trees
+    if tree_callback is None:
+        return trees
 
-def read_tree_file(filename):
+
+def read_trees(text, broken_ok=False, tree_callback=None):
+    """
+    Reads multiple trees from the text
+
+    TODO: some of the error cases we hit can be recovered from
+    """
+    token_iterator = TextTokenIterator(text)
+    return read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
+
+def read_tree_file(filename, broken_ok=False, tree_callback=None):
     """
     Read all of the trees in the given file
     """
-    with open(filename) as fin:
-        trees = read_trees(fin.read())
+    with FileTokenIterator(filename) as token_iterator:
+        trees = read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
     return trees
 
-def read_treebank(filename):
+def read_treebank(filename, tree_callback=None):
     """
     Read a treebank and alter the trees to be a simpler format for learning to parse
     """
     logger.info("Reading trees from %s", filename)
-    trees = read_tree_file(filename)
+    trees = read_tree_file(filename, tree_callback=tree_callback)
     trees = [t.prune_none().simplify_labels() for t in trees]
 
     illegal_trees = [t for t in trees if len(t.children) > 1]

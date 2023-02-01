@@ -36,6 +36,8 @@ def main():
     parser.add_argument("--langs", default="", help="A list of language codes to process.  If not set, all languages under src_root will be processed.")
     parser.add_argument("--packages", default="", help="A list of packages to process.  If not set, all packages under the languages found will be processed.")
     parser.add_argument("--no_xz_output", default=True, dest="xz_output", action="store_false", help="Output compressed xz files")
+    parser.add_argument("--split_size", default=50, type=int, help="How large to make each split, in MB")
+    parser.add_argument("--no_make_test_file", default=True, dest="make_test_file", action="store_false", help="Don't save a test file.  Honestly, we never even use it.  Best for low resource languages where every bit helps")
     args = parser.parse_args()
 
     print("Processing files:")
@@ -65,6 +67,8 @@ def main():
     print(lang_dirs)
     print("")
 
+    split_size = int(args.split_size * 1024 * 1024)
+
     for lang in lang_dirs:
         lang_root = src_root / lang
         data_dirs = os.listdir(lang_root)
@@ -82,11 +86,11 @@ def main():
             if not os.path.exists(tgt_dir):
                 os.makedirs(tgt_dir)
             print(f"-> Processing {lang}-{dataset_name}")
-            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output)
+            prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output, split_size, args.make_test_file)
 
         print("")
 
-def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
+def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, make_test_file):
     """
     Combine, shuffle and split data into smaller files, following a naming convention.
     """
@@ -121,11 +125,11 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         if size < 0.1:
             raise RuntimeError("Not enough data found to build a charlm.  At least 100MB data expected")
 
-        print(f"--> Splitting into smaller files...")
+        print(f"--> Splitting into smaller files of size {split_size} ...")
         train_dir = tgt_dir / 'train'
         if not os.path.exists(train_dir): # make training dir
             os.makedirs(train_dir)
-        cmd = f"split -C 52428800 -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
+        cmd = f"split -C {split_size} -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
             raise RuntimeError("Failed to split files!")
@@ -134,15 +138,20 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress):
         if total < 3:
             raise RuntimeError("Something went wrong!  %d file(s) produced by shuffle and split, expected at least 3" % total)
 
-        print("--> Creating dev and test files...")
         dev_file = f"{tgt_dir}/dev.txt"
         test_file = f"{tgt_dir}/test.txt"
-        shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
-        shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
+        if make_test_file:
+            print("--> Creating dev and test files...")
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
+            txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
+        else:
+            print("--> Creating dev file...")
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
+            txt_files = [dev_file] + glob.glob(f'{train_dir}/*.txt')
 
         if compress:
             print("--> Compressing files...")
-            txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
             for txt_file in tqdm(txt_files):
                 subprocess.run(['xz', txt_file])
 

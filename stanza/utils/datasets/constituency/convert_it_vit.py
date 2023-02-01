@@ -52,6 +52,24 @@ This update is hopefully in current ELRA distributions now.
 If not, please contact ELRA to specifically ask for the updated version.
 Internally to Stanford, feel free to ask Chris or John for the updates.
 Look for the line below "original version with more errors"
+
+In August 2022, Prof. Delmonte made a slight update in a zip file
+`john.zip`.  If/when that gets updated to ELRA, we will update it
+here.  Contact Chris or John for a copy if not updated yet, or go
+back in git history to get the older version of the code which
+works with the 2022 ELRA update.
+
+Later, in September 2022, there is yet another update,
+New version of VIT.zip
+Unzip the contents into a folder
+$CONSTITUENCY_BASE/italian/it_vit
+so there should be a file
+$CONSTITUENCY_BASE/italian/it_vit/VITwritten/VITconstsyntNumb
+
+There are a few other updates needed to improve the annotations,
+but all the nagging seemed to give Prof. Delmonte a headache,
+so at this point we include those fixes in this script instead.
+See the first few tsurgeon operations in update_mwts_and_special_cases
 """
 
 from collections import defaultdict, deque
@@ -198,6 +216,33 @@ def raw_tree(text):
         "num-0/07%plus":           "(num 0,07%) (num plus)",
         "num-0/69%minus":          "(num 0,69%) (num minus)",
         "num-0_39%minus":          "(num 0,39%) (num minus)",
+        "num-9_11/16":             "(num 9-11,16)",
+        "num-2/184_90":            "(num 2=184/90)",
+        "num-3/429_20":            "(num 3eq429/20)",
+        # TODO: remove the following num conversions if possible
+        # this would require editing either constituency or UD
+        "num-1:28_124":            "(num 1=8/1242)",
+        "num-1:28_397":            "(num 1=8/3972)",
+        "num-1:28_947":            "(num 1=8/9472)",
+        "num-1:29_657":            "(num 1=9/6572)",
+        "num-1:29_867":            "(num 1=9/8672)",
+        "num-1:29_874":            "(num 1=9/8742)",
+        "num-1:30_083":            "(num 1=0/0833)",
+        "num-1:30_140":            "(num 1=0/1403)",
+        "num-1:30_354":            "(num 1=0/3543)",
+        "num-1:30_453":            "(num 1=0/4533)",
+        "num-1:30_946":            "(num 1=0/9463)",
+        "num-1:31_602":            "(num 1=1/6023)",
+        "num-1:31_842":            "(num 1=1/8423)",
+        "num-1:32_087":            "(num 1=2/0873)",
+        "num-1:32_259":            "(num 1=2/2593)",
+        "num-1:33_166":            "(num 1=3/1663)",
+        "num-1:34_154":            "(num 1=4/1543)",
+        "num-1:34_556":            "(num 1=4/5563)",
+        "num-1:35_323":            "(num 1=5/3233)",
+        "num-1:36_023":            "(num 1=6/0233)",
+        "num-1:36_076":            "(num 1=6/0763)",
+        "num-1:36_651":            "(num 1=6/6513)",
         "n-giga_flop/s":           "(n giga_flop/s)",
         "sect-'g-1'":              "(sect g-1)",
         "sect-'h-1'":              "(sect h-1)",
@@ -205,10 +250,14 @@ def raw_tree(text):
         "sect-'h-3'":              "(sect h-3)",
         "abbr-'a-b-c'":            "(abbr a-b-c)",
         "abbr-d_o_a_":             "(abbr DOA)",
+        "abbr-d_l_":               "(abbr DL)",
+        "abbr-i_s_e_f_":           "(abbr ISEF)",
         "abbr-d_p_r_":             "(abbr DPR)",
         "abbr-D_P_R_":             "(abbr DPR)",
         "abbr-d_m_":               "(abbr dm)",
         "abbr-T_U_":               "(abbr TU)",
+        "abbr-F_A_M_E_":           "(abbr Fame)",
+        "dots-'...'":              "(dots ...)",
     }
     new_pieces = ["(ROOT "]
     for piece in pieces:
@@ -222,7 +271,7 @@ def raw_tree(text):
             # maxsplit=1 because of words like 1990-EQU-100
             tag, word = piece.split("-", maxsplit=1)
             if word.find("'") >= 0 or word.find("(") >= 0 or word.find(")") >= 0:
-                raise ValueError(piece)
+                raise ValueError("Unhandled weird node: {}".format(piece))
             if word.endswith("_"):
                 word = word[:-1] + "'"
             date_match = DATE_RE.match(word)
@@ -390,7 +439,13 @@ def get_mwt(*dep_datasets):
                 mwt_map[token.text] = expansion
     return mwt_map
 
-def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon_processor):
+def update_mwts_and_special_cases(original_tree, dep_sentence, mwt_map, tsurgeon_processor):
+    """
+    Replace MWT structures with their UD equivalents, along with some other minor tsurgeon based edits
+
+    original_tree: the tree as read from VIT
+    dep_sentence: the UD dependency dataset version of this sentence
+    """
     updated_tree = original_tree
 
     operations = []
@@ -405,9 +460,26 @@ def update_mwts_and_special_cases(original_tree, dev_sentence, mwt_map, tsurgeon
         operations.append(["/^testo$/ !, __ . /^:$/=prune", "prune prune"])
         operations.append(["/^testo$/=prune !, __", "prune prune"])
 
+    if len(con_words) >= 2 and con_words[-2] == '...' and con_words[-1] == '.':
+        # the most recent VIT constituency has some sentence final . after a ...
+        # the UD dataset has a more typical ... ending instead
+        # these lines used to say "riempire" which was rather odd
+        operations.append(["/^[.][.][.]$/ . /^[.]$/=prune", "prune prune"])
+
+    # a few constituent tags are simply errors which need to be fixed
+    if original_tree.children[0].label == 'p':
+        # 'p' shouldn't be at root
+        operations.append(["_ROOT_ < p=p", "relabel p cp"])
+    # fix one specific tree if it has an s_top in it
+    operations.append(["s_top=stop < (in=in < più=piu)", "replace piu (q più)", "relabel in sq", "relabel stop sa"])
+    # sect doesn't exist as a constituent.  replace it with sa
+    operations.append(["sect=sect < num", "relabel sect sa"])
+    # ppas as an internal node gets removed
+    operations.append(["ppas=ppas < (__ < __)", "excise ppas ppas"])
+
     # now assemble a bunch of regex to split and otherwise manipulate
     # the MWT in the trees
-    for token in dev_sentence.tokens:
+    for token in dep_sentence.tokens:
         if len(token.words) == 1:
             continue
         if token.text in mwt_map:
@@ -487,22 +559,20 @@ def update_tree(original_tree, dep_sentence, con_id, dep_id, mwt_map, tsurgeon_p
     try:
         updated_tree = updated_tree.replace_words(ud_words)
     except ValueError as e:
-        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\n{}\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
+        raise ValueError("Failed to process {} {}:\nORIGINAL TREE\n{}\nUPDATED TREE\n{}\nUPDATED LEAVES\n{}\nUD TEXT\n{}\nTsurgeons applied:\n{}\n".format(con_id, dep_id, original_tree, updated_tree, updated_tree.leaf_labels(), ud_words, "\n".join("{}".format(op) for op in operations))) from e
     return updated_tree
 
 # train set:
 #  858: missing close parens in the UD conversion
-# 2388: the problem is inconsistent treatment of s_p_a_
-# 05071: the heuristic to fill in a missing "si" doesn't work because there's
+# 1169: 'che', 'poi', 'tutti', 'i', 'Paesi', 'ue', '.' -> 'per', 'tutti', 'i', 'paesi', 'Ue', '.'
+# 2375: the problem is inconsistent treatment of s_p_a_
+# 05052: the heuristic to fill in a missing "si" doesn't work because there's
 #   already another "si" immediately after
-# 07089: wrong word edited out in UD?
-# 07137: FAME -> F A ME wtf?
-# 08391: da riempire inconsistency
 #
 # test set:
-# 04541: similar to another tree which is missed
-# 09785: da riempire inconsistency
-IGNORE_IDS = ["sent_00867", "sent_01169", "sent_01990", "sent_02388", "sent_05071", "sent_07089", "sent_07137", "sent_08391", "sent_04541", "sent_09785"]
+# 09764: weird punct at end
+# 10058: weird punct at end
+IGNORE_IDS = ["sent_00867", "sent_01169", "sent_02375", "sent_05052", "sent_09764", "sent_10058"]
 
 def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, tsurgeon_processor):
     """
@@ -520,14 +590,21 @@ def extract_updated_dataset(con_tree_map, dep_sentence_map, split_ids, mwt_map, 
         trees.append(updated_tree)
     return trees
 
-def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence=None):
+def convert_it_vit(paths, dataset_name, debug_sentence=None):
     # original version with more errors
     #con_filename = os.path.join(con_directory, "2011-12-20", "Archive", "VIT_newconstsynt.txt")
     # this is the April 2022 version
     #con_filename = os.path.join(con_directory, "VIT_newconstsynt.txt")
     # the most recent update from ELRA may look like this?
     # it's what we got, at least
-    con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+    # con_filename = os.path.join(con_directory, "italian", "VITwritten", "VITconstsyntNumb")
+
+    # needs at least UD 2.11 or this will not work
+    con_directory = paths["CONSTITUENCY_BASE"]
+    ud_directory = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
+
+    con_filename = os.path.join(con_directory, "italian", "it_vit", "VITwritten", "VITconstsyntNumb")
     ud_vit_train = os.path.join(ud_directory, "it_vit-ud-train.conllu")
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
@@ -558,12 +635,12 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
             con_tree_map[tree_id] = tree
         except UnclosedTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ExtraCloseTreeError as e:
             num_discarded = num_discarded + 1
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
         except ValueError as e:
-            print("Discarding {} because of reading error:\n  {}\n  {}".format(sentence[0], e, sentence[1]))
+            print("Discarding {} because of reading error:\n  {}: {}\n  {}".format(sentence[0], type(e), e, sentence[1]))
             num_discarded = num_discarded + 1
             #raise ValueError("Could not process line %d" % idx) from e
 
@@ -576,7 +653,9 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
     train_ids = match_sentences(con_tree_map, con_vit_ngrams, ud_train_data.sentences, "train", debug_sentence)
     dev_ids   = match_sentences(con_tree_map, con_vit_ngrams, ud_dev_data.sentences,   "dev",   debug_sentence)
     test_ids  = match_sentences(con_tree_map, con_vit_ngrams, ud_test_data.sentences,  "test",  debug_sentence)
-    print("Trees: {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
+    print("Remaining total trees: %d" % (len(train_ids) + len(dev_ids) + len(test_ids)))
+    print("  {} train {} dev {} test".format(len(train_ids), len(dev_ids), len(test_ids)))
+    print("Updating trees with MWT and newer tokens from UD...")
 
     # the moveprune feature requires a new corenlp release after 4.4.0
     with tsurgeon.Tsurgeon(classpath="$CLASSPATH") as tsurgeon_processor:
@@ -588,15 +667,11 @@ def convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, 
 
 def main():
     paths = default_paths.get_default_paths()
-    con_directory = paths["CONSTITUENCY_BASE"]
-    ud_directory  = os.path.join(paths["UDBASE"], "UD_Italian-VIT")
-
-    output_directory = paths["CONSTITUENCY_DATA_DIR"]
     dataset_name = "it_vit"
 
     debug_sentence = sys.argv[1] if len(sys.argv) > 1 else None
 
-    convert_it_vit(con_directory, ud_directory, output_directory, dataset_name, debug_sentence)
+    convert_it_vit(paths, dataset_name, debug_sentence)
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,21 @@
+"""
+Based on
+
+@inproceedings{akbik-etal-2018-contextual,
+    title = "Contextual String Embeddings for Sequence Labeling",
+    author = "Akbik, Alan  and
+      Blythe, Duncan  and
+      Vollgraf, Roland",
+    booktitle = "Proceedings of the 27th International Conference on Computational Linguistics",
+    month = aug,
+    year = "2018",
+    address = "Santa Fe, New Mexico, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/C18-1139",
+    pages = "1638--1649",
+}
+"""
+
 from collections import Counter
 from operator import itemgetter
 import os
@@ -260,7 +278,7 @@ class CharacterLanguageModelTrainer():
     @classmethod
     def from_new_model(cls, args, vocab):
         model = CharacterLanguageModel(args, vocab, is_forward_lm=True if args['direction'] == 'forward' else False)
-        if args['cuda']: model = model.cuda()
+        model = model.to(args['device'])
         params = [param for param in model.parameters() if param.requires_grad]
         optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
         criterion = torch.nn.CrossEntropyLoss()
@@ -278,7 +296,7 @@ class CharacterLanguageModelTrainer():
         """
         state = torch.load(filename, lambda storage, loc: storage)
         model = CharacterLanguageModel.from_full_state(state['model'], finetune)
-        if args['cuda']: model = model.cuda()
+        model = model.to(args['device'])
 
         params = [param for param in model.parameters() if param.requires_grad]
         optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])

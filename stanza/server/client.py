@@ -574,20 +574,64 @@ class CoreNLPClient(RobustService):
             matches = regex_matches_to_indexed_words(matches)
         return matches
 
-    def tregex(self, text, pattern, filter=False, annotators=None, properties=None):
+    def fill_tree_proto(self, tree, proto_tree):
+        if tree.label:
+            proto_tree.value = tree.label
+        for child in tree.children:
+            proto_child = proto_tree.child.add()
+            self.fill_tree_proto(child, proto_child)
+
+    def tregex(self, text=None, pattern=None, filter=False, annotators=None, properties=None, trees=None):
         # parse is not included by default in some of the pipelines,
         # so we may need to manually override the annotators
         # to include parse in order for tregex to do anything
         if annotators is None and self.annotators is not None:
-            if "parse" not in self.annotators:
+            assert isinstance(self.annotators, str)
+            pieces = self.annotators.split(",")
+            if "parse" not in pieces:
                 annotators = self.annotators + ",parse"
         else:
             annotators = "tokenize,ssplit,pos,parse"
+        if pattern is None:
+            raise ValueError("Cannot have None as a pattern for tregex")
+
+        # TODO: we could also allow for passing in a complete document,
+        # along with the original text, so that the spans returns are more accurate
+        if trees is not None:
+            if properties is None:
+                properties = {}
+            properties['inputFormat'] = 'serialized'
+            if 'serializer' not in properties:
+                properties['serializer'] = 'edu.stanford.nlp.pipeline.ProtobufAnnotationSerializer'
+            doc = Document()
+            full_text = []
+            for tree_idx, tree in enumerate(trees):
+                sentence = doc.sentence.add()
+                sentence.sentenceIndex = tree_idx
+                sentence.tokenOffsetBegin = len(full_text)
+                leaves = tree.leaf_labels()
+                full_text.extend(leaves)
+                sentence.tokenOffsetEnd = len(full_text)
+                self.fill_tree_proto(tree, sentence.parseTree)
+                for word in leaves:
+                    token = sentence.token.add()
+                    # the other side uses both value and word, weirdly enough
+                    token.value = word
+                    token.word = word
+                    # without the actual tokenization, at least we can
+                    # stop the words from running together
+                    token.after = " "
+            doc.text = " ".join(full_text)
+            with io.BytesIO() as stream:
+                writeToDelimitedString(doc, stream)
+                text = stream.getvalue()
+
         return self.__regex('/tregex', text, pattern, filter, annotators, properties)
 
     def __regex(self, path, text, pattern, filter, annotators=None, properties=None):
         """
         Send a regex-related request to the CoreNLP server.
+
         :param (str | unicode) path: the path for the regex endpoint
         :param text: raw text for the CoreNLPServer to apply the regex
         :param (str | unicode) pattern: regex pattern
@@ -629,7 +673,7 @@ class CoreNLPClient(RobustService):
                     'filter': filter,
                     'properties': str(properties)
                 },
-                data=text.encode('utf-8'),
+                data=text.encode('utf-8') if isinstance(text, str) else text,
                 headers={'content-type': ctype},
                 timeout=(self.timeout*2)/1000,
             )

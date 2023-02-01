@@ -17,6 +17,7 @@ import os
 import random
 
 from stanza.models.common import utils
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.datasets.constituency import selftrain
 
 tqdm = utils.get_tqdm()
@@ -49,6 +50,9 @@ def list_wikipedia_files(input_dir):
 
     Recursively traverse the directory, then sort
     """
+    if not os.path.isdir(input_dir) and os.path.split(input_dir)[1].startswith("wiki_"):
+        return [input_dir]
+
     wiki_files = []
 
     recursive_files = deque()
@@ -83,7 +87,10 @@ def read_wiki_file(filename):
             line = next(line_iterator, None)
         elif line.startswith("</doc"):
             if current_doc:
-                docs.append("\n\n".join(current_doc))
+                if len(current_doc) > 2:
+                    # a lot of very short documents are links to related documents
+                    # a single wikipedia can have tens of thousands of useless almost-duplicates
+                    docs.append("\n\n".join(current_doc))
                 current_doc = []
         else:
             # not the start or end of a doc
@@ -91,7 +98,7 @@ def read_wiki_file(filename):
             line = line.replace("()", " ")
             line = line.replace("( )", " ")
             line = line.strip()
-            if line.find("&lt;") > 0 or line.find("&gt;") > 0:
+            if line.find("&lt;") >= 0 or line.find("&gt;") >= 0:
                 line = ""
             if line:
                 current_doc.append(line)
@@ -110,8 +117,9 @@ def main():
     if args.shuffle:
         random.shuffle(wiki_files)
 
-    tag_pipe = selftrain.build_tag_pipe(ssplit=True, lang=args.lang)
-    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models)
+    foundation_cache = FoundationCache()
+    tag_pipe = selftrain.build_tag_pipe(ssplit=True, lang=args.lang, foundation_cache=foundation_cache)
+    parser_pipes = selftrain.build_parser_pipes(args.lang, args.models, foundation_cache=foundation_cache)
 
     # create a blank file.  we will append to this file so that partial results can be used
     with open(args.output_file, "w") as fout:

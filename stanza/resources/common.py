@@ -188,7 +188,7 @@ def add_mwt(processors, resources, lang):
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
         processors[MWT] = value
 
-def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False):
+def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False, maybe_add_mwt=True):
     """
     Given a parsed resources file, language, and possible package
     and/or processors, expands the package to the list of processors
@@ -204,7 +204,7 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
     # resolve processor models
     if processors:
         logger.debug(f'Processing parameter "processors"...')
-        if TOKENIZE in processors and MWT not in processors:
+        if maybe_add_mwt and TOKENIZE in processors and MWT not in processors:
             add_mwt(processors, resources, lang)
         for key, plist in processors.items():
             if not isinstance(key, str):
@@ -222,7 +222,7 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
                     logger.debug(f'Found {key}: {value}.')
                     processor_list[key].append(value)
                 # allow values to be default in some cases
-                elif key in resources[lang]['default_processors'] and value == 'default':
+                elif key in resources[lang].get('default_processors', {}) and value == 'default':
                     logger.debug(
                         f'Found {key}: {resources[lang]["default_processors"][key]}.'
                     )
@@ -290,7 +290,7 @@ def add_dependencies(resources, lang, processor_list):
     [['pos', (ModelSpecification(processor='pos', package='gsd', dependencies=(('pretrain', 'gsd'),)),)],
      ['depparse', (ModelSpecification(processor='depparse', package='gsd', dependencies=(('pretrain', 'gsd'),)),)]]
     """
-    default_dependencies = resources[lang]['default_dependencies']
+    default_dependencies = resources[lang].get('default_dependencies', {})
     for item in processor_list:
         processor, model_specs = item
         new_model_specs = []
@@ -404,8 +404,8 @@ def process_pipeline_parameters(lang, model_dir, package, processors):
         package = None
     elif isinstance(processors, dict):
         processors = {
-            k.strip().lower(): v.strip().lower() \
-                for k, v in processors.items()
+            k.strip().lower(): ([v_i.strip().lower() for v_i in v] if isinstance(v, (tuple, list)) else v.strip().lower())
+            for k, v in processors.items()
         }
     elif processors is not None:
         raise TypeError(
@@ -531,7 +531,8 @@ def download(
         resources_branch=None,
         resources_version=DEFAULT_RESOURCES_VERSION,
         model_url=DEFAULT_MODEL_URL,
-        proxies=None
+        proxies=None,
+        download_json=True
     ):
     # set global logging level
     set_logging_level(logging_level, verbose)
@@ -540,7 +541,11 @@ def download(
         lang, model_dir, package, processors
     )
 
-    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
+        if not download_json:
+            logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
+        download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+
     resources = load_resources_json(model_dir)
     if lang not in resources:
         raise UnknownLanguageError(lang)

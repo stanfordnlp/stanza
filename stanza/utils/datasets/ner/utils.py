@@ -6,6 +6,7 @@ or the entire prepare_ner_dataset.py script
 """
 
 import os
+import random
 
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
@@ -48,6 +49,7 @@ def write_sentences(output_filename, dataset):
     """
     Write exactly one output file worth of dataset
     """
+    os.makedirs(os.path.split(output_filename)[0], exist_ok=True)
     with open(output_filename, "w", encoding="utf-8") as fout:
         for sentence in dataset:
             for word in sentence:
@@ -120,3 +122,51 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
 
     return sentences
 
+
+def random_shuffle_files(input_dir, output_dir, short_name):
+    """
+    Shuffle the files into different chunks based on their filename
+
+    The first piece of the filename, split by ".", is used as a random seed.
+
+    This will make it so that adding new files or using a different
+    annotation scheme (assuming that's encoding in pieces of the
+    filename) won't change the distibution of the files
+    """
+    input_files = os.listdir(input_dir)
+    input_files = sorted(input_files)
+    input_keys = {}
+    for f in input_files:
+        seed = f.split(".")[0]
+        if seed in input_keys:
+            raise ValueError("Multiple files with the same prefix: %s and %s" % (input_keys[seed], f))
+        input_keys[seed] = f
+    assert len(input_keys) == len(input_files)
+
+    train_files = []
+    dev_files = []
+    test_files = []
+
+    for filename in input_files:
+        seed = filename.split(".")[0]
+        random.seed(filename, 2)
+        location = random.random()
+        if location < 0.7:
+            train_files.append(filename)
+        elif location < 0.8:
+            dev_files.append(filename)
+        else:
+            test_files.append(filename)
+
+    print(len(train_files), len(dev_files), len(test_files))
+    assert len(train_files) + len(dev_files) + len(test_files) == len(input_files)
+
+    file_lists = [train_files, dev_files, test_files]
+    datasets = []
+    for files in file_lists:
+        dataset = []
+        for filename in files:
+            dataset.extend(read_tsv(os.path.join(input_dir, filename), 0, 1))
+        datasets.append(dataset)
+
+    write_dataset(datasets, output_dir, short_name)

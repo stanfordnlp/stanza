@@ -23,6 +23,8 @@ def get_long_tensor(tokens_list, batch_size, pad_id=constant.PAD_ID):
     while isinstance(x[0], list):
         sizes.append(max(len(y) for y in x))
         x = [z for y in x for z in y]
+    # TODO: pass in a device parameter and put it directly on the relevant device?
+    # that might be faster than creating it and then moving it
     tokens = torch.LongTensor(batch_size, *sizes).fill_(pad_id)
     for i, s in enumerate(tokens_list):
         tokens[i, :len(s)] = torch.LongTensor(s)

@@ -9,7 +9,7 @@ import itertools
 import re
 import warnings
 
-from stanza.models.common.doc import StanzaObject
+from stanza.models.common.stanza_object import StanzaObject
 
 # useful more for the "is" functionality than the time savings
 CLOSE_PAREN = ')'
@@ -34,6 +34,7 @@ class TreePrintMethod(Enum):
     ONE_LINE          = 1  # (ROOT (S ...  ))
     LABELED_PARENS    = 2  # (_ROOT (_S ... )_S )_ROOT
     PRETTY            = 3  # multiple lines
+    VLSP              = 4  # <s> (S ... ) </s>
 
 
 class Tree(StanzaObject):
@@ -161,12 +162,14 @@ class Tree(StanzaObject):
         Otherwise, a tree too deep might blow up the call stack
 
         There is a type specific format:
-          O      -> one line PTB format, which is the default anyway
-          L      -> open and close brackets are labeled, spaces in the tokens are replaced with _
-          P      -> pretty print over multiple lines
-          ?      -> spaces in the tokens are replaced with ? for any value of ? other than OLP
-                    warning: this may be removed in the future
-          ?{OLP} -> specific format AND a custom space replacement
+          O       -> one line PTB format, which is the default anyway
+          L       -> open and close brackets are labeled, spaces in the tokens are replaced with _
+          P       -> pretty print over multiple lines
+          V       -> surround lines with <s>...</s>, don't print ROOT, and turn () into L/RBKT
+          ?       -> spaces in the tokens are replaced with ? for any value of ? other than OLP
+                     warning: this may be removed in the future
+          ?{OLPV} -> specific format AND a custom space replacement
+          Vi      -> add an ID to the <s> in the V format.  Also works with ?Vi
         """
         space_replacement = " "
         print_format = TreePrintMethod.ONE_LINE
@@ -186,19 +189,39 @@ class Tree(StanzaObject):
         elif spec and spec[-1] == 'P':
             print_format = TreePrintMethod.PRETTY
             space_replacement = spec[0]
+        elif spec and spec[0] == 'V':
+            print_format = TreePrintMethod.VLSP
+            use_tree_id = spec[-1] == 'i'
+        elif spec and len(spec) > 1 and spec[1] == 'V':
+            print_format = TreePrintMethod.VLSP
+            space_replacement = spec[0]
+            use_tree_id = spec[-1] == 'i'
         elif spec:
             space_replacement = spec[0]
             warnings.warn("Use of a custom replacement without a format specifier is deprecated.  Please use {}O instead".format(space_replacement), stacklevel=2)
 
+        LRB = "LBKT" if print_format == TreePrintMethod.VLSP else "-LRB-"
+        RRB = "RBKT" if print_format == TreePrintMethod.VLSP else "-RRB-"
         def normalize(text):
-            return text.replace(" ", space_replacement).replace("(", "-LRB-").replace(")", "-RRB-")
+            return text.replace(" ", space_replacement).replace("(", LRB).replace(")", RRB)
 
         if print_format is TreePrintMethod.PRETTY:
             return self.pretty_print(normalize)
 
         with StringIO() as buf:
             stack = deque()
-            stack.append(self)
+            if print_format == TreePrintMethod.VLSP:
+                if use_tree_id:
+                    buf.write("<s id={}>\n".format(self.tree_id))
+                else:
+                    buf.write("<s>\n")
+                if len(self.children) == 0:
+                    raise ValueError("Cannot print an empty tree with V format")
+                elif len(self.children) > 1:
+                    raise ValueError("Cannot print a tree with %d branches with V format" % len(self.children))
+                stack.append(self.children[0])
+            else:
+                stack.append(self)
             while len(stack) > 0:
                 node = stack.pop()
 
@@ -210,7 +233,7 @@ class Tree(StanzaObject):
                         buf.write(normalize(node.label))
                     continue
 
-                if print_format is TreePrintMethod.ONE_LINE:
+                if print_format is TreePrintMethod.ONE_LINE or print_format is TreePrintMethod.VLSP:
                     buf.write(OPEN_PAREN)
                     if node.label is not None:
                         buf.write(normalize(node.label))
@@ -223,6 +246,8 @@ class Tree(StanzaObject):
                 for child in reversed(node.children):
                     stack.append(child)
                     stack.append(SPACE_SEPARATOR)
+            if print_format == TreePrintMethod.VLSP:
+                buf.write("\n</s>")
             buf.seek(0)
             return buf.read()
 
@@ -356,11 +381,16 @@ class Tree(StanzaObject):
         return sorted(set(x.label for x in trees))
 
     @staticmethod
-    def get_compound_constituents(trees):
+    def get_compound_constituents(trees, separate_root=False):
         constituents = set()
         stack = deque()
         for tree in trees:
-            stack.append(tree)
+            if separate_root:
+                constituents.add((tree.label,))
+                for child in tree.children:
+                    stack.append(child)
+            else:
+                stack.append(tree)
             while len(stack) > 0:
                 node = stack.pop()
                 if node.is_leaf() or node.is_preterminal():
@@ -387,6 +417,19 @@ class Tree(StanzaObject):
             new_label = pattern.split(new_label)[0]
         new_children = [child.simplify_labels(pattern) for child in self.children]
         return Tree(new_label, new_children)
+
+    def reverse(self):
+        """
+        Flip a tree backwards
+
+        The intent is to train a parser backwards to see if the
+        forward and backwards parsers can augment each other
+        """
+        if self.is_leaf():
+            return Tree(self.label)
+
+        new_children = [child.reverse() for child in reversed(self.children)]
+        return Tree(self.label, new_children)
 
     def remap_constituent_labels(self, label_map):
         """
