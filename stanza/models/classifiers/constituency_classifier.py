@@ -9,13 +9,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from stanza.models.classifiers.base_classifier import BaseClassifier
 from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ModelType, build_output_layers
+
+from stanza.models.common.utils import split_into_batches, sort_with_indices, unsort
 
 logger = logging.getLogger('stanza')
 tlogger = logging.getLogger('stanza.classifiers.trainer')
 
-class ConstituencyClassifier(nn.Module):
+class ConstituencyClassifier(BaseClassifier):
     def __init__(self, tree_embedding, labels, args):
         super(ConstituencyClassifier, self).__init__()
         self.labels = labels
@@ -80,4 +83,3 @@ class ConstituencyClassifier(nn.Module):
             'labels':          self.labels,
         }
         return params
-

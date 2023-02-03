@@ -11,12 +11,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import stanza.models.classifiers.data as data
+from stanza.models.classifiers.base_classifier import BaseClassifier
 from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
-from stanza.models.common.utils import split_into_batches, sort_with_indices, unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -51,7 +51,7 @@ help, but dev performance went down for each variation of
 logger = logging.getLogger('stanza')
 tlogger = logging.getLogger('stanza.classifiers.trainer')
 
-class CNNClassifier(nn.Module):
+class CNNClassifier(BaseClassifier):
     def __init__(self, pretrain, extra_vocab, labels,
                  charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer,
                  args):
@@ -478,36 +478,7 @@ class CNNClassifier(nn.Module):
         }
         return params
 
+    def preprocess_data(self, sentences):
+        sentences = [data.update_text(s, self.config.wordvec_type) for s in sentences]
+        return sentences
 
-def label_text(model, text, batch_size=None):
-    """
-    Given a list of sentences, return the model's results on that text.
-    """
-    model.eval()
-
-    text = [data.update_text(s, model.config.wordvec_type) for s in text]
-
-    if batch_size is None:
-        intervals = [(0, len(text))]
-        orig_idx = None
-    else:
-        text, orig_idx = sort_with_indices(text, key=len, reverse=True)
-        intervals = split_into_batches(text, batch_size)
-    labels = []
-    for interval in intervals:
-        if interval[1] - interval[0] == 0:
-            # this can happen for empty text
-            continue
-        output = model(text[interval[0]:interval[1]])
-        predicted = torch.argmax(output, dim=1)
-        labels.extend(predicted.tolist())
-
-    if orig_idx:
-        text = unsort(text, orig_idx)
-        labels = unsort(labels, orig_idx)
-
-    logger.debug("Found labels")
-    for (label, sentence) in zip(labels, text):
-        logger.debug((label, sentence))
-
-    return labels
