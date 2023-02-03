@@ -83,3 +83,6 @@ class ConstituencyClassifier(BaseClassifier):
             'labels':          self.labels,
         }
         return params
+
+    def extract_sentences(self, doc):
+        return [sentence.constituency for sentence in doc.sentences]

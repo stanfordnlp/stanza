@@ -482,3 +482,6 @@ class CNNClassifier(BaseClassifier):
         sentences = [data.update_text(s, self.config.wordvec_type) for s in sentences]
         return sentences
 
+    def extract_sentences(self, doc):
+        # TODO: tokens or words better here?
+        return [[token.text for token in sentence.tokens] for sentence in doc.sentences]

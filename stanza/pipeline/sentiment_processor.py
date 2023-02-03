@@ -12,9 +12,7 @@ ClassifierProcessor and have "sentiment" be an option.
 from types import SimpleNamespace
 
 from stanza.models.classifiers.trainer import Trainer
-from stanza.models.classifiers.utils import ModelType
 
-from stanza.models.common import doc
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
@@ -58,12 +56,7 @@ class SentimentProcessor(UDProcessor):
         self._batch_size = config.get('batch_size', SentimentProcessor.DEFAULT_BATCH_SIZE)
 
     def process(self, document):
-        sentences = document.sentences
-        if self._model_type is ModelType.CNN:
-            # TODO: tokens or words better here?
-            sentences = [[token.text for token in sentence.tokens] for sentence in sentences]
-        else:
-            sentences = [sentence.constituency for sentence in sentences]
+        sentences = self._model.extract_sentences(document)
         labels = self._model.label_sentences(sentences, batch_size=self._batch_size)
         # TODO: allow a classifier processor for any attribute, not just sentiment
         document.set(SENTIMENT, labels, to_sentence=True)
