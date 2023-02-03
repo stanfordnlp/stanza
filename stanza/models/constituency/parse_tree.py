@@ -81,8 +81,14 @@ class Tree(StanzaObject):
         """
         Get the labels of the leaves
         """
+        if self.is_leaf():
+            return [self.label]
+
         words = [x.children[0].label for x in self.yield_preterminals()]
         return words
+
+    def __len__(self):
+        return len(self.leaf_labels())
 
     def all_leaves_are_preterminals(self):
         """
