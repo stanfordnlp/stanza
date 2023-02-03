@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import logging
 
 import torch
@@ -16,7 +18,13 @@ and the ConstituencyClassifier processes trees
 
 logger = logging.getLogger('stanza')
 
-class BaseClassifier(nn.Module):
+class BaseClassifier(ABC, nn.Module):
+    @abstractmethod
+    def extract_sentences(self, doc):
+        """
+        Extract the sentences or the relevant information in the sentences from a document
+        """
+
     def preprocess_sentences(self, sentences):
         """
         By default, don't do anything
