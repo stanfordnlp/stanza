@@ -309,7 +309,7 @@ class Pipeline:
                         raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
                     if processor_name not in resources[lang]:
                         # user asked for a model which doesn't exist for this language?
-                        raise UnsupportedProcessorError(processor_name, lang)
+                        raise UnsupportedProcessorError(processor_name, lang) from e
                     if not os.path.exists(model_path):
                         model_name, _ = os.path.splitext(model_name)
                         # TODO: before recommending this, check that such a thing exists in resources.json.

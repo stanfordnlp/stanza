@@ -58,7 +58,9 @@ class Trainer:
     @staticmethod
     def load(filename, args, foundation_cache=None, load_optimizer=False):
         if not os.path.exists(filename):
-            if os.path.exists(os.path.join(args.save_dir, filename)):
+            if args.save_dir is None:
+                raise FileNotFoundError("Cannot find model in {} and args.save_dir is None".format(filename))
+            elif os.path.exists(os.path.join(args.save_dir, filename)):
                 filename = os.path.join(args.save_dir, filename)
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args.save_dir, filename)))

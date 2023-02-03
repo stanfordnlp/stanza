@@ -43,9 +43,13 @@ class SentimentProcessor(UDProcessor):
                                charlm_backward_file = backward_charlm_path,
                                wordvec_pretrain_file = pretrain_path,
                                elmo_model = None,
-                               use_elmo = False)
+                               use_elmo = False,
+                               save_dir = None)
+        filename = config['model_path']
+        if filename is None:
+            raise FileNotFoundError("No model specified for the sentiment processor.  Perhaps it is not supported for the language.  {}".format(config))
         # set up model
-        trainer = Trainer.load(filename=config['model_path'],
+        trainer = Trainer.load(filename=filename,
                                args=args,
                                foundation_cache=pipeline.foundation_cache)
         self._model = trainer.model
