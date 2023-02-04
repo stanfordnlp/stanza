@@ -7,7 +7,7 @@ import stanza
 from stanza.tests import *
 
 from stanza.pipeline import core
-from stanza.resources.common import get_md5
+from stanza.resources.common import get_md5, load_resources_json
 
 pytestmark = pytest.mark.pipeline
 
@@ -197,16 +197,23 @@ def test_limited_pipeline():
         # this should fail
         doc = pipe("John Bauer works at Stanford", processors="tokenize,depparse")
 
-def test_empty_unknown_language():
+@pytest.fixture(scope="module")
+def unknown_language_name():
+    resources = load_resources_json(model_dir=TEST_MODELS_DIR)
+    name = "en"
+    while name in resources:
+        name = name + "z"
+    assert name != "en"
+    return name
+
+def test_empty_unknown_language(unknown_language_name):
     """
     Check that there is an error for trying to load an unknown language
-
-    (expects zzzzz to stay unknown forever)
     """
     with pytest.raises(ValueError):
-        pipe = stanza.Pipeline("zzzzz", download_method=None)
+        pipe = stanza.Pipeline(unknown_language_name, download_method=None)
 
-def test_unknown_language_tokenizer():
+def test_unknown_language_tokenizer(unknown_language_name):
     """
     Test that loading tokenize works for an unknown language
     """
@@ -214,7 +221,7 @@ def test_unknown_language_tokenizer():
     # even if we one day add MWT to English, the tokenizer by itself should still work
     tokenize_processor = base_pipe.processors["tokenize"]
 
-    pipe=stanza.Pipeline("zzzzz",
+    pipe=stanza.Pipeline(unknown_language_name,
                          processors="tokenize",
                          allow_unknown_language=True,
                          tokenize_model_path=tokenize_processor.config['model_path'],
@@ -224,7 +231,7 @@ def test_unknown_language_tokenizer():
     assert words == ['This', 'is', 'a', 'test']
 
 
-def test_unknown_language_mwt():
+def test_unknown_language_mwt(unknown_language_name):
     """
     Test that loading tokenize & mwt works for an unknown language
     """
@@ -233,7 +240,7 @@ def test_unknown_language_mwt():
     tokenize_processor = base_pipe.processors["tokenize"]
     mwt_processor = base_pipe.processors["mwt"]
 
-    pipe=stanza.Pipeline("zzzzz",
+    pipe=stanza.Pipeline(unknown_language_name,
                          processors="tokenize,mwt",
                          allow_unknown_language=True,
                          tokenize_model_path=tokenize_processor.config['model_path'],
