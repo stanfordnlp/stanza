@@ -437,6 +437,14 @@ treebank_special_cases = {
 
 SHORTNAME_RE = re.compile("^[a-z-]+_[a-z0-9-_]+$")
 
+def langcode_to_lang(lcode):
+    if lcode in lcode2lang:
+        return lcode2lang[lcode]
+    elif lcode.lower() in lcode2lang:
+        return lcode2lang[lcode.lower()]
+    else:
+        return lcode
+
 def lang_to_langcode(lang):
     if lang in lang2lcode:
         lcode = lang2lcode[lang]

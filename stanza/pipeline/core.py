@@ -13,6 +13,7 @@ import os
 
 from distutils.util import strtobool
 from stanza.pipeline._constants import *
+from stanza.models.common.constant import langcode_to_lang
 from stanza.models.common.doc import Document
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.utils import default_device
@@ -187,6 +188,7 @@ class Pipeline:
                  proxies=None,
                  foundation_cache=None,
                  device=None,
+                 allow_unknown_language=False,
                  **kwargs):
         self.lang, self.dir, self.kwargs = lang, dir, kwargs
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
@@ -227,23 +229,30 @@ class Pipeline:
             logger.warning(f'Unsupported language: {lang}.')
 
         # Maintain load list
-        self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized"))) if lang in resources else []
-        self.load_list = add_dependencies(resources, lang, self.load_list) if lang in resources else []
-        if download_method is not DownloadMethod.NONE:
-            # skip processors which aren't downloaded from our collection
-            download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
-            # skip variants
-            download_list = filter_variants(download_list)
-            # gather up the model list...
-            download_list = flatten_processor_list(download_list)
-            # download_models will skip models we already have
-            download_models(download_list,
-                            resources=resources,
-                            lang=lang,
-                            model_dir=self.dir,
-                            resources_version=resources_version,
-                            proxies=proxies,
-                            log_info=False)
+        if lang in resources:
+            self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized")))
+            self.load_list = add_dependencies(resources, lang, self.load_list)
+            if download_method is not DownloadMethod.NONE:
+                # skip processors which aren't downloaded from our collection
+                download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
+                # skip variants
+                download_list = filter_variants(download_list)
+                # gather up the model list...
+                download_list = flatten_processor_list(download_list)
+                # download_models will skip models we already have
+                download_models(download_list,
+                                resources=resources,
+                                lang=lang,
+                                model_dir=self.dir,
+                                resources_version=resources_version,
+                                proxies=proxies,
+                                log_info=False)
+        elif allow_unknown_language:
+            self.load_list = [(proc, [ModelSpecification(processor=proc, package='default', dependencies=None)])
+                              for proc in list(processors.keys())]
+            lang_name = langcode_to_lang(lang)
+        else:
+            self.load_list = []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
             raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))

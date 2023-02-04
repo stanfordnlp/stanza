@@ -196,3 +196,46 @@ def test_limited_pipeline():
     with pytest.raises(ValueError):
         # this should fail
         doc = pipe("John Bauer works at Stanford", processors="tokenize,depparse")
+
+def test_empty_unknown_language():
+    """
+    Check that there is an error for trying to load an unknown language
+
+    (expects zzzzz to stay unknown forever)
+    """
+    with pytest.raises(ValueError):
+        pipe = stanza.Pipeline("zzzzz", download_method=None)
+
+def test_unknown_language_tokenizer():
+    """
+    Test that loading tokenize works for an unknown language
+    """
+    base_pipe = stanza.Pipeline("en", dir=TEST_MODELS_DIR, processors="tokenize", download_method=None)
+    # even if we one day add MWT to English, the tokenizer by itself should still work
+    tokenize_processor = base_pipe.processors["tokenize"]
+
+    pipe=stanza.Pipeline("zzzzz",
+                         processors="tokenize",
+                         allow_unknown_language=True,
+                         tokenize_model_path=tokenize_processor.config['model_path'],
+                         download_method=None)
+    doc = pipe("This is a test")
+    words = [x.text for x in doc.sentences[0].words]
+    assert words == ['This', 'is', 'a', 'test']
+
+
+def test_unknown_language_mwt():
+    """
+    Test that loading tokenize & mwt works for an unknown language
+    """
+    base_pipe = stanza.Pipeline("fr", dir=TEST_MODELS_DIR, processors="tokenize,mwt", download_method=None)
+    assert len(base_pipe.processors) == 2
+    tokenize_processor = base_pipe.processors["tokenize"]
+    mwt_processor = base_pipe.processors["mwt"]
+
+    pipe=stanza.Pipeline("zzzzz",
+                         processors="tokenize,mwt",
+                         allow_unknown_language=True,
+                         tokenize_model_path=tokenize_processor.config['model_path'],
+                         mwt_model_path=mwt_processor.config['model_path'],
+                         download_method=None)
