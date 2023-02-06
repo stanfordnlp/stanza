@@ -29,7 +29,27 @@ BERT = {
     # "da": "Maltehb/danish-bert-botxo",
     #
     # the multilingual bert is a marginal improvement for conparse
-    "da": "bert-base-multilingual-cased",
+    #
+    # December 2022 update:
+    # there are quite a few Danish transformers available on HuggingFace
+    # here are the results of training a constituency parser with adadelta/adamw
+    # on each of them:
+    #
+    # no bert                              0.8245    0.8230
+    # alexanderfalk/danbert-small-cased    0.8236    0.8286
+    # Geotrend/distilbert-base-da-cased    0.8268    0.8306
+    # sarnikowski/convbert-small-da-cased  0.8322    0.8341
+    # bert-base-multilingual-cased         0.8341    0.8342
+    # vesteinn/ScandiBERT-no-faroese       0.8373    0.8408
+    # Maltehb/danish-bert-botxo            0.8383    0.8408
+    # vesteinn/ScandiBERT                  0.8421    0.8475
+    #
+    # Also, two models have token windows too short for use with the
+    # Danish dataset:
+    #  jonfd/electra-small-nordic
+    #  Maltehb/aelaectra-danish-electra-small-cased
+    #
+    "da": "vesteinn/ScandiBERT",
 
     # As of April 2022, the bert models available have a weird
     # tokenizer issue where soft hyphen causes it to crash.
@@ -44,6 +64,12 @@ BERT = {
     "de": "dbmdz/bert-base-german-cased",
 
     # https://huggingface.co/roberta-base
+    # an experiment with the constituency parser
+    # to compare roberta-base vs roberta-large had
+    # better results with roberta-large
+    # this was true even with more than 4 layers of roberta-large
+    # roberta-base:  0.9591
+    # roberta-large: 0.9577
     "en": "roberta-base",
 
     # NER scores for a couple Persian options:
@@ -108,8 +134,11 @@ BERT = {
 
     # from https://github.com/VinAIResearch/PhoBERT
     # "vi": "vinai/phobert-base",
-    # another option is phobert-large, but that doesn't
-    # change the scores any
+    # using 6 or 7 layers of phobert-large is slightly
+    # more effective for constituency parsing than
+    # using 4 layers of phobert-base
+    # ... going beyond 4 layers of phobert-base
+    # does not help the scores
     "vi": "vinai/phobert-large",
 
     # https://github.com/ymcui/Chinese-BERT-wwm
@@ -123,6 +152,18 @@ BERT = {
     # herbert-large-cased (dev/test): 92.25/91.62
     # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
     "pl": "allegro/herbert-base-cased",
+
+    # https://huggingface.co/xlm-roberta-base
+    # Scores by entity on 18 labels:
+    # no bert : 86.68
+    # xlm-roberta-base : 89.31
+    "hy": "xlm-roberta-base",
+}
+
+BERT_LAYERS = {
+    # not clear what the best number is without more experiments,
+    # but more than 4 is working better than just 4
+    "vi": 7,
 }
 
 def build_argparse():
@@ -250,7 +291,10 @@ def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
         return ud_eval.build_evaluation_table(evaluation, verbose=True, counts=False, enhanced=False)
     else:
         results = [evaluation[key].f1 for key in evals]
-        return " ".join("{:.2f}".format(100 * x) for x in results)
+        max_len = max(5, max(len(e) for e in evals))
+        evals_string = " ".join(("{:>%d}" % max_len).format(e) for e in evals)
+        results_string = " ".join(("{:%d.2f}" % max_len).format(100 * x) for x in results)
+        return evals_string + "\n" + results_string
 
 def run_eval_script_tokens(eval_gold, eval_pred):
     return run_eval_script(eval_gold, eval_pred, evals=["Tokens", "Sentences", "Words"])
@@ -283,7 +327,10 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
                 # error will let us find that pretrain later
                 pass
         if os.path.exists(default_pt_path):
-            logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+            if dataset is not None and dataset_pretrains is not None and language in dataset_pretrains and dataset in dataset_pretrains[language]:
+                logger.info(f"Using default pretrain for {language}:{dataset}, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+            else:
+                logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             return default_pt_path
 
     pretrain_path = '{}/{}/pretrain/*.pt'.format(model_dir, language)
@@ -332,8 +379,7 @@ def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
             logger.info(f'Downloaded model, using model {resource_path} for {direction} charlm')
             return resource_path
     except ValueError as e:
-        # we're about to throw an error anyway
-        pass
+        raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work") from e
 
     raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work")
 
@@ -342,8 +388,24 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
     If specified, return forward and backward charlm args
     """
     if charlm:
-        forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
-        backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
+        try:
+            forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
+            backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
+        except FileNotFoundError as e:
+            # if we couldn't find sd_isra when training an SD model,
+            # for example, but isra exists, we try to download the
+            # shorter model name
+            if charlm.startswith(language + "_"):
+                short_charlm = charlm[len(language)+1:]
+                try:
+                    forward = find_charlm_file('forward', language, short_charlm, model_dir=model_dir)
+                    backward = find_charlm_file('backward', language, short_charlm, model_dir=model_dir)
+                except FileNotFoundError as e2:
+                    raise FileNotFoundError("Tried to find charlm %s, which doesn't exist.  Also tried %s, but didn't find that either" % (charlm, short_charlm)) from e
+                logger.warning("Was asked to find charlm %s, which does not exist.  Did find %s though", charlm, short_charlm)
+            else:
+                raise
+
         char_args = ['--charlm_forward_file', forward,
                      '--charlm_backward_file', backward]
         if not base_args:
@@ -369,4 +431,5 @@ def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
         return default_charlm
     else:
         return None
+
 
