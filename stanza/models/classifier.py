@@ -306,7 +306,27 @@ def parse_args(args=None):
     return args
 
 
-def confusion_dataset(model, dataset):
+def dataset_predictions(model, dataset):
+    model.eval()
+    index_label_map = {x: y for (x, y) in enumerate(model.labels)}
+
+    dataset_lengths = data.sort_dataset_by_len(dataset, keep_index=True)
+
+    predictions = []
+    o_idx = []
+    for length in dataset_lengths.keys():
+        batch = dataset_lengths[length]
+        output = model([x[0] for x in batch])
+        for i in range(len(batch)):
+            predicted = torch.argmax(output[i])
+            predicted_label = index_label_map[predicted.item()]
+            predictions.append(predicted_label)
+            o_idx.append(batch[i][1])
+
+    predictions = utils.unsort(predictions, o_idx)
+    return predictions
+
+def confusion_dataset(predictions, dataset, labels):
     """
     Returns a confusion matrix
 
@@ -314,32 +334,15 @@ def confusion_dataset(model, dataset):
     Second key: predicted
     so: confusion_matrix[gold][predicted]
     """
-    model.eval()
-    index_label_map = {x: y for (x, y) in enumerate(model.labels)}
-
-    dataset_lengths = data.sort_dataset_by_len(dataset, keep_index=True)
-
     confusion_matrix = {}
-    for label in model.labels:
+    for label in labels:
         confusion_matrix[label] = {}
 
-    predictions = []
-    o_idx = []
-    for length in dataset_lengths.keys():
-        batch = dataset_lengths[length]
-        expected_labels = [x[0].sentiment for x in batch]
+    for predicted_label, datum in zip(predictions, dataset):
+        expected_label = datum.sentiment
+        confusion_matrix[expected_label][predicted_label] = confusion_matrix[expected_label].get(predicted_label, 0) + 1
 
-        output = model([x[0] for x in batch])
-        for i in range(len(expected_labels)):
-            predicted = torch.argmax(output[i])
-            predicted_label = index_label_map[predicted.item()]
-            predictions.append(predicted_label)
-            o_idx.append(batch[i][1])
-            confusion_matrix[expected_labels[i]][predicted_label] = confusion_matrix[expected_labels[i]].get(predicted_label, 0) + 1
-
-    predictions = utils.unsort(predictions, o_idx)
-
-    return confusion_matrix, predictions
+    return confusion_matrix
 
 
 def score_dataset(model, dataset, label_map=None,
@@ -397,7 +400,8 @@ def score_dataset(model, dataset, label_map=None,
     return correct
 
 def score_dev_set(model, dev_set, dev_eval_scoring):
-    confusion_matrix, _ = confusion_dataset(model, dev_set)
+    predictions = dataset_predictions(model, dev_set)
+    confusion_matrix = confusion_dataset(predictions, dev_set, model.labels)
     logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion_matrix, model.labels)))
     correct, total = confusion_to_accuracy(confusion_matrix)
     macro_f1 = confusion_to_macro_f1(confusion_matrix)
@@ -617,7 +621,8 @@ def main(args=None):
     data.check_labels(trainer.model.labels, test_set)
 
     if args.test_remap_labels is None:
-        confusion_matrix, predictions = confusion_dataset(trainer.model, test_set)
+        predictions = dataset_predictions(trainer.model, test_set)
+        confusion_matrix = confusion_dataset(predictions, test_set, trainer.model.labels)
         if args.output_predictions:
             logger.info("List of predictions: %s", predictions)
         logger.info("Confusion matrix:\n{}".format(format_confusion(confusion_matrix, trainer.model.labels)))
