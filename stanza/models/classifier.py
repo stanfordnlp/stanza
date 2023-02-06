@@ -171,6 +171,7 @@ def build_parser():
     parser.add_argument('--train_file', type=str, default=DEFAULT_TRAIN, help='Input file(s) to train a model from.  Each line is an example.  Should go <label> <tokenized sentence>.  Comma separated list.')
     parser.add_argument('--dev_file', type=str, default=DEFAULT_DEV, help='Input file(s) to use as the dev set.')
     parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
+    parser.add_argument('--output_predictions', default=False, action='store_true', help='Output predictions when running the test set')
     parser.add_argument('--max_epochs', type=int, default=100)
     parser.add_argument('--tick', type=int, default=2000)
 
@@ -316,23 +317,29 @@ def confusion_dataset(model, dataset):
     model.eval()
     index_label_map = {x: y for (x, y) in enumerate(model.labels)}
 
-    dataset_lengths = data.sort_dataset_by_len(dataset)
+    dataset_lengths = data.sort_dataset_by_len(dataset, keep_index=True)
 
     confusion_matrix = {}
     for label in model.labels:
         confusion_matrix[label] = {}
 
+    predictions = []
+    o_idx = []
     for length in dataset_lengths.keys():
         batch = dataset_lengths[length]
-        expected_labels = [x.sentiment for x in batch]
+        expected_labels = [x[0].sentiment for x in batch]
 
-        output = model(batch)
+        output = model([x[0] for x in batch])
         for i in range(len(expected_labels)):
             predicted = torch.argmax(output[i])
             predicted_label = index_label_map[predicted.item()]
+            predictions.append(predicted_label)
+            o_idx.append(batch[i][1])
             confusion_matrix[expected_labels[i]][predicted_label] = confusion_matrix[expected_labels[i]].get(predicted_label, 0) + 1
 
-    return confusion_matrix
+    predictions = utils.unsort(predictions, o_idx)
+
+    return confusion_matrix, predictions
 
 
 def score_dataset(model, dataset, label_map=None,
@@ -390,7 +397,7 @@ def score_dataset(model, dataset, label_map=None,
     return correct
 
 def score_dev_set(model, dev_set, dev_eval_scoring):
-    confusion_matrix = confusion_dataset(model, dev_set)
+    confusion_matrix, _ = confusion_dataset(model, dev_set)
     logger.info("Dev set confusion matrix:\n{}".format(format_confusion(confusion_matrix, model.labels)))
     correct, total = confusion_to_accuracy(confusion_matrix)
     macro_f1 = confusion_to_macro_f1(confusion_matrix)
@@ -610,7 +617,9 @@ def main(args=None):
     data.check_labels(trainer.model.labels, test_set)
 
     if args.test_remap_labels is None:
-        confusion_matrix = confusion_dataset(trainer.model, test_set)
+        confusion_matrix, predictions = confusion_dataset(trainer.model, test_set)
+        if args.output_predictions:
+            logger.info("List of predictions: %s", predictions)
         logger.info("Confusion matrix:\n{}".format(format_confusion(confusion_matrix, trainer.model.labels)))
         correct, total = confusion_to_accuracy(confusion_matrix)
         logger.info("Macro f1: {}".format(confusion_to_macro_f1(confusion_matrix)))
