@@ -2,9 +2,11 @@ import os
 
 import pytest
 
+import stanza
 import stanza.models.classifier as classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
+from stanza.tests import TEST_MODELS_DIR
 from stanza.tests.classifiers.test_classifier import fake_embeddings
 from stanza.tests.classifiers.test_data import train_file_with_trees, dev_file_with_trees
 from stanza.models.common import utils
@@ -56,7 +58,7 @@ class TestConstituencyClassifier:
         save_filename = os.path.join(args.save_dir, args.save_name)
         checkpoint_file = utils.checkpoint_name(args.save_dir, save_filename, args.checkpoint_save_name)
         classifier.train_model(trainer, save_filename, checkpoint_file, args, train_set, dev_set, labels)
-        return trainer
+        return trainer, train_set, args
 
     def test_build_model(self, tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees):
         """
@@ -78,6 +80,34 @@ class TestConstituencyClassifier:
 
     def test_train_basic(self, tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees):
         self.run_training(tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees)
+
+    def test_train_pipeline(self, tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees):
+        """
+        Test that writing out a temp model, then loading it in the pipeline is a thing that works
+        """
+        trainer, _, args = self.run_training(tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees)
+        save_filename = os.path.join(args.save_dir, args.save_name)
+        assert os.path.exists(save_filename)
+        assert os.path.exists(args.constituency_model)
+
+        pipeline_args = {"lang": "en",
+                         "download_method": None,
+                         "model_dir": TEST_MODELS_DIR,
+                         "processors": "tokenize,pos,constituency,sentiment",
+                         "tokenize_pretokenized": True,
+                         "constituency_model_path": args.constituency_model,
+                         "constituency_pretrain_path": args.wordvec_pretrain_file,
+                         "constituency_backward_charlm_path": None,
+                         "constituency_forward_charlm_path": None,
+                         "sentiment_model_path": save_filename,
+                         "sentiment_pretrain_path": args.wordvec_pretrain_file,
+                         "sentiment_backward_charlm_path": None,
+                         "sentiment_forward_charlm_path": None}
+        pipeline = stanza.Pipeline(**pipeline_args)
+        doc = pipeline("This is a test")
+        # since the model is random, we have no expectations for what the result actually is
+        assert doc.sentences[0].sentiment is not None
+
 
     def test_train_all_words(self, tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees):
         self.run_training(tmp_path, constituency_model, fake_embeddings, train_file_with_trees, dev_file_with_trees, ['--constituency_all_words'])
