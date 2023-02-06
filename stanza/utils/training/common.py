@@ -104,6 +104,12 @@ BERT = {
     # test: 2022-03-04 INFO: fi_turku 91.36
     "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
+    # https://huggingface.co/xlm-roberta-base
+    # Scores by entity for armtdp NER on 18 labels:
+    # no bert : 86.68
+    # xlm-roberta-base : 89.31
+    "hy": "xlm-roberta-base",
+
     # Indonesian POS experiments: dev set of GSD
     # python3 stanza/utils/training/run_pos.py id_gsd
     # 89.95
