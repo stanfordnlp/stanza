@@ -112,7 +112,7 @@ def dataset_vocab(dataset):
         raise ValueError("Unexpected values for PAD and UNK!")
     return vocab
 
-def sort_dataset_by_len(dataset):
+def sort_dataset_by_len(dataset, keep_index=False):
     """
     returns a dict mapping length -> list of items of that length
 
@@ -122,8 +122,11 @@ def sort_dataset_by_len(dataset):
     lengths = sorted(list(set(len(x.text) for x in dataset)))
     for l in lengths:
         sorted_dataset[l] = []
-    for item in dataset:
-        sorted_dataset[len(item.text)].append(item)
+    for item_idx, item in enumerate(dataset):
+        if keep_index:
+            sorted_dataset[len(item.text)].append((item, item_idx))
+        else:
+            sorted_dataset[len(item.text)].append(item)
     return sorted_dataset
 
 def shuffle_dataset(sorted_dataset):
