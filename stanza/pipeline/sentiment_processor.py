@@ -21,6 +21,9 @@ class SentimentProcessor(UDProcessor):
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([SENTIMENT])
     # set of processor requirements for this processor
+    # TODO: a constituency based model needs CONSTITUENCY as well
+    # issue: by the time we load the model in Processor.__init__,
+    # the requirements are already prepared
     REQUIRES_DEFAULT = set([TOKENIZE])
 
     # default batch size, measured in words per batch
