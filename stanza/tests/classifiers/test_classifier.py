@@ -51,28 +51,32 @@ def test_file(tmp_path_factory):
         json.dump(test_set, fout, ensure_ascii=False)
     return test_filename
 
+@pytest.fixture(scope="module")
+def fake_embeddings(tmp_path_factory):
+    """
+    will return a path to a fake embeddings file with the words in SENTENCES
+    """
+    # could set np random seed here
+    words = sorted(set([x.lower() for y in SENTENCES for x in y]))
+    words = words[:-1]
+    embedding_dir = tmp_path_factory.mktemp("data")
+    embedding_txt = embedding_dir / "embedding.txt"
+    embedding_pt  = embedding_dir / "embedding.pt"
+    embedding = np.random.random((len(words), EMB_DIM))
+
+    with open(embedding_txt, "w", encoding="utf-8") as fout:
+        for word, emb in zip(words, embedding):
+            fout.write(word)
+            fout.write("\t")
+            fout.write("\t".join(str(x) for x in emb))
+            fout.write("\n")
+
+    pt = pretrain.Pretrain(str(embedding_pt), str(embedding_txt))
+    pt.load()
+    assert os.path.exists(embedding_pt)
+    return embedding_pt
+
 class TestClassifier:
-    @pytest.fixture(scope="class")
-    def fake_embeddings(self, tmp_path_factory):
-        # could set np random seed here
-        words = sorted(set([x.lower() for y in SENTENCES for x in y]))
-        words = words[:-1]
-        embedding_txt = tmp_path_factory.mktemp("data") / "embedding.txt"
-        embedding_pt  = tmp_path_factory.mktemp("data") / "embedding.pt"
-        embedding = np.random.random((len(words), EMB_DIM))
-
-        with open(embedding_txt, "w", encoding="utf-8") as fout:
-            for word, emb in zip(words, embedding):
-                fout.write(word)
-                fout.write("\t")
-                fout.write("\t".join(str(x) for x in emb))
-                fout.write("\n")
-
-        pt = pretrain.Pretrain(str(embedding_pt), str(embedding_txt))
-        pt.load()
-        assert os.path.exists(embedding_pt)
-        return embedding_pt
-
     def build_model(self, tmp_path, fake_embeddings, train_file, dev_file, extra_args=None):
         """
         Build a model to be used by one of the later tests
