@@ -435,9 +435,14 @@ def checkpoint_name(save_dir, save_name, checkpoint_name):
     For example, can pass in args['save_dir'], args['save_name'], args['checkpoint_save_name']
     """
     if checkpoint_name:
+        model_dir = os.path.split(checkpoint_name)[0]
+        if model_dir == save_dir:
+            return checkpoint_name
         return os.path.join(save_dir, checkpoint_name)
 
-    save_name = os.path.join(save_dir, save_name)
+    model_dir = os.path.split(save_name)[0]
+    if model_dir != save_dir:
+        save_name = os.path.join(save_dir, save_name)
     if save_name.endswith(".pt"):
         return save_name[:-3] + "_checkpoint.pt"
 
