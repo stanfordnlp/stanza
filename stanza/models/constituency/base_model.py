@@ -264,8 +264,7 @@ class BaseModel(ABC):
         if keep_scores is true, the score will be the sum of the values
           returned by the model for each transition
 
-        transition_choice: which method of the model to use for
-          choosing the next transition
+        transition_choice: which method of the model to use for choosing the next transition
           predict for predicting the transition based on the model
           predict_gold to just extract the gold transition from the sequence
         """
