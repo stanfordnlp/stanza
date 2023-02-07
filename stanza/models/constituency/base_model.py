@@ -261,11 +261,13 @@ class BaseModel(ABC):
 
         The return is a list of tuples: (gold_tree, [(predicted, score) ...])
         gold_tree will be left blank if the data did not include gold trees
-        currently score is always 1.0, but the interface may be expanded
-        to get a score from the result of the parsing
+        if keep_scores is true, the score will be the sum of the values
+          returned by the model for each transition
 
         transition_choice: which method of the model to use for
-        choosing the next transition
+          choosing the next transition
+          predict for predicting the transition based on the model
+          predict_gold to just extract the gold transition from the sequence
         """
         treebank = []
         treebank_indices = []
