@@ -127,7 +127,7 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
             line = ' '.join(line.split())
             if line == '':
                 continue
-            elif line == '<s>':
+            elif line == '<s>' or line.startswith("<s id="):
                 tree = ""
                 tree += '(ROOT '
                 reading_tree = True

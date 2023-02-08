@@ -89,11 +89,16 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
         output_limits = (stop_train, stop_dev)
         output_names = (train_path, dev_path)
         print("Splitting {} train, {} dev".format(stop_train, stop_dev - stop_train))
-    else:
+    elif train_size + dev_size > 0.0:
         stop_dev = int(num_samples * (train_size + dev_size))
         output_limits = (stop_train, stop_dev, num_samples)
         output_names = (train_path, dev_path, test_path)
         print("Splitting {} train, {} dev, {} test".format(stop_train, stop_dev - stop_train, num_samples - stop_dev))
+    else:
+        stop_dev = 0
+        output_limits = (num_samples,)
+        output_names = (test_path,)
+        print("Copying all {} trees to test".format(num_samples))
 
     # Count how much stuff we've written.
     # We will switch to the next output file when we're written enough

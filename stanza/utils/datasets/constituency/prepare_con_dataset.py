@@ -29,6 +29,10 @@ vlsp09 is the 2009 constituency treebank:
     In conjunction with ACL-IJCNLP 2009, Suntec City, Singapore, 2009
   This can be obtained by contacting vlsp.resources@gmail.com
 
+vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
+  there is an official test set as well
+  you may be able to obtain both of these by contacting vlsp.resources@gmail.com
+
 da_arboretum
   Ekhard Bick
     Arboretum, a Hybrid Treebank for Danish
@@ -174,8 +178,8 @@ def process_vlsp22(paths, dataset_name, *args):
     parser = argparse.ArgumentParser()
     parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
     parser.add_argument('--no_convert_brackets', default=True, action='store_false', dest='convert_brackets', help="Don't convert the VLSP parens RKBT & LKBT to PTB parens")
-    parser.add_argument('--n_splits', default=None, type=int, help='Split the data into this many pieces.  Relevant as there is no set training/dev split and no official test data yet, so this allows for N models on N different dev sets')
-    parser.add_argument('--test_split', default=False, action='store_true', help='Split 1/10th of the data as a test split as well.  Useful for experimental results')
+    parser.add_argument('--n_splits', default=None, type=int, help='Split the data into this many pieces.  Relevant as there is no set training/dev split, so this allows for N models on N different dev sets')
+    parser.add_argument('--test_split', default=False, action='store_true', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
     args = parser.parse_args(args=list(*args))
 
     if os.path.exists(args.subdir):
@@ -185,14 +189,17 @@ def process_vlsp22(paths, dataset_name, *args):
     if not os.path.exists(vlsp_dir):
         raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
-    vlsp_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if not x.endswith(".zip")]
-    vlsp_files.sort()
-    if len(vlsp_files) == 0:
-        raise FileNotFoundError("No tree files found in {}".format(vlsp_dir))
-    print("Loaded files from {}".format(vlsp_dir))
-    print("Procesing:\n  {}".format("\n  ".join(vlsp_files)))
-    with tempfile.TemporaryDirectory() as tmp_output_path:
-        vtb_convert.convert_files(vlsp_files, tmp_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
+    vlsp_test_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("private") and not x.endswith(".zip")]
+    vlsp_train_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("file") and not x.endswith(".zip")]
+    vlsp_train_files.sort()
+    if len(vlsp_train_files) == 0:
+        raise FileNotFoundError("No train files (files starting with 'file') found in {}".format(vlsp_dir))
+    if len(vlsp_test_files) == 0:
+        raise FileNotFoundError("No test files found in {}".format(vlsp_dir))
+    print("Loading training files from {}".format(vlsp_dir))
+    print("Procesing training files:\n  {}".format("\n  ".join(vlsp_train_files)))
+    with tempfile.TemporaryDirectory() as train_output_path:
+        vtb_convert.convert_files(vlsp_train_files, train_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
         # This produces a 0 length test set, just as a placeholder until the actual test set is released
         if args.n_splits:
             test_size = 0.1 if args.test_split else 0.0
@@ -205,24 +212,25 @@ def process_vlsp22(paths, dataset_name, *args):
                 rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
                 if args.test_split:
                     rotation_name = rotation_name + "t"
-                vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=train_size, dev_size=dev_size, rotation=(rotation, args.n_splits))
-                _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], rotation_name)
-                if not os.path.exists(test_file):
-                    with open(test_file, "w"):
-                        # create an empty test file - currently we don't have actual test data for VLSP 22
-                        pass
+                vtb_split.split_files(train_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=train_size, dev_size=dev_size, rotation=(rotation, args.n_splits))
         else:
             test_size = 0.1 if args.test_split else 0.0
             dev_size = 0.1
             train_size = 1.0 - test_size - dev_size
             if args.test_split:
                 dataset_name = dataset_name + "t"
-            vtb_split.split_files(tmp_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=train_size, dev_size=dev_size)
-            _, _, test_file = vtb_split.create_paths(paths["CONSTITUENCY_DATA_DIR"], dataset_name)
-            if not os.path.exists(test_file):
-                with open(test_file, "w"):
-                    # create an empty test file - currently we don't have actual test data for VLSP 22
-                    pass
+            vtb_split.split_files(train_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=train_size, dev_size=dev_size)
+
+    if not args.test_split:
+        print("Procesing test files:\n  {}".format("\n  ".join(vlsp_test_files)))
+        with tempfile.TemporaryDirectory() as test_output_path:
+            vtb_convert.convert_files(vlsp_test_files, test_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
+            if args.n_splits:
+                for rotation in range(args.n_splits):
+                    rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
+                    vtb_split.split_files(test_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=0, dev_size=0)
+            else:
+                vtb_split.split_files(test_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0, dev_size=0)
 
 def process_arboretum(paths, dataset_name, *args):
     """
