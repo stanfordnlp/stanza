@@ -246,7 +246,7 @@ def read_treebank(filename, tree_callback=None):
 
     illegal_trees = [t for t in trees if len(t.children) > 1]
     if len(illegal_trees) > 0:
-        raise ValueError("Found {} tree(s) which had non-unary transitions at the ROOT.  First illegal tree: {}".format(len(illegal_trees), illegal_trees[0]))
+        raise ValueError("Found {} tree(s) which had non-unary transitions at the ROOT.  First illegal tree: {:P}".format(len(illegal_trees), illegal_trees[0]))
 
     return trees
 
