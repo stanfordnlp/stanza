@@ -7,6 +7,19 @@ transition
 
 Currently the code is kind of awkward because it includes a lot of
 duplicated logic in predict() and parse_sentences()
+
+Example of how to run it to build a silver dataset:
+
+python3 stanza/models/constituency/ensemble.py
+  saved_models/constituency/en_wsj_inorder_?.pt
+   --mode parse_text
+   --tokenized_file /nlp/scr/horatio/en_silver/en_split_100
+   --predict_file /nlp/scr/horatio/en_silver/en_split_100.inorder.mrg
+   --retag_package en_combined_bert
+   --lang en
+
+then, ideally, run a second time with a set of topdown models,
+then take the trees which match from the files
 """
 
 
