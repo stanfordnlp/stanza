@@ -344,7 +344,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
         if len(offsets) > tokenizer.model_max_length - 2:
-            logger.error("Invalid size, max size: %d, got %d %s", tokenizer.model_max_length, len(offsets), data[idx])
+            logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx], offsets)
             raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
     features = []
