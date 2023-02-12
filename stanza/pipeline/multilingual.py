@@ -2,8 +2,6 @@
 Class for running multilingual pipelines
 """
 
-import torch
-
 from collections import OrderedDict
 import copy
 import logging

@@ -6,7 +6,6 @@ from enum import Enum
 import io
 import itertools
 import sys
-import torch
 import logging
 import json
 import os
