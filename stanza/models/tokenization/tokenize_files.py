@@ -18,10 +18,11 @@ import zipfile
 import torch
 
 import stanza
-from stanza.models.common.utils import get_tqdm, open_read_text, default_device
+from stanza.models.common.utils import open_read_text, default_device
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.utils import output_predictions
 from stanza.pipeline.tokenize_processor import TokenizeProcessor
+from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 

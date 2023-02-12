@@ -37,8 +37,9 @@ from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
+from stanza.utils.get_tqdm import get_tqdm
 
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza.constituency.trainer')
 

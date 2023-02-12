@@ -3,9 +3,9 @@ import os
 import tempfile
 
 import stanza
-from stanza.models.common.utils import get_tqdm
 from stanza.utils.default_paths import get_default_paths
 from stanza.utils.datasets.ner.utils import read_tsv
+from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 

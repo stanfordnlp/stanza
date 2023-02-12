@@ -28,11 +28,11 @@ import os
 import random
 
 import stanza
-from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.utils.datasets.constituency import selftrain
+from stanza.utils.get_tqdm import get_tqdm
 
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 logger = logging.getLogger('stanza')
 
 def parse_args():

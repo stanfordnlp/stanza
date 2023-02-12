@@ -9,8 +9,9 @@ import logging
 from stanza.models.common import utils
 from stanza.models.constituency.parse_transitions import Shift, CompoundUnary, OpenConstituent, CloseConstituent, TransitionScheme, Finalize
 from stanza.models.constituency.tree_reader import read_trees
+from stanza.utils.get_tqdm import get_tqdm
 
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza.constituency.trainer')
 

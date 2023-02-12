@@ -13,11 +13,11 @@ import os
 import numpy as np
 
 import stanza
-from stanza.models.common import utils
 from stanza.utils.datasets.constituency import selftrain
+from stanza.utils.get_tqdm import get_tqdm
 
 logger = logging.getLogger('stanza')
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 def parse_args():
     """

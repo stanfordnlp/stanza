@@ -17,9 +17,9 @@ import logging
 
 import stanza
 from stanza.models.common.bert_embedding import load_tokenizer, filter_data
-from stanza.models.common.utils import get_tqdm
 from stanza.utils.datasets.constituency import selftrain_wiki
 from stanza.utils.datasets.constituency.selftrain import add_length_args, tokenize_docs
+from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 

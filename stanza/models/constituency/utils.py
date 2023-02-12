@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
-from stanza.models.common.utils import get_tqdm
+from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 

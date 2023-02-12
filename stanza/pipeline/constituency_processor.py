@@ -5,7 +5,7 @@ Processor that attaches a constituency tree to a sentence
 from stanza.models.constituency.trainer import Trainer
 
 from stanza.models.common import doc
-from stanza.models.common.utils import get_tqdm
+from stanza.utils.get_tqdm import get_tqdm
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 

@@ -10,9 +10,10 @@ import re
 import stanza
 from stanza.models.common import utils
 from stanza.models.common.bert_embedding import TextTooLongError
+from stanza.utils.get_tqdm import get_tqdm
 
 logger = logging.getLogger('stanza')
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 def common_args(parser):
     parser.add_argument(

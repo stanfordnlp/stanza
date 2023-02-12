@@ -8,10 +8,10 @@ import argparse
 import logging
 import sys
 
-from stanza.models.common import utils
 from stanza.models.constituency import tree_reader
+from stanza.utils.get_tqdm import get_tqdm
 
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza.constituency')
 

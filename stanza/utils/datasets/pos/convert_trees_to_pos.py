@@ -16,9 +16,9 @@ import os
 import shutil
 import sys
 
-from stanza.models.common.utils import get_tqdm
 from stanza.models.constituency import tree_reader
 import stanza.utils.default_paths as default_paths
+from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 

@@ -11,8 +11,9 @@ import re
 
 from stanza.models.common import utils
 from stanza.models.constituency.parse_tree import Tree
+from stanza.utils.get_tqdm import get_tqdm
 
-tqdm = utils.get_tqdm()
+tqdm = get_tqdm()
 
 OPEN_PAREN = "("
 CLOSE_PAREN = ")"
