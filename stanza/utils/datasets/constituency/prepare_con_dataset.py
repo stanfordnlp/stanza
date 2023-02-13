@@ -32,6 +32,11 @@ vlsp09 is the 2009 constituency treebank:
 vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
   there is an official test set as well
   you may be able to obtain both of these by contacting vlsp.resources@gmail.com
+  NGUYEN Thi Minh Huyen, HA My Linh, VU Xuan Luong, PHAN Thi Hue,
+  LE Van Cuong, NGUYEN Thi Luong, NGO The Quyen
+    VLSP 2022 Challenge: Vietnamese Constituency Parsing
+    to appear in Journal of Computer Science and Cybernetics.
+
 
 da_arboretum
   Ekhard Bick
