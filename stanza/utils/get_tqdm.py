@@ -25,7 +25,7 @@ def get_tqdm():
         if 'terminal' in ipy_str:
             from tqdm import tqdm
             return tqdm
-    except:
+    except Exception:
         if sys.stderr.isatty():
             from tqdm import tqdm
             return tqdm
