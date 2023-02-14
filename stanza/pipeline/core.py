@@ -415,6 +415,16 @@ class Pipeline:
                 doc = process(doc)
         return doc
 
+    def bulk_process(self, docs, *args, **kwargs):
+        """
+        Run the pipeline in bulk processing mode
+
+        Expects a list of str or a list of Docs
+        """
+        # Wrap each text as a Document unless it is already such a document
+        docs = [doc if isinstance(doc, Document) else Document([], text=doc) for doc in docs]
+        return self.process(docs, *args, **kwargs)
+
     def __str__(self):
         """
         Assemble the processors in order to make a simple description of the pipeline

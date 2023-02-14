@@ -191,12 +191,22 @@ class TestEnglishPipeline:
         pipeline("")
         pipeline("--")
 
+    def test_bulk_process(self, pipeline):
+        """ Double check that the bulk_process method in Pipeline converts documents as expected """
+        # it should process strings
+        processed = pipeline.bulk_process(EN_DOCS)
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
+        # it should pass Documents through successfully
+        docs = [Document([], text=t) for t in EN_DOCS]
+        processed = pipeline.bulk_process(docs)
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
     @pytest.fixture(scope="class")
     def processed_multidoc(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
         docs = [Document([], text=t) for t in EN_DOCS]
         return pipeline(docs)
-
 
     def test_conllu_multidoc(self, processed_multidoc):
         assert "\n\n".join(["{:C}".format(doc) for doc in processed_multidoc]) == EN_DOC_CONLLU_GOLD_MULTIDOC
