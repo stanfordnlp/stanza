@@ -2,6 +2,7 @@
 Pipeline that runs tokenize,mwt,pos,lemma,depparse
 """
 
+import collections
 from enum import Enum
 import io
 import itertools
@@ -424,6 +425,29 @@ class Pipeline:
         # Wrap each text as a Document unless it is already such a document
         docs = [doc if isinstance(doc, Document) else Document([], text=doc) for doc in docs]
         return self.process(docs, *args, **kwargs)
+
+    def stream(self, docs, batch_size=50, *args, **kwargs):
+        """
+        Go through an iterator of documents in batches, yield processed documents
+        """
+        if not isinstance(docs, collections.abc.Iterator):
+            docs = iter(docs)
+        def next_batch():
+            batch = []
+            for _ in range(batch_size):
+                try:
+                    next_doc = next(docs)
+                    batch.append(next_doc)
+                except StopIteration:
+                    return batch
+            return batch
+
+        batch = next_batch()
+        while batch:
+            batch = self.bulk_process(batch, *args, **kwargs)
+            for doc in batch:
+                yield doc
+            batch = next_batch()
 
     def __str__(self):
         """

@@ -202,6 +202,25 @@ class TestEnglishPipeline:
         processed = pipeline.bulk_process(docs)
         assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
+    def test_stream(self, pipeline):
+        """ Test the streaming interface to the Pipeline """
+        # Test all of the documents in one batch
+        # (the default batch size is significantly more than |EN_DOCS|)
+        processed = [doc for doc in pipeline.stream(EN_DOCS)]
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
+        # It should also work on an iterator rather than an iterable
+        processed = [doc for doc in pipeline.stream(iter(EN_DOCS))]
+        assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
+        # Stream one at a time
+        # This time, the sentence indices will be offset...
+        # TODO: add an offset to the sentence index
+        processed = [doc for doc in pipeline.stream(EN_DOCS, batch_size=1)]
+        processed = ["{:C}".format(doc) for doc in processed]
+        processed = [doc.replace("sent_id = 0", "sent_id = %d" % sent_idx) for sent_idx, doc in enumerate(processed)]
+        assert "\n\n".join(processed) == EN_DOC_CONLLU_GOLD_MULTIDOC
+
     @pytest.fixture(scope="class")
     def processed_multidoc(self, pipeline):
         """ Document created by running full English pipeline on a few sentences """
