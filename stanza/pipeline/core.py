@@ -11,7 +11,6 @@ import logging
 import json
 import os
 
-from distutils.util import strtobool
 from stanza.pipeline._constants import *
 from stanza.models.common.constant import langcode_to_lang
 from stanza.models.common.doc import Document
