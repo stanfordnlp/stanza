@@ -136,7 +136,7 @@ processor_dict = {
     'lemma': 'default'
 }
 stanza.download('de', processors=processor_dict, package=None)
-nlp = stanza.Pipeline('de', processors=processor_dict, package=None)
+nlp = stanza.Pipeline('de', processors=processor_dict, package=None, download_method=None)
 ```
 
 There is also a mechanism for only attempting to download models when
