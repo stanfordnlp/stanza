@@ -158,17 +158,20 @@ class Document(StanzaObject):
                     if comment.startswith("# text ="):
                         sentence.text = comment.split("=", 1)[-1].strip()
                         break
+
+            for comment in sentence_comments:
+                sentence.add_comment(comment)
+
             # look for sent_id in the comments
             # if it's there, overwrite the sent_idx id from above
             for comment in sentence_comments:
                 if comment.startswith("# sent_id"):
                     sentence.sent_id = comment.split("=", 1)[-1].strip()
                     break
-            else: # no sent_id found.  add a comment with our enumerated id
+            else:
+                # no sent_id found.  add a comment with our enumerated id
+                # setting the sent_id on the sentence will automatically add the comment
                 sentence.sent_id = str(sentence.index)
-                sentence_comments.append("# sent_id = " + sentence.sent_id)
-            for comment in sentence_comments:
-                sentence.add_comment(comment)
 
     def _count_words(self):
         """
@@ -349,6 +352,10 @@ class Document(StanzaObject):
         """ Returns a list of list of comments for the sentences """
         return [[comment for comment in sentence.comments] for sentence in self.sentences]
 
+    def reindex_sentences(self, start_index):
+        for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
+            sentence.sent_id = str(sent_id)
+
     def to_dict(self):
         """ Dumps the whole document into a list of list of dictionary for each token in each sentence in the doc.
         """
@@ -488,6 +495,13 @@ class Sentence(StanzaObject):
     def sent_id(self, value):
         """ Set the sentence's sent_id value. """
         self._sent_id = value
+        sent_id_comment = "# sent_id = " + str(value)
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# sent_id = "):
+                self._comments[comment_idx] = sent_id_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(sent_id_comment)
 
     @property
     def doc(self):

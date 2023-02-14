@@ -428,6 +428,8 @@ class Pipeline:
     def stream(self, docs, batch_size=50, *args, **kwargs):
         """
         Go through an iterator of documents in batches, yield processed documents
+
+        sentence indices will be counted across the entire iterator
         """
         if not isinstance(docs, collections.abc.Iterator):
             docs = iter(docs)
@@ -441,10 +443,13 @@ class Pipeline:
                     return batch
             return batch
 
+        sentence_start_index = 0
         batch = next_batch()
         while batch:
             batch = self.bulk_process(batch, *args, **kwargs)
             for doc in batch:
+                doc.reindex_sentences(sentence_start_index)
+                sentence_start_index += len(doc.sentences)
                 yield doc
             batch = next_batch()
 

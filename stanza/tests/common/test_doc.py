@@ -113,6 +113,24 @@ def test_sentiment_comment(doc):
         assert len(sentiment_comments) == 1
         assert sentiment_comments[0].endswith(expected)
 
+def test_sent_id_comment(doc):
+    """
+    Test that setting the sentiment on a doc sets the sentiment comment
+    """
+    for sent_idx, sentence in enumerate(doc.sentences):
+        assert len([x for x in sentence.comments if x.startswith("# sent_id")]) == 1
+        assert sentence.sent_id == "%d" % sent_idx
+    doc.sentences[0].sent_id = "foo"
+    assert doc.sentences[0].sent_id == "foo"
+    assert len([x for x in doc.sentences[0].comments if x.startswith("# sent_id")]) == 1
+    assert "# sent_id = foo" in doc.sentences[0].comments
+
+    doc.reindex_sentences(10)
+    for sent_idx, sentence in enumerate(doc.sentences):
+        assert sentence.sent_id == "%d" % (sent_idx + 10)
+        assert len([x for x in doc.sentences[0].comments if x.startswith("# sent_id")]) == 1
+        assert "# sent_id = %d" % (sent_idx + 10) in sentence.comments
+
 @pytest.fixture(scope="module")
 def pipeline():
     return stanza.Pipeline(dir=TEST_MODELS_DIR)

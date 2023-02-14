@@ -214,11 +214,8 @@ class TestEnglishPipeline:
         assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
         # Stream one at a time
-        # This time, the sentence indices will be offset...
-        # TODO: add an offset to the sentence index
         processed = [doc for doc in pipeline.stream(EN_DOCS, batch_size=1)]
         processed = ["{:C}".format(doc) for doc in processed]
-        processed = [doc.replace("sent_id = 0", "sent_id = %d" % sent_idx) for sent_idx, doc in enumerate(processed)]
         assert "\n\n".join(processed) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
     @pytest.fixture(scope="class")
