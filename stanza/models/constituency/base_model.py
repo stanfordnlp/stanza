@@ -283,6 +283,8 @@ class BaseModel(ABC):
         treebank = []
         treebank_indices = []
         state_batch = build_batch_fn(batch_size, data_iterator)
+        # used to track which indices we are currently parsing
+        # since the parses get finished at different times, this will let us unsort after
         batch_indices = list(range(len(state_batch)))
         horizon_iterator = iter([])
 
