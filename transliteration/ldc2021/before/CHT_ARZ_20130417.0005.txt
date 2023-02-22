@@ -1,0 +1,91 @@
+ INPUT STRING:	كيف
+     IS_TRANS:	kyf
+        INDEX:	P1W1
+      OFFSETS:	0-3
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kayof_1]
+   UNSPLITVOC:	(kayof)
+          POS:	INTERROG_ADV
+          VOC:	kayof
+        GLOSS:	how/what degree
+
+ INPUT STRING:	اليووك
+     IS_TRANS:	Alywwk
+        INDEX:	P1W2
+      OFFSETS:	4-10
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[foreign]
+   UNSPLITVOC:	(Alywwk)
+          POS:	FOREIGN
+          VOC:	Alywwk
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P1W3
+      OFFSETS:	11-12
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	?
+
+ INPUT STRING:	بيسلم
+     IS_TRANS:	byslm
+        INDEX:	P2W1
+      OFFSETS:	0-5
+       TOKENS:	P2W1-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sal~im_1]
+   UNSPLITVOC:	(biyisal~im)
+          POS:	PROG_PART+IV3MS+IV
+          VOC:	bi+yi+sal~im
+        GLOSS:	[present-tense]+he/it+greet/hand over/surrender/be safe
+
+ INPUT STRING:	عليكي
+     IS_TRANS:	Elyky
+        INDEX:	P2W2
+      OFFSETS:	6-11
+       TOKENS:	P2W3-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[EalaY_2]
+   UNSPLITVOC:	(Ealaykiy)
+          POS:	PREP+PRON_2FS
+          VOC:	EalaY+ik
+        GLOSS:	on/above+you
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P2W3
+      OFFSETS:	12-14
+       TOKENS:	P2W5-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	كبيرة
+     IS_TRANS:	kbyrp
+        INDEX:	P2W4
+      OFFSETS:	15-20
+       TOKENS:	P2W6-P2W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kibiyr_1]
+   UNSPLITVOC:	(kibiyrap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	kibiyr+ap
+        GLOSS:	senior/major/large/big/important/great+[fem.sg.]
+

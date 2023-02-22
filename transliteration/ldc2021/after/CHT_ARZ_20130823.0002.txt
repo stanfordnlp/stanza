@@ -1,0 +1,410 @@
+ INPUT STRING: بس
+     IS_TRANS: bs
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: bs
+    VOCALIZED: bas~
+          POS: CONJ
+        GLOSS: but
+
+ INPUT STRING: واسع
+     IS_TRANS: wAsE
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,7
+  UNVOCALIZED: wAsE
+    VOCALIZED: wAsiE
+          POS: ADJ
+        GLOSS: wide/extensive/broad
+
+ INPUT STRING: شوية
+     IS_TRANS: $wyp
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 8,12
+  UNVOCALIZED: $wyp
+    VOCALIZED: $uway~+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: a little bit+[fem.sg.]
+
+ INPUT STRING: اي
+     IS_TRANS: Ay
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: Ay
+    VOCALIZED: Ay
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: فار
+     IS_TRANS: fAr
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,6
+  UNVOCALIZED: fAr
+    VOCALIZED: fAr
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: زي
+     IS_TRANS: zy
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 7,9
+  UNVOCALIZED: zy
+    VOCALIZED: zy
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 10,12
+  UNVOCALIZED: <n
+    VOCALIZED: <in
+          POS: SUB_CONJ
+        GLOSS: Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 13,16
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 17,21
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: وري
+     IS_TRANS: wry
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,3
+  UNVOCALIZED: wry
+    VOCALIZED: war~+iy-
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: stoke/kindle/conceal/feign/be stoked/be kindled/be concealed/be feigned+you
+
+ INPUT STRING: ني
+     IS_TRANS: ny
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,5
+  UNVOCALIZED: ny
+    VOCALIZED: -niy
+          POS: CVSUFF_DO:1S
+        GLOSS: me
+
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 4,5
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: أفكر
+     IS_TRANS: >fkr
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 5,9
+  UNVOCALIZED: Afkr
+    VOCALIZED: -Aa+fak~ar
+          POS: IV1S+IV
+        GLOSS: I+think/consider/ponder
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PREP
+        GLOSS: with/by
+
+ INPUT STRING: جد
+     IS_TRANS: jd
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 1,3
+  UNVOCALIZED: jd
+    VOCALIZED: -jad~
+          POS: NOUN
+        GLOSS: seriousness/earnestness/very/much
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P5W3
+      OFFSETS: 4,5
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P5W4
+      OFFSETS: 5,6
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P5W5
+      OFFSETS: 6,7
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: طيب
+     IS_TRANS: Tyb
+      COMMENT: []
+        INDEX: P6W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Tyb
+    VOCALIZED: Tay~ib
+          POS: ADJ
+        GLOSS: good/pleasant
+
+ INPUT STRING: يعني
+     IS_TRANS: yEny
+      COMMENT: []
+        INDEX: P6W2
+      OFFSETS: 4,8
+  UNVOCALIZED: yEny
+    VOCALIZED: ya+Eoniy
+          POS: IV3MS+IV
+        GLOSS: he/it+mean/signify/concern/be meant/be signified/be concerned (with)
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P7W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: عسل
+     IS_TRANS: Esl
+      COMMENT: []
+        INDEX: P7W2
+      OFFSETS: 3,6
+  UNVOCALIZED: Esl
+    VOCALIZED: Easal
+          POS: NOUN
+        GLOSS: honey
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P7W3
+      OFFSETS: 7,9
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: ممتازة
+     IS_TRANS: mmtAzp
+      COMMENT: []
+        INDEX: P7W4
+      OFFSETS: 10,16
+  UNVOCALIZED: mmtAzp
+    VOCALIZED: mumotAz+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: excellent/superior/first-rate/privileged/favored+[fem.sg.]
+
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P8W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: البس
+     IS_TRANS: Albs
+      COMMENT: []
+        INDEX: P8W2
+      OFFSETS: 4,8
+  UNVOCALIZED: Albs
+    VOCALIZED: Aa+lobis
+          POS: IV1S+IV
+        GLOSS: I+put on/wear/dress/make vague/deceive/be worn/be dressed in
+
+ INPUT STRING: درش
+     IS_TRANS: dr$
+      COMMENT: []
+        INDEX: P8W3
+      OFFSETS: 9,12
+  UNVOCALIZED: dr$
+    VOCALIZED: dr$
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: بدك
+     IS_TRANS: bdk
+      COMMENT: []
+        INDEX: P8W4
+      OFFSETS: 13,16
+  UNVOCALIZED: bdk
+    VOCALIZED: bdk
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: فاكرة
+     IS_TRANS: fAkrp
+      COMMENT: []
+        INDEX: P9W1
+      OFFSETS: 0,5
+  UNVOCALIZED: fAkrp
+    VOCALIZED: fAkor+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: remembering+[fem.sg.]
+
+ INPUT STRING: اللي
+     IS_TRANS: Ally
+      COMMENT: []
+        INDEX: P9W2
+      OFFSETS: 6,10
+  UNVOCALIZED: Ally
+    VOCALIZED: Alliy
+          POS: REL_PRON
+        GLOSS: who/which/that
+
+ INPUT STRING: كنت
+     IS_TRANS: knt
+      COMMENT: []
+        INDEX: P9W3
+      OFFSETS: 11,14
+  UNVOCALIZED: knt
+    VOCALIZED: kun+t
+          POS: PV+PVSUFF_SUBJ:1S
+        GLOSS: be/was/were+I
+
+ INPUT STRING: لابسا
+     IS_TRANS: lAbsA
+      COMMENT: []
+        INDEX: P9W4
+      OFFSETS: 15,20
+  UNVOCALIZED: lAbsp
+    VOCALIZED: lAbos+ap-
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: wearing+[fem.sg.]
+
+ INPUT STRING: ة
+     IS_TRANS: p
+      COMMENT: []
+        INDEX: P9W5
+      OFFSETS: 20,21
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: PRON_3MS
+        GLOSS: him
+
+ INPUT STRING: هنا
+     IS_TRANS: hnA
+      COMMENT: []
+        INDEX: P9W6
+      OFFSETS: 22,25
+  UNVOCALIZED: hnA
+    VOCALIZED: hinA
+          POS: ADV
+        GLOSS: here/from now on/somewhere
+
+ INPUT STRING: فين
+     IS_TRANS: fyn
+      COMMENT: []
+        INDEX: P10W1
+      OFFSETS: 0,3
+  UNVOCALIZED: fyn
+    VOCALIZED: fiyn
+          POS: INTERROG_ADV
+        GLOSS: where
+
+ INPUT STRING: أه
+     IS_TRANS: >h
+      COMMENT: []
+        INDEX: P11W1
+      OFFSETS: 0,2
+  UNVOCALIZED: Ah
+    VOCALIZED: Aah
+          POS: INTERJ
+        GLOSS: yes
+
+ INPUT STRING: .
+     IS_TRANS: .
+      COMMENT: []
+        INDEX: P11W2
+      OFFSETS: 2,3
+  UNVOCALIZED: .
+    VOCALIZED: .
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: دا
+     IS_TRANS: dA
+      COMMENT: []
+        INDEX: P11W3
+      OFFSETS: 4,6
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: حلو
+     IS_TRANS: Hlw
+      COMMENT: []
+        INDEX: P11W4
+      OFFSETS: 7,10
+  UNVOCALIZED: Hlw
+    VOCALIZED: Hilow
+          POS: ADJ
+        GLOSS: good
+
+ INPUT STRING: طيب
+     IS_TRANS: Tyb
+      COMMENT: []
+        INDEX: P12W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Tyb
+    VOCALIZED: Tay~ib
+          POS: ADJ
+        GLOSS: good/pleasant
+

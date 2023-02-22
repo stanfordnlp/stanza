@@ -1,0 +1,180 @@
+ INPUT STRING: اماني
+     IS_TRANS: AmAny
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,5
+  UNVOCALIZED: AmAny
+    VOCALIZED: AmAniy
+          POS: NOUN_PROP
+        GLOSS: Amani
+
+ INPUT STRING: ابعتي
+     IS_TRANS: AbEty
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 6,11
+  UNVOCALIZED: AbEty
+    VOCALIZED: AiboEat+iy-
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: send+you
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 11,12
+  UNVOCALIZED: l
+    VOCALIZED: -li-
+          POS: PREP
+        GLOSS: to/for
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 12,13
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: PRON_1S
+        GLOSS: me
+
+ INPUT STRING: عنوان
+     IS_TRANS: EnwAn
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 14,19
+  UNVOCALIZED: EnwAn
+    VOCALIZED: EinowAn
+          POS: NOUN
+        GLOSS: headline/title
+
+ INPUT STRING: البيت
+     IS_TRANS: Albyt
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 20,25
+  UNVOCALIZED: Albyt
+    VOCALIZED: Al+biyt
+          POS: DET+NOUN
+        GLOSS: the+house/houses/verse/verses
+
+ INPUT STRING: شكرا
+     IS_TRANS: $krA
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: $krA
+    VOCALIZED: $ukor+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: thankfulness/thanks/thank you+[acc.indef.]
+
+ INPUT STRING: عفوا
+     IS_TRANS: EfwA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,4
+  UNVOCALIZED: EfwA
+    VOCALIZED: Eafow+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: pardon/amnesty/excuse me!+[acc.indef.]
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 5,7
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: انتظار
+     IS_TRANS: AntZAr
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,14
+  UNVOCALIZED: AntZAr
+    VOCALIZED: AinotiZAr-
+          POS: NOUN
+        GLOSS: waiting/anticipating
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 14,15
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: POSS_PRON_2FS
+        GLOSS: your
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 16,17
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: عاملين
+     IS_TRANS: EAmlyn
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 17,23
+  UNVOCALIZED: EAmlyn
+    VOCALIZED: -EAmol+iyn
+          POS: NOUN+NSUFF_MASC_PL
+        GLOSS: worker/workers/factor/agent/coefficient/factors/agents+[pl.]
+
+ INPUT STRING: مسقعه
+     IS_TRANS: msqEh
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 24,29
+  UNVOCALIZED: msqEp
+    VOCALIZED: misaq~aE+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: moussaka (eggplant and meat dish)+[fem.sg.]
+
+ INPUT STRING: تسلمي
+     IS_TRANS: tslmy
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,5
+  UNVOCALIZED: tslmy
+    VOCALIZED: ti+solam+iy
+          POS: IV2FS+IV+IVSUFF_SUBJ:2FS
+        GLOSS: you+be safe/be faultless+you
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 6,8
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: قلب
+     IS_TRANS: qlb
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 9,12
+  UNVOCALIZED: qlb
+    VOCALIZED: qalob-
+          POS: NOUN
+        GLOSS: overthrowing/toppling/reversal/inversion/heart/center/essence/hearts
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 12,13
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+

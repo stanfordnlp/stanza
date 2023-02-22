@@ -1,0 +1,130 @@
+ INPUT STRING:	مي
+     IS_TRANS:	my
+        INDEX:	P1W1
+      OFFSETS:	0-2
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[may~_1]
+   UNSPLITVOC:	(may~)
+          POS:	NOUN_PROP
+          VOC:	may~
+        GLOSS:	Mayy
+
+ INPUT STRING:	صباح
+     IS_TRANS:	SbAH
+        INDEX:	P1W2
+      OFFSETS:	3-7
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[SabAH_1]
+   UNSPLITVOC:	(SabAH)
+          POS:	NOUN
+          VOC:	SabAH
+        GLOSS:	morning/in the morning
+
+ INPUT STRING:	الخير
+     IS_TRANS:	Alxyr
+        INDEX:	P1W3
+      OFFSETS:	8-13
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[xiyr_1]
+   UNSPLITVOC:	(Alxiyr)
+          POS:	DET+NOUN
+          VOC:	Al+xiyr
+        GLOSS:	the+good
+
+ INPUT STRING:	صباح
+     IS_TRANS:	SbAH
+        INDEX:	P2W1
+      OFFSETS:	0-4
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[SabAH_1]
+   UNSPLITVOC:	(SabAH)
+          POS:	NOUN
+          VOC:	SabAH
+        GLOSS:	morning/in the morning
+
+ INPUT STRING:	النور
+     IS_TRANS:	Alnwr
+        INDEX:	P2W2
+      OFFSETS:	5-10
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nuwr_1]
+   UNSPLITVOC:	(Alnuwr)
+          POS:	DET+NOUN
+          VOC:	Al+nuwr
+        GLOSS:	the+light/lights
+
+ INPUT STRING:	يااماني
+     IS_TRANS:	yAAmAny
+        INDEX:	P2W3
+      OFFSETS:	11-18
+       TOKENS:	P2W3-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AamAniy_1]
+   UNSPLITVOC:	(yAAmAniy)
+          POS:	VOC_PART+NOUN_PROP
+          VOC:	yA+AmAniy
+        GLOSS:	O/oh+Amani
+
+ INPUT STRING:	معلش
+     IS_TRANS:	mEl$
+        INDEX:	P3W1
+      OFFSETS:	0-4
+       TOKENS:	P3W1-P3W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEoli$_1]
+   UNSPLITVOC:	(maEoli$)
+          POS:	INTERJ
+          VOC:	maEoli$
+        GLOSS:	sorry/never mind
+
+ INPUT STRING:	كان
+     IS_TRANS:	kAn
+        INDEX:	P3W2
+      OFFSETS:	5-8
+       TOKENS:	P3W2-P3W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(kAn)
+          POS:	PV
+          VOC:	kAn
+        GLOSS:	be/was/were
+
+ INPUT STRING:	معايا
+     IS_TRANS:	mEAyA
+        INDEX:	P3W3
+      OFFSETS:	9-14
+       TOKENS:	P3W3-P3W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEa_1]
+   UNSPLITVOC:	(maEAyA)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	maEa+iy
+        GLOSS:	with+my
+
+ INPUT STRING:	تليفون
+     IS_TRANS:	tlyfwn
+        INDEX:	P3W4
+      OFFSETS:	15-21
+       TOKENS:	P3W5-P3W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[tiliyfuwn_1]
+   UNSPLITVOC:	(tiliyfuwn)
+          POS:	NOUN
+          VOC:	tiliyfuwn
+        GLOSS:	telephone
+

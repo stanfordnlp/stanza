@@ -1,0 +1,230 @@
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: kl
+    VOCALIZED: kul~
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: سنة
+     IS_TRANS: snp
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,6
+  UNVOCALIZED: snp
+    VOCALIZED: san+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: year/years+[fem.sg.]
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 7,8
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: SUB_CONJ
+        GLOSS: while
+
+ INPUT STRING: انتي
+     IS_TRANS: Anty
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 8,12
+  UNVOCALIZED: Anty
+    VOCALIZED: -Ainotiy
+          POS: PRON_2FS
+        GLOSS: you [fem.sg.]/you/feminine
+
+ INPUT STRING: طيبة
+     IS_TRANS: Tybp
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 13,17
+  UNVOCALIZED: Tybp
+    VOCALIZED: Tiy~b+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: good nature/goodness+[fem.sg.]
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 18,20
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: أجمل
+     IS_TRANS: >jml
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 21,25
+  UNVOCALIZED: >jml
+    VOCALIZED: >ajomal
+          POS: ADJ_COMP
+        GLOSS: more/most beautiful
+
+ INPUT STRING: وردة
+     IS_TRANS: wrdp
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 26,30
+  UNVOCALIZED: wrdp
+    VOCALIZED: warod+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: rose+[fem.sg.]
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: SUB_CONJ
+        GLOSS: while
+
+ INPUT STRING: انتي
+     IS_TRANS: Anty
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 1,5
+  UNVOCALIZED: Anty
+    VOCALIZED: -Ainotiy
+          POS: PRON_2FS
+        GLOSS: you [fem.sg.]/you/feminine
+
+ INPUT STRING: أطيب
+     IS_TRANS: >Tyb
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,10
+  UNVOCALIZED: >Tyb
+    VOCALIZED: >aToyab
+          POS: ADJ_COMP
+        GLOSS: better/best
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 11,12
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: أجمل
+     IS_TRANS: >jml
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 12,16
+  UNVOCALIZED: >jml
+    VOCALIZED: ->ajomal
+          POS: ADJ_COMP
+        GLOSS: more/most beautiful
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 17,19
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: ناني
+     IS_TRANS: nAny
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 20,24
+  UNVOCALIZED: nAny
+    VOCALIZED: nAniy
+          POS: NOUN_PROP
+        GLOSS: Nani
+
+ INPUT STRING: .
+     IS_TRANS: .
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 24,25
+  UNVOCALIZED: .
+    VOCALIZED: .
+          POS: PUNC
+        GLOSS: .
+
+ INPUT STRING: .
+     IS_TRANS: .
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 25,26
+  UNVOCALIZED: .
+    VOCALIZED: .
+          POS: PUNC
+        GLOSS: .
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P2W10
+      OFFSETS: 26,28
+  UNVOCALIZED: rb
+    VOCALIZED: rab~-
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P2W11
+      OFFSETS: 28,30
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: يخلي
+     IS_TRANS: yxly
+      COMMENT: []
+        INDEX: P2W12
+      OFFSETS: 31,35
+  UNVOCALIZED: yxly
+    VOCALIZED: yi+xal~iy-
+          POS: IV3MS+IV
+        GLOSS: he/it+release/evacuate/allow/be released/be evacuated/be allowed
+
+ INPUT STRING: كي
+     IS_TRANS: ky
+      COMMENT: []
+        INDEX: P2W13
+      OFFSETS: 35,37
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: IVSUFF_DO:2FS
+        GLOSS: you
+
+ INPUT STRING: لي
+     IS_TRANS: ly
+      COMMENT: []
+        INDEX: P2W14
+      OFFSETS: 38,40
+  UNVOCALIZED: ly
+    VOCALIZED: liy~-
+          POS: PREP
+        GLOSS: for/to
+
+ INPUT STRING: ا
+     IS_TRANS: A
+      COMMENT: []
+        INDEX: P2W15
+      OFFSETS: 40,41
+  UNVOCALIZED: A
+    VOCALIZED: -A
+          POS: PRON_1S
+        GLOSS: me
+

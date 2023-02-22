@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20120316.0001" medium="SMS" donated="true">
+  <su id="s0">
+    <source>ok isa mfesh moshkila</source>
+    <annotated_arabizi>
+      <token id="t0">ok</token>
+      <token id="t1">isa</token>
+      <token id="t2">mfesh</token>
+      <token id="t3">moshkila</token>
+    </annotated_arabizi>
+    <auto_transliteration>عك إن[-]شاء[-]الله مفيهش ما[-]شكي[-]ليه</auto_transliteration>
+    <corrected_transliteration>اوكي إن[-]شاء[-]الله مافيهش مشكلة</corrected_transliteration>
+    <normalized_transliteration>اوكي إن شاء الله مافيهش مشكلة</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2012-03-16 15:53:38 UTC" participant="139275">ok isa mfesh moshkila</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Moni ma7adesh felbeet from now leghayet 9 keda yemken fa khaliha leyoom tani :)</source>
+    <annotated_arabizi>
+      <token id="t0" tag="arabicName">Moni</token>
+      <token id="t1">ma7adesh</token>
+      <token id="t2">felbeet</token>
+      <token id="t3" tag="foreign">from</token>
+      <token id="t4" tag="foreign">now</token>
+      <token id="t5">leghayet</token>
+      <token id="t6" tag="foreign">9</token>
+      <token id="t7">keda</token>
+      <token id="t8">yemken</token>
+      <token id="t9">fa</token>
+      <token id="t10">khaliha</token>
+      <token id="t11">leyoom</token>
+      <token id="t12">tani</token>
+      <token id="t13">:)</token>
+    </annotated_arabizi>
+    <auto_transliteration>مني ما[-]حدش فالبيت فروم نو لغاية 9 كده يمكن فيه خليها ليوم تاني :(</auto_transliteration>
+    <corrected_transliteration>مني ما[-]حدش فالبيت فروم نو لغاية 9 كده يمكن ف[+] خليها ليوم تاني #</corrected_transliteration>
+    <normalized_transliteration>مني ما حدش فالبيت فروم نو لغاية 9 كده يمكن فخليها ليوم تاني #</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2012-03-16 15:55:07 UTC" participant="139396">Moni ma7adesh felbeet from now leghayet 9 keda yemken fa khaliha leyoom tani :)</message>
+    </messages>
+  </su>
+</conversation>

@@ -1,0 +1,300 @@
+ INPUT STRING: احنا
+     IS_TRANS: AHnA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: AHnA
+    VOCALIZED: AiHonA
+          POS: PRON_1P
+        GLOSS: we
+
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,7
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: سامعين
+     IS_TRANS: sAmEyn
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 8,14
+  UNVOCALIZED: sAmEyn
+    VOCALIZED: sAmoE+iyn
+          POS: ADJ.VN+NSUFF_MASC_PL
+        GLOSS: listening/able to hear+two
+
+ INPUT STRING: أي
+     IS_TRANS: >y
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 15,17
+  UNVOCALIZED: >y
+    VOCALIZED: >ay~
+          POS: NOUN_QUANT
+        GLOSS: any
+
+ INPUT STRING: آذان
+     IS_TRANS: |*An
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 18,22
+  UNVOCALIZED: |*An
+    VOCALIZED: |*An
+          POS: NOUN
+        GLOSS: azan
+
+ INPUT STRING: خالص
+     IS_TRANS: xAlS
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 23,27
+  UNVOCALIZED: xAlS
+    VOCALIZED: xAliS
+          POS: ADJ
+        GLOSS: pure/clear/sincere
+
+ INPUT STRING: ع
+     IS_TRANS: E
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 28,29
+  UNVOCALIZED: E
+    VOCALIZED: Ea-
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: شان
+     IS_TRANS: $An
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 29,32
+  UNVOCALIZED: $An
+    VOCALIZED: -$An
+          POS: NOUN
+        GLOSS: situation/case/matters/because of/matter/status/condition/for sake of
+
+ INPUT STRING: ماشيين
+     IS_TRANS: mA$yyn
+      COMMENT: []
+        INDEX: P1W9
+      OFFSETS: 33,39
+  UNVOCALIZED: mA$yyn
+    VOCALIZED: mA$oy+iyn
+          POS: ADJ+NSUFF_MASC_PL
+        GLOSS: going/walking/on foot+two
+
+ INPUT STRING: على
+     IS_TRANS: ElY
+      COMMENT: []
+        INDEX: P1W10
+      OFFSETS: 40,43
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: البحر
+     IS_TRANS: AlbHr
+      COMMENT: []
+        INDEX: P1W11
+      OFFSETS: 44,49
+  UNVOCALIZED: AlbHr
+    VOCALIZED: Al+baHor
+          POS: DET+NOUN
+        GLOSS: the+sea/seas
+
+ INPUT STRING: العربية
+     IS_TRANS: AlErbyp
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,7
+  UNVOCALIZED: AlErbyp
+    VOCALIZED: Al+Earabiy~+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+car+[fem.sg.]
+
+ INPUT STRING: وقفت
+     IS_TRANS: wqft
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 8,12
+  UNVOCALIZED: wqft
+    VOCALIZED: wiqof+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: stand+it/they/she
+
+ INPUT STRING: بعد
+     IS_TRANS: bEd
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 13,16
+  UNVOCALIZED: bEd
+    VOCALIZED: baEod
+          POS: NOUN
+        GLOSS: after/if/unless/whether/as long as/as soon as/which
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 17,19
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: REL_PRON
+        GLOSS: why/what/which
+
+ INPUT STRING: كلمت
+     IS_TRANS: klmt
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 20,24
+  UNVOCALIZED: klmt
+    VOCALIZED: kal~im+t-
+          POS: PV+PVSUFF_SUBJ:1S
+        GLOSS: talk/speak/talk to+I
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 24,25
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: PVSUFF_DO:2FS
+        GLOSS: you
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 26,27
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PREP
+        GLOSS: with/by
+
+ INPUT STRING: شوية
+     IS_TRANS: $wyp
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 27,31
+  UNVOCALIZED: $wyp
+    VOCALIZED: -$uway~+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: a little bit+[fem.sg.]
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 32,34
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: باوجه
+     IS_TRANS: bAwjh
+      COMMENT: []
+        INDEX: P2W10
+      OFFSETS: 35,40
+  UNVOCALIZED: bAwjh
+    VOCALIZED: bAwjh
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: فك
+     IS_TRANS: fk
+      COMMENT: []
+        INDEX: P2W11
+      OFFSETS: 41,43
+  UNVOCALIZED: fk
+    VOCALIZED: fk
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W12
+      OFFSETS: 44,45
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: أحمد
+     IS_TRANS: >Hmd
+      COMMENT: []
+        INDEX: P2W13
+      OFFSETS: 45,49
+  UNVOCALIZED: >Hmd
+    VOCALIZED: ->aHomad
+          POS: NOUN_PROP
+        GLOSS: Ahmad/Ahmed
+
+ INPUT STRING: سعيد
+     IS_TRANS: sEyd
+      COMMENT: []
+        INDEX: P2W14
+      OFFSETS: 50,54
+  UNVOCALIZED: sEyd
+    VOCALIZED: saEiyd
+          POS: NOUN_PROP
+        GLOSS: Said/Saeed
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P2W15
+      OFFSETS: 55,56
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: يحاول
+     IS_TRANS: yHAwl
+      COMMENT: []
+        INDEX: P2W16
+      OFFSETS: 56,61
+  UNVOCALIZED: yHAwl
+    VOCALIZED: -yi+HAwil
+          POS: IV3MS+IV
+        GLOSS: he/it+test/try/attempt/try out/test for ripeness/explore/invent/originate
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P2W17
+      OFFSETS: 62,64
+  UNVOCALIZED: fy
+    VOCALIZED: fiy-
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P2W18
+      OFFSETS: 64,65
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: PRON_3MS
+        GLOSS: he/it
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P2W19
+      OFFSETS: 66,67
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+

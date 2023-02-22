@@ -1,0 +1,117 @@
+ INPUT STRING:	موبايلي
+     IS_TRANS:	mwbAyly
+        INDEX:	P1W1
+      OFFSETS:	0-7
+       TOKENS:	P1W1-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[muwbAyol_1]
+   UNSPLITVOC:	(muwbAyoliy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	muwbAyol+iy
+        GLOSS:	cell phone+my
+
+ INPUT STRING:	حيفصل
+     IS_TRANS:	HyfSl
+        INDEX:	P1W2
+      OFFSETS:	8-13
+       TOKENS:	P1W3-P1W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[faSal_1]
+   UNSPLITVOC:	(HayifoSil)
+          POS:	FUT_PART+IV3MS+IV
+          VOC:	Ha+yi+foSil
+        GLOSS:	will+he/it+separate/detach/set apart
+
+ INPUT STRING:	كلمني
+     IS_TRANS:	klmny
+        INDEX:	P1W3
+      OFFSETS:	14-19
+       TOKENS:	P1W5-P1W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kal~im_1]
+   UNSPLITVOC:	(kal~imniy)
+          POS:	CV+CVSUFF_SUBJ:2MS+CVSUFF_DO:1S
+          VOC:	kal~im+(null)+niy
+        GLOSS:	talk/speak/talk to+you+me
+
+ INPUT STRING:	عند
+     IS_TRANS:	End
+        INDEX:	P1W4
+      OFFSETS:	20-23
+       TOKENS:	P1W7-P1W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eanod_1]
+   UNSPLITVOC:	(Eanod)
+          POS:	NOUN
+          VOC:	Eanod
+        GLOSS:	at/have/possession/with
+
+ INPUT STRING:	مي
+     IS_TRANS:	my
+        INDEX:	P1W5
+      OFFSETS:	24-26
+       TOKENS:	P1W8-P1W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[may~_1]
+   UNSPLITVOC:	(may~)
+          POS:	NOUN_PROP
+          VOC:	may~
+        GLOSS:	Mayy
+
+ INPUT STRING:	أطمن
+     IS_TRANS:	>Tmn
+        INDEX:	P1W6
+      OFFSETS:	27-31
+       TOKENS:	P1W9-P1W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[AiTam~in_1]
+   UNSPLITVOC:	(AaTam~in)
+          POS:	IV1S+IV
+          VOC:	Aa+Tam~in
+        GLOSS:	I+assure
+
+ INPUT STRING:	عليك
+     IS_TRANS:	Elyk
+        INDEX:	P1W7
+      OFFSETS:	32-36
+       TOKENS:	P1W10-P1W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[EalaY_2]
+   UNSPLITVOC:	(Ealiyik)
+          POS:	PREP+PRON_2MS
+          VOC:	EalaY+ik
+        GLOSS:	on/above+you
+
+ INPUT STRING:	والنعمة
+     IS_TRANS:	wAlnEmp
+        INDEX:	P2W1
+      OFFSETS:	0-7
+       TOKENS:	P2W1-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[niEomap_1]
+   UNSPLITVOC:	(wiAlniEomap)
+          POS:	CONJ+DET+NOUN+NSUFF_FEM_SG
+          VOC:	wi+Al+niEom+ap
+        GLOSS:	and+the+blessing/blessings+[fem.sg.]
+
+ INPUT STRING:	بأحبك
+     IS_TRANS:	b>Hbk
+        INDEX:	P2W2
+      OFFSETS:	8-13
+       TOKENS:	P2W3-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Hab~_1]
+   UNSPLITVOC:	(bAaHib~ik)
+          POS:	PROG_PART+IV1S+IV+IVSUFF_DO:2FS
+          VOC:	bi+Aa+Hib~+ik
+        GLOSS:	[present-tense]+I+love/like/want+you
+

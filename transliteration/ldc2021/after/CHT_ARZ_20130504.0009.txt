@@ -1,0 +1,60 @@
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,6
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: برنجي
+     IS_TRANS: brnjy
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 7,12
+  UNVOCALIZED: brnjy
+    VOCALIZED: birinojiy
+          POS: ADJ
+        GLOSS: first/best
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 4,6
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: زعامة
+     IS_TRANS: zEAmp
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 7,12
+  UNVOCALIZED: zEAmp
+    VOCALIZED: zaEAm+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: leadership/leaders+[fem.sg.]
+

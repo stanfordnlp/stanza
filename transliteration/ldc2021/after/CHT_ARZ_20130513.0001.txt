@@ -1,0 +1,180 @@
+ INPUT STRING: ايه
+     IS_TRANS: Ayh
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: النظام
+     IS_TRANS: AlnZAm
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,10
+  UNVOCALIZED: AlnZAm
+    VOCALIZED: Al+niZAm
+          POS: DET+NOUN
+        GLOSS: the+regime/government/regimes/governments/systems/methodology/system/order
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 11,13
+  UNVOCALIZED: <n
+    VOCALIZED: <in~
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 14,17
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 18,22
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: تودي
+     IS_TRANS: twdy
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,4
+  UNVOCALIZED: twdy
+    VOCALIZED: twdy
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 5,7
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: هينف
+     IS_TRANS: hynf
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,12
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: ع
+     IS_TRANS: E
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 12,13
+  UNVOCALIZED: ynfE
+    VOCALIZED: -yi+nofaE
+          POS: IV3MS+IV
+        GLOSS: he/it+be useful to/be advantageous to
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 14,15
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: هأحاو
+     IS_TRANS: h>HAw
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 16,21
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 21,22
+  UNVOCALIZED: AHAwl
+    VOCALIZED: -Aa+HAwil
+          POS: IV1S+IV
+        GLOSS: I+try
+
+ INPUT STRING: أضبط
+     IS_TRANS: >DbT
+      COMMENT: []
+        INDEX: P3W8
+      OFFSETS: 23,27
+  UNVOCALIZED: ADbT
+    VOCALIZED: Aa+DobuT
+          POS: IV1S+IV
+        GLOSS: I+regulate/adjust/fix/seize/confiscate/be seized/be confiscated
+
+ INPUT STRING: بكرة
+     IS_TRANS: bkrp
+      COMMENT: []
+        INDEX: P3W9
+      OFFSETS: 28,32
+  UNVOCALIZED: bkrh
+    VOCALIZED: bukorah
+          POS: NOUN
+        GLOSS: tomorrow/sometime in the future/meal/luncheon/breakfast/lunch
+
+ INPUT STRING: أو
+     IS_TRANS: >w
+      COMMENT: []
+        INDEX: P3W10
+      OFFSETS: 33,35
+  UNVOCALIZED: >w
+    VOCALIZED: >aw
+          POS: CONJ
+        GLOSS: Or/if not/unless/except if/except when
+
+ INPUT STRING: بعد
+     IS_TRANS: bEd
+      COMMENT: []
+        INDEX: P3W11
+      OFFSETS: 36,39
+  UNVOCALIZED: bEd
+    VOCALIZED: baEod-
+          POS: NOUN
+        GLOSS: after/if/unless/whether/as long as/as soon as/which
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W12
+      OFFSETS: 39,40
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: POSS_PRON_3MS
+        GLOSS: his/its
+

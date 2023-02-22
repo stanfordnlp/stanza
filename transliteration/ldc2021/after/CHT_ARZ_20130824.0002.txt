@@ -1,0 +1,220 @@
+ INPUT STRING: ألوو
+     IS_TRANS: >lww
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: >lw
+    VOCALIZED: >alw
+          POS: INTERJ
+        GLOSS: hallo
+
+ INPUT STRING: فاض
+     IS_TRANS: fAD
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: fAD
+    VOCALIZED: fAD+(null)-
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: exceed/overflow+he/it
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,4
+  UNVOCALIZED: l
+    VOCALIZED: -li-
+          POS: PREP
+        GLOSS: to/for
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 4,5
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: PRON_2FS
+        GLOSS: you
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 6,9
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: طول
+     IS_TRANS: Twl
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 10,13
+  UNVOCALIZED: Twl
+    VOCALIZED: Twl
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: كتب
+     IS_TRANS: ktb
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 14,17
+  UNVOCALIZED: ktb
+    VOCALIZED: katob
+          POS: NOUN
+        GLOSS: writing/essay/piece of writing/writings/essays
+
+ INPUT STRING: كتاب
+     IS_TRANS: ktAb
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 18,22
+  UNVOCALIZED: ktAb
+    VOCALIZED: kitAb
+          POS: NOUN
+        GLOSS: book/books
+
+ INPUT STRING: مخل
+     IS_TRANS: mxl
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 23,26
+  UNVOCALIZED: mA
+    VOCALIZED: mA-
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: ص
+     IS_TRANS: S
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 26,27
+  UNVOCALIZED: xlS
+    VOCALIZED: -xuluS+(null)-
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: be ended/elapse/go by/pass/be concluded/be completed/come an end/finish+he/it
+
+ INPUT STRING: ش
+     IS_TRANS: $
+      COMMENT: []
+        INDEX: P2W10
+      OFFSETS: 27,28
+  UNVOCALIZED: $
+    VOCALIZED: -$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P2W11
+      OFFSETS: 29,30
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: لأ
+     IS_TRANS: l>
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: lA
+    VOCALIZED: lA
+          POS: INTERJ
+        GLOSS: no
+
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,5
+  UNVOCALIZED: kl
+    VOCALIZED: kul~-
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 5,6
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: POSS_PRON_3MS
+        GLOSS: his/its
+
+ INPUT STRING: أحلى
+     IS_TRANS: >HlY
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 7,11
+  UNVOCALIZED: >HlY
+    VOCALIZED: >aHolaY
+          POS: ADJ_COMP
+        GLOSS: more sweet
+
+ INPUT STRING: اتزبط
+     IS_TRANS: AtzbT
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 12,17
+  UNVOCALIZED: AtzbT
+    VOCALIZED: AtzbT+(null)
+          POS: PV_PASS+PVSUFF_SUBJ:3MS
+        GLOSS: control+it
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PREP
+        GLOSS: with/by
+
+ INPUT STRING: جد
+     IS_TRANS: jd
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 1,3
+  UNVOCALIZED: jd
+    VOCALIZED: -jid~
+          POS: NOUN
+        GLOSS: seriousness/earnestness/very/much
+
+ INPUT STRING: حمد
+     IS_TRANS: Hmd
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Hmd
+    VOCALIZED: Hamod
+          POS: NOUN
+        GLOSS: commendation/praise
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 4,5
+  UNVOCALIZED: l
+    VOCALIZED: li-
+          POS: PREP
+        GLOSS: for/to
+
+ INPUT STRING: له
+     IS_TRANS: lh
+      COMMENT: []
+        INDEX: P5W3
+      OFFSETS: 5,7
+  UNVOCALIZED: Allh
+    VOCALIZED: -All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+

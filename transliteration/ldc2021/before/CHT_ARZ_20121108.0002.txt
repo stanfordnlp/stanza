@@ -1,0 +1,65 @@
+ INPUT STRING:	انتو
+     IS_TRANS:	Antw
+        INDEX:	P1W1
+      OFFSETS:	0-4
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Ainotuw_1]
+   UNSPLITVOC:	(Ainotuw)
+          POS:	PRON_2P
+          VOC:	Ainotuw
+        GLOSS:	you [pl.]
+
+ INPUT STRING:	فين
+     IS_TRANS:	fyn
+        INDEX:	P1W2
+      OFFSETS:	5-8
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fiyn_1]
+   UNSPLITVOC:	(fiyn)
+          POS:	INTERROG_ADV
+          VOC:	fiyn
+        GLOSS:	where
+
+ INPUT STRING:	بقى
+     IS_TRANS:	bqY
+        INDEX:	P1W3
+      OFFSETS:	9-12
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(baqaY)
+          POS:	ADV
+          VOC:	baqaY
+        GLOSS:	so/then
+
+ INPUT STRING:	قدام
+     IS_TRANS:	qdAm
+        INDEX:	P2W1
+      OFFSETS:	0-4
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qud~Am_1]
+   UNSPLITVOC:	(qud~Am)
+          POS:	NOUN
+          VOC:	qud~Am
+        GLOSS:	front/in front of
+
+ INPUT STRING:	تشيليز
+     IS_TRANS:	t$ylyz
+        INDEX:	P2W2
+      OFFSETS:	5-11
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[t$iyliyz_1]
+   UNSPLITVOC:	(t$iyliyz)
+          POS:	NOUN_PROP
+          VOC:	t$iyliyz
+        GLOSS:	chilis
+

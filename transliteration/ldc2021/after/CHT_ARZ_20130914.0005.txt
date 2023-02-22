@@ -1,0 +1,120 @@
+ INPUT STRING: حوده
+     IS_TRANS: Hwdh
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Hwdp
+    VOCALIZED: Huwd+ap
+          POS: NOUN_PROP+NSUFF_FEM_SG
+        GLOSS: Houda+[fem.sg.]
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: kl
+    VOCALIZED: kul~
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: خرا
+     IS_TRANS: xrA
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,6
+  UNVOCALIZED: xrA
+    VOCALIZED: xrA
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,2
+  UNVOCALIZED: <n
+    VOCALIZED: <in
+          POS: SUB_CONJ
+        GLOSS: Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 3,6
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 7,11
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,3
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: الكلام
+     IS_TRANS: AlklAm
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 4,10
+  UNVOCALIZED: AlklAm
+    VOCALIZED: Al+kalAm
+          POS: DET+NOUN
+        GLOSS: the+speech/statement/remark/talk/saying
+
+ INPUT STRING: نازل
+     IS_TRANS: nAzl
+      COMMENT: []
+        INDEX: P5W3
+      OFFSETS: 11,15
+  UNVOCALIZED: nAzl
+    VOCALIZED: nAzil
+          POS: ADJ
+        GLOSS: descending/staying
+
+ INPUT STRING: النهارده
+     IS_TRANS: AlnhArdh
+      COMMENT: []
+        INDEX: P5W4
+      OFFSETS: 16,24
+  UNVOCALIZED: AlnhArdp
+    VOCALIZED: Al+nahArod+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+this day/morning/day/today+[fem.sg.]
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P5W5
+      OFFSETS: 25,26
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+

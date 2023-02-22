@@ -1,0 +1,220 @@
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: وقت
+     IS_TRANS: wqt
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,6
+  UNVOCALIZED: wqt
+    VOCALIZED: waqot-
+          POS: NOUN
+        GLOSS: time/moment/period of time/moments/times
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 6,7
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: POSS_PRON_3MS
+        GLOSS: his/its
+
+ INPUT STRING: لنقد
+     IS_TRANS: lnqd
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 8,12
+  UNVOCALIZED: lnqd
+    VOCALIZED: lnqd
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: أن
+     IS_TRANS: >n
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 13,15
+  UNVOCALIZED: >n
+    VOCALIZED: >n
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 16,17
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: هههه
+     IS_TRANS: hhhh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: hhhh
+    VOCALIZED: hahhaha
+          POS: INTERJ
+        GLOSS: hahhaha
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: mA
+    VOCALIZED: mA-
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: أنا
+     IS_TRANS: >nA
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 2,5
+  UNVOCALIZED: >nA
+    VOCALIZED: ->anA
+          POS: PRON_1P
+        GLOSS: I
+
+ INPUT STRING: قلت
+     IS_TRANS: qlt
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 6,9
+  UNVOCALIZED: qlt
+    VOCALIZED: qul+t
+          POS: PV+PVSUFF_SUBJ:1S
+        GLOSS: said/say/be said/(for example)+I
+
+ INPUT STRING: اكيد
+     IS_TRANS: Akyd
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 10,14
+  UNVOCALIZED: >kyd
+    VOCALIZED: >akiyd
+          POS: ADJ
+        GLOSS: certain/definite/certainly/surely/definitely
+
+ INPUT STRING: كريم
+     IS_TRANS: krym
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 15,19
+  UNVOCALIZED: krym
+    VOCALIZED: kariym
+          POS: NOUN_PROP
+        GLOSS: Kareem/Karim
+
+ INPUT STRING: يهم
+     IS_TRANS: yhm
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 20,23
+  UNVOCALIZED: yhm
+    VOCALIZED: yi+him~-
+          POS: IV3MS+IV
+        GLOSS: he/it+concern
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 23,24
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: مصلحت
+     IS_TRANS: mSlHt
+      COMMENT: []
+        INDEX: P3W8
+      OFFSETS: 25,30
+  UNVOCALIZED: mSlHp
+    VOCALIZED: maSolaH+ap-
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: interest/advantage/favor/interests/advantages/department/agency/departments+[fem.sg.]
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P3W9
+      OFFSETS: 30,32
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: بردك
+     IS_TRANS: brdk
+      COMMENT: []
+        INDEX: P3W10
+      OFFSETS: 33,37
+  UNVOCALIZED: brdk
+    VOCALIZED: barodak
+          POS: ADV
+        GLOSS: sure
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P3W11
+      OFFSETS: 38,39
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: ههاه
+     IS_TRANS: hhAh
+      COMMENT: []
+        INDEX: P3W12
+      OFFSETS: 40,44
+  UNVOCALIZED: hhAh
+    VOCALIZED: hahAh
+          POS: INTERJ
+        GLOSS: haha
+
+ INPUT STRING: حيح
+     IS_TRANS: HyH
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,3
+  UNVOCALIZED: HyH
+    VOCALIZED: HiyiH
+          POS: INTERJ
+        GLOSS: HiyH
+
+ INPUT STRING: ماشي
+     IS_TRANS: mA$y
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,4
+  UNVOCALIZED: mA$y
+    VOCALIZED: mA$iy
+          POS: INTERJ
+        GLOSS: ok
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 5,6
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+

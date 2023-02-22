@@ -1,0 +1,130 @@
+ INPUT STRING:	ما
+     IS_TRANS:	mA
+        INDEX:	P1W1
+      OFFSETS:	0-2
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=MSA	sama=T	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[mA_5]
+   UNSPLITVOC:	(mA)
+          POS:	EXCLAM_PRON
+          VOC:	mA
+        GLOSS:	what/how
+
+ INPUT STRING:	شاء
+     IS_TRANS:	$A'
+        INDEX:	P1W2
+      OFFSETS:	3-6
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$A'_1]
+   UNSPLITVOC:	($A')
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	$A'+(null)
+        GLOSS:	want/desire/wish+he/it
+
+ INPUT STRING:	الله
+     IS_TRANS:	Allh
+        INDEX:	P1W3
+      OFFSETS:	7-11
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(All~ah)
+          POS:	NOUN_PROP
+          VOC:	All~ah
+        GLOSS:	Allah/God
+
+ INPUT STRING:	يوح
+     IS_TRANS:	ywH
+        INDEX:	P1W4
+      OFFSETS:	12-15
+       TOKENS:	P1W4-P1W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(ywH)
+          POS:	TYPO
+          VOC:	ywH
+        GLOSS:	nogloss
+
+ INPUT STRING:	جميلة
+     IS_TRANS:	jmylp
+        INDEX:	P1W5
+      OFFSETS:	16-21
+       TOKENS:	P1W5-P1W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[jamiyl_1]
+   UNSPLITVOC:	(jamiylap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	jamiyl+ap
+        GLOSS:	beautiful/nice/fine (arts)+[fem.sg.]
+
+ INPUT STRING:	خالص
+     IS_TRANS:	xAlS
+        INDEX:	P1W6
+      OFFSETS:	22-26
+       TOKENS:	P1W6-P1W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[xAliS_1]
+   UNSPLITVOC:	(xAliS)
+          POS:	ADV
+          VOC:	xAliS
+        GLOSS:	forever/never/pure/clear/sincere/very/absolutely
+
+ INPUT STRING:	تسمي
+     IS_TRANS:	tsmy
+        INDEX:	P2W1
+      OFFSETS:	0-4
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(tsmy)
+          POS:	TYPO
+          VOC:	tsmy
+        GLOSS:	nogloss
+
+ INPUT STRING:	لي
+     IS_TRANS:	ly
+        INDEX:	P2W2
+      OFFSETS:	5-7
+       TOKENS:	P2W2-P2W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[li_1]
+   UNSPLITVOC:	(liiy)
+          POS:	PREP+PRON_1S
+          VOC:	li+iy
+        GLOSS:	to/him (it/he has)/them/her (it/she has/they have)/for+me
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P2W3
+      OFFSETS:	8-10
+       TOKENS:	P2W4-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	قمر
+     IS_TRANS:	qmr
+        INDEX:	P2W4
+      OFFSETS:	11-14
+       TOKENS:	P2W5-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qamar_1]
+   UNSPLITVOC:	(qamar)
+          POS:	NOUN
+          VOC:	qamar
+        GLOSS:	moon/satellite/satellites
+

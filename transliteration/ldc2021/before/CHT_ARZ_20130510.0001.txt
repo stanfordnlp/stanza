@@ -1,0 +1,130 @@
+ INPUT STRING:	نانا
+     IS_TRANS:	nAnA
+        INDEX:	P1W1
+      OFFSETS:	0-4
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nAnA_1]
+   UNSPLITVOC:	(nAnA)
+          POS:	NOUN_PROP
+          VOC:	nAnA
+        GLOSS:	Nana
+
+ INPUT STRING:	الدنيا
+     IS_TRANS:	AldnyA
+        INDEX:	P2W1
+      OFFSETS:	0-6
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dunoyA_1]
+   UNSPLITVOC:	(AldunoyA)
+          POS:	DET+NOUN
+          VOC:	Al+dunoyA
+        GLOSS:	the+world/worlds
+
+ INPUT STRING:	بتشتى
+     IS_TRANS:	bt$tY
+        INDEX:	P2W2
+      OFFSETS:	7-12
+       TOKENS:	P2W2-P2W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$ataY_1]
+   UNSPLITVOC:	(biti$otiy)
+          POS:	PROG_PART+IV2FS+IV+IVSUFF_SUBJ:2FS
+          VOC:	bi+ti+$ot+iy
+        GLOSS:	[present-tense]+you+Gloss:TBA+you
+
+ INPUT STRING:	ادعوا
+     IS_TRANS:	AdEwA
+        INDEX:	P3W1
+      OFFSETS:	0-5
+       TOKENS:	P3W1-P3W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[daEA_1]
+   UNSPLITVOC:	(AidoEuwA)
+          POS:	CV+CVSUFF_SUBJ:2P
+          VOC:	AidoE+uwA
+        GLOSS:	call/invite/be called/be invited+they
+
+ INPUT STRING:	ريري
+     IS_TRANS:	ryry
+        INDEX:	P4W1
+      OFFSETS:	0-4
+       TOKENS:	P4W1-P4W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[riyriy_1]
+   UNSPLITVOC:	(riyriy)
+          POS:	NOUN_PROP
+          VOC:	riyriy
+        GLOSS:	Riri
+
+ INPUT STRING:	حاضر
+     IS_TRANS:	HADr
+        INDEX:	P5W1
+      OFFSETS:	0-4
+       TOKENS:	P5W1-P5W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HADir_1]
+   UNSPLITVOC:	(HADir)
+          POS:	NOUN
+          VOC:	HADir
+        GLOSS:	present time
+
+ INPUT STRING:	حبيبتي
+     IS_TRANS:	Hbybty
+        INDEX:	P5W2
+      OFFSETS:	5-11
+       TOKENS:	P5W2-P5W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Habiybap_1]
+   UNSPLITVOC:	(Habiybtiy)
+          POS:	NOUN+NSUFF_FEM_SG+POSS_PRON_1S
+          VOC:	Habiyb+ap+iy
+        GLOSS:	beloved/lover/darling/dear/sweet heart/sweatheart/sweetheart+[fem.sg.]+my
+
+ INPUT STRING:	ادعي
+     IS_TRANS:	AdEy
+        INDEX:	P6W1
+      OFFSETS:	0-4
+       TOKENS:	P6W1-P6W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[daEA_1]
+   UNSPLITVOC:	(AidoEiy)
+          POS:	CV+CVSUFF_SUBJ:2MS
+          VOC:	AidoEiy+(null)
+        GLOSS:	call/invite/be called/be invited+you
+
+ INPUT STRING:	لي
+     IS_TRANS:	ly
+        INDEX:	P6W2
+      OFFSETS:	5-7
+       TOKENS:	P6W2-P6W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[li_1]
+   UNSPLITVOC:	(liy~a)
+          POS:	PREP+PRON_1S
+          VOC:	li+iy
+        GLOSS:	to/him (it/he has)/them/her (it/she has/they have)/for+gloss
+
+ INPUT STRING:	#
+     IS_TRANS:	#
+        INDEX:	P6W3
+      OFFSETS:	8-9
+       TOKENS:	P6W4-P6W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(#)
+          POS:	PUNC
+          VOC:	#
+        GLOSS:	#
+

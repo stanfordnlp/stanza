@@ -1,0 +1,80 @@
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: اوكي
+     IS_TRANS: Awky
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 1,5
+  UNVOCALIZED: >wky
+    VOCALIZED: ->uwk~iy
+          POS: INTERJ
+        GLOSS: ok
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 6,7
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: !
+     IS_TRANS: !
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 7,8
+  UNVOCALIZED: !
+    VOCALIZED: !
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: الحمد
+     IS_TRANS: AlHmd
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,5
+  UNVOCALIZED: AlHmd
+    VOCALIZED: Al+Hamod
+          POS: DET+NOUN
+        GLOSS: the+commendation/praise
+
+ INPUT STRING: لاالله
+     IS_TRANS: lAAllh
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 6,12
+  UNVOCALIZED: lAAllh
+    VOCALIZED: lAAllh
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: حبيبت
+     IS_TRANS: Hbybt
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,5
+  UNVOCALIZED: Hbybp
+    VOCALIZED: Habiyb+ap-
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: beloved/lover/darling/dear/sweet heart/sweatheart/sweetheart+[fem.sg.]
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 5,6
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+

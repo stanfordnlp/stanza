@@ -1,0 +1,180 @@
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,6
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: ح
+     IS_TRANS: H
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 7,8
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: اقدر
+     IS_TRANS: Aqdr
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 8,12
+  UNVOCALIZED: Aqdr
+    VOCALIZED: -Aa+qodar
+          POS: IV1S+IV
+        GLOSS: I+be able/be able to/be capable of/no capacity
+
+ INPUT STRING: آجي
+     IS_TRANS: |jy
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 13,16
+  UNVOCALIZED: |jy
+    VOCALIZED: |+jiy
+          POS: IV1S+IV
+        GLOSS: I+occur/came/come/reach/arrive
+
+ INPUT STRING: بكرة
+     IS_TRANS: bkrp
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 17,21
+  UNVOCALIZED: bkrp
+    VOCALIZED: bukor+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: tomorrow+[fem.sg.]
+
+ INPUT STRING: مف
+     IS_TRANS: mf
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: mA
+    VOCALIZED: mA-
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 2,3
+  UNVOCALIZED: fy
+    VOCALIZED: -fiy-
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 3,4
+  UNVOCALIZED: h
+    VOCALIZED: -h-
+          POS: PRON_3FS
+        GLOSS: it/him
+
+ INPUT STRING: ش
+     IS_TRANS: $
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 4,5
+  UNVOCALIZED: $
+    VOCALIZED: -$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: مشكلة
+     IS_TRANS: m$klp
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 6,11
+  UNVOCALIZED: m$klp
+    VOCALIZED: mu$okil+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: problem/issue/problems/issues/inconveniences+[fem.sg.]
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: الشغل
+     IS_TRANS: Al$gl
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 1,6
+  UNVOCALIZED: Al$gl
+    VOCALIZED: -Al+$ugol
+          POS: DET+NOUN
+        GLOSS: the+work/activity/occupation/labor/business
+
+ INPUT STRING: حأبع
+     IS_TRANS: H>bE
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 7,11
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: ت
+     IS_TRANS: t
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 11,12
+  UNVOCALIZED: AbEt
+    VOCALIZED: -Aa+boEat-
+          POS: IV1S+IV
+        GLOSS: I+send
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 12,13
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: على
+     IS_TRANS: ElY
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 14,17
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: ميل
+     IS_TRANS: myl
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 18,21
+  UNVOCALIZED: myl
+    VOCALIZED: myl
+          POS: FOREIGN
+        GLOSS: nogloss
+

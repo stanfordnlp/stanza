@@ -1,0 +1,110 @@
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: <yh
+    VOCALIZED: <yh
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: حوده
+     IS_TRANS: Hwdh
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,8
+  UNVOCALIZED: Hwdp
+    VOCALIZED: Huwd+ap
+          POS: NOUN_PROP+NSUFF_FEM_SG
+        GLOSS: Houda+[fem.sg.]
+
+ INPUT STRING: انت
+     IS_TRANS: Ant
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,12
+  UNVOCALIZED: Ant
+    VOCALIZED: Ainota
+          POS: PRON_2MS
+        GLOSS: you [masc.sg.]/you/masculine
+
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 13,15
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: مسافر
+     IS_TRANS: msAfr
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 16,21
+  UNVOCALIZED: msAfr
+    VOCALIZED: misAfir
+          POS: ADJ
+        GLOSS: traveler/passenger/traveling
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 22,23
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: حوده
+     IS_TRANS: Hwdh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Hwdp
+    VOCALIZED: Huwd+ap
+          POS: NOUN_PROP+NSUFF_FEM_SG
+        GLOSS: Houda+[fem.sg.]
+
+ INPUT STRING: بكرة
+     IS_TRANS: bkrp
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,4
+  UNVOCALIZED: bkrp
+    VOCALIZED: bukor+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: tomorrow+[fem.sg.]
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 5,7
+  UNVOCALIZED: <n
+    VOCALIZED: <in~
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,11
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 12,16
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+

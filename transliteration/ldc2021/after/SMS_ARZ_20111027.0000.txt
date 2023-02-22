@@ -1,0 +1,200 @@
+ INPUT STRING: صباح
+     IS_TRANS: SbAH
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: SbAH
+    VOCALIZED: SabAH
+          POS: NOUN
+        GLOSS: morning/in the morning
+
+ INPUT STRING: الخير
+     IS_TRANS: Alxyr
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,10
+  UNVOCALIZED: Alxyr
+    VOCALIZED: Al+xiyr
+          POS: DET+NOUN
+        GLOSS: the+good
+
+ INPUT STRING: خلي
+     IS_TRANS: xly
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 11,14
+  UNVOCALIZED: xly
+    VOCALIZED: xal~+iy
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: release/evacuate/allow/be released/be evacuated/be allowed+you
+
+ INPUT STRING: ماما
+     IS_TRANS: mAmA
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 15,19
+  UNVOCALIZED: mAmA
+    VOCALIZED: mAmA
+          POS: NOUN
+        GLOSS: mama
+
+ INPUT STRING: تفضي
+     IS_TRANS: tfDy
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 20,24
+  UNVOCALIZED: tfDy
+    VOCALIZED: ti+faD~+iy-
+          POS: IV2FS+IV+IVSUFF_SUBJ:2FS
+        GLOSS: you+vacate/empty/be vacated/be emptied+you
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 24,25
+  UNVOCALIZED: l
+    VOCALIZED: -li-
+          POS: PREP
+        GLOSS: for/to
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 25,26
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: PRON_2FS
+        GLOSS: you
+
+ INPUT STRING: درج
+     IS_TRANS: drj
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 27,30
+  UNVOCALIZED: drj
+    VOCALIZED: duroj
+          POS: NOUN
+        GLOSS: desk drawer/desk drawers
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P1W9
+      OFFSETS: 31,33
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: الديب
+     IS_TRANS: Aldyb
+      COMMENT: []
+        INDEX: P1W10
+      OFFSETS: 34,39
+  UNVOCALIZED: Aldyb
+    VOCALIZED: Aldyb
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: فريز
+     IS_TRANS: fryz
+      COMMENT: []
+        INDEX: P1W11
+      OFFSETS: 40,44
+  UNVOCALIZED: fryz
+    VOCALIZED: fryz
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: ع
+     IS_TRANS: E
+      COMMENT: []
+        INDEX: P1W12
+      OFFSETS: 45,46
+  UNVOCALIZED: E
+    VOCALIZED: Ea-
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: شان
+     IS_TRANS: $An
+      COMMENT: []
+        INDEX: P1W13
+      OFFSETS: 46,49
+  UNVOCALIZED: $An
+    VOCALIZED: -$An
+          POS: NOUN
+        GLOSS: situation/case/matters/because of/matter/status/condition/for sake of
+
+ INPUT STRING: مع
+     IS_TRANS: mE
+      COMMENT: []
+        INDEX: P1W14
+      OFFSETS: 50,52
+  UNVOCALIZED: mE
+    VOCALIZED: maEa-
+          POS: NOUN
+        GLOSS: with
+
+ INPUT STRING: ايا
+     IS_TRANS: AyA
+      COMMENT: []
+        INDEX: P1W15
+      OFFSETS: 52,55
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: جمبري
+     IS_TRANS: jmbry
+      COMMENT: []
+        INDEX: P1W16
+      OFFSETS: 56,61
+  UNVOCALIZED: jmbry
+    VOCALIZED: jamobariy
+          POS: NOUN
+        GLOSS: shrimp/unit shrimp
+
+ INPUT STRING: حاضر
+     IS_TRANS: HADr
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: HADr
+    VOCALIZED: HADir
+          POS: ADJ
+        GLOSS: present/attending
+
+ INPUT STRING: ان
+     IS_TRANS: An
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 5,7
+  UNVOCALIZED: <n
+    VOCALIZED: <in
+          POS: SUB_CONJ
+        GLOSS: Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 8,11
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 12,16
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+

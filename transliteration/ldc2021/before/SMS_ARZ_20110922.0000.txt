@@ -1,0 +1,234 @@
+ INPUT STRING:	وانتي
+     IS_TRANS:	wAnty
+        INDEX:	P1W1
+      OFFSETS:	0-5
+       TOKENS:	P1W1-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Ainotiy_1]
+   UNSPLITVOC:	(wiAinotiy)
+          POS:	CONJ+PRON_2FS
+          VOC:	wi+Ainotiy
+        GLOSS:	and+you [fem.sg.]/you/feminine
+
+ INPUT STRING:	أحلى
+     IS_TRANS:	>HlY
+        INDEX:	P1W2
+      OFFSETS:	6-10
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aHolaY_1]
+   UNSPLITVOC:	(>aHolaY)
+          POS:	ADJ_COMP
+          VOC:	>aHolaY
+        GLOSS:	more sweet
+
+ INPUT STRING:	من
+     IS_TRANS:	mn
+        INDEX:	P1W3
+      OFFSETS:	11-13
+       TOKENS:	P1W4-P1W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[min_1]
+   UNSPLITVOC:	(min)
+          POS:	PREP
+          VOC:	min
+        GLOSS:	from
+
+ INPUT STRING:	الشمس
+     IS_TRANS:	Al$ms
+        INDEX:	P1W4
+      OFFSETS:	14-19
+       TOKENS:	P1W5-P1W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$amos_1]
+   UNSPLITVOC:	(Al$amos)
+          POS:	DET+NOUN
+          VOC:	Al+$amos
+        GLOSS:	the+sun/suns
+
+ INPUT STRING:	اللي
+     IS_TRANS:	Ally
+        INDEX:	P1W5
+      OFFSETS:	20-24
+       TOKENS:	P1W6-P1W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Alliy_1]
+   UNSPLITVOC:	(Alliy)
+          POS:	REL_PRON
+          VOC:	Alliy
+        GLOSS:	who/which/that
+
+ INPUT STRING:	من
+     IS_TRANS:	mn
+        INDEX:	P1W6
+      OFFSETS:	25-27
+       TOKENS:	P1W7-P1W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[min_1]
+   UNSPLITVOC:	(min)
+          POS:	PREP
+          VOC:	min
+        GLOSS:	from
+
+ INPUT STRING:	غيرها
+     IS_TRANS:	gyrhA
+        INDEX:	P1W7
+      OFFSETS:	28-33
+       TOKENS:	P1W8-P1W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[giyr_1]
+   UNSPLITVOC:	(giyrhA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	giyr+hA
+        GLOSS:	not/other+its/their/her
+
+ INPUT STRING:	القمر
+     IS_TRANS:	Alqmr
+        INDEX:	P1W8
+      OFFSETS:	34-39
+       TOKENS:	P1W10-P1W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qamar_1]
+   UNSPLITVOC:	(Alqamar)
+          POS:	DET+NOUN
+          VOC:	Al+qamar
+        GLOSS:	the+moon/satellite/satellites
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P1W9
+      OFFSETS:	40-42
+       TOKENS:	P1W11-P1W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	حينور
+     IS_TRANS:	Hynwr
+        INDEX:	P1W10
+      OFFSETS:	43-48
+       TOKENS:	P1W12-P1W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[naw~ar_1]
+   UNSPLITVOC:	(Hayinaw~ar)
+          POS:	FUT_PART+IV3MS+IV
+          VOC:	Ha+yi+naw~ar
+        GLOSS:	will+he/it+shed light/enlighten
+
+ INPUT STRING:	#
+     IS_TRANS:	#
+        INDEX:	P1W11
+      OFFSETS:	49-50
+       TOKENS:	P1W14-P1W14
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(#)
+          POS:	PUNC
+          VOC:	#
+        GLOSS:	#
+
+ INPUT STRING:	بأحبك
+     IS_TRANS:	b>Hbk
+        INDEX:	P1W12
+      OFFSETS:	51-56
+       TOKENS:	P1W15-P1W17
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Hab~_1]
+   UNSPLITVOC:	(bAaHib~ik)
+          POS:	PROG_PART+IV1S+IV+IVSUFF_DO:2FS
+          VOC:	bi+Aa+Hib~+ik
+        GLOSS:	[present-tense]+I+love/like/want+you
+
+ INPUT STRING:	كنتي
+     IS_TRANS:	knty
+        INDEX:	P2W1
+      OFFSETS:	0-4
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(kuntiy)
+          POS:	PV+PVSUFF_SUBJ:2FS
+          VOC:	kun+tiy
+        GLOSS:	be/was/were+you
+
+ INPUT STRING:	أحلى
+     IS_TRANS:	>HlY
+        INDEX:	P2W2
+      OFFSETS:	5-9
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aHolaY_1]
+   UNSPLITVOC:	(>aHolaY)
+          POS:	ADJ_COMP
+          VOC:	>aHolaY
+        GLOSS:	more sweet
+
+ INPUT STRING:	من
+     IS_TRANS:	mn
+        INDEX:	P2W3
+      OFFSETS:	10-12
+       TOKENS:	P2W3-P2W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[min_1]
+   UNSPLITVOC:	(min)
+          POS:	PREP
+          VOC:	min
+        GLOSS:	from
+
+ INPUT STRING:	القمر
+     IS_TRANS:	Alqmr
+        INDEX:	P2W4
+      OFFSETS:	13-18
+       TOKENS:	P2W4-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qamar_1]
+   UNSPLITVOC:	(Alqamar)
+          POS:	DET+NOUN
+          VOC:	Al+qamar
+        GLOSS:	the+moon/satellite/satellites
+
+ INPUT STRING:	النهاردة
+     IS_TRANS:	AlnhArdp
+        INDEX:	P2W5
+      OFFSETS:	19-27
+       TOKENS:	P2W5-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nahArodap_1]
+   UNSPLITVOC:	(AlnahArodap)
+          POS:	DET+NOUN+NSUFF_FEM_SG
+          VOC:	Al+nahArod+ap
+        GLOSS:	the+this day/morning/day/today+[fem.sg.]
+
+ INPUT STRING:	#
+     IS_TRANS:	#
+        INDEX:	P2W6
+      OFFSETS:	28-29
+       TOKENS:	P2W6-P2W6
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(#)
+          POS:	PUNC
+          VOC:	#
+        GLOSS:	#
+

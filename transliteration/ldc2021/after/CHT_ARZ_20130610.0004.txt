@@ -1,0 +1,130 @@
+ INPUT STRING: شوفي
+     IS_TRANS: $wfy
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: $wfy
+    VOCALIZED: $uwf+iy
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: look+you
+
+ INPUT STRING: عمرو
+     IS_TRANS: Emrw
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,9
+  UNVOCALIZED: Emrw
+    VOCALIZED: Eamorw
+          POS: NOUN_PROP
+        GLOSS: Amr
+
+ INPUT STRING: أديب
+     IS_TRANS: >dyb
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 10,14
+  UNVOCALIZED: >dyb
+    VOCALIZED: >adiyb
+          POS: NOUN_PROP
+        GLOSS: Adeeb/Adib
+
+ INPUT STRING: دلوقتي
+     IS_TRANS: dlwqty
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 15,21
+  UNVOCALIZED: dlwqty
+    VOCALIZED: dilowaqotiy
+          POS: ADV
+        GLOSS: now
+
+ INPUT STRING: جايب
+     IS_TRANS: jAyb
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: jAyb
+    VOCALIZED: jAyib
+          POS: ADJ
+        GLOSS: bringing
+
+ INPUT STRING: تحليل
+     IS_TRANS: tHlyl
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 5,10
+  UNVOCALIZED: tHlyl
+    VOCALIZED: taHoliyl
+          POS: NOUN
+        GLOSS: analysis/dissolution/analyses
+
+ INPUT STRING: عن
+     IS_TRANS: En
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 11,13
+  UNVOCALIZED: En
+    VOCALIZED: Ean
+          POS: PREP
+        GLOSS: (away) from/off/about/on/over
+
+ INPUT STRING: مرسي
+     IS_TRANS: mrsy
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 14,18
+  UNVOCALIZED: mrsy
+    VOCALIZED: murosiy
+          POS: NOUN_PROP
+        GLOSS: Mursi
+
+ INPUT STRING: مرسي
+     IS_TRANS: mrsy
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 19,23
+  UNVOCALIZED: mrsy
+    VOCALIZED: murosiy
+          POS: NOUN_PROP
+        GLOSS: Mursi
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: خسارة
+     IS_TRANS: xsArp
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,8
+  UNVOCALIZED: xsArp
+    VOCALIZED: xusAr+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: casualty/losses/damage/loss+[fem.sg.]
+
+ INPUT STRING: كنت
+     IS_TRANS: knt
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 9,12
+  UNVOCALIZED: knt
+    VOCALIZED: kun+t
+          POS: PV+PVSUFF_SUBJ:1S
+        GLOSS: be/was/were+I
+
+ INPUT STRING: نايمة
+     IS_TRANS: nAymp
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 13,18
+  UNVOCALIZED: nAymp
+    VOCALIZED: nAyom+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: sleeping/asleep+[fem.sg.]
+

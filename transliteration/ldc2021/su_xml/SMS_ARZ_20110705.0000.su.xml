@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20110705.0000" medium="SMS" donated="true">
+  <su id="s0">
+    <source>Kset eh?</source>
+    <annotated_arabizi>
+      <token id="t0">Kset</token>
+      <token id="t1">eh?</token>
+    </annotated_arabizi>
+    <auto_transliteration>كست إيه؟</auto_transliteration>
+    <corrected_transliteration>كاسيت إيه[-]؟</corrected_transliteration>
+    <normalized_transliteration>كاسيت إيه ؟</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2011-07-04 22:07:33 UTC" participant="139379">Kset eh?</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>:) yes gamela awe</source>
+    <annotated_arabizi>
+      <token id="t0">:)</token>
+      <token id="t1" tag="foreign">yes</token>
+      <token id="t2">gamela</token>
+      <token id="t3">awe</token>
+    </annotated_arabizi>
+    <auto_transliteration>:( يا جميلة قوي</auto_transliteration>
+    <corrected_transliteration># يا جميلة قوي</corrected_transliteration>
+    <normalized_transliteration># يا جميلة قوي</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2011-07-04 22:08:32 UTC" participant="139379">:) yes gamela awe</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>7'alst elqesa..to7fa..to7fa..to7fa..lakn 7tw7shny awe awe :'(</source>
+    <annotated_arabizi>
+      <token id="t0">7'alst</token>
+      <token id="t1">elqesa..to7fa..to7fa..to7fa..lakn</token>
+      <token id="t2">7tw7shny</token>
+      <token id="t3">awe</token>
+      <token id="t4">awe</token>
+      <token id="t5">:'(</token>
+    </annotated_arabizi>
+    <auto_transliteration>خلصت الكيسة..تحفة..تحفة..تحفة..لكن حتوحشني قوي قوي :على)</auto_transliteration>
+    <corrected_transliteration>خلصت القصة..تحفة..تحفة..تحفة..لكن حتوحشني قوي قوي #</corrected_transliteration>
+    <normalized_transliteration>خلصت القصة..تحفة..تحفة..تحفة..لكن حتوحشني قوي قوي #</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2011-07-05 04:06:36 UTC" participant="139275">7'alst elqesa..to7fa..to7fa..to7fa..lakn 7tw7shny awe awe :'(</message>
+    </messages>
+  </su>
+</conversation>

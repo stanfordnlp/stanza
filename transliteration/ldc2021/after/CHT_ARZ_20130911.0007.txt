@@ -1,0 +1,110 @@
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: EXCLAM_PRON
+        GLOSS: what/how
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,6
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 7,11
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: يوح
+     IS_TRANS: ywH
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 12,15
+  UNVOCALIZED: ywH
+    VOCALIZED: ywH
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: جميلة
+     IS_TRANS: jmylp
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 16,21
+  UNVOCALIZED: jmylp
+    VOCALIZED: jamiyl+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: beautiful/nice/fine (arts)+[fem.sg.]
+
+ INPUT STRING: خالص
+     IS_TRANS: xAlS
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 22,26
+  UNVOCALIZED: xAlS
+    VOCALIZED: xAliS
+          POS: ADV
+        GLOSS: forever/never/pure/clear/sincere/very/absolutely
+
+ INPUT STRING: تسمي
+     IS_TRANS: tsmy
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: tsmy
+    VOCALIZED: tsmy
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 5,6
+  UNVOCALIZED: l
+    VOCALIZED: li-
+          POS: PREP
+        GLOSS: to/him (it/he has)/them/her (it/she has/they have)/for
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,7
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: PRON_1S
+        GLOSS: me
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 8,10
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: قمر
+     IS_TRANS: qmr
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 11,14
+  UNVOCALIZED: qmr
+    VOCALIZED: qamar
+          POS: NOUN
+        GLOSS: moon/satellite/satellites
+

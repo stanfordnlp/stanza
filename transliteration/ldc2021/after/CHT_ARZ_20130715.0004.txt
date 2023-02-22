@@ -1,0 +1,420 @@
+ INPUT STRING: عاملة
+     IS_TRANS: EAmlp
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,5
+  UNVOCALIZED: EAmlp
+    VOCALIZED: EAmol+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: working+[fem.sg.]
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 6,9
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 10,12
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: رمضان
+     IS_TRANS: rmDAn
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 13,18
+  UNVOCALIZED: rmDAn
+    VOCALIZED: ramaDAn
+          POS: NOUN
+        GLOSS: Ramadan
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 19,21
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: قمر
+     IS_TRANS: qmr
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 22,25
+  UNVOCALIZED: qmr
+    VOCALIZED: qamar
+          POS: NOUN
+        GLOSS: moon/satellite/satellites
+
+ INPUT STRING: تمام
+     IS_TRANS: tmAm
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: tmAm
+    VOCALIZED: tamAm
+          POS: NOUN
+        GLOSS: exact/complete/exactly/completely
+
+ INPUT STRING: حمد
+     IS_TRANS: Hmd
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 5,8
+  UNVOCALIZED: Hmd
+    VOCALIZED: Hamod
+          POS: NOUN
+        GLOSS: commendation/praise
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 9,13
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: kl
+    VOCALIZED: kul~-
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 2,3
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: POSS_PRON_3MS
+        GLOSS: his/its
+
+ INPUT STRING: بنو
+     IS_TRANS: bnw
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 4,7
+  UNVOCALIZED: bnw
+    VOCALIZED: bnw
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: يوم
+     IS_TRANS: ywm
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,3
+  UNVOCALIZED: ywm
+    VOCALIZED: yawm
+          POS: NOUN
+        GLOSS: today/day/some day/ever/days
+
+ INPUT STRING: تحت
+     IS_TRANS: tHt
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 4,7
+  UNVOCALIZED: tHt
+    VOCALIZED: taHot
+          POS: NOUN
+        GLOSS: under
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 8,9
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: يوم
+     IS_TRANS: ywm
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 9,12
+  UNVOCALIZED: ywm
+    VOCALIZED: -yuwm
+          POS: NOUN
+        GLOSS: today/day/some day/ever/days
+
+ INPUT STRING: فوق
+     IS_TRANS: fwq
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 13,16
+  UNVOCALIZED: fwq
+    VOCALIZED: fuwq
+          POS: NOUN
+        GLOSS: above/over/top/upper part
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P4W6
+      OFFSETS: 17,18
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: لول
+     IS_TRANS: lwl
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,3
+  UNVOCALIZED: lwl
+    VOCALIZED: lwl
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P6W1
+      OFFSETS: 0,2
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: المرجيحة
+     IS_TRANS: AlmrjyHp
+      COMMENT: []
+        INDEX: P6W2
+      OFFSETS: 3,11
+  UNVOCALIZED: AlmrjyHp
+    VOCALIZED: Al+murojiyH+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+seesaw/swing/seesaws/swings/trapeze+[fem.sg.]
+
+ INPUT STRING: انتي
+     IS_TRANS: Anty
+      COMMENT: []
+        INDEX: P7W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Anty
+    VOCALIZED: Ainotiy
+          POS: PRON_2FS
+        GLOSS: you [fem.sg.]/you/feminine
+
+ INPUT STRING: قلبتي
+     IS_TRANS: qlbty
+      COMMENT: []
+        INDEX: P7W2
+      OFFSETS: 5,10
+  UNVOCALIZED: qlbty
+    VOCALIZED: qalab+tiy
+          POS: PV+PVSUFF_SUBJ:2FS
+        GLOSS: turn around/reverse/overthrow/topple+you
+
+ INPUT STRING: مهرجانات
+     IS_TRANS: mhrjAnAt
+      COMMENT: []
+        INDEX: P7W3
+      OFFSETS: 11,19
+  UNVOCALIZED: mhrjAnAt
+    VOCALIZED: mahrajAn+At
+          POS: NOUN+NSUFF_FEM_PL
+        GLOSS: festival+[fem.pl.]
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P7W4
+      OFFSETS: 19,20
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: لول
+     IS_TRANS: lwl
+      COMMENT: []
+        INDEX: P8W1
+      OFFSETS: 0,3
+  UNVOCALIZED: lwl
+    VOCALIZED: lwl
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: طبعا
+     IS_TRANS: TbEA
+      COMMENT: []
+        INDEX: P9W1
+      OFFSETS: 0,4
+  UNVOCALIZED: TbEA
+    VOCALIZED: TaboE+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: temperament/naturally/of course/printing+[acc.indef.]
+
+ INPUT STRING: ذوق
+     IS_TRANS: *wq
+      COMMENT: []
+        INDEX: P10W1
+      OFFSETS: 0,3
+  UNVOCALIZED: *wq
+    VOCALIZED: *uwq-
+          POS: NOUN
+        GLOSS: taste/sense/sensitivity/tastes/sensitivities
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P10W2
+      OFFSETS: 3,4
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P10W3
+      OFFSETS: 5,7
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: رقى
+     IS_TRANS: rqY
+      COMMENT: []
+        INDEX: P10W4
+      OFFSETS: 8,11
+  UNVOCALIZED: rqy
+    VOCALIZED: ruqiy~
+          POS: NOUN
+        GLOSS: progress/rise/promotion
+
+ INPUT STRING: مستمر
+     IS_TRANS: mstmr
+      COMMENT: []
+        INDEX: P10W5
+      OFFSETS: 12,17
+  UNVOCALIZED: mstmr
+    VOCALIZED: musotamir~
+          POS: ADJ
+        GLOSS: continuing/continuous/incessant
+
+ INPUT STRING: لول
+     IS_TRANS: lwl
+      COMMENT: []
+        INDEX: P11W1
+      OFFSETS: 0,3
+  UNVOCALIZED: lwl
+    VOCALIZED: lwl
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P12W1
+      OFFSETS: 0,2
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: تقول
+     IS_TRANS: tqwl
+      COMMENT: []
+        INDEX: P12W2
+      OFFSETS: 3,7
+  UNVOCALIZED: tqwl
+    VOCALIZED: ti+quwl-
+          POS: IV2MS+IV
+        GLOSS: you+said/say/be said/(for example)
+
+ INPUT STRING: ش
+     IS_TRANS: $
+      COMMENT: []
+        INDEX: P12W3
+      OFFSETS: 7,8
+  UNVOCALIZED: $
+    VOCALIZED: -$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: على
+     IS_TRANS: ElY
+      COMMENT: []
+        INDEX: P12W4
+      OFFSETS: 9,12
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: نفس
+     IS_TRANS: nfs
+      COMMENT: []
+        INDEX: P12W5
+      OFFSETS: 13,16
+  UNVOCALIZED: nfs
+    VOCALIZED: nafos-
+          POS: NOUN
+        GLOSS: same/self/selves/soul/souls
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P12W6
+      OFFSETS: 16,17
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: POSS_PRON_2FS
+        GLOSS: your
+
+ INPUT STRING: كده
+     IS_TRANS: kdh
+      COMMENT: []
+        INDEX: P12W7
+      OFFSETS: 18,21
+  UNVOCALIZED: kdh
+    VOCALIZED: kidah
+          POS: NOUN
+        GLOSS: this/after all that time/in this way/approximately/like that/as such/that/like
+
+ INPUT STRING: انت
+     IS_TRANS: Ant
+      COMMENT: []
+        INDEX: P13W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Ant
+    VOCALIZED: Ainota
+          POS: PRON_2MS
+        GLOSS: you [masc.sg.]/you/masculine
+
+ INPUT STRING: جميل
+     IS_TRANS: jmyl
+      COMMENT: []
+        INDEX: P13W2
+      OFFSETS: 4,8
+  UNVOCALIZED: jmyl
+    VOCALIZED: jamiyl
+          POS: ADJ
+        GLOSS: beautiful/nice/fine (arts)
+

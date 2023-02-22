@@ -1,0 +1,120 @@
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,6
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: عربية
+     IS_TRANS: Erbyp
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 7,12
+  UNVOCALIZED: Erbyp
+    VOCALIZED: Earabiy~+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: Arabic (language)+[fem.sg.]
+
+ INPUT STRING: لما
+     IS_TRANS: lmA
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 13,16
+  UNVOCALIZED: lmA
+    VOCALIZED: lam~A
+          POS: SUB_CONJ
+        GLOSS: as/when
+
+ INPUT STRING: اطلع
+     IS_TRANS: ATlE
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 17,21
+  UNVOCALIZED: ATlE
+    VOCALIZED: Aa+TolaE
+          POS: IV1S+IV
+        GLOSS: I+ascend/begin to/rise/start/seems/come out/get out/turn be
+
+ INPUT STRING: حأشو
+     IS_TRANS: H>$w
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 22,26
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: ف
+     IS_TRANS: f
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 26,27
+  UNVOCALIZED: A$wf
+    VOCALIZED: -Aa+$uwf-
+          POS: IV1S+IV
+        GLOSS: I+look
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 27,28
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: ذات
+     IS_TRANS: *At
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: *At
+    VOCALIZED: *At
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: أس
+     IS_TRANS: >s
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 4,6
+  UNVOCALIZED: >s
+    VOCALIZED: >s
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: مي
+     IS_TRANS: my
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 7,9
+  UNVOCALIZED: my
+    VOCALIZED: my
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: برياقفست
+     IS_TRANS: bryAqfst
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 10,18
+  UNVOCALIZED: bryAqfst
+    VOCALIZED: bryAqfst
+          POS: FOREIGN
+        GLOSS: nogloss
+

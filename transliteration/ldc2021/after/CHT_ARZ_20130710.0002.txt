@@ -1,0 +1,100 @@
+ INPUT STRING: رمضان
+     IS_TRANS: rmDAn
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,5
+  UNVOCALIZED: rmDAn
+    VOCALIZED: ramaDAn
+          POS: NOUN_PROP
+        GLOSS: Ramadan
+
+ INPUT STRING: كريم
+     IS_TRANS: krym
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 6,10
+  UNVOCALIZED: krym
+    VOCALIZED: kariym
+          POS: ADJ
+        GLOSS: distinguished/generous/noble/precious
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 11,13
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: روشان
+     IS_TRANS: rw$An
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 14,19
+  UNVOCALIZED: rw$An
+    VOCALIZED: ruw$An
+          POS: NOUN
+        GLOSS: Rochane
+
+ INPUT STRING: سم
+     IS_TRANS: sm
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: sm
+    VOCALIZED: sm
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: تو
+     IS_TRANS: tw
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,5
+  UNVOCALIZED: tw
+    VOCALIZED: tw
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: يوو
+     IS_TRANS: yww
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,9
+  UNVOCALIZED: yww
+    VOCALIZED: yww
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: !
+     IS_TRANS: !
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 9,10
+  UNVOCALIZED: !
+    VOCALIZED: !
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 11,15
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: أكرم
+     IS_TRANS: >krm
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 16,20
+  UNVOCALIZED: >krm
+    VOCALIZED: >akoram
+          POS: ADJ_COMP
+        GLOSS: nobler/noblest/dearer/dearest/more/most precious
+

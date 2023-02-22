@@ -1,0 +1,160 @@
+ INPUT STRING: طارق
+     IS_TRANS: TArq
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: TArq
+    VOCALIZED: TAriq
+          POS: NOUN_PROP
+        GLOSS: Tariq
+
+ INPUT STRING: حببي
+     IS_TRANS: Hbby
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Hbby
+    VOCALIZED: Hbby
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: عنيفرساري
+     IS_TRANS: EnyfrsAry
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 5,14
+  UNVOCALIZED: EnyfrsAry
+    VOCALIZED: EnyfrsAry
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: عقبال
+     IS_TRANS: EqbAl
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 15,20
+  UNVOCALIZED: EqbAl
+    VOCALIZED: EuqobAl
+          POS: NOUN
+        GLOSS: Following/consequence
+
+ INPUT STRING: الفرح
+     IS_TRANS: AlfrH
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 21,26
+  UNVOCALIZED: AlfrH
+    VOCALIZED: Al+faroH
+          POS: DET+NOUN
+        GLOSS: the+festivity
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 27,29
+  UNVOCALIZED: <n
+    VOCALIZED: <in
+          POS: SUB_CONJ
+        GLOSS: Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 30,33
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 34,38
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: ميرسي
+     IS_TRANS: myrsy
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,5
+  UNVOCALIZED: myrsy
+    VOCALIZED: myrsy
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 6,8
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: سيسي
+     IS_TRANS: sysy
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 9,13
+  UNVOCALIZED: sysy
+    VOCALIZED: siysiy
+          POS: NOUN
+        GLOSS: Sisi
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 14,16
+  UNVOCALIZED: rb
+    VOCALIZED: rab~-
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 16,18
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: يخلي
+     IS_TRANS: yxly
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 19,23
+  UNVOCALIZED: yxly
+    VOCALIZED: yi+xal~iy-
+          POS: IV3MS+IV
+        GLOSS: he/it+release/evacuate/allow/be released/be evacuated/be allowed
+
+ INPUT STRING: كي
+     IS_TRANS: ky
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 23,25
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: IVSUFF_DO:2FS
+        GLOSS: you
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,1
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+

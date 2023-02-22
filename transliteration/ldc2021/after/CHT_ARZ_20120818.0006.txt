@@ -1,0 +1,170 @@
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: شكرا
+     IS_TRANS: $krA
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,9
+  UNVOCALIZED: $krA
+    VOCALIZED: $ukor+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: thankfulness/thanks/thank you+[acc.indef.]
+
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: kl
+    VOCALIZED: kul~
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: سنة
+     IS_TRANS: snp
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,6
+  UNVOCALIZED: snp
+    VOCALIZED: san+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: year/years+[fem.sg.]
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 7,8
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: انتي
+     IS_TRANS: Anty
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 8,12
+  UNVOCALIZED: Anty
+    VOCALIZED: -Ainotiy
+          POS: PRON_2FS
+        GLOSS: you [fem.sg.]/you/feminine
+
+ INPUT STRING: طيبة
+     IS_TRANS: Tybp
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 13,17
+  UNVOCALIZED: Tybp
+    VOCALIZED: Tay~ib+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: good/pleasant+[fem.sg.]
+
+ INPUT STRING: وصل
+     IS_TRANS: wSl
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 18,21
+  UNVOCALIZED: wSl
+    VOCALIZED: wiSil+(null)-
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: connect/arrive/reach+he/it
+
+ INPUT STRING: ني
+     IS_TRANS: ny
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 21,23
+  UNVOCALIZED: ny
+    VOCALIZED: -niy
+          POS: PVSUFF_DO:1S
+        GLOSS: me
+
+ INPUT STRING: السنفور
+     IS_TRANS: Alsnfwr
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 24,31
+  UNVOCALIZED: Alsnfwr
+    VOCALIZED: Al+sanfuwr
+          POS: DET+NOUN
+        GLOSS: the+baby
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 32,34
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P2W10
+      OFFSETS: 35,36
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: خدي
+     IS_TRANS: xdy
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,3
+  UNVOCALIZED: xdy
+    VOCALIZED: xud+iy
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: I/take+you
+
+ INPUT STRING: فطار
+     IS_TRANS: fTAr
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 4,8
+  UNVOCALIZED: fTAr
+    VOCALIZED: fiTAr
+          POS: NOUN
+        GLOSS: breakfast
+
+ INPUT STRING: بكرة
+     IS_TRANS: bkrp
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 9,13
+  UNVOCALIZED: bkrp
+    VOCALIZED: bukor+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: tomorrow+[fem.sg.]
+
+ INPUT STRING: ##
+     IS_TRANS: ##
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 15,17
+  UNVOCALIZED: ##
+    VOCALIZED: ##
+          POS: PUNC
+        GLOSS: ##
+
+ INPUT STRING: أهه
+     IS_TRANS: >hh
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 18,21
+  UNVOCALIZED: >hh
+    VOCALIZED: >ahah
+          POS: INTERJ
+        GLOSS: laughing
+

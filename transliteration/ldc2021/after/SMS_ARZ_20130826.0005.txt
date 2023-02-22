@@ -1,0 +1,240 @@
+ INPUT STRING: هي
+     IS_TRANS: hy
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: hy
+    VOCALIZED: hiy~a
+          POS: PRON_3FS
+        GLOSS: it/they/she
+
+ INPUT STRING: دي
+     IS_TRANS: dy
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,5
+  UNVOCALIZED: dy
+    VOCALIZED: diy
+          POS: DEM_PRON_FS
+        GLOSS: this
+
+ INPUT STRING: آخرت
+     IS_TRANS: |xrt
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 6,10
+  UNVOCALIZED: Axrt
+    VOCALIZED: Axorit-
+          POS: NOUN
+        GLOSS: end/later part
+
+ INPUT STRING: ها
+     IS_TRANS: hA
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 10,12
+  UNVOCALIZED: hA
+    VOCALIZED: -hA
+          POS: POSS_PRON_3FS
+        GLOSS: its/their/her
+
+ INPUT STRING: طباخ
+     IS_TRANS: TbAx
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 13,17
+  UNVOCALIZED: TbAx
+    VOCALIZED: Tab~Ax
+          POS: NOUN
+        GLOSS: cook/chef
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 18,19
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: ابن
+     IS_TRANS: Abn
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,6
+  UNVOCALIZED: Abn
+    VOCALIZED: Aibon-
+          POS: NOUN
+        GLOSS: son/children/sons
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,7
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: البنات
+     IS_TRANS: AlbnAt
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 8,14
+  UNVOCALIZED: AlbnAt
+    VOCALIZED: Al+banAt
+          POS: DET+NOUN
+        GLOSS: the+daughter/girl/daughters/girls
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 15,16
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: تموت
+     IS_TRANS: tmwt
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 16,20
+  UNVOCALIZED: tmwt
+    VOCALIZED: -ti+muwt
+          POS: IV3FS+IV
+        GLOSS: it/they/she+die/pass away
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 21,23
+  UNVOCALIZED: fy
+    VOCALIZED: fiy
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: كده
+     IS_TRANS: kdh
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 24,27
+  UNVOCALIZED: kdh
+    VOCALIZED: kidah
+          POS: NOUN
+        GLOSS: this/after all that time/in this way/approximately/like that/as such/that/like
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 28,29
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 1,2
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,4
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 1,3
+  UNVOCALIZED: mA
+    VOCALIZED: -mA-
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 3,4
+  UNVOCALIZED: l
+    VOCALIZED: -li-
+          POS: PREP
+        GLOSS: for
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 4,5
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: PRON_3MS
+        GLOSS: he
+
+ INPUT STRING: نطبخ
+     IS_TRANS: nTbx
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 6,10
+  UNVOCALIZED: nTbx
+    VOCALIZED: nu+Tobux
+          POS: IV1P+IV
+        GLOSS: we+cook/be cooked
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P4W6
+      OFFSETS: 11,12
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: ها
+     IS_TRANS: hA
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,2
+  UNVOCALIZED: hA
+    VOCALIZED: hA
+          POS: INTERJ
+        GLOSS: laugh
+

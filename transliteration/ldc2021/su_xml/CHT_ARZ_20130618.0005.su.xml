@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="CHT_ARZ_20130618.0005" medium="CHT" donated="true">
+  <su id="s0">
+    <source>u ok ?!</source>
+    <annotated_arabizi>
+      <token id="t0" tag="foreign">u</token>
+      <token id="t1" tag="foreign">ok</token>
+      <token id="t2" tag="punctuation">?!</token>
+    </annotated_arabizi>
+    <auto_transliteration>و[+] عك ؟!</auto_transliteration>
+    <corrected_transliteration>و[+] اوكي ؟!</corrected_transliteration>
+    <normalized_transliteration>واوكي ؟!</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-06-18 12:34:04 UTC" participant="139134">u ok ?!</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Elh</source>
+    <annotated_arabizi>
+      <token id="t0">Elh</token>
+    </annotated_arabizi>
+    <auto_transliteration>الله</auto_transliteration>
+    <corrected_transliteration>الحمد[-]لاالله</corrected_transliteration>
+    <normalized_transliteration>الحمد لاالله</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2013-06-18 12:48:04 UTC" participant="139590">Elh</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>habibtyyy</source>
+    <annotated_arabizi>
+      <token id="t0">habibtyy</token>
+    </annotated_arabizi>
+    <auto_transliteration>حبيبتي</auto_transliteration>
+    <corrected_transliteration>حبيبتي</corrected_transliteration>
+    <normalized_transliteration>حبيبتي</normalized_transliteration>
+    <messages>
+      <message id="m0004" time="2013-06-18 13:05:33 UTC" participant="139134">habibtyyy</message>
+    </messages>
+  </su>
+</conversation>

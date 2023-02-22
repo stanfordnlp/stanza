@@ -1,0 +1,280 @@
+ INPUT STRING: عامل
+     IS_TRANS: EAml
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: EAml
+    VOCALIZED: EAmil
+          POS: ADJ
+        GLOSS: active/operating/working
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,8
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,11
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: زفت
+     IS_TRANS: zft
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 12,15
+  UNVOCALIZED: zft
+    VOCALIZED: zifot
+          POS: NOUN
+        GLOSS: asphalt/pitch
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: تعملي
+     IS_TRANS: tEmly
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 1,6
+  UNVOCALIZED: tEmly
+    VOCALIZED: -ti+Eomil+iy
+          POS: IV2FS+IV+IVSUFF_SUBJ:2FS
+        GLOSS: you+function/make/act/do+you
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 7,10
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: آكل
+     IS_TRANS: |kl
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 1,4
+  UNVOCALIZED: Akl
+    VOCALIZED: -Aa+kul
+          POS: IV1S+IV
+        GLOSS: I+eat/consume/be eaten/be consumed
+
+ INPUT STRING: مولتن
+     IS_TRANS: mwltn
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 5,10
+  UNVOCALIZED: mwltn
+    VOCALIZED: mwltn
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: كيك
+     IS_TRANS: kyk
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 11,14
+  UNVOCALIZED: kyk
+    VOCALIZED: kyk
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: انت
+     IS_TRANS: Ant
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 1,4
+  UNVOCALIZED: Ant
+    VOCALIZED: -Ainota
+          POS: PRON_2MS
+        GLOSS: you [masc.sg.]/you/masculine
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: تعملي
+     IS_TRANS: tEmly
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 1,6
+  UNVOCALIZED: tEmly
+    VOCALIZED: -ti+Eomil+iy
+          POS: IV2FS+IV+IVSUFF_SUBJ:2FS
+        GLOSS: you+function/make/act/do+you
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P5W3
+      OFFSETS: 7,10
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: نو
+     IS_TRANS: nw
+      COMMENT: []
+        INDEX: P5W4
+      OFFSETS: 11,13
+  UNVOCALIZED: nw
+    VOCALIZED: nw
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P6W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: تخانق
+     IS_TRANS: txAnq
+      COMMENT: []
+        INDEX: P6W2
+      OFFSETS: 1,6
+  UNVOCALIZED: AtxAnq
+    VOCALIZED: -Aa+txAniq
+          POS: IV1S+IV
+        GLOSS: I+make a problem
+
+ INPUT STRING: مع
+     IS_TRANS: mE
+      COMMENT: []
+        INDEX: P6W3
+      OFFSETS: 7,9
+  UNVOCALIZED: mE
+    VOCALIZED: maEa
+          POS: NOUN
+        GLOSS: with
+
+ INPUT STRING: أم
+     IS_TRANS: >m
+      COMMENT: []
+        INDEX: P6W4
+      OFFSETS: 10,12
+  UNVOCALIZED: >m
+    VOCALIZED: >um~-
+          POS: NOUN
+        GLOSS: mother/maternal/mothers
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P6W5
+      OFFSETS: 12,13
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P7W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: تقول
+     IS_TRANS: tqwl
+      COMMENT: []
+        INDEX: P7W2
+      OFFSETS: 1,5
+  UNVOCALIZED: tqwl
+    VOCALIZED: -ti+quwl
+          POS: IV3FS+IV
+        GLOSS: it/they/she+said/say/be said/(for example)
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P7W3
+      OFFSETS: 6,8
+  UNVOCALIZED: <n
+    VOCALIZED: <in~-
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P7W4
+      OFFSETS: 8,9
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: PRON_1S
+        GLOSS: i
+
+ INPUT STRING: عنصرية
+     IS_TRANS: EnSryp
+      COMMENT: []
+        INDEX: P7W5
+      OFFSETS: 10,16
+  UNVOCALIZED: EnSryp
+    VOCALIZED: EunoSuriy+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: racial/ethnic+[fem.sg.]
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P7W6
+      OFFSETS: 17,18
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+

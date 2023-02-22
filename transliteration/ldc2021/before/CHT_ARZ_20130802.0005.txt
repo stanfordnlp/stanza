@@ -1,0 +1,4095 @@
+ INPUT STRING:	ماما
+     IS_TRANS:	mAmA
+        INDEX:	P1W1
+      OFFSETS:	0-4
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmA)
+          POS:	NOUN
+          VOC:	mAmA
+        GLOSS:	mama
+
+ INPUT STRING:	لسه
+     IS_TRANS:	lsh
+        INDEX:	P1W2
+      OFFSETS:	5-8
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lis~ah_1]
+   UNSPLITVOC:	(lis~ah)
+          POS:	ADV
+          VOC:	lis~ah
+        GLOSS:	yet
+
+ INPUT STRING:	مكلماني
+     IS_TRANS:	mklmAny
+        INDEX:	P1W3
+      OFFSETS:	9-16
+       TOKENS:	P1W3-P1W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mikal~im_1]
+   UNSPLITVOC:	(mikal~imAniy)
+          POS:	ADJ+NSUFF_FEM_SG+PRON_1S
+          VOC:	mikal~im+ap+niy
+        GLOSS:	talking+[fem.sg.]+I
+
+ INPUT STRING:	مامتى
+     IS_TRANS:	mAmtY
+        INDEX:	P2W1
+      OFFSETS:	0-5
+       TOKENS:	P2W1-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmtiy)
+          POS:	NOUN+NSUFF_FEM_SG+POSS_PRON_1S
+          VOC:	mAm+ap+iy
+        GLOSS:	mama+[fem.sg.]+my
+
+ INPUT STRING:	متخيلة
+     IS_TRANS:	mtxylp
+        INDEX:	P2W2
+      OFFSETS:	6-12
+       TOKENS:	P2W3-P2W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mutaxay~il_1]
+   UNSPLITVOC:	(mutaxay~ilap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	mutaxay~il+ap
+        GLOSS:	supposing/imagining+[fem.sg.]
+
+ INPUT STRING:	إيه
+     IS_TRANS:	<yh
+        INDEX:	P3W1
+      OFFSETS:	0-3
+       TOKENS:	P3W1-P3W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_1]
+   UNSPLITVOC:	(<iyh)
+          POS:	INTERROG_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P3W2
+      OFFSETS:	4-5
+       TOKENS:	P3W2-P3W2
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	واحدة
+     IS_TRANS:	wAHdp
+        INDEX:	P4W1
+      OFFSETS:	0-5
+       TOKENS:	P4W1-P4W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[wAHid_1]
+   UNSPLITVOC:	(wAHodap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	wAHod+ap
+        GLOSS:	one+[fem.sg.]
+
+ INPUT STRING:	صحبتها
+     IS_TRANS:	SHbthA
+        INDEX:	P4W2
+      OFFSETS:	6-12
+       TOKENS:	P4W2-P4W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[SaHib_1]
+   UNSPLITVOC:	(SaHibathA)
+          POS:	NOUN+NSUFF_FEM_SG+POSS_PRON_3FS
+          VOC:	SaHib+at+hA
+        GLOSS:	friend+[fem.sg.]+its/their/her
+
+ INPUT STRING:	اتقتلت
+     IS_TRANS:	Atqtlt
+        INDEX:	P4W3
+      OFFSETS:	13-19
+       TOKENS:	P4W4-P4W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aitoqatal_1]
+   UNSPLITVOC:	(Aitoqatalit)
+          POS:	PV_PASS+PVSUFF_SUBJ:3FS
+          VOC:	Aitoqatal+it
+        GLOSS:	be murdered/be killtd/be killed/be massacred+it/they/she
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P5W1
+      OFFSETS:	0-2
+       TOKENS:	P5W1-P5W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	ساتر
+     IS_TRANS:	sAtr
+        INDEX:	P5W2
+      OFFSETS:	3-7
+       TOKENS:	P5W2-P5W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAtir_1]
+   UNSPLITVOC:	(sAtir)
+          POS:	ADJ
+          VOC:	sAtir
+        GLOSS:	protecting/covering/hiding/protector
+
+ INPUT STRING:	حرامي
+     IS_TRANS:	HrAmy
+        INDEX:	P6W1
+      OFFSETS:	0-5
+       TOKENS:	P6W1-P6W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HarAmiy_1]
+   UNSPLITVOC:	(HarAmiy)
+          POS:	NOUN
+          VOC:	HarAmiy
+        GLOSS:	thief/thieves/thiefs
+
+ INPUT STRING:	دخل
+     IS_TRANS:	dxl
+        INDEX:	P6W2
+      OFFSETS:	6-9
+       TOKENS:	P6W2-P6W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[daxal_1]
+   UNSPLITVOC:	(daxal)
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	daxal+(null)
+        GLOSS:	enter/be entered+he/it
+
+ INPUT STRING:	بيتها
+     IS_TRANS:	bythA
+        INDEX:	P6W3
+      OFFSETS:	10-15
+       TOKENS:	P6W3-P6W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[biyt_1]
+   UNSPLITVOC:	(biytahA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	biyt+hA
+        GLOSS:	house/houses/verse/verses+its/their/her
+
+ INPUT STRING:	فين
+     IS_TRANS:	fyn
+        INDEX:	P7W1
+      OFFSETS:	0-3
+       TOKENS:	P7W1-P7W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fiyon_1]
+   UNSPLITVOC:	(fiyon)
+          POS:	INTERROG_ADV
+          VOC:	fiyon
+        GLOSS:	where
+
+ INPUT STRING:	وازاي
+     IS_TRANS:	wAzAy
+        INDEX:	P7W2
+      OFFSETS:	4-9
+       TOKENS:	P7W2-P7W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aiz~Ay_1]
+   UNSPLITVOC:	(wiAiz~Ay)
+          POS:	CONJ+INTERROG_ADV
+          VOC:	wi+Aiz~Ay
+        GLOSS:	and+how/what degree
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P7W3
+      OFFSETS:	10-11
+       TOKENS:	P7W4-P7W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	يعرفها
+     IS_TRANS:	yErfhA
+        INDEX:	P8W1
+      OFFSETS:	0-6
+       TOKENS:	P8W1-P8W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eirif_1]
+   UNSPLITVOC:	(yiEorafahA)
+          POS:	IV3MS+IV+IVSUFF_DO:3FS
+          VOC:	yi+Eoraf+hA
+        GLOSS:	he/it+know+it/them/her
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P8W2
+      OFFSETS:	7-8
+       TOKENS:	P8W3-P8W3
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	هي
+     IS_TRANS:	hy
+        INDEX:	P9W1
+      OFFSETS:	0-2
+       TOKENS:	P9W1-P9W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	قاومته
+     IS_TRANS:	qAwmth
+        INDEX:	P9W2
+      OFFSETS:	3-9
+       TOKENS:	P9W2-P9W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAwam_1]
+   UNSPLITVOC:	(qAwamituh)
+          POS:	PV+PVSUFF_SUBJ:3FS+PVSUFF_DO:3MS
+          VOC:	qAwam+it+uh
+        GLOSS:	resist/oppose/be resisted/be opposed+it/they/she+it/him
+
+ INPUT STRING:	وأستخبت
+     IS_TRANS:	w>stxbt
+        INDEX:	P9W3
+      OFFSETS:	10-17
+       TOKENS:	P9W4-P9W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[{isotaxabaY_1]
+   UNSPLITVOC:	(wi{isotaxabit)
+          POS:	PV_PASS+PVSUFF_SUBJ:3FS
+          VOC:	{isotaxab+it
+        GLOSS:	hide+it/they/she
+
+ INPUT STRING:	فقتلها
+     IS_TRANS:	fqtlhA
+        INDEX:	P9W4
+      OFFSETS:	18-24
+       TOKENS:	P9W5-P9W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qatal_1]
+   UNSPLITVOC:	(faqatalhA)
+          POS:	CONJ+PV+PVSUFF_SUBJ:3MS+PVSUFF_DO:3FS
+          VOC:	fa+qatal+(null)+hA
+        GLOSS:	so/and+kill/be killed+he/it+it/them/her
+
+ INPUT STRING:	اوه
+     IS_TRANS:	Awh
+        INDEX:	P10W1
+      OFFSETS:	0-3
+       TOKENS:	P10W1-P10W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aawoh_1]
+   UNSPLITVOC:	(Aawoh)
+          POS:	INTERJ
+          VOC:	Aawoh
+        GLOSS:	oh
+
+ INPUT STRING:	،
+     IS_TRANS:	,
+        INDEX:	P10W2
+      OFFSETS:	3-4
+       TOKENS:	P10W2-P10W2
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(,)
+          POS:	PUNC
+          VOC:	,
+        GLOSS:	nogloss
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P10W3
+      OFFSETS:	5-7
+       TOKENS:	P10W3-P10W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	ربي
+     IS_TRANS:	rby
+        INDEX:	P10W4
+      OFFSETS:	8-11
+       TOKENS:	P10W4-P10W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rab~_1]
+   UNSPLITVOC:	(rab~iy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	rab~+iy
+        GLOSS:	lord/master/lords/masters/owner/proprietor/owners/proprietors+my
+
+ INPUT STRING:	وما
+     IS_TRANS:	wmA
+        INDEX:	P11W1
+      OFFSETS:	0-3
+       TOKENS:	P11W1-P11W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[mA_4]
+   UNSPLITVOC:	(wamA)
+          POS:	CONJ+NEG_PART
+          VOC:	wa+mA
+        GLOSS:	and+not
+
+ INPUT STRING:	لقاش
+     IS_TRANS:	lqA$
+        INDEX:	P11W2
+      OFFSETS:	4-8
+       TOKENS:	P11W3-P11W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[laqaY_1]
+   UNSPLITVOC:	(laqA$)
+          POS:	PV+PVSUFF_SUBJ:3MS+NEG_PART
+          VOC:	laqA+(null)+$
+        GLOSS:	find+he/it+not
+
+ INPUT STRING:	حاجة
+     IS_TRANS:	HAjp
+        INDEX:	P11W3
+      OFFSETS:	9-13
+       TOKENS:	P11W5-P11W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAjap_1]
+   UNSPLITVOC:	(HAjap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	HAj+ap
+        GLOSS:	need/needs/thing/belongings+[fem.sg.]
+
+ INPUT STRING:	يسرقها
+     IS_TRANS:	ysrqhA
+        INDEX:	P11W4
+      OFFSETS:	14-20
+       TOKENS:	P11W6-P11W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[saraq_1]
+   UNSPLITVOC:	(yisoraqahA)
+          POS:	IV3MS+IV+IVSUFF_DO:3FS
+          VOC:	yi+soraq+hA
+        GLOSS:	he/it+steal/rob+it/them/her
+
+ INPUT STRING:	fy
+     IS_TRANS:	fy
+        INDEX:	P12W1
+      OFFSETS:	0-2
+       TOKENS:	P12W1-P12W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy)
+          POS:	PREP
+          VOC:	fiy
+        GLOSS:	in
+
+ INPUT STRING:	أيه
+     IS_TRANS:	>yh
+        INDEX:	P12W2
+      OFFSETS:	3-6
+       TOKENS:	P12W2-P12W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_1]
+   UNSPLITVOC:	(<iyh)
+          POS:	INTERROG_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W3
+      OFFSETS:	7-8
+       TOKENS:	P12W3-P12W3
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	الناس
+     IS_TRANS:	AlnAs
+        INDEX:	P12W4
+      OFFSETS:	8-13
+       TOKENS:	P12W4-P12W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nAs_1]
+   UNSPLITVOC:	(AlnAs)
+          POS:	DET+NOUN
+          VOC:	Al+nAs
+        GLOSS:	the+people
+
+ INPUT STRING:	بقت
+     IS_TRANS:	bqt
+        INDEX:	P12W5
+      OFFSETS:	14-17
+       TOKENS:	P12W5-P12W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(baqit)
+          POS:	PV+PVSUFF_SUBJ:3FS
+          VOC:	baq+it
+        GLOSS:	become/begin/start/be/begin a new day+it/they/she
+
+ INPUT STRING:	كدا
+     IS_TRANS:	kdA
+        INDEX:	P12W6
+      OFFSETS:	18-21
+       TOKENS:	P12W6-P12W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kidah_1]
+   UNSPLITVOC:	(kidA)
+          POS:	NOUN
+          VOC:	kidA
+        GLOSS:	this/after all that time/in this way/approximately/like that/as such/that/like
+
+ INPUT STRING:	lyh
+     IS_TRANS:	lyh
+        INDEX:	P12W7
+      OFFSETS:	22-25
+       TOKENS:	P12W7-P12W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[layoh_1]
+   UNSPLITVOC:	(layoh)
+          POS:	INTERROG_ADV
+          VOC:	layoh
+        GLOSS:	why
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W8
+      OFFSETS:	25-26
+       TOKENS:	P12W8-P12W8
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W9
+      OFFSETS:	26-27
+       TOKENS:	P12W9-P12W9
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	wfy
+     IS_TRANS:	wfy
+        INDEX:	P12W10
+      OFFSETS:	28-31
+       TOKENS:	P12W10-P12W10
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(wfy)
+          POS:	FOREIGN
+          VOC:	wfy
+        GLOSS:	wfy
+
+ INPUT STRING:	رمضان
+     IS_TRANS:	rmDAn
+        INDEX:	P12W11
+      OFFSETS:	32-37
+       TOKENS:	P12W11-P12W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[ramaDAn_1]
+   UNSPLITVOC:	(ramaDAn)
+          POS:	NOUN
+          VOC:	ramaDAn
+        GLOSS:	Ramadan
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W12
+      OFFSETS:	38-39
+       TOKENS:	P12W12-P12W12
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W13
+      OFFSETS:	39-40
+       TOKENS:	P12W13-P12W13
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W14
+      OFFSETS:	40-41
+       TOKENS:	P12W14-P12W14
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P12W15
+      OFFSETS:	41-42
+       TOKENS:	P12W15-P12W15
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	دخلها
+     IS_TRANS:	dxlhA
+        INDEX:	P13W1
+      OFFSETS:	0-5
+       TOKENS:	P13W1-P13W1
+       STATUS:	has_sol=F	excluded=.	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	None
+   UNSPLITVOC:	(dxlhA)
+          POS:	NO_FUNC
+          VOC:	dxlhA
+        GLOSS:	nogloss
+
+ INPUT STRING:	ساعة
+     IS_TRANS:	sAEp
+        INDEX:	P13W2
+      OFFSETS:	6-10
+       TOKENS:	P13W2-P13W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAEap_1]
+   UNSPLITVOC:	(sAEap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	sAE+ap
+        GLOSS:	hour/time/hours/clock/watch/timepiece/clocks/watches+[fem.sg.]
+
+ INPUT STRING:	الفطار
+     IS_TRANS:	AlfTAr
+        INDEX:	P13W3
+      OFFSETS:	11-17
+       TOKENS:	P13W3-P13W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiTAr_1]
+   UNSPLITVOC:	(AlfiTAr)
+          POS:	DET+NOUN
+          VOC:	Al+fiTAr
+        GLOSS:	the+breaking the fast/breaking of the ramadan fast/meal eaten at sunset/breakfast
+
+ INPUT STRING:	لا
+     IS_TRANS:	lA
+        INDEX:	P14W1
+      OFFSETS:	0-2
+       TOKENS:	P14W1-P14W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[lA_2]
+   UNSPLITVOC:	(lA)
+          POS:	NEG_PART
+          VOC:	lA
+        GLOSS:	no/not/non-
+
+ INPUT STRING:	حول
+     IS_TRANS:	Hwl
+        INDEX:	P14W2
+      OFFSETS:	3-6
+       TOKENS:	P14W2-P14W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Hawl_1]
+   UNSPLITVOC:	(Hawl)
+          POS:	NOUN
+          VOC:	Hawl
+        GLOSS:	about/around/concerning/power
+
+ INPUT STRING:	ولا
+     IS_TRANS:	wlA
+        INDEX:	P14W3
+      OFFSETS:	7-10
+       TOKENS:	P14W3-P14W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[lA_2]
+   UNSPLITVOC:	(walA)
+          POS:	CONJ+NEG_PART
+          VOC:	wa+lA
+        GLOSS:	and+no/not/non-
+
+ INPUT STRING:	قوة
+     IS_TRANS:	qwp
+        INDEX:	P14W4
+      OFFSETS:	11-14
+       TOKENS:	P14W5-P14W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[quw~ap_1]
+   UNSPLITVOC:	(quw~ap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	quw~+ap
+        GLOSS:	power/strength/force/violence/armed forces/forces+[fem.sg.]
+
+ INPUT STRING:	إلا
+     IS_TRANS:	<lA
+        INDEX:	P14W5
+      OFFSETS:	15-18
+       TOKENS:	P14W6-P14W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<il~A_1]
+   UNSPLITVOC:	(<il~A)
+          POS:	RESTRIC_PART
+          VOC:	<il~A
+        GLOSS:	except for
+
+ INPUT STRING:	بالله
+     IS_TRANS:	bAllh
+        INDEX:	P14W6
+      OFFSETS:	19-24
+       TOKENS:	P14W7-P14W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(biAll~ah)
+          POS:	PREP+NOUN_PROP
+          VOC:	bi+All~ah
+        GLOSS:	with/by+Allah/God
+
+ INPUT STRING:	ساكنة
+     IS_TRANS:	sAknp
+        INDEX:	P15W1
+      OFFSETS:	0-5
+       TOKENS:	P15W1-P15W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAkin_1]
+   UNSPLITVOC:	(sAkonap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	sAkon+ap
+        GLOSS:	residing+[fem.sg.]
+
+ INPUT STRING:	لوحدها
+     IS_TRANS:	lwHdhA
+        INDEX:	P15W2
+      OFFSETS:	6-12
+       TOKENS:	P15W2-P15W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[waHod_1]
+   UNSPLITVOC:	(liwaHodahA)
+          POS:	PREP+NOUN+POSS_PRON_3FS
+          VOC:	li+waHod+hA
+        GLOSS:	for/to+alone/only+its/their/her
+
+ INPUT STRING:	في
+     IS_TRANS:	fy
+        INDEX:	P15W3
+      OFFSETS:	13-15
+       TOKENS:	P15W5-P15W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy)
+          POS:	PREP
+          VOC:	fiy
+        GLOSS:	in
+
+ INPUT STRING:	فيلا
+     IS_TRANS:	fylA
+        INDEX:	P15W4
+      OFFSETS:	16-20
+       TOKENS:	P15W6-P15W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiyl~A_1]
+   UNSPLITVOC:	(fiyl~A)
+          POS:	NOUN
+          VOC:	fiyl~A
+        GLOSS:	villa/villas
+
+ INPUT STRING:	فالإبراهيمية
+     IS_TRANS:	fAl<brAhymyp
+        INDEX:	P15W5
+      OFFSETS:	21-33
+       TOKENS:	P15W7-P15W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<iborAhiymiy~ap_1]
+   UNSPLITVOC:	(fiAl<iborAhiymiy~ap)
+          POS:	PREP+DET+NOUN_PROP+NSUFF_FEM_SG
+          VOC:	fi+Al+<iborAhiymiy~+ap
+        GLOSS:	in+the+Ibrahimiyya+[fem.sg.]
+
+ INPUT STRING:	الطف
+     IS_TRANS:	AlTf
+        INDEX:	P16W1
+      OFFSETS:	0-4
+       TOKENS:	P16W1-P16W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[>ulotuf_1]
+   UNSPLITVOC:	(>ulotuf)
+          POS:	CV+CVSUFF_SUBJ:2MS
+          VOC:	>ulotuf+(null)
+        GLOSS:	be elegant/be amiable+you
+
+ INPUT STRING:	بيننا
+     IS_TRANS:	bynnA
+        INDEX:	P16W2
+      OFFSETS:	5-10
+       TOKENS:	P16W2-P16W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[bi_1]
+   UNSPLITVOC:	(binA)
+          POS:	PREP+PRON_1P
+          VOC:	bi+nA
+        GLOSS:	by+us
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P16W3
+      OFFSETS:	11-13
+       TOKENS:	P16W4-P16W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	rb
+     IS_TRANS:	rb
+        INDEX:	P16W4
+      OFFSETS:	14-16
+       TOKENS:	P16W5-P16W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rab~_1]
+   UNSPLITVOC:	(rab~)
+          POS:	NOUN
+          VOC:	rab~
+        GLOSS:	lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING:	شارع
+     IS_TRANS:	$ArE
+        INDEX:	P17W1
+      OFFSETS:	0-4
+       TOKENS:	P17W1-P17W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$AriE_1]
+   UNSPLITVOC:	($AriE)
+          POS:	NOUN
+          VOC:	$AriE
+        GLOSS:	street/streets/legislator
+
+ INPUT STRING:	أبو
+     IS_TRANS:	>bw
+        INDEX:	P17W2
+      OFFSETS:	5-8
+       TOKENS:	P17W2-P17W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>abuw_1]
+   UNSPLITVOC:	(>abuw)
+          POS:	NOUN_PROP
+          VOC:	>abuw
+        GLOSS:	Abu
+
+ INPUT STRING:	الخير
+     IS_TRANS:	Alxyr
+        INDEX:	P17W3
+      OFFSETS:	9-14
+       TOKENS:	P17W3-P17W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[lxayor_1]
+   UNSPLITVOC:	(Alxayor)
+          POS:	DET+NOUN_PROP
+          VOC:	Al+xayor
+        GLOSS:	the+Khair
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P18W1
+      OFFSETS:	0-3
+       TOKENS:	P18W1-P18W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	مخضوضة
+     IS_TRANS:	mxDwDp
+        INDEX:	P18W2
+      OFFSETS:	4-10
+       TOKENS:	P18W2-P18W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[maxDuD_1]
+   UNSPLITVOC:	(maxDuDap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	maxDuD+ap
+        GLOSS:	shocked+[fem.sg.]
+
+ INPUT STRING:	أوي
+     IS_TRANS:	>wy
+        INDEX:	P18W3
+      OFFSETS:	11-14
+       TOKENS:	P18W3-P18W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qawiy_1]
+   UNSPLITVOC:	(>awiy)
+          POS:	ADJ
+          VOC:	qawiy
+        GLOSS:	powerful/strong
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P19W1
+      OFFSETS:	0-2
+       TOKENS:	P19W1-P19W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	lhwy
+     IS_TRANS:	lhwy
+        INDEX:	P19W2
+      OFFSETS:	3-7
+       TOKENS:	P19W2-P19W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lahow_1]
+   UNSPLITVOC:	(lahowiy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	lahow+iy
+        GLOSS:	entertainment/amusement+my
+
+ INPUT STRING:	،
+     IS_TRANS:	,
+        INDEX:	P19W3
+      OFFSETS:	8-9
+       TOKENS:	P19W4-P19W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(,)
+          POS:	PUNC
+          VOC:	,
+        GLOSS:	nogloss
+
+ INPUT STRING:	dA
+     IS_TRANS:	dA
+        INDEX:	P19W4
+      OFFSETS:	9-11
+       TOKENS:	P19W5-P19W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dah_1]
+   UNSPLITVOC:	(dA)
+          POS:	DEM_PRON_MS
+          VOC:	dah
+        GLOSS:	this
+
+ INPUT STRING:	E
+     IS_TRANS:	E
+        INDEX:	P19W5
+      OFFSETS:	12-13
+       TOKENS:	P19W6-P19W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EalaY_1]
+   UNSPLITVOC:	(EalaY)
+          POS:	PREP
+          VOC:	EalaY
+        GLOSS:	on/above
+
+ INPUT STRING:	الشارع
+     IS_TRANS:	Al$ArE
+        INDEX:	P19W6
+      OFFSETS:	14-20
+       TOKENS:	P19W7-P19W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$AriE_1]
+   UNSPLITVOC:	(Al$AriE)
+          POS:	DET+NOUN
+          VOC:	Al+$AriE
+        GLOSS:	the+street/streets/legislator
+
+ INPUT STRING:	وحتة
+     IS_TRANS:	wHtp
+        INDEX:	P19W7
+      OFFSETS:	21-25
+       TOKENS:	P19W8-P19W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Hit~ap_1]
+   UNSPLITVOC:	(wiHit~ap)
+          POS:	CONJ+NOUN+NSUFF_FEM_SG
+          VOC:	wi+Hit~+ap
+        GLOSS:	and+morsel/piece/morsels/pieces+[fem.sg.]
+
+ INPUT STRING:	زحمة
+     IS_TRANS:	zHmp
+        INDEX:	P19W8
+      OFFSETS:	26-30
+       TOKENS:	P19W10-P19W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[zaHomap_1]
+   UNSPLITVOC:	(zaHomap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	zaHom+ap
+        GLOSS:	crowded/jam+[fem.sg.]
+
+ INPUT STRING:	AtA
+     IS_TRANS:	AtA
+        INDEX:	P20W1
+      OFFSETS:	0-3
+       TOKENS:	P20W1-P20W1
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(AtA)
+          POS:	FOREIGN
+          VOC:	AtA
+        GLOSS:	AtA
+
+ INPUT STRING:	كمان
+     IS_TRANS:	kmAn
+        INDEX:	P20W2
+      OFFSETS:	4-8
+       TOKENS:	P20W2-P20W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kamAn_1]
+   UNSPLITVOC:	(kamAn)
+          POS:	ADV
+          VOC:	kamAn
+        GLOSS:	metabolism/also/else
+
+ INPUT STRING:	اتخضيت
+     IS_TRANS:	AtxDyt
+        INDEX:	P20W3
+      OFFSETS:	9-15
+       TOKENS:	P20W3-P20W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<itoxaD_1]
+   UNSPLITVOC:	(<itoxaDiyt)
+          POS:	PV_PASS+PVSUFF_SUBJ:1S
+          VOC:	<itoxaDiy+t
+        GLOSS:	be afraid/seek refuge+I
+
+ INPUT STRING:	sAEp
+     IS_TRANS:	sAEp
+        INDEX:	P21W1
+      OFFSETS:	0-4
+       TOKENS:	P21W1-P21W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAEap_1]
+   UNSPLITVOC:	(sAEap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	sAE+ap
+        GLOSS:	hour/time/hours/clock/watch/timepiece/clocks/watches+[fem.sg.]
+
+ INPUT STRING:	الفطار
+     IS_TRANS:	AlfTAr
+        INDEX:	P21W2
+      OFFSETS:	5-11
+       TOKENS:	P21W2-P21W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiTAr_1]
+   UNSPLITVOC:	(AlfiTAr)
+          POS:	DET+NOUN
+          VOC:	Al+fiTAr
+        GLOSS:	the+breaking the fast/breaking of the ramadan fast/meal eaten at sunset/breakfast
+
+ INPUT STRING:	وما
+     IS_TRANS:	wmA
+        INDEX:	P22W1
+      OFFSETS:	0-3
+       TOKENS:	P22W1-P22W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[mA_4]
+   UNSPLITVOC:	(wamA)
+          POS:	CONJ+NEG_PART
+          VOC:	wa+mA
+        GLOSS:	and+not
+
+ INPUT STRING:	لاقاش
+     IS_TRANS:	lAqA$
+        INDEX:	P22W2
+      OFFSETS:	4-9
+       TOKENS:	P22W3-P22W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[laqaY_1]
+   UNSPLITVOC:	(laqA$)
+          POS:	PV+PVSUFF_SUBJ:3MS+NEG_PART
+          VOC:	laqA+(null)+$
+        GLOSS:	find+he/it+not
+
+ INPUT STRING:	عندها
+     IS_TRANS:	EndhA
+        INDEX:	P22W3
+      OFFSETS:	10-15
+       TOKENS:	P22W5-P22W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Einod_1]
+   UNSPLITVOC:	(EinodahA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	Einod+hA
+        GLOSS:	with/at+its/their/her
+
+ INPUT STRING:	HAjp
+     IS_TRANS:	HAjp
+        INDEX:	P22W4
+      OFFSETS:	16-20
+       TOKENS:	P22W7-P22W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAjap_1]
+   UNSPLITVOC:	(HAjap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	HAj+ap
+        GLOSS:	need/needs/thing/belongings+[fem.sg.]
+
+ INPUT STRING:	تتسرق
+     IS_TRANS:	ttsrq
+        INDEX:	P22W5
+      OFFSETS:	21-26
+       TOKENS:	P22W8-P22W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[saraq_1]
+   UNSPLITVOC:	(titosiriq)
+          POS:	IV3FS+IV_PASS
+          VOC:	ti+tosiriq
+        GLOSS:	it/they/she+steal/rob
+
+ INPUT STRING:	bs
+     IS_TRANS:	bs
+        INDEX:	P23W1
+      OFFSETS:	0-2
+       TOKENS:	P23W1-P23W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bas~_1]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	برضه
+     IS_TRANS:	brDh
+        INDEX:	P23W2
+      OFFSETS:	3-7
+       TOKENS:	P23W2-P23W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baroDuh_1]
+   UNSPLITVOC:	(baroDuh)
+          POS:	ADV
+          VOC:	baroDuh
+        GLOSS:	also
+
+ INPUT STRING:	دلوقتي
+     IS_TRANS:	dlwqty
+        INDEX:	P23W3
+      OFFSETS:	8-14
+       TOKENS:	P23W3-P23W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dilowaqotiy_1]
+   UNSPLITVOC:	(dilowaqotiy)
+          POS:	ADV
+          VOC:	dilowaqotiy
+        GLOSS:	now
+
+ INPUT STRING:	الشوارع
+     IS_TRANS:	Al$wArE
+        INDEX:	P23W4
+      OFFSETS:	15-22
+       TOKENS:	P23W4-P23W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$AriE_1]
+   UNSPLITVOC:	(Al$awAriE)
+          POS:	DET+NOUN
+          VOC:	Al+$awAriE
+        GLOSS:	the+street/streets/legislator
+
+ INPUT STRING:	ما
+     IS_TRANS:	mA
+        INDEX:	P23W5
+      OFFSETS:	23-25
+       TOKENS:	P23W5-P23W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[mA_4]
+   UNSPLITVOC:	(mA)
+          POS:	NEG_PART
+          VOC:	mA
+        GLOSS:	not
+
+ INPUT STRING:	بتبقاش
+     IS_TRANS:	btbqA$
+        INDEX:	P23W6
+      OFFSETS:	26-32
+       TOKENS:	P23W6-P23W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(bitiboqA$)
+          POS:	PROG_PART+IV3FS+IV+NEG_PART
+          VOC:	bi+ti+boqA+$
+        GLOSS:	[present-tense]+it/they/she+become/begin/start/be/begin a new day+not
+
+ INPUT STRING:	فاضية
+     IS_TRANS:	fADyp
+        INDEX:	P23W7
+      OFFSETS:	33-38
+       TOKENS:	P23W9-P23W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fADiy_1]
+   UNSPLITVOC:	(fADoyap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	fADoy+ap
+        GLOSS:	empty/unoccupied/free+[fem.sg.]
+
+ INPUT STRING:	sAEp
+     IS_TRANS:	sAEp
+        INDEX:	P23W8
+      OFFSETS:	39-43
+       TOKENS:	P23W10-P23W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAEap_1]
+   UNSPLITVOC:	(sAEap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	sAE+ap
+        GLOSS:	hour/time/hours/clock/watch/timepiece/clocks/watches+[fem.sg.]
+
+ INPUT STRING:	الفطار
+     IS_TRANS:	AlfTAr
+        INDEX:	P23W9
+      OFFSETS:	44-50
+       TOKENS:	P23W11-P23W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiTAr_1]
+   UNSPLITVOC:	(AlfiTAr)
+          POS:	DET+NOUN
+          VOC:	Al+fiTAr
+        GLOSS:	the+breaking the fast/breaking of the ramadan fast/meal eaten at sunset/breakfast
+
+ INPUT STRING:	Tb
+     IS_TRANS:	Tb
+        INDEX:	P24W1
+      OFFSETS:	0-2
+       TOKENS:	P24W1-P24W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Tab_1]
+   UNSPLITVOC:	(Tab)
+          POS:	INTERJ
+          VOC:	Tab
+        GLOSS:	ok
+
+ INPUT STRING:	ومسكوه
+     IS_TRANS:	wmskwh
+        INDEX:	P24W2
+      OFFSETS:	3-9
+       TOKENS:	P24W2-P24W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[misik_1]
+   UNSPLITVOC:	(wimisokuwh)
+          POS:	CONJ+PV+PVSUFF_SUBJ:3P+PVSUFF_DO:3MS
+          VOC:	wi+misok+uwA+uh
+        GLOSS:	and+refrain from/ceize/hold/seize+they+it/him
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P24W3
+      OFFSETS:	10-11
+       TOKENS:	P24W5-P24W5
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P24W4
+      OFFSETS:	11-12
+       TOKENS:	P24W6-P24W6
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P25W1
+      OFFSETS:	0-2
+       TOKENS:	P25W1-P25W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	قادرة
+     IS_TRANS:	qAdrp
+        INDEX:	P25W2
+      OFFSETS:	3-8
+       TOKENS:	P25W2-P25W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAdir_1]
+   UNSPLITVOC:	(qAdorap)
+          POS:	ADJ.VN+NSUFF_FEM_SG
+          VOC:	qAdor+ap
+        GLOSS:	capable/able+[fem.sg.]
+
+ INPUT STRING:	اصدق
+     IS_TRANS:	ASdq
+        INDEX:	P25W3
+      OFFSETS:	9-13
+       TOKENS:	P25W3-P25W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Sad~aq_1]
+   UNSPLITVOC:	(AaSad~aq)
+          POS:	IV1S+IV
+          VOC:	Aa+Sad~aq
+        GLOSS:	I+believe/give credence to/confirm/be believed/ratify/adopt
+
+ INPUT STRING:	لا
+     IS_TRANS:	lA
+        INDEX:	P26W1
+      OFFSETS:	0-2
+       TOKENS:	P26W1-P26W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lA_1]
+   UNSPLITVOC:	(lA)
+          POS:	INTERJ
+          VOC:	lA
+        GLOSS:	no
+
+ INPUT STRING:	هرب
+     IS_TRANS:	hrb
+        INDEX:	P26W2
+      OFFSETS:	3-6
+       TOKENS:	P26W2-P26W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hirib_1]
+   UNSPLITVOC:	(hirib)
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	hirib+(null)
+        GLOSS:	run away/escape/ran away/desert+he/it
+
+ INPUT STRING:	ربنا
+     IS_TRANS:	rbnA
+        INDEX:	P27W1
+      OFFSETS:	0-4
+       TOKENS:	P27W1-P27W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rab~_1]
+   UNSPLITVOC:	(rab~inA)
+          POS:	NOUN+POSS_PRON_1P
+          VOC:	rab~+nA
+        GLOSS:	lord/master/lords/masters/owner/proprietor/owners/proprietors+our
+
+ INPUT STRING:	ينتقم
+     IS_TRANS:	yntqm
+        INDEX:	P27W2
+      OFFSETS:	5-10
+       TOKENS:	P27W3-P27W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Ainotaqam_1]
+   UNSPLITVOC:	(yinotiqim)
+          POS:	IV3MS+IV
+          VOC:	yi+notiqim
+        GLOSS:	he/it+take revenge/avenge/retaliate
+
+ INPUT STRING:	mnh
+     IS_TRANS:	mnh
+        INDEX:	P27W3
+      OFFSETS:	11-14
+       TOKENS:	P27W4-P27W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[min~_1]
+   UNSPLITVOC:	(min~uh)
+          POS:	PREP+PRON_3MS
+          VOC:	min~+uh
+        GLOSS:	from+it/him
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P28W1
+      OFFSETS:	0-2
+       TOKENS:	P28W1-P28W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	رب
+     IS_TRANS:	rb
+        INDEX:	P28W2
+      OFFSETS:	3-5
+       TOKENS:	P28W2-P28W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rab~_1]
+   UNSPLITVOC:	(rab~)
+          POS:	NOUN
+          VOC:	rab~
+        GLOSS:	lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING:	يمسكوه
+     IS_TRANS:	ymskwh
+        INDEX:	P28W3
+      OFFSETS:	6-12
+       TOKENS:	P28W3-P28W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[misik_1]
+   UNSPLITVOC:	(yimosikuwh)
+          POS:	IV3P+IV+IVSUFF_SUBJ:P+IVSUFF_DO:3MS
+          VOC:	yi+mosik+uwA+uh
+        GLOSS:	they+refrain from/ceize/hold/seize+we+it/him
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P29W1
+      OFFSETS:	0-3
+       TOKENS:	P29W1-P29W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	كمان
+     IS_TRANS:	kmAn
+        INDEX:	P29W2
+      OFFSETS:	4-8
+       TOKENS:	P29W2-P29W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kamAn_1]
+   UNSPLITVOC:	(kamAn)
+          POS:	ADV
+          VOC:	kamAn
+        GLOSS:	metabolism/also/else
+
+ INPUT STRING:	باقلق
+     IS_TRANS:	bAqlq
+        INDEX:	P29W3
+      OFFSETS:	9-14
+       TOKENS:	P29W3-P29W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qiliq_1]
+   UNSPLITVOC:	(bAqolaq)
+          POS:	PROG_PART+IV1S+IV
+          VOC:	bi+Aa+qolaq
+        GLOSS:	[present-tense]+I+worry
+
+ INPUT STRING:	لإن
+     IS_TRANS:	l<n
+        INDEX:	P29W4
+      OFFSETS:	15-18
+       TOKENS:	P29W5-P29W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<in~_1]
+   UNSPLITVOC:	(li<in~)
+          POS:	PREP+SUB_CONJ
+          VOC:	li+<in~
+        GLOSS:	for/to+that
+
+ INPUT STRING:	bAbA
+     IS_TRANS:	bAbA
+        INDEX:	P29W5
+      OFFSETS:	19-23
+       TOKENS:	P29W7-P29W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bAbA_1]
+   UNSPLITVOC:	(bAbA)
+          POS:	NOUN
+          VOC:	bAbA
+        GLOSS:	Pope
+
+ INPUT STRING:	بينزل
+     IS_TRANS:	bynzl
+        INDEX:	P29W6
+      OFFSETS:	24-29
+       TOKENS:	P29W8-P29W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nizil_1]
+   UNSPLITVOC:	(biyinozil)
+          POS:	PROG_PART+IV3MS+IV
+          VOC:	bi+yi+nozil
+        GLOSS:	[present-tense]+he/it+descend/come/desend/stay
+
+ INPUT STRING:	ويسيب
+     IS_TRANS:	wysyb
+        INDEX:	P29W7
+      OFFSETS:	30-35
+       TOKENS:	P29W10-P29W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAb_1]
+   UNSPLITVOC:	(wiyisiyb)
+          POS:	CONJ+IV3MS+IV
+          VOC:	wi+yi+siyb
+        GLOSS:	and+he/it+flow/neglect
+
+ INPUT STRING:	متنا
+     IS_TRANS:	mtnA
+        INDEX:	P29W8
+      OFFSETS:	36-40
+       TOKENS:	P29W12-P29W12
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(mtnA)
+          POS:	TYPO
+          VOC:	mtnA
+        GLOSS:	nogloss
+
+ INPUT STRING:	لوحدها
+     IS_TRANS:	lwHdhA
+        INDEX:	P29W9
+      OFFSETS:	41-47
+       TOKENS:	P29W13-P29W15
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[waHod_1]
+   UNSPLITVOC:	(liwaHodhA)
+          POS:	PREP+NOUN+POSS_PRON_3FS
+          VOC:	li+waHod+hA
+        GLOSS:	for/to+alone/only+its/their/her
+
+ INPUT STRING:	الصبح
+     IS_TRANS:	AlSbH
+        INDEX:	P29W10
+      OFFSETS:	48-53
+       TOKENS:	P29W16-P29W16
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[SuboH_1]
+   UNSPLITVOC:	(AlSuboH)
+          POS:	DET+NOUN
+          VOC:	Al+SuboH
+        GLOSS:	the+morning/daybreak/mornings
+
+ INPUT STRING:	وساعة
+     IS_TRANS:	wsAEp
+        INDEX:	P29W11
+      OFFSETS:	54-59
+       TOKENS:	P29W17-P29W18
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAEap_1]
+   UNSPLITVOC:	(wisAEap)
+          POS:	CONJ+NOUN+NSUFF_FEM_SG
+          VOC:	wi+sAE+ap
+        GLOSS:	and+hour/time/hours/clock/watch/timepiece/clocks/watches+[fem.sg.]
+
+ INPUT STRING:	التراويح
+     IS_TRANS:	AltrAwyH
+        INDEX:	P29W12
+      OFFSETS:	60-68
+       TOKENS:	P29W19-P29W19
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[tarowiyHap_1]
+   UNSPLITVOC:	(AltarAwiyH)
+          POS:	DET+NOUN
+          VOC:	Al+tarAwiyH
+        GLOSS:	the+distraction/diversion/distractions/diversions/evening prayers (during Ramadan)
+
+ INPUT STRING:	والعمارة
+     IS_TRANS:	wAlEmArp
+        INDEX:	P29W13
+      OFFSETS:	69-77
+       TOKENS:	P29W20-P29W21
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EimArap_1]
+   UNSPLITVOC:	(wiAlEimArap)
+          POS:	CONJ+DET+NOUN+NSUFF_FEM_SG
+          VOC:	wi+Al+EimAr+ap
+        GLOSS:	and+the+building/structure/architecture/buildings/structures+[fem.sg.]
+
+ INPUT STRING:	عنده
+     IS_TRANS:	Endh
+        INDEX:	P29W14
+      OFFSETS:	78-82
+       TOKENS:	P29W22-P29W23
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eanod_1]
+   UNSPLITVOC:	(Eanoduh)
+          POS:	NOUN+POSS_PRON_3MS
+          VOC:	Eanod+uh
+        GLOSS:	at/have/possession/with+his/its
+
+ INPUT STRING:	أغلبها
+     IS_TRANS:	>glbhA
+        INDEX:	P29W15
+      OFFSETS:	83-89
+       TOKENS:	P29W24-P29W25
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>agolab_1]
+   UNSPLITVOC:	(>agolabahA)
+          POS:	NOUN_QUANT+POSS_PRON_3FS
+          VOC:	>agolab+hA
+        GLOSS:	most (of)/the majority (of)/the greater portion of part (of)+its/their/her
+
+ INPUT STRING:	فاضي
+     IS_TRANS:	fADy
+        INDEX:	P29W16
+      OFFSETS:	90-94
+       TOKENS:	P29W26-P29W26
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fADiy_1]
+   UNSPLITVOC:	(fADiy)
+          POS:	ADJ
+          VOC:	fADiy
+        GLOSS:	empty/unoccupied/free
+
+ INPUT STRING:	hy
+     IS_TRANS:	hy
+        INDEX:	P30W1
+      OFFSETS:	0-2
+       TOKENS:	P30W1-P30W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	مامتك
+     IS_TRANS:	mAmtk
+        INDEX:	P30W2
+      OFFSETS:	3-8
+       TOKENS:	P30W2-P30W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmotik)
+          POS:	NOUN+POSS_PRON_2FS
+          VOC:	mAmot+ik
+        GLOSS:	mama+your
+
+ INPUT STRING:	قاعدة
+     IS_TRANS:	qAEdp
+        INDEX:	P30W3
+      OFFSETS:	9-14
+       TOKENS:	P30W4-P30W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAEid_1]
+   UNSPLITVOC:	(qAEodap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	qAEod+ap
+        GLOSS:	sitting/seated/lazy/inactive/evaders (draft dodgers)+[fem.sg.]
+
+ INPUT STRING:	لوحدها
+     IS_TRANS:	lwHdhA
+        INDEX:	P30W4
+      OFFSETS:	15-21
+       TOKENS:	P30W5-P30W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[waHod_1]
+   UNSPLITVOC:	(liwaHodahA)
+          POS:	PREP+NOUN+POSS_PRON_3FS
+          VOC:	li+waHod+hA
+        GLOSS:	for/to+alone/only+its/their/her
+
+ INPUT STRING:	مامي
+     IS_TRANS:	mAmy
+        INDEX:	P31W1
+      OFFSETS:	0-4
+       TOKENS:	P31W1-P31W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmiy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	mAm+iy
+        GLOSS:	mama+my
+
+ INPUT STRING:	بتقولي
+     IS_TRANS:	btqwly
+        INDEX:	P31W2
+      OFFSETS:	5-11
+       TOKENS:	P31W3-P31W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[qAl_1]
+   UNSPLITVOC:	(bitiquwl~iy)
+          POS:	PROG_PART+IV3FS+IV+PREP+PRON_1S
+          VOC:	bi+ti+quwl+li+iy
+        GLOSS:	[present-tense]+it/they/she+say+for/to+I/me
+
+ INPUT STRING:	روحي
+     IS_TRANS:	rwHy
+        INDEX:	P31W3
+      OFFSETS:	12-16
+       TOKENS:	P31W7-P31W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(ruwHiy)
+          POS:	CV+CVSUFF_SUBJ:2FS
+          VOC:	ruwH+iy
+        GLOSS:	begin/go+you
+
+ INPUT STRING:	أعرفيلي
+     IS_TRANS:	>Erfyly
+        INDEX:	P31W4
+      OFFSETS:	17-24
+       TOKENS:	P31W8-P31W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eirif_1]
+   UNSPLITVOC:	(AiEorafiy_liy)
+          POS:	CV+CVSUFF_SUBJ:2FS+PREP+PRON_1S
+          VOC:	AiEoraf+iy+li+iy
+        GLOSS:	know+you+to/for+I
+
+ INPUT STRING:	الاخبار
+     IS_TRANS:	AlAxbAr
+        INDEX:	P31W5
+      OFFSETS:	25-32
+       TOKENS:	P31W11-P31W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[xabar_1]
+   UNSPLITVOC:	(AlAxobAr)
+          POS:	DET+NOUN
+          VOC:	Al+AxobAr
+        GLOSS:	the+news/report/reports
+
+ INPUT STRING:	hy
+     IS_TRANS:	hy
+        INDEX:	P32W1
+      OFFSETS:	0-2
+       TOKENS:	P32W1-P32W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	اتقتلت
+     IS_TRANS:	Atqtlt
+        INDEX:	P32W2
+      OFFSETS:	3-9
+       TOKENS:	P32W2-P32W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aitoqatal_1]
+   UNSPLITVOC:	(Aitoqatalit)
+          POS:	PV_PASS+PVSUFF_SUBJ:3FS
+          VOC:	Aitoqatal+it
+        GLOSS:	be murdered/be killtd/be killed/be massacred+it/they/she
+
+ INPUT STRING:	امبارح
+     IS_TRANS:	AmbArH
+        INDEX:	P32W3
+      OFFSETS:	10-16
+       TOKENS:	P32W3-P32W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AimobAriH_1]
+   UNSPLITVOC:	(AimobAriH)
+          POS:	NOUN
+          VOC:	AimobAriH
+        GLOSS:	yesterday
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P32W4
+      OFFSETS:	16-17
+       TOKENS:	P32W4-P32W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P32W5
+      OFFSETS:	17-18
+       TOKENS:	P32W5-P32W5
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	bs
+     IS_TRANS:	bs
+        INDEX:	P33W1
+      OFFSETS:	0-2
+       TOKENS:	P33W1-P33W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[bas~2]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P33W2
+      OFFSETS:	3-6
+       TOKENS:	P33W2-P33W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	خايفة
+     IS_TRANS:	xAyfp
+        INDEX:	P33W3
+      OFFSETS:	7-12
+       TOKENS:	P33W3-P33W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[xAyif_1]
+   UNSPLITVOC:	(xAyofap)
+          POS:	ADJ.VN+NSUFF_FEM_SG
+          VOC:	xAyof+ap
+        GLOSS:	frightened/fearful/afraid+[fem.sg.]
+
+ INPUT STRING:	اروح
+     IS_TRANS:	ArwH
+        INDEX:	P33W4
+      OFFSETS:	13-17
+       TOKENS:	P33W4-P33W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(AaruwH)
+          POS:	IV1S+IV
+          VOC:	Aa+ruwH
+        GLOSS:	I+begin/go
+
+ INPUT STRING:	البيت
+     IS_TRANS:	Albyt
+        INDEX:	P33W5
+      OFFSETS:	18-23
+       TOKENS:	P33W5-P33W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bayt_1]
+   UNSPLITVOC:	(Albayt)
+          POS:	DET+NOUN
+          VOC:	Al+bayt
+        GLOSS:	the+house/houses/verse/verses
+
+ INPUT STRING:	أصلا
+     IS_TRANS:	>SlA
+        INDEX:	P33W6
+      OFFSETS:	24-28
+       TOKENS:	P33W6-P33W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aSol_1]
+   UNSPLITVOC:	(>aSolAF)
+          POS:	NOUN+CASE_INDEF_ACC
+          VOC:	>aSol+AF
+        GLOSS:	origin/source/root/origins/sources/principles/originally/primarily+[acc.indef.]
+
+ INPUT STRING:	أيوه
+     IS_TRANS:	>ywh
+        INDEX:	P34W1
+      OFFSETS:	0-4
+       TOKENS:	P34W1-P34W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>ayowah_1]
+   UNSPLITVOC:	(>ayowah)
+          POS:	INTERJ
+          VOC:	>ayowah
+        GLOSS:	yes
+
+ INPUT STRING:	ايوا
+     IS_TRANS:	AywA
+        INDEX:	P35W1
+      OFFSETS:	0-4
+       TOKENS:	P35W1-P35W1
+       STATUS:	has_sol=F	excluded=.	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	None
+   UNSPLITVOC:	(AywA)
+          POS:	NO_FUNC
+          VOC:	AywA
+        GLOSS:	nogloss
+
+ INPUT STRING:	TbEA
+     IS_TRANS:	TbEA
+        INDEX:	P35W2
+      OFFSETS:	5-9
+       TOKENS:	P35W2-P35W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[TaboE_1]
+   UNSPLITVOC:	(TaboEAF)
+          POS:	NOUN+CASE_INDEF_ACC
+          VOC:	TaboE+AF
+        GLOSS:	temperament/naturally/of course/printing+[acc.indef.]
+
+ INPUT STRING:	خدي
+     IS_TRANS:	xdy
+        INDEX:	P36W1
+      OFFSETS:	0-3
+       TOKENS:	P36W1-P36W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aaxad_1]
+   UNSPLITVOC:	(xudiy)
+          POS:	CV+CVSUFF_SUBJ:2FS
+          VOC:	xud+iy
+        GLOSS:	I/take+you
+
+ INPUT STRING:	Hd
+     IS_TRANS:	Hd
+        INDEX:	P36W2
+      OFFSETS:	4-6
+       TOKENS:	P36W2-P36W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(Had~)
+          POS:	NOUN
+          VOC:	Had~
+        GLOSS:	stop/halt/end/extent/limit/level/border/frontier
+
+ INPUT STRING:	معاكي
+     IS_TRANS:	mEAky
+        INDEX:	P36W3
+      OFFSETS:	7-12
+       TOKENS:	P36W3-P36W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEa_1]
+   UNSPLITVOC:	(maEAkiy)
+          POS:	NOUN+POSS_PRON_2FS
+          VOC:	maEa+ik
+        GLOSS:	with+your
+
+ INPUT STRING:	qwly
+     IS_TRANS:	qwly
+        INDEX:	P37W1
+      OFFSETS:	0-4
+       TOKENS:	P37W1-P37W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAl_1]
+   UNSPLITVOC:	(quwliy)
+          POS:	CV+CVSUFF_SUBJ:2FS
+          VOC:	quwl+iy
+        GLOSS:	said/say/be said/(for example)+you
+
+ INPUT STRING:	لطنط
+     IS_TRANS:	lTnT
+        INDEX:	P37W2
+      OFFSETS:	5-9
+       TOKENS:	P37W2-P37W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[TanoT_1]
+   UNSPLITVOC:	(liTanoT)
+          POS:	PREP+NOUN
+          VOC:	li+TanoT
+        GLOSS:	for/to+paternal aunt/auntie/aunt
+
+ INPUT STRING:	ماتفتحش
+     IS_TRANS:	mAtftH$
+        INDEX:	P37W3
+      OFFSETS:	10-17
+       TOKENS:	P37W4-P37W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fataH_1]
+   UNSPLITVOC:	(mAtifitaH$)
+          POS:	NEG_PART+IV3FS+IV+NEG_PART
+          VOC:	mA+ti+fitaH+$
+        GLOSS:	not+it/them/she+open+not
+
+ INPUT STRING:	لحد
+     IS_TRANS:	lHd
+        INDEX:	P37W4
+      OFFSETS:	18-21
+       TOKENS:	P37W7-P37W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(liHad~)
+          POS:	PREP+NOUN
+          VOC:	li+Had~
+        GLOSS:	for/to+someone
+
+ INPUT STRING:	لا
+     IS_TRANS:	lA
+        INDEX:	P38W1
+      OFFSETS:	0-2
+       TOKENS:	P38W1-P38W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lA_1]
+   UNSPLITVOC:	(lA)
+          POS:	INTERJ
+          VOC:	lA
+        GLOSS:	no
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P38W2
+      OFFSETS:	3-5
+       TOKENS:	P38W2-P38W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	حروح
+     IS_TRANS:	HrwH
+        INDEX:	P38W3
+      OFFSETS:	6-10
+       TOKENS:	P38W3-P38W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(HaAaruwH)
+          POS:	FUT_PART+IV1S+IV
+          VOC:	Ha+Aa+ruwH
+        GLOSS:	will+I+begin/go
+
+ INPUT STRING:	أصلا
+     IS_TRANS:	>SlA
+        INDEX:	P38W4
+      OFFSETS:	11-15
+       TOKENS:	P38W5-P38W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aSol_1]
+   UNSPLITVOC:	(>aSolAF)
+          POS:	NOUN+CASE_INDEF_ACC
+          VOC:	>aSol+AF
+        GLOSS:	origin/source/root/origins/sources/principles/originally/primarily+[acc.indef.]
+
+ INPUT STRING:	أمي
+     IS_TRANS:	>my
+        INDEX:	P39W1
+      OFFSETS:	0-3
+       TOKENS:	P39W1-P39W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>um~_1]
+   UNSPLITVOC:	(>um~iy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	>um~+iy
+        GLOSS:	mother/maternal/mothers+my
+
+ INPUT STRING:	كانت
+     IS_TRANS:	kAnt
+        INDEX:	P39W2
+      OFFSETS:	4-8
+       TOKENS:	P39W3-P39W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(kAnit)
+          POS:	PV+PVSUFF_SUBJ:3FS
+          VOC:	kAn+it
+        GLOSS:	be/was/were+it/they/she
+
+ INPUT STRING:	بتحبها
+     IS_TRANS:	btHbhA
+        INDEX:	P39W3
+      OFFSETS:	9-15
+       TOKENS:	P39W4-P39W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Hab~_1]
+   UNSPLITVOC:	(bitiHib~ahA)
+          POS:	PROG_PART+IV3FS+IV+IVSUFF_DO:3FS
+          VOC:	bi+ti+Hib~+hA
+        GLOSS:	[present-tense]+it/they/she+love/like/want+it/them/her
+
+ INPUT STRING:	قوي
+     IS_TRANS:	qwy
+        INDEX:	P39W4
+      OFFSETS:	16-19
+       TOKENS:	P39W7-P39W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qawiy_1]
+   UNSPLITVOC:	(qawiy)
+          POS:	ADJ
+          VOC:	qawiy
+        GLOSS:	powerful/strong
+
+ INPUT STRING:	hy
+     IS_TRANS:	hy
+        INDEX:	P40W1
+      OFFSETS:	0-2
+       TOKENS:	P40W1-P40W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	مابتفتحش
+     IS_TRANS:	mAbtftH$
+        INDEX:	P40W2
+      OFFSETS:	3-11
+       TOKENS:	P40W2-P40W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fataH_1]
+   UNSPLITVOC:	(mA_bitftH$)
+          POS:	NEG_PART+PROG_PART+IV3FS+IV+NEG_PART
+          VOC:	mA+bi+t+fataH+$
+        GLOSS:	not+[present-tense]+it/they/she+open+not
+
+ INPUT STRING:	لجد
+     IS_TRANS:	ljd
+        INDEX:	P40W3
+      OFFSETS:	12-15
+       TOKENS:	P40W6-P40W6
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(ljd)
+          POS:	TYPO
+          VOC:	ljd
+        GLOSS:	nogloss
+
+ INPUT STRING:	bs
+     IS_TRANS:	bs
+        INDEX:	P40W4
+      OFFSETS:	16-18
+       TOKENS:	P40W7-P40W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[bas~_2]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	sAEAt
+     IS_TRANS:	sAEAt
+        INDEX:	P40W5
+      OFFSETS:	19-24
+       TOKENS:	P40W8-P40W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sAEap_1]
+   UNSPLITVOC:	(sAEAt)
+          POS:	NOUN+NSUFF_FEM_PL
+          VOC:	sAE+At
+        GLOSS:	hour/time/hours/clock/watch/timepiece/clocks/watches+[fem.pl.]
+
+ INPUT STRING:	بيجي
+     IS_TRANS:	byjy
+        INDEX:	P40W6
+      OFFSETS:	25-29
+       TOKENS:	P40W9-P40W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[jA_1]
+   UNSPLITVOC:	(biyijiy)
+          POS:	PROG_PART+IV3MS+IV
+          VOC:	bi+yi+jiy
+        GLOSS:	[present-tense]+he/it+came/come
+
+ INPUT STRING:	لها
+     IS_TRANS:	lhA
+        INDEX:	P40W7
+      OFFSETS:	30-33
+       TOKENS:	P40W11-P40W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[li_1]
+   UNSPLITVOC:	(lihA)
+          POS:	PREP+PRON_3FS
+          VOC:	li+hA
+        GLOSS:	for/to+it/them/her
+
+ INPUT STRING:	بتوع
+     IS_TRANS:	btwE
+        INDEX:	P40W8
+      OFFSETS:	34-38
+       TOKENS:	P40W13-P40W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bitAE_1]
+   UNSPLITVOC:	(bituwE)
+          POS:	NOUN
+          VOC:	bituwE
+        GLOSS:	owners/something/belongings
+
+ INPUT STRING:	الصيدلية
+     IS_TRANS:	AlSydlyp
+        INDEX:	P40W9
+      OFFSETS:	39-47
+       TOKENS:	P40W14-P40W14
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Saydaliy~ap_1]
+   UNSPLITVOC:	(AlSaydaliy~ap)
+          POS:	DET+NOUN+NSUFF_FEM_SG
+          VOC:	Al+Saydaliy~+ap
+        GLOSS:	the+pharmacy+[fem.sg.]
+
+ INPUT STRING:	يدوها
+     IS_TRANS:	ydwhA
+        INDEX:	P40W10
+      OFFSETS:	48-53
+       TOKENS:	P40W15-P40W16
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aid~aY_1]
+   UNSPLITVOC:	(yid~uwhA)
+          POS:	IV3P+IV+IVSUFF_SUBJ:P+IVSUFF_DO:3FS
+          VOC:	yi+d~+uwA+hA
+        GLOSS:	they+give/provide/hand over/be given/be provided/carry out/perform/lead+we+it/them/her
+
+ INPUT STRING:	حفن
+     IS_TRANS:	Hfn
+        INDEX:	P40W11
+      OFFSETS:	54-57
+       TOKENS:	P40W17-P40W17
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(Hfn)
+          POS:	TYPO
+          VOC:	Hfn
+        GLOSS:	nogloss
+
+ INPUT STRING:	الله
+     IS_TRANS:	Allh
+        INDEX:	P41W1
+      OFFSETS:	0-4
+       TOKENS:	P41W1-P41W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(All~ah)
+          POS:	NOUN_PROP
+          VOC:	All~ah
+        GLOSS:	Allah/God
+
+ INPUT STRING:	يرحمها
+     IS_TRANS:	yrHmhA
+        INDEX:	P41W2
+      OFFSETS:	5-11
+       TOKENS:	P41W2-P41W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[raHam_1]
+   UNSPLITVOC:	(yiroHamhA)
+          POS:	IV3MS+IV+IVSUFF_DO:3FS
+          VOC:	yi+roHam+hA
+        GLOSS:	he/it+have mercy/be compassionate/have mercy on/be merceful/bless/be merciful/have mercy with+it/them/her
+
+ INPUT STRING:	،
+     IS_TRANS:	,
+        INDEX:	P41W3
+      OFFSETS:	11-12
+       TOKENS:	P41W4-P41W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(,)
+          POS:	PUNC
+          VOC:	,
+        GLOSS:	nogloss
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P41W4
+      OFFSETS:	13-15
+       TOKENS:	P41W5-P41W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	عيني
+     IS_TRANS:	Eyny
+        INDEX:	P41W5
+      OFFSETS:	16-20
+       TOKENS:	P41W6-P41W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eayn_1]
+   UNSPLITVOC:	(Eayniy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	Eayn+iy
+        GLOSS:	eye/eyes/water spring/water source/water springs/water sources/notables/ain (Arabic letter)+my
+
+ INPUT STRING:	على
+     IS_TRANS:	ElY
+        INDEX:	P41W6
+      OFFSETS:	21-24
+       TOKENS:	P41W8-P41W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[EalaY_2]
+   UNSPLITVOC:	(EalaY)
+          POS:	PREP
+          VOC:	EalaY
+        GLOSS:	on/above
+
+ INPUT STRING:	أهالينا
+     IS_TRANS:	>hAlynA
+        INDEX:	P41W7
+      OFFSETS:	25-32
+       TOKENS:	P41W9-P41W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>ahol_1]
+   UNSPLITVOC:	(>ahAliynA)
+          POS:	NOUN+POSS_PRON_1P
+          VOC:	>ahAliy+nA
+        GLOSS:	family/people/families/folk/indigenous people/qualified/welcome!+our
+
+ INPUT STRING:	،
+     IS_TRANS:	,
+        INDEX:	P41W8
+      OFFSETS:	33-34
+       TOKENS:	P41W11-P41W11
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(,)
+          POS:	PUNC
+          VOC:	,
+        GLOSS:	nogloss
+
+ INPUT STRING:	أوكية
+     IS_TRANS:	>wkyp
+        INDEX:	P42W1
+      OFFSETS:	0-5
+       TOKENS:	P42W1-P42W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aawok~ayoh_1]
+   UNSPLITVOC:	(Aawok~ayoh)
+          POS:	INTERJ
+          VOC:	Aawok~ayoh
+        GLOSS:	ok
+
+ INPUT STRING:	lw
+     IS_TRANS:	lw
+        INDEX:	P42W2
+      OFFSETS:	6-8
+       TOKENS:	P42W2-P42W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[law_1]
+   UNSPLITVOC:	(law)
+          POS:	SUB_CONJ
+          VOC:	law
+        GLOSS:	if
+
+ INPUT STRING:	Hd
+     IS_TRANS:	Hd
+        INDEX:	P42W3
+      OFFSETS:	9-11
+       TOKENS:	P42W3-P42W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(Had~)
+          POS:	NOUN
+          VOC:	Had~
+        GLOSS:	someone
+
+ INPUT STRING:	معروف
+     IS_TRANS:	mErwf
+        INDEX:	P42W4
+      OFFSETS:	12-17
+       TOKENS:	P42W4-P42W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEoruwf_1]
+   UNSPLITVOC:	(maEoruwf)
+          POS:	ADJ
+          VOC:	maEoruwf
+        GLOSS:	known/well-known
+
+ INPUT STRING:	والله
+     IS_TRANS:	wAllh
+        INDEX:	P43W1
+      OFFSETS:	0-5
+       TOKENS:	P43W1-P43W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(waAll~ah)
+          POS:	PREP+NOUN_PROP
+          VOC:	wa+All~ah
+        GLOSS:	and+Allah/God
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P43W2
+      OFFSETS:	6-8
+       TOKENS:	P43W3-P43W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	knY
+     IS_TRANS:	knY
+        INDEX:	P43W3
+      OFFSETS:	9-12
+       TOKENS:	P43W4-P43W4
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[typo]
+   UNSPLITVOC:	(knY)
+          POS:	TYPO
+          VOC:	knY
+        GLOSS:	nogloss
+
+ INPUT STRING:	الزمن
+     IS_TRANS:	Alzmn
+        INDEX:	P43W4
+      OFFSETS:	13-18
+       TOKENS:	P43W5-P43W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[zaman_1]
+   UNSPLITVOC:	(Alzaman)
+          POS:	DET+NOUN
+          VOC:	Al+zaman
+        GLOSS:	the+time/period/duration/for some time/for a while/periods
+
+ INPUT STRING:	بقى
+     IS_TRANS:	bqY
+        INDEX:	P43W5
+      OFFSETS:	19-22
+       TOKENS:	P43W6-P43W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(baqaY)
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	baqaY+(null)
+        GLOSS:	become/begin/start/be/begin a new day+he/it
+
+ INPUT STRING:	زفت
+     IS_TRANS:	zft
+        INDEX:	P43W6
+      OFFSETS:	23-26
+       TOKENS:	P43W7-P43W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[zifot_1]
+   UNSPLITVOC:	(zifot)
+          POS:	NOUN
+          VOC:	zifot
+        GLOSS:	asphalt/pitch
+
+ INPUT STRING:	وآديكي
+     IS_TRANS:	w|dyky
+        INDEX:	P43W7
+      OFFSETS:	27-33
+       TOKENS:	P43W8-P43W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[>adiy_1]
+   UNSPLITVOC:	(wa>adiyik)
+          POS:	CONJ+DEM_PRON+PRON_2FS
+          VOC:	wa+>adiy+ik
+        GLOSS:	and+this+you
+
+ INPUT STRING:	شايفة
+     IS_TRANS:	$Ayfp
+        INDEX:	P43W8
+      OFFSETS:	34-39
+       TOKENS:	P43W11-P43W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$Af_1]
+   UNSPLITVOC:	($Ayofap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	$Ayof+ap
+        GLOSS:	viewer/observer/onlooker+[fem.sg.]
+
+ INPUT STRING:	العنف
+     IS_TRANS:	AlEnf
+        INDEX:	P43W9
+      OFFSETS:	40-45
+       TOKENS:	P43W12-P43W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eunof_1]
+   UNSPLITVOC:	(AlEunof)
+          POS:	DET+NOUN
+          VOC:	Al+Eunof
+        GLOSS:	the+violence/force
+
+ INPUT STRING:	f
+     IS_TRANS:	f
+        INDEX:	P43W10
+      OFFSETS:	46-47
+       TOKENS:	P43W13-P43W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy)
+          POS:	PREP
+          VOC:	fiy
+        GLOSS:	in
+
+ INPUT STRING:	kl
+     IS_TRANS:	kl
+        INDEX:	P43W11
+      OFFSETS:	48-50
+       TOKENS:	P43W14-P43W14
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kul~_1]
+   UNSPLITVOC:	(kul~)
+          POS:	NOUN_QUANT
+          VOC:	kul~
+        GLOSS:	all/entire/every/whole
+
+ INPUT STRING:	مكان
+     IS_TRANS:	mkAn
+        INDEX:	P43W12
+      OFFSETS:	51-55
+       TOKENS:	P43W15-P43W15
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[makAn_1]
+   UNSPLITVOC:	(makAn)
+          POS:	NOUN
+          VOC:	makAn
+        GLOSS:	place/location/position/places/locations/positions
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P44W1
+      OFFSETS:	0-3
+       TOKENS:	P44W1-P44W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	باقول
+     IS_TRANS:	bAqwl
+        INDEX:	P44W2
+      OFFSETS:	4-9
+       TOKENS:	P44W2-P44W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAl_1]
+   UNSPLITVOC:	(bAaquwl)
+          POS:	PROG_PART+IV1S+IV
+          VOC:	bi+Aa+quwl
+        GLOSS:	[present-tense]+I+said/say/be said/(for example)
+
+ INPUT STRING:	لمامي
+     IS_TRANS:	lmAmy
+        INDEX:	P44W3
+      OFFSETS:	10-15
+       TOKENS:	P44W4-P44W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(limAmiy)
+          POS:	PREP+NOUN+POSS_PRON_1S
+          VOC:	li+mAm+iy
+        GLOSS:	for/to+mama+my
+
+ INPUT STRING:	ymkn
+     IS_TRANS:	ymkn
+        INDEX:	P44W4
+      OFFSETS:	16-20
+       TOKENS:	P44W7-P44W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>amokan_1]
+   UNSPLITVOC:	(yimokin)
+          POS:	IV3MS+IV
+          VOC:	yi+mokin
+        GLOSS:	he/it+be possible/make possible for
+
+ INPUT STRING:	Hd
+     IS_TRANS:	Hd
+        INDEX:	P44W5
+      OFFSETS:	21-23
+       TOKENS:	P44W8-P44W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(Had~)
+          POS:	NOUN
+          VOC:	Had~
+        GLOSS:	someone
+
+ INPUT STRING:	متطرف
+     IS_TRANS:	mtTrf
+        INDEX:	P44W6
+      OFFSETS:	24-29
+       TOKENS:	P44W9-P44W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mutaTar~if_1]
+   UNSPLITVOC:	(mutaTar~if)
+          POS:	ADJ
+          VOC:	mutaTar~if
+        GLOSS:	extremist/radical
+
+ INPUT STRING:	عشأن
+     IS_TRANS:	E$>n
+        INDEX:	P44W7
+      OFFSETS:	30-34
+       TOKENS:	P44W10-P44W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$a>on_1]
+   UNSPLITVOC:	(Ea$a>on)
+          POS:	PREP+NOUN
+          VOC:	Ea+$a>on
+        GLOSS:	on/above+matter/affair/case/importance/status/situation/condition/affairs
+
+ INPUT STRING:	hy
+     IS_TRANS:	hy
+        INDEX:	P44W8
+      OFFSETS:	35-37
+       TOKENS:	P44W12-P44W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	ارمنية
+     IS_TRANS:	Armnyp
+        INDEX:	P44W9
+      OFFSETS:	38-44
+       TOKENS:	P44W13-P44W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[>aromaniy~_2]
+   UNSPLITVOC:	(>aromaniy~ap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	>aromaniy~+ap
+        GLOSS:	Armenian+[fem.sg.]
+
+ INPUT STRING:	طيب
+     IS_TRANS:	Tyb
+        INDEX:	P45W1
+      OFFSETS:	0-3
+       TOKENS:	P45W1-P45W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Tay~ib_1]
+   UNSPLITVOC:	(Tay~ib)
+          POS:	ADJ
+          VOC:	Tay~ib
+        GLOSS:	good/pleasant
+
+ INPUT STRING:	lw
+     IS_TRANS:	lw
+        INDEX:	P45W2
+      OFFSETS:	4-6
+       TOKENS:	P45W2-P45W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[law_1]
+   UNSPLITVOC:	(law)
+          POS:	SUB_CONJ
+          VOC:	law
+        GLOSS:	if
+
+ INPUT STRING:	عندها
+     IS_TRANS:	EndhA
+        INDEX:	P45W3
+      OFFSETS:	7-12
+       TOKENS:	P45W3-P45W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eanod_1]
+   UNSPLITVOC:	(EanodahA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	Eanod+hA
+        GLOSS:	at/have/possession/with+its/their/her
+
+ INPUT STRING:	ولاد
+     IS_TRANS:	wlAd
+        INDEX:	P45W4
+      OFFSETS:	13-17
+       TOKENS:	P45W5-P45W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[walad_1]
+   UNSPLITVOC:	(wilAd)
+          POS:	NOUN
+          VOC:	wilAd
+        GLOSS:	child/son/children
+
+ INPUT STRING:	حاولوا
+     IS_TRANS:	HAwlwA
+        INDEX:	P45W5
+      OFFSETS:	18-24
+       TOKENS:	P45W6-P45W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAwil_1]
+   UNSPLITVOC:	(HAwoluwA)
+          POS:	CV+CVSUFF_SUBJ:2P
+          VOC:	HAwol+uwA
+        GLOSS:	test/try/attempt/try out/test for ripeness/explore/invent/originate+you
+
+ INPUT STRING:	تكلموهم
+     IS_TRANS:	tklmwhm
+        INDEX:	P45W6
+      OFFSETS:	25-32
+       TOKENS:	P45W7-P45W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kal~im_1]
+   UNSPLITVOC:	(tikal~imuwhum)
+          POS:	IV2P+IV+IVSUFF_SUBJ:P+IVSUFF_DO:3P
+          VOC:	ti+kal~im+uwA+hum
+        GLOSS:	you+talk/speak/talk to+we+them
+
+ INPUT STRING:	عندها
+     IS_TRANS:	EndhA
+        INDEX:	P46W1
+      OFFSETS:	0-5
+       TOKENS:	P46W1-P46W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eanod_1]
+   UNSPLITVOC:	(EanodhA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	Eanod+hA
+        GLOSS:	at/have/possession/with+its/their/her
+
+ INPUT STRING:	ماهي
+     IS_TRANS:	mAhy
+        INDEX:	P47W1
+      OFFSETS:	0-4
+       TOKENS:	P47W1-P47W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[hiy~A_1]
+   UNSPLITVOC:	(mAhiy~A)
+          POS:	SUB_CONJ+PRON_3FS
+          VOC:	mA+hiy~A
+        GLOSS:	that+it/they/she
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P47W2
+      OFFSETS:	5-7
+       TOKENS:	P47W3-P47W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	عارفة
+     IS_TRANS:	EArfp
+        INDEX:	P47W3
+      OFFSETS:	8-13
+       TOKENS:	P47W4-P47W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EArif_1]
+   UNSPLITVOC:	(EArofap)
+          POS:	ADJ.VN+NSUFF_FEM_SG
+          VOC:	EArof+ap
+        GLOSS:	knowing/having knowledge of+[fem.sg.]
+
+ INPUT STRING:	توصلهم
+     IS_TRANS:	twSlhm
+        INDEX:	P47W4
+      OFFSETS:	14-20
+       TOKENS:	P47W5-P47W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[wisil_1]
+   UNSPLITVOC:	(tiwoSal~ihum)
+          POS:	IV3FS+IV+PREP+PRON_3P
+          VOC:	ti+woSal+li+hum
+        GLOSS:	it/they/she+arrive at/reach/connect+for/to+them
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P48W1
+      OFFSETS:	0-3
+       TOKENS:	P48W1-P48W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	برضه
+     IS_TRANS:	brDh
+        INDEX:	P48W2
+      OFFSETS:	4-8
+       TOKENS:	P48W2-P48W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baroDuh_1]
+   UNSPLITVOC:	(baroDuh)
+          POS:	ADV
+          VOC:	baroDuh
+        GLOSS:	also
+
+ INPUT STRING:	باقول
+     IS_TRANS:	bAqwl
+        INDEX:	P48W3
+      OFFSETS:	9-14
+       TOKENS:	P48W3-P48W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAl_1]
+   UNSPLITVOC:	(bAaquwl)
+          POS:	PROG_PART+IV1S+IV
+          VOC:	bi+Aa+quwl
+        GLOSS:	[present-tense]+I+said/say/be said/(for example)
+
+ INPUT STRING:	mmkn
+     IS_TRANS:	mmkn
+        INDEX:	P48W4
+      OFFSETS:	15-19
+       TOKENS:	P48W5-P48W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mumokin_1]
+   UNSPLITVOC:	(mumokin)
+          POS:	ADJ
+          VOC:	mumokin
+        GLOSS:	possible
+
+ INPUT STRING:	ماتكونش
+     IS_TRANS:	mAtkwn$
+        INDEX:	P48W5
+      OFFSETS:	20-27
+       TOKENS:	P48W6-P48W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(mA_tikuwn$)
+          POS:	NEG_PART+IV3FS+IV+NEG_PART
+          VOC:	mA+ti+kuwn+$
+        GLOSS:	not+it/they/she+be/was/were+not
+
+ INPUT STRING:	سرقة
+     IS_TRANS:	srqp
+        INDEX:	P48W6
+      OFFSETS:	28-32
+       TOKENS:	P48W9-P48W9
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[siroqap_1]
+   UNSPLITVOC:	(siroqap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	siroq+ap
+        GLOSS:	stealthily+[fem.sg.]
+
+ INPUT STRING:	يبقى
+     IS_TRANS:	ybqY
+        INDEX:	P48W7
+      OFFSETS:	33-37
+       TOKENS:	P48W10-P48W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(yiboqaY)
+          POS:	IV3MS+IV
+          VOC:	yi+boqaY
+        GLOSS:	he/it+become/begin/start/be/begin a new day
+
+ INPUT STRING:	حاولى
+     IS_TRANS:	HAwlY
+        INDEX:	P48W8
+      OFFSETS:	38-43
+       TOKENS:	P48W11-P48W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAwil_1]
+   UNSPLITVOC:	(HAwoliy)
+          POS:	CV+CVSUFF_SUBJ:2FS
+          VOC:	HAwol+iy
+        GLOSS:	test/try/attempt/try out/test for ripeness/explore/invent/originate+you
+
+ INPUT STRING:	تاخذي
+     IS_TRANS:	tAx*y
+        INDEX:	P48W9
+      OFFSETS:	44-49
+       TOKENS:	P48W12-P48W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[>axa*_1]
+   UNSPLITVOC:	(ta>oxudiy)
+          POS:	IV2FS+IV+IVSUFF_SUBJ:2FS
+          VOC:	ta+>oxu*+iy
+        GLOSS:	you [fem.sg.]+take/begin+[fem.sg.]
+
+ INPUT STRING:	Hd
+     IS_TRANS:	Hd
+        INDEX:	P48W10
+      OFFSETS:	50-52
+       TOKENS:	P48W13-P48W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(Had~)
+          POS:	NOUN
+          VOC:	Had~
+        GLOSS:	someone
+
+ INPUT STRING:	وروحوا
+     IS_TRANS:	wrwHwA
+        INDEX:	P48W11
+      OFFSETS:	53-59
+       TOKENS:	P48W14-P48W15
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(wiruwHuwA)
+          POS:	CONJ+CV+CVSUFF_SUBJ:2P
+          VOC:	wi+ruwH+uwA
+        GLOSS:	and+begin/go+you
+
+ INPUT STRING:	أو
+     IS_TRANS:	>w
+        INDEX:	P48W12
+      OFFSETS:	60-62
+       TOKENS:	P48W16-P48W16
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aw_1]
+   UNSPLITVOC:	(>aw)
+          POS:	CONJ
+          VOC:	>aw
+        GLOSS:	Or/if not/unless/except if/except when
+
+ INPUT STRING:	هم
+     IS_TRANS:	hm
+        INDEX:	P48W13
+      OFFSETS:	63-65
+       TOKENS:	P48W17-P48W17
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hum~a_1]
+   UNSPLITVOC:	(hum~a)
+          POS:	PRON_3P
+          VOC:	hum~a
+        GLOSS:	they [masc.pl]/they
+
+ INPUT STRING:	يروحوا
+     IS_TRANS:	yrwHwA
+        INDEX:	P48W14
+      OFFSETS:	66-72
+       TOKENS:	P48W18-P48W18
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(yiruwHuwA)
+          POS:	IV3P+IV+IVSUFF_SUBJ:P
+          VOC:	yi+ruwH+uwA
+        GLOSS:	they+begin/go+they
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P49W1
+      OFFSETS:	0-3
+       TOKENS:	P49W1-P49W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	HAsp
+     IS_TRANS:	HAsp
+        INDEX:	P49W2
+      OFFSETS:	4-8
+       TOKENS:	P49W2-P49W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAsis_1]
+   UNSPLITVOC:	(HAs~ap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	HAs~+ap
+        GLOSS:	feeling+[fem.sg.]
+
+ INPUT STRING:	كده
+     IS_TRANS:	kdh
+        INDEX:	P49W3
+      OFFSETS:	9-12
+       TOKENS:	P49W3-P49W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kidah_1]
+   UNSPLITVOC:	(kidah)
+          POS:	NOUN
+          VOC:	kidah
+        GLOSS:	this/after all that time/in this way/approximately/like that/as such/that/like
+
+ INPUT STRING:	bs
+     IS_TRANS:	bs
+        INDEX:	P50W1
+      OFFSETS:	0-2
+       TOKENS:	P50W1-P50W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[bas~2]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	مامي
+     IS_TRANS:	mAmy
+        INDEX:	P50W2
+      OFFSETS:	3-7
+       TOKENS:	P50W2-P50W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmiy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	mAm+iy
+        GLOSS:	mama+my
+
+ INPUT STRING:	بتقول
+     IS_TRANS:	btqwl
+        INDEX:	P50W3
+      OFFSETS:	8-13
+       TOKENS:	P50W4-P50W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAl_1]
+   UNSPLITVOC:	(bitiquwl)
+          POS:	PROG_PART+IV3FS+IV
+          VOC:	bi+ti+quwl
+        GLOSS:	[present-tense]+it/they/she+said/say/be said/(for example)
+
+ INPUT STRING:	منزل
+     IS_TRANS:	mnzl
+        INDEX:	P50W4
+      OFFSETS:	14-18
+       TOKENS:	P50W6-P50W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[minaz~il_1]
+   UNSPLITVOC:	(minaz~il)
+          POS:	ADJ
+          VOC:	minaz~il
+        GLOSS:	unloading/lowering
+
+ INPUT STRING:	kl
+     IS_TRANS:	kl
+        INDEX:	P50W5
+      OFFSETS:	19-21
+       TOKENS:	P50W7-P50W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kul~_1]
+   UNSPLITVOC:	(kul~)
+          POS:	NOUN_QUANT
+          VOC:	kul~
+        GLOSS:	all/entire/every/whole
+
+ INPUT STRING:	اللي
+     IS_TRANS:	Ally
+        INDEX:	P50W6
+      OFFSETS:	22-26
+       TOKENS:	P50W8-P50W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[Aill~iy_1]
+   UNSPLITVOC:	(Aill~iy)
+          POS:	REL_PRON
+          VOC:	Aill~iy
+        GLOSS:	who/which/that
+
+ INPUT STRING:	fy
+     IS_TRANS:	fy
+        INDEX:	P50W7
+      OFFSETS:	27-29
+       TOKENS:	P50W9-P50W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiyh)
+          POS:	PREP+PRON_3MS
+          VOC:	fiy+uh
+        GLOSS:	in+it/him
+
+ INPUT STRING:	الدولاب
+     IS_TRANS:	AldwlAb
+        INDEX:	P50W8
+      OFFSETS:	30-37
+       TOKENS:	P50W11-P50W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[duwlAb_1]
+   UNSPLITVOC:	(AlduwlAb)
+          POS:	DET+NOUN
+          VOC:	Al+duwlAb
+        GLOSS:	the+wheel/tire/gear/wheels/tires/gears
+
+ INPUT STRING:	E
+     IS_TRANS:	E
+        INDEX:	P50W9
+      OFFSETS:	38-39
+       TOKENS:	P50W12-P50W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EalaY_1]
+   UNSPLITVOC:	(EalaY)
+          POS:	PREP
+          VOC:	EalaY
+        GLOSS:	on/above
+
+ INPUT STRING:	الأرض
+     IS_TRANS:	Al>rD
+        INDEX:	P50W10
+      OFFSETS:	40-45
+       TOKENS:	P50W13-P50W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>aroD_1]
+   UNSPLITVOC:	(Al>aroD)
+          POS:	DET+NOUN
+          VOC:	Al+>aroD
+        GLOSS:	the+earth/territory/land/territories/lands
+
+ INPUT STRING:	كان
+     IS_TRANS:	kAn
+        INDEX:	P51W1
+      OFFSETS:	0-3
+       TOKENS:	P51W1-P51W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(kAn)
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	kAn+(null)
+        GLOSS:	be/was/were+he/it
+
+ INPUT STRING:	اسمها
+     IS_TRANS:	AsmhA
+        INDEX:	P51W2
+      OFFSETS:	4-9
+       TOKENS:	P51W2-P51W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aisom_1]
+   UNSPLITVOC:	(AisomahA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	Aisom+hA
+        GLOSS:	name/names+its/their/her
+
+ INPUT STRING:	أيه
+     IS_TRANS:	>yh
+        INDEX:	P51W3
+      OFFSETS:	10-13
+       TOKENS:	P51W4-P51W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_1]
+   UNSPLITVOC:	(<iyh)
+          POS:	INTERROG_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	الست
+     IS_TRANS:	Alst
+        INDEX:	P51W4
+      OFFSETS:	14-18
+       TOKENS:	P51W5-P51W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[sit~_1]
+   UNSPLITVOC:	(Alsit~)
+          POS:	DET+NOUN
+          VOC:	Al+sit~
+        GLOSS:	the+lady/miss/ladies/misses
+
+ INPUT STRING:	دي
+     IS_TRANS:	dy
+        INDEX:	P51W5
+      OFFSETS:	19-21
+       TOKENS:	P51W6-P51W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[diy_1]
+   UNSPLITVOC:	(diy)
+          POS:	DEM_PRON_FS
+          VOC:	diy
+        GLOSS:	this
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P51W6
+      OFFSETS:	21-22
+       TOKENS:	P51W7-P51W7
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P51W7
+      OFFSETS:	22-23
+       TOKENS:	P51W8-P51W8
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	mnh
+     IS_TRANS:	mnh
+        INDEX:	P52W1
+      OFFSETS:	0-3
+       TOKENS:	P52W1-P52W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[min~_1]
+   UNSPLITVOC:	(min~uh)
+          POS:	PREP+PRON_3MS
+          VOC:	min~+uh
+        GLOSS:	from+it/him
+
+ INPUT STRING:	llh
+     IS_TRANS:	llh
+        INDEX:	P52W2
+      OFFSETS:	4-7
+       TOKENS:	P52W3-P52W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(lil~ah)
+          POS:	PREP+NOUN_PROP
+          VOC:	li+All~ah
+        GLOSS:	for/to+Allah/God
+
+ INPUT STRING:	mnh
+     IS_TRANS:	mnh
+        INDEX:	P52W3
+      OFFSETS:	8-11
+       TOKENS:	P52W5-P52W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[min~_1]
+   UNSPLITVOC:	(min~uh)
+          POS:	PREP+PRON_3MS
+          VOC:	min~+uh
+        GLOSS:	from+it/him
+
+ INPUT STRING:	llh
+     IS_TRANS:	llh
+        INDEX:	P52W4
+      OFFSETS:	12-15
+       TOKENS:	P52W7-P52W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(lil~ah)
+          POS:	PREP+NOUN_PROP
+          VOC:	li+All~ah
+        GLOSS:	for/to+Allah/God
+
+ INPUT STRING:	wmmkn
+     IS_TRANS:	wmmkn
+        INDEX:	P53W1
+      OFFSETS:	0-5
+       TOKENS:	P53W1-P53W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mumokin_1]
+   UNSPLITVOC:	(wimumokin)
+          POS:	PART+ADJ
+          VOC:	wi+mumokin
+        GLOSS:	so/and+possible
+
+ INPUT STRING:	ykwn
+     IS_TRANS:	ykwn
+        INDEX:	P53W2
+      OFFSETS:	6-10
+       TOKENS:	P53W3-P53W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kAn_1]
+   UNSPLITVOC:	(yikuwn)
+          POS:	IV3MS+IV
+          VOC:	yi+kuwn
+        GLOSS:	he/it+be/was/were
+
+ INPUT STRING:	Hd
+     IS_TRANS:	Hd
+        INDEX:	P53W3
+      OFFSETS:	11-13
+       TOKENS:	P53W4-P53W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(Had~)
+          POS:	NOUN
+          VOC:	Had~
+        GLOSS:	someone
+
+ INPUT STRING:	hy
+     IS_TRANS:	hy
+        INDEX:	P53W4
+      OFFSETS:	14-16
+       TOKENS:	P53W5-P53W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hiy~a_1]
+   UNSPLITVOC:	(hiy~a)
+          POS:	PRON_3FS
+          VOC:	hiy~a
+        GLOSS:	it/they/she
+
+ INPUT STRING:	تعرفه
+     IS_TRANS:	tErfh
+        INDEX:	P53W5
+      OFFSETS:	17-22
+       TOKENS:	P53W6-P53W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eirif_1]
+   UNSPLITVOC:	(tiEorafuh)
+          POS:	IV3FS+IV+IVSUFF_DO:3MS
+          VOC:	ti+Eoraf+uh
+        GLOSS:	it/they/she+know+it/him
+
+ INPUT STRING:	شيء
+     IS_TRANS:	$y'
+        INDEX:	P54W1
+      OFFSETS:	0-3
+       TOKENS:	P54W1-P54W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$ay'_1]
+   UNSPLITVOC:	($ay')
+          POS:	NOUN
+          VOC:	$ay'
+        GLOSS:	something/thing/things
+
+ INPUT STRING:	مرعب
+     IS_TRANS:	mrEb
+        INDEX:	P54W2
+      OFFSETS:	4-8
+       TOKENS:	P54W2-P54W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[muroEib_1]
+   UNSPLITVOC:	(muroEib)
+          POS:	ADJ
+          VOC:	muroEib
+        GLOSS:	frightening/terrifying
+
+ INPUT STRING:	لا
+     IS_TRANS:	lA
+        INDEX:	P55W1
+      OFFSETS:	0-2
+       TOKENS:	P55W1-P55W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lA_1]
+   UNSPLITVOC:	(lA)
+          POS:	INTERJ
+          VOC:	lA
+        GLOSS:	no
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P55W2
+      OFFSETS:	3-5
+       TOKENS:	P55W2-P55W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	قادرة
+     IS_TRANS:	qAdrp
+        INDEX:	P55W3
+      OFFSETS:	6-11
+       TOKENS:	P55W3-P55W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[qAdir_1]
+   UNSPLITVOC:	(qAdorap)
+          POS:	ADJ.VN+NSUFF_FEM_SG
+          VOC:	qAdor+ap
+        GLOSS:	capable/able+[fem.sg.]
+
+ INPUT STRING:	اروح
+     IS_TRANS:	ArwH
+        INDEX:	P55W4
+      OFFSETS:	12-16
+       TOKENS:	P55W4-P55W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAH_1]
+   UNSPLITVOC:	(AaruwH)
+          POS:	IV1S+IV
+          VOC:	Aa+ruwH
+        GLOSS:	I+begin/go
+
+ INPUT STRING:	هناك
+     IS_TRANS:	hnAk
+        INDEX:	P55W5
+      OFFSETS:	17-21
+       TOKENS:	P55W5-P55W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[hinAk_1]
+   UNSPLITVOC:	(hinAk)
+          POS:	ADV
+          VOC:	hinAk
+        GLOSS:	there
+
+ INPUT STRING:	لمايعملوا
+     IS_TRANS:	lmAyEmlwA
+        INDEX:	P56W1
+      OFFSETS:	0-9
+       TOKENS:	P56W1-P56W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[Eamal_1]
+   UNSPLITVOC:	(lmAyiEimiluwA)
+          POS:	SUB_CONJ+IV3P+IV+IVSUFF_SUBJ:P
+          VOC:	lmA+yi+Eimil+uwA
+        GLOSS:	when+they+do+they
+
+ INPUT STRING:	EzA
+     IS_TRANS:	EzA
+        INDEX:	P56W2
+      OFFSETS:	10-13
+       TOKENS:	P56W3-P56W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EazA_1]
+   UNSPLITVOC:	(EazA)
+          POS:	NOUN
+          VOC:	EazA
+        GLOSS:	consolation/mourning/comfort/solace/salwa/paying of condolences
+
+ INPUT STRING:	mmkn
+     IS_TRANS:	mmkn
+        INDEX:	P57W1
+      OFFSETS:	0-4
+       TOKENS:	P57W1-P57W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mumokin_1]
+   UNSPLITVOC:	(mumokin)
+          POS:	ADJ
+          VOC:	mumokin
+        GLOSS:	possible
+
+ INPUT STRING:	مش
+     IS_TRANS:	m$
+        INDEX:	P57W2
+      OFFSETS:	5-7
+       TOKENS:	P57W2-P57W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mi$_1]
+   UNSPLITVOC:	(mi$)
+          POS:	NEG_PART
+          VOC:	mi$
+        GLOSS:	not
+
+ INPUT STRING:	عارفة
+     IS_TRANS:	EArfp
+        INDEX:	P57W3
+      OFFSETS:	8-13
+       TOKENS:	P57W3-P57W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EArif_1]
+   UNSPLITVOC:	(EArofap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	EArof+ap
+        GLOSS:	knowing/having knowledge of+[fem.sg.]
+
+ INPUT STRING:	bs
+     IS_TRANS:	bs
+        INDEX:	P58W1
+      OFFSETS:	0-2
+       TOKENS:	P58W1-P58W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[bas~_2]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	مخضوضة
+     IS_TRANS:	mxDwDp
+        INDEX:	P58W2
+      OFFSETS:	3-9
+       TOKENS:	P58W2-P58W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[maxDuD_1]
+   UNSPLITVOC:	(maxDuDap)
+          POS:	ADJ+NSUFF_FEM_SG
+          VOC:	maxDuD+ap
+        GLOSS:	shocked+[fem.sg.]
+
+ INPUT STRING:	w
+     IS_TRANS:	w
+        INDEX:	P58W3
+      OFFSETS:	10-11
+       TOKENS:	P58W3-P58W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[wi_1]
+   UNSPLITVOC:	(wi)
+          POS:	CONJ
+          VOC:	wi
+        GLOSS:	and/particle introducing an oath
+
+ INPUT STRING:	HAsp
+     IS_TRANS:	HAsp
+        INDEX:	P58W4
+      OFFSETS:	12-16
+       TOKENS:	P58W4-P58W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAsis_1]
+   UNSPLITVOC:	(HAs~ap)
+          POS:	ADJ.VN+NSUFF_FEM_SG
+          VOC:	HAs~+ap
+        GLOSS:	feeling+[fem.sg.]
+
+ INPUT STRING:	إن
+     IS_TRANS:	<n
+        INDEX:	P58W5
+      OFFSETS:	17-19
+       TOKENS:	P58W5-P58W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<in_1]
+   UNSPLITVOC:	(<in)
+          POS:	SUB_CONJ
+          VOC:	<in
+        GLOSS:	Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING:	أول
+     IS_TRANS:	>wl
+        INDEX:	P58W6
+      OFFSETS:	20-23
+       TOKENS:	P58W6-P58W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[>aw~il_1]
+   UNSPLITVOC:	(>aw~il)
+          POS:	ADJ
+          VOC:	>aw~il
+        GLOSS:	first/first-place/best/top/early/beginning/ancients/first of all
+
+ INPUT STRING:	مرة
+     IS_TRANS:	mrp
+        INDEX:	P58W7
+      OFFSETS:	24-27
+       TOKENS:	P58W7-P58W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mar~ap_1]
+   UNSPLITVOC:	(mar~ap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	mar~+ap
+        GLOSS:	occasion/time/moment/occasions/times/moments/once/one time+[fem.sg.]
+
+ INPUT STRING:	تحصل
+     IS_TRANS:	tHSl
+        INDEX:	P58W8
+      OFFSETS:	28-32
+       TOKENS:	P58W8-P58W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HaSal_1]
+   UNSPLITVOC:	(tiHoSal)
+          POS:	IV3FS+IV
+          VOC:	ti+HoSal
+        GLOSS:	it/they/she+obtain/acquire/get/be obtained/be acquired/occur/happen/take place
+
+ INPUT STRING:	لحد
+     IS_TRANS:	lHd
+        INDEX:	P58W9
+      OFFSETS:	33-36
+       TOKENS:	P58W9-P58W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(liHad~)
+          POS:	PREP+NOUN
+          VOC:	li+Had~
+        GLOSS:	for/to+someone
+
+ INPUT STRING:	نعرفه
+     IS_TRANS:	nErfh
+        INDEX:	P58W10
+      OFFSETS:	37-42
+       TOKENS:	P58W11-P58W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eirif_1]
+   UNSPLITVOC:	(niEorafuh)
+          POS:	IV1P+IV+IVSUFF_DO:3MS
+          VOC:	ni+Eoraf+uh
+        GLOSS:	we+know+it/him
+
+ INPUT STRING:	طلبين
+     IS_TRANS:	Tlbyn
+        INDEX:	P59W1
+      OFFSETS:	0-5
+       TOKENS:	P59W1-P59W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Talab_1]
+   UNSPLITVOC:	(Talabayn)
+          POS:	NOUN+NSUFF_MASC_DU
+          VOC:	Talab+ayn
+        GLOSS:	quest/search/request/demand/requests/demands+two
+
+ INPUT STRING:	مامي
+     IS_TRANS:	mAmy
+        INDEX:	P59W2
+      OFFSETS:	6-10
+       TOKENS:	P59W2-P59W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mAmA_1]
+   UNSPLITVOC:	(mAmiy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	mAm+iy
+        GLOSS:	mama+my
+
+ INPUT STRING:	fy
+     IS_TRANS:	fy
+        INDEX:	P59W3
+      OFFSETS:	11-13
+       TOKENS:	P59W4-P59W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy)
+          POS:	PREP
+          VOC:	fiy
+        GLOSS:	in
+
+ INPUT STRING:	اقسم
+     IS_TRANS:	Aqsm
+        INDEX:	P59W4
+      OFFSETS:	14-18
+       TOKENS:	P59W5-P59W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[qisom_1]
+   UNSPLITVOC:	(Alqisom)
+          POS:	DET+NOUN
+          VOC:	Al+qisom
+        GLOSS:	the+police station
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P60W1
+      OFFSETS:	0-3
+       TOKENS:	P60W1-P60W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	w
+     IS_TRANS:	w
+        INDEX:	P60W2
+      OFFSETS:	4-5
+       TOKENS:	P60W2-P60W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[wi_1]
+   UNSPLITVOC:	(wi)
+          POS:	CONJ
+          VOC:	wi
+        GLOSS:	and/particle introducing an oath
+
+ INPUT STRING:	زيزو
+     IS_TRANS:	zyzw
+        INDEX:	P60W3
+      OFFSETS:	6-10
+       TOKENS:	P60W3-P60W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[ziyzuw_1]
+   UNSPLITVOC:	(ziyzuw)
+          POS:	NOUN_PROP
+          VOC:	ziyzuw
+        GLOSS:	zizo
+
+ INPUT STRING:	رايحين
+     IS_TRANS:	rAyHyn
+        INDEX:	P60W4
+      OFFSETS:	11-17
+       TOKENS:	P60W4-P60W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[rAyiH_1]
+   UNSPLITVOC:	(rAyoHiyn)
+          POS:	ADJ+NSUFF_MASC_PL
+          VOC:	rAyoH+iyn
+        GLOSS:	going+two
+
+ INPUT STRING:	معاها
+     IS_TRANS:	mEAhA
+        INDEX:	P60W5
+      OFFSETS:	18-23
+       TOKENS:	P60W5-P60W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEa_1]
+   UNSPLITVOC:	(maEAhA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	maEa+hA
+        GLOSS:	with+its/their/her
+
+ INPUT STRING:	أيه
+     IS_TRANS:	>yh
+        INDEX:	P61W1
+      OFFSETS:	0-3
+       TOKENS:	P61W1-P61W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_1]
+   UNSPLITVOC:	(<iyh)
+          POS:	INTERROG_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	dA
+     IS_TRANS:	dA
+        INDEX:	P61W2
+      OFFSETS:	4-6
+       TOKENS:	P61W2-P61W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dah_1]
+   UNSPLITVOC:	(dA)
+          POS:	DEM_PRON_MS
+          VOC:	dah
+        GLOSS:	this
+
+ INPUT STRING:	طالبينها
+     IS_TRANS:	TAlbynhA
+        INDEX:	P61W3
+      OFFSETS:	7-15
+       TOKENS:	P61W3-P61W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[TAlib_1]
+   UNSPLITVOC:	(TAlobiynhA)
+          POS:	ADJ+NSUFF_MASC_PL+PRON_3FS
+          VOC:	TAlob+iyn+hA
+        GLOSS:	requesting+two+it/them/her
+
+ INPUT STRING:	lyh
+     IS_TRANS:	lyh
+        INDEX:	P61W4
+      OFFSETS:	16-19
+       TOKENS:	P61W5-P61W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[layoh_1]
+   UNSPLITVOC:	(layoh)
+          POS:	REL_ADV
+          VOC:	layoh
+        GLOSS:	why
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P61W5
+      OFFSETS:	19-20
+       TOKENS:	P61W6-P61W6
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P61W6
+      OFFSETS:	20-21
+       TOKENS:	P61W7-P61W7
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	عشأن
+     IS_TRANS:	E$>n
+        INDEX:	P62W1
+      OFFSETS:	0-4
+       TOKENS:	P62W1-P62W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[$a>on_1]
+   UNSPLITVOC:	(Ea$a>on)
+          POS:	PREP+NOUN
+          VOC:	Ea+$a>on
+        GLOSS:	on/above+matter/affair/case/importance/status/situation/condition/affairs
+
+ INPUT STRING:	تعرفها
+     IS_TRANS:	tErfhA
+        INDEX:	P62W2
+      OFFSETS:	5-11
+       TOKENS:	P62W3-P62W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eirif_1]
+   UNSPLITVOC:	(tiEorafahA)
+          POS:	IV3FS+IV+IVSUFF_DO:3FS
+          VOC:	ti+Eoraf+hA
+        GLOSS:	it/they/she+know+it/them/her
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P62W3
+      OFFSETS:	11-12
+       TOKENS:	P62W5-P62W5
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	؟
+     IS_TRANS:	?
+        INDEX:	P62W4
+      OFFSETS:	12-13
+       TOKENS:	P62W6-P62W6
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[punc]
+   UNSPLITVOC:	(?)
+          POS:	PUNC
+          VOC:	?
+        GLOSS:	nogloss
+
+ INPUT STRING:	كويس
+     IS_TRANS:	kwys
+        INDEX:	P63W1
+      OFFSETS:	0-4
+       TOKENS:	P63W1-P63W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kuway~is_1]
+   UNSPLITVOC:	(kuway~is)
+          POS:	ADJ
+          VOC:	kuway~is
+        GLOSS:	beautiful/nice/fine (arts)/brilliant/pleasant/shining with light/pretty/attractive
+
+ INPUT STRING:	إنكو
+     IS_TRANS:	<nkw
+        INDEX:	P63W2
+      OFFSETS:	5-9
+       TOKENS:	P63W2-P63W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<in~_1]
+   UNSPLITVOC:	(<in~kum)
+          POS:	SUB_CONJ+PRON_2P
+          VOC:	<in~+kum
+        GLOSS:	that+you
+
+ INPUT STRING:	معاها
+     IS_TRANS:	mEAhA
+        INDEX:	P63W3
+      OFFSETS:	10-15
+       TOKENS:	P63W4-P63W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEa_1]
+   UNSPLITVOC:	(maEAhA)
+          POS:	NOUN+POSS_PRON_3FS
+          VOC:	maEa+hA
+        GLOSS:	with+its/their/her
+
+ INPUT STRING:	ابقى
+     IS_TRANS:	AbqY
+        INDEX:	P64W1
+      OFFSETS:	0-4
+       TOKENS:	P64W1-P64W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[baqaY_1]
+   UNSPLITVOC:	(Aiboqiy)
+          POS:	CV+CVSUFF_SUBJ:2FS
+          VOC:	Aiboq+iy
+        GLOSS:	become/begin/start/be/begin a new day+you
+
+ INPUT STRING:	طمنيني
+     IS_TRANS:	Tmnyny
+        INDEX:	P64W2
+      OFFSETS:	5-11
+       TOKENS:	P64W2-P64W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Tam~in_1]
+   UNSPLITVOC:	(Tam~iniyniy)
+          POS:	CV+CVSUFF_SUBJ:2FS+CVSUFF_DO:1S
+          VOC:	Tam~in+iy+niy
+        GLOSS:	assuage/calm down/pacify/reassure+you+me
+
+ INPUT STRING:	عملتي
+     IS_TRANS:	Emlty
+        INDEX:	P64W3
+      OFFSETS:	12-17
+       TOKENS:	P64W4-P64W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eamal_1]
+   UNSPLITVOC:	(Eamaltiy)
+          POS:	PV+PVSUFF_SUBJ:2FS
+          VOC:	Eamal+tiy
+        GLOSS:	function/make/act/do+you
+
+ INPUT STRING:	أيه
+     IS_TRANS:	>yh
+        INDEX:	P64W4
+      OFFSETS:	18-21
+       TOKENS:	P64W5-P64W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_1]
+   UNSPLITVOC:	(<iyh)
+          POS:	INTERROG_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	مع
+     IS_TRANS:	mE
+        INDEX:	P64W5
+      OFFSETS:	22-24
+       TOKENS:	P64W6-P64W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[maEa_1]
+   UNSPLITVOC:	(maEa)
+          POS:	NOUN
+          VOC:	maEa
+        GLOSS:	with
+
+ INPUT STRING:	طنط
+     IS_TRANS:	TnT
+        INDEX:	P64W6
+      OFFSETS:	25-28
+       TOKENS:	P64W7-P64W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[TanoT_1]
+   UNSPLITVOC:	(TanoT)
+          POS:	NOUN
+          VOC:	TanoT
+        GLOSS:	paternal aunt/auntie/aunt
+

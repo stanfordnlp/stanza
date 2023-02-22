@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130715.0001" medium="SMS" donated="true">
+  <su id="s0">
+    <source>Aywa ana etisalat. Eh el klam</source>
+    <annotated_arabizi>
+      <token id="t0">Aywa</token>
+      <token id="t1">ana</token>
+      <token id="t2">etisalat.</token>
+      <token id="t3">Eh</token>
+      <token id="t4">el</token>
+      <token id="t5">klam</token>
+    </annotated_arabizi>
+    <auto_transliteration>أيوه انا اتصالات. إيه ال[+] كلام</auto_transliteration>
+    <corrected_transliteration>أيوه انا إتصالات. إيه ال[+] كلام</corrected_transliteration>
+    <normalized_transliteration>أيوه انا إتصالات. إيه الكلام</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-07-15 11:14:50 UTC" participant="139066">Aywa ana etisalat. Eh el klam</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Rakam 5edmet el 3omla kam ??</source>
+    <annotated_arabizi>
+      <token id="t0">Rakam</token>
+      <token id="t1">5edmet</token>
+      <token id="t2">el</token>
+      <token id="t3">3omla</token>
+      <token id="t4">kam</token>
+      <token id="t5" tag="punctuation">??</token>
+    </annotated_arabizi>
+    <auto_transliteration>رقم خدمة ال[+] عمله كام ؟؟</auto_transliteration>
+    <corrected_transliteration>رقم خدمة ال[+] عمله كام ؟؟</corrected_transliteration>
+    <normalized_transliteration>رقم خدمة العمله كام ؟؟</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2013-07-15 11:15:14 UTC" participant="139288">Rakam 5edmet el 3omla kam ??</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>333</source>
+    <annotated_arabizi>
+      <token id="t0" tag="foreign">33</token>
+    </annotated_arabizi>
+    <auto_transliteration>33</auto_transliteration>
+    <corrected_transliteration>33</corrected_transliteration>
+    <normalized_transliteration>33</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2013-07-15 11:15:23 UTC" participant="139066">333</message>
+    </messages>
+  </su>
+  <su id="s3">
+    <source>Shokran :*</source>
+    <annotated_arabizi>
+      <token id="t0">Shokran</token>
+      <token id="t1">:*</token>
+    </annotated_arabizi>
+    <auto_transliteration>شكرا :*</auto_transliteration>
+    <corrected_transliteration>شكرا #</corrected_transliteration>
+    <normalized_transliteration>شكرا #</normalized_transliteration>
+    <messages>
+      <message id="m0003" time="2013-07-15 11:15:57 UTC" participant="139288">Shokran :*</message>
+    </messages>
+  </su>
+  <su id="s4">
+    <source>7abibi</source>
+    <annotated_arabizi>
+      <token id="t0">7abibi</token>
+    </annotated_arabizi>
+    <auto_transliteration>حبيبي</auto_transliteration>
+    <corrected_transliteration>حبيبي</corrected_transliteration>
+    <normalized_transliteration>حبيبي</normalized_transliteration>
+    <messages>
+      <message id="m0004" time="2013-07-15 11:16:16 UTC" participant="139066">7abibi</message>
+    </messages>
+  </su>
+  <su id="s5">
+    <source>Kelap dooper man lelbee3 !!???</source>
+    <annotated_arabizi>
+      <token id="t0">Kelap</token>
+      <token id="t1" tag="foreign">dooper</token>
+      <token id="t2" tag="foreign">man</token>
+      <token id="t3">lelbee3</token>
+      <token id="t4" tag="punctuation">!!???</token>
+    </annotated_arabizi>
+    <auto_transliteration>كلب دوفر من للبيع !!؟؟؟</auto_transliteration>
+    <corrected_transliteration>كلاب دوبر مان للبيع !!؟؟؟</corrected_transliteration>
+    <normalized_transliteration>كلاب دوبر مان للبيع !!؟؟؟</normalized_transliteration>
+    <messages>
+      <message id="m0005" time="2013-07-15 17:41:47 UTC" participant="139288">Kelap dooper man lelbee3 !!???</message>
+    </messages>
+  </su>
+</conversation>

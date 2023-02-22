@@ -1,0 +1,299 @@
+ INPUT STRING:	والله
+     IS_TRANS:	wAllh
+        INDEX:	P1W1
+      OFFSETS:	0-5
+       TOKENS:	P1W1-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(waAll~ahi)
+          POS:	PREP+NOUN_PROP
+          VOC:	wa+All~ah
+        GLOSS:	by+Allah/God
+
+ INPUT STRING:	ما
+     IS_TRANS:	mA
+        INDEX:	P1W2
+      OFFSETS:	6-8
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[mA_9]
+   UNSPLITVOC:	(mA)
+          POS:	VERB
+          VOC:	mA
+        GLOSS:	is not
+
+ INPUT STRING:	فيش
+     IS_TRANS:	fy$
+        INDEX:	P1W3
+      OFFSETS:	9-12
+       TOKENS:	P1W4-P1W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy$)
+          POS:	PREP+PRON_3MS+NEG_PART
+          VOC:	fiy+uh+$
+        GLOSS:	in+him/it+not
+
+ INPUT STRING:	مشكلة
+     IS_TRANS:	m$klp
+        INDEX:	P1W4
+      OFFSETS:	13-18
+       TOKENS:	P1W7-P1W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mu$okilap_1]
+   UNSPLITVOC:	(mu$okilap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	mu$okil+ap
+        GLOSS:	problem/issue/problems/issues/inconveniences+[fem.sg.]
+
+ INPUT STRING:	بس
+     IS_TRANS:	bs
+        INDEX:	P1W5
+      OFFSETS:	19-21
+       TOKENS:	P1W8-P1W8
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=T
+      COMMENT:	[]
+        LEMMA:	[bas~_2]
+   UNSPLITVOC:	(bas~)
+          POS:	CONJ
+          VOC:	bas~
+        GLOSS:	but
+
+ INPUT STRING:	هنحتاج
+     IS_TRANS:	hnHtAj
+        INDEX:	P1W6
+      OFFSETS:	22-28
+       TOKENS:	P1W9-P1W10
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[AiHotAj_1]
+   UNSPLITVOC:	(haniHotAj)
+          POS:	FUT_PART+IV1P+IV
+          VOC:	ha+ni+HotAj
+        GLOSS:	will+we+require/be in need/need
+
+ INPUT STRING:	نظبط
+     IS_TRANS:	nZbT
+        INDEX:	P1W7
+      OFFSETS:	29-33
+       TOKENS:	P1W11-P1W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Zab~aT_1]
+   UNSPLITVOC:	(niZab~aT)
+          POS:	IV1P+IV
+          VOC:	ni+Zab~aT
+        GLOSS:	we+tune/adjust/order
+
+ INPUT STRING:	فيه
+     IS_TRANS:	fyh
+        INDEX:	P1W8
+      OFFSETS:	34-37
+       TOKENS:	P1W12-P1W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiyh)
+          POS:	PREP+PRON_3MS
+          VOC:	fiy+uh
+        GLOSS:	in+it/him
+
+ INPUT STRING:	حاجات
+     IS_TRANS:	HAjAt
+        INDEX:	P1W9
+      OFFSETS:	38-43
+       TOKENS:	P1W14-P1W14
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[HAjap_1]
+   UNSPLITVOC:	(HAjAt)
+          POS:	NOUN+NSUFF_FEM_PL
+          VOC:	HAj+At
+        GLOSS:	need/needs/thing/belongings+[fem.pl.]
+
+ INPUT STRING:	المهم
+     IS_TRANS:	Almhm
+        INDEX:	P2W1
+      OFFSETS:	0-5
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[muhim~_1]
+   UNSPLITVOC:	(Almuhim~)
+          POS:	DET+ADJ
+          VOC:	Al+muhim~
+        GLOSS:	the+important/serious
+
+ INPUT STRING:	احنا
+     IS_TRANS:	AHnA
+        INDEX:	P2W2
+      OFFSETS:	6-10
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AiHonA_1]
+   UNSPLITVOC:	(AiHonA)
+          POS:	PRON_1P
+          VOC:	AiHonA
+        GLOSS:	we
+
+ INPUT STRING:	هنتقابل
+     IS_TRANS:	hntqAbl
+        INDEX:	P2W3
+      OFFSETS:	11-18
+       TOKENS:	P2W3-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[AitoqAbil_1]
+   UNSPLITVOC:	(hanitoqAbil)
+          POS:	FUT_PART+IV1P+IV
+          VOC:	ha+ni+toqAbil
+        GLOSS:	will+we+meet together
+
+ INPUT STRING:	بكرة
+     IS_TRANS:	bkrp
+        INDEX:	P2W4
+      OFFSETS:	19-23
+       TOKENS:	P2W5-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bukorap_1]
+   UNSPLITVOC:	(bukorap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	bukor+ap
+        GLOSS:	tomorrow+[fem.sg.]
+
+ INPUT STRING:	ولا
+     IS_TRANS:	wlA
+        INDEX:	P2W5
+      OFFSETS:	24-27
+       TOKENS:	P2W6-P2W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[wal~A_1]
+   UNSPLITVOC:	(wal~A)
+          POS:	CONJ
+          VOC:	wal~A
+        GLOSS:	or
+
+ INPUT STRING:	ايه
+     IS_TRANS:	Ayh
+        INDEX:	P2W6
+      OFFSETS:	28-31
+       TOKENS:	P2W7-P2W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[<iyh_3]
+   UNSPLITVOC:	(<iyh)
+          POS:	REL_PRON
+          VOC:	<iyh
+        GLOSS:	what
+
+ INPUT STRING:	لا
+     IS_TRANS:	lA
+        INDEX:	P3W1
+      OFFSETS:	0-2
+       TOKENS:	P3W1-P3W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[lA_1]
+   UNSPLITVOC:	(lA)
+          POS:	INTERJ
+          VOC:	lA
+        GLOSS:	no
+
+ INPUT STRING:	مفيش
+     IS_TRANS:	mfy$
+        INDEX:	P3W2
+      OFFSETS:	3-7
+       TOKENS:	P3W2-P3W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[mA_9]
+   UNSPLITVOC:	(ma_fiy$)
+          POS:	VERB+PREP+PRON_3MS+NEG_PART
+          VOC:	mA+fiy+uh+$
+        GLOSS:	is not+in+him/it+not
+
+ INPUT STRING:	مقابلة
+     IS_TRANS:	mqAblp
+        INDEX:	P3W3
+      OFFSETS:	8-14
+       TOKENS:	P3W6-P3W6
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[muqAbolap_1]
+   UNSPLITVOC:	(muqAbolap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	muqAbol+ap
+        GLOSS:	interview/meeting/encounter+[fem.sg.]
+
+ INPUT STRING:	بكرة
+     IS_TRANS:	bkrp
+        INDEX:	P3W4
+      OFFSETS:	15-19
+       TOKENS:	P3W7-P3W7
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[bukorap_1]
+   UNSPLITVOC:	(bukorap)
+          POS:	NOUN+NSUFF_FEM_SG
+          VOC:	bukor+ap
+        GLOSS:	tomorrow+[fem.sg.]
+
+ INPUT STRING:	،
+     IS_TRANS:	,
+        INDEX:	P3W5
+      OFFSETS:	20-21
+       TOKENS:	P3W8-P3W8
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[DEFAULT]
+   UNSPLITVOC:	(,)
+          POS:	PUNC
+          VOC:	,
+        GLOSS:	,
+
+ INPUT STRING:	محدش
+     IS_TRANS:	mHd$
+        INDEX:	P3W6
+      OFFSETS:	21-25
+       TOKENS:	P3W9-P3W11
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[Had~_1]
+   UNSPLITVOC:	(ma_Had~i$)
+          POS:	VERB+NOUN+NEG_PART
+          VOC:	mA+Had~+$
+        GLOSS:	is not+stop/halt/end/extent/limit/level/border/frontier/someone+not
+
+ INPUT STRING:	اكد
+     IS_TRANS:	Akd
+        INDEX:	P3W7
+      OFFSETS:	26-29
+       TOKENS:	P3W12-P3W12
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[>ak~id_1]
+   UNSPLITVOC:	(>ak~id)
+          POS:	PV+PVSUFF_SUBJ:3MS
+          VOC:	>ak~id+(null)
+        GLOSS:	ensure/assure/confirm/ascetain/endorse/guarantee/stress/insist+he/it
+
+ INPUT STRING:	الميعاد
+     IS_TRANS:	AlmyEAd
+        INDEX:	P3W8
+      OFFSETS:	30-37
+       TOKENS:	P3W13-P3W13
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[miyEAd_1]
+   UNSPLITVOC:	(AlmiyEAd)
+          POS:	DET+NOUN
+          VOC:	Al+miyEAd
+        GLOSS:	the+promise/promises/appointment/appointed time/appointments/appointed times
+

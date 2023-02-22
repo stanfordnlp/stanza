@@ -1,0 +1,65 @@
+ INPUT STRING:	عجوه
+     IS_TRANS:	Ejwh
+        INDEX:	P1W1
+      OFFSETS:	0-4
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[Eajowap_1]
+   UNSPLITVOC:	(Eajowap)
+          POS:	NOUN_PROP
+          VOC:	Eajowap
+        GLOSS:	Agwah
+
+ INPUT STRING:	ما
+     IS_TRANS:	mA
+        INDEX:	P2W1
+      OFFSETS:	0-2
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[mA_1]
+   UNSPLITVOC:	(mA)
+          POS:	FOCUS_PART
+          VOC:	mA
+        GLOSS:	[emphasis]
+
+ INPUT STRING:	تنزل
+     IS_TRANS:	tnzl
+        INDEX:	P2W2
+      OFFSETS:	3-7
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[nizil_1]
+   UNSPLITVOC:	(tinozil)
+          POS:	IV2MS+IV
+          VOC:	ti+nozil
+        GLOSS:	you+descend/come/desend/stay
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P2W3
+      OFFSETS:	8-10
+       TOKENS:	P2W3-P2W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	ابني
+     IS_TRANS:	Abny
+        INDEX:	P2W4
+      OFFSETS:	11-15
+       TOKENS:	P2W4-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<ibon_1]
+   UNSPLITVOC:	(<iboniy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	<ibon+iy
+        GLOSS:	son/children/sons+my
+

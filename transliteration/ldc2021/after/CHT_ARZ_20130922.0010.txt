@@ -1,0 +1,290 @@
+ INPUT STRING: هي
+     IS_TRANS: hy
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: hy
+    VOCALIZED: hiy~a
+          POS: PRON_3FS
+        GLOSS: it/they/she
+
+ INPUT STRING: ريهام
+     IS_TRANS: ryhAm
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,8
+  UNVOCALIZED: ryhAm
+    VOCALIZED: riyhAm
+          POS: NOUN_PROP
+        GLOSS: Reham
+
+ INPUT STRING: عزت
+     IS_TRANS: Ezt
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,12
+  UNVOCALIZED: Ezt
+    VOCALIZED: Eiz~at
+          POS: NOUN_PROP
+        GLOSS: Izzat/Ezzat
+
+ INPUT STRING: فسخت
+     IS_TRANS: fsxt
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 13,17
+  UNVOCALIZED: fsxt
+    VOCALIZED: fasax+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: annul/dissolve/revoke+it/they/she
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 18,19
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 19,20
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: ?
+
+ INPUT STRING: من
+     IS_TRANS: mn
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: mn
+    VOCALIZED: min
+          POS: PREP
+        GLOSS: from
+
+ INPUT STRING: زمان
+     IS_TRANS: zmAn
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,7
+  UNVOCALIZED: zmAn
+    VOCALIZED: zamAn
+          POS: NOUN
+        GLOSS: time/duration/times/durations
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 8,10
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: بنت
+     IS_TRANS: bnt
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 11,14
+  UNVOCALIZED: bnt
+    VOCALIZED: binot-
+          POS: NOUN
+        GLOSS: daughter/girl/daughters/girls
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 14,15
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: نهار
+     IS_TRANS: nhAr
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,7
+  UNVOCALIZED: nhAr
+    VOCALIZED: nahAr
+          POS: NOUN
+        GLOSS: daytime/day/by day/during the day
+
+ INPUT STRING: وحت
+     IS_TRANS: wHt
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,11
+  UNVOCALIZED: wHt
+    VOCALIZED: wHt
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: حببن
+     IS_TRANS: Hbbn
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 12,16
+  UNVOCALIZED: Hbbn
+    VOCALIZED: Hbbn
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 17,20
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: لسه
+     IS_TRANS: lsh
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 21,24
+  UNVOCALIZED: lsh
+    VOCALIZED: lis~ah
+          POS: ADV
+        GLOSS: yet
+
+ INPUT STRING: شايفة
+     IS_TRANS: $Ayfp
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 25,30
+  UNVOCALIZED: $Ayfp
+    VOCALIZED: $Ayof+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: observer+[fem.sg.]
+
+ INPUT STRING: نو
+     IS_TRANS: nw
+      COMMENT: []
+        INDEX: P3W8
+      OFFSETS: 31,33
+  UNVOCALIZED: nw
+    VOCALIZED: nw
+          POS: FOREIGN
+        GLOSS: nogloss
+
+ INPUT STRING: صدقي
+     IS_TRANS: Sdqy
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,4
+  UNVOCALIZED: Sdqy
+    VOCALIZED: Sad~aq+iy-
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: believe/give credence to/confirm/be believed/ratify/adopt+you
+
+ INPUT STRING: ني
+     IS_TRANS: ny
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 4,6
+  UNVOCALIZED: ny
+    VOCALIZED: -niy
+          POS: CVSUFF_DO:1S
+        GLOSS: me
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 7,9
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: اعرف
+     IS_TRANS: AErf
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 10,14
+  UNVOCALIZED: AErf
+    VOCALIZED: Aa+Eoraf
+          POS: IV1S+IV
+        GLOSS: I+know
+
+ INPUT STRING: بس
+     IS_TRANS: bs
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 15,17
+  UNVOCALIZED: bs
+    VOCALIZED: bas~
+          POS: CONJ
+        GLOSS: but
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P4W6
+      OFFSETS: 18,20
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: من
+     IS_TRANS: mn
+      COMMENT: []
+        INDEX: P4W7
+      OFFSETS: 21,23
+  UNVOCALIZED: mn
+    VOCALIZED: min
+          POS: PREP
+        GLOSS: from
+
+ INPUT STRING: زمان
+     IS_TRANS: zmAn
+      COMMENT: []
+        INDEX: P4W8
+      OFFSETS: 24,28
+  UNVOCALIZED: zmAn
+    VOCALIZED: zamAn
+          POS: NOUN
+        GLOSS: time/duration/times/durations
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: نهار
+     IS_TRANS: nhAr
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 3,7
+  UNVOCALIZED: nhAr
+    VOCALIZED: nahAr
+          POS: NOUN
+        GLOSS: daytime/day/by day/during the day
+

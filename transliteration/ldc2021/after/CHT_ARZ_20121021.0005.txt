@@ -1,0 +1,120 @@
+ INPUT STRING: قاع
+     IS_TRANS: qAE
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: qAE
+    VOCALIZED: qAE
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: عايزة
+     IS_TRANS: EAyzp
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,5
+  UNVOCALIZED: EAyzp
+    VOCALIZED: EAyoz+ap
+          POS: ADJ.VN+NSUFF_FEM_SG
+        GLOSS: needing/liking/requiring/wanting/desiring+[fem.sg.]
+
+ INPUT STRING: اشوف
+     IS_TRANS: A$wf
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 6,10
+  UNVOCALIZED: A$wf
+    VOCALIZED: Aa+$uwf-
+          POS: IV1S+IV
+        GLOSS: I+look
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 10,11
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: IVSUFF_DO:2FS
+        GLOSS: you
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 12,14
+  UNVOCALIZED: <n
+    VOCALIZED: <in
+          POS: SUB_CONJ
+        GLOSS: Although/(even) though/even if/despite/in spite of the fact that/verily/truly
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 15,18
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 19,23
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: طيب
+     IS_TRANS: Tyb
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Tyb
+    VOCALIZED: Tay~ib
+          POS: ADJ
+        GLOSS: good/pleasant
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 4,7
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: الاعع
+     IS_TRANS: AlAEE
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,13
+  UNVOCALIZED: AlAEE
+    VOCALIZED: AlAEE
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 14,16
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: ؟
+     IS_TRANS: ?
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 17,18
+  UNVOCALIZED: ?
+    VOCALIZED: ?
+          POS: PUNC
+        GLOSS: nogloss
+

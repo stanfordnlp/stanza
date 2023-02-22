@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="CHT_ARZ_20130907.0002" medium="CHT" donated="true">
+  <su id="s0">
+    <source>Eh ya zmala fenak Cairo ?</source>
+    <annotated_arabizi>
+      <token id="t0">Eh</token>
+      <token id="t1">ya</token>
+      <token id="t2">zmala</token>
+      <token id="t3">fenak</token>
+      <token id="t4" tag="foreign">Cairo</token>
+      <token id="t5">?</token>
+    </annotated_arabizi>
+    <auto_transliteration>إيه يا زمالة فأنك سيرة ؟</auto_transliteration>
+    <corrected_transliteration>إيه يا زمالة فينك سيرة ؟</corrected_transliteration>
+    <normalized_transliteration>إيه يا زمالة فينك سيرة ؟</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-09-07 14:19:00 UTC" participant="139578">Eh ya zmala fenak</message>
+      <message id="m0001" time="2013-09-07 14:19:00 UTC" participant="139578">Cairo ?</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Ah Kol 5ar isa</source>
+    <annotated_arabizi>
+      <token id="t0">Ah</token>
+      <token id="t1">Kol</token>
+      <token id="t2">5ar</token>
+      <token id="t3">isa</token>
+    </annotated_arabizi>
+    <auto_transliteration>آه كل خير إن[-]شاء[-]الله</auto_transliteration>
+    <corrected_transliteration>آه كل خير إن[-]شاء[-]الله</corrected_transliteration>
+    <normalized_transliteration>آه كل خير إن شاء الله</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2013-09-07 14:28:00 UTC" participant="139275">Ah</message>
+      <message id="m0003" time="2013-09-07 14:30:00 UTC" participant="139275">Kol 5ar isa</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>Mmmm ok ya sh2e2 W eh alklam Isa</source>
+    <annotated_arabizi>
+      <token id="t0" tag="sound">Mmm</token>
+      <token id="t1">ok</token>
+      <token id="t2">ya</token>
+      <token id="t3">sh2e2</token>
+      <token id="t4">W</token>
+      <token id="t5">eh</token>
+      <token id="t6">alklam</token>
+      <token id="t7">Isa</token>
+    </annotated_arabizi>
+    <auto_transliteration>ما[-]من عك يا شقق و[+] إيه الكلام إن[-]شاء[-]الله</auto_transliteration>
+    <corrected_transliteration>ما[-]من أوكيه يا شقيق و[+] إيه الكلام إن[-]شاء[-]الله</corrected_transliteration>
+    <normalized_transliteration>ما من أوكيه يا شقيق وإيه الكلام إن شاء الله</normalized_transliteration>
+    <messages>
+      <message id="m0004" time="2013-09-07 14:31:00 UTC" participant="139578">Mmmm ok ya sh2e2</message>
+      <message id="m0005" time="2013-09-07 14:31:00 UTC" participant="139578">W eh alklam</message>
+      <message id="m0006" time="2013-09-07 14:33:00 UTC" participant="139578">Isa</message>
+    </messages>
+  </su>
+</conversation>

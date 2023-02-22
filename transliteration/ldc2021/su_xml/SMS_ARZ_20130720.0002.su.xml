@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130720.0002" medium="SMS" donated="true">
+  <su id="s0">
+    <source>Ba2olk eh Ana msh h3raf aroo7:s</source>
+    <annotated_arabizi>
+      <token id="t0">Ba2olk</token>
+      <token id="t1">eh</token>
+      <token id="t2">Ana</token>
+      <token id="t3">msh</token>
+      <token id="t4">h3raf</token>
+      <token id="t5">aroo7:s</token>
+    </annotated_arabizi>
+    <auto_transliteration>باقو[-]لك إيه انا مش حاعرف اروح[-]#</auto_transliteration>
+    <corrected_transliteration>بأقو[-]لك إيه انا مش حأعرف اروح[-]#</corrected_transliteration>
+    <normalized_transliteration>بأقو لك إيه انا مش حأعرف اروح #</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-07-20 14:57:37 UTC" participant="139066">Ba2olk eh</message>
+      <message id="m0001" time="2013-07-20 14:57:48 UTC" participant="139066">Ana msh h3raf aroo7:s</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>T2riban Enta sure gy?</source>
+    <annotated_arabizi>
+      <token id="t0">T2riban</token>
+      <token id="t1">Enta</token>
+      <token id="t2" tag="foreign">sure</token>
+      <token id="t3">gy?</token>
+    </annotated_arabizi>
+    <auto_transliteration>تقريبا انت سر غي؟</auto_transliteration>
+    <corrected_transliteration>تقريبا انت سر جاي؟</corrected_transliteration>
+    <normalized_transliteration>تقريبا انت سر جاي؟</normalized_transliteration>
+    <messages>
+      <message id="m0004" time="2013-07-20 15:00:49 UTC" participant="139292">T2riban</message>
+      <message id="m0005" time="2013-07-20 15:00:55 UTC" participant="139292">Enta sure gy?</message>
+      <message id="m0006" time="2013-07-20 15:01:03 UTC" participant="139292">Msh gy asdy</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>Msh gy asdy</source>
+    <annotated_arabizi>
+      <token id="t0">Msh</token>
+      <token id="t1">gy</token>
+      <token id="t2">asdy</token>
+    </annotated_arabizi>
+    <auto_transliteration>مش غي قصدي</auto_transliteration>
+    <corrected_transliteration>مش جاي قصدي</corrected_transliteration>
+    <normalized_transliteration>مش جاي قصدي</normalized_transliteration>
+    <messages>
+      <message id="m0006" time="2013-07-20 15:01:03 UTC" participant="139292">Msh gy asdy</message>
+    </messages>
+  </su>
+  <su id="s3">
+    <source>Ah sure msh h3rf</source>
+    <annotated_arabizi>
+      <token id="t0">Ah</token>
+      <token id="t1" tag="foreign">sure</token>
+      <token id="t2">msh</token>
+      <token id="t3">h3rf</token>
+    </annotated_arabizi>
+    <auto_transliteration>آه سوري مش حاعرف</auto_transliteration>
+    <corrected_transliteration>آه سوري مش حأعرف</corrected_transliteration>
+    <normalized_transliteration>آه سوري مش حأعرف</normalized_transliteration>
+    <messages>
+      <message id="m0007" time="2013-07-20 15:01:11 UTC" participant="139066">Ah sure msh h3rf</message>
+    </messages>
+  </su>
+  <su id="s4">
+    <source>Isaaa</source>
+    <annotated_arabizi>
+      <token id="t0">Isaa</token>
+    </annotated_arabizi>
+    <auto_transliteration>ايه</auto_transliteration>
+    <corrected_transliteration>لسه</corrected_transliteration>
+    <normalized_transliteration>لسه</normalized_transliteration>
+    <messages>
+      <message id="m0009" time="2013-07-20 15:22:38 UTC" participant="139066">Isaaa</message>
+    </messages>
+  </su>
+</conversation>

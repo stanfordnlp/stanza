@@ -1,0 +1,91 @@
+ INPUT STRING:	رمضان
+     IS_TRANS:	rmDAn
+        INDEX:	P1W1
+      OFFSETS:	0-5
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[ramaDAn_1]
+   UNSPLITVOC:	(ramaDAn)
+          POS:	NOUN_PROP
+          VOC:	ramaDAn
+        GLOSS:	Ramadan
+
+ INPUT STRING:	كريم
+     IS_TRANS:	krym
+        INDEX:	P1W2
+      OFFSETS:	6-10
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[kariym_1]
+   UNSPLITVOC:	(kariym)
+          POS:	ADJ
+          VOC:	kariym
+        GLOSS:	distinguished/generous/noble/precious
+
+ INPUT STRING:	وريري
+     IS_TRANS:	wryry
+        INDEX:	P1W3
+      OFFSETS:	11-16
+       TOKENS:	P1W3-P1W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[riyriy_1]
+   UNSPLITVOC:	(wiriyriy)
+          POS:	CONJ+NOUN_PROP
+          VOC:	wi+riyriy
+        GLOSS:	and+Riri
+
+ INPUT STRING:	حبيبي
+     IS_TRANS:	Hbyby
+        INDEX:	P2W1
+      OFFSETS:	0-5
+       TOKENS:	P2W1-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Habiyb_1]
+   UNSPLITVOC:	(Habiybiy)
+          POS:	NOUN+POSS_PRON_1S
+          VOC:	Habiyb+iy
+        GLOSS:	dear/beloved/sweetheart+my
+
+ INPUT STRING:	بيبي
+     IS_TRANS:	byby
+        INDEX:	P2W2
+      OFFSETS:	6-10
+       TOKENS:	P2W3-P2W3
+       STATUS:	has_sol=T	excluded=T	orig=ARZ	sama=.	calima_all=.	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[foreign]
+   UNSPLITVOC:	(byby)
+          POS:	FOREIGN
+          VOC:	byby
+        GLOSS:	nogloss
+
+ INPUT STRING:	الله
+     IS_TRANS:	Allh
+        INDEX:	P2W3
+      OFFSETS:	11-15
+       TOKENS:	P2W4-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[All~ah_1]
+   UNSPLITVOC:	(All~ah)
+          POS:	NOUN_PROP
+          VOC:	All~ah
+        GLOSS:	Allah/God
+
+ INPUT STRING:	أكرم
+     IS_TRANS:	>krm
+        INDEX:	P2W4
+      OFFSETS:	16-20
+       TOKENS:	P2W5-P2W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[>akoram_2]
+   UNSPLITVOC:	(>akoram)
+          POS:	ADJ_COMP
+          VOC:	>akoram
+        GLOSS:	nobler/noblest/dearer/dearest/more/most precious
+

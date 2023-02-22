@@ -1,0 +1,180 @@
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: اسفه
+     IS_TRANS: Asfh
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,8
+  UNVOCALIZED: >sfp
+    VOCALIZED: >asof+ap
+          POS: ADJ+NSUFF_FEM_SG
+        GLOSS: sorry+[fem.sg.]
+
+ INPUT STRING: ماما
+     IS_TRANS: mAmA
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,13
+  UNVOCALIZED: mAmA
+    VOCALIZED: mAmA
+          POS: NOUN
+        GLOSS: mama
+
+ INPUT STRING: اتصلت
+     IS_TRANS: AtSlt
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 14,19
+  UNVOCALIZED: AtSlt
+    VOCALIZED: Ait~aSal+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: contact/get in touch (with)+it/they/she
+
+ INPUT STRING: علي
+     IS_TRANS: Ely
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 20,23
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY-
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: ا
+     IS_TRANS: A
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 23,24
+  UNVOCALIZED: yA
+    VOCALIZED: -yA
+          POS: PRON_1S
+        GLOSS: me
+
+ INPUT STRING: قطعت
+     IS_TRANS: qTEt
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 25,29
+  UNVOCALIZED: qTEt
+    VOCALIZED: qaTaE+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: cut off/sever/interrupt/stop+it/they/she
+
+ INPUT STRING: الخط
+     IS_TRANS: AlxT
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 30,34
+  UNVOCALIZED: AlxT
+    VOCALIZED: Al+xaT~
+          POS: DET+NOUN
+        GLOSS: the+handwriting/script/calligraphy/line/lines
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wa-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: لا
+     IS_TRANS: lA
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 1,3
+  UNVOCALIZED: lA
+    VOCALIZED: -lA
+          POS: NEG_PART
+        GLOSS: no/not/non-
+
+ INPUT STRING: يهكك
+     IS_TRANS: yhkk
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 4,8
+  UNVOCALIZED: yhkk
+    VOCALIZED: yhkk
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: اتصلي
+     IS_TRANS: AtSly
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,5
+  UNVOCALIZED: AtSly
+    VOCALIZED: Ait~iSol+iy
+          POS: CV+CVSUFF_SUBJ:2FS
+        GLOSS: contact/get in touch (with)+you
+
+ INPUT STRING: تاني
+     IS_TRANS: tAny
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 6,10
+  UNVOCALIZED: tAny
+    VOCALIZED: tAniy
+          POS: ADJ
+        GLOSS: second/next/II/secondly/thani/other/another/the last
+
+ INPUT STRING: هاخل
+     IS_TRANS: hAxl
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,4
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: ص
+     IS_TRANS: S
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 4,5
+  UNVOCALIZED: AxlS
+    VOCALIZED: -Aa+xolaS
+          POS: IV1S+IV
+        GLOSS: I+be ended/elapse/go by/pass/be concluded/be completed/come an end/finish
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 6,7
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: اكلم
+     IS_TRANS: Aklm
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 7,11
+  UNVOCALIZED: Aklm
+    VOCALIZED: -Aa+kal~im-
+          POS: IV1S+IV
+        GLOSS: I+talk/speak/talk to
+
+ INPUT STRING: كم
+     IS_TRANS: km
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 11,13
+  UNVOCALIZED: km
+    VOCALIZED: -kum
+          POS: IVSUFF_DO:2P
+        GLOSS: you
+

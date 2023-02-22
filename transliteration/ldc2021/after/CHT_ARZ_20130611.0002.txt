@@ -1,0 +1,80 @@
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wa-
+          POS: PREP
+        GLOSS: by
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 1,5
+  UNVOCALIZED: Allh
+    VOCALIZED: -All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wa-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 1,4
+  UNVOCALIZED: AnA
+    VOCALIZED: -AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: وحشت
+     IS_TRANS: wH$t
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,4
+  UNVOCALIZED: wH$t
+    VOCALIZED: waHa$+it-
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: miss+it/they/she
+
+ INPUT STRING: ني
+     IS_TRANS: ny
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 4,6
+  UNVOCALIZED: ny
+    VOCALIZED: -niy
+          POS: PVSUFF_DO:1S
+        GLOSS: me
+
+ INPUT STRING: السرسعة
+     IS_TRANS: AlsrsEp
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 7,14
+  UNVOCALIZED: AlsrsEp
+    VOCALIZED: Al+sarosaE+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+loud protestation/angry bluster+[fem.sg.]
+
+ INPUT STRING: أيوة
+     IS_TRANS: >ywp
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,4
+  UNVOCALIZED: >ywh
+    VOCALIZED: >ayowah
+          POS: INTERJ
+        GLOSS: yes
+

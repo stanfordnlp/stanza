@@ -1,0 +1,120 @@
+ INPUT STRING: صباح
+     IS_TRANS: SbAH
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,4
+  UNVOCALIZED: SbAH
+    VOCALIZED: SabAH
+          POS: NOUN
+        GLOSS: morning/in the morning
+
+ INPUT STRING: الخير
+     IS_TRANS: Alxyr
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 5,10
+  UNVOCALIZED: Alxyr
+    VOCALIZED: Al+xiyr
+          POS: DET+NOUN
+        GLOSS: the+good
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 11,14
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: أخبار
+     IS_TRANS: >xbAr
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 15,20
+  UNVOCALIZED: >xbAr
+    VOCALIZED: >axobAr
+          POS: NOUN
+        GLOSS: news/report/reports
+
+ INPUT STRING: الإجازة
+     IS_TRANS: Al<jAzp
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 21,28
+  UNVOCALIZED: Al>jAzp
+    VOCALIZED: Al+>ajAz+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+furlough/permit/holiday/leave/certificate/degree/forgiveness/pardon+[fem.sg.]
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: <yh
+    VOCALIZED: <iyh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: أخبار
+     IS_TRANS: >xbAr
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 4,9
+  UNVOCALIZED: >xbAr
+    VOCALIZED: >axobAr-
+          POS: NOUN
+        GLOSS: news/report/reports
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 9,10
+  UNVOCALIZED: k
+    VOCALIZED: -ak
+          POS: POSS_PRON_2MS
+        GLOSS: your
+
+ INPUT STRING: انت
+     IS_TRANS: Ant
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,3
+  UNVOCALIZED: Ant
+    VOCALIZED: Ainota
+          POS: PRON_2MS
+        GLOSS: you [masc.sg.]/you/masculine
+
+ INPUT STRING: مشيت
+     IS_TRANS: m$yt
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 4,8
+  UNVOCALIZED: m$yt
+    VOCALIZED: mi$iy+t
+          POS: PV+PVSUFF_SUBJ:2MS
+        GLOSS: go/walk+you
+
+ INPUT STRING: ولا
+     IS_TRANS: wlA
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 9,12
+  UNVOCALIZED: wlA
+    VOCALIZED: wal~A
+          POS: CONJ
+        GLOSS: or
+
+ INPUT STRING: لسه
+     IS_TRANS: lsh
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 13,16
+  UNVOCALIZED: lsh
+    VOCALIZED: lis~ah
+          POS: ADV
+        GLOSS: yet/still
+

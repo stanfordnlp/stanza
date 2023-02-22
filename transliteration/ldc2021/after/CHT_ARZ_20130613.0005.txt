@@ -1,0 +1,290 @@
+ INPUT STRING: ندا
+     IS_TRANS: ndA
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: ndA
+    VOCALIZED: nadA
+          POS: NOUN_PROP
+        GLOSS: Nada
+
+ INPUT STRING: مني
+     IS_TRANS: mny
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,3
+  UNVOCALIZED: mnY
+    VOCALIZED: munaY
+          POS: NOUN_PROP
+        GLOSS: Mouna/Muna
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: روح
+     IS_TRANS: rwH
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 3,6
+  UNVOCALIZED: rwH
+    VOCALIZED: ruwH-
+          POS: NOUN
+        GLOSS: repose/refreshment
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 6,7
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 8,10
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: REL_PRON
+        GLOSS: why/what/which
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 11,14
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 15,19
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 20,24
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+
+ INPUT STRING: أكبر
+     IS_TRANS: >kbr
+      COMMENT: []
+        INDEX: P3W8
+      OFFSETS: 25,29
+  UNVOCALIZED: >kbr
+    VOCALIZED: >akobar
+          POS: ADJ_COMP
+        GLOSS: larger/largest/greater/greatest
+
+ INPUT STRING: علي
+     IS_TRANS: Ely
+      COMMENT: []
+        INDEX: P3W9
+      OFFSETS: 30,33
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY-
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W10
+      OFFSETS: 33,34
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: PRON_3MS
+        GLOSS: him/it
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P3W11
+      OFFSETS: 35,37
+  UNVOCALIZED: rb
+    VOCALIZED: rab~-
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P3W12
+      OFFSETS: 37,39
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: يحفظ
+     IS_TRANS: yHfZ
+      COMMENT: []
+        INDEX: P3W13
+      OFFSETS: 40,44
+  UNVOCALIZED: yHfZ
+    VOCALIZED: yi+HofaZ-
+          POS: IV3MS+IV
+        GLOSS: he/it+keep/preserve/protect/memorize
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W14
+      OFFSETS: 44,45
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: عاوزة
+     IS_TRANS: EAwzp
+      COMMENT: []
+        INDEX: P3W15
+      OFFSETS: 46,51
+  UNVOCALIZED: EAwzp
+    VOCALIZED: EAwoz+ap
+          POS: ADJ.VN+NSUFF_FEM_SG
+        GLOSS: wanting/needing+[fem.sg.]
+
+ INPUT STRING: أكل
+     IS_TRANS: >kl
+      COMMENT: []
+        INDEX: P3W16
+      OFFSETS: 52,55
+  UNVOCALIZED: Akl
+    VOCALIZED: Aa+kol-
+          POS: IV1S+IV
+        GLOSS: I+eat/feed
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P3W17
+      OFFSETS: 55,56
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,2
+  UNVOCALIZED: rb
+    VOCALIZED: rab~-
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 2,4
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: يبارك
+     IS_TRANS: ybArk
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 5,10
+  UNVOCALIZED: ybArk
+    VOCALIZED: yi+bArik
+          POS: IV3MS+IV
+        GLOSS: he/it+congratulate/bless/approve
+
+ INPUT STRING: في
+     IS_TRANS: fy
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 11,13
+  UNVOCALIZED: fy
+    VOCALIZED: fiy-
+          POS: PREP
+        GLOSS: in
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 13,14
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: PRON_3MS
+        GLOSS: him/it
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P4W6
+      OFFSETS: 15,17
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P4W7
+      OFFSETS: 18,20
+  UNVOCALIZED: rb
+    VOCALIZED: rab~
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: عاوزة
+     IS_TRANS: EAwzp
+      COMMENT: []
+        INDEX: P5W1
+      OFFSETS: 0,5
+  UNVOCALIZED: EAwzp
+    VOCALIZED: EAwoz+ap
+          POS: ADJ.VN+NSUFF_FEM_SG
+        GLOSS: wanting/needing+[fem.sg.]
+
+ INPUT STRING: أكل
+     IS_TRANS: >kl
+      COMMENT: []
+        INDEX: P5W2
+      OFFSETS: 6,9
+  UNVOCALIZED: Akl
+    VOCALIZED: Aa+kol-
+          POS: IV1S+IV
+        GLOSS: I+eat/feed
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P5W3
+      OFFSETS: 9,10
+  UNVOCALIZED: h
+    VOCALIZED: -uh
+          POS: IVSUFF_DO:3MS
+        GLOSS: it/him
+

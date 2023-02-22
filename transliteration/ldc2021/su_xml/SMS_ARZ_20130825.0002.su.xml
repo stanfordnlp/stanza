@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130825.0002" medium="SMS" donated="true">
+  <su id="s0">
+    <source>Meen m3ah bb 9900 3ayz as2al 3ala 7aga Sftbc</source>
+    <annotated_arabizi>
+      <token id="t0">Meen</token>
+      <token id="t1">m3ah</token>
+      <token id="t2" tag="foreign">bb</token>
+      <token id="t3">9900</token>
+      <token id="t4">3ayz</token>
+      <token id="t5">as2al</token>
+      <token id="t6">3ala</token>
+      <token id="t7">7aga</token>
+      <token id="t8">Sftbc</token>
+    </annotated_arabizi>
+    <auto_transliteration>من معاه بيه 9900 عايز اسأل على حاجة شفتبك</auto_transliteration>
+    <corrected_transliteration>من معاه بيه 9900 عايز اسأل على حاجة شوفت[-]بيه</corrected_transliteration>
+    <normalized_transliteration>من معاه بيه 9900 عايز اسأل على حاجة شوفت بيه</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-08-25 12:54:36 UTC" participant="139293">Meen m3ah bb 9900 3ayz as2al 3ala 7aga Sftbc</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Aywa</source>
+    <annotated_arabizi>
+      <token id="t0">Aywa</token>
+    </annotated_arabizi>
+    <auto_transliteration>أيوه</auto_transliteration>
+    <corrected_transliteration>أيوه</corrected_transliteration>
+    <normalized_transliteration>أيوه</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2013-08-25 13:24:13 UTC" participant="139066">Aywa</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>Byshta3'al 3aleh instagram !?</source>
+    <annotated_arabizi>
+      <token id="t0">Byshta3'al</token>
+      <token id="t1">3aleh</token>
+      <token id="t2" tag="foreign">instagram</token>
+      <token id="t3" tag="punctuation">!?</token>
+    </annotated_arabizi>
+    <auto_transliteration>بيشتغال عليه إنستاجرام !؟</auto_transliteration>
+    <corrected_transliteration>بيشتغال عليه إنستاجرام !؟</corrected_transliteration>
+    <normalized_transliteration>بيشتغال عليه إنستاجرام !؟</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2013-08-25 13:27:22 UTC" participant="139293">Byshta3'al 3aleh instagram !?</message>
+    </messages>
+  </su>
+  <su id="s3">
+    <source>La2 W lw btfkar tgeebo matgebhosh</source>
+    <annotated_arabizi>
+      <token id="t0">La2</token>
+      <token id="t1">W</token>
+      <token id="t2">lw</token>
+      <token id="t3">btfkar</token>
+      <token id="t4">tgeebo</token>
+      <token id="t5">matgebhosh</token>
+    </annotated_arabizi>
+    <auto_transliteration>لا و[+] لو بتفكر تجيبه متجيبهوش</auto_transliteration>
+    <corrected_transliteration>لا و[+] لو بتفكر تجيبه ما[-]تجيبهوش</corrected_transliteration>
+    <normalized_transliteration>لا ولو بتفكر تجيبه ما تجيبهوش</normalized_transliteration>
+    <messages>
+      <message id="m0003" time="2013-08-25 13:28:22 UTC" participant="139066">La2</message>
+      <message id="m0004" time="2013-08-25 13:28:38 UTC" participant="139066">W lw btfkar tgeebo matgebhosh</message>
+    </messages>
+  </su>
+  <su id="s4">
+    <source>E7m shokraaan</source>
+    <annotated_arabizi>
+      <token id="t0" tag="sound">E7m</token>
+      <token id="t1">shokraan</token>
+    </annotated_arabizi>
+    <auto_transliteration>إحم شكران</auto_transliteration>
+    <corrected_transliteration>إحم شكراّ</corrected_transliteration>
+    <normalized_transliteration>إحم شكراّ</normalized_transliteration>
+    <messages>
+      <message id="m0005" time="2013-08-25 13:29:30 UTC" participant="139293">E7m shokraaan</message>
+    </messages>
+  </su>
+  <su id="s5">
+    <source>Ameen :D</source>
+    <annotated_arabizi>
+      <token id="t0">Ameen</token>
+      <token id="t1">:D</token>
+    </annotated_arabizi>
+    <auto_transliteration>آمين #</auto_transliteration>
+    <corrected_transliteration>آمين #</corrected_transliteration>
+    <normalized_transliteration>آمين #</normalized_transliteration>
+    <messages>
+      <message id="m0007" time="2013-08-25 13:38:42 UTC" participant="139293">Ameen :D</message>
+    </messages>
+  </su>
+</conversation>

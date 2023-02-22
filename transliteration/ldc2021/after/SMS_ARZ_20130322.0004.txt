@@ -1,0 +1,390 @@
+ INPUT STRING: اللهم
+     IS_TRANS: Allhm
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,5
+  UNVOCALIZED: Allhm
+    VOCALIZED: All~`hum~a
+          POS: NOUN
+        GLOSS: truly/certainly/oh God!/dear God
+
+ INPUT STRING: لا
+     IS_TRANS: lA
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 6,8
+  UNVOCALIZED: lA
+    VOCALIZED: lA
+          POS: NEG_PART
+        GLOSS: no/not/non-
+
+ INPUT STRING: سهل
+     IS_TRANS: shl
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,12
+  UNVOCALIZED: shl
+    VOCALIZED: sahol
+          POS: NOUN
+        GLOSS: easy/simple
+
+ INPUT STRING: إلا
+     IS_TRANS: <lA
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 13,16
+  UNVOCALIZED: <lA
+    VOCALIZED: <il~A
+          POS: PREP
+        GLOSS: except
+
+ INPUT STRING: ما
+     IS_TRANS: mA
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 17,19
+  UNVOCALIZED: mA
+    VOCALIZED: mA
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: جعلت
+     IS_TRANS: jElt
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 20,24
+  UNVOCALIZED: jElt
+    VOCALIZED: jaEal+ta-
+          POS: PV+PVSUFF_SUBJ:2MS
+        GLOSS: make/bring about/appoint+you [masc.sg.] [verb]
+
+ INPUT STRING: ه
+     IS_TRANS: h
+      COMMENT: []
+        INDEX: P1W7
+      OFFSETS: 24,25
+  UNVOCALIZED: h
+    VOCALIZED: -hu
+          POS: PVSUFF_DO:3MS
+        GLOSS: it/him
+
+ INPUT STRING: سهلا
+     IS_TRANS: shlA
+      COMMENT: []
+        INDEX: P1W8
+      OFFSETS: 26,30
+  UNVOCALIZED: shlA
+    VOCALIZED: sahol+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: easy/simple+[acc.indef.]
+
+ INPUT STRING: ان
+     IS_TRANS: An
+      COMMENT: []
+        INDEX: P1W9
+      OFFSETS: 31,33
+  UNVOCALIZED: >n
+    VOCALIZED: >an~a-
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P1W10
+      OFFSETS: 33,34
+  UNVOCALIZED: k
+    VOCALIZED: -ka
+          POS: PRON_2MS
+        GLOSS: you [masc.sg.]
+
+ INPUT STRING: تجعل
+     IS_TRANS: tjEl
+      COMMENT: []
+        INDEX: P1W11
+      OFFSETS: 35,39
+  UNVOCALIZED: tjEl
+    VOCALIZED: ta+joEal+o
+          POS: IV2MS+IV+IVSUFF_MOOD:J
+        GLOSS: you [masc.sg.]+make/bring about/appoint+[jus.]
+
+ INPUT STRING: الحزن
+     IS_TRANS: AlHzn
+      COMMENT: []
+        INDEX: P1W12
+      OFFSETS: 40,45
+  UNVOCALIZED: AlHzn
+    VOCALIZED: Al+Hazon
+          POS: DET+NOUN
+        GLOSS: the+rough
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P1W13
+      OFFSETS: 46,48
+  UNVOCALIZED: <n
+    VOCALIZED: <ino
+          POS: SUB_CONJ
+        GLOSS: Although, (even) though, even if, despite, in spite of the fact that, verily, truly
+
+ INPUT STRING: شئت
+     IS_TRANS: $}t
+      COMMENT: []
+        INDEX: P1W14
+      OFFSETS: 49,52
+  UNVOCALIZED: $}t
+    VOCALIZED: $i}+ta
+          POS: PV+PVSUFF_SUBJ:2MS
+        GLOSS: want/desire/wish+you [masc.sg.] [verb]
+
+ INPUT STRING: سهلا
+     IS_TRANS: shlA
+      COMMENT: []
+        INDEX: P1W15
+      OFFSETS: 53,57
+  UNVOCALIZED: shlA
+    VOCALIZED: sahol+AF
+          POS: NOUN+CASE_INDEF_ACC
+        GLOSS: easy/simple+[acc.indef.]
+
+ INPUT STRING: .
+     IS_TRANS: .
+      COMMENT: []
+        INDEX: P1W16
+      OFFSETS: 57,58
+  UNVOCALIZED: .
+    VOCALIZED: .
+          POS: PUNC
+        GLOSS: nogloss
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P1W17
+      OFFSETS: 58,60
+  UNVOCALIZED: rb
+    VOCALIZED: rab~-
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P1W18
+      OFFSETS: 60,62
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: our
+
+ INPUT STRING: ييسر
+     IS_TRANS: yysr
+      COMMENT: []
+        INDEX: P1W19
+      OFFSETS: 63,67
+  UNVOCALIZED: yysr
+    VOCALIZED: yi+yas~ir
+          POS: IV3MS+IV
+        GLOSS: he/it+facilitate/make easy
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P1W20
+      OFFSETS: 68,69
+  UNVOCALIZED: l
+    VOCALIZED: li-
+          POS: PREP
+        GLOSS: to/him (it/he has)/them/her (it/she has/they have)/for
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P1W21
+      OFFSETS: 69,70
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: PRON_2FS
+        GLOSS: you
+
+ INPUT STRING: حبيبت
+     IS_TRANS: Hbybt
+      COMMENT: []
+        INDEX: P1W22
+      OFFSETS: 71,76
+  UNVOCALIZED: Hbybp
+    VOCALIZED: Habiyb+ap-
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: beloved/lover/darling/dear/sweet heart/sweatheart/sweetheart+[fem.sg.]
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P1W23
+      OFFSETS: 76,77
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: yA
+    VOCALIZED: yA-
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 2,4
+  UNVOCALIZED: rb
+    VOCALIZED: -rab~
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: ييسر
+     IS_TRANS: yysr
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 5,9
+  UNVOCALIZED: yysr
+    VOCALIZED: yi+yas~ir
+          POS: IV3MS+IV
+        GLOSS: he/it+facilitate/make easy
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 10,11
+  UNVOCALIZED: l
+    VOCALIZED: li-
+          POS: PREP
+        GLOSS: for
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 11,13
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: PRON_1P
+        GLOSS: us
+
+ INPUT STRING: كل
+     IS_TRANS: kl
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 14,16
+  UNVOCALIZED: kl
+    VOCALIZED: kul~-
+          POS: NOUN_QUANT
+        GLOSS: all/entire/every/whole
+
+ INPUT STRING: نا
+     IS_TRANS: nA
+      COMMENT: []
+        INDEX: P2W7
+      OFFSETS: 16,18
+  UNVOCALIZED: nA
+    VOCALIZED: -nA
+          POS: POSS_PRON_1P
+        GLOSS: us
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W8
+      OFFSETS: 19,21
+  UNVOCALIZED: yA
+    VOCALIZED: yA-
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: رب
+     IS_TRANS: rb
+      COMMENT: []
+        INDEX: P2W9
+      OFFSETS: 21,23
+  UNVOCALIZED: rb
+    VOCALIZED: -rab~
+          POS: NOUN
+        GLOSS: lord/master/lords/masters/owner/proprietor/owners/proprietors
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W10
+      OFFSETS: 24,25
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: يهون
+     IS_TRANS: yhwn
+      COMMENT: []
+        INDEX: P2W11
+      OFFSETS: 25,29
+  UNVOCALIZED: yhwn
+    VOCALIZED: -yi+haw~in
+          POS: IV3MS+IV
+        GLOSS: he/it+be insignificant/be contemptible
+
+ INPUT STRING: علي
+     IS_TRANS: Ely
+      COMMENT: []
+        INDEX: P2W12
+      OFFSETS: 30,33
+  UNVOCALIZED: ElY
+    VOCALIZED: EalaY-
+          POS: PREP
+        GLOSS: on
+
+ INPUT STRING: ا
+     IS_TRANS: A
+      COMMENT: []
+        INDEX: P2W13
+      OFFSETS: 33,34
+  UNVOCALIZED: y
+    VOCALIZED: -ya
+          POS: PRON_1S
+        GLOSS: me
+
+ INPUT STRING: إن
+     IS_TRANS: <n
+      COMMENT: []
+        INDEX: P2W14
+      OFFSETS: 35,37
+  UNVOCALIZED: <n
+    VOCALIZED: <in~
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: شاء
+     IS_TRANS: $A'
+      COMMENT: []
+        INDEX: P2W15
+      OFFSETS: 38,41
+  UNVOCALIZED: $A'
+    VOCALIZED: $A'+(null)
+          POS: PV+PVSUFF_SUBJ:3MS
+        GLOSS: want/desire/wish+he/it
+
+ INPUT STRING: الله
+     IS_TRANS: Allh
+      COMMENT: []
+        INDEX: P2W16
+      OFFSETS: 42,46
+  UNVOCALIZED: Allh
+    VOCALIZED: All~ah
+          POS: NOUN_PROP
+        GLOSS: Allah/God
+

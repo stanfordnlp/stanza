@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20120526.0001" medium="SMS" donated="true">
+  <su id="s0">
+    <source>el net nila m3'les :( ntklm bokra isa ?</source>
+    <annotated_arabizi>
+      <token id="t0">el</token>
+      <token id="t1" tag="foreign">net</token>
+      <token id="t2">nila</token>
+      <token id="t3">m3'les</token>
+      <token id="t4">:(</token>
+      <token id="t5">ntklm</token>
+      <token id="t6">bokra</token>
+      <token id="t7">isa</token>
+      <token id="t8" tag="punctuation">?</token>
+    </annotated_arabizi>
+    <auto_transliteration>ال[+] نت نيلة مغلى :) نتكلم بكرة إن[-]شاء[-]الله ؟</auto_transliteration>
+    <corrected_transliteration>ال[+] نت نيلة مغلس # نتكلم بكرة إن[-]شاء[-]الله ؟</corrected_transliteration>
+    <normalized_transliteration>النت نيلة مغلس # نتكلم بكرة إن شاء الله ؟</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2012-05-26 19:38:59 UTC" participant="139275">el net nila m3'les :( ntklm bokra isa ?</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Ok ya 7abebty wala yhmk isA :)</source>
+    <annotated_arabizi>
+      <token id="t0" tag="foreign">Ok</token>
+      <token id="t1">ya</token>
+      <token id="t2">7abebty</token>
+      <token id="t3">wala</token>
+      <token id="t4">yhmk</token>
+      <token id="t5">isA</token>
+      <token id="t6">:)</token>
+    </annotated_arabizi>
+    <auto_transliteration>عك يا حبيبتي ولا يهمك إن[-]شاء[-]الله :(</auto_transliteration>
+    <corrected_transliteration>عك يا حبيبتي ولا يهمك إن[-]شاء[-]الله #</corrected_transliteration>
+    <normalized_transliteration>عك يا حبيبتي ولا يهمك إن شاء الله #</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2012-05-26 19:43:16 UTC" participant="139424">Ok ya 7abebty wala yhmk isA :)</message>
+    </messages>
+  </su>
+</conversation>

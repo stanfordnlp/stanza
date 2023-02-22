@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130408.0001" medium="SMS" donated="true">
+  <su id="s0">
+    <source>mobily 7yfsl klmni 3and mai atmn 3alej</source>
+    <annotated_arabizi>
+      <token id="t0">mobily</token>
+      <token id="t1">7yfsl</token>
+      <token id="t2">klmni</token>
+      <token id="t3">3and</token>
+      <token id="t4" tag="arabicName">mai</token>
+      <token id="t5">atmn</token>
+      <token id="t6">3alej</token>
+    </annotated_arabizi>
+    <auto_transliteration>ما[-]بليه حيفصل كلمني عن مي اتمن علاج</auto_transliteration>
+    <corrected_transliteration>موبايلي حيفصل كلمني عند مي أطمن عليك</corrected_transliteration>
+    <normalized_transliteration>موبايلي حيفصل كلمني عند مي أطمن عليك</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-04-08 20:23:33 UTC" participant="139275">mobily 7yfsl klmni 3and mai atmn 3alej</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Wen3ma b7bk</source>
+    <annotated_arabizi>
+      <token id="t0">Wen3ma</token>
+      <token id="t1">b7bk</token>
+    </annotated_arabizi>
+    <auto_transliteration>ونعمة باحبك</auto_transliteration>
+    <corrected_transliteration>والنعمة بأحبك</corrected_transliteration>
+    <normalized_transliteration>والنعمة بأحبك</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2013-04-08 22:32:38 UTC" participant="139394">Wen3ma b7bk</message>
+    </messages>
+  </su>
+</conversation>

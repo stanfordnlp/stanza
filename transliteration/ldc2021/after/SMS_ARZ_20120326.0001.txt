@@ -1,0 +1,110 @@
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,1
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: أحب
+     IS_TRANS: >Hb
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 1,4
+  UNVOCALIZED: AHb
+    VOCALIZED: -Aa+Hib~u-
+          POS: IV1S+IV
+        GLOSS: I+love
+
+ INPUT STRING: كم
+     IS_TRANS: km
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 4,6
+  UNVOCALIZED: km
+    VOCALIZED: -kum
+          POS: IVSUFF_DO:2P
+        GLOSS: you
+
+ INPUT STRING: قوي
+     IS_TRANS: qwy
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 7,10
+  UNVOCALIZED: qwy
+    VOCALIZED: qawiy
+          POS: ADJ
+        GLOSS: powerful/strong
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 11,12
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,1
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: احنا
+     IS_TRANS: AHnA
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 1,5
+  UNVOCALIZED: AHnA
+    VOCALIZED: -AiHonA
+          POS: PRON_1P
+        GLOSS: we
+
+ INPUT STRING: كمان
+     IS_TRANS: kmAn
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,10
+  UNVOCALIZED: kmAn
+    VOCALIZED: kamAn
+          POS: ADV
+        GLOSS: metabolism/also/else
+
+ INPUT STRING: بنحبوكي
+     IS_TRANS: bnHbwky
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 11,18
+  UNVOCALIZED: bnHbwky
+    VOCALIZED: bnHbwky
+          POS: NO_FUNC
+        GLOSS: nogloss
+
+ INPUT STRING: قوي
+     IS_TRANS: qwy
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 19,22
+  UNVOCALIZED: qwy
+    VOCALIZED: qawiy
+          POS: ADJ
+        GLOSS: powerful/strong
+
+ INPUT STRING: #
+     IS_TRANS: #
+      COMMENT: []
+        INDEX: P2W6
+      OFFSETS: 23,24
+  UNVOCALIZED: #
+    VOCALIZED: #
+          POS: PUNC
+        GLOSS: #
+

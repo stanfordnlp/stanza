@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130925.0000" medium="SMS" donated="true">
+  <su id="s0">
+    <source>Tol el lel mstany telephonek</source>
+    <annotated_arabizi>
+      <token id="t0">Tol</token>
+      <token id="t1">el</token>
+      <token id="t2">lel</token>
+      <token id="t3">mstany</token>
+      <token id="t4">telephonek</token>
+    </annotated_arabizi>
+    <auto_transliteration>طول ال[+] ليل مستني تليفونك</auto_transliteration>
+    <corrected_transliteration>طول ال[+] ليل مستني تليفونك</corrected_transliteration>
+    <normalized_transliteration>طول الليل مستني تليفونك</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-09-25 00:43:59 UTC" participant="139867">Tol el lel mstany telephonek</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Manemtesh</source>
+    <annotated_arabizi>
+      <token id="t0">Manemtesh</token>
+    </annotated_arabizi>
+    <auto_transliteration>منمتش</auto_transliteration>
+    <corrected_transliteration>ما[-]نمتش</corrected_transliteration>
+    <normalized_transliteration>ما نمتش</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2013-09-25 00:44:06 UTC" participant="139867">Manemtesh</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>Lma ts7y call me</source>
+    <annotated_arabizi>
+      <token id="t0">Lma</token>
+      <token id="t1">ts7y</token>
+      <token id="t2" tag="foreign">call</token>
+      <token id="t3" tag="foreign">me</token>
+    </annotated_arabizi>
+    <auto_transliteration>لما تصحى كل من</auto_transliteration>
+    <corrected_transliteration>لما تصحى كل من</corrected_transliteration>
+    <normalized_transliteration>لما تصحى كل من</normalized_transliteration>
+    <messages>
+      <message id="m0004" time="2013-09-25 00:45:38 UTC" participant="139867">Lma ts7y call me</message>
+    </messages>
+  </su>
+  <su id="s3">
+    <source>We yasallaammm..lol</source>
+    <annotated_arabizi>
+      <token id="t0">We</token>
+      <token id="t1">yasallaamm..lol</token>
+    </annotated_arabizi>
+    <auto_transliteration>و[+] ياسلام..لل</auto_transliteration>
+    <corrected_transliteration>و[+] يا[-]سلام..لول</corrected_transliteration>
+    <normalized_transliteration>ويا سلام..لول</normalized_transliteration>
+    <messages>
+      <message id="m0006" time="2013-09-25 10:00:25 UTC" participant="139866">We yasallaammm..lol</message>
+    </messages>
+  </su>
+  <su id="s4">
+    <source>Alooo</source>
+    <annotated_arabizi>
+      <token id="t0" tag="foreign">Aloo</token>
+    </annotated_arabizi>
+    <auto_transliteration>عليه</auto_transliteration>
+    <corrected_transliteration>آلو</corrected_transliteration>
+    <normalized_transliteration>آلو</normalized_transliteration>
+    <messages>
+      <message id="m0008" time="2013-09-25 10:33:20 UTC" participant="139866">Alooo</message>
+    </messages>
+  </su>
+</conversation>

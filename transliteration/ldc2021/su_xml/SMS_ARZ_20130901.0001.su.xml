@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20130901.0001" medium="SMS" donated="true">
+  <su id="s0">
+    <source>3amel eh</source>
+    <annotated_arabizi>
+      <token id="t0">3amel</token>
+      <token id="t1">eh</token>
+    </annotated_arabizi>
+    <auto_transliteration>عامل إيه</auto_transliteration>
+    <corrected_transliteration>عامل إيه</corrected_transliteration>
+    <normalized_transliteration>عامل إيه</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2013-09-01 22:35:57 UTC" participant="139066">3amel eh</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Eh ya3amonna :D ana tmam wnta</source>
+    <annotated_arabizi>
+      <token id="t0">Eh</token>
+      <token id="t1">ya3amonna</token>
+      <token id="t2">:D</token>
+      <token id="t3">ana</token>
+      <token id="t4">tmam</token>
+      <token id="t5">wnta</token>
+    </annotated_arabizi>
+    <auto_transliteration>إيه يعمونا # انا تمام وانت</auto_transliteration>
+    <corrected_transliteration>إيه يا[-]عمنا # انا تمام وانت</corrected_transliteration>
+    <normalized_transliteration>إيه يا عمنا # انا تمام وانت</normalized_transliteration>
+    <messages>
+      <message id="m0002" time="2013-09-02 18:34:26 UTC" participant="139285">Eh ya3amonna :D ana tmam wnta</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>Tmam el7. Kollo tmam</source>
+    <annotated_arabizi>
+      <token id="t0">Tmam</token>
+      <token id="t1">el7.</token>
+      <token id="t2">Kollo</token>
+      <token id="t3">tmam</token>
+    </annotated_arabizi>
+    <auto_transliteration>تمام الح. كله تمام</auto_transliteration>
+    <corrected_transliteration>تمام الحمد[-]لله كله تمام</corrected_transliteration>
+    <normalized_transliteration>تمام الحمد لله كله تمام</normalized_transliteration>
+    <messages>
+      <message id="m0003" time="2013-09-02 18:40:27 UTC" participant="139066">Tmam el7. Kollo tmam</message>
+    </messages>
+  </su>
+</conversation>

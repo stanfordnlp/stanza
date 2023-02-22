@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<conversation id="SMS_ARZ_20110721.0000" medium="SMS" donated="true">
+  <su id="s0">
+    <source>enty f elbet?</source>
+    <annotated_arabizi>
+      <token id="t0">enty</token>
+      <token id="t1">f</token>
+      <token id="t2">elbet?</token>
+    </annotated_arabizi>
+    <auto_transliteration>انتي في البيت؟</auto_transliteration>
+    <corrected_transliteration>انتي في البيت؟</corrected_transliteration>
+    <normalized_transliteration>انتي في البيت؟</normalized_transliteration>
+    <messages>
+      <message id="m0000" time="2011-07-21 18:21:14 UTC" participant="139378">enty f elbet?</message>
+    </messages>
+  </su>
+  <su id="s1">
+    <source>Ballmk mesh btrody , tayb ana 7albes w 73dy 3ala do3a el7'yat w agi aslem 3aliky momken</source>
+    <annotated_arabizi>
+      <token id="t0">Ballmk</token>
+      <token id="t1">mesh</token>
+      <token id="t2">btrody</token>
+      <token id="t3" tag="punctuation">,</token>
+      <token id="t4">tayb</token>
+      <token id="t5">ana</token>
+      <token id="t6">7albes</token>
+      <token id="t7">w</token>
+      <token id="t8">73dy</token>
+      <token id="t9">3ala</token>
+      <token id="t10">do3a</token>
+      <token id="t11">el7'yat</token>
+      <token id="t12">w</token>
+      <token id="t13">agi</token>
+      <token id="t14">aslem</token>
+      <token id="t15">3aliky</token>
+      <token id="t16">momken</token>
+    </annotated_arabizi>
+    <auto_transliteration>بالمك مش بتردي ، طيب انا حالبس و[+] حاعدي على دعا الخيط و[+] آجي اسلم عليكي ممكن</auto_transliteration>
+    <corrected_transliteration>بأكلمك مش بتردي ، طيب انا حألبس و[+] حأعدي على دعاء الخياط و[+] آجي أسلم عليكي ممكن</corrected_transliteration>
+    <normalized_transliteration>بأكلمك مش بتردي ، طيب انا حألبس وحأعدي على دعاء الخياط وآجي أسلم عليكي ممكن</normalized_transliteration>
+    <messages>
+      <message id="m0001" time="2011-07-21 18:24:55 UTC" participant="139378">Ballmk mesh btrody , tayb ana 7albes w 73dy 3ala do3a el7'yat w agi aslem 3aliky momken</message>
+    </messages>
+  </su>
+  <su id="s2">
+    <source>akreed fe moshkila fl phonw</source>
+    <annotated_arabizi>
+      <token id="t0">akreed</token>
+      <token id="t1">fe</token>
+      <token id="t2">moshkila</token>
+      <token id="t3">fl</token>
+      <token id="t4" tag="foreign">phonw</token>
+    </annotated_arabizi>
+    <auto_transliteration>أكراد في ما[-]شكي[-]ليه فل فونة</auto_transliteration>
+    <corrected_transliteration>أكيد في مشكلة في[-]ال[+] فون</corrected_transliteration>
+    <normalized_transliteration>أكيد في مشكلة في الفون</normalized_transliteration>
+    <messages>
+      <message id="m0003" time="2011-07-22 00:24:38 UTC" participant="139275">akreed fe moshkila fl phonw</message>
+    </messages>
+  </su>
+</conversation>

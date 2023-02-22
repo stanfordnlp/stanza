@@ -1,0 +1,70 @@
+ INPUT STRING: اتخطبت
+     IS_TRANS: AtxTbt
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,6
+  UNVOCALIZED: AtxTbt
+    VOCALIZED: AitoxaTab+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: address/speak/declaim/be engaged+it/they/she
+
+ INPUT STRING: لميت
+     IS_TRANS: lmyt
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 7,11
+  UNVOCALIZED: lmyt
+    VOCALIZED: lmyt
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: لا
+     IS_TRANS: lA
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: lA
+    VOCALIZED: lA
+          POS: INTERJ
+        GLOSS: no
+
+ INPUT STRING: انا
+     IS_TRANS: AnA
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,3
+  UNVOCALIZED: AnA
+    VOCALIZED: AnA
+          POS: PRON_1S
+        GLOSS: I/me
+
+ INPUT STRING: بسا
+     IS_TRANS: bsA
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 4,7
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PROG_PART
+        GLOSS: [present-tense]
+
+ INPUT STRING: ل
+     IS_TRANS: l
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 7,8
+  UNVOCALIZED: As>l
+    VOCALIZED: -Aa+so>al-
+          POS: IV1S+IV
+        GLOSS: I+ask/inquire/request/be asked
+
+ INPUT STRING: ك
+     IS_TRANS: k
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 8,9
+  UNVOCALIZED: k
+    VOCALIZED: -ik
+          POS: IVSUFF_DO:2FS
+        GLOSS: you
+

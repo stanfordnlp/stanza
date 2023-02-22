@@ -1,0 +1,208 @@
+ INPUT STRING:	فين
+     IS_TRANS:	fyn
+        INDEX:	P1W1
+      OFFSETS:	0-3
+       TOKENS:	P1W1-P1W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[fiyon_1]
+   UNSPLITVOC:	(fiyon)
+          POS:	INTERROG_ADV
+          VOC:	fiyon
+        GLOSS:	where
+
+ INPUT STRING:	اسم
+     IS_TRANS:	Asm
+        INDEX:	P1W2
+      OFFSETS:	4-7
+       TOKENS:	P1W2-P1W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[<isom_1]
+   UNSPLITVOC:	(<isom)
+          POS:	NOUN
+          VOC:	<isom
+        GLOSS:	name/names
+
+ INPUT STRING:	الدكتور
+     IS_TRANS:	Aldktwr
+        INDEX:	P1W3
+      OFFSETS:	8-15
+       TOKENS:	P1W3-P1W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dukotawr_1]
+   UNSPLITVOC:	(Aldukotawr)
+          POS:	DET+NOUN
+          VOC:	Al+dukotawr
+        GLOSS:	the+doctor
+
+ INPUT STRING:	يا
+     IS_TRANS:	yA
+        INDEX:	P1W4
+      OFFSETS:	16-18
+       TOKENS:	P1W4-P1W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[yA_1]
+   UNSPLITVOC:	(yA)
+          POS:	VOC_PART
+          VOC:	yA
+        GLOSS:	O/oh
+
+ INPUT STRING:	ماريانا
+     IS_TRANS:	mAryAnA
+        INDEX:	P1W5
+      OFFSETS:	19-26
+       TOKENS:	P1W5-P1W5
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[mAryAnA_1]
+   UNSPLITVOC:	(mAryAnA)
+          POS:	NOUN_PROP
+          VOC:	mAryAnA
+        GLOSS:	Mariana
+
+ INPUT STRING:	ده
+     IS_TRANS:	dh
+        INDEX:	P2W1
+      OFFSETS:	0-2
+       TOKENS:	P2W1-P2W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[dah_1]
+   UNSPLITVOC:	(dah)
+          POS:	DEM_PRON_MS
+          VOC:	dah
+        GLOSS:	this
+
+ INPUT STRING:	التليفون
+     IS_TRANS:	Altlyfwn
+        INDEX:	P2W2
+      OFFSETS:	3-11
+       TOKENS:	P2W2-P2W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[tiliyfawn_1]
+   UNSPLITVOC:	(Altiliyfawn)
+          POS:	DET+NOUN
+          VOC:	Al+tiliyfawn
+        GLOSS:	the+telephone
+
+ INPUT STRING:	والعنوان
+     IS_TRANS:	wAlEnwAn
+        INDEX:	P2W3
+      OFFSETS:	12-20
+       TOKENS:	P2W3-P2W4
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[EinowAn_1]
+   UNSPLITVOC:	(wiAlEinowAn)
+          POS:	CONJ+DET+NOUN
+          VOC:	wi+Al+EinowAn
+        GLOSS:	and+the+headline/title/address
+
+ INPUT STRING:	رومني
+     IS_TRANS:	rwmny
+        INDEX:	P3W1
+      OFFSETS:	0-5
+       TOKENS:	P3W1-P3W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[ruwmaniy_1]
+   UNSPLITVOC:	(ruwmaniy)
+          POS:	NOUN_PROP
+          VOC:	ruwmaniy
+        GLOSS:	Roumani
+
+ INPUT STRING:	أو
+     IS_TRANS:	>w
+        INDEX:	P3W2
+      OFFSETS:	6-8
+       TOKENS:	P3W2-P3W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Aw_1]
+   UNSPLITVOC:	(Aw)
+          POS:	CONJ
+          VOC:	Aw
+        GLOSS:	or
+
+ INPUT STRING:	ورمى
+     IS_TRANS:	wrmY
+        INDEX:	P3W3
+      OFFSETS:	9-13
+       TOKENS:	P3W3-P3W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=F	calima_pv=F
+      COMMENT:	[]
+        LEMMA:	[wiramoy_1]
+   UNSPLITVOC:	(wiramoy)
+          POS:	NOUN_PROP
+          VOC:	wiramoy
+        GLOSS:	wiramy
+
+ INPUT STRING:	أعملك
+     IS_TRANS:	>Emlk
+        INDEX:	P4W1
+      OFFSETS:	0-5
+       TOKENS:	P4W1-P4W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[Eamal_1]
+   UNSPLITVOC:	(AaEomilak)
+          POS:	IV1S+IV+IVSUFF_DO:2MS
+          VOC:	Aa+Eomil+ak
+        GLOSS:	I+function/make/act/do+you
+
+ INPUT STRING:	ميعاد
+     IS_TRANS:	myEAd
+        INDEX:	P4W2
+      OFFSETS:	6-11
+       TOKENS:	P4W3-P4W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[miyEAd_1]
+   UNSPLITVOC:	(miyEAd)
+          POS:	NOUN
+          VOC:	miyEAd
+        GLOSS:	promise/promises/appointment/appointed time/appointments/appointed times
+
+ INPUT STRING:	انا
+     IS_TRANS:	AnA
+        INDEX:	P5W1
+      OFFSETS:	0-3
+       TOKENS:	P5W1-P5W1
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=F	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[AnA_1]
+   UNSPLITVOC:	(AnA)
+          POS:	PRON_1S
+          VOC:	AnA
+        GLOSS:	I/me
+
+ INPUT STRING:	في
+     IS_TRANS:	fy
+        INDEX:	P5W2
+      OFFSETS:	4-6
+       TOKENS:	P5W2-P5W2
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[fiy_1]
+   UNSPLITVOC:	(fiy)
+          POS:	PREP
+          VOC:	fiy
+        GLOSS:	in
+
+ INPUT STRING:	المستشفي
+     IS_TRANS:	Almst$fy
+        INDEX:	P5W3
+      OFFSETS:	7-15
+       TOKENS:	P5W3-P5W3
+       STATUS:	has_sol=T	excluded=F	orig=ARZ	sama=T	calima_all=T	calima_pv=.
+      COMMENT:	[]
+        LEMMA:	[musota$ofaY_1]
+   UNSPLITVOC:	(Almusota$ofaY)
+          POS:	DET+NOUN
+          VOC:	Al+musota$ofaY
+        GLOSS:	the+hospital/hospitals
+

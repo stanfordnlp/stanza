@@ -1,0 +1,290 @@
+ INPUT STRING: نش
+     IS_TRANS: n$
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,2
+  UNVOCALIZED: n$
+    VOCALIZED: n$
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: ح
+     IS_TRANS: H
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 3,4
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: تكمل
+     IS_TRANS: tkml
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 4,8
+  UNVOCALIZED: tkml
+    VOCALIZED: -ti+kam~il
+          POS: IV3FS+IV
+        GLOSS: it/they/she+complete/finish
+
+ INPUT STRING: .
+     IS_TRANS: .
+      COMMENT: []
+        INDEX: P1W4
+      OFFSETS: 9,10
+  UNVOCALIZED: .
+    VOCALIZED: .
+          POS: PUNC
+        GLOSS: .
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P1W5
+      OFFSETS: 10,11
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: اعتذرت
+     IS_TRANS: AEt*rt
+      COMMENT: []
+        INDEX: P1W6
+      OFFSETS: 11,17
+  UNVOCALIZED: AEt*rt
+    VOCALIZED: -AiEta*ar+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: excuse/apologize+it/they/she
+
+ INPUT STRING: ده
+     IS_TRANS: dh
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,2
+  UNVOCALIZED: dh
+    VOCALIZED: dah
+          POS: DEM_PRON_MS
+        GLOSS: this
+
+ INPUT STRING: شئ
+     IS_TRANS: $}
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 3,5
+  UNVOCALIZED: $y'
+    VOCALIZED: $iy'
+          POS: NOUN
+        GLOSS: thing/things/something
+
+ INPUT STRING: يسعد
+     IS_TRANS: ysEd
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 6,10
+  UNVOCALIZED: ysEd
+    VOCALIZED: yi+soEid-
+          POS: IV3MS+IV
+        GLOSS: he/it+be happy/have the good fortune to/be blessed with god fortune/be made happy/be delighted/have a god time/become happy/cheer up
+
+ INPUT STRING: ني
+     IS_TRANS: ny
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 10,12
+  UNVOCALIZED: ny
+    VOCALIZED: -niy
+          POS: IVSUFF_DO:1S
+        GLOSS: me
+
+ INPUT STRING: قالت
+     IS_TRANS: qAlt
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,4
+  UNVOCALIZED: qAlt
+    VOCALIZED: qAl+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: said/say/be said/(for example)+it/they/she
+
+ INPUT STRING: ايه
+     IS_TRANS: Ayh
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 5,8
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: اعتذرت
+     IS_TRANS: AEt*rt
+      COMMENT: []
+        INDEX: P4W1
+      OFFSETS: 0,6
+  UNVOCALIZED: AEt*rt
+    VOCALIZED: AEt*r+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: excuse/apologize+it/they/she
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P4W2
+      OFFSETS: 7,8
+  UNVOCALIZED: w
+    VOCALIZED: wi-
+          POS: CONJ
+        GLOSS: and
+
+ INPUT STRING: قالت
+     IS_TRANS: qAlt
+      COMMENT: []
+        INDEX: P4W3
+      OFFSETS: 8,12
+  UNVOCALIZED: qAlt
+    VOCALIZED: -qAl+it
+          POS: PV+PVSUFF_SUBJ:3FS
+        GLOSS: said/say/be said/(for example)+it/they/she
+
+ INPUT STRING: ان
+     IS_TRANS: An
+      COMMENT: []
+        INDEX: P4W4
+      OFFSETS: 13,15
+  UNVOCALIZED: <n
+    VOCALIZED: <in~-
+          POS: SUB_CONJ
+        GLOSS: that
+
+ INPUT STRING: ها
+     IS_TRANS: hA
+      COMMENT: []
+        INDEX: P4W5
+      OFFSETS: 15,17
+  UNVOCALIZED: hA
+    VOCALIZED: -hA
+          POS: PRON_3FS
+        GLOSS: she/it
+
+ INPUT STRING: مش
+     IS_TRANS: m$
+      COMMENT: []
+        INDEX: P4W6
+      OFFSETS: 18,20
+  UNVOCALIZED: m$
+    VOCALIZED: mi$
+          POS: NEG_PART
+        GLOSS: not
+
+ INPUT STRING: ح
+     IS_TRANS: H
+      COMMENT: []
+        INDEX: P4W7
+      OFFSETS: 21,22
+  UNVOCALIZED: H
+    VOCALIZED: Ha-
+          POS: FUT_PART
+        GLOSS: will
+
+ INPUT STRING: تقدر
+     IS_TRANS: tqdr
+      COMMENT: []
+        INDEX: P4W8
+      OFFSETS: 22,26
+  UNVOCALIZED: tqdr
+    VOCALIZED: -ti+qodar
+          POS: IV3FS+IV
+        GLOSS: it/they/she+be able/be able to/be capable of/no capacity
+
+ INPUT STRING: تكمل
+     IS_TRANS: tkml
+      COMMENT: []
+        INDEX: P4W9
+      OFFSETS: 27,31
+  UNVOCALIZED: tkml
+    VOCALIZED: ti+kam~il
+          POS: IV3FS+IV
+        GLOSS: it/they/she+complete/finish
+
+ INPUT STRING: ع
+     IS_TRANS: E
+      COMMENT: []
+        INDEX: P4W10
+      OFFSETS: 32,33
+  UNVOCALIZED: E
+    VOCALIZED: Ea-
+          POS: PREP
+        GLOSS: on/above
+
+ INPUT STRING: شان
+     IS_TRANS: $An
+      COMMENT: []
+        INDEX: P4W11
+      OFFSETS: 33,36
+  UNVOCALIZED: $An
+    VOCALIZED: -$An
+          POS: NOUN
+        GLOSS: situation/case/matters/because of/matter/status/condition/for sake of
+
+ INPUT STRING: عند
+     IS_TRANS: End
+      COMMENT: []
+        INDEX: P4W12
+      OFFSETS: 37,40
+  UNVOCALIZED: End
+    VOCALIZED: Eanod-
+          POS: NOUN
+        GLOSS: at/have/possession/with
+
+ INPUT STRING: ها
+     IS_TRANS: hA
+      COMMENT: []
+        INDEX: P4W13
+      OFFSETS: 40,42
+  UNVOCALIZED: hA
+    VOCALIZED: -hA
+          POS: POSS_PRON_3FS
+        GLOSS: its/their/her
+
+ INPUT STRING: شغل
+     IS_TRANS: $gl
+      COMMENT: []
+        INDEX: P4W14
+      OFFSETS: 43,46
+  UNVOCALIZED: $gl
+    VOCALIZED: $ugol
+          POS: NOUN
+        GLOSS: work/activity/occupation/labor/business
+
+ INPUT STRING: كتير
+     IS_TRANS: ktyr
+      COMMENT: []
+        INDEX: P4W15
+      OFFSETS: 47,51
+  UNVOCALIZED: ktyr
+    VOCALIZED: kitiyr
+          POS: ADJ
+        GLOSS: numerous/many/several/much/a lot/very
+
+ INPUT STRING: حاجة
+     IS_TRANS: HAjp
+      COMMENT: []
+        INDEX: P4W16
+      OFFSETS: 52,56
+  UNVOCALIZED: HAjp
+    VOCALIZED: HAj+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: need/needs/thing/belongings+[fem.sg.]
+
+ INPUT STRING: كدا
+     IS_TRANS: kdA
+      COMMENT: []
+        INDEX: P4W17
+      OFFSETS: 57,60
+  UNVOCALIZED: kdA
+    VOCALIZED: kidA
+          POS: NOUN
+        GLOSS: this/like/something like/like that/such/that way/that
+

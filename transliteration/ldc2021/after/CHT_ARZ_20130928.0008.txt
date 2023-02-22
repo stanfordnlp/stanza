@@ -1,0 +1,160 @@
+ INPUT STRING: أين
+     IS_TRANS: >yn
+      COMMENT: []
+        INDEX: P1W1
+      OFFSETS: 0,3
+  UNVOCALIZED: >yn
+    VOCALIZED: >ayona
+          POS: INTERROG_ADV
+        GLOSS: where
+
+ INPUT STRING: أشيائ
+     IS_TRANS: >$yA}
+      COMMENT: []
+        INDEX: P1W2
+      OFFSETS: 4,9
+  UNVOCALIZED: >$yA}
+    VOCALIZED: >a$yA}-
+          POS: NOUN
+        GLOSS: thing
+
+ INPUT STRING: ي
+     IS_TRANS: y
+      COMMENT: []
+        INDEX: P1W3
+      OFFSETS: 9,10
+  UNVOCALIZED: y
+    VOCALIZED: -iy
+          POS: POSS_PRON_1S
+        GLOSS: my
+
+ INPUT STRING: أشياء
+     IS_TRANS: >$yA'
+      COMMENT: []
+        INDEX: P2W1
+      OFFSETS: 0,5
+  UNVOCALIZED: A$yA'
+    VOCALIZED: Aa$oyA'
+          POS: NOUN
+        GLOSS: thing/things/something
+
+ INPUT STRING: إيه
+     IS_TRANS: <yh
+      COMMENT: []
+        INDEX: P2W2
+      OFFSETS: 6,9
+  UNVOCALIZED: >yh
+    VOCALIZED: >ayoh
+          POS: INTERROG_PRON
+        GLOSS: what
+
+ INPUT STRING: يا
+     IS_TRANS: yA
+      COMMENT: []
+        INDEX: P2W3
+      OFFSETS: 10,12
+  UNVOCALIZED: yA
+    VOCALIZED: yA
+          POS: VOC_PART
+        GLOSS: O/oh
+
+ INPUT STRING: أم
+     IS_TRANS: >m
+      COMMENT: []
+        INDEX: P2W4
+      OFFSETS: 13,15
+  UNVOCALIZED: >m
+    VOCALIZED: >um~
+          POS: NOUN
+        GLOSS: mother/maternal/mothers
+
+ INPUT STRING: أشياء
+     IS_TRANS: >$yA'
+      COMMENT: []
+        INDEX: P2W5
+      OFFSETS: 16,21
+  UNVOCALIZED: A$yA'
+    VOCALIZED: Aa$oyA'
+          POS: NOUN
+        GLOSS: thing/things/something
+
+ INPUT STRING: 1
+     IS_TRANS: 1
+      COMMENT: []
+        INDEX: P3W1
+      OFFSETS: 0,1
+  UNVOCALIZED: 1
+    VOCALIZED: 1
+          POS: NOUN_NUM
+        GLOSS: 1
+
+ INPUT STRING: حأردس
+     IS_TRANS: H>rds
+      COMMENT: []
+        INDEX: P3W2
+      OFFSETS: 2,7
+  UNVOCALIZED: H>rds
+    VOCALIZED: H>rds
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: و
+     IS_TRANS: w
+      COMMENT: []
+        INDEX: P3W3
+      OFFSETS: 8,9
+  UNVOCALIZED: w
+    VOCALIZED: wi
+          POS: CONJ
+        GLOSS: and/particle introducing an oath
+
+ INPUT STRING: 1
+     IS_TRANS: 1
+      COMMENT: []
+        INDEX: P3W4
+      OFFSETS: 9,10
+  UNVOCALIZED: 1
+    VOCALIZED: 1
+          POS: NOUN_NUM
+        GLOSS: 1
+
+ INPUT STRING: منجة
+     IS_TRANS: mnjp
+      COMMENT: []
+        INDEX: P3W5
+      OFFSETS: 11,15
+  UNVOCALIZED: mnjp
+    VOCALIZED: mnjp
+          POS: TYPO
+        GLOSS: nogloss
+
+ INPUT STRING: ب
+     IS_TRANS: b
+      COMMENT: []
+        INDEX: P3W6
+      OFFSETS: 16,17
+  UNVOCALIZED: b
+    VOCALIZED: bi-
+          POS: PREP
+        GLOSS: with/by
+
+ INPUT STRING: مناسبة
+     IS_TRANS: mnAsbp
+      COMMENT: []
+        INDEX: P3W7
+      OFFSETS: 17,23
+  UNVOCALIZED: mnAsbp
+    VOCALIZED: -munAsob+ap
+          POS: NOUN+NSUFF_FEM_SG
+        GLOSS: festivity/occasion+[fem.sg.]
+
+ INPUT STRING: الطريقة
+     IS_TRANS: AlTryqp
+      COMMENT: []
+        INDEX: P3W8
+      OFFSETS: 24,31
+  UNVOCALIZED: AlTryqp
+    VOCALIZED: Al+Tariyq+ap
+          POS: DET+NOUN+NSUFF_FEM_SG
+        GLOSS: the+method/procedure/methods/manners+[fem.sg.]
+
