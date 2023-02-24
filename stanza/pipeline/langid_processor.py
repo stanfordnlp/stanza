@@ -73,7 +73,7 @@ class LangIDProcessor(UDProcessor):
         for regex in LangIDProcessor.all_regexes:
             text = regex.sub(" ", text)
 
-        text = emoji.get_emoji_regexp().sub(" ", text)
+        text = emoji.replace_emoji(text, replace=" ")
 
         if text.strip():
             text = text.strip()
