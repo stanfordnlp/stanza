@@ -20,6 +20,7 @@ import numpy as np
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
 import stanza.utils.conll18_ud_eval as ud_eval
+from IPython import get_ipython
 
 logger = logging.getLogger('stanza')
 
