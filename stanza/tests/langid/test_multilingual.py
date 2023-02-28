@@ -2,6 +2,8 @@
 Tests specifically for the MultilingualPipeline
 """
 
+from collections import defaultdict
+
 import pytest
 
 from stanza.pipeline.multilingual import MultilingualPipeline
@@ -79,3 +81,14 @@ def test_multilingual_config():
     }
 
     run_multilingual_pipeline(en_has_dependencies=False, lang_configs=lang_configs)
+
+def test_defaultdict_config():
+    """
+    Test that you can pass in a defaultdict for the lang_configs argument
+    """
+    lang_configs = defaultdict(lambda: dict(processors="tokenize"))
+    run_multilingual_pipeline(en_has_dependencies=False, fr_has_dependencies=False, lang_configs=lang_configs)
+
+    lang_configs = defaultdict(lambda: dict(processors="tokenize"))
+    lang_configs["en"] = {"processors": "tokenize,pos,lemma,depparse"}
+    run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=False, lang_configs=lang_configs)

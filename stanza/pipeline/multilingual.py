@@ -18,6 +18,19 @@ class MultilingualPipeline:
     """
     Pipeline for handling multilingual data. Takes in text, detects language, and routes request to pipeline for that
     language.
+
+    You can specify options to individual language pipelines with the lang_configs field.
+    For example, if you want English pipelines to have NER, but want to turn that off for French, you can do:
+        lang_configs = {"en": {"processors": "tokenize,pos,lemma,depparse,ner"},
+                        "fr": {"processors": "tokenize,pos,lemma,depparse"}}
+        pipeline = MultilingualPipeline(lang_configs=lang_configs)
+
+    You can also pass in a defaultdict created in such a way that it provides default parameters for each language.
+    For example, in order to only get tokenization for each language:
+    (remembering that the Pipeline will automagically add MWT to a language which uses MWT):
+        from collections import defaultdict
+        lang_configs = defaultdict(lambda: dict(processors="tokenize"))
+        pipeline = MultilingualPipeline(lang_configs=lang_configs)
     """
 
     def __init__(
@@ -79,8 +92,17 @@ class MultilingualPipeline:
             self.pipeline_cache.move_to_end(lang, last=True)
 
         # update language configs
-        if lang not in self.lang_configs:
-            self.lang_configs[lang] = {'lang': lang}
+        # try/except to allow for a defaultdict
+        try:
+            lang_config = self.lang_configs[lang]
+        except KeyError:
+            lang_config = {'lang': lang}
+            self.lang_configs[lang] = lang_config
+
+        # if a defaultdict is passed in, the defaultdict might not contain 'lang'
+        # so even though we tried adding 'lang' in the constructor, we'll check again here
+        if 'lang' not in lang_config:
+            lang_config['lang'] = lang
 
         # update pipeline cache
         if lang not in self.pipeline_cache:
