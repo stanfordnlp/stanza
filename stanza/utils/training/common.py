@@ -114,7 +114,25 @@ BERT = {
     # on NER, this gets 88.37 dev and 91.02 test
     # another option is dbmdz/bert-base-italian-cased,
     # which gets 87.27 dev and 90.32 test
-    "it": "Musixmatch/umberto-commoncrawl-cased-v1",
+    #
+    #  in-order constituency parser on the VIT dev set:
+    # dbmdz/bert-base-italian-cased                       0.8079
+    # dbmdz/bert-base-italian-xxl-cased:                  0.8195
+    # Musixmatch/umberto-commoncrawl-cased-v1:            0.8256
+    # dbmdz/electra-base-italian-xxl-cased-discriminator: 0.8314
+    #
+    #  FBK NER dev set:
+    # dbmdz/bert-base-italian-cased:                      87.76
+    # Musixmatch/umberto-commoncrawl-cased-v1:            88.62
+    # dbmdz/bert-base-italian-xxl-cased:                  88.84
+    # dbmdz/electra-base-italian-xxl-cased-discriminator: 89.91
+    #
+    #  combined UD POS dev set:                             UPOS    XPOS  UFeats AllTags
+    # dbmdz/bert-base-italian-cased:                       98.62   98.53   98.06   97.49
+    # dbmdz/bert-base-italian-xxl-cased:                   98.61   98.54   98.07   97.58
+    # dbmdz/electra-base-italian-xxl-cased-discriminator:  98.64   98.54   98.14   97.61
+    # Musixmatch/umberto-commoncrawl-cased-v1:             98.56   98.45   98.13   97.62
+    "it": "dbmdz/electra-base-italian-xxl-cased-discriminator",
 
     # experiments on the cintil conparse dataset
     # ran a variety of transformer settings
