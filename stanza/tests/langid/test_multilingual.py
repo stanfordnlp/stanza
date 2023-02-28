@@ -21,6 +21,8 @@ def run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=True
         "('sentence', 0, 'root')",
         "('.', 5, 'punct')"
     ))
+    if not en_has_dependencies:
+        english_deps_gold = ""
 
     french_text = "C'est une phrase française."
     french_words = ["C'", "est", "une", "phrase", "française", "."]
@@ -32,6 +34,8 @@ def run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=True
         "('française', 4, 'amod')",
         "('.', 4, 'punct')"
     ))
+    if not fr_has_dependencies:
+        french_deps_gold = ""
 
     if 'lang_configs' in kwargs:
         nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, **kwargs)
@@ -45,14 +49,12 @@ def run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=True
     assert docs[0].lang == "en"
     assert len(docs[0].sentences) == 1
     assert [x.text for x in docs[0].sentences[0].words] == english_words
-    if en_has_dependencies:
-        assert docs[0].sentences[0].dependencies_string() == english_deps_gold
+    assert docs[0].sentences[0].dependencies_string() == english_deps_gold
 
     assert len(docs[1].sentences) == 1
     assert docs[1].lang == "fr"
     assert [x.text for x in docs[1].sentences[0].words] == french_words
-    if fr_has_dependencies:
-        assert docs[1].sentences[0].dependencies_string() == french_deps_gold
+    assert docs[1].sentences[0].dependencies_string() == french_deps_gold
 
 
 def test_multilingual_pipeline():
