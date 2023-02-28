@@ -12,6 +12,7 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 def run_multilingual_pipeline(**kwargs):
     english_text = "This is an English sentence."
+    english_words = ["This", "is", "an", "English", "sentence", "."]
     english_deps_gold = "\n".join((
         "('This', 5, 'nsubj')",
         "('is', 5, 'cop')",
@@ -22,6 +23,7 @@ def run_multilingual_pipeline(**kwargs):
     ))
 
     french_text = "C'est une phrase française."
+    french_words = ["C'", "est", "une", "phrase", "française", "."]
     french_deps_gold = "\n".join((
         "(\"C'\", 4, 'nsubj')",
         "('est', 4, 'cop')",
@@ -38,8 +40,12 @@ def run_multilingual_pipeline(**kwargs):
     docs = nlp(docs)
 
     assert docs[0].lang == "en"
+    assert len(docs[0].sentences) == 1
+    assert [x.text for x in docs[0].sentences[0].words] == english_words
     assert docs[0].sentences[0].dependencies_string() == english_deps_gold
+    assert len(docs[1].sentences) == 1
     assert docs[1].lang == "fr"
+    assert [x.text for x in docs[1].sentences[0].words] == french_words
     assert docs[1].sentences[0].dependencies_string() == french_deps_gold
 
 
