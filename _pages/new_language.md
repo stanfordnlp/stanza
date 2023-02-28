@@ -3,8 +3,8 @@ layout: page
 title: Add a New Language
 keywords: stanza, model training
 permalink: '/new_language.html'
-nav_order: 6
-parent: Usage
+nav_order: 2
+parent: Training
 ---
 
 ## Summary

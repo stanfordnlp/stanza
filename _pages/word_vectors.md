@@ -3,8 +3,8 @@ layout: page
 title: Word Vectors
 keywords: stanza, model training, embedding
 permalink: '/word_vectors.html'
-nav_order: 6
-parent: Usage
+nav_order: 3
+parent: Training
 ---
 
 ## Downloading Word Vectors

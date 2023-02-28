@@ -3,8 +3,8 @@ layout: page
 title: Adding a new Sentiment model
 keywords: sentiment, stanza, model training
 permalink: '/new_language_sentiment.html'
-nav_order: 9
-parent: Usage
+nav_order: 6
+parent: Training
 ---
 
 ## End to End Sentiment example

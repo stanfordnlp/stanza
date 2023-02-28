@@ -3,8 +3,8 @@ layout: page
 title: Adding a new NER model
 keywords: ner, named entity recognition, stanza, model training
 permalink: '/new_language_ner.html'
-nav_order: 7
-parent: Usage
+nav_order: 4
+parent: Training
 ---
 
 ## End to End NER example

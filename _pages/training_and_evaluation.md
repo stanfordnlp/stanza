@@ -3,8 +3,8 @@ layout: page
 title: Model Training and Evaluation
 keywords: stanza, model training
 permalink: '/training_and_evaluation.html'
-nav_order: 5
-parent: Usage
+nav_order: 1
+parent: Training
 ---
 
 ## Overview

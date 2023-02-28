@@ -3,8 +3,8 @@ layout: page
 title: Retrain models for a UD dataset
 keywords: stanza, model training
 permalink: '/retrain_ud.html'
-nav_order: 9
-parent: Usage
+nav_order: 7
+parent: Training
 ---
 
 ## Retrain UD models
