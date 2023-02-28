@@ -315,6 +315,9 @@ message DependencyGraph {
   repeated Node     node     = 1;
   repeated Edge     edge     = 2;
   repeated uint32   root     = 3 [packed=true];
+  // optional: if this graph message is not part of a larger context,
+  // the tokens will help reconstruct the actual sentence
+  repeated Token    token    = 4;
 }
 
 //
@@ -371,7 +374,7 @@ message Mention {
   optional bool generic                = 25;
   optional bool isSingleton            = 26;
   optional bool hasBasicDependency     = 27;
-  optional bool hasEnhancedDepenedncy  = 28;
+  optional bool hasEnhancedDependency  = 28;
   optional bool hasContextParseTree    = 29;
   optional IndexedWord headIndexedWord = 30;
   optional IndexedWord   dependingVerb = 31;
@@ -642,10 +645,22 @@ message SemgrexResponse {
     required string          reln        = 2;
   }
 
+  message NamedEdge {
+    required string          name        = 1;
+    required int32           source      = 2;
+    required int32           target      = 3;
+    optional string          reln        = 4;
+    optional bool            isExtra     = 5;
+    optional uint32          sourceCopy  = 6;
+    optional uint32          targetCopy  = 7;
+  }
+
   message Match {
     required int32           matchIndex   = 1;
     repeated NamedNode       node         = 2;
     repeated NamedRelation   reln         = 3;
+    repeated NamedEdge       edge         = 6;
+
     // when processing multiple dependency graphs at once,
     // which dependency graph this applies to
     // indexed from 0
@@ -666,6 +681,36 @@ message SemgrexResponse {
   repeated GraphResult       result      = 1;
 }
 
+
+// A message for processing an Ssurgeon
+// Each sentence stores information about the tokens making up the
+// corresponding graph
+// An alternative would have been to use the existing Document or
+// Sentence classes, but the problem with that is it would be
+// ambiguous which dependency object to use.
+// The Ssurgeon is composed of two pieces, the semgrex and the
+// ssurgeon operations, along with some optional documentation.
+message SsurgeonRequest {
+  message Ssurgeon {
+    optional string          semgrex     = 1;
+    repeated string          operation   = 2;
+    optional string          id          = 3;
+    optional string          notes       = 4;
+    optional string          language    = 5;
+  }
+
+  repeated Ssurgeon          ssurgeon    = 1;
+  repeated DependencyGraph   graph       = 2;
+}
+
+message SsurgeonResponse {
+  message SsurgeonResult {
+    optional DependencyGraph graph      = 1;
+    optional bool            changed    = 2;
+  }
+
+  repeated SsurgeonResult    result      = 1;
+}
 
 // It's possible to send in a whole document, but we
 // only care about the Sentences and Tokens
