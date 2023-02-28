@@ -40,11 +40,11 @@ def run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=True
         french_deps_gold = ""
 
     if 'lang_configs' in kwargs:
-        nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, **kwargs)
+        nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, download_method=None, **kwargs)
     else:
         lang_configs = {"en": {"processors": "tokenize,pos,lemma,depparse"},
                         "fr": {"processors": "tokenize,pos,lemma,depparse"}}
-        nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, lang_configs=lang_configs, **kwargs)
+        nlp = MultilingualPipeline(model_dir=TEST_MODELS_DIR, download_method=None, lang_configs=lang_configs, **kwargs)
     docs = [english_text, french_text]
     docs = nlp(docs)
 

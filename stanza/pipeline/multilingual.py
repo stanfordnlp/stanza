@@ -8,7 +8,7 @@ import logging
 
 from stanza.models.common.doc import Document
 from stanza.models.common.utils import default_device
-from stanza.pipeline.core import Pipeline
+from stanza.pipeline.core import Pipeline, DownloadMethod
 from stanza.pipeline._constants import *
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
@@ -31,6 +31,9 @@ class MultilingualPipeline:
         from collections import defaultdict
         lang_configs = defaultdict(lambda: dict(processors="tokenize"))
         pipeline = MultilingualPipeline(lang_configs=lang_configs)
+
+    download_method can be set as in Pipeline to turn off downloading
+      of the .json config or turn off downloading of everything
     """
 
     def __init__(
@@ -43,6 +46,7 @@ class MultilingualPipeline:
         use_gpu: bool = None,
         restrict: bool = False,
         device: str = None,
+        download_method: DownloadMethod = DownloadMethod.DOWNLOAD_RESOURCES,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
@@ -53,6 +57,10 @@ class MultilingualPipeline:
         # most recent Pipeline goes to the end, pop the oldest one
         # when we run out of space
         self.pipeline_cache = OrderedDict()
+
+        self.download_method = download_method
+        if 'download_method' not in self.lang_id_config:
+            self.lang_id_config['download_method'] = self.download_method
 
         # if lang is not in any of the lang_configs, update them to
         # include the lang parameter.  otherwise, the default language
@@ -103,6 +111,9 @@ class MultilingualPipeline:
         # so even though we tried adding 'lang' in the constructor, we'll check again here
         if 'lang' not in lang_config:
             lang_config['lang'] = lang
+
+        if 'download_method' not in lang_config:
+            lang_config['download_method'] = self.download_method
 
         # update pipeline cache
         if lang not in self.pipeline_cache:
