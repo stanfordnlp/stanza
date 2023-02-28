@@ -3,7 +3,7 @@ layout: page
 title: Contributing
 keywords: testing
 permalink: '/contributing.html'
-nav_order: 4
+nav_order: 5
 parent: Usage
 ---
 

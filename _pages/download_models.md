@@ -3,7 +3,7 @@ layout: page
 title: Download Models
 keywords: download models
 permalink: '/download_models.html'
-nav_order: 3
+nav_order: 4
 parent: Usage
 toc: false
 ---
