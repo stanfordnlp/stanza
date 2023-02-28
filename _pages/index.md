@@ -69,7 +69,7 @@ You should be able to see all the annotations in the example by running the foll
 >>> print(doc.entities)
 ```
 
-For more details on how to use the neural network pipeline, please see our [Getting Started Guide](installation_usage.md) and [Tutorials](tutorials.md).
+For more details on how to use the neural network pipeline, please see our [Installation](installation_usage.md), [Getting Started Guide](getting_started.md), and [Tutorials](tutorials.md) pages.
 
 Aside from the neural pipeline, Stanza also provides the official Python wrapper for accessing the Java Stanford CoreNLP package. For more details, please see [Stanford CoreNLP Client](corenlp_client.md).
 

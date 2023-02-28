@@ -7,7 +7,7 @@ parent: Usage
 nav_order: 3
 ---
 
-While our [Installation & Getting Started](installation_usage) page covers basic installation and simple examples of using the neural NLP pipeline, on this page we provide links to advanced examples on building the pipeline, running text annotation and converting the annotations into different formats. At the end we also link to toturials with online notebooks for interactive learning of the library.
+While our [Installation](installation_usage) and [Getting Started](getting_started) pages cover basic installation and simple examples of using the neural NLP pipeline, on this page we provide links to advanced examples on building the pipeline, running text annotation and converting the annotations into different formats. At the end we also link to toturials with online notebooks for interactive learning of the library.
 
 ## Pipeline Building
 

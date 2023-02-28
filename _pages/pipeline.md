@@ -151,7 +151,7 @@ print(doc) # Look at the result
 
 Here, we are building a Pipeline for English that performs tokenization, sentence segmentation, and POS tagging that runs on the GPU, and POS tagging is limited to processing 3000 words at one time to avoid excessive GPU memory consumption.
 
-You can find more examples about how to use these options [here](installation_usage.md#building-a-pipeline).
+You can find more examples about how to use these options [here](getting_started.md#building-a-pipeline).
 
 {% include alerts.html %} {{ note }} {{ "To maximize speed performance, it is essential to run the pipeline on batches of documents. Running a for loop on one sentence at a time will be very slow. The best approach at this time is to concatenate documents together, with each document separated by a blank line (i.e., two line breaks \n\n). The tokenizer will recognize blank lines as sentence breaks. We are actively working on improving multi-document processing." | markdownify }}  {{ end }}
 

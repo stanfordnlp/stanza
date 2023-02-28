@@ -20,7 +20,7 @@ Pretrained models in Stanza can be divided into two categories, based on the dat
 {{ end }}
 
 
-Downloading Stanza models is as simple as calling the `stanza.download()` method. We provide detailed examples on how to use the `download` interface on the [Getting Started](installation_usage.md#building-a-pipeline) page. Detailed descriptions of all available options (i.e., arguments) of the `download` method are listed below:
+Downloading Stanza models is as simple as calling the `stanza.download()` method. We provide detailed examples on how to use the `download` interface on the [Getting Started](getting_started.md#building-a-pipeline) page. Detailed descriptions of all available options (i.e., arguments) of the `download` method are listed below:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
