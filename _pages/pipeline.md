@@ -9,6 +9,8 @@ parent: Neural Pipeline
 
 ## Pipeline
 
+For basic end to end examples, please see [Getting Started](getting_started.md).
+
 To start annotating text with Stanza, you would typically start by building a [`Pipeline`](pipeline.md#pipeline) that contains [`Processor`](pipeline.md#processors)s, each fulfilling a specific NLP task you desire (e.g., tokenization, part-of-speech tagging, syntactic parsing, etc). The pipeline takes in raw text or a [`Document`](data_objects.md#document) object that contains partial annotations, runs the specified processors in succession, and returns an annotated [`Document`](data_objects.md#document) (see the documentation on [`Document`](data_objects.md#document) for more information on how to extract these annotations).
 
 To build and customize the pipeline, you can specify the options in the table below:
