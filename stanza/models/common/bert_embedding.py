@@ -218,7 +218,18 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
-BAD_TOKENIZERS = ('bert-base-german-cased', 'dbmdz/bert-base-german-cased', 'google/muril-base-cased', 'l3cube-pune/marathi-roberta')
+BAD_TOKENIZERS = ('bert-base-german-cased',
+                  # the dbmdz tokenizers turn one or more types of characters into empty words
+                  # for example, from PoSTWITA:
+                  #   ewww 󾓺 — in viaggio Roma
+                  # the character which may not be rendering properly is 0xFE4FA
+                  # https://github.com/dbmdz/berts/issues/48
+                  'dbmdz/bert-base-german-cased',
+                  'dbmdz/bert-base-italian-xxl-cased',
+                  'dbmdz/bert-base-italian-cased',
+                  'dbmdz/electra-base-italian-xxl-cased-discriminator',
+                  'google/muril-base-cased',
+                  'l3cube-pune/marathi-roberta')
 
 def fix_german_tokens(tokenizer, data):
     """
