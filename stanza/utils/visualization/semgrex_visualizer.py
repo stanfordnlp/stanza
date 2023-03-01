@@ -11,13 +11,7 @@ from IPython.display import display, HTML
 import typing
 from typing import List
 
-# Put stanza/utils into PYTHONPATH
-current = os.path.dirname(os.path.realpath(__file__))
-parent = os.path.dirname(current)
-sys.path.append(parent)
-
-from find_nth import find_nth
-from round_base import round_base
+from utils import find_nth, round_base
 
 
 def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
