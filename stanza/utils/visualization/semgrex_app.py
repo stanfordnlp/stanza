@@ -186,9 +186,9 @@ def main():
     parser.add_argument(
         "--CLASSPATH",
         type=str,
-        default="C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*",
+        default=os.getenv["CLASSPATH"],
         help="""Path to your CoreNLP directory.""",
-    )
+    )  # for example, set $CLASSPATH to "C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*"
     args = parser.parse_args()
     CLASSPATH = args.CLASSPATH
 
