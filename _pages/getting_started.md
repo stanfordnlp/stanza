@@ -176,7 +176,7 @@ Here, we are building a Pipeline for English that performs tokenization, sentenc
 
 You can find more examples about how to use these options [here](getting_started.md#building-a-pipeline).
 
-{% include alerts.html %} {{ note }} {{ "To maximize speed performance, it is essential to run the pipeline on batches of documents. Running a for loop on one sentence at a time will be very slow. The best approach at this time is to concatenate documents together, with each document separated by a blank line (i.e., two line breaks \n\n). The tokenizer will recognize blank lines as sentence breaks. We are actively working on improving multi-document processing." | markdownify }}  {{ end }}
+{% include alerts.html %} {{ note }} {{ "To maximize speed performance, it is essential to run the pipeline on batches of documents. Running a for loop on one sentence at a time will be very slow. Please see the next section, Processing Multiple Documents, for an explanation of how to run Stanza on multiple documents at once." | markdownify }}  {{ end }}
 
 ### Processing Multiple Documents
 
@@ -197,6 +197,8 @@ print(out_docs[1]) # The output is also a list of stanza.Document objects, each 
 You will find this useful when you have a large number of documents to process, but you would prefer Stanza to respect document boundaries. Especially with a GPU available, this will allow Stanza to process documents in parallel and will be significantly more efficient than processing your documents one by one.
 
 The same usage pattern also applies to other Pipeline use cases, e.g., partially annotated documents (that are already in `stanza.Document` objects), pretokenized text (should be assigned to the `text` argument similarly to the raw text example above), etc.
+
+As a side note, text segments separated by two line breaks (\n\n) will be split into pieces by Stanza and processed in parallel.
 
 Coming in v1.5
 {: .label .label-green }
