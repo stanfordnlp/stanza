@@ -242,7 +242,7 @@ pos_pretrains = {
         "combined_bert": "combined",
     },
     "it": {
-        "combined_bert": "combined",
+        "combined_electra": "combined",
         "vit_bert": "vit",
     },
     "myv": {
