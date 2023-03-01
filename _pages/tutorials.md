@@ -17,6 +17,8 @@ While our [Installation](installation_usage) and [Getting Started](getting_start
 
 [Running Tokenization and Sentence Segmentation](tokenize.md#tokenization-and-sentence-segmentation)
 
+[Running Stanza on multiple documents](getting_started.md#processing-multiple-documents)
+
 [Running Tokenization without Sentence Segmentation](tokenize.md#tokenization-without-sentence-segmentation)
 
 [Running Stanza with Pretokenized Text](tokenize.md#start-with-pretokenized-text)
