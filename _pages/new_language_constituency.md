@@ -196,6 +196,7 @@ default POS package from Stanza for the given language.  To change to
 a different POS package, one can use the `--retag_package` command
 line flag.
 
+TODO: link the Vietnamese specific POS tag converter
 
 ### Word Vectors
 
