@@ -11,9 +11,7 @@ parent: Training
 
 I refuse to believe anyone actually wants to do this.
 
-Nevertheless, it is actually possible to do.  We will follow along with the VIT dataset from ELRA:
-
-http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/
+Nevertheless, it is actually possible to do.  We will follow along with [the VIT dataset from ELRA](http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/)
 
 At each step of the way, please mentally substitute the language and dataset of your choice for Italian VIT.
 
