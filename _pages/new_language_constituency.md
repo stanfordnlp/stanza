@@ -235,13 +235,13 @@ python -m stanza.utils.training.run_constituency it_vit
 
 ### Running the dev and test sets
 
-# TODO: add a section on this
+TODO: add a section on this
 
 ### Useful flags
 
-# TODO: add a section on this
+TODO: add a section on this
 
 ### Silver Trees
 
-# TODO: add a section on this
+TODO: add a section on this
 
