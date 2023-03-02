@@ -1,14 +1,18 @@
 """
 Turns a constituency treebank into a POS dataset with the tags as the upos column
 
-Note that this doesn't pay any attention to whether or not the tags actually are upos
+The constituency treebank first has to be converted from the original
+data to PTB style trees.  This script converts trees from the
+CONSTITUENCY_DATA_DIR folder to a conllu dataset in the POS_DATA_DIR folder.
 
-Also not possible: using this for tokenization
+Note that this doesn't pay any attention to whether or not the tags actually are upos.
+Also not possible: using this for tokenization.
 
 TODO: upgrade the POS model to handle xpos datasets with no upos, then make upos/xpos an option here
 
 To run this:
   python3 stanza/utils/training/run_pos.py vi_vlsp22
+
 """
 
 import argparse
@@ -41,9 +45,9 @@ def convert_file(in_file, out_file):
                 fout.write("%s\t" % pt.children[0].label)
                 # don't know the lemma
                 fout.write("_\t")
-                # always xpos (for now)
+                # always put the tag, whatever it is, in the upos (for now)
                 fout.write("%s\t" % pt.label)
-                # don't know upos or features
+                # don't know xpos or features
                 fout.write("_\t_\t")
                 # so word 0 fake dep on root, everyone else fake dep on previous word
                 fout.write("%d\t" % pt_idx)
