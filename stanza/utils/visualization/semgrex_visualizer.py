@@ -9,12 +9,12 @@ from spacy import displacy
 from spacy.tokens import Doc
 from IPython.display import display, HTML
 import typing
-from typing import List
+from typing import List, Tuple, Any
 
 from utils import find_nth, round_base
 
 
-def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
+def get_sentences_html(doc: stanza.Document, language: str, visualize_xpos: bool = False) -> List[str]:
     """
     Returns a list of HTML strings representing the dependency visualizations of a given stanza document.
     One HTML string is generated per sentence of the document object. Converts the stanza document object
@@ -22,9 +22,11 @@ def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
 
     @param doc: a stanza document object which can be generated with an NLP pipeline.
     @param language: the two letter language code for the document e.g. "en" for English.
+    @param visualize_xpos: A toggled option to use xpos tags for part-of-speech labels instead of upos.
+
     @return: a list of HTML strings which visualize the dependencies of the doc object.
     """
-
+    USE_FINE_GRAINED = False if not visualize_xpos else True
     html_strings, sentences_to_visualize = [], []
     nlp = spacy.blank(
         "en"
@@ -39,7 +41,10 @@ def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
                 words.append(word.text)
                 lemmas.append(word.lemma)
                 deps.append(word.deprel)
-                tags.append(word.upos)
+                if visualize_xpos and word.xpos:
+                    tags.append(word.xpos)
+                else:
+                    tags.append(word.upos)
                 if word.head == 0:  # spaCy head indexes are one-off from Stanza's
                     heads.append(sentence_len - word.id)
                 else:
@@ -49,14 +54,22 @@ def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
                 words.append(word.text)
                 lemmas.append(word.lemma)
                 deps.append(word.deprel)
-                tags.append(word.upos)
+                if visualize_xpos and word.xpos:
+                    tags.append(word.xpos)
+                else:
+                    tags.append(word.upos)
                 if word.head == 0:
                     heads.append(word.id - 1)
                 else:
                     heads.append(word.head - 1)
-        stanza_to_spacy_doc = Doc(
-            nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags
-        )
+        if USE_FINE_GRAINED:
+            stanza_to_spacy_doc = Doc(
+                nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, tags=tags
+            )
+        else:
+            stanza_to_spacy_doc = Doc(
+                nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags
+            )
         sentences_to_visualize.append(stanza_to_spacy_doc)
 
     for line in sentences_to_visualize:  # render all sentences through displaCy
@@ -69,6 +82,7 @@ def get_sentences_html(doc: stanza.Document, language: str) -> List[str]:
                     "word_spacing": 30,
                     "distance": 100,
                     "arrow_spacing": 20,
+                    "fine_grained": USE_FINE_GRAINED
                 },
                 jupyter=False,
             )
@@ -86,7 +100,6 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
     @param semgrex_sentence: a Semgrex result object containing the matches to a provided query.
     @return: edited HTML containing the visual changes described above.
     """
-
     tracker = {}  # keep track of which words have multiple labels
     DEFAULT_TSPAN_COUNT = (
         2  # the original displacy html assigns two <tspan> objects per <text> object
@@ -139,11 +152,17 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                         'class="displacy-word"', 'class="bolded"'
                     ).replace('fill="currentColor"', f'fill="{color}"')
                     # insert edited <tspan> object into html string
+
+                    # TODO: DEBUG. This code has a bug in it that causes the svg to not end on an input like
+                    # "The Wimbledon grass-court tennis tournament banned players, resulting in players hating others."
+                    # to malfunction and add another <svg> copy to the tail-end of the first svg rendering.
+                    # This bug has been patched in the end of this function, but need to find out what is going on.
                     orig_html = (
                         orig_html[:tspan_start]
                         + edited_tspan
                         + orig_html[tspan_end + CLOSING_TSPAN_LEN + 2 :]
                     )
+
                     tracker[match_index] = DEFAULT_TSPAN_COUNT
 
                 # next, we have to insert the new <tspan> object for the label
@@ -201,6 +220,13 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                 new_tspan = f'  <tspan class="displacy-word" dy="{dy}em" fill="{color}" x={x_value}>{name[: 3].title()}.</tspan>\n'  # abbreviate label names to 3 chars
                 orig_html = up_to_new_tspan + new_tspan + rest
                 tracker[match_index] += 1
+
+        # process out extra term if present -- TODO: Figure out why the semgrexify_html function lines 164-168 cause a duplication bug
+        end = find_nth(haystack=orig_html, needle="</svg", n=1)
+        LENGTH_OF_END_SVG = 7  # </svg> has length 6 so add 1 to the end too
+        if len(orig_html) > end + LENGTH_OF_END_SVG:
+            orig_html = orig_html[: end + LENGTH_OF_END_SVG]
+
     return orig_html
 
 
@@ -219,6 +245,7 @@ def visualize_search_doc(
     start_match: int = 0,
     end_match: int = 11,
     render: bool = True,
+    visualize_xpos: bool = False
 ) -> List[str]:
     """
     Visualizes the result of running Semgrex search on a document. The i-th element of
@@ -231,6 +258,8 @@ def visualize_search_doc(
     @param start_match: Beginning of the splice for which to display elements with.
     @param end_match: End of the splice for which to display elements with.
     @param render: A toggled option to render the HTML strings within the returned list
+    @param visualize_xpos: A toggled option to use xpos tags in part-of-speech labels, defaulting to upos tags.
+
     @return: A list of HTML strings representing the dependency relations of the doc object.
     """
 
@@ -239,7 +268,8 @@ def visualize_search_doc(
         edited_html_strings = []
         semgrex_results = sem.process(doc, *semgrex_queries)
         # one html string for each sentence
-        unedited_html_strings = get_sentences_html(doc, lang_code)
+        unedited_html_strings = get_sentences_html(doc, lang_code, visualize_xpos=visualize_xpos)
+
         for i in range(len(unedited_html_strings)):
 
             if matches_count >= end_match:  # we've collected enough matches
@@ -258,6 +288,7 @@ def visualize_search_doc(
                     edited_string = semgrexify_html(
                         unedited_html_strings[i], semgrex_results.result[i]
                     )
+
                     edited_string = adjust_dep_arrows(edited_string)
                     edited_html_strings.append(edited_string)
                 matches_count += 1
@@ -274,6 +305,7 @@ def visualize_search_str(
     end_match: int = 11,
     pipe=None,
     render: bool = True,
+    visualize_xpos: bool = False
 ):
     """
     Visualizes the result of running Semgrex search on a string. The i-th element of
@@ -287,6 +319,8 @@ def visualize_search_str(
     @param end_match: End of the splice for which to display elements with.
     @param pipe: An NLP pipeline through which the text will be processed.
     @param render: A toggled option to render the HTML strings within the returned list.
+    @param visualize_xpos: A toggled option to use xpos tags for part-of-speech labeling, defaulting to upos tags
+
     @return: A list of HTML strings representing the dependency relations of the doc object.
     """
     if pipe is None:
@@ -301,6 +335,7 @@ def visualize_search_str(
         start_match=start_match,
         end_match=end_match,
         render=render,
+        visualize_xpos=visualize_xpos
     )
 
 

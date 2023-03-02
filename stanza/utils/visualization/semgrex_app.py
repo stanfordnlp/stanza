@@ -76,11 +76,17 @@ def get_window_input() -> Tuple[bool, int, int]:
     return show_window, start_window, end_window
 
 
-def get_input() -> Tuple[str, str, List[str], Tuple[bool, int, int]]:
+def get_pos_input() -> bool:
+    use_xpos = st.checkbox("Would you like to visualize xpos tags?",
+                           help="The default visualization options use upos tags for part-of-speech labeling.")
+    return use_xpos
+
+def get_input() -> Tuple[str, str, List[str], Tuple[bool, int, int, bool]]:
     input_txt, input_queries = get_text_and_query()
     client_files = get_file_input()  # this is already converted to string format
     window_input = get_window_input()
-    return input_txt, input_queries, client_files, window_input
+    visualize_xpos = get_pos_input()
+    return input_txt, input_queries, client_files, window_input, visualize_xpos
 
 
 def run_semgrex_process(
@@ -92,6 +98,7 @@ def run_semgrex_process(
     pipe: Any,
     start_window: int,
     end_window: int,
+    visualize_xpos: bool
 ) -> None:
     """
     Run Semgrex search on the input text/files with input query and serve the HTML on the app.
@@ -104,6 +111,7 @@ def run_semgrex_process(
     @param pipe: NLP pipeline to process input with
     @param start_window: If displaying a splice of visualizations, this is the start idx
     @param end_window: If displaying a splice of visualizations, this is the end idx
+    @param visualize_xpos: Set to true if using xpos tags for part of speech labels, otherwise use upos tags
 
     """
 
@@ -137,6 +145,7 @@ def run_semgrex_process(
                                 start_match=begin_viz_idx,
                                 end_match=end_viz_idx,
                                 pipe=pipe,
+                                visualize_xpos=visualize_xpos
                             )
                             html_strings += client_file_html_strings
                     else:  # just input text, no files
@@ -148,6 +157,7 @@ def run_semgrex_process(
                                 start_match=start_window - 1,
                                 end_match=end_window - 1,
                                 pipe=pipe,
+                                visualize_xpos=visualize_xpos
                             )
                         else:
                             html_strings = visualize_search_str(
@@ -156,7 +166,9 @@ def run_semgrex_process(
                                 "en",
                                 end_match=float("inf"),
                                 pipe=pipe,
+                                visualize_xpos=visualize_xpos
                             )
+
 
                     if len(html_strings) == 0:
                         st.write("No Semgrex match hits!")
@@ -190,6 +202,7 @@ def main():
         help="""Path to your CoreNLP directory.""",
     )  # for example, set $CLASSPATH to "C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*"
     args = parser.parse_args()
+    print("CLASSPATH:" , args.CLASSPATH)
     CLASSPATH = args.CLASSPATH
 
     os.environ["CLASSPATH"] = CLASSPATH
@@ -206,7 +219,7 @@ def main():
         "<h3>Enter a text below, along with your Semgrex query of choice.</h3>"
     )
     st.markdown(html_string, unsafe_allow_html=True)
-    input_txt, input_queries, client_files, window_input = get_input()
+    input_txt, input_queries, client_files, window_input, visualize_xpos = get_input()
 
     show_window, start_window, end_window = window_input
 
@@ -225,6 +238,7 @@ def main():
         pipe=st.session_state["pipeline"],
         start_window=start_window,
         end_window=end_window,
+        visualize_xpos=visualize_xpos
     )
 
 
