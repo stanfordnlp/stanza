@@ -78,7 +78,7 @@ def get_window_input() -> Tuple[bool, int, int]:
 
 def get_pos_input() -> bool:
     use_xpos = st.checkbox("Would you like to visualize xpos tags?",
-                           help="The default visualization options use upos tags for part-of-speech labeling.")
+                           help="The default visualization options use upos tags for part-of-speech labeling. If xpos tags aren't available for the sentence, displays upos.")
     return use_xpos
 
 def get_input() -> Tuple[str, str, List[str], Tuple[bool, int, int, bool]]:
