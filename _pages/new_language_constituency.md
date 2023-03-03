@@ -215,7 +215,15 @@ python3 -m stanza.utils.training.run_pos vi_vlsp22
 
 The same arguments for word vectors, charlm, and transformers apply to both `run_constituency` and `run_pos`
 
-### Word Vectors
+### CoreNLP installation
+
+The parser uses a scoring script from CoreNLP to find the bracket F1 score.
+Therefore, you need to follow the
+[CoreNLP setup instructions](client_setup.md)
+to download the software.
+It is not necessary to download any of the CoreNLP models, though.
+
+### Word vectors
 
 The base version of the tool uses word vectors as an input layer to the classifier.
 
@@ -260,11 +268,23 @@ python -m stanza.utils.training.run_constituency it_vit --score_dev
 python -m stanza.utils.training.run_constituency it_vit --score_test
 ```
 
+### Silver trees
+
+TODO: add a section on this
+
 ### Useful flags
 
+`run_constituency` and the constituency parser main program,
+`stanza.models.constituency_parser`, have several flags which may be
+relevant for training and/or testing.
+
 TODO: add a section on this
 
-### Silver Trees
-
-TODO: add a section on this
-
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| --wordvec_pretrain_file | str | depends on language | Instead of using the default pretrain, use this pretrain file.  Especially relevant if a language has no default pretrain |
+| --no_charlm | -- | -- | Turn off the charlm entirely |
+| --charlm_forward_file | str | depends on language | If you trained a charlm yourself, this will specify where the forward model is |
+| --charlm_backward_file | str | depends on language | If you trained a charlm yourself, this will specify where the backward model is |
+| --bert_model | str | depends on language | Which transformer to use.  Defaults are in [stanza/utils/training/common.py](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/training/common.py) |
+| --no_bert | -- | -- | Turn off transformers entirely |
