@@ -270,17 +270,85 @@ python -m stanza.utils.training.run_constituency it_vit --score_test
 
 ### Silver trees
 
-TODO: add a section on this
+We have found that making a fake dataset of silver trees improves performance.
+
+This is most noticeable either on small gold datasets, or on datasets
+with low accuracy.  The pattern is not yet clear, since we've done it
+on three datasets.  For both IT and VI, a dataset of ~8000 training
+trees led to a parser with an accuracy in the low 80s, and adding a
+silver dataset improved F1 by ~1.  For EN, a dataset of ~40K training
+trees (PTB) led to a parser with an accuracy in the high 95.X, and
+adding a silver dataset had barely any effect.  If you find a large
+dataset with low accuracy, or a small dataset with high accuracy, and
+help us narrow down the difference, that would be excellent!
+
+What we do is the following.  We train 5x models which are each
+slightly different, then train a second batch of 5x models with a
+different transition scheme.  Each set of 5 models is used in an
+ensemble to parse all of Wikipedia or some other large text repo.  We
+then take all trees of length 10 to 100 where the two ensembles agree,
+and use this as trees where we have high confidence in their accuracy.
+
+To train multiple similar, but slightly different models, you can use
+`--bert_hidden_layers N` to use a different number of hidden layers
+from the transformer you are using (assuming you are using one), or
+`--seed N` to train a model from different initial conditions
+
+Different transition schemes can be triggered with
+`--transition_scheme IN_ORDER` (default),
+`--transition_scheme TOP_DOWN`, or even
+`--reversed` to try parsing backwards
+
+[Wikipedia dumps](https://dumps.wikimedia.org/backup-index-bydb.html) - look for your language code, then download "<lang>-<date>-pages-meta-current.xml.bz2"
+
+[Wikipedia extractor](https://github.com/attardi/wikiextractor)
+
+[Script to tokenize the extracted wikipedia](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/datasets/constituency/tokenize_wiki.py) - you will need a tokenizer for your language, which may be an issue if you are working on a language Stanza does not currently know about.  Then again, you'll need a tokenizer for that language to use the parser on raw text, anyway
+
+[Script to run an ensemble of models on tokenized text](https://github.com/stanfordnlp/stanza/blob/dev/stanza/models/constituency/ensemble.py)
+
+For this, you will run it as follows, except you will obviously need
+to substitute different names for the models, the retagging package,
+and the language, and you will want to run this on both sets of 5
+models for each tokenized file produced from Wikipedia (or whatever
+other data source you used):
+
+```
+python3 -m stanza.models.constituency.ensemble saved_models/constituency/en_wsj_topbert_?.pt --mode parse_text --tokenized_file AA_tokenized --retag_package en_combined_bert --lang en --predict_file AA.topdown.mrg
+```
+
+Very simple script for finding common trees in two files:
+
+[python3 -m stanza.utils.datasets.constituency.common_trees <file1> <file2>](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/datasets/constituency/common_trees.py)
+
+So, for example, after producing tree files from the `AA` section of English Wikipedia, we did this:
+
+```
+python3 -m stanza.utils.datasets.constituency.common_trees AA.topdown.mrg AA.inorder.mrg > AA.both.mrg
+```
+
+After combining the models, we uniquify and shuffle the trees:
+
+```
+cat ??.both.mrg | sort | uniq | shuf > en.both.mrg
+```
+
+Then take the top 1M or so:
+
+```
+head -n 1000000 en.both.mrg > en_wsj.silver.mrg
+```
+
+This is now our silver training set.  As mentioned above, it was very helpful for IT and VI, and not particularly effective for EN.
+You can try this after building an initial model if you want to get improved accuracy.
 
 ### Useful flags
 
 `run_constituency` and the constituency parser main program,
 `stanza.models.constituency_parser`, have several flags which may be
-relevant for training and/or testing.
+relevant for training and testing.
 
-TODO: add a section on this
-
-| Option | Type | Default | Description |
+| Pretrain Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | --wordvec_pretrain_file | str | depends on language | Instead of using the default pretrain, use this pretrain file.  Especially relevant if a language has no default pretrain |
 | --no_charlm | -- | -- | Turn off the charlm entirely |
@@ -288,3 +356,14 @@ TODO: add a section on this
 | --charlm_backward_file | str | depends on language | If you trained a charlm yourself, this will specify where the backward model is |
 | --bert_model | str | depends on language | Which transformer to use.  Defaults are in [stanza/utils/training/common.py](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/training/common.py) |
 | --no_bert | -- | -- | Turn off transformers entirely |
+| Training Option | Type | Default | Description |
+| --epochs | int | 400 | How long to train |
+| --transition_scheme | str | IN_ORDER | IN_ORDER works best, TOP_DOWN works okay, others were all experimental and didn't really help |
+| --silver_file | str | -- | Which file to use for silver trees, if any |
+
+Note that the default before for `--epochs` is to train for the first
+1/2 epochs with AdaDelta, then switch to either Madgrad or AdamW for
+the final 1/2 epochs.  If performance levels off for a long time, you
+should not terminate training early, as there is usually quite a bit
+of improvement in epochs 200-210 and possibly some smaller improvement
+after 210.
