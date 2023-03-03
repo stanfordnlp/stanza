@@ -196,7 +196,24 @@ default POS package from Stanza for the given language.  To change to
 a different POS package, one can use the `--retag_package` command
 line flag.
 
-TODO: link the Vietnamese specific POS tag converter
+Sometimes, a language will not have a suitable POS tagger available.
+In the case of a Vietnamese constituency parser we built, we found it
+advantageous to use the constituency treebank for training a POS tagger,
+as that dataset was much larger than the available UD dataset.
+The script we used for converting the treebank to a POS dataset
+can be used on any language:
+
+[convert_trees_to_pos.py](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/datasets/pos/convert_trees_to_pos.py)
+
+This needs to be run on a fully converted treebank.  So, for example, one would run
+
+```
+python3 -m stanza.utils.datasets.constituency.prepare_con_dataset vi_vlsp22
+python3 -m stanza.utils.datasets.pos.convert_trees_to_pos vi_vlsp22
+python3 -m stanza.utils.training.run_pos vi_vlsp22
+```
+
+The same arguments for word vectors, charlm, and transformers apply to both `run_constituency` and `run_pos`
 
 ### Word Vectors
 
@@ -232,9 +249,16 @@ At this point, everything is ready to push the button and start training.
 python -m stanza.utils.training.run_constituency it_vit
 ```
 
+The model will take quite some time to train, and you almost certainly want to use a GPU to do it.
+
 ### Running the dev and test sets
 
-TODO: add a section on this
+Once the model is trained, you can test it on the dev and test sets:
+
+```bash
+python -m stanza.utils.training.run_constituency it_vit --score_dev
+python -m stanza.utils.training.run_constituency it_vit --score_test
+```
 
 ### Useful flags
 
