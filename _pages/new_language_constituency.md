@@ -319,7 +319,7 @@ python3 -m stanza.models.constituency.ensemble saved_models/constituency/en_wsj_
 
 Very simple script for finding common trees in two files:
 
-[python3 -m stanza.utils.datasets.constituency.common_trees <file1> <file2>](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/datasets/constituency/common_trees.py)
+[python3 -m stanza.utils.datasets.constituency.common_trees \<file1\> \<file2\>](https://github.com/stanfordnlp/stanza/blob/6b9ecae54bbb5b95d42c9732675180e3aa4653d3/stanza/utils/datasets/constituency/common_trees.py)
 
 So, for example, after producing tree files from the `AA` section of English Wikipedia, we did this:
 
