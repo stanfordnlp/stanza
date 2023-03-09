@@ -67,6 +67,7 @@ def build_retag_pipeline(args):
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
             if path is not None:
+                retag_args['allow_unknown_language'] = True
                 retag_args['pos_model_path'] = path
 
             retag_pipeline = Pipeline(foundation_cache=foundation_cache, **retag_args)
