@@ -116,6 +116,9 @@ def add_token(token_list, word, token):
     Add a token to a proto request.
 
     CoreNLP tokens have components of both word and token from stanza.
+
+    We pass along "after" but not "before", and the "after" is limited
+    to whether or not there is a space after the token
     """
     query_token = token_list.add()
     query_token.word = word.text
@@ -126,8 +129,25 @@ def add_token(token_list, word, token):
         query_token.pos = word.xpos
     if word.upos is not None:
         query_token.coarseTag = word.upos
+    if word.feats and word.feats != "_":
+        for feature in word.feats.split("|"):
+            key, value = feature.split("=", maxsplit=1)
+            query_token.conllUFeatures.key.append(key)
+            query_token.conllUFeatures.value.append(value)
     if token.ner is not None:
         query_token.ner = token.ner
+    if token.id[-1] != word.id:
+        # if we are not the last word of an MWT token
+        # we are absolutely not followed by space
+        pass
+    elif ((token.misc is not None and "SpaceAfter=No" in token.misc) or
+          (word.misc is not None and "SpaceAfter=No" in word.misc)):
+        # if either the token or the specific word item say there is
+        # no SpaceAfter, we believe them
+        pass
+    else:
+        # otherwise, seems like there might actually be a SpaceAfter
+        query_token.after = " "
 
 def add_sentence(request_sentences, sentence, num_tokens):
     """
@@ -154,6 +174,13 @@ def add_word_to_graph(graph, word, sent_idx, word_idx):
         edge.source = word.head
         edge.target = word_idx+1
         edge.dep = word.deprel
+
+def features_to_string(features):
+    if not features:
+        return None
+    if len(features.key) == 0:
+        return None
+    return "|".join("%s=%s" % (key, value) for key, value in zip(features.key, features.value))
 
 class JavaProtobufContext(object):
     """

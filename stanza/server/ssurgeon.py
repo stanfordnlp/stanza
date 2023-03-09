@@ -8,10 +8,13 @@ The main program in this file gives a very short intro to how to use it.
 
 
 import argparse
+import copy
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext
+from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string
 from stanza.utils.conll import CoNLL
+
+from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
 
 SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
 
@@ -73,6 +76,94 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 
     return send_ssurgeon_request(request)
 
+def convert_response_to_doc(doc, semgrex_response):
+    doc = copy.deepcopy(doc)
+    for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
+        if not ssurgeon_result.changed:
+            continue
+
+        ssurgeon_graph = ssurgeon_result.graph
+        if len(ssurgeon_graph.token) == len(sentence.words) and all(x.word == y.text for x, y in zip(ssurgeon_graph.token, sentence.words)):
+            # Word texts are unchanged.  Need to copy various attributes, plus the dependency links
+            # TODO: pass back & forth the MWT.  the UD_English-Pronouns dataset can use that!
+            #   for example, each usage of 's should attach to the previous
+            #   possessive - dealer's
+            #   it's
+            #   isn't
+            #   aint (no break)
+            #   to be: car's
+            #   'll as in hers'll, his'll, etc
+            for graph_word, sentence_word in zip(ssurgeon_graph.token, sentence.words):
+                sentence_word.lemma = graph_word.lemma
+                sentence_word.upos = graph_word.coarseTag
+                sentence_word.xpos = graph_word.pos
+                sentence_word.head = None
+                sentence_word.deprel = None
+                sentence_word.deps = None
+                sentence_word.feats = features_to_string(graph_word.conllUFeatures)
+            for root in ssurgeon_graph.root:
+                sentence.words[root-1].head = 0
+                sentence.words[root-1].deprel = "root"
+            for edge in ssurgeon_graph.edge:
+                # can't do anything about the extra dependencies for now
+                # TODO: put them all in .deps
+                if edge.isExtra:
+                    continue
+                sentence.words[edge.target-1].head = edge.source
+                sentence.words[edge.target-1].deprel = edge.dep
+        else:
+            # TODO: this will lose all the MWT
+            #   There is probably a way to convey that to Ssurgeon and back
+            # TODO: make that happen for the Pronouns dataset!
+            tokens = []
+            for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
+                if graph_node.copyAnnotation:
+                    continue
+                word_entry = {
+                    ID: graph_node.index,
+                    TEXT: graph_word.word,
+                    LEMMA: graph_word.lemma,
+                    UPOS: graph_word.coarseTag,
+                    XPOS: graph_word.pos,
+                    # TODO: the features are coming back not alphabetized!  need to fix
+                    FEATS: features_to_string(graph_word.conllUFeatures),
+                    DEPS: None,
+                    NER: graph_word.ner,
+                    START_CHAR: None,   # TODO: fix this?  one problem is the text positions
+                    END_CHAR: None,     #   might change across all of the sentences
+                }
+                if not graph_word.after:
+                    word_entry[MISC] = "SpaceAfter=No"
+                tokens.append(word_entry)
+            tokens.sort(key=lambda x: x[ID])
+            for root in ssurgeon_graph.root:
+                tokens[root-1][HEAD] = 0
+                tokens[root-1][DEPREL] = "root"
+            for edge in ssurgeon_graph.edge:
+                # can't do anything about the extra dependencies for now
+                # TODO: put them all in .deps
+                if edge.isExtra:
+                    continue
+                tokens[edge.target-1][HEAD] = edge.source
+                tokens[edge.target-1][DEPREL] = edge.dep
+            old_comments = list(sentence.comments)
+            sentence = Sentence(tokens, doc)
+
+            word_text = [word.text if (word_idx == len(sentence.words) - 1 or (word.misc and "SpaceAfter=No" in word.misc)) else word.text + " "
+                         for word_idx, word in enumerate(sentence.words)]
+            sentence_text = "".join(word_text)
+
+            for comment in old_comments:
+                if comment.startswith("# text"):
+                    sentence.add_comment("# text = " + sentence_text)
+                else:
+                    sentence.add_comment(comment)
+            
+            doc.sentences[sent_idx] = sentence
+
+        sentence.rebuild_dependencies()
+    return doc
+
 class Ssurgeon(JavaProtobufContext):
     """
     Ssurgeon context window
@@ -112,16 +203,16 @@ SAMPLE_DOC = """
 
 def main():
     # The default semgrex detects sentences in the UD_English-Pronouns dataset which have both nsubj and csubj on the same word.
-    # The default ssurgeon transforms the unwanted csubj to advcl:relcl.
+    # The default ssurgeon transforms the unwanted csubj to advcl
     # See https://github.com/UniversalDependencies/docs/issues/923
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
-    parser.add_argument('ssurgeon', type=str, nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl:relcl")
+    parser.add_argument('ssurgeon', type=str, nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
     args = parser.parse_args()
 
     if len(args.ssurgeon) == 0:
-        args.ssurgeon = ["relabelNamedEdge -edge bad -reln advcl:relcl"]
+        args.ssurgeon = ["relabelNamedEdge -edge bad -reln advcl"]
 
     if args.input_file:
         doc = CoNLL.conll2doc(input_file=args.input_file)
@@ -129,7 +220,9 @@ def main():
         doc = CoNLL.conll2doc(input_str=SAMPLE_DOC)
 
     print("{:C}".format(doc))
-    print(process_doc_one_operation(doc, args.semgrex, args.ssurgeon))
+    ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
+    updated_doc = convert_response_to_doc(doc, ssurgeon_response)
+    print("{:C}".format(updated_doc))
 
 if __name__ == '__main__':
     main()
