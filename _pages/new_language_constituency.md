@@ -196,6 +196,9 @@ default POS package from Stanza for the given language.  To change to
 a different POS package, one can use the `--retag_package` command
 line flag.
 
+To change to a specific model (such as if you build one yourself)
+use the `--retag_model_path` command line flag.
+
 Sometimes, a language will not have a suitable POS tagger available.
 In the case of a Vietnamese constituency parser we built, we found it
 advantageous to use the constituency treebank for training a POS tagger,
@@ -360,6 +363,8 @@ relevant for training and testing.
 | --epochs | int | 400 | How long to train |
 | --transition_scheme | str | IN_ORDER | IN_ORDER works best, TOP_DOWN works okay, others were all experimental and didn't really help |
 | --silver_file | str | -- | Which file to use for silver trees, if any |
+| --retag_package | str | -- | Which POS tagger package to use for retagging.  Language dependent |
+| --retag_model_path | str | -- | An exact path to a custom POS tagger |
 
 Note that the default before for `--epochs` is to train for the first
 1/2 epochs with AdaDelta, then switch to either Madgrad or AdamW for
