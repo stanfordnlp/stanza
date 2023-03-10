@@ -26,6 +26,8 @@ def add_retag_args(parser):
     parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
     parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default.  Can specify multiple taggers with ; in which case the majority vote wins')
     parser.add_argument('--retag_pretrain_path', default=None, help='Use this for a pretrain path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom pretrain')
+    parser.add_argument('--retag_charlm_forward_file', default=None, help='Use this for a forward charlm path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom charlm')
+    parser.add_argument('--retag_charlm_backward_file', default=None, help='Use this for a backward charlm  path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom charlm')
     parser.add_argument('--no_retag', dest='retag_package', action="store_const", const=None, help="Don't retag the trees")
 
 def postprocess_args(args):
@@ -66,6 +68,10 @@ def build_retag_pipeline(args):
                       "package": {"pos": package}}
         if args['retag_pretrain_path'] is not None:
             retag_args['pos_pretrain_path'] = args['retag_pretrain_path']
+        if args['retag_forward_charlm_path'] is not None:
+            retag_args['pos_forward_charlm_path'] = args['retag_forward_charlm_path']
+        if args['retag_backward_charlm_path'] is not None:
+            retag_args['pos_backward_charlm_path'] = args['retag_backward_charlm_path']
 
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
