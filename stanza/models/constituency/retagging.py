@@ -68,10 +68,10 @@ def build_retag_pipeline(args):
                       "package": {"pos": package}}
         if args['retag_pretrain_path'] is not None:
             retag_args['pos_pretrain_path'] = args['retag_pretrain_path']
-        if args['retag_forward_charlm_path'] is not None:
-            retag_args['pos_forward_charlm_path'] = args['retag_forward_charlm_path']
-        if args['retag_backward_charlm_path'] is not None:
-            retag_args['pos_backward_charlm_path'] = args['retag_backward_charlm_path']
+        if args['retag_charlm_forward_file'] is not None:
+            retag_args['pos_forward_charlm_path'] = args['retag_charlm_forward_file']
+        if args['retag_charlm_backward_file'] is not None:
+            retag_args['pos_backward_charlm_path'] = args['retag_charlm_backward_file']
 
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
