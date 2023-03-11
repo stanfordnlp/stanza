@@ -202,7 +202,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                     paired_dy != DEFAULT_DY_VAL and node == match.node[1]
                 ):  # we're on the second node and need to adjust height to match the paired node
                     dy = paired_dy
-                if node == match.node[0]:
+                if node == match.node[0] and len(match.node) > 1:
                     paired_node_level = 2
                     if (
                         match.node[1].matchIndex in tracker

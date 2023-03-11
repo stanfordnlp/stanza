@@ -2,6 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from semgrex_visualizer import visualize_search_str
 from semgrex_visualizer import edit_html_overflow
+from stanza.utils.conll import CoNLL
+import ssurgeon_visualizer as ssv
+from stanza.server.ssurgeon import *
 from io import StringIO
 import os
 import stanza
@@ -98,7 +101,8 @@ def run_semgrex_process(
     pipe: Any,
     start_window: int,
     end_window: int,
-    visualize_xpos: bool
+    visualize_xpos: bool,
+    show_success: bool = True
 ) -> None:
     """
     Run Semgrex search on the input text/files with input query and serve the HTML on the app.
@@ -176,17 +180,17 @@ def run_semgrex_process(
                     for s in html_strings:
                         s_no_overflow = edit_html_overflow(s)
                         components.html(
-                            s_no_overflow, height=300, width=1000, scrolling=True
+                            s_no_overflow, height=200, width=1000, scrolling=True
                         )
-
-                    if len(html_strings) == 1:
-                        st.success(
-                            f"Completed! Visualized {len(html_strings)} Semgrex search hit."
-                        )
-                    else:
-                        st.success(
-                            f"Completed! Visualized {len(html_strings)} Semgrex search hits."
-                        )
+                    if show_success:
+                        if len(html_strings) == 1:
+                            st.success(
+                                f"Completed! Visualized {len(html_strings)} Semgrex search hit."
+                            )
+                        else:
+                            st.success(
+                                f"Completed! Visualized {len(html_strings)} Semgrex search hits."
+                            )
             except OSError:
                 st.error(
                     "Your text input or your provided Semgrex queries are incorrect. Please try again."
@@ -205,8 +209,8 @@ def main():
     print("CLASSPATH:" , args.CLASSPATH)
     CLASSPATH = args.CLASSPATH
 
-    os.environ["CLASSPATH"] = CLASSPATH
-
+    # os.environ["CLASSPATH"] = CLASSPATH
+    os.environ["CLASSPATH"] = "C:\\Users\\Alex\\Desktop\\stanford-corenlp-4.5.3\\*"
     if "pipeline" not in st.session_state:  # run pipeline once per user session
         en_nlp_stanza = stanza.Pipeline(
             "en", processors="tokenize, pos, lemma, depparse"
@@ -241,6 +245,102 @@ def main():
         visualize_xpos=visualize_xpos
     )
 
+    SAMPLE_DOC = """
+    # sent_id = 271
+    # text = Hers is easy to clean.
+    # previous = What did the dealer like about Alex's car?
+    # comment = extraction/raising via "tough extraction" and clausal subject
+    1	Hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	3	nsubj	_	_
+    2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
+    3	easy	easy	ADJ	JJ	Degree=Pos	0	root	_	_
+    4	to	to	PART	TO	_	5	mark	_	_
+    5	clean	clean	VERB	VB	VerbForm=Inf	3	csubj	_	SpaceAfter=No
+    6	.	.	PUNCT	.	_	5	punct	_	_
+    """
+    st.title("Displaying Ssurgeon Results")
+
+    input_txt = st.text_area(
+        "Text to analyze",
+        SAMPLE_DOC,
+        placeholder=SAMPLE_DOC,
+    )
+    semgrex_input_queries = st.text_area(
+        "Semgrex search queries (separate each query with a comma)",
+        "{}=source >nsubj {} >csubj=bad {}",
+        placeholder="""{}=source >nsubj {} >csubj=bad {}""",
+    )
+    ssurgeon_input_queries = st.text_area(
+        "Ssurgeon commands",
+        "relabelNamedEdge -edge bad -reln advcl",
+        placeholder="relabelNamedEdge -edge bad -reln advcl"
+    )
+
+    st.markdown("""**Alternatively, upload file(s) to edit.**""")
+    uploaded_files = st.file_uploader(
+        "", accept_multiple_files=True, label_visibility="collapsed"
+    )
+    res = []
+    for file in uploaded_files:
+        stringio = StringIO(file.getvalue().decode("utf-8"))
+        string_data = stringio.read()
+        res.append(string_data)
+
+    clicked = st.button(
+        "Load Semgrex search visualization",
+        help="""Semgrex search visualizations only display 
+        sentences with a query match. Non-matching sentences are not shown.""",
+    )
+    clicked_for_file_edit = st.button(
+        "Edit File"
+    )
+
+    if clicked:
+        try:
+            with st.spinner("Processing..."):
+                semgrex_queries = semgrex_input_queries # separate queries into individual parts
+                ssurgeon_queries = [ssurgeon_input_queries]
+                html_strings = ssv.visualize_edited_deprel_adjusted_str_input(input_txt, semgrex_queries, ssurgeon_queries)
+                doc = CoNLL.conll2doc(input_str=input_txt)
+                string_txt = " ".join([word.text for sentence in doc.sentences for word in sentence.words])
+
+                html_string = (
+                    "<h3>Previous deprel visualization:</h3>"
+                )
+                st.markdown(html_string, unsafe_allow_html=True)
+                components.html(
+                    run_semgrex_process(input_txt=string_txt, input_queries=semgrex_queries, clicked=clicked,
+                                        show_window=False, client_files=[], pipe=st.session_state["pipeline"],
+                                        start_window=1, end_window=11, visualize_xpos=visualize_xpos, show_success=False)
+                )
+
+                if len(html_strings) == 0:
+                    st.write("No Semgrex match hits!")
+
+                for s in html_strings:
+                    html_string = (
+                        "<h3>Edited deprel visualization:</h3>"
+                    )
+                    st.markdown(html_string, unsafe_allow_html=True)
+                    s_no_overflow = edit_html_overflow(s)
+                    components.html(
+                        s_no_overflow, height=200, width=1000, scrolling=True
+                    )
+        except OSError:
+            st.error(
+                "Your text input or your provided Semgrex/Ssurgeon queries are incorrect. Please try again."
+            )
+    if clicked_for_file_edit:
+        # files are in res
+        if len(res) == 0:
+            st.error("You must provide files for analysis.")
+        with st.spinner("Editing..."):
+            single_file = res[0]
+            doc = CoNLL.conll2doc(input_str=single_file)
+            ssurgeon_response = process_doc_one_operation(doc, semgrex_input_queries, [ssurgeon_input_queries])
+            updated_doc = convert_response_to_doc(doc, ssurgeon_response)
+            output = CoNLL.doc2conll(updated_doc)[0]
+            output_str = "\n".join(output)
+            st.download_button("Download your edited file", data=output_str, file_name="SSurgeon.conll")
 
 if __name__ == "__main__":
     main()
