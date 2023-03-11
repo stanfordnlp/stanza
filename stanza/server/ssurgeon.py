@@ -208,6 +208,7 @@ def main():
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
     parser.add_argument('ssurgeon', type=str, nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
+    parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
     args = parser.parse_args()
 
     if len(args.ssurgeon) == 0:
@@ -218,7 +219,8 @@ def main():
     else:
         doc = CoNLL.conll2doc(input_str=SAMPLE_DOC)
 
-    print("{:C}".format(doc))
+    if args.print_input:
+        print("{:C}".format(doc))
     ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
     updated_doc = convert_response_to_doc(doc, ssurgeon_response)
     print("{:C}".format(updated_doc))
