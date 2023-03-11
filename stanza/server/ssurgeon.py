@@ -125,7 +125,6 @@ def convert_response_to_doc(doc, semgrex_response):
                     LEMMA: graph_word.lemma,
                     UPOS: graph_word.coarseTag,
                     XPOS: graph_word.pos,
-                    # TODO: the features are coming back not alphabetized!  need to fix
                     FEATS: features_to_string(graph_word.conllUFeatures),
                     DEPS: None,
                     NER: graph_word.ner,

@@ -25,8 +25,8 @@ SAMPLE_DOC_EXPECTED = """
 # text = Hers is easy to clean.
 # previous = What did the dealer like about Alex's car?
 # comment = extraction/raising via "tough extraction" and clausal subject
-1	Hers	hers	PRON	PRP	Number=Sing|Poss=Yes|Gender=Fem|Person=3|PronType=Prs	3	nsubj	_	_
-2	is	be	AUX	VBZ	Tense=Pres|Mood=Ind|Number=Sing|VerbForm=Fin|Person=3	3	cop	_	_
+1	Hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	3	nsubj	_	_
+2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
 3	easy	easy	ADJ	JJ	Degree=Pos	0	root	_	_
 4	to	to	PART	TO	_	5	mark	_	_
 5	clean	clean	VERB	VB	VerbForm=Inf	3	advcl	_	SpaceAfter=No
@@ -65,7 +65,7 @@ ADD_WORD_DOC_EXPECTED = """
 # sent_id = 12
 # comment = if you're in to that kind of thing
 1	Jennifer	Jennifer	PROPN	NNP	Number=Sing	2	nsubj	_	ner=S-PERSON
-2	has	have	VERB	VBZ	Tense=Pres|Mood=Ind|Number=Sing|VerbForm=Fin|Person=3	0	root	_	ner=O
+2	has	have	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	_	ner=O
 3	lovely	lovely	ADJ	JJ	Degree=Pos	5	amod	_	ner=O
 4	blue	blue	ADJ	JJ	_	5	amod	_	ner=O
 5	antennae	antenna	NOUN	NNS	Number=Plur	2	obj	_	SpaceAfter=No|ner=O
