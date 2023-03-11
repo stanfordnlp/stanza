@@ -9,6 +9,7 @@ The main program in this file gives a very short intro to how to use it.
 
 import argparse
 import copy
+import re
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
 from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string
@@ -26,6 +27,24 @@ class SsurgeonEdit:
         self.ssurgeon_id = ssurgeon_id
         self.notes = notes
         self.language = language
+
+def parse_ssurgeon_edits(ssurgeon_text):
+    ssurgeon_text = ssurgeon_text.strip()
+    ssurgeon_blocks = re.split("\n\n+", ssurgeon_text)
+    ssurgeon_edits = []
+    for idx, block in enumerate(ssurgeon_blocks):
+        lines = block.split("\n")
+        comments = [line[1:].strip() for line in lines if line.startswith("#")]
+        notes = " ".join(comments)
+        lines = [x for x in lines if x.strip() and not x.startswith("#")]
+        semgrex = lines[0]
+        ssurgeon = lines[1:]
+        ssurgeon_edits.append(SsurgeonEdit(semgrex, ssurgeon, "%d" % (idx + 1), notes))
+    return ssurgeon_edits
+
+def read_ssurgeon_edits(edit_file):
+    with open(edit_file, encoding="utf-8") as fin:
+        return parse_ssurgeon_edits(fin.read())
 
 def send_ssurgeon_request(request):
     return send_request(request, SsurgeonResponse, SSURGEON_JAVA)
@@ -206,6 +225,7 @@ def main():
     # See https://github.com/UniversalDependencies/docs/issues/923
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
+    parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
     parser.add_argument('ssurgeon', type=str, nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
@@ -221,7 +241,12 @@ def main():
 
     if args.print_input:
         print("{:C}".format(doc))
-    ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
+    if args.edit_file:
+        ssurgeon_edits = read_ssurgeon_edits(args.edit_file)
+        ssurgeon_request = build_request(doc, ssurgeon_edits)
+        ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
+    else:
+        ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
     updated_doc = convert_response_to_doc(doc, ssurgeon_response)
     print("{:C}".format(updated_doc))
 
