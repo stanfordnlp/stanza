@@ -228,6 +228,9 @@ BAD_TOKENIZERS = ('bert-base-german-cased',
                   'dbmdz/bert-base-italian-xxl-cased',
                   'dbmdz/bert-base-italian-cased',
                   'dbmdz/electra-base-italian-xxl-cased-discriminator',
+                  # fails on a sentence in the Indonesian GSD dataset:
+                  # 'Tak', 'dapat', 'disangkal', 'jika', '\u200e', 'kemenangan', ...
+                  'cahya/bert-base-indonesian-1.5G',
                   'google/muril-base-cased',
                   'l3cube-pune/marathi-roberta')
 
