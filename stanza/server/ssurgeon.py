@@ -36,7 +36,10 @@ def parse_ssurgeon_edits(ssurgeon_text):
         lines = block.split("\n")
         comments = [line[1:].strip() for line in lines if line.startswith("#")]
         notes = " ".join(comments)
-        lines = [x for x in lines if x.strip() and not x.startswith("#")]
+        lines = [x.strip() for x in lines if x.strip() and not x.startswith("#")]
+        if len(lines) == 0:
+            # was a block of entirely comments
+            continue
         semgrex = lines[0]
         ssurgeon = lines[1:]
         ssurgeon_edits.append(SsurgeonEdit(semgrex, ssurgeon, "%d" % (idx + 1), notes))
