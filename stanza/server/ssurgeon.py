@@ -146,6 +146,8 @@ def convert_response_to_doc(doc, semgrex_response):
         mwt_tokens = []
         for word_start_idx, word in enumerate(tokens):
             if not word["is_first_mwt"]:
+                if word["is_mwt"]:
+                    word[MISC] = None
                 mwt_tokens.append(word)
                 continue
             word_end_idx = word_start_idx + 1
@@ -159,6 +161,7 @@ def convert_response_to_doc(doc, semgrex_response):
                 # use the SpaceAfter=No (or not) from the last word in the token
                 MISC: tokens[word_end_idx-1][MISC],
             }
+            word[MISC] = None
             mwt_tokens.append(mwt_token_entry)
             mwt_tokens.append(word)
 
@@ -167,7 +170,11 @@ def convert_response_to_doc(doc, semgrex_response):
 
         # TODO: look at word.parent to see if it is part of an MWT
         # once that's done, the beginning words of an MWT do not need SpaceAfter=No any more (it is implied)
-        word_text = [word.text if (word_idx == len(sentence.words) - 1 or (word.misc and "SpaceAfter=No" in word.misc)) else word.text + " "
+        word_text = [word.text if (word_idx == len(sentence.words) - 1 or
+                                   (word.misc and "SpaceAfter=No" in word.misc) or
+                                   word.id != word.parent.id[-1] or
+                                   (word.parent.misc and "SpaceAfter=No" in word.parent.misc))
+                     else word.text + " "
                      for word_idx, word in enumerate(sentence.words)]
         sentence_text = "".join(word_text)
 

@@ -106,7 +106,7 @@ BECOME_MWT_DOC_EXPECTED = """
 # text = It's not yours!
 # comment = negation
 1-2	It's	_	_	_	_	_	_	_	_
-1	It	it	PRON	PRP	Number=Sing|Person=2|PronType=Prs	4	nsubj	_	SpaceAfter=No
+1	It	it	PRON	PRP	Number=Sing|Person=2|PronType=Prs	4	nsubj	_	_
 2	's	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
 3	not	not	PART	RB	Polarity=Neg	4	advmod	_	_
 4	yours	yours	PRON	PRP	Gender=Neut|Number=Sing|Person=2|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
@@ -150,8 +150,8 @@ EXISTING_MWT_DOC_EXPECTED = """
 2	of	of	ADP	IN	_	4	case	_	_
 3	“	"	PUNCT	``	_	4	punct	_	SpaceAfter=No
 4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
-4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	_	SpaceAfter=No
-5	’s	's	PART	POS	_	4	case	_	SpaceAfter=No
+4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	_	_
+5	’s	's	PART	POS	_	4	case	_	_
 6	”	"	PUNCT	''	_	4	punct	_	_
 """
 
