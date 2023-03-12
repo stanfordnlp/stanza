@@ -141,7 +141,6 @@ EXISTING_MWT_DOC_INPUT = """
 6	”	"	PUNCT	''	_	4	punct	4:punct	_
 """
 
-# TODO: word 4 should not have SpaceAfter=No, but that needs to be fixed in ssurgeon.py first
 # TODO: also, we shouldn't lose the enhanced dependencies...
 EXISTING_MWT_DOC_EXPECTED = """
 # sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005

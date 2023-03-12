@@ -168,8 +168,6 @@ def convert_response_to_doc(doc, semgrex_response):
         old_comments = list(sentence.comments)
         sentence = Sentence(mwt_tokens, doc)
 
-        # TODO: look at word.parent to see if it is part of an MWT
-        # once that's done, the beginning words of an MWT do not need SpaceAfter=No any more (it is implied)
         word_text = [word.text if (word_idx == len(sentence.words) - 1 or
                                    (word.misc and "SpaceAfter=No" in word.misc) or
                                    word.id != word.parent.id[-1] or
