@@ -1,0 +1,12 @@
+# To run this, use the stanza/server/ssurgeon.py main file.
+# For example:
+# python stanza/server/ssurgeon.py  --edit_file demo/ssurgeon_script.txt --no_print_input --input_file ../data/ud2_11/UD_English-Pronouns/en_pronouns-ud-test.conllu > en_pronouns.updated_2.conllu
+
+# This turns unwanted csubj into advcl
+{}=source >nsubj {} >csubj=bad {}
+relabelNamedEdge -edge bad -reln advcl
+
+# This detects punctuations which are not attached to the root and reattaches them
+{word:/[.]/}=punct <punct=bad {}=parent << {$}=root : {}=parent << {}=root
+removeNamedEdge -edge bad
+addEdge -gov root -dep punct -reln punct
