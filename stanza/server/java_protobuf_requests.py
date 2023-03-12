@@ -136,6 +136,10 @@ def add_token(token_list, word, token):
             query_token.conllUFeatures.value.append(value)
     if token.ner is not None:
         query_token.ner = token.ner
+    if len(token.id) > 1:
+        query_token.mwtText = token.text
+        query_token.isMWT = True
+        query_token.isFirstMWT = token.id[0] == word.id
     if token.id[-1] != word.id:
         # if we are not the last word of an MWT token
         # we are absolutely not followed by space

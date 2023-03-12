@@ -128,3 +128,45 @@ def test_ssurgeon_become_mwt():
 
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, BECOME_MWT_DOC_EXPECTED)
+
+EXISTING_MWT_DOC_INPUT = """
+# sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005
+# text = One of “NCRC4ME’s”
+1	One	one	NUM	CD	NumType=Card	0	root	0:root	_
+2	of	of	ADP	IN	_	4	case	8:case	_
+3	“	"	PUNCT	``	_	4	punct	4:punct	SpaceAfter=No
+4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
+4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	8:compound	_
+5	’s	's	PART	POS	_	4	case	4:case	_
+6	”	"	PUNCT	''	_	4	punct	4:punct	_
+"""
+
+# TODO: word 4 should not have SpaceAfter=No, but that needs to be fixed in ssurgeon.py first
+# TODO: also, we shouldn't lose the enhanced dependencies...
+EXISTING_MWT_DOC_EXPECTED = """
+# sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005
+# text = One of “NCRC4ME’s”
+1	One	one	NUM	CD	NumType=Card	0	root	_	_
+2	of	of	ADP	IN	_	4	case	_	_
+3	“	"	PUNCT	``	_	4	punct	_	SpaceAfter=No
+4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
+4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	_	SpaceAfter=No
+5	’s	's	PART	POS	_	4	case	_	SpaceAfter=No
+6	”	"	PUNCT	''	_	4	punct	_	_
+"""
+
+def test_ssurgeon_existing_mwt_no_change():
+    """
+    Test that converting a document with an MWT works as expected
+    """
+    semgrex_pattern = "{word:It}=it . {word:/'s/}=s"
+    ssurgeon_edits = ["EditNode -node it -is_mwt true  -is_first_mwt true  -mwt_text It's",
+                      "EditNode -node s  -is_mwt true  -is_first_mwt false -mwt_text It's"]
+
+    doc = CoNLL.conll2doc(input_str=EXISTING_MWT_DOC_INPUT)
+
+    ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+
+    result = "{:C}".format(updated_doc)
+    compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
