@@ -98,86 +98,87 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 def convert_response_to_doc(doc, semgrex_response):
     doc = copy.deepcopy(doc)
     for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
-        if not ssurgeon_result.changed:
-            continue
+        # EditNode is currently bugged... :/
+        # TODO: change this after next CoreNLP release (after 4.5.3)
+        #if not ssurgeon_result.changed:
+        #    continue
 
         ssurgeon_graph = ssurgeon_result.graph
-        if len(ssurgeon_graph.token) == len(sentence.words) and all(x.word == y.text for x, y in zip(ssurgeon_graph.token, sentence.words)):
-            # Word texts are unchanged.  Need to copy various attributes, plus the dependency links
-            # TODO: pass back & forth the MWT.  the UD_English-Pronouns dataset can use that!
-            #   for example, each usage of 's should attach to the previous
-            #   possessive - dealer's
-            #   it's
-            #   isn't
-            #   aint (no break)
-            #   to be: car's
-            #   'll as in hers'll, his'll, etc
-            for graph_word, sentence_word in zip(ssurgeon_graph.token, sentence.words):
-                sentence_word.lemma = graph_word.lemma
-                sentence_word.upos = graph_word.coarseTag
-                sentence_word.xpos = graph_word.pos
-                sentence_word.head = None
-                sentence_word.deprel = None
-                sentence_word.deps = None
-                sentence_word.feats = features_to_string(graph_word.conllUFeatures)
-            for root in ssurgeon_graph.root:
-                sentence.words[root-1].head = 0
-                sentence.words[root-1].deprel = "root"
-            for edge in ssurgeon_graph.edge:
-                # can't do anything about the extra dependencies for now
-                # TODO: put them all in .deps
-                if edge.isExtra:
-                    continue
-                sentence.words[edge.target-1].head = edge.source
-                sentence.words[edge.target-1].deprel = edge.dep
-        else:
-            # TODO: this will lose all the MWT
-            #   There is probably a way to convey that to Ssurgeon and back
-            # TODO: make that happen for the Pronouns dataset!
-            tokens = []
-            for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
-                if graph_node.copyAnnotation:
-                    continue
-                word_entry = {
-                    ID: graph_node.index,
-                    TEXT: graph_word.word,
-                    LEMMA: graph_word.lemma,
-                    UPOS: graph_word.coarseTag,
-                    XPOS: graph_word.pos,
-                    FEATS: features_to_string(graph_word.conllUFeatures),
-                    DEPS: None,
-                    NER: graph_word.ner,
-                    START_CHAR: None,   # TODO: fix this?  one problem is the text positions
-                    END_CHAR: None,     #   might change across all of the sentences
-                }
-                if not graph_word.after:
-                    word_entry[MISC] = "SpaceAfter=No"
-                tokens.append(word_entry)
-            tokens.sort(key=lambda x: x[ID])
-            for root in ssurgeon_graph.root:
-                tokens[root-1][HEAD] = 0
-                tokens[root-1][DEPREL] = "root"
-            for edge in ssurgeon_graph.edge:
-                # can't do anything about the extra dependencies for now
-                # TODO: put them all in .deps
-                if edge.isExtra:
-                    continue
-                tokens[edge.target-1][HEAD] = edge.source
-                tokens[edge.target-1][DEPREL] = edge.dep
-            old_comments = list(sentence.comments)
-            sentence = Sentence(tokens, doc)
+        # TODO: pass the mwt to the dataset
+        # TODO: make a script that converts the Pronouns dataset to MWT!
+        tokens = []
+        for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
+            if graph_node.copyAnnotation:
+                continue
+            word_entry = {
+                ID: graph_node.index,
+                TEXT: graph_word.word,
+                LEMMA: graph_word.lemma,
+                UPOS: graph_word.coarseTag,
+                XPOS: graph_word.pos,
+                FEATS: features_to_string(graph_word.conllUFeatures),
+                DEPS: None,
+                NER: graph_word.ner if graph_word.ner else None,
+                MISC: None,
+                START_CHAR: None,   # TODO: fix this?  one problem is the text positions
+                END_CHAR: None,     #   might change across all of the sentences
+                # presumably python will complain if this conflicts
+                # with one of the constants above
+                "is_mwt": graph_word.isMWT,
+                "is_first_mwt": graph_word.isFirstMWT,
+                "mwt_text": graph_word.mwtText,
+            }
+            if not graph_word.after:
+                word_entry[MISC] = "SpaceAfter=No"
+            tokens.append(word_entry)
+        tokens.sort(key=lambda x: x[ID])
+        for root in ssurgeon_graph.root:
+            tokens[root-1][HEAD] = 0
+            tokens[root-1][DEPREL] = "root"
+        for edge in ssurgeon_graph.edge:
+            # can't do anything about the extra dependencies for now
+            # TODO: put them all in .deps
+            if edge.isExtra:
+                continue
+            tokens[edge.target-1][HEAD] = edge.source
+            tokens[edge.target-1][DEPREL] = edge.dep
 
-            word_text = [word.text if (word_idx == len(sentence.words) - 1 or (word.misc and "SpaceAfter=No" in word.misc)) else word.text + " "
-                         for word_idx, word in enumerate(sentence.words)]
-            sentence_text = "".join(word_text)
+        # for any MWT, produce a token_entry which represents the word range
+        mwt_tokens = []
+        for word_start_idx, word in enumerate(tokens):
+            if not word["is_first_mwt"]:
+                mwt_tokens.append(word)
+                continue
+            word_end_idx = word_start_idx + 1
+            while word_end_idx < len(tokens) and tokens[word_end_idx]["is_mwt"] and not tokens[word_end_idx]["is_first_mwt"]:
+                word_end_idx += 1
+            mwt_token_entry = {
+                # the tokens don't fencepost the way lists do
+                ID: (tokens[word_start_idx][ID], tokens[word_end_idx-1][ID]),
+                TEXT: word["mwt_text"],
+                NER: word[NER],
+                # use the SpaceAfter=No (or not) from the last word in the token
+                MISC: tokens[word_end_idx-1][MISC],
+            }
+            mwt_tokens.append(mwt_token_entry)
+            mwt_tokens.append(word)
 
-            for comment in old_comments:
-                if comment.startswith("# text"):
-                    sentence.add_comment("# text = " + sentence_text)
-                else:
-                    sentence.add_comment(comment)
-            
-            doc.sentences[sent_idx] = sentence
+        old_comments = list(sentence.comments)
+        sentence = Sentence(mwt_tokens, doc)
+
+        # TODO: look at word.parent to see if it is part of an MWT
+        # once that's done, the beginning words of an MWT do not need SpaceAfter=No any more (it is implied)
+        word_text = [word.text if (word_idx == len(sentence.words) - 1 or (word.misc and "SpaceAfter=No" in word.misc)) else word.text + " "
+                     for word_idx, word in enumerate(sentence.words)]
+        sentence_text = "".join(word_text)
+
+        for comment in old_comments:
+            if comment.startswith("# text"):
+                sentence.add_comment("# text = " + sentence_text)
+            else:
+                sentence.add_comment(comment)
+
+        doc.sentences[sent_idx] = sentence
 
         sentence.rebuild_dependencies()
     return doc

@@ -89,3 +89,42 @@ def test_ssurgeon_different_length():
     #print(ADD_WORD_DOC_EXPECTED)
 
     compare_ignoring_whitespace(result, ADD_WORD_DOC_EXPECTED)
+
+BECOME_MWT_DOC_INPUT = """
+# sent_id = 25
+# text = It's not yours!
+# comment = negation 
+1	It	it	PRON	PRP	Number=Sing|Person=2|PronType=Prs	4	nsubj	_	SpaceAfter=No
+2	's	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
+3	not	not	PART	RB	Polarity=Neg	4	advmod	_	_
+4	yours	yours	PRON	PRP	Gender=Neut|Number=Sing|Person=2|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+5	!	!	PUNCT	.	_	4	punct	_	_
+"""
+
+BECOME_MWT_DOC_EXPECTED = """
+# sent_id = 25
+# text = It's not yours!
+# comment = negation
+1-2	It's	_	_	_	_	_	_	_	_
+1	It	it	PRON	PRP	Number=Sing|Person=2|PronType=Prs	4	nsubj	_	SpaceAfter=No
+2	's	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
+3	not	not	PART	RB	Polarity=Neg	4	advmod	_	_
+4	yours	yours	PRON	PRP	Gender=Neut|Number=Sing|Person=2|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+5	!	!	PUNCT	.	_	4	punct	_	_
+"""
+
+def test_ssurgeon_become_mwt():
+    """
+    Test that converting a document, adding a new MWT, works as expected
+    """
+    semgrex_pattern = "{word:It}=it . {word:/'s/}=s"
+    ssurgeon_edits = ["EditNode -node it -is_mwt true  -is_first_mwt true  -mwt_text It's",
+                      "EditNode -node s  -is_mwt true  -is_first_mwt false -mwt_text It's"]
+
+    doc = CoNLL.conll2doc(input_str=BECOME_MWT_DOC_INPUT)
+
+    ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+
+    result = "{:C}".format(updated_doc)
+    compare_ignoring_whitespace(result, BECOME_MWT_DOC_EXPECTED)
