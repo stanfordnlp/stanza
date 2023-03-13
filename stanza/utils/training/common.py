@@ -104,6 +104,21 @@ BERT = {
     # test: 2022-03-04 INFO: fi_turku 91.36
     "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
+    # Indonesian POS experiments: dev set of GSD
+    # python3 stanza/utils/training/run_pos.py id_gsd
+    # 89.95
+    # flax-community/indonesian-roberta-large
+    # 89.78   (!)
+    # flax-community/indonesian-roberta-base
+    # 90.14
+    # indolem/indobert-base-uncased
+    # 90.21
+    # cahya/bert-base-indonesian-1.5G
+    # 90.32
+    # cahya/roberta-base-indonesian-1.5G
+    # 90.40
+    "id": "cahya/roberta-base-indonesian-1.5G",
+
     # from https://github.com/idb-ita/GilBERTo
     # annoyingly, it doesn't handle cased text
     # supposedly there is an argument "do_lower_case"
