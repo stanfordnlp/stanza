@@ -140,6 +140,7 @@ default_ners = {
     "fi": "turku",
     "fr": "wikiner",
     "hu": "combined",
+    "hy": "armtdp",
     "it": "fbk",
     "ja": "gsd",
     "kk": "kazNERD",
