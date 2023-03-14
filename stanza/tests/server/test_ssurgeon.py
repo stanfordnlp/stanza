@@ -157,6 +157,14 @@ EXISTING_MWT_DOC_EXPECTED = """
 def test_ssurgeon_existing_mwt_no_change():
     """
     Test that converting a document with an MWT works as expected
+
+    Note regarding this test:
+    Currently it works because ssurgeon.py doesn't look at the
+      "changed" flag because of a bug in EditNode in CoreNLP 4.5.3
+    If that is fixed, but the enhanced dependencies aren't fixed,
+      this test will fail because the enhanced dependencies *aren't*
+      removed.  Fixing the enhanced dependencies as well will fix
+      that, though.
     """
     semgrex_pattern = "{word:It}=it . {word:/'s/}=s"
     ssurgeon_edits = ["EditNode -node it -is_mwt true  -is_first_mwt true  -mwt_text It's",
