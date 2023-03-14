@@ -8,7 +8,7 @@ import tempfile
 
 import stanza
 from stanza.resources import common
-from stanza.tests import TEST_WORKING_DIR
+from stanza.tests import TEST_MODELS_DIR, TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
@@ -105,3 +105,28 @@ def test_process_pipeline_parameters():
         assert processors == {"tokenize": "ewt", "pos": "ewt"}
         assert package == None
 
+def test_language_resources():
+    resources = common.load_resources_json(TEST_MODELS_DIR)
+
+    # check that an unknown language comes back as None
+    bad_lang = 'z'
+    while bad_lang in resources and len(bad_lang) < 100:
+        bad_lang = bad_lang + 'z'
+    assert bad_lang not in resources
+    assert common.get_language_resources(resources, bad_lang) == None
+
+    # check the parameters of the test make sense
+    # there should be 'zh' which is an alias of 'zh-hans'
+    assert "zh" in resources
+    assert "alias" in resources["zh"]
+    assert resources["zh"]["alias"] == "zh-hans"
+
+    # check that getting the resources for either 'zh' or 'zh-hans'
+    # return the simplified Chinese resources
+    zh_resources = common.get_language_resources(resources, "zh")
+    assert "tokenize" in zh_resources
+    assert "alias" not in zh_resources
+    assert "Chinese" in zh_resources["lang_name"]
+
+    zh_hans_resources = common.get_language_resources(resources, "zh-hans")
+    assert zh_resources == zh_hans_resources

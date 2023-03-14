@@ -458,6 +458,19 @@ def load_resources_json(model_dir=DEFAULT_MODEL_DIR):
         resources = json.load(fin)
     return resources
 
+def get_language_resources(resources, lang):
+    """
+    Get the resources for a lang from an already loaded resources json, following 'alias' if needed
+    """
+    if lang not in resources:
+        return None
+
+    lang_resources = resources[lang]
+    while 'alias' in lang_resources:
+        lang = lang_resources['alias']
+        lang_resources = resources[lang]
+
+    return lang_resources
 
 def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
                              resources_url=DEFAULT_RESOURCES_URL,
