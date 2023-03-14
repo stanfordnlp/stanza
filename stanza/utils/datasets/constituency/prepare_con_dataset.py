@@ -3,6 +3,21 @@
 The operation of this script depends heavily on the dataset in question.
 The common result is that the data files go to data/constituency and are in PTB format.
 
+da_arboretum
+  Ekhard Bick
+    Arboretum, a Hybrid Treebank for Danish
+    https://www.researchgate.net/publication/251202293_Arboretum_a_Hybrid_Treebank_for_Danish
+  Available here for a license fee:
+    http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/
+  Internal to Stanford, please contact Chris Manning and/or John Bauer
+  The file processed is the tiger xml, although there are some edits
+    needed in order to make it functional for our parser
+  The treebank comes as a tar.gz file, W0084.tar.gz
+  untar this file in $CONSTITUENCY_BASE/danish
+  then move the extracted folder to "arboretum"
+    $CONSTITUENCY_BASE/danish/W0084/... becomes
+    $CONSTITUENCY_BASE/danish/arboretum/...
+
 it_turin
   A combination of Evalita competition from 2011 and the ParTUT trees
   More information is available in convert_it_turin
@@ -21,50 +36,6 @@ it_vit
       https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.423.5538&rep=rep1&type=pdf
   Available from ELRA:
     http://catalog.elra.info/en-us/repository/browse/ELRA-W0040/
-
-vlsp09 is the 2009 constituency treebank:
-  Nguyen Phuong Thai, Vu Xuan Luong, Nguyen Thi Minh Huyen, Nguyen Van Hiep, Le Hong Phuong
-    Building a Large Syntactically-Annotated Corpus of Vietnamese
-    Proceedings of The Third Linguistic Annotation Workshop
-    In conjunction with ACL-IJCNLP 2009, Suntec City, Singapore, 2009
-  This can be obtained by contacting vlsp.resources@gmail.com
-
-vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
-  there is an official test set as well
-  you may be able to obtain both of these by contacting vlsp.resources@gmail.com
-  NGUYEN Thi Minh Huyen, HA My Linh, VU Xuan Luong, PHAN Thi Hue,
-  LE Van Cuong, NGUYEN Thi Luong, NGO The Quyen
-    VLSP 2022 Challenge: Vietnamese Constituency Parsing
-    to appear in Journal of Computer Science and Cybernetics.
-
-
-da_arboretum
-  Ekhard Bick
-    Arboretum, a Hybrid Treebank for Danish
-    https://www.researchgate.net/publication/251202293_Arboretum_a_Hybrid_Treebank_for_Danish
-  Available here for a license fee:
-    http://catalog.elra.info/en-us/repository/browse/ELRA-W0084/
-  Internal to Stanford, please contact Chris Manning and/or John Bauer
-  The file processed is the tiger xml, although there are some edits
-    needed in order to make it functional for our parser
-  The treebank comes as a tar.gz file, W0084.tar.gz
-  untar this file in $CONSTITUENCY_BASE/danish
-  then move the extracted folder to "arboretum"
-    $CONSTITUENCY_BASE/danish/W0084/... becomes
-    $CONSTITUENCY_BASE/danish/arboretum/...
-
-tr_starlang
-  A dataset in three parts from the Starlang group in Turkey:
-  Neslihan Kara, Büşra Marşan, et al
-    Creating A Syntactically Felicitous Constituency Treebank For Turkish
-    https://ieeexplore.ieee.org/document/9259873
-  git clone the following three repos
-    https://github.com/olcaytaner/TurkishAnnotatedTreeBank-15
-    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-15
-    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
-  Put them in
-    $CONSTITUENCY_BASE/turkish
-  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset tr_starlang
 
 ja_alt
   Asian Language Treebank produced a treebank for Japanese:
@@ -105,6 +76,34 @@ pt_cintil
     so for example, the final result might be
     extern_data/constituency/portuguese/CINTIL/CINTIL-Treebank.xml
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset pt_cintil
+
+tr_starlang
+  A dataset in three parts from the Starlang group in Turkey:
+  Neslihan Kara, Büşra Marşan, et al
+    Creating A Syntactically Felicitous Constituency Treebank For Turkish
+    https://ieeexplore.ieee.org/document/9259873
+  git clone the following three repos
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-15
+    https://github.com/olcaytaner/TurkishAnnotatedTreeBank2-20
+  Put them in
+    $CONSTITUENCY_BASE/turkish
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset tr_starlang
+
+vlsp09 is the 2009 constituency treebank:
+  Nguyen Phuong Thai, Vu Xuan Luong, Nguyen Thi Minh Huyen, Nguyen Van Hiep, Le Hong Phuong
+    Building a Large Syntactically-Annotated Corpus of Vietnamese
+    Proceedings of The Third Linguistic Annotation Workshop
+    In conjunction with ACL-IJCNLP 2009, Suntec City, Singapore, 2009
+  This can be obtained by contacting vlsp.resources@gmail.com
+
+vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
+  there is an official test set as well
+  you may be able to obtain both of these by contacting vlsp.resources@gmail.com
+  NGUYEN Thi Minh Huyen, HA My Linh, VU Xuan Luong, PHAN Thi Hue,
+  LE Van Cuong, NGUYEN Thi Luong, NGO The Quyen
+    VLSP 2022 Challenge: Vietnamese Constituency Parsing
+    to appear in Journal of Computer Science and Cybernetics.
 """
 
 import argparse
