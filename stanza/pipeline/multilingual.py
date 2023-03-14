@@ -5,12 +5,13 @@ Class for running multilingual pipelines
 from collections import OrderedDict
 import copy
 import logging
+from typing import Union
 
 from stanza.models.common.doc import Document
 from stanza.models.common.utils import default_device
 from stanza.pipeline.core import Pipeline, DownloadMethod
 from stanza.pipeline._constants import *
-from stanza.resources.common import DEFAULT_MODEL_DIR
+from stanza.resources.common import DEFAULT_MODEL_DIR, get_language_resources, load_resources_json
 
 logger = logging.getLogger('stanza')
 
@@ -46,6 +47,8 @@ class MultilingualPipeline:
                  restrict: bool = False,
                  device: str = None,
                  download_method: DownloadMethod = DownloadMethod.DOWNLOAD_RESOURCES,
+                 # python 3.6 compatibility - maybe want to update to 3.7 at some point
+                 processors: Union[str, list] = None,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
@@ -56,6 +59,12 @@ class MultilingualPipeline:
         # most recent Pipeline goes to the end, pop the oldest one
         # when we run out of space
         self.pipeline_cache = OrderedDict()
+        if processors is None:
+            self.default_processors = None
+        elif isinstance(processors, str):
+            self.default_processors = [x.strip() for x in processors.split(",")]
+        else:
+            self.default_processors = list(processors)
 
         self.download_method = download_method
         if 'download_method' not in self.lang_id_config:
@@ -87,6 +96,9 @@ class MultilingualPipeline:
         # build language id pipeline
         self.lang_id_pipeline = Pipeline(dir=self.model_dir, lang='multilingual', processors="langid", 
                                          device=self.device, **self.lang_id_config)
+        # load the resources so that we can refer to it later when building a new pipeline
+        # note that it was either downloaded or not based on download_method when building the lang_id_pipeline
+        self.resources = load_resources_json(self.model_dir)
 
     def _update_pipeline_cache(self, lang):
         """
@@ -113,6 +125,14 @@ class MultilingualPipeline:
 
         if 'download_method' not in lang_config:
             lang_config['download_method'] = self.download_method
+
+        if 'processors' not in lang_config:
+            if self.default_processors:
+                lang_resources = get_language_resources(self.resources, lang)
+                lang_processors = [x for x in self.default_processors if x in lang_resources]
+                if lang_processors != self.default_processors:
+                    logger.info("Not all requested processors %s available for %s.  Loading %s instead", self.default_processors, lang, lang_processors)
+                lang_config['processors'] = ",".join(lang_processors)
 
         # update pipeline cache
         if lang not in self.pipeline_cache:
