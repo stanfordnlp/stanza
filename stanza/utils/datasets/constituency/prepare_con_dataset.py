@@ -18,6 +18,18 @@ da_arboretum
     $CONSTITUENCY_BASE/danish/W0084/... becomes
     $CONSTITUENCY_BASE/danish/arboretum/...
 
+id_icon
+  ICON: Building a Large-Scale Benchmark Constituency Treebank
+    for the Indonesian Language
+    Ee Suan Lim, Wei Qi Leong, Ngan Thanh Nguyen, Dea Adhista,
+    Wei Ming Kng, William Chandra Tjhi, Ayu Purwarianti
+    https://aclanthology.org/2023.tlt-1.5.pdf
+  Available at https://github.com/aisingapore/seacorenlp-data
+  git clone the repo in $CONSTITUENCY_BASE/seacorenlp
+  so there is now a directory
+    $CONSTITUENCY_BASE/seacorenlp/seacorenlp-data
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset id_icon
+
 it_turin
   A combination of Evalita competition from 2011 and the ParTUT trees
   More information is available in convert_it_turin
@@ -114,6 +126,8 @@ import tempfile
 
 from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
+from stanza.models.constituency import tree_reader
+from stanza.models.constituency.parse_tree import Tree
 from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
@@ -305,8 +319,27 @@ def process_pt_cintil(paths, dataset_name, *args):
 
     write_dataset(datasets, output_dir, dataset_name)
 
+def process_id_icon(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'id'
+    assert source == 'icon'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "seacorenlp", "seacorenlp-data", "id", "constituency")
+    input_files = [os.path.join(input_dir, x) for x in ("train.txt", "dev.txt", "test.txt")]
+    datasets = []
+    for input_file in input_files:
+        trees = tree_reader.read_tree_file(input_file)
+        trees = [Tree("ROOT", tree) for tree in trees]
+        datasets.append(trees)
+
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    write_dataset(datasets, output_dir, dataset_name)
+
+
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
+
+    'id_icon':      process_id_icon,
 
     'it_turin':     process_it_turin,
     'it_vit':       process_it_vit,
