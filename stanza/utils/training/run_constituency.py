@@ -21,6 +21,7 @@ logger = logging.getLogger('stanza')
 RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
     "es": "upos",   # AnCora has half-finished xpos tags
+    "id": "upos",   # GSD is missing a few punctuation tags
     "it": "upos",
     "vi": "upos",
     "pt": "upos",   # default PT model has no xpos either
