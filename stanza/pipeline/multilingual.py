@@ -36,17 +36,16 @@ class MultilingualPipeline:
       of the .json config or turn off downloading of everything
     """
 
-    def __init__(
-        self,
-        model_dir: str = DEFAULT_MODEL_DIR,
-        lang_id_config: dict = None,
-        lang_configs: dict = None,
-        ld_batch_size: int = 64,
-        max_cache_size: int = 10,
-        use_gpu: bool = None,
-        restrict: bool = False,
-        device: str = None,
-        download_method: DownloadMethod = DownloadMethod.DOWNLOAD_RESOURCES,
+    def __init__(self,
+                 model_dir: str = DEFAULT_MODEL_DIR,
+                 lang_id_config: dict = None,
+                 lang_configs: dict = None,
+                 ld_batch_size: int = 64,
+                 max_cache_size: int = 10,
+                 use_gpu: bool = None,
+                 restrict: bool = False,
+                 device: str = None,
+                 download_method: DownloadMethod = DownloadMethod.DOWNLOAD_RESOURCES,
     ):
         # set up configs and cache for various language pipelines
         self.model_dir = model_dir
