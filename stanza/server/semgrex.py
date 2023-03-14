@@ -32,9 +32,12 @@ launching time.  It is still important not to wastefully serialize the
 same document over and over, though.
 """
 
+import argparse
+
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
 from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext
+from stanza.utils.conll import CoNLL
 
 SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
 
@@ -87,13 +90,21 @@ class Semgrex(JavaProtobufContext):
 
 
 def main():
-    nlp = stanza.Pipeline('en',
-                          processors='tokenize,pos,lemma,depparse')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
+    parser.add_argument('--semgrex', type=str, default="{}=source >obj=zzz {}=target", help="Semgrex to apply to the text.  The default looks for sentences with objects")
+    parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
+    args = parser.parse_args()
 
-    doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him.')
-    #print(doc.sentences[0].dependencies)
-    print(doc)
-    print(process_doc(doc, "{}=source >obj=zzz {}=target"))
+    if args.input_file:
+        doc = CoNLL.conll2doc(input_file=args.input_file)
+    else:
+        nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma,depparse')
+        doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him.')
+
+    if args.print_input:
+        print("{:C}".format(doc))
+    print(process_doc(doc, args.semgrex))
 
 if __name__ == '__main__':
     main()

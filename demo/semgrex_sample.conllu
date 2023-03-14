@@ -1,0 +1,24 @@
+
+# sent_id = reviews-181748-0003
+# text = My experience was awful though.
+1	My	my	PRON	PRP$	Case=Gen|Number=Sing|Person=1|Poss=Yes|PronType=Prs	2	nmod:poss	2:nmod:poss	_
+2	experience	experience	NOUN	NN	Number=Sing	4	nsubj	4:nsubj	_
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	cop	4:cop	_
+4	awful	awful	ADJ	JJ	Degree=Pos	0	root	0:root	_
+5	though	though	ADV	RB	_	4	advmod	4:advmod	SpaceAfter=No
+6	.	.	PUNCT	.	_	4	punct	4:punct	_
+
+
+
+# sent_id = reviews-117115-0005
+# text = The intruders slit the screen of the window.
+1	The	the	DET	DT	Definite=Def|PronType=Art	2	det	2:det	_
+2	intruders	intruder	NOUN	NNS	Number=Plur	3	nsubj	3:nsubj	_
+3	slit	slit	VERB	VBD	Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+4	the	the	DET	DT	Definite=Def|PronType=Art	5	det	5:det	_
+5	screen	screen	NOUN	NN	Number=Sing	3	obj	3:obj	_
+6	of	of	ADP	IN	_	8	case	8:case	_
+7	the	the	DET	DT	Definite=Def|PronType=Art	8	det	8:det	_
+8	window	window	NOUN	NN	Number=Sing	5	nmod	5:nmod:of	SpaceAfter=No
+9	.	.	PUNCT	.	_	3	punct	3:punct	_
+
