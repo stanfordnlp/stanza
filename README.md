@@ -51,6 +51,27 @@ The PyTorch implementation of the neural pipeline in this repository is due to [
 
 If you use the CoreNLP software through Stanza, please cite the CoreNLP software package and the respective modules as described [here](https://stanfordnlp.github.io/CoreNLP/#citing-stanford-corenlp-in-papers) ("Citing Stanford CoreNLP in papers"). The CoreNLP client is mostly written by [Arun Chaganty](http://arun.chagantys.org/), and [Jason Bolton](mailto:jebolton@stanford.edu) spearheaded merging the two projects together.
 
+If you use the Semgrex or Ssurgeon part of CoreNLP, please cite [our GURT paper on Semgrex and Ssurgeon](https://aclanthology.org/2023.tlt-1.7/):
+
+```bibtex
+@inproceedings{bauer-etal-2023-semgrex,
+    title = "Semgrex and Ssurgeon, Searching and Manipulating Dependency Graphs",
+    author = "Bauer, John  and
+      Kiddon, Chlo{\'e}  and
+      Yeh, Eric  and
+      Shan, Alex  and
+      D. Manning, Christopher",
+    booktitle = "Proceedings of the 21st International Workshop on Treebanks and Linguistic Theories (TLT, GURT/SyntaxFest 2023)",
+    month = mar,
+    year = "2023",
+    address = "Washington, D.C.",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.tlt-1.7",
+    pages = "67--73",
+    abstract = "Searching dependency graphs and manipulating them can be a time consuming and challenging task to get right. We document Semgrex, a system for searching dependency graphs, and introduce Ssurgeon, a system for manipulating the output of Semgrex. The compact language used by these systems allows for easy command line or API processing of dependencies. Additionally, integration with publicly released toolkits in Java and Python allows for searching text relations and attributes over natural text.",
+}
+```
+
 ## Issues and Usage Q&A
 
 To ask questions, report issues or request features 🤔, please use the [GitHub Issue Tracker](https://github.com/stanfordnlp/stanza/issues). Before creating a new issue, please make sure to search for existing issues that may solve your problem, or visit the [Frequently Asked Questions (FAQ) page](https://stanfordnlp.github.io/stanza/faq.html) on our website.
