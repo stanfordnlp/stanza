@@ -18,6 +18,27 @@ da_arboretum
     $CONSTITUENCY_BASE/danish/W0084/... becomes
     $CONSTITUENCY_BASE/danish/arboretum/...
 
+en_ptb3-revised is an updated version of PTB with NML and stuff
+  put LDC2015T13 in $CONSTITUENCY_BASE/english
+  the directory name may look like LDC2015T13_eng_news_txt_tbnk-ptb_revised
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset en_ptb3-revised
+
+  All this needs to do is concatenate the various pieces
+
+  @article{ptb_revised,
+    title= {Penn Treebank Revised: English News Text Treebank LDC2015T13},
+    journal= {},
+    author= {Ann Bies and Justin Mott and Colin Warner},
+    year= {2015},
+    url= {https://doi.org/10.35111/xpjy-at91},
+    doi= {10.35111/xpjy-at91},
+    isbn= {1-58563-724-6},
+    dcmi= {text},
+    languages= {english},
+    language= {english},
+    ldc= {LDC2015T13},
+  }
+
 id_icon
   ICON: Building a Large-Scale Benchmark Constituency Treebank
     for the Indonesian Language
@@ -138,28 +159,6 @@ zh_ctb-90 is the 9.0 version of CTB
 
   the splits used are the ones from the file docs/ctb9.0-file-list.txt
     included in the CTB 9.0 release
-
-en_ptb3-revised is an updated version of PTB with NML and stuff
-  put LDC2015T13 in $CONSTITUENCY_BASE/english
-  the directory name may look like LDC2015T13_eng_news_txt_tbnk-ptb_revised
-  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset en_ptb3-revised
-
-  All this needs to do is concatenate the various pieces
-
-  @article{ptb_revised,
-    title= {Penn Treebank Revised: English News Text Treebank LDC2015T13},
-    journal= {},
-    author= {Ann Bies and Justin Mott and Colin Warner},
-    year= {2015},
-    url= {https://doi.org/10.35111/xpjy-at91},
-    doi= {10.35111/xpjy-at91},
-    isbn= {1-58563-724-6},
-    dcmi= {text},
-    languages= {english},
-    language= {english},
-    ldc= {LDC2015T13},
-  }
-
 """
 
 import argparse
