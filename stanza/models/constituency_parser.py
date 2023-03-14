@@ -35,8 +35,8 @@ There are a few minor differences in the model:
   - Initializing the embeddings with smaller values than pytorch default
     For example, on a ja_alt dataset, scores went from 0.8980 to 0.8985
     at 200 iterations averaged over 5 trials
-  - Partitioned transformer layers help quite a bit, but require some
-    finicky training mechanism.  See --multistage
+  - Training with AdaDelta first, then AdamW or madgrad later improves
+    results quite a bit.  See --multistage
 
 A couple experiments which have been tried with little noticeable impact:
   - Combining constituents using the method in the paper (only a trained
