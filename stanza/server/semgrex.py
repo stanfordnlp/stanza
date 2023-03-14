@@ -33,6 +33,7 @@ same document over and over, though.
 """
 
 import argparse
+import copy
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
@@ -88,12 +89,53 @@ class Semgrex(JavaProtobufContext):
         request = build_request(doc, semgrex_patterns)
         return self.process_request(request)
 
+def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only):
+    """
+    Put comments on the sentences which describe the matching semgrex patterns
+    """
+    doc = copy.deepcopy(doc)
+    if isinstance(semgrex_patterns, str):
+        semgrex_patterns = [semgrex_patterns]
+    matching_sentences = []
+    for sentence, graph_result in zip(doc.sentences, semgrex_result.result):
+        sentence_matched = False
+        for semgrex_pattern, pattern_result in zip(semgrex_patterns, graph_result.result):
+            semgrex_pattern = semgrex_pattern.replace("\n", " ")
+            if len(pattern_result.match) == 0:
+                sentence.add_comment("# semgrex pattern |%s| did not match!" % semgrex_pattern)
+            else:
+                sentence_matched = True
+                for match in pattern_result.match:
+                    match_word = "%d:%s" % (match.matchIndex, sentence.words[match.matchIndex-1].text)
+                    if len(match.node) == 0:
+                        node_matches = ""
+                    else:
+                        node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
+                                        for node in match.node]
+                        node_matches = "  " + " ".join(node_matches)
+                    sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (semgrex_pattern, match_word, node_matches))
+        if sentence_matched:
+            matching_sentences.append(sentence)
+    if matches_only:
+        doc.sentences = matching_sentences
+    return doc
+
 
 def main():
+    """
+    Runs a toy example, or can run a given semgrex expression on the given input file.
+
+    For example:
+    python3 -m stanza.server.semgrex --input_file demo/semgrex_sample.conllu
+
+    --matches_only to only print sentences that match the semgrex pattern
+    --no_print_input to not print the input
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
-    parser.add_argument('--semgrex', type=str, default="{}=source >obj=zzz {}=target", help="Semgrex to apply to the text.  The default looks for sentences with objects")
+    parser.add_argument('semgrex', type=str, nargs="*", default=["{}=source >obj=zzz {}=target"], help="Semgrex to apply to the text.  The default looks for sentences with objects")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
+    parser.add_argument('--matches_only', action='store_true', default=False, help="Only print the matching sentences")
     args = parser.parse_args()
 
     if args.input_file:
@@ -104,7 +146,12 @@ def main():
 
     if args.print_input:
         print("{:C}".format(doc))
-    print(process_doc(doc, args.semgrex))
+        print()
+        print("-" * 75)
+        print()
+    semgrex_result = process_doc(doc, *args.semgrex)
+    doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only)
+    print("{:C}".format(doc))
 
 if __name__ == '__main__':
     main()
