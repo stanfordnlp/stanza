@@ -111,19 +111,17 @@ BERT = {
     "hy": "xlm-roberta-base",
 
     # Indonesian POS experiments: dev set of GSD
-    # python3 stanza/utils/training/run_pos.py id_gsd
-    # 89.95
-    # flax-community/indonesian-roberta-large
-    # 89.78   (!)
-    # flax-community/indonesian-roberta-base
-    # 90.14
-    # indolem/indobert-base-uncased
-    # 90.21
-    # cahya/bert-base-indonesian-1.5G
-    # 90.32
-    # cahya/roberta-base-indonesian-1.5G
-    # 90.40
-    "id": "cahya/roberta-base-indonesian-1.5G",
+    # python3 stanza/utils/training/run_pos.py id_gsd --no_bert
+    # python3 stanza/utils/training/run_pos.py id_gsd --bert_model ...
+    # also ran on the ICON constituency dataset
+    #  model                                      POS       CON
+    # no_bert                                    89.95     84.74
+    # flax-community/indonesian-roberta-large    89.78 (!)  xxx
+    # flax-community/indonesian-roberta-base     90.14      xxx
+    # indolem/indobert-base-uncased              90.21     88.60
+    # cahya/bert-base-indonesian-1.5G            90.32     88.15
+    # cahya/roberta-base-indonesian-1.5G         90.40     87.27
+    "id": "indolem/indobert-base-uncased",
 
     # from https://github.com/idb-ita/GilBERTo
     # annoyingly, it doesn't handle cased text
