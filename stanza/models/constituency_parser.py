@@ -173,12 +173,104 @@ def parse_args(args=None):
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+
     # BERT helps a lot and actually doesn't slow things down too much
     # for VI, for example, use vinai/phobert-base
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
     parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
+
+    # BERT finetuning (or any transformer finetuning)
+    # also helps quite a lot.
+    # Experimentally, finetuning all of the layers is the most effective
+    # On the id_icon dataset with the indolem transformer
+    # In this experiment, we trained for 150 iterations with AdaDelta,
+    # with the learning rate 0.01,
+    # then trained for another 150 with madgrad and no finetuning
+    #   1 layer        0.880753  (152)
+    #   2 layers       0.880453  (174)
+    #   3 layers       0.881774  (163)
+    #   4 layers       0.886915  (194)
+    #   5 layers       0.892064  (299)
+    #   6 layers       0.891825  (224)
+    #   7 layers       0.894373  (173)
+    #   8 layers       0.894505  (233)
+    #   9 layers       0.896676  (269)
+    #  10 layers       0.897525  (269)
+    #  11 layers       0.897348  (211)
+    #  12 layers       0.898729  (270)
+    #  everything      0.898855  (252)
+    # so the trend is clear that more finetuning is better
+    #
+    # We found that finetuning works very well on the AdaDelta portion
+    # of a multistage training, but less well on a madgrad second
+    # stage.  The issue was that we literally could not set the
+    # learning rate low enough because madgrad used epsilon in the LR:
+    #  https://github.com/facebookresearch/madgrad/issues/16
+    #
+    # Possible values of the AdaDelta learning rate on the id_icon dataset
+    # In this experiment, we finetuned the entire transformer 150
+    # iterations on AdaDelta, then trained with madgrad for another
+    # 150 with no finetuning
+    #   0.0005:    0.89122   (155)
+    #   0.001:     0.889807  (241)
+    #   0.002:     0.894874  (202)
+    #   0.005:     0.896327  (270)
+    #   0.006:     0.898989  (246)
+    #   0.007:     0.896712  (167)
+    #   0.008:     0.900136  (237)
+    #   0.009:     0.898597  (169)
+    #   0.01:      0.898665  (251)
+    #   0.012:     0.89661   (274)
+    #   0.014:     0.899149  (283)
+    #   0.016:     0.896314  (230)
+    #   0.018:     0.897753  (257)
+    #   0.02:      0.893665  (256)
+    #   0.05:      0.849274  (159)
+    #   0.1:       0.850633  (183)
+    #   0.2:       0.847332  (176)
+    #
+    # The peak is somewhere around 0.008 to 0.014, with the further
+    # observation that at the 150 iteration mark, 0.09 was winning:
+    #   0.007:     0.894589  (33)
+    #   0.008:     0.894777  (53)
+    #   0.009:     0.896466  (56)
+    #   0.01:      0.895557  (71)
+    #   0.012:     0.893479  (45)
+    #   0.014:     0.89468  (116)
+    #   0.016:     0.893053 (128)
+    #   0.018:     0.893086  (48)
+    #
+    # Another option is to train for a few iterations with no
+    # finetuning, then begin finetuning.  However, that was not
+    # beneficial at all.
+    # Start iteration on id_icon, same setup as above:
+    #   1:         0.898855  (252)
+    #   5:         0.897885  (217)
+    #   10:        0.895367  (215)
+    #   25:        0.896781  (193)
+    #   50:        0.895216  (193)
+    # Using adamw instead of madgrad:
+    #   1:         0.900594  (226)
+    #   5:         0.898153  (267)
+    #   10:        0.898756  (271)
+    #   25:        0.896867  (256)
+    #   50:        0.895025  (220)
+    # TODO: there is a possible benefit to using AdamW here
+    # TODO: also, experiment with various settings with the second half learning rate.
+    # TODO: once we have a better idea of the best settings to use,
+    #   make --bert_finetune set those defaults
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
+    parser.add_argument('--bert_finetune_begin_epoch', default=None, type=int, help='Which epoch to start finetuning the transformer')
+    parser.add_argument('--bert_finetune_end_epoch', default=None, type=int, help='Which epoch to stop finetuning the transformer')
+    parser.add_argument('--bert_learning_rate', default=0.009, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--stage1_bert_learning_rate', default=None, type=float, help="Scale the learning rate for transformer finetuning by this much only during an AdaDelta warmup")
+    parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
+    parser.add_argument('--stage1_bert_finetune', default=None, action='store_true', help="Finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
+    parser.add_argument('--no_stage1_bert_finetune', dest='stage1_bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
@@ -531,6 +623,9 @@ def parse_args(args=None):
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
 
+    if args.stage1_bert_learning_rate is None:
+        args.stage1_bert_learning_rate = args.bert_learning_rate
+
     if args.optim is None and args.mode == 'train':
         if not args.multistage:
             # this seemed to work the best when not doing multistage
@@ -558,6 +653,8 @@ def parse_args(args=None):
 
         if args.stage1_learning_rate is None:
             args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+        if args.stage1_bert_finetune is None:
+            args.stage1_bert_finetune = args.bert_finetune
 
     if args.reduce_position is None:
         args.reduce_position = args.hidden_size // 4

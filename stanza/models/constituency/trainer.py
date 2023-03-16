@@ -98,12 +98,26 @@ class Trainer:
         update_args.pop("transition_scheme", None)
         update_args.pop("transition_stack", None)
         update_args.pop("maxout_k", None)
+        # we don't pop bert_finetune, with the theory being that if
+        # the saved model has bert_finetune==True we can load the bert
+        # weights but then not further finetune if bert_finetune==False
         saved_args.update(update_args)
+
+        # TODO: not needed if we rebuild the models
+        if saved_args.get("bert_finetune", None) is None:
+            saved_args["bert_finetune"] = False
+        if saved_args.get("stage1_bert_finetune", None) is None:
+            saved_args["stage1_bert_finetune"] = False
 
         model_type = params['model_type']
         if model_type == 'LSTM':
             pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
-            bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
+            if saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
+                # if bert_finetune is True, don't use the cached model!
+                # otherwise, other uses of the cached model will be ruined
+                bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None))
+            else:
+                bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
             forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
             backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
             model = LSTMModel(pretrain=pt,
@@ -445,6 +459,9 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
     forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
     backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
+    # TODO: technically, if we are training Bert, we should be loading Bert separately.
+    # Otherwise, this will be a huge mess if someone tries to use the previous
+    # Bert model later on for any reason
     bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
 
     trainer = None
@@ -632,6 +649,35 @@ def next_epoch_data(leftover_training_data, train_data, epoch_size):
 
     return leftover_training_data, epoch_data
 
+def update_bert_learning_rate(args, optimizer, epochs_trained):
+    """
+    Update the learning rate for the bert finetuning, if applicable
+    """
+    # would be nice to have a parameter group specific scheduler
+    # however, there is an issue with the optimizer we had the most success with, madgrad
+    # when the learning rate is 0 for a group, it still learns by some
+    # small amount because of the eps parameter
+    # in fact, that is enough to make the learning for the bert in the
+    # second half broken
+    for base_param_group in optimizer.param_groups:
+        if base_param_group['param_group_name'] == 'base':
+            break
+    else:
+        raise AssertionError("There should always be a base parameter group")
+    for param_group in optimizer.param_groups:
+        if param_group['param_group_name'] == 'bert':
+            old_lr = param_group['lr']
+            if args['bert_finetune_begin_epoch'] is not None and epochs_trained < args['bert_finetune_begin_epoch']:
+                param_group['lr'] = 0.0
+            elif args['bert_finetune_end_epoch'] is not None and epochs_trained >= args['bert_finetune_end_epoch']:
+                param_group['lr'] = 0.0
+            elif args['multistage'] and epochs_trained < args['epochs'] // 2:
+                param_group['lr'] = base_param_group['lr'] * args['stage1_bert_learning_rate']
+            else:
+                param_group['lr'] = base_param_group['lr'] * args['bert_learning_rate']
+            if param_group['lr'] != old_lr:
+                logger.info("Setting %s finetuning rate from %f to %f", param_group['param_group_name'], old_lr, param_group['lr'])
+
 def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_filename, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
@@ -702,6 +748,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
         logger.info("Starting epoch %d", trainer.epochs_trained)
+        update_bert_learning_rate(args, trainer.optimizer, trainer.epochs_trained)
+
         if args['log_norms']:
             model.log_norms()
         leftover_training_data, epoch_data = next_epoch_data(leftover_training_data, train_data, args['epoch_size'])
