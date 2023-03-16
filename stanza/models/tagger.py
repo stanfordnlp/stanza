@@ -341,8 +341,7 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        logger.info("Tagger score:")
-        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
 
 if __name__ == '__main__':
     main()
