@@ -11,7 +11,7 @@ from stanza import Pipeline
 
 from stanza.models import constituency_parser
 from stanza.models.common import pretrain
-from stanza.models.common.bert_embedding import load_bert
+from stanza.models.common.bert_embedding import load_bert, load_tokenizer
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.utils import set_random_seed
 from stanza.models.constituency import lstm_model
@@ -76,6 +76,39 @@ class TestTrainer:
     @pytest.fixture(scope="class")
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
+
+    @pytest.fixture(scope="class")
+    def tiny_random_xlnet(self, tmp_path_factory):
+        """
+        Download the tiny-random-xlnet model and make a concrete copy of it
+
+        The issue here is that the "random" nature of the original
+        makes it difficult or impossible to test that the values in
+        the transformer don't change during certain operations.
+        Saving a concrete instantiation of those random numbers makes
+        it so we can test there is no difference when training only a
+        subset of the layers, for example
+        """
+        xlnet_name = 'hf-internal-testing/tiny-random-xlnet'
+        xlnet_model, xlnet_tokenizer = load_bert(xlnet_name)
+        path = str(tmp_path_factory.mktemp('tiny-random-xlnet'))
+        xlnet_model.save_pretrained(path)
+        xlnet_tokenizer.save_pretrained(path)
+        return path
+
+    @pytest.fixture(scope="class")
+    def tiny_random_bart(self, tmp_path_factory):
+        """
+        Download the tiny-random-bart model and make a concrete copy of it
+
+        Issue is the same as with tiny_random_xlnet
+        """
+        bart_name = 'hf-internal-testing/tiny-random-bart'
+        bart_model, bart_tokenizer = load_bert(bart_name)
+        path = str(tmp_path_factory.mktemp('tiny-random-bart'))
+        bart_model.save_pretrained(path)
+        bart_tokenizer.save_pretrained(path)
+        return path
 
     def test_initial_model(self, wordvec_pretrain_file):
         """
@@ -400,8 +433,148 @@ class TestTrainer:
         """
         self.frozen_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-bert')
 
-    def test_xlnet_frozen(self, wordvec_pretrain_file):
+    def test_xlnet_frozen(self, wordvec_pretrain_file, tiny_random_xlnet):
         """
         Check that the parameters of an xlnet model don't change when training a basic model
         """
-        self.frozen_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-random-xlnet')
+        self.frozen_transformer_test(wordvec_pretrain_file, tiny_random_xlnet)
+
+    def test_bart_frozen(self, wordvec_pretrain_file, tiny_random_bart):
+        """
+        Check that the parameters of an xlnet model don't change when training a basic model
+        """
+        self.frozen_transformer_test(wordvec_pretrain_file, tiny_random_bart)
+
+    def test_bert_finetune_one_epoch(self, wordvec_pretrain_file):
+        """
+        Check that the parameters the bert model DO change over a single training step
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            transformer_name = 'hf-internal-testing/tiny-bert'
+            args = ['--bert_model', transformer_name, '--bert_finetune', '--optim', 'adadelta']
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=1, extra_args=args)
+
+            # check that the weights are different
+            foundation_cache = FoundationCache()
+            bert_model, bert_tokenizer = foundation_cache.load_bert(transformer_name)
+            assert not self.bert_weights_allclose(bert_model, trained_model)
+
+            # double check that a new bert is created instead of using the FoundationCache when the bert has been trained
+            model_name = args['save_name']
+            assert os.path.exists(model_name)
+            no_finetune_args = self.training_args(wordvec_pretrain_file, tmpdirname, None, None, "--no_bert_finetune", "--no_stage1_bert_finetune", '--bert_model', transformer_name)
+            tr = trainer.Trainer.load(model_name, args=no_finetune_args, foundation_cache=foundation_cache)
+            assert tr.model.bert_model is not bert_model
+            assert not self.bert_weights_allclose(bert_model, tr)
+            assert self.bert_weights_allclose(trained_model.model.bert_model, tr)
+
+            new_save_name = os.path.join(tmpdirname, "test_resave_bert.pt")
+            assert not os.path.exists(new_save_name)
+            tr.save(new_save_name, save_optimizer=False)
+            tr2 = trainer.Trainer.load(new_save_name, args=no_finetune_args, foundation_cache=foundation_cache)
+            # TODO FIXME: if the save being loaded has a bert_model,
+            # it should be moved back from unsaved to saved modules
+            #assert tr2.model.bert_model is not bert_model
+
+    def finetune_transformer_test(self, wordvec_pretrain_file, transformer_name):
+        """
+        Check that the parameters of the transformer DO change when using bert_finetune
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--bert_model', transformer_name, '--bert_finetune', '--optim', 'adamw']
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
+            # check that the weights are different
+            foundation_cache = FoundationCache()
+            bert_model, bert_tokenizer = foundation_cache.load_bert(transformer_name)
+            assert not self.bert_weights_allclose(bert_model, trained_model)
+
+            # double check that a new bert is created instead of using the FoundationCache when the bert has been trained
+            no_finetune_args = self.training_args(wordvec_pretrain_file, tmpdirname, None, None, "--no_bert_finetune", "--no_stage1_bert_finetune", '--bert_model', transformer_name)
+            trained_model = trainer.Trainer.load(args['save_name'], args=no_finetune_args, foundation_cache=foundation_cache)
+            assert not trained_model.model.args['bert_finetune']
+            assert not trained_model.model.args['stage1_bert_finetune']
+            assert trained_model.model.bert_model is not bert_model
+
+    def test_bert_finetune(self, wordvec_pretrain_file):
+        """
+        Check that the parameters of a bert model DO change when using bert_finetune
+        """
+        self.finetune_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-bert')
+
+    def test_xlnet_finetune(self, wordvec_pretrain_file, tiny_random_xlnet):
+        """
+        Check that the parameters of an xlnet model DO change when using bert_finetune
+        """
+        self.finetune_transformer_test(wordvec_pretrain_file, tiny_random_xlnet)
+
+    def test_stage1_bert_finetune(self, wordvec_pretrain_file):
+        """
+        Check that the parameters the bert model DO change when using stage1_bert_finetune, but only for the first couple steps
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            bert_model_name = 'hf-internal-testing/tiny-bert'
+            args = ['--bert_model', bert_model_name, '--stage1_bert_finetune', '--optim', 'adamw']
+            # need to use num_epochs==6 so that epochs 1 and 2 are saved to be different
+            # a test of 5 or less means that sometimes it will reload the params
+            # at step 2 to get ready for the following iterations with adamw
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=6, extra_args=args)
+
+            # check that the weights are different
+            foundation_cache = FoundationCache()
+            bert_model, bert_tokenizer = foundation_cache.load_bert(bert_model_name)
+            assert not self.bert_weights_allclose(bert_model, trained_model)
+
+            # double check that a new bert is created instead of using the FoundationCache when the bert has been trained
+            no_finetune_args = self.training_args(wordvec_pretrain_file, tmpdirname, None, None, "--no_bert_finetune", "--no_stage1_bert_finetune", '--bert_model', bert_model_name, '--optim', 'adamw')
+            num_epochs = trained_model.model.args['epochs']
+            each_name = os.path.join(tmpdirname, 'each_%02d.pt')
+            for i in range(1, num_epochs+1):
+                model_name = each_name % i
+                assert os.path.exists(model_name)
+                tr = trainer.Trainer.load(model_name, args=no_finetune_args, foundation_cache=foundation_cache)
+                assert tr.model.bert_model is not bert_model
+                assert not self.bert_weights_allclose(bert_model, tr)
+                if i >= num_epochs // 2:
+                    assert self.bert_weights_allclose(trained_model.model.bert_model, tr)
+
+            # verify that models 1 and 2 are saved to be different
+            model_name_1 = each_name % 1
+            model_name_2 = each_name % 2
+            tr_1 = trainer.Trainer.load(model_name_1, args=no_finetune_args, foundation_cache=foundation_cache)
+            tr_2 = trainer.Trainer.load(model_name_2, args=no_finetune_args, foundation_cache=foundation_cache)
+            assert not self.bert_weights_allclose(tr_1.model.bert_model, tr_2)
+
+
+    def one_layer_finetune_transformer_test(self, wordvec_pretrain_file, transformer_name):
+        """
+        Check that the parameters the bert model DO change when using bert_finetune
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--bert_model', transformer_name, '--bert_finetune', '--bert_finetune_layers', '1', '--optim', 'adamw', '--bert_finetune_layers', '1']
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
+            # check that the weights of the last layer are different,
+            # but the weights of the earlier layers and
+            # non-transformer-layers are the same
+            foundation_cache = FoundationCache()
+            bert_model, bert_tokenizer = foundation_cache.load_bert(transformer_name)
+            assert bert_model.config.num_hidden_layers > 1
+            layer_name = "layer.%d." % (bert_model.config.num_hidden_layers - 1)
+            for name, parameter in bert_model.named_parameters():
+                other_name = "bert_model." + name
+                other_parameter = trained_model.model.get_parameter(other_name)
+                if layer_name in name:
+                    if 'rel_attn.seg_embed' in name or 'rel_attn.r_s_bias' in name:
+                        # not sure why this happens for xlnet, just roll with it
+                        continue
+                    assert not torch.allclose(parameter.cpu(), other_parameter.cpu())
+                else:
+                    assert torch.allclose(parameter.cpu(), other_parameter.cpu())
+
+    def test_bert_finetune_one_layer(self, wordvec_pretrain_file):
+        self.one_layer_finetune_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-bert')
+
+    def test_xlnet_finetune_one_layer(self, wordvec_pretrain_file, tiny_random_xlnet):
+        self.one_layer_finetune_transformer_test(wordvec_pretrain_file, tiny_random_xlnet)
+

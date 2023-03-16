@@ -351,7 +351,10 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
-        self.add_unsaved_module('bert_model', bert_model)
+        if self.args['bert_finetune'] or self.args['stage1_bert_finetune']:
+            self.bert_model = bert_model
+        else:
+            self.add_unsaved_module('bert_model', bert_model)
         self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -740,7 +743,8 @@ class LSTMModel(BaseModel, nn.Module):
             # we will take 1:-1 if we don't care about the endpoints
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
-                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'])
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else
