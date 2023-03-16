@@ -182,7 +182,7 @@ def train(args):
                 args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
 
     # load data
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+    logger.info("Loading training data with batch size %d from %s", args['batch_size'], args['train_file'])
     with open(args['train_file']) as fin:
         train_doc = Document(json.load(fin))
     logger.info("Loaded %d sentences of training data", len(train_doc.sentences))
@@ -190,6 +190,7 @@ def train(args):
         raise ValueError("File %s exists but has no usable training data" % args['train_file'])
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     vocab = train_batch.vocab
+    logger.info("Loading dev data from %s", args['eval_file'])
     with open(args['eval_file']) as fin:
         dev_doc = Document(json.load(fin))
     logger.info("Loaded %d sentences of dev data", len(dev_doc.sentences))
