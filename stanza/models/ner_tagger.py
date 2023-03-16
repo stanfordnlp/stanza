@@ -183,13 +183,15 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_doc = Document(json.load(open(args['train_file'])))
+    with open(args['train_file']) as fin:
+        train_doc = Document(json.load(fin))
     logger.info("Loaded %d sentences of training data", len(train_doc.sentences))
     if len(train_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable training data" % args['train_file'])
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     vocab = train_batch.vocab
-    dev_doc = Document(json.load(open(args['eval_file'])))
+    with open(args['eval_file']) as fin:
+        dev_doc = Document(json.load(fin))
     logger.info("Loaded %d sentences of dev data", len(dev_doc.sentences))
     if len(dev_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable dev data" % args['train_file'])
@@ -334,7 +336,8 @@ def evaluate(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    doc = Document(json.load(open(args['eval_file'])))
+    with open(args['eval_file']) as fin:
+        doc = Document(json.load(fin))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.bert_tokenizer)
     utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
 
