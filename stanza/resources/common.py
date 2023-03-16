@@ -431,15 +431,16 @@ def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
     """
     Downloads resources.json to obtain latest packages.
     """
-    logger.debug('Downloading resource file...')
     if resources_url == DEFAULT_RESOURCES_URL and resources_branch is not None:
         resources_url = STANZA_RESOURCES_GITHUB + resources_branch
     # handle short name for resources urls; otherwise treat it as url
     if resources_url.lower() in ('stanford', 'stanfordnlp'):
         resources_url = STANFORDNLP_RESOURCES_URL
+    resources_url = f'{resources_url}/resources_{resources_version}.json'
+    logger.debug('Downloading resource file from %s', resources_url)
     # make request
     request_file(
-        f'{resources_url}/resources_{resources_version}.json',
+        resources_url,
         os.path.join(model_dir, 'resources.json'),
         proxies,
         raise_for_status=True
