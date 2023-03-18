@@ -171,9 +171,9 @@ class TestTrainer:
         if not exists_ok:
             assert not os.path.exists(args['save_name'])
         retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR)
-        tr = trainer.train(args, None, each_name, [retag_pipeline])
+        trained_model = trainer.train(args, None, each_name, [retag_pipeline])
         # check that hooks are in the model if expected
-        for p in tr.model.parameters():
+        for p in trained_model.model.parameters():
             if p.requires_grad:
                 if args['grad_clipping'] is not None:
                     assert len(p._backward_hooks) == 1
@@ -202,7 +202,7 @@ class TestTrainer:
             assert tr.epochs_trained == i
             assert tr.batches_trained == (4 * i if use_silver else 2 * i)
 
-        return args
+        return args, trained_model
 
     def test_train(self, wordvec_pretrain_file):
         """
@@ -234,7 +234,7 @@ class TestTrainer:
         saved in the trainer
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-            args = self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=False)
+            args, _ = self.run_train_test(wordvec_pretrain_file, tmpdirname, use_silver=False)
             save_5 = args['save_each_name'] % 5
             save_10 = args['save_each_name'] % 10
             assert os.path.exists(save_5)
@@ -255,7 +255,7 @@ class TestTrainer:
                 args += ['--lattn_d_proj', '16']
             if extra_args:
                 args += extra_args
-            args = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=8, extra_args=args)
+            args, _ = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=8, extra_args=args)
             each_name = os.path.join(args['save_dir'], 'each_%02d.pt')
 
             word_input_sizes = defaultdict(list)
