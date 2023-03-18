@@ -360,6 +360,10 @@ class LSTMModel(BaseModel, nn.Module):
             if args['bert_hidden_layers']:
                 # The average will be offset by 1/N so that the default zeros
                 # repressents an average of the N layers
+                if args['bert_hidden_layers'] > bert_model.config.num_hidden_layers:
+                    # limit ourselves to the number of layers actually available
+                    # note that we can +1 because of the initial embedding layer
+                    args['bert_hidden_layers'] = bert_model.config.num_hidden_layers + 1
                 self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
                 nn.init.zeros_(self.bert_layer_mix.weight)
             else:
