@@ -371,9 +371,14 @@ class TestTrainer:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             bert_model_name = 'hf-internal-testing/tiny-bert'
             args = ['--bert_model', bert_model_name]
-            args, trainer = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
             bert_model, bert_tokenizer = load_bert(bert_model_name)
             for name, parameter in bert_model.named_parameters():
                 other_name = "bert_model." + name
-                other_parameter = trainer.model.get_parameter(other_name)
+                other_parameter = trained_model.model.get_parameter(other_name)
                 assert torch.allclose(parameter.cpu(), other_parameter.cpu())
+
+            checkpoint = torch.load(args['save_name'], lambda storage, loc: storage)
+            params = checkpoint['params']
+            for x in params.keys():
+                assert not x.startswith("bert_model.")
