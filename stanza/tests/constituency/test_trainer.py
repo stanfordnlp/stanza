@@ -380,5 +380,7 @@ class TestTrainer:
 
             checkpoint = torch.load(args['save_name'], lambda storage, loc: storage)
             params = checkpoint['params']
-            for x in params.keys():
-                assert not x.startswith("bert_model.")
+            # check that the bert model wasn't saved in the model
+            assert all(not x.startswith("bert_model.") for x in params['model'].keys())
+            # make sure we're looking at the right thing
+            assert any(x.startswith("output_layers.") for x in params['model'].keys())
