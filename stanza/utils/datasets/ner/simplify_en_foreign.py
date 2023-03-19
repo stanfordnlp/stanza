@@ -174,7 +174,10 @@ def main(args=None):
         batch_files = os.listdir(tempdir)
         pipe = stanza.Pipeline("en", processors="tokenize,ner", tokenize_pretokenized=True)
         for filename in tqdm(batch_files):
-            write_file_stanza(pipe, tempdir, final_dir, filename)
+            try:
+                write_file_stanza(pipe, tempdir, final_dir, filename)
+            except Exception as e:
+                raise RuntimeError("Failed to process filename %s" % filename) from e
 
 if __name__ == '__main__':
     main()
