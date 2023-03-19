@@ -11,6 +11,7 @@ from stanza import Pipeline
 
 from stanza.models import constituency_parser
 from stanza.models.common import pretrain
+from stanza.models.common.bert_embedding import load_bert
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.utils import set_random_seed
 from stanza.models.constituency import lstm_model
@@ -182,7 +183,7 @@ class TestTrainer:
 
         # check that the model can be loaded back
         assert os.path.exists(args['save_name'])
-        tr = trainer.Trainer.load(args['save_name'], load_optimizer=True)
+        tr = trainer.Trainer.load(args['save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
         assert tr.optimizer is not None
         assert tr.scheduler is not None
         assert tr.epochs_trained >= 1
@@ -190,7 +191,7 @@ class TestTrainer:
             if p.requires_grad:
                 assert p._backward_hooks is None
 
-        tr = trainer.Trainer.load(args['checkpoint_save_name'], load_optimizer=True)
+        tr = trainer.Trainer.load(args['checkpoint_save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
         assert tr.optimizer is not None
         assert tr.scheduler is not None
         assert tr.epochs_trained == num_epochs
@@ -198,7 +199,7 @@ class TestTrainer:
         for i in range(1, num_epochs+1):
             model_name = each_name % i
             assert os.path.exists(model_name)
-            tr = trainer.Trainer.load(model_name, load_optimizer=True)
+            tr = trainer.Trainer.load(model_name, load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
             assert tr.epochs_trained == i
             assert tr.batches_trained == (4 * i if use_silver else 2 * i)
 
@@ -362,3 +363,17 @@ class TestTrainer:
         assert len(results[1].constituents) == 4
         assert results[1].constituents[-1].value == test_tree[1]
         assert results[1].constituents[-2].value == test_tree[1].children[0]
+
+    def test_bert_frozen(self, wordvec_pretrain_file):
+        """
+        Check that the parameters the bert model don't change when training a basic model
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            bert_model_name = 'hf-internal-testing/tiny-bert'
+            args = ['--bert_model', bert_model_name]
+            args, trainer = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+            bert_model, bert_tokenizer = load_bert(bert_model_name)
+            for name, parameter in bert_model.named_parameters():
+                other_name = "bert_model." + name
+                other_parameter = trainer.model.get_parameter(other_name)
+                assert torch.allclose(parameter.cpu(), other_parameter.cpu())
