@@ -364,6 +364,17 @@ class TestTrainer:
         assert results[1].constituents[-1].value == test_tree[1]
         assert results[1].constituents[-2].value == test_tree[1].children[0]
 
+    def bert_weights_allclose(self, bert_model, parser_model):
+        """
+        Return True if all bert weights are close, False otherwise
+        """
+        for name, parameter in bert_model.named_parameters():
+            other_name = "bert_model." + name
+            other_parameter = parser_model.model.get_parameter(other_name)
+            if not torch.allclose(parameter.cpu(), other_parameter.cpu()):
+                return False
+        return True
+
     def test_bert_frozen(self, wordvec_pretrain_file):
         """
         Check that the parameters the bert model don't change when training a basic model
@@ -373,10 +384,7 @@ class TestTrainer:
             args = ['--bert_model', bert_model_name]
             args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
             bert_model, bert_tokenizer = load_bert(bert_model_name)
-            for name, parameter in bert_model.named_parameters():
-                other_name = "bert_model." + name
-                other_parameter = trained_model.model.get_parameter(other_name)
-                assert torch.allclose(parameter.cpu(), other_parameter.cpu())
+            assert self.bert_weights_allclose(bert_model, trained_model)
 
             checkpoint = torch.load(args['save_name'], lambda storage, loc: storage)
             params = checkpoint['params']
@@ -385,6 +393,7 @@ class TestTrainer:
             # make sure we're looking at the right thing
             assert any(x.startswith("output_layers.") for x in params['model'].keys())
 
+            # check that the cached model is used as expected when loading a bert model
             foundation_cache = FoundationCache()
             bert_model, bert_tokenizer = foundation_cache.load_bert(bert_model_name)
             trained_model = trainer.Trainer.load(args['save_name'], foundation_cache=foundation_cache)
