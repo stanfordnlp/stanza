@@ -384,3 +384,8 @@ class TestTrainer:
             assert all(not x.startswith("bert_model.") for x in params['model'].keys())
             # make sure we're looking at the right thing
             assert any(x.startswith("output_layers.") for x in params['model'].keys())
+
+            foundation_cache = FoundationCache()
+            bert_model, bert_tokenizer = foundation_cache.load_bert(bert_model_name)
+            trained_model = trainer.Trainer.load(args['save_name'], foundation_cache=foundation_cache)
+            assert trained_model.model.bert_model is bert_model
