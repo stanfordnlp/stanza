@@ -723,8 +723,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.best_f1 = f1
             trainer.best_epoch = trainer.epochs_trained
             trainer.save(args['save_name'], save_optimizer=False)
-        if model_save_each_filename:
-            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
         if epoch_stats.nans > 0:
             logger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
         logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
@@ -779,6 +777,10 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # can be made based on the end of the epoch
         if args['checkpoint'] and args['checkpoint_save_name']:
             trainer.save(args['checkpoint_save_name'], save_optimizer=True)
+        # same with the "each filename", actually, in case those are
+        # brought back for more training or even just for testing
+        if model_save_each_filename:
+            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
 
     return trainer
 

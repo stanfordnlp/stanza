@@ -270,15 +270,15 @@ class TestTrainer:
                 # there should be three stages: no attn, pattn, pattn+lattn
                 assert len(word_input_sizes) == 3
                 word_input_keys = sorted(word_input_sizes.keys())
-                assert word_input_sizes[word_input_keys[0]] == [1, 2, 3, 4]
-                assert word_input_sizes[word_input_keys[1]] == [5, 6]
-                assert word_input_sizes[word_input_keys[2]] == [7, 8]
+                assert word_input_sizes[word_input_keys[0]] == [1, 2, 3]
+                assert word_input_sizes[word_input_keys[1]] == [4, 5]
+                assert word_input_sizes[word_input_keys[2]] == [6, 7, 8]
             else:
                 # with no lattn, there are two stages: no attn, pattn
                 assert len(word_input_sizes) == 2
                 word_input_keys = sorted(word_input_sizes.keys())
-                assert word_input_sizes[word_input_keys[0]] == [1, 2, 3, 4]
-                assert word_input_sizes[word_input_keys[1]] == [5, 6, 7, 8]
+                assert word_input_sizes[word_input_keys[0]] == [1, 2, 3]
+                assert word_input_sizes[word_input_keys[1]] == [4, 5, 6, 7, 8]
 
     def test_multistage_lattn(self, wordvec_pretrain_file):
         """
