@@ -645,6 +645,9 @@ class LSTMModel(BaseModel, nn.Module):
         """
         self.unsaved_modules += [name]
         setattr(self, name, module)
+        if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            for _, parameter in module.named_parameters():
+                parameter.requires_grad = False
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
@@ -661,7 +664,7 @@ class LSTMModel(BaseModel, nn.Module):
             for c_idx, c_open in enumerate(self.constituent_opens):
                 lines.append("  %s weight %.6g bias %.6g" % (c_open, torch.norm(self.reduce_linear_weight[c_idx]).item(), torch.norm(self.reduce_linear_bias[c_idx]).item()))
         for name, param in self.named_parameters():
-            if param.requires_grad and name not in skip and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            if param.requires_grad and name not in skip:
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         return lines
 
