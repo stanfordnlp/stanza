@@ -152,7 +152,7 @@ class TestTrainer:
         args['wandb'] = None
         return args
 
-    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None, use_silver=False, exists_ok=False):
+    def run_train_test(self, wordvec_pretrain_file, tmpdirname, num_epochs=5, extra_args=None, use_silver=False, exists_ok=False, foundation_cache=None):
         """
         Runs a test of the trainer for a few iterations.
 
@@ -171,7 +171,7 @@ class TestTrainer:
         each_name = args['save_each_name']
         if not exists_ok:
             assert not os.path.exists(args['save_name'])
-        retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR)
+        retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR, foundation_cache=foundation_cache)
         trained_model = trainer.train(args, None, each_name, [retag_pipeline])
         # check that hooks are in the model if expected
         for p in trained_model.model.parameters():
@@ -375,15 +375,12 @@ class TestTrainer:
                 return False
         return True
 
-    def test_bert_frozen(self, wordvec_pretrain_file):
-        """
-        Check that the parameters the bert model don't change when training a basic model
-        """
+    def frozen_transformer_test(self, wordvec_pretrain_file, transformer_name):
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-            bert_model_name = 'hf-internal-testing/tiny-bert'
-            args = ['--bert_model', bert_model_name]
-            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
-            bert_model, bert_tokenizer = load_bert(bert_model_name)
+            foundation_cache = FoundationCache()
+            args = ['--bert_model', transformer_name]
+            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args, foundation_cache=foundation_cache)
+            bert_model, bert_tokenizer = foundation_cache.load_bert(transformer_name)
             assert self.bert_weights_allclose(bert_model, trained_model)
 
             checkpoint = torch.load(args['save_name'], lambda storage, loc: storage)
@@ -394,7 +391,17 @@ class TestTrainer:
             assert any(x.startswith("output_layers.") for x in params['model'].keys())
 
             # check that the cached model is used as expected when loading a bert model
-            foundation_cache = FoundationCache()
-            bert_model, bert_tokenizer = foundation_cache.load_bert(bert_model_name)
             trained_model = trainer.Trainer.load(args['save_name'], foundation_cache=foundation_cache)
             assert trained_model.model.bert_model is bert_model
+
+    def test_bert_frozen(self, wordvec_pretrain_file):
+        """
+        Check that the parameters of the bert model don't change when training a basic model
+        """
+        self.frozen_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-bert')
+
+    def test_xlnet_frozen(self, wordvec_pretrain_file):
+        """
+        Check that the parameters of an xlnet model don't change when training a basic model
+        """
+        self.frozen_transformer_test(wordvec_pretrain_file, 'hf-internal-testing/tiny-random-xlnet')
