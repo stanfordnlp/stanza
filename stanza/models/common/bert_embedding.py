@@ -336,7 +336,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if isinstance(data, tuple):
         data = list(data)
 
-    if model_name.startswith("xlnet"):
+    if "xlnet" in model_name:
         return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
     if model_name in BAD_TOKENIZERS:
