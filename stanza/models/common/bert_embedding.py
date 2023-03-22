@@ -329,7 +329,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if model_name.startswith("vinai/phobert"):
         return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
-    if model_name == "vinai/bartpho-word":
+    if 'bart' in model_name:
+        # this should work with "vinai/bartpho-word"
         # not sure this works with any other Bart
         return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers)
 
