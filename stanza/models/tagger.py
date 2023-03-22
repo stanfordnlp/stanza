@@ -51,7 +51,7 @@ def parse_args(args=None):
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
     parser.add_argument('--composite_deep_biaff_hidden_dim', type=int, default=100)
-    parser.add_argument('--word_emb_dim', type=int, default=75)
+    parser.add_argument('--word_emb_dim', type=int, default=75, help='Dimension of the finetuned word embedding.  Set to 0 to turn off')
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
     parser.add_argument('--transformed_dim', type=int, default=125)
