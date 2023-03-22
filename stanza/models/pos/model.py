@@ -153,7 +153,7 @@ class Tagger(nn.Module):
             inputs += [pretrained_emb]
 
         def pad(x):
-            return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
+            return pad_packed_sequence(PackedSequence(x, inputs[0].batch_sizes), batch_first=True)[0]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
