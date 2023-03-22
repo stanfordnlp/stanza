@@ -214,7 +214,7 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
         offsets = [[0] + off + [-1] for off in offsets]
     processed = [feature[offset] for feature, offset in zip(features, offsets)]
 
-    # This is a list of ltensors
+    # This is a list of tensors
     # Each tensor holds the representation of a sentence extracted from phobert
     return processed
 
