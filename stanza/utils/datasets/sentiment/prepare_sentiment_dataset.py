@@ -101,6 +101,11 @@ en_sstplus
 
   python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_sstplus
 
+en_corona
+  A kaggle covid-19 text classification dataset
+  https://www.kaggle.com/datasets/datatattle/covid-19-nlp-text-classification
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset en_corona
+
 German
 ------
 
@@ -246,6 +251,7 @@ import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.sentiment import process_airline
 from stanza.utils.datasets.sentiment import process_arguana_xml
+from stanza.utils.datasets.sentiment import process_corona
 from stanza.utils.datasets.sentiment import process_es_tass2020
 from stanza.utils.datasets.sentiment import process_it_sentipolc16
 from stanza.utils.datasets.sentiment import process_MELD
@@ -319,6 +325,12 @@ def convert_meld(paths, dataset_name, *args):
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_MELD.main(in_directory, out_directory, dataset_name)
 
+def convert_corona(paths, dataset_name, *args):
+    """
+    Convert the kaggle covid dataset to train/dev/test files
+    """
+    process_corona.main(*args)
+
 def convert_scare(paths, dataset_name, *args):
     in_directory = os.path.join(paths['SENTIMENT_BASE'], "german", "scare")
     out_directory = paths['SENTIMENT_DATA_DIR']
@@ -389,6 +401,7 @@ DATASET_MAPPING = {
     "de_scare":     convert_scare,
     "de_usage":     convert_de_usage,
 
+    "en_corona":    convert_corona,
     "en_sst2":      convert_sst2,
     "en_sst2roots": convert_sst2roots,
     "en_sst3roots": convert_sst3roots,
