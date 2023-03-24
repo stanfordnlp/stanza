@@ -257,10 +257,37 @@ def parse_args(args=None):
     #   10:        0.898756  (271)
     #   25:        0.896867  (256)
     #   50:        0.895025  (220)
-    # TODO: there is a possible benefit to using AdamW here
-    # TODO: also, experiment with various settings with the second half learning rate.
-    # TODO: once we have a better idea of the best settings to use,
-    #   make --bert_finetune set those defaults
+    #
+    #
+    # With the observation that very low learning rate is currently
+    # not working for madgrad, we tried to parameter sweep LR for
+    # AdamW, and got the following, using a first stage LR of 0.009:
+    #  0.0:     0.899706  (290)
+    #  0.00005: 0.899631  (176)
+    #  0.0001:  0.899851  (233)
+    #  0.0002:  0.898601  (207)
+    #  0.0003:  0.899258  (252)
+    #  0.0004:  0.90033  (187)
+    #  0.0005:  0.899091  (183)
+    #  0.001:   0.899791  (268)
+    #  0.002:   0.899453  (196)
+    #  0.003:   0.897029  (173)
+    #  0.004:   0.899566  (290)
+    #  0.005:   0.899285  (289)
+    #  0.01:    0.898938  (233)
+    #  0.02:    0.898983  (248)
+    #  0.03:    0.898571  (247)
+    #  0.04:    0.898466  (180)
+    #  0.05:    0.897448  (214)
+    # It should be noted that in the 0.0001 range, the epoch to epoch
+    # change of the Bert weights was almost negligible.  Weights would
+    # change in the 5th or 6th decimal place, if at all.
+    #
+    # The conclusion of all these experiments is that, if we are using
+    # bert_finetuning, the best approach is probably a stage1 learning
+    # rate of 0.009 or so and a second stage optimizer of adamw with
+    # no LR or a very low LR.  This behavior is what happens with the
+    # --stage1_bert_finetune flag
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
@@ -630,6 +657,9 @@ def parse_args(args=None):
         if not args.multistage:
             # this seemed to work the best when not doing multistage
             args.optim = "adadelta"
+        elif args.bert_finetune or args.stage1_bert_finetune:
+            logger.info("Multistage training is set, optimizer is not chosen, and bert finetuning is active.  Will use AdamW as the second stage optimizer.")
+            args.optim = "adamw"
         else:
             # if MADGRAD exists, use it
             # otherwise, adamw
