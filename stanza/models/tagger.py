@@ -171,16 +171,22 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    # train_data is now a list of sentences, where each sentence is a
-    # list of words, in which each word is a dict of conll attributes
-    train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
-    # possibly augment the training data with some amount of fake data
-    # based on the options chosen
-    logger.info("Original data size: {}".format(len(train_data)))
-    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                    keep_original_sentences=False))
-    logger.info("Augmented data size: {}".format(len(train_data)))
-    train_doc = Document(train_data)
+    all_train_data = []
+    for train_file in args['train_file'].split(";"):
+        logger.info("Reading %s" % train_file)
+        # train_data is now a list of sentences, where each sentence is a
+        # list of words, in which each word is a dict of conll attributes
+        train_data, _ = CoNLL.conll2dict(input_file=train_file)
+        # possibly augment the training data with some amount of fake data
+        # based on the options chosen
+        logger.info("Original data size: {}".format(len(train_data)))
+        train_data.extend(augment_punct(train_data, args['augment_nopunct'],
+                                        keep_original_sentences=False))
+        logger.info("Augmented data size: {}".format(len(train_data)))
+        all_train_data.extend(train_data)
+    # TODO: build the DataLoader out of multiple docs, which we can use
+    # to separate the sentences which have xpos vs no xpos, for example
+    train_doc = Document(all_train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])

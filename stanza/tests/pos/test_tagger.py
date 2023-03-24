@@ -56,6 +56,18 @@ TRAIN_DATA = """
 
 """.lstrip()
 
+TRAIN_DATA_2 = """
+# sent_id = 11
+# text = It's all hers!
+# previous = Which person owns this?
+# comment = predeterminer modifier
+1	It	it	PRON	PRP	Number=Sing|Person=3|PronType=Prs	4	nsubj	_	SpaceAfter=No
+2	's	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
+3	all	all	DET	DT	Case=Nom	4	det:predet	_	_
+4	hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+5	!	!	PUNCT	.	_	4	punct	_	_
+
+""".lstrip()
 
 DEV_DATA = """
 1	From	from	ADP	IN	_	3	case	3:case	_
@@ -77,15 +89,21 @@ class TestTagger:
         """
         Run the training for a few iterations, load & return the model
         """
-        train_file = str(tmp_path / "train.conllu")
         dev_file = str(tmp_path / "dev.conllu")
         pred_file = str(tmp_path / "pred.conllu")
 
         save_name = "test_tagger.pt"
         save_file = str(tmp_path / save_name)
 
-        with open(train_file, "w", encoding="utf-8") as fout:
-            fout.write(train_text)
+        if isinstance(train_text, str):
+            train_text = [train_text]
+        train_files = []
+        for idx, train_blob in enumerate(train_text):
+            train_file = str(tmp_path / ("train_%d.conllu" % idx))
+            with open(train_file, "w", encoding="utf-8") as fout:
+                fout.write(train_blob)
+            train_files.append(train_file)
+        train_file = ";".join(train_files)
 
         with open(dev_file, "w", encoding="utf-8") as fout:
             fout.write(dev_text)
@@ -128,3 +146,19 @@ class TestTagger:
         assert 'of' in word_vocab
         assert 'officials' in TRAIN_DATA
         assert 'officials' not in word_vocab
+
+    def test_multiple_files(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test that multiple train files works
+
+        Checks for evidence of it working by looking for words from the second file in the vocab
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA, TRAIN_DATA_2 * 3], DEV_DATA, extra_args=["--word_cutoff", "3"])
+        word_vocab = trainer.vocab['word']
+        assert 'of' in word_vocab
+        assert 'officials' in TRAIN_DATA
+        assert 'officials' not in word_vocab
+
+        assert '	hers	' not in TRAIN_DATA
+        assert '	hers	' in TRAIN_DATA_2
+        assert 'hers' in word_vocab
