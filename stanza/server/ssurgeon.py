@@ -12,7 +12,7 @@ import copy
 import re
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string
+from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string, space_after_to_misc
 from stanza.utils.conll import CoNLL
 
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
@@ -130,8 +130,8 @@ def convert_response_to_doc(doc, semgrex_response):
                 "is_first_mwt": graph_word.isFirstMWT,
                 "mwt_text": graph_word.mwtText,
             }
-            if not graph_word.after:
-                word_entry[MISC] = "SpaceAfter=No"
+            # TODO: do "before" as well
+            word_entry[MISC] = space_after_to_misc(graph_word.after)
             tokens.append(word_entry)
         tokens.sort(key=lambda x: x[ID])
         for root in ssurgeon_graph.root:

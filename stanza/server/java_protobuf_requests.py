@@ -144,14 +144,13 @@ def add_token(token_list, word, token):
         # if we are not the last word of an MWT token
         # we are absolutely not followed by space
         pass
-    elif ((token.misc is not None and "SpaceAfter=No" in token.misc) or
-          (word.misc is not None and "SpaceAfter=No" in word.misc)):
-        # if either the token or the specific word item say there is
-        # no SpaceAfter, we believe them
-        pass
     else:
-        # otherwise, seems like there might actually be a SpaceAfter
-        query_token.after = " "
+        space_after = misc_to_space_after(token.misc)
+        if space_after == ' ':
+            # in some treebanks, the word might have more interesting
+            # space after annotations than the token
+            space_after = misc_to_space_after(word.misc)
+        query_token.after = space_after
 
 def add_sentence(request_sentences, sentence, num_tokens):
     """
@@ -185,6 +184,80 @@ def features_to_string(features):
     if len(features.key) == 0:
         return None
     return "|".join("%s=%s" % (key, value) for key, value in zip(features.key, features.value))
+
+def space_after_to_misc(space):
+    """
+    Convert whitespace back to the escaped format - either SpaceAfter=No or SpacesAfter=...
+    """
+    if not space:
+        return "SpaceAfter=No"
+    if space == " ":
+        return ""
+    spaces = []
+    for char in space:
+        if char == ' ':
+            spaces.append('\\s')
+        elif char == '\t':
+            spaces.append('\\t')
+        elif char == '\r':
+            spaces.append('\\r')
+        elif char == '\n':
+            spaces.append('\\n')
+        elif char == '|':
+            spaces.append('\\p')
+        elif char == '\\':
+            spaces.append('\\\\')
+        else:
+            spaces.append(char)
+    space_after = "".join(spaces)
+    return "SpacesAfter=%s" % space_after
+
+def misc_to_space_after(misc):
+    """
+    Convert either SpaceAfter=No or the SpacesAfter annotation
+
+    see https://universaldependencies.org/misc.html#spacesafter
+
+    We compensate for some treebanks using SpaceAfter=\n instead of SpacesAfter=\n
+    On the way back, though, those annotations will be turned into SpacesAfter
+
+    # TODO: some treebanks also have SpacesBefore on the first token, and we should honor that
+    """
+    if not misc:
+        return " "
+    pieces = misc.split("|")
+    if "SpaceAfter=No" in pieces:
+        return ""
+    for piece in pieces:
+        if piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter="):
+            misc_space = piece.split("=", maxsplit=1)[1]
+            spaces = []
+            pos = 0
+            while pos < len(misc_space):
+                if misc_space[pos:pos+2] == '\\s':
+                    spaces.append(' ')
+                    pos += 2
+                elif misc_space[pos:pos+2] == '\\t':
+                    spaces.append('\t')
+                    pos += 2
+                elif misc_space[pos:pos+2] == '\\r':
+                    spaces.append('\r')
+                    pos += 2
+                elif misc_space[pos:pos+2] == '\\n':
+                    spaces.append('\n')
+                    pos += 2
+                elif misc_space[pos:pos+2] == '\\p':
+                    spaces.append('|')
+                    pos += 2
+                elif misc_space[pos:pos+2] == '\\\\':
+                    spaces.append('\\')
+                    pos += 2
+                else:
+                    spaces.append(misc_space[pos])
+                    pos += 1
+            space_after = "".join(spaces)
+            return space_after
+    return " "
 
 class JavaProtobufContext(object):
     """

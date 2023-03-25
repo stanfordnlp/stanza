@@ -208,3 +208,36 @@ def test_ssurgeon_mwt_text():
 
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, ITALIAN_MWT_INPUT)
+
+ITALIAN_SPACES_AFTER_INPUT="""
+# sent_id = train_1114
+# text = ““““ buona scuola ““““
+# twittiro = EXPLICIT	OTHER
+1	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+2	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+3	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+4	“	“	PUNCT	FB	_	6	punct	_	_
+5	buona	buono	ADJ	A	Gender=Fem|Number=Sing	6	amod	_	_
+6	scuola	scuola	NOUN	S	Gender=Fem|Number=Sing	0	root	_	_
+7	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+8	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+9	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+10	“	“	PUNCT	FB	_	6	punct	_	SpacesAfter=\\n
+"""
+
+
+def test_ssurgeon_spaces_after_text():
+    """
+    Test that SpacesAfter goes and comes back the same way
+
+    Tested using some random example from the UD_Italian-TWITTIRO dataset
+    """
+    doc = CoNLL.conll2doc(input_str=ITALIAN_SPACES_AFTER_INPUT)
+
+    # we don't want to edit this, just test the to/from conversion
+    ssurgeon_response = ssurgeon.process_doc(doc, [])
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+
+    result = "{:C}".format(updated_doc)
+    compare_ignoring_whitespace(result, ITALIAN_SPACES_AFTER_INPUT)
+
