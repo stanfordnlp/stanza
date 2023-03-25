@@ -255,7 +255,7 @@ def main():
     else:
         ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
     updated_doc = convert_response_to_doc(doc, ssurgeon_response)
-    print("{:C}".format(updated_doc))
+    print("{:C}\n".format(updated_doc))
 
 if __name__ == '__main__':
     main()
