@@ -171,13 +171,12 @@ def convert_response_to_doc(doc, semgrex_response):
         old_comments = list(sentence.comments)
         sentence = Sentence(mwt_tokens, doc)
 
-        word_text = [word.text if (word_idx == len(sentence.words) - 1 or
-                                   (word.misc and "SpaceAfter=No" in word.misc) or
-                                   word.id != word.parent.id[-1] or
-                                   (word.parent.misc and "SpaceAfter=No" in word.parent.misc))
-                     else word.text + " "
-                     for word_idx, word in enumerate(sentence.words)]
-        sentence_text = "".join(word_text)
+        token_text = [token.text if (token_idx == len(sentence.tokens) - 1 or
+                                     (token.misc and "SpaceAfter=No" in token.misc) or
+                                     (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc))
+                     else token.text + " "
+                     for token_idx, token in enumerate(sentence.tokens)]
+        sentence_text = "".join(token_text)
 
         for comment in old_comments:
             if comment.startswith("# text"):
