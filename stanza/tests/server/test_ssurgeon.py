@@ -241,3 +241,29 @@ def test_ssurgeon_spaces_after_text():
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, ITALIAN_SPACES_AFTER_INPUT)
 
+EMPTY_VALUES_INPUT = """
+# text = Jennifer has lovely antennae.
+# sent_id = 12
+# comment = if you're in to that kind of thing
+1	Jennifer	_	_	_	Number=Sing	2	nsubj	_	ner=S-PERSON
+2	has	_	_	_	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	_	ner=O
+3	lovely	_	_	_	Degree=Pos	4	amod	_	ner=O
+4	antennae	_	_	_	Number=Plur	2	obj	_	SpaceAfter=No|ner=O
+5	.	_	_	_	_	2	punct	_	ner=O
+"""
+
+def test_ssurgeon_blank_values():
+    """
+    Check that various None fields such as lemma & xpos are not turned into blanks
+
+    Tests, like regulations, are often written in blood
+    """
+    doc = CoNLL.conll2doc(input_str=EMPTY_VALUES_INPUT)
+
+    # we don't want to edit this, just test the to/from conversion
+    ssurgeon_response = ssurgeon.process_doc(doc, [])
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+
+    result = "{:C}".format(updated_doc)
+    compare_ignoring_whitespace(result, EMPTY_VALUES_INPUT)
+

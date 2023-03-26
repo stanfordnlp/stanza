@@ -114,10 +114,10 @@ def convert_response_to_doc(doc, semgrex_response):
                 continue
             word_entry = {
                 ID: graph_node.index,
-                TEXT: graph_word.word,
-                LEMMA: graph_word.lemma,
-                UPOS: graph_word.coarseTag,
-                XPOS: graph_word.pos,
+                TEXT: graph_word.word if graph_word.word else None,
+                LEMMA: graph_word.lemma if graph_word.lemma else None,
+                UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
+                XPOS: graph_word.pos if graph_word.pos else None,
                 FEATS: features_to_string(graph_word.conllUFeatures),
                 DEPS: None,
                 NER: graph_word.ner if graph_word.ner else None,
