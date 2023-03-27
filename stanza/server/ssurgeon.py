@@ -67,15 +67,18 @@ def build_request(doc, ssurgeon_edits):
         if ssurgeon.language is not None:
             ssurgeon_proto.language = ssurgeon.language
 
-    for sent_idx, sentence in enumerate(doc.sentences):
-        graph = request.graph.add()
-        word_idx = 0
-        for token in sentence.tokens:
-            for word in token.words:
-                add_token(graph.token, word, token)
-                add_word_to_graph(graph, word, sent_idx, word_idx)
+    try:
+        for sent_idx, sentence in enumerate(doc.sentences):
+            graph = request.graph.add()
+            word_idx = 0
+            for token in sentence.tokens:
+                for word in token.words:
+                    add_token(graph.token, word, token)
+                    add_word_to_graph(graph, word, sent_idx, word_idx)
 
-                word_idx = word_idx + 1
+                    word_idx = word_idx + 1
+    except Exception as e:
+        raise RuntimeError("Failed to process sentence {}:\n{:C}".format(sent_idx, sentence)) from e
 
     return request
 
