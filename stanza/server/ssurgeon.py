@@ -175,8 +175,8 @@ def convert_response_to_doc(doc, semgrex_response):
         sentence = Sentence(mwt_tokens, doc)
 
         token_text = [token.text if (token_idx == len(sentence.tokens) - 1 or
-                                     (token.misc and "SpaceAfter=No" in token.misc) or
-                                     (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc))
+                                     (token.misc and "SpaceAfter=No" in token.misc.split("|")) or
+                                     (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc.split("|")))
                      else token.text + " "
                      for token_idx, token in enumerate(sentence.tokens)]
         sentence_text = "".join(token_text)
