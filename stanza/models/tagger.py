@@ -137,6 +137,8 @@ def model_file_name(args):
     else:
         save_name = args['shorthand'] + "_tagger.pt"
 
+    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
+        return save_name
     return os.path.join(args['save_dir'], save_name)
 
 def load_pretrain(args):
