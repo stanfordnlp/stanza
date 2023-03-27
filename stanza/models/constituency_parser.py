@@ -82,6 +82,10 @@ A couple experiments which have been tried with little noticeable impact:
       two layer MLP:                    0.9409
       two layer MLP, init weights:      0.9413
       single layer:                     0.9467
+  - There is code to rebuild models with a new structure in lstm_model.py
+    As part of this, we tried to randomly reinitialize the transitions
+    if the transition embedding had gone to 0, which often happens
+    This didn't help at all
 
 The code breakdown is as follows:
 
