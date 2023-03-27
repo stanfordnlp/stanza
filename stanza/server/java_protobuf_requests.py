@@ -228,6 +228,9 @@ def misc_to_space_after(misc):
     pieces = misc.split("|")
     if "SpaceAfter=No" in pieces:
         return ""
+    if "SpaceAfter=Yes" in pieces:
+        # as of UD 2.11, the Cantonese treebank had this as a misc feature
+        return " "
     for piece in pieces:
         if piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter="):
             misc_space = piece.split("=", maxsplit=1)[1]
