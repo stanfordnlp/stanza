@@ -152,6 +152,10 @@ def add_token(token_list, word, token):
             space_after = misc_to_space_after(word.misc)
         query_token.after = space_after
 
+    # TODO: there can be misc fields on tokens which we need to account for
+    if word.misc and word.misc != "_":
+        query_token.conllUMisc = word.misc
+
 def add_sentence(request_sentences, sentence, num_tokens):
     """
     Add the tokens for this stanza sentence to a list of protobuf sentences
@@ -184,6 +188,63 @@ def features_to_string(features):
     if len(features.key) == 0:
         return None
     return "|".join("%s=%s" % (key, value) for key, value in zip(features.key, features.value))
+
+def misc_space_pieces(misc):
+    """
+    Return only the space-related misc pieces
+    """
+    if misc is None or misc == "" or misc == "_":
+        return misc
+    pieces = misc.split("|")
+    pieces = [x for x in pieces if x.split("=", maxsplit=1)[0] in ("SpaceAfter", "SpacesAfter", "SpacesBefore")]
+    if len(pieces) > 0:
+        return "|".join(pieces)
+    return None
+
+def remove_space_misc(misc):
+    """
+    Remove any pieces from misc which are space-related
+    """
+    if misc is None or misc == "" or misc == "_":
+        return misc
+    pieces = misc.split("|")
+    pieces = [x for x in pieces if x.split("=", maxsplit=1)[0] not in ("SpaceAfter", "SpacesAfter", "SpacesBefore")]
+    if len(pieces) > 0:
+        return "|".join(pieces)
+    return None
+
+def substitute_space_misc(misc, space_misc):
+    space_misc_pieces = space_misc.split("|") if space_misc else []
+    space_misc_after = None
+    space_misc_before = None
+    for piece in space_misc_pieces:
+        if piece.startswith("SpaceBefore"):
+            space_misc_before = piece
+        elif piece.startswith("SpaceAfter") or piece.startswith("SpacesAfter"):
+            space_misc_after = piece
+        else:
+            raise AssertionError("An unknown piece wound up in the misc space fields: %s" % piece)
+
+    pieces = misc.split("|")
+    new_pieces = []
+    for piece in pieces:
+        if piece.startswith("SpaceBefore"):
+            if space_misc_before:
+                new_pieces.append(space_misc_before)
+                space_misc_before = None
+        elif piece.startswith("SpaceAfter") or piece.startswith("SpacesAfter"):
+            if space_misc_after:
+                new_pieces.append(space_misc_after)
+                space_misc_after = None
+        else:
+            new_pieces.append(piece)
+    if space_misc_after:
+        new_pieces.append(space_misc_after)
+    if space_misc_before:
+        new_pieces.append(space_misc_before)
+    if len(new_pieces) == 0:
+        return None
+    return "|".join(new_pieces)
 
 def space_after_to_misc(space):
     """
@@ -231,6 +292,9 @@ def misc_to_space_after(misc):
     if "SpaceAfter=Yes" in pieces:
         # as of UD 2.11, the Cantonese treebank had this as a misc feature
         return " "
+    if "SpaceAfter=No~" in pieces:
+        # as of UD 2.11, a weird typo in the Russian Taiga dataset
+        return ""
     for piece in pieces:
         if piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter="):
             misc_space = piece.split("=", maxsplit=1)[1]

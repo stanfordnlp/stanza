@@ -13,7 +13,7 @@ import re
 import sys
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string, space_after_to_misc
+from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string, space_after_to_misc, substitute_space_misc, remove_space_misc, misc_space_pieces
 from stanza.utils.conll import CoNLL
 
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
@@ -135,6 +135,9 @@ def convert_response_to_doc(doc, semgrex_response):
             }
             # TODO: do "before" as well
             word_entry[MISC] = space_after_to_misc(graph_word.after)
+            if graph_word.conllUMisc:
+                # TODO: do this treatment to the token misc as well
+                word_entry[MISC] = substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
             tokens.append(word_entry)
         tokens.sort(key=lambda x: x[ID])
         for root in ssurgeon_graph.root:
@@ -153,7 +156,7 @@ def convert_response_to_doc(doc, semgrex_response):
         for word_start_idx, word in enumerate(tokens):
             if not word["is_first_mwt"]:
                 if word["is_mwt"]:
-                    word[MISC] = None
+                    word[MISC] = remove_space_misc(word[MISC])
                 mwt_tokens.append(word)
                 continue
             word_end_idx = word_start_idx + 1
@@ -165,9 +168,10 @@ def convert_response_to_doc(doc, semgrex_response):
                 TEXT: word["mwt_text"],
                 NER: word[NER],
                 # use the SpaceAfter=No (or not) from the last word in the token
-                MISC: tokens[word_end_idx-1][MISC],
+                # TODO: use the mwtMisc field as well
+                MISC: misc_space_pieces(tokens[word_end_idx-1][MISC]),
             }
-            word[MISC] = None
+            word[MISC] = remove_space_misc(word[MISC])
             mwt_tokens.append(mwt_token_entry)
             mwt_tokens.append(word)
 

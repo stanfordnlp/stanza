@@ -178,7 +178,10 @@ def test_ssurgeon_existing_mwt_no_change():
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
 
-def check_unchanged(input_text):
+def check_empty_test(input_text, expected=None):
+    if expected is None:
+        expected = input_text
+
     doc = CoNLL.conll2doc(input_str=input_text)
 
     # we don't want to edit this, just test the to/from conversion
@@ -186,7 +189,7 @@ def check_unchanged(input_text):
     updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
 
     result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, input_text)
+    compare_ignoring_whitespace(result, expected)
 
 ITALIAN_MWT_INPUT = """
 # sent_id = train_78
@@ -210,7 +213,7 @@ def test_ssurgeon_mwt_text():
     For example, in Italian, "col" splits into "con il", and we want
     the #text to contain "col"
     """
-    check_unchanged(ITALIAN_MWT_INPUT)
+    check_empty_test(ITALIAN_MWT_INPUT)
 
 ITALIAN_SPACES_AFTER_INPUT="""
 # sent_id = train_1114
@@ -228,6 +231,22 @@ ITALIAN_SPACES_AFTER_INPUT="""
 10	“	“	PUNCT	FB	_	6	punct	_	SpacesAfter=\\n
 """
 
+ITALIAN_SPACES_AFTER_YES_INPUT="""
+# sent_id = train_1114
+# text = ““““ buona scuola ““““
+# twittiro = EXPLICIT	OTHER
+1	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+2	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+3	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+4	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=Yes
+5	buona	buono	ADJ	A	Gender=Fem|Number=Sing	6	amod	_	_
+6	scuola	scuola	NOUN	S	Gender=Fem|Number=Sing	0	root	_	_
+7	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+8	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+9	“	“	PUNCT	FB	_	6	punct	_	SpaceAfter=No
+10	“	“	PUNCT	FB	_	6	punct	_	SpacesAfter=\\n
+"""
+
 
 def test_ssurgeon_spaces_after_text():
     """
@@ -235,7 +254,13 @@ def test_ssurgeon_spaces_after_text():
 
     Tested using some random example from the UD_Italian-TWITTIRO dataset
     """
-    check_unchanged(ITALIAN_SPACES_AFTER_INPUT)
+    check_empty_test(ITALIAN_SPACES_AFTER_INPUT)
+
+def test_ssurgeon_spaces_after_yes():
+    """
+    Test that an unnecessary SpaceAfter=Yes is eliminated
+    """
+    check_empty_test(ITALIAN_SPACES_AFTER_YES_INPUT, ITALIAN_SPACES_AFTER_INPUT)
 
 EMPTY_VALUES_INPUT = """
 # text = Jennifer has lovely antennae.
@@ -254,5 +279,42 @@ def test_ssurgeon_blank_values():
 
     Tests, like regulations, are often written in blood
     """
-    check_unchanged(EMPTY_VALUES_INPUT)
+    check_empty_test(EMPTY_VALUES_INPUT)
 
+# first couple sentences of UD_Cantonese-HK
+# we change the order of the misc column in word 3 to make sure the
+# pieces don't get unnecessarily reordered by ssurgeon
+CANTONESE_MISC_WORDS_INPUT = """
+# sent_id = 1
+# text = 你喺度搵乜嘢呀？
+1	你	你	PRON	_	_	3	nsubj	_	SpaceAfter=No|Translit=nei5|Gloss=2SG
+2	喺度	喺度	ADV	_	_	3	advmod	_	SpaceAfter=No|Translit=hai2dou6|Gloss=PROG
+3	搵	搵	VERB	_	_	0	root	_	Translit=wan2|Gloss=find|SpaceAfter=No
+4	乜嘢	乜嘢	PRON	_	_	3	obj	_	SpaceAfter=No|Translit=mat1je5|Gloss=what
+5	呀	呀	PART	_	_	3	discourse:sp	_	SpaceAfter=No|Translit=aa3|Gloss=SFP
+6	？	？	PUNCT	_	_	3	punct	_	SpaceAfter=No
+
+# sent_id = 2
+# text = 咪執返啲嘢去阿哥個新屋度囖。
+1	咪	咪	ADV	_	_	2	advmod	_	SpaceAfter=No
+2	執	執	VERB	_	_	0	root	_	SpaceAfter=No
+3	返	返	VERB	_	_	2	compound:dir	_	SpaceAfter=No
+4	啲	啲	NOUN	_	NounType=Clf	5	clf:det	_	SpaceAfter=No
+5	嘢	嘢	NOUN	_	_	3	obj	_	SpaceAfter=No
+6	去	去	VERB	_	_	2	conj	_	SpaceAfter=No
+7	阿哥	阿哥	NOUN	_	_	10	nmod	_	SpaceAfter=No
+8	個	個	NOUN	_	NounType=Clf	10	clf:det	_	SpaceAfter=No
+9	新	新	ADJ	_	_	10	amod	_	SpaceAfter=No
+10	屋	屋	NOUN	_	_	6	obj	_	SpaceAfter=No
+11	度	度	ADP	_	_	10	case:loc	_	SpaceAfter=No
+12	囖	囖	PART	_	_	2	discourse:sp	_	SpaceAfter=No
+13	。	。	PUNCT	_	_	2	punct	_	SpaceAfter=No
+"""
+
+def test_ssurgeon_misc_words():
+    """
+    Check that various None fields such as lemma & xpos are not turned into blanks
+
+    Tests, like regulations, are often written in blood
+    """
+    check_empty_test(CANTONESE_MISC_WORDS_INPUT)
