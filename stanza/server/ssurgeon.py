@@ -111,7 +111,6 @@ def convert_response_to_doc(doc, semgrex_response):
         #    continue
 
         ssurgeon_graph = ssurgeon_result.graph
-        # TODO: make a script that converts the Pronouns dataset to MWT!
         tokens = []
         for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
             if graph_node.copyAnnotation:
