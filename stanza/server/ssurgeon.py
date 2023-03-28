@@ -10,6 +10,7 @@ The main program in this file gives a very short intro to how to use it.
 import argparse
 import copy
 import re
+import sys
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
 from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string, space_after_to_misc
@@ -230,6 +231,13 @@ SAMPLE_DOC = """
 """
 
 def main():
+    # for Windows, so that we aren't randomly printing garbage (or just failing to print)
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # TODO: deprecate 3.6 support after the next release
+        pass
+
     # The default semgrex detects sentences in the UD_English-Pronouns dataset which have both nsubj and csubj on the same word.
     # The default ssurgeon transforms the unwanted csubj to advcl
     # See https://github.com/UniversalDependencies/docs/issues/923
