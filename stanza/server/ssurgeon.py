@@ -186,7 +186,7 @@ def convert_response_to_doc(doc, semgrex_response):
         sentence_text = "".join(token_text)
 
         for comment in old_comments:
-            if comment.startswith("# text"):
+            if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
                 sentence.add_comment("# text = " + sentence_text)
             else:
                 sentence.add_comment(comment)

@@ -150,12 +150,14 @@ class Document(StanzaObject):
         else:
             comments = [list(x) for x in comments]
         for sentence, sentence_comments in zip(self.sentences, comments):
-            if sentence.text and not any(x.startswith("# text") or x.startswith("#text") for x in sentence_comments):
+            # the space after text can occur in treebanks such as the Naija-NSC treebank,
+            # which extensively uses `# text_en =` and `# text_ortho`
+            if sentence.text and not any(comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text=") for comment in sentence_comments):
                 # split/join to handle weird whitespace, especially newlines
                 sentence_comments.append("# text = " + ' '.join(sentence.text.split()))
             elif not sentence.text:
                 for comment in sentence_comments:
-                    if comment.startswith("# text ="):
+                    if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
                         sentence.text = comment.split("=", 1)[-1].strip()
                         break
 
