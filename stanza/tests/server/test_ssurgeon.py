@@ -178,6 +178,16 @@ def test_ssurgeon_existing_mwt_no_change():
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
 
+def check_unchanged(input_text):
+    doc = CoNLL.conll2doc(input_str=input_text)
+
+    # we don't want to edit this, just test the to/from conversion
+    ssurgeon_response = ssurgeon.process_doc(doc, [])
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+
+    result = "{:C}".format(updated_doc)
+    compare_ignoring_whitespace(result, input_text)
+
 ITALIAN_MWT_INPUT = """
 # sent_id = train_78
 # text = @user dovrebbe fare pace col cervello
@@ -200,14 +210,7 @@ def test_ssurgeon_mwt_text():
     For example, in Italian, "col" splits into "con il", and we want
     the #text to contain "col"
     """
-    doc = CoNLL.conll2doc(input_str=ITALIAN_MWT_INPUT)
-
-    # we don't want to edit this, just test the to/from conversion
-    ssurgeon_response = ssurgeon.process_doc(doc, [])
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
-
-    result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, ITALIAN_MWT_INPUT)
+    check_unchanged(ITALIAN_MWT_INPUT)
 
 ITALIAN_SPACES_AFTER_INPUT="""
 # sent_id = train_1114
@@ -232,14 +235,7 @@ def test_ssurgeon_spaces_after_text():
 
     Tested using some random example from the UD_Italian-TWITTIRO dataset
     """
-    doc = CoNLL.conll2doc(input_str=ITALIAN_SPACES_AFTER_INPUT)
-
-    # we don't want to edit this, just test the to/from conversion
-    ssurgeon_response = ssurgeon.process_doc(doc, [])
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
-
-    result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, ITALIAN_SPACES_AFTER_INPUT)
+    check_unchanged(ITALIAN_SPACES_AFTER_INPUT)
 
 EMPTY_VALUES_INPUT = """
 # text = Jennifer has lovely antennae.
@@ -258,12 +254,5 @@ def test_ssurgeon_blank_values():
 
     Tests, like regulations, are often written in blood
     """
-    doc = CoNLL.conll2doc(input_str=EMPTY_VALUES_INPUT)
-
-    # we don't want to edit this, just test the to/from conversion
-    ssurgeon_response = ssurgeon.process_doc(doc, [])
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
-
-    result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, EMPTY_VALUES_INPUT)
+    check_unchanged(EMPTY_VALUES_INPUT)
 
