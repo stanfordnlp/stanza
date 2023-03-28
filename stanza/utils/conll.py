@@ -24,7 +24,8 @@ class CoNLL:
         doc, sent = [], []
         doc_comments, sent_comments = [], []
         for line_idx, line in enumerate(f):
-            line = line.strip()
+            # leave whitespace such as NBSP, in case it is meaningful in the conll-u doc
+            line = line.lstrip().rstrip(' \n\r\t')
             if len(line) == 0:
                 if len(sent) > 0:
                     doc.append(sent)
