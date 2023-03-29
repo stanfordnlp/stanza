@@ -266,3 +266,34 @@ def test_mwt_ner_conversion():
 
     conll = "{:C}".format(doc)
     assert conll == MWT_NER
+
+
+# A random sentence from et_ewt-ud-train.conllu
+# which we use to test the deps conversion for multiple deps
+ESTONIAN_DEPS = """
+# newpar
+# sent_id = aia_foorum_37
+# text = Sestpeale ei mõistagi neid, kes koduaias sortidega tegelevad.
+1	Sestpeale	sest_peale	ADV	D	_	3	advmod	3:advmod	_
+2	ei	ei	AUX	V	Polarity=Neg	3	aux	3:aux	_
+3	mõistagi	mõistma	VERB	V	Connegative=Yes|Mood=Ind|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	0:root	_
+4	neid	tema	PRON	P	Case=Par|Number=Plur|Person=3|PronType=Prs	3	obj	3:obj|9:nsubj	SpaceAfter=No
+5	,	,	PUNCT	Z	_	9	punct	9:punct	_
+6	kes	kes	PRON	P	Case=Nom|Number=Plur|PronType=Int,Rel	9	nsubj	4:ref	_
+7	koduaias	kodu_aed	NOUN	S	Case=Ine|Number=Sing	9	obl	9:obl	_
+8	sortidega	sort	NOUN	S	Case=Com|Number=Plur	9	obl	9:obl	_
+9	tegelevad	tegelema	VERB	V	Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	4	acl:relcl	4:acl	SpaceAfter=No
+10	.	.	PUNCT	Z	_	3	punct	3:punct	_
+""".strip()
+
+def test_deps_conversion():
+    doc = CoNLL.conll2doc(input_str=ESTONIAN_DEPS)
+    assert len(doc.sentences) == 1
+    sentence = doc.sentences[0]
+    assert len(sentence.tokens) == 10
+
+    word = doc.sentences[0].words[3]
+    assert word.deps == "3:obj|9:nsubj"
+
+    conll = "{:C}".format(doc)
+    assert conll == ESTONIAN_DEPS
