@@ -110,6 +110,7 @@ def check_russian_doc(doc):
         assert expected_id == sentence.sent_id
         assert sent_idx == sentence.index
         assert len(sentence.comments) == 3
+        assert not sentence.has_enhanced_dependencies()
 
     sentences = "{:C}".format(doc)
     sentences = sentences.split("\n\n")
@@ -287,6 +288,7 @@ def test_mwt_ner_conversion():
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
     assert len(sentence.tokens) == 5
+    assert not sentence.has_enhanced_dependencies()
     EXPECTED_NER = ["O", "O", "S-PERSON", "O", "O"]
     EXPECTED_WORDS = [1, 1, 2, 1, 1]
     for token, ner, expected_words in zip(sentence.tokens, EXPECTED_NER, EXPECTED_WORDS):
@@ -325,6 +327,7 @@ def test_deps_conversion():
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
     assert len(sentence.tokens) == 10
+    assert sentence.has_enhanced_dependencies()
 
     word = doc.sentences[0].words[3]
     assert word.deps == "3:obj|9:nsubj"

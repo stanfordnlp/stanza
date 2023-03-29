@@ -8,6 +8,8 @@ import json
 import pickle
 import warnings
 
+import networkx as nx
+
 from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
@@ -283,8 +285,10 @@ class Document(StanzaObject):
                 if not m and not n:
                     for word in token.words:
                         token.id = (idx_w, )
+                        # delete dependency information
+                        word.deps = None
+                        word.head, word.deprel = None, None
                         word.id = idx_w
-                        word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
@@ -294,7 +298,7 @@ class Document(StanzaObject):
                     token.id = (idx_w, idx_w_end)
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
+                        token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
 
             # reprocess the words using the new tokens
@@ -414,6 +418,10 @@ class Sentence(StanzaObject):
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
 
+        # enhanced_dependencies represents the DEPS column
+        # this is a networkx MultiDiGraph
+        # with edges from the parent to the dependent
+        self._enhanced_dependencies = nx.MultiDiGraph()
         self._process_tokens(tokens)
 
     def _process_tokens(self, tokens):
@@ -426,9 +434,9 @@ class Sentence(StanzaObject):
                 entry[ID] = (entry[ID], )
             if len(entry.get(ID)) > 1: # if this token is a multi-word token
                 st, en = entry[ID]
-                self.tokens.append(Token(entry))
+                self.tokens.append(Token(self, entry))
             else: # else this token is a word
-                new_word = Word(entry)
+                new_word = Word(self, entry)
                 if len(self.words) > 0 and self.words[-1].id == new_word.id:
                     # this can happen in the following context:
                     # a document was created with MWT=Yes to mark that a token should be split
@@ -445,16 +453,16 @@ class Sentence(StanzaObject):
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
-                    self.tokens.append(Token(entry, words=[new_word]))
+                    self.tokens.append(Token(self, entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
 
-        # add back-pointers for words and tokens to the sentence
-        for w in self.words:
-            w.sent = self
-        for t in self.tokens:
-            t.sent = self
-
         self.rebuild_dependencies()
+
+    def has_enhanced_dependencies(self):
+        """
+        Whether or not the enhanced dependencies are part of this sentence
+        """
+        return len(self._enhanced_dependencies) > 0
 
     @property
     def index(self):
@@ -671,7 +679,7 @@ class Sentence(StanzaObject):
             if word.head == 0:
                 # make a word for the ROOT
                 word_entry = {ID: 0, TEXT: "ROOT"}
-                head = Word(word_entry)
+                head = Word(self, word_entry)
             else:
                 # id is index in words list + 1
                 head = self.words[word.head - 1]
@@ -805,8 +813,10 @@ class Token(StanzaObject):
     a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
     """
 
-    def __init__(self, token_entry, words=None):
-        """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
+    def __init__(self, sentence, token_entry, words=None):
+        """
+        Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
+        The owning sentence must be passed in.
         """
         self._id = token_entry.get(ID)
         self._text = token_entry.get(TEXT)
@@ -818,7 +828,7 @@ class Token(StanzaObject):
         self._words = words if words is not None else []
         self._start_char = token_entry.get(START_CHAR, None)
         self._end_char = token_entry.get(END_CHAR, None)
-        self._sent = None
+        self._sent = sentence
 
         if self._misc is not None:
             init_from_misc(self)
@@ -953,7 +963,7 @@ class Word(StanzaObject):
     """ A word class that stores attributes of a word.
     """
 
-    def __init__(self, word_entry):
+    def __init__(self, sentence, word_entry):
         """ Construct a word given a dictionary format word entry.
         """
         self._id = word_entry.get(ID, None)
@@ -970,15 +980,18 @@ class Word(StanzaObject):
         self._feats = word_entry.get(FEATS, None)
         self._head = word_entry.get(HEAD, None)
         self._deprel = word_entry.get(DEPREL, None)
-        self._deps = word_entry.get(DEPS, None)
         self._misc = word_entry.get(MISC, None)
         self._start_char = word_entry.get(START_CHAR, None)
         self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
-        self._sent = None
+        self._sent = sentence
 
         if self._misc is not None:
             init_from_misc(self)
+
+        # use the setter, which will go up to the sentence and set the
+        # dependencies on that graph
+        self.deps = word_entry.get(DEPS, None)
 
     @property
     def id(self):
@@ -1063,12 +1076,48 @@ class Word(StanzaObject):
     @property
     def deps(self):
         """ Access the dependencies of this word. """
-        return self._deps
+        graph = self._sent._enhanced_dependencies
+        if not graph.has_node(self.id):
+            return None
+
+        data = []
+        predecessors = sorted(list(graph.predecessors(self.id)))
+        for parent in predecessors:
+            deps = sorted(list(graph.get_edge_data(parent, self.id)))
+            for dep in deps:
+                if len(parent) == 1:
+                    data.append("%d:%s" % (parent[0], dep))
+                else:
+                    data.append("%d.%d:%s" % (parent[0], parent[1], dep))
+        if not data:
+            return None
+
+        return "|".join(data)
 
     @deps.setter
     def deps(self, value):
         """ Set the word's dependencies value. """
-        self._deps = value if self._is_null(value) == False else None
+        graph = self._sent._enhanced_dependencies
+        # need to make a new list: cannot iterate and delete at the same time
+        if graph.has_node(self.id):
+            in_edges = list(graph.in_edges(self.id))
+            graph.remove_edges_from(in_edges)
+
+        if value is None:
+            return
+
+        if isinstance(value, str):
+            value = value.split("|")
+        if all(isinstance(x, str) for x in value):
+            value = [x.split(":", maxsplit=1) for x in value]
+        for parent, dep in value:
+            if "." in parent:
+                parent = tuple(map(int, parent.split(".", maxsplit=1)))
+            else:
+                # parents which aren't empty nodes still get tuples
+                # this makes it easier to sort when writing them back out
+                parent = (int(parent),)
+            graph.add_edge(parent, self.id, dep)
 
     @property
     def misc(self):
