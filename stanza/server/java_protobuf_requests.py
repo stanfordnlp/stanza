@@ -183,6 +183,25 @@ def add_word_to_graph(graph, word, sent_idx, word_idx):
         edge.target = word_idx+1
         edge.dep = word.deprel
 
+def add_networkx_graph(graph_proto, dependencies, sent_idx):
+    for source in dependencies:
+        if source == 0:
+            # unlike with basic, we need to send over the roots,
+            # as the enhanced can have loops
+            for root in dependencies.successors(source):
+                graph_proto.root.append(root)
+            continue
+        node = graph_proto.node.add()
+        node.sentenceIndex = sent_idx + 1
+        # the nodes in the networkx graph are indexed from 1, not counting the root
+        node.index = source
+        for target in dependencies.successors(source):
+            for deprel in dependencies.get_edge_data(source, target):
+                edge = graph_proto.edge.add()
+                edge.source = source
+                edge.target = target
+                edge.dep = deprel
+
 def features_to_string(features):
     if not features:
         return None
