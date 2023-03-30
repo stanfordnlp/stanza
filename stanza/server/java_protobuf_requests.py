@@ -2,7 +2,7 @@ from collections import deque
 import subprocess
 
 from stanza.models.constituency.parse_tree import Tree
-from stanza.protobuf import FlattenedParseTree
+from stanza.protobuf import DependencyGraph, FlattenedParseTree
 from stanza.server.client import resolve_classpath
 
 def send_request(request, response_type, java_main, classpath=None):
@@ -120,6 +120,9 @@ def add_token(token_list, word, token):
     We pass along "after" but not "before", and the "after" is limited
     to whether or not there is a space after the token
     """
+    if token is None and isinstance(word.id, int):
+        raise AssertionError("Only expected word w/o token for 'extra' words")
+
     query_token = token_list.add()
     query_token.word = word.text
     query_token.value = word.text
@@ -134,27 +137,37 @@ def add_token(token_list, word, token):
             key, value = feature.split("=", maxsplit=1)
             query_token.conllUFeatures.key.append(key)
             query_token.conllUFeatures.value.append(value)
-    if token.ner is not None:
-        query_token.ner = token.ner
-    if len(token.id) > 1:
-        query_token.mwtText = token.text
-        query_token.isMWT = True
-        query_token.isFirstMWT = token.id[0] == word.id
-    if token.id[-1] != word.id:
-        # if we are not the last word of an MWT token
-        # we are absolutely not followed by space
-        pass
+    if token is not None:
+        if token.ner is not None:
+            query_token.ner = token.ner
+        if token is not None and len(token.id) > 1:
+            query_token.mwtText = token.text
+            query_token.isMWT = True
+            query_token.isFirstMWT = token.id[0] == word.id
+        if token.id[-1] != word.id:
+            # if we are not the last word of an MWT token
+            # we are absolutely not followed by space
+            pass
+        else:
+            space_after = misc_to_space_after(token.misc)
+            if space_after == ' ':
+                # in some treebanks, the word might have more interesting
+                # space after annotations than the token
+                space_after = misc_to_space_after(word.misc)
+            query_token.after = space_after
+
+        query_token.index = word.id
     else:
-        space_after = misc_to_space_after(token.misc)
-        if space_after == ' ':
-            # in some treebanks, the word might have more interesting
-            # space after annotations than the token
-            space_after = misc_to_space_after(word.misc)
-        query_token.after = space_after
+        # presumably empty words won't really be written this way,
+        # but we can still keep track of it
+        query_token.after = misc_to_space_after(word.misc)
+
+        query_token.index = word.id[0]
+        query_token.emptyIndex = word.id[1]
 
     if word.misc and word.misc != "_":
         query_token.conllUMisc = word.misc
-    if token.misc and token.misc != "_":
+    if token is not None and token.misc and token.misc != "_":
         query_token.mwtMisc = token.misc
 
 def add_sentence(request_sentences, sentence, num_tokens):
@@ -182,6 +195,53 @@ def add_word_to_graph(graph, word, sent_idx, word_idx):
         edge.source = word.head
         edge.target = word_idx+1
         edge.dep = word.deprel
+
+def convert_networkx_graph(graph_proto, sentence, sent_idx):
+    """
+    Turns a networkx graph into a DependencyGraph from the proto file
+    """
+    for token in sentence.tokens:
+        for word in token.words:
+            add_token(graph_proto.token, word, token)
+    for word in sentence.empty_words:
+        add_token(graph_proto.token, word, None)
+
+    dependencies = sentence._enhanced_dependencies
+    for target in dependencies:
+        if target == 0:
+            # don't need to send the explicit root
+            continue
+        for source in dependencies.predecessors(target):
+            if source == 0:
+                # unlike with basic, we need to send over the roots,
+                # as the enhanced can have loops
+                graph_proto.rootNode.append(len(graph_proto.node))
+                continue
+            for deprel in dependencies.get_edge_data(source, target):
+                edge = graph_proto.edge.add()
+                if isinstance(source, int):
+                    edge.source = source
+                else:
+                    edge.source = source[0]
+                    if source[1] != 0:
+                        edge.sourceEmpty = source[1]
+                if isinstance(target, int):
+                    edge.target = target
+                else:
+                    edge.target = target[0]
+                    if target[1] != 0:
+                        edge.targetEmpty = target[1]
+                edge.dep = deprel
+        node = graph_proto.node.add()
+        node.sentenceIndex = sent_idx + 1
+        # the nodes in the networkx graph are indexed from 1, not counting the root
+        if isinstance(target, int):
+            node.index = target
+        else:
+            node.index = target[0]
+            if target[1] != 0:
+                node.emptyIndex = target[1]
+    return graph_proto
 
 def features_to_string(features):
     if not features:
