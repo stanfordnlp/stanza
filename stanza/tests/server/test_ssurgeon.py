@@ -133,10 +133,10 @@ EXISTING_MWT_DOC_INPUT = """
 # sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005
 # text = One of “NCRC4ME’s”
 1	One	one	NUM	CD	NumType=Card	0	root	0:root	_
-2	of	of	ADP	IN	_	4	case	8:case	_
+2	of	of	ADP	IN	_	4	case	4:case	_
 3	“	"	PUNCT	``	_	4	punct	4:punct	SpaceAfter=No
 4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
-4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	8:compound	_
+4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	1:compound	_
 5	’s	's	PART	POS	_	4	case	4:case	_
 6	”	"	PUNCT	''	_	4	punct	4:punct	_
 """
