@@ -13,7 +13,7 @@ import re
 import sys
 
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, features_to_string, space_after_to_misc, substitute_space_misc, remove_space_misc, misc_space_pieces
+from stanza.server import java_protobuf_requests
 from stanza.utils.conll import CoNLL
 
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
@@ -51,7 +51,7 @@ def read_ssurgeon_edits(edit_file):
         return parse_ssurgeon_edits(fin.read())
 
 def send_ssurgeon_request(request):
-    return send_request(request, SsurgeonResponse, SSURGEON_JAVA)
+    return java_protobuf_requests.send_request(request, SsurgeonResponse, SSURGEON_JAVA)
 
 def build_request(doc, ssurgeon_edits):
     request = SsurgeonRequest()
@@ -74,8 +74,8 @@ def build_request(doc, ssurgeon_edits):
             word_idx = 0
             for token in sentence.tokens:
                 for word in token.words:
-                    add_token(graph.token, word, token)
-                    add_word_to_graph(graph, word, sent_idx, word_idx)
+                    java_protobuf_requests.add_token(graph.token, word, token)
+                    java_protobuf_requests.add_word_to_graph(graph, word, sent_idx, word_idx)
 
                     word_idx = word_idx + 1
     except Exception as e:
@@ -121,7 +121,7 @@ def convert_response_to_doc(doc, semgrex_response):
                 LEMMA: graph_word.lemma if graph_word.lemma else None,
                 UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
                 XPOS: graph_word.pos if graph_word.pos else None,
-                FEATS: features_to_string(graph_word.conllUFeatures),
+                FEATS: java_protobuf_requests.features_to_string(graph_word.conllUFeatures),
                 DEPS: None,
                 NER: graph_word.ner if graph_word.ner else None,
                 MISC: None,
@@ -134,10 +134,10 @@ def convert_response_to_doc(doc, semgrex_response):
                 "mwt_text": graph_word.mwtText,
             }
             # TODO: do "before" as well
-            word_entry[MISC] = space_after_to_misc(graph_word.after)
+            word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
             if graph_word.conllUMisc:
                 # TODO: do this treatment to the token misc as well
-                word_entry[MISC] = substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
+                word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
             tokens.append(word_entry)
         tokens.sort(key=lambda x: x[ID])
         for root in ssurgeon_graph.root:
@@ -156,7 +156,7 @@ def convert_response_to_doc(doc, semgrex_response):
         for word_start_idx, word in enumerate(tokens):
             if not word["is_first_mwt"]:
                 if word["is_mwt"]:
-                    word[MISC] = remove_space_misc(word[MISC])
+                    word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
                 mwt_tokens.append(word)
                 continue
             word_end_idx = word_start_idx + 1
@@ -169,9 +169,9 @@ def convert_response_to_doc(doc, semgrex_response):
                 NER: word[NER],
                 # use the SpaceAfter=No (or not) from the last word in the token
                 # TODO: use the mwtMisc field as well
-                MISC: misc_space_pieces(tokens[word_end_idx-1][MISC]),
+                MISC: java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC]),
             }
-            word[MISC] = remove_space_misc(word[MISC])
+            word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
             mwt_tokens.append(mwt_token_entry)
             mwt_tokens.append(word)
 
@@ -196,7 +196,7 @@ def convert_response_to_doc(doc, semgrex_response):
         sentence.rebuild_dependencies()
     return doc
 
-class Ssurgeon(JavaProtobufContext):
+class Ssurgeon(java_protobuf_requests.JavaProtobufContext):
     """
     Ssurgeon context window
 
