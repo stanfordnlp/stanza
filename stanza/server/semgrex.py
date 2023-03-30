@@ -37,7 +37,7 @@ import copy
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext
+from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, convert_networkx_graph
 from stanza.utils.conll import CoNLL
 
 SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
@@ -45,30 +45,34 @@ SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
 def send_semgrex_request(request):
     return send_request(request, SemgrexResponse, SEMGREX_JAVA)
 
-def build_request(doc, semgrex_patterns):
+def build_request(doc, semgrex_patterns, enhanced=False):
     request = SemgrexRequest()
     for semgrex in semgrex_patterns:
         request.semgrex.append(semgrex)
 
     for sent_idx, sentence in enumerate(doc.sentences):
         query = request.query.add()
-        word_idx = 0
-        for token in sentence.tokens:
-            for word in token.words:
-                add_token(query.token, word, token)
-                add_word_to_graph(query.graph, word, sent_idx, word_idx)
+        if enhanced:
+            # tokens will be added on to the graph object
+            convert_networkx_graph(query.graph, sentence, sent_idx)
+        else:
+            word_idx = 0
+            for token in sentence.tokens:
+                for word in token.words:
+                    add_token(query.token, word, token)
+                    add_word_to_graph(query.graph, word, sent_idx, word_idx)
 
-                word_idx = word_idx + 1
+                    word_idx = word_idx + 1
 
     return request
 
-def process_doc(doc, *semgrex_patterns):
+def process_doc(doc, *semgrex_patterns, enhanced=False):
     """
     Returns the result of processing the given semgrex expression on the stanza doc.
 
     Currently the return is a SemgrexResponse from CoreNLP.proto
     """
-    request = build_request(doc, semgrex_patterns)
+    request = build_request(doc, semgrex_patterns, enhanced=enhanced)
 
     return send_semgrex_request(request)
 
@@ -138,6 +142,7 @@ def main():
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
     parser.add_argument('--matches_only', action='store_true', default=False, help="Only print the matching sentences")
+    parser.add_argument('--enhanced', action='store_true', default=False, help='Use the enhanced dependencies instead of the basic')
     args = parser.parse_args()
 
     if args.semgrex_file:
@@ -145,7 +150,7 @@ def main():
             args.semgrex = [x.strip() for x in fin.readlines() if x.strip()]
 
     if args.input_file:
-        doc = CoNLL.conll2doc(input_file=args.input_file)
+        doc = CoNLL.conll2doc(input_file=args.input_file, ignore_gapping=False)
     else:
         nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma,depparse')
         doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him.')
@@ -155,7 +160,7 @@ def main():
         print()
         print("-" * 75)
         print()
-    semgrex_result = process_doc(doc, *args.semgrex)
+    semgrex_result = process_doc(doc, *args.semgrex, enhanced=args.enhanced)
     doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only)
     print("{:C}".format(doc))
 
