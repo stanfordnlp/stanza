@@ -9,6 +9,7 @@ The main program in this file gives a very short intro to how to use it.
 
 import argparse
 import copy
+import logging
 import os
 import re
 import sys
@@ -19,7 +20,10 @@ from stanza.utils.conll import CoNLL
 
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
 
+logger = logging.getLogger('stanza')
+
 SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
+
 
 class SsurgeonEdit:
     def __init__(self, semgrex_pattern, ssurgeon_edits, ssurgeon_id=None, notes=None, language="UniversalEnglish"):
@@ -79,6 +83,12 @@ def build_request(doc, ssurgeon_edits):
                     java_protobuf_requests.add_word_to_graph(graph, word, sent_idx, word_idx)
 
                     word_idx = word_idx + 1
+            if sentence.has_enhanced_dependencies():
+                graph = request.graph.add()
+                for token in sentence.tokens:
+                    for word in token.words:
+                        java_protobuf_requests.add_token(graph.token, word, token)
+                java_protobuf_requests.add_networkx_graph(graph, sentence._enhanced_dependencies, sent_idx)
     except Exception as e:
         raise RuntimeError("Failed to process sentence {}:\n{:C}".format(sent_idx, sentence)) from e
 
@@ -106,7 +116,13 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 def convert_response_to_doc(doc, semgrex_response):
     doc = copy.deepcopy(doc)
     try:
-        for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
+        sent_idx = 0
+        response_idx = 0
+        while sent_idx < len(doc.sentences):
+            sentence = doc.sentences[sent_idx]
+            ssurgeon_result = semgrex_response.result[response_idx]
+            has_enhanced = sentence.has_enhanced_dependencies()
+
             # EditNode is currently bugged... :/
             # TODO: change this after next CoreNLP release (after 4.5.3)
             #if not ssurgeon_result.changed:
@@ -198,6 +214,26 @@ def convert_response_to_doc(doc, semgrex_response):
             doc.sentences[sent_idx] = sentence
 
             sentence.rebuild_dependencies()
+
+            sent_idx += 1
+            response_idx += 1
+
+            if has_enhanced:
+                enhanced_ssurgeon_graph = semgrex_response.result[response_idx].graph
+                response_idx += 1
+
+                enhanced_words = [None] * len(enhanced_ssurgeon_graph.node)
+                for node_idx, node in enumerate(enhanced_ssurgeon_graph.node):
+                    enhanced_words[node.index-1] = enhanced_ssurgeon_graph.token[node_idx].word
+                if (len(sentence.words) != len(enhanced_words) or
+                    any(word.text != enhanced_word for word, enhanced_word in zip(sentence.words, enhanced_words))):
+                    logger.warning("Sentence %d had different words in the enhanced graph compared to the basic graph after running the ssurgeon!", sent_idx)
+                    continue
+                # yay, the words match at a very basic level
+                for edge in enhanced_ssurgeon_graph.edge:
+                    sentence._enhanced_dependencies.add_edge(edge.source, edge.target, edge.dep)
+                for root in enhanced_ssurgeon_graph.root:
+                    sentence._enhanced_dependencies.add_edge(0, root, "root")
     except Exception as e:
         raise RuntimeError("Ssurgeon could not process sentence {}\nSsurgeon result:\n{}\nOriginal sentence:\n{:C}".format(sent_idx, ssurgeon_result, sentence)) from e
     return doc
