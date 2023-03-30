@@ -10,6 +10,7 @@ The main program in this file gives a very short intro to how to use it.
 import argparse
 from collections import namedtuple
 import copy
+import logging
 import os
 import re
 import sys
@@ -20,6 +21,8 @@ from stanza.server import java_protobuf_requests
 from stanza.utils.conll import CoNLL
 
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, Word, Token, Sentence
+
+logger = logging.getLogger('stanza')
 
 SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
 
@@ -76,6 +79,12 @@ def build_request(doc, ssurgeon_edits):
                     java_protobuf_requests.add_word_to_graph(graph, word, sent_idx, word_idx)
 
                     word_idx = word_idx + 1
+            if sentence.has_enhanced_dependencies():
+                graph = request.graph.add()
+                for token in sentence.tokens:
+                    for word in token.words:
+                        java_protobuf_requests.add_token(graph.token, word, token)
+                java_protobuf_requests.convert_networkx_graph(graph, sentence, sent_idx)
     except Exception as e:
         raise RuntimeError("Failed to process sentence {}:\n{:C}".format(sent_idx, sentence)) from e
 
@@ -100,7 +109,12 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 
     return send_ssurgeon_request(request)
 
-def build_word_entry(word_index, graph_word):
+def build_word_entry(graph_word):
+    if graph_word.emptyIndex:
+        word_index = (graph_word.index, graph_word.emptyIndex)
+    else:
+        word_index = graph_word.index
+
     word_entry = {
         ID: word_index,
         TEXT: graph_word.word if graph_word.word else None,
@@ -129,7 +143,13 @@ def build_word_entry(word_index, graph_word):
 def convert_response_to_doc(doc, semgrex_response):
     doc = copy.deepcopy(doc)
     try:
-        for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
+        sent_idx = 0
+        response_idx = 0
+        while sent_idx < len(doc.sentences):
+            sentence = doc.sentences[sent_idx]
+            ssurgeon_result = semgrex_response.result[response_idx]
+            has_enhanced = sentence.has_enhanced_dependencies()
+
             # EditNode is currently bugged... :/
             # TODO: change this after next CoreNLP release (after 4.5.3)
             #if not ssurgeon_result.changed:
@@ -138,7 +158,7 @@ def convert_response_to_doc(doc, semgrex_response):
             ssurgeon_graph = ssurgeon_result.graph
             tokens = []
             for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
-                word_entry = build_word_entry(graph_node.index, graph_word)
+                word_entry = build_word_entry(graph_word)
                 tokens.append(word_entry)
             tokens.sort(key=lambda x: x[ID])
             for root in ssurgeon_graph.root:
@@ -199,6 +219,57 @@ def convert_response_to_doc(doc, semgrex_response):
             doc.sentences[sent_idx] = sentence
 
             sentence.rebuild_dependencies()
+
+            sent_idx += 1
+            response_idx += 1
+
+            if has_enhanced:
+                enhanced_ssurgeon_graph = semgrex_response.result[response_idx].graph
+                response_idx += 1
+
+                enhanced_words_map = {}
+                for node_idx, node in enumerate(enhanced_ssurgeon_graph.node):
+                    if node.emptyIndex:
+                        continue
+                    enhanced_words_map[node.index-1] = enhanced_ssurgeon_graph.token[node_idx].word
+                if any(expected_idx != idx for expected_idx, idx in enumerate(sorted(enhanced_words_map.keys()))):
+                    logger.warning("Sentence %d had gap in indices of the enhanced graph!")
+                    continue
+                enhanced_words = []
+                for index, word in sorted(enhanced_words_map.items()):
+                    enhanced_words.append(word)
+                if (len(sentence.words) != len(enhanced_words) or
+                    any(word.text != enhanced_word for word, enhanced_word in zip(sentence.words, enhanced_words))):
+                    logger.warning("Sentence %d had different words in the enhanced graph compared to the basic graph after running the ssurgeon!", sent_idx)
+                    continue
+                # yay, the words match at a very basic level
+                # first need to add any extra words
+                empty_words = []
+                for token in enhanced_ssurgeon_graph.token:
+                    if not token.emptyIndex:
+                        continue
+                    word_entry = build_word_entry(token)
+                    empty_words.append(Word(sentence, word_entry))
+                sentence.empty_words = empty_words
+
+                # next add the edges
+                for edge in enhanced_ssurgeon_graph.edge:
+                    if edge.sourceEmpty:
+                        source = (edge.source, edge.sourceEmpty)
+                    else:
+                        source = edge.source
+                    if edge.targetEmpty:
+                        target = (edge.target, edge.targetEmpty)
+                    else:
+                        target = edge.target
+                    sentence.enhanced_dependencies.add_edge(source, target, edge.dep)
+                for root in enhanced_ssurgeon_graph.rootNode:
+                    root = enhanced_ssurgeon_graph.node[root]
+                    if root.emptyIndex:
+                        root = (root.index, root.emptyIndex)
+                    else:
+                        root = root.index
+                    sentence.enhanced_dependencies.add_edge(0, root, "root")
     except Exception as e:
         raise RuntimeError("Ssurgeon could not process sentence {}\nSsurgeon result:\n{}\nOriginal sentence:\n{:C}".format(sent_idx, ssurgeon_result, sentence)) from e
     return doc
@@ -271,7 +342,7 @@ def main():
         ssurgeon_edits = [SsurgeonEdit(args.semgrex, args.ssurgeon)]
 
     if args.input_file:
-        docs = [CoNLL.conll2doc(input_file=args.input_file)]
+        docs = [CoNLL.conll2doc(input_file=args.input_file, ignore_gapping=False)]
         outputs = [args.output_file]
         input_output = zip(docs, outputs)
     elif args.input_dir:
@@ -287,7 +358,7 @@ def main():
                 doc_path = os.path.join(args.input_dir, doc_filename)
                 output_path = os.path.join(args.output_dir, doc_filename)
                 print("Processing %s to %s" % (doc_path, output_path))
-                yield CoNLL.conll2doc(input_file=doc_path), output_path
+                yield CoNLL.conll2doc(input_file=doc_path, ignore_gapping=False), output_path
         input_output = read_docs()
     else:
         docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC)]

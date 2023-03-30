@@ -141,19 +141,6 @@ EXISTING_MWT_DOC_INPUT = """
 6	”	"	PUNCT	''	_	4	punct	4:punct	_
 """
 
-# TODO: also, we shouldn't lose the enhanced dependencies...
-EXISTING_MWT_DOC_EXPECTED = """
-# sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005
-# text = One of “NCRC4ME’s”
-1	One	one	NUM	CD	NumType=Card	0	root	_	_
-2	of	of	ADP	IN	_	4	case	_	_
-3	“	"	PUNCT	``	_	4	punct	_	SpaceAfter=No
-4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
-4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	_	_
-5	’s	's	PART	POS	_	4	case	_	_
-6	”	"	PUNCT	''	_	4	punct	_	_
-"""
-
 def test_ssurgeon_existing_mwt_no_change():
     """
     Test that converting a document with an MWT works as expected
@@ -176,7 +163,7 @@ def test_ssurgeon_existing_mwt_no_change():
     updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
 
     result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
+    compare_ignoring_whitespace(result, EXISTING_MWT_DOC_INPUT)
 
 def check_empty_test(input_text, expected=None, echo=False):
     if expected is None:

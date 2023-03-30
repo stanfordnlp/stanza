@@ -591,6 +591,14 @@ class Sentence(StanzaObject):
         return self._enhanced_dependencies is not None and len(self._enhanced_dependencies) > 0
 
     @property
+    def enhanced_dependencies(self):
+        graph = self._enhanced_dependencies
+        if graph is None:
+            graph = nx.MultiDiGraph()
+            self._enhanced_dependencies = graph
+        return graph
+
+    @property
     def index(self):
         """
         Access the index of this sentence within the doc.
