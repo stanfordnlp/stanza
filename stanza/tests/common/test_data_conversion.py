@@ -297,3 +297,36 @@ def test_deps_conversion():
 
     conll = "{:C}".format(doc)
     assert conll == ESTONIAN_DEPS
+
+ESTONIAN_EMPTY_DEPS = """
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+6	maasikatele	maasikas	NOUN	S	Case=All|Number=Plur	3	obl	5.1:obl	Orphan=Yes
+7	...	...	PUNCT	Z	_	3	punct	5.1:punct	_
+""".strip()
+
+def test_empty_deps_conversion():
+    """
+    Ideally we would be able to read & recreate the dependencies
+
+    Currently that is not possible.  Perhaps it should be fixed.
+    At the very least, we shouldn't fail horribly when reading this
+    """
+    doc = CoNLL.conll2doc(input_str=ESTONIAN_EMPTY_DEPS)
+    assert len(doc.sentences) == 1
+    sentence = doc.sentences[0]
+    conll = "{:C}".format(doc)
+    #assert len(sentence.tokens) == 10
+
+    #word = doc.sentences[0].words[3]
+    #assert word.deps == "3:obj|9:nsubj"
+
+    #conll = "{:C}".format(doc)
+    #assert conll == ESTONIAN_EMPTY_DOCS
+
