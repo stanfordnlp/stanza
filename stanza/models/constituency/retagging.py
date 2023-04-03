@@ -15,6 +15,7 @@ from stanza import Pipeline
 
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.resources.common import download_resources_json, load_resources_json, get_language_resources
 
 logger = logging.getLogger('stanza')
 
@@ -54,8 +55,17 @@ def build_retag_pipeline(args):
     """
     # some argument sets might not use 'mode'
     if args['retag_package'] is not None and args.get('mode', None) != 'remove_optimizer':
+        download_resources_json()
+        resources = load_resources_json()
+
         if '_' in args['retag_package']:
             lang, package = args['retag_package'].split('_', 1)
+            lang_resources = get_language_resources(resources, lang)
+            if lang_resources is None and 'lang' in args:
+                lang_resources = get_language_resources(resources, args['lang'])
+                if lang_resources is not None and 'pos' in lang_resources and args['retag_package'] in lang_resources['pos']:
+                    lang = args['lang']
+                    package = args['retag_package']
         else:
             if 'lang' not in args:
                 raise ValueError("Retag package %s does not specify the language, and it is not clear from the arguments" % args['retag_package'])
@@ -75,6 +85,7 @@ def build_retag_pipeline(args):
 
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
+            retag_args['download_method'] = 'reuse_resources'
             if path is not None:
                 retag_args['allow_unknown_language'] = True
                 retag_args['pos_model_path'] = path
