@@ -85,6 +85,8 @@ def build_retag_pipeline(args):
 
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
+            # we just downloaded the resources a moment ago
+            # no need to repeatedly download
             retag_args['download_method'] = 'reuse_resources'
             if path is not None:
                 retag_args['allow_unknown_language'] = True
