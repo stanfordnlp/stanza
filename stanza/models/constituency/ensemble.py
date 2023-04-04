@@ -34,7 +34,7 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text
+from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text, parse_dir
 from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
 from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
@@ -253,6 +253,7 @@ def parse_args(args=None):
 
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--tokenized_dir', type=str, default=None, help='Input directory of tokenized text for parsing with parse_text.')
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
@@ -315,7 +316,12 @@ def main():
             if kbestF1 is not None:
                 logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
     elif args['mode'] == 'parse_text':
-        parse_text(args, ensemble, retag_pipeline)
+        if args['tokenized_dir']:
+            if not args['predict_dir']:
+                raise ValueError("Must specific --predict_dir to go with --tokenized_dir")
+            parse_dir(args, ensemble, retag_pipeline, args['tokenized_dir'], args['predict_dir'])
+        else:
+            parse_text(args, ensemble, retag_pipeline)
     else:
         raise ValueError("Unhandled mode %s" % args['mode'])
 

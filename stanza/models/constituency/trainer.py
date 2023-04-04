@@ -247,7 +247,20 @@ def load_model_parse_text(args, model_file, retag_pipeline):
     model.eval()
     logger.info("Loaded model from %s", model_file)
 
-    parse_text(args, model, retag_pipeline)
+    if args['tokenized_dir']:
+        if not args['predict_dir']:
+            raise ValueError("Must specific --predict_dir to go with --tokenized_dir")
+        parse_dir(args, model, retag_pipeline, args['tokenized_dir'], args['predict_dir'])
+    else:
+        parse_text(args, model, retag_pipeline)
+
+def parse_dir(args, model, retag_pipeline, tokenized_dir, predict_dir):
+    os.makedirs(predict_dir, exist_ok=True)
+    for filename in os.listdir(tokenized_dir):
+        input_path = os.path.join(tokenized_dir, filename)
+        output_path = os.path.join(predict_dir, os.path.splitext(filename)[0] + ".mrg")
+        logger.info("Processing %s to %s", input_path, output_path)
+        parse_text(args, model, retag_pipeline, tokenized_file=input_path, predict_file=output_path)
 
 def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=None):
     """
