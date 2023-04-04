@@ -104,96 +104,99 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 
 def convert_response_to_doc(doc, semgrex_response):
     doc = copy.deepcopy(doc)
-    for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
-        # EditNode is currently bugged... :/
-        # TODO: change this after next CoreNLP release (after 4.5.3)
-        #if not ssurgeon_result.changed:
-        #    continue
+    try:
+        for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
+            # EditNode is currently bugged... :/
+            # TODO: change this after next CoreNLP release (after 4.5.3)
+            #if not ssurgeon_result.changed:
+            #    continue
 
-        ssurgeon_graph = ssurgeon_result.graph
-        tokens = []
-        for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
-            if graph_node.copyAnnotation:
-                continue
-            word_entry = {
-                ID: graph_node.index,
-                TEXT: graph_word.word if graph_word.word else None,
-                LEMMA: graph_word.lemma if graph_word.lemma else None,
-                UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
-                XPOS: graph_word.pos if graph_word.pos else None,
-                FEATS: java_protobuf_requests.features_to_string(graph_word.conllUFeatures),
-                DEPS: None,
-                NER: graph_word.ner if graph_word.ner else None,
-                MISC: None,
-                START_CHAR: None,   # TODO: fix this?  one problem is the text positions
-                END_CHAR: None,     #   might change across all of the sentences
-                # presumably python will complain if this conflicts
-                # with one of the constants above
-                "is_mwt": graph_word.isMWT,
-                "is_first_mwt": graph_word.isFirstMWT,
-                "mwt_text": graph_word.mwtText,
-            }
-            # TODO: do "before" as well
-            word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
-            if graph_word.conllUMisc:
-                # TODO: do this treatment to the token misc as well
-                word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
-            tokens.append(word_entry)
-        tokens.sort(key=lambda x: x[ID])
-        for root in ssurgeon_graph.root:
-            tokens[root-1][HEAD] = 0
-            tokens[root-1][DEPREL] = "root"
-        for edge in ssurgeon_graph.edge:
-            # can't do anything about the extra dependencies for now
-            # TODO: put them all in .deps
-            if edge.isExtra:
-                continue
-            tokens[edge.target-1][HEAD] = edge.source
-            tokens[edge.target-1][DEPREL] = edge.dep
+            ssurgeon_graph = ssurgeon_result.graph
+            tokens = []
+            for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
+                if graph_node.copyAnnotation:
+                    continue
+                word_entry = {
+                    ID: graph_node.index,
+                    TEXT: graph_word.word if graph_word.word else None,
+                    LEMMA: graph_word.lemma if graph_word.lemma else None,
+                    UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
+                    XPOS: graph_word.pos if graph_word.pos else None,
+                    FEATS: java_protobuf_requests.features_to_string(graph_word.conllUFeatures),
+                    DEPS: None,
+                    NER: graph_word.ner if graph_word.ner else None,
+                    MISC: None,
+                    START_CHAR: None,   # TODO: fix this?  one problem is the text positions
+                    END_CHAR: None,     #   might change across all of the sentences
+                    # presumably python will complain if this conflicts
+                    # with one of the constants above
+                    "is_mwt": graph_word.isMWT,
+                    "is_first_mwt": graph_word.isFirstMWT,
+                    "mwt_text": graph_word.mwtText,
+                }
+                # TODO: do "before" as well
+                word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
+                if graph_word.conllUMisc:
+                    # TODO: do this treatment to the token misc as well
+                    word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
+                tokens.append(word_entry)
+            tokens.sort(key=lambda x: x[ID])
+            for root in ssurgeon_graph.root:
+                tokens[root-1][HEAD] = 0
+                tokens[root-1][DEPREL] = "root"
+            for edge in ssurgeon_graph.edge:
+                # can't do anything about the extra dependencies for now
+                # TODO: put them all in .deps
+                if edge.isExtra:
+                    continue
+                tokens[edge.target-1][HEAD] = edge.source
+                tokens[edge.target-1][DEPREL] = edge.dep
 
-        # for any MWT, produce a token_entry which represents the word range
-        mwt_tokens = []
-        for word_start_idx, word in enumerate(tokens):
-            if not word["is_first_mwt"]:
-                if word["is_mwt"]:
-                    word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
+            # for any MWT, produce a token_entry which represents the word range
+            mwt_tokens = []
+            for word_start_idx, word in enumerate(tokens):
+                if not word["is_first_mwt"]:
+                    if word["is_mwt"]:
+                        word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
+                    mwt_tokens.append(word)
+                    continue
+                word_end_idx = word_start_idx + 1
+                while word_end_idx < len(tokens) and tokens[word_end_idx]["is_mwt"] and not tokens[word_end_idx]["is_first_mwt"]:
+                    word_end_idx += 1
+                mwt_token_entry = {
+                    # the tokens don't fencepost the way lists do
+                    ID: (tokens[word_start_idx][ID], tokens[word_end_idx-1][ID]),
+                    TEXT: word["mwt_text"],
+                    NER: word[NER],
+                    # use the SpaceAfter=No (or not) from the last word in the token
+                    # TODO: use the mwtMisc field as well
+                    MISC: java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC]),
+                }
+                word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
+                mwt_tokens.append(mwt_token_entry)
                 mwt_tokens.append(word)
-                continue
-            word_end_idx = word_start_idx + 1
-            while word_end_idx < len(tokens) and tokens[word_end_idx]["is_mwt"] and not tokens[word_end_idx]["is_first_mwt"]:
-                word_end_idx += 1
-            mwt_token_entry = {
-                # the tokens don't fencepost the way lists do
-                ID: (tokens[word_start_idx][ID], tokens[word_end_idx-1][ID]),
-                TEXT: word["mwt_text"],
-                NER: word[NER],
-                # use the SpaceAfter=No (or not) from the last word in the token
-                # TODO: use the mwtMisc field as well
-                MISC: java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC]),
-            }
-            word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
-            mwt_tokens.append(mwt_token_entry)
-            mwt_tokens.append(word)
 
-        old_comments = list(sentence.comments)
-        sentence = Sentence(mwt_tokens, doc)
+            old_comments = list(sentence.comments)
+            sentence = Sentence(mwt_tokens, doc)
 
-        token_text = [token.text if (token_idx == len(sentence.tokens) - 1 or
-                                     (token.misc and "SpaceAfter=No" in token.misc.split("|")) or
-                                     (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc.split("|")))
-                     else token.text + " "
-                     for token_idx, token in enumerate(sentence.tokens)]
-        sentence_text = "".join(token_text)
+            token_text = [token.text if (token_idx == len(sentence.tokens) - 1 or
+                                         (token.misc and "SpaceAfter=No" in token.misc.split("|")) or
+                                         (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc.split("|")))
+                         else token.text + " "
+                         for token_idx, token in enumerate(sentence.tokens)]
+            sentence_text = "".join(token_text)
 
-        for comment in old_comments:
-            if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
-                sentence.add_comment("# text = " + sentence_text)
-            else:
-                sentence.add_comment(comment)
+            for comment in old_comments:
+                if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
+                    sentence.add_comment("# text = " + sentence_text)
+                else:
+                    sentence.add_comment(comment)
 
-        doc.sentences[sent_idx] = sentence
+            doc.sentences[sent_idx] = sentence
 
-        sentence.rebuild_dependencies()
+            sentence.rebuild_dependencies()
+    except Exception as e:
+        raise RuntimeError("Ssurgeon could not process sentence {}\nSsurgeon result:\n{}\nOriginal sentence:\n{:C}".format(sent_idx, ssurgeon_result, sentence)) from e
     return doc
 
 class Ssurgeon(java_protobuf_requests.JavaProtobufContext):
