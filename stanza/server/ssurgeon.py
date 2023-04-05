@@ -252,13 +252,15 @@ def main():
     parser.add_argument('--output_file', type=str, default=None, help="Output file (otherwise will write to stdout)")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
-    parser.add_argument('ssurgeon', type=str, nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
+    parser.add_argument('ssurgeon', type=str, default=["relabelNamedEdge -edge bad -reln advcl"], nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
     args = parser.parse_args()
 
-    if len(args.ssurgeon) == 0:
-        args.ssurgeon = ["relabelNamedEdge -edge bad -reln advcl"]
+    if args.edit_file:
+        ssurgeon_edits = read_ssurgeon_edits(args.edit_file)
+    else:
+        ssurgeon_edits = [SsurgeonEdit(args.semgrex, args.ssurgeon)]
 
     if args.input_file:
         doc = CoNLL.conll2doc(input_file=args.input_file)
@@ -267,12 +269,8 @@ def main():
 
     if args.print_input:
         print("{:C}".format(doc))
-    if args.edit_file:
-        ssurgeon_edits = read_ssurgeon_edits(args.edit_file)
-        ssurgeon_request = build_request(doc, ssurgeon_edits)
-        ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
-    else:
-        ssurgeon_response = process_doc_one_operation(doc, args.semgrex, args.ssurgeon)
+    ssurgeon_request = build_request(doc, ssurgeon_edits)
+    ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
     updated_doc = convert_response_to_doc(doc, ssurgeon_response)
     if args.output_file:
         with open(args.output_file, "w", encoding="utf-8") as fout:
