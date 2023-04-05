@@ -9,6 +9,7 @@ The main program in this file gives a very short intro to how to use it.
 
 import argparse
 import copy
+import os
 import re
 import sys
 
@@ -250,6 +251,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
     parser.add_argument('--output_file', type=str, default=None, help="Output file (otherwise will write to stdout)")
+    parser.add_argument('--input_dir', type=str, default=None, help="Input dir to process instead of a single file.  Will reuse the Java program")
+    parser.add_argument('--output_dir', type=str, default=None, help="Output dir for writing files, necessary if using --input_dir")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
     parser.add_argument('ssurgeon', type=str, default=["relabelNamedEdge -edge bad -reln advcl"], nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl")
@@ -263,20 +266,35 @@ def main():
         ssurgeon_edits = [SsurgeonEdit(args.semgrex, args.ssurgeon)]
 
     if args.input_file:
-        doc = CoNLL.conll2doc(input_file=args.input_file)
+        docs = [CoNLL.conll2doc(input_file=args.input_file)]
+        outputs = [args.output_file]
+        input_output = zip(docs, outputs)
+    elif args.input_dir:
+        if not args.output_dir:
+            raise ValueError("Cannot process multiple files without knowing where to send them - please set --output_dir in order to use --input_dir")
+        def read_docs():
+            for doc_filename in os.listdir(args.input_dir):
+                doc_path = os.path.join(args.input_dir, doc_filename)
+                output_path = os.path.join(args.output_dir, doc_filename)
+                print("Processing %s to %s" % (doc_path, output_path))
+                yield CoNLL.conll2doc(input_file=doc_path), output_path
+        input_output = read_docs()
     else:
-        doc = CoNLL.conll2doc(input_str=SAMPLE_DOC)
+        docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC)]
+        outputs = [None]
+        input_output = zip(docs, outputs)
 
-    if args.print_input:
-        print("{:C}".format(doc))
-    ssurgeon_request = build_request(doc, ssurgeon_edits)
-    ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
-    updated_doc = convert_response_to_doc(doc, ssurgeon_response)
-    if args.output_file:
-        with open(args.output_file, "w", encoding="utf-8") as fout:
-            fout.write("{:C}\n\n".format(updated_doc))
-    else:
-        print("{:C}\n".format(updated_doc))
+    for doc, output in input_output:
+        if args.print_input:
+            print("{:C}".format(doc))
+        ssurgeon_request = build_request(doc, ssurgeon_edits)
+        ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
+        updated_doc = convert_response_to_doc(doc, ssurgeon_response)
+        if output is not None:
+            with open(output, "w", encoding="utf-8") as fout:
+                fout.write("{:C}\n\n".format(updated_doc))
+        else:
+            print("{:C}\n".format(updated_doc))
 
 if __name__ == '__main__':
     main()
