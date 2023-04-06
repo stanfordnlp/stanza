@@ -98,6 +98,16 @@ def parse_args(args=None):
 
     return args
 
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_tokenizer.pt"
+
+    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
+        return save_name
+    return os.path.join(args['save_dir'], save_name)
+
 def main(args=None):
     args = parse_args(args=args)
 
@@ -108,9 +118,8 @@ def main(args=None):
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
     args['feat_dim'] = len(args['feat_funcs'])
-    save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
-    args['save_name'] = os.path.join(args['save_dir'], save_name)
-    utils.ensure_dir(args['save_dir'])
+    args['save_name'] = model_file_name(args)
+    utils.ensure_dir(os.path.split(args['save_name'])[0])
 
     if args['mode'] == 'train':
         train(args)
