@@ -744,9 +744,14 @@ def build_combined_italian_dataset(paths, dataset):
         # (no DE or I)
         # and I didn't feel like sorting through the differences
         # Note: currently these each have small changes compared with
-        # the UD2.7 release.  See the issues (possibly closed by now)
+        # the UD2.11 release.  See the issues (possibly closed by now)
         # filed by AngledLuffa on each of the treebanks for more info.
-        treebanks = ["UD_Italian-ISDT", "UD_Italian-VIT", "UD_Italian-TWITTIRO", "UD_Italian-PoSTWITA"]
+        treebanks = [
+            "UD_Italian-ISDT",
+            "UD_Italian-VIT",
+            "UD_Italian-TWITTIRO",
+            "UD_Italian-PoSTWITA"
+        ]
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
