@@ -192,6 +192,8 @@ class Trainer:
                                                  args=args)
             model = model.to(args.device)
         elif args.model_type == ModelType.CONSTITUENCY:
+            # this passes flags such as "constituency_backprop" from
+            # the classifier to the TreeEmbedding as the "backprop" flag
             parser_args = { x[len("constituency_"):]: y for x, y in vars(args).items() if x.startswith("constituency_") }
             parser_args.update({
                 "wordvec_pretrain_file": args.wordvec_pretrain_file,
