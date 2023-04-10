@@ -251,7 +251,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
     parser.add_argument('--output_file', type=str, default=None, help="Output file (otherwise will write to stdout)")
-    parser.add_argument('--input_dir', type=str, default=None, help="Input dir to process instead of a single file.  Will reuse the Java program")
+    parser.add_argument('--input_dir', type=str, default=None, help="Input dir to process instead of a single file.  Allows for reusing the Java program")
+    parser.add_argument('--input_filter', type=str, default=".*[.]conllu", help="Only process files from the input_dir that match this filter - regex, not shell filter")
+    parser.add_argument('--no_input_filter', action='store_const', const=None, help="Remove the default input filename filter")
     parser.add_argument('--output_dir', type=str, default=None, help="Output dir for writing files, necessary if using --input_dir")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj")
@@ -274,6 +276,9 @@ def main():
             raise ValueError("Cannot process multiple files without knowing where to send them - please set --output_dir in order to use --input_dir")
         def read_docs():
             for doc_filename in os.listdir(args.input_dir):
+                if args.input_filter:
+                    if not re.match(args.input_filter, doc_filename):
+                        continue
                 doc_path = os.path.join(args.input_dir, doc_filename)
                 output_path = os.path.join(args.output_dir, doc_filename)
                 print("Processing %s to %s" % (doc_path, output_path))
