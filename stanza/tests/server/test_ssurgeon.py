@@ -178,7 +178,7 @@ def test_ssurgeon_existing_mwt_no_change():
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
 
-def check_empty_test(input_text, expected=None):
+def check_empty_test(input_text, expected=None, echo=False):
     if expected is None:
         expected = input_text
 
@@ -189,6 +189,13 @@ def check_empty_test(input_text, expected=None):
     updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
 
     result = "{:C}".format(updated_doc)
+    if echo:
+        print("INPUT")
+        print(input_text)
+        print("EXPECTED")
+        print(expected)
+        print("RESULT")
+        print(result)
     compare_ignoring_whitespace(result, expected)
 
 ITALIAN_MWT_INPUT = """
@@ -318,3 +325,24 @@ def test_ssurgeon_misc_words():
     Tests, like regulations, are often written in blood
     """
     check_empty_test(CANTONESE_MISC_WORDS_INPUT)
+
+ITALIAN_MWT_SPACE_AFTER_INPUT = """
+# sent_id = train_78
+# text = @user dovrebbe fare pace colcervello
+# twittiro = IMPLICIT	ANALOGY
+1	@user	@user	SYM	SYM	_	3	nsubj	_	_
+2	dovrebbe	dovere	AUX	VM	Mood=Cnd|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	aux	_	_
+3	fare	fare	VERB	V	VerbForm=Inf	0	root	_	_
+4	pace	pace	NOUN	S	Gender=Fem|Number=Sing	3	obj	_	_
+5-6	col	_	_	_	_	_	_	_	SpaceAfter=No
+5	con	con	ADP	E	_	7	case	_	_
+6	il	il	DET	RD	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	_
+7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	_
+"""
+
+def test_ssurgeon_mwt_space_after():
+    """
+    Check the SpaceAfter=No on an MWT (rather than a word)
+    """
+    check_empty_test(ITALIAN_MWT_SPACE_AFTER_INPUT)
+
