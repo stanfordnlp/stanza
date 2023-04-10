@@ -200,6 +200,15 @@ class Trainer:
                 "charlm_forward_file": args.charlm_forward_file,
                 "charlm_backward_file": args.charlm_backward_file,
                 "bert_model": args.bert_model,
+                # we found that finetuning from the classifier output
+                # all the way to the bert layers caused the bert model
+                # to go astray
+                # could make this an option... but it is much less accurate
+                # with the Bert finetuning
+                # noting that the constituency parser itself works better
+                # after finetuning, of course
+                "bert_finetune": False,
+                "stage1_bert_finetune": False,
             })
             logger.info("Building constituency classifier using %s as the base model" % args.constituency_model)
             tree_embedding = TreeEmbedding.from_parser_file(parser_args)
