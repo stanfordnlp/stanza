@@ -655,6 +655,10 @@ class LSTMModel(BaseModel, nn.Module):
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
 
+    def unmark_unsaved_module(self, name):
+        if name in self.unsaved_modules:
+            self.unsaved_modules.remove(name)
+
     def get_root_labels(self):
         return self.root_labels
 

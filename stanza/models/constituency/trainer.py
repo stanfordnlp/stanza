@@ -116,8 +116,10 @@ class Trainer:
                 # if bert_finetune is True, don't use the cached model!
                 # otherwise, other uses of the cached model will be ruined
                 bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None))
+                bert_saved = True
             else:
                 bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
+                bert_saved = False
             forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
             backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
             model = LSTMModel(pretrain=pt,
@@ -134,6 +136,9 @@ class Trainer:
                               constituent_opens=params['constituent_opens'],
                               unary_limit=params['unary_limit'],
                               args=saved_args)
+            # TODO: maybe just don't mark it as unsaved in the first place?
+            if bert_saved:
+                model.unmark_unsaved_module("bert_model")
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)

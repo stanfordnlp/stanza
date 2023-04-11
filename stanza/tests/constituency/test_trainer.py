@@ -472,9 +472,10 @@ class TestTrainer:
             assert not os.path.exists(new_save_name)
             tr.save(new_save_name, save_optimizer=False)
             tr2 = trainer.Trainer.load(new_save_name, args=no_finetune_args, foundation_cache=foundation_cache)
-            # TODO FIXME: if the save being loaded has a bert_model,
-            # it should be moved back from unsaved to saved modules
-            #assert tr2.model.bert_model is not bert_model
+            # check that the resaved model included its finetuned bert weights
+            assert tr2.model.bert_model is not bert_model
+            # the finetuned bert weights should also be scheduled for saving the next time as well
+            assert not tr2.model.is_unsaved_module("bert_model")
 
     def finetune_transformer_test(self, wordvec_pretrain_file, transformer_name):
         """
