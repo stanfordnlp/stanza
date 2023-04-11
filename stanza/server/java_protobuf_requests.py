@@ -152,9 +152,10 @@ def add_token(token_list, word, token):
             space_after = misc_to_space_after(word.misc)
         query_token.after = space_after
 
-    # TODO: there can be misc fields on tokens which we need to account for
     if word.misc and word.misc != "_":
         query_token.conllUMisc = word.misc
+    if token.misc and token.misc != "_":
+        query_token.mwtMisc = token.misc
 
 def add_sentence(request_sentences, sentence, num_tokens):
     """

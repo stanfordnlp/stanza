@@ -349,3 +349,28 @@ def test_ssurgeon_mwt_space_after():
     """
     check_empty_test(ITALIAN_MWT_SPACE_AFTER_INPUT)
 
+ITALIAN_MWT_MISC_INPUT = """
+# sent_id = train_78
+# text = @user dovrebbe farepacecolcervello
+# twittiro = IMPLICIT	ANALOGY
+1	@user	@user	SYM	SYM	_	3	nsubj	_	_
+2	dovrebbe	dovere	AUX	VM	Mood=Cnd|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	aux	_	_
+3-4	farepace	_	_	_	_	_	_	_	Players=GonnaPlay|SpaceAfter=No
+3	fare	fare	VERB	V	VerbForm=Inf	0	root	_	_
+4	pace	pace	NOUN	S	Gender=Fem|Number=Sing	3	obj	_	_
+5-6	col	_	_	_	_	_	_	_	SpaceAfter=No|Haters=GonnaHate
+5	con	con	ADP	E	_	7	case	_	_
+6	il	il	DET	RD	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	_
+7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	RandomFeature=foo
+"""
+
+def test_ssurgeon_mwt_misc():
+    """
+    Check the SpaceAfter=No on an MWT (rather than a word)
+
+    the RandomFeature=foo is on account of a silly bug in the initial
+    version of passing in MWT misc features
+    """
+    # currently commented out because the public version of CoreNLP doesn't support it
+    #check_empty_test(ITALIAN_MWT_MISC_INPUT)
+

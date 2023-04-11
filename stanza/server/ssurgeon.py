@@ -134,11 +134,11 @@ def convert_response_to_doc(doc, semgrex_response):
                     "is_mwt": graph_word.isMWT,
                     "is_first_mwt": graph_word.isFirstMWT,
                     "mwt_text": graph_word.mwtText,
+                    "mwt_misc": graph_word.mwtMisc,
                 }
                 # TODO: do "before" as well
                 word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
                 if graph_word.conllUMisc:
-                    # TODO: do this treatment to the token misc as well
                     word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
                 tokens.append(word_entry)
             tokens.sort(key=lambda x: x[ID])
@@ -171,8 +171,11 @@ def convert_response_to_doc(doc, semgrex_response):
                     NER: word[NER],
                     # use the SpaceAfter=No (or not) from the last word in the token
                     # TODO: use the mwtMisc field as well
-                    MISC: java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC]),
+                    MISC: None,
                 }
+                mwt_token_entry[MISC] = java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC])
+                if tokens[word_end_idx-1]["mwt_misc"]:
+                    mwt_token_entry[MISC] = java_protobuf_requests.substitute_space_misc(tokens[word_end_idx-1]["mwt_misc"], mwt_token_entry[MISC])
                 word[MISC] = java_protobuf_requests.remove_space_misc(word[MISC])
                 mwt_tokens.append(mwt_token_entry)
                 mwt_tokens.append(word)
