@@ -127,6 +127,7 @@ class Trainer:
                               backward_charlm=backward_charlm,
                               bert_model=bert_model,
                               bert_tokenizer=bert_tokenizer,
+                              force_bert_saved=bert_saved,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -136,9 +137,6 @@ class Trainer:
                               constituent_opens=params['constituent_opens'],
                               unary_limit=params['unary_limit'],
                               args=saved_args)
-            # TODO: maybe just don't mark it as unsaved in the first place?
-            if bert_saved:
-                model.unmark_unsaved_module("bert_model")
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(params['model'], strict=False)
@@ -520,7 +518,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # using the model's current values works for if the new
         # dataset is the same or smaller
         # TODO: handle a larger dataset as well
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.force_bert_saved, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
         model = model.to(args['device'])
         model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model, False)
@@ -536,13 +534,13 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         temp_args['pattn_num_layers'] = 0
         temp_args['lattn_d_proj'] = 0
 
-        temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
+        temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
         temp_model = temp_model.to(args['device'])
         temp_optim = build_optimizer(temp_args, temp_model, True)
         scheduler = build_scheduler(temp_args, temp_optim)
         trainer = Trainer(temp_model, temp_optim, scheduler)
     else:
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         model = model.to(args['device'])
 
         optimizer = build_optimizer(args, model, False)
@@ -836,7 +834,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
             bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
-            new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
+            new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.force_bert_saved, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
             new_model.to(device)
             new_model.copy_with_new_structure(model)
 

@@ -210,7 +210,7 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -351,7 +351,8 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
-        if self.args['bert_finetune'] or self.args['stage1_bert_finetune']:
+        self.force_bert_saved = force_bert_saved
+        if self.args['bert_finetune'] or self.args['stage1_bert_finetune'] or force_bert_saved:
             self.bert_model = bert_model
         else:
             self.add_unsaved_module('bert_model', bert_model)
@@ -654,10 +655,6 @@ class LSTMModel(BaseModel, nn.Module):
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
-
-    def unmark_unsaved_module(self, name):
-        if name in self.unsaved_modules:
-            self.unsaved_modules.remove(name)
 
     def get_root_labels(self):
         return self.root_labels
