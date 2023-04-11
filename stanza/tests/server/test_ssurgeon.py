@@ -337,12 +337,15 @@ ITALIAN_MWT_SPACE_AFTER_INPUT = """
 5-6	col	_	_	_	_	_	_	_	SpaceAfter=No
 5	con	con	ADP	E	_	7	case	_	_
 6	il	il	DET	RD	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	_
-7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	_
+7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	RandomFeature=foo
 """
 
 def test_ssurgeon_mwt_space_after():
     """
     Check the SpaceAfter=No on an MWT (rather than a word)
+
+    the RandomFeature=foo is on account of a silly bug in the initial
+    version of passing in MWT misc features
     """
     check_empty_test(ITALIAN_MWT_SPACE_AFTER_INPUT)
 
