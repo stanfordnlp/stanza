@@ -737,7 +737,7 @@ def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
 
-def build_combined_italian_dataset(paths, dataset):
+def build_combined_italian_dataset(paths, model_type, dataset):
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
@@ -767,7 +767,7 @@ def check_gum_ready(udbase_dir):
     if common.mostly_underscores(gum_conllu):
         raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
-def build_combined_english_dataset(paths, dataset):
+def build_combined_english_dataset(paths, model_type, dataset):
     """
     en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
@@ -855,7 +855,7 @@ def replace_semicolons(sentences):
     print("Updated %d sentences to replace sentence-final ; with ." % count)
     return new_sents
 
-def build_combined_spanish_dataset(paths, dataset):
+def build_combined_spanish_dataset(paths, model_type, dataset):
     """
     es_combined is AnCora and GSD put together
 
@@ -887,7 +887,7 @@ def build_combined_spanish_dataset(paths, dataset):
     return sents
 
 
-def build_combined_hebrew_dataset(paths, dataset):
+def build_combined_hebrew_dataset(paths, model_type, dataset):
     """
     Combines the IAHLT treebank with an updated form of HTB where the annotation style more closes matches IAHLT
 
@@ -937,14 +937,14 @@ COMBINED_EXTRA_FNS = {
     "it_combined": build_extra_combined_italian_dataset,
 }
 
-def build_combined_dataset(paths, short_name, augment):
+def build_combined_dataset(paths, short_name, model_type, augment):
     random.seed(1234)
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     build_fn = COMBINED_FNS[short_name]
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
-        sents = build_fn(paths, dataset)
+        sents = build_fn(paths, model_type, dataset)
         if dataset == 'train' and augment:
             sents = augment_punct(sents)
         if extra_fn is not None:
@@ -1113,7 +1113,7 @@ def process_treebank(treebank, model_type, paths, args):
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
-        build_combined_dataset(paths, short_name, args.augment)
+        build_combined_dataset(paths, short_name, model_type, args.augment)
     elif short_name in BIO_DATASETS:
         build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
     elif short_name.startswith("en_gum"):
