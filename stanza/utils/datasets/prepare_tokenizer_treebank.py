@@ -749,9 +749,13 @@ def build_combined_italian_dataset(paths, model_type, dataset):
         treebanks = [
             "UD_Italian-ISDT",
             "UD_Italian-VIT",
-            "UD_Italian-TWITTIRO",
-            "UD_Italian-PoSTWITA"
         ]
+        if model_type is not common.ModelType.TOKENIZER:
+            treebanks.extend([
+                "UD_Italian-TWITTIRO",
+                "UD_Italian-PoSTWITA"
+            ])
+        print("Building {} dataset out of {}".format(model_type, " ".join(treebanks)))
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
