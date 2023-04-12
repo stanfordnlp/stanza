@@ -37,7 +37,7 @@ def write_segmenter_file(output_filename, dataset):
             fout.write(text)
             fout.write("\n")
 
-def process_treebank(treebank, paths, output_dir):
+def process_treebank(treebank, model_type, paths, output_dir):
     with tempfile.TemporaryDirectory() as tokenizer_dir:
         paths = dict(paths)
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
@@ -48,7 +48,7 @@ def process_treebank(treebank, paths, output_dir):
         args = argparse.Namespace()
         args.augment = False
         args.prepare_labels = False
-        prepare_tokenizer_treebank.process_treebank(treebank, paths, args)
+        prepare_tokenizer_treebank.process_treebank(treebank, model_type, paths, args)
 
         # TODO: these names should be refactored
         train_file = f"{tokenizer_dir}/{short_name}.train.gold.conllu"
@@ -71,7 +71,7 @@ def main():
 
     paths = default_paths.get_default_paths()
     for treebank in args.treebanks:
-        process_treebank(treebank, paths, args.output_dir)
+        process_treebank(treebank, common.ModelType.TOKENIZER, paths, args.output_dir)
 
 if __name__ == '__main__':
     main()

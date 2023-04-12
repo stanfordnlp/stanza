@@ -48,7 +48,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
-def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
+def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -67,7 +67,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=Tr
         args = argparse.Namespace()
         args.augment = augment
         args.prepare_labels = False
-        process_treebank(treebank, paths, args)
+        process_treebank(treebank, model_type, paths, args)
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -1081,7 +1081,7 @@ def add_specific_args(parser):
 
     convert_vi_vlsp.add_vlsp_args(parser)
 
-def process_treebank(treebank, paths, args):
+def process_treebank(treebank, model_type, paths, args):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -1139,7 +1139,7 @@ def process_treebank(treebank, paths, args):
 
 
 def main():
-    common.main(process_treebank, add_specific_args)
+    common.main(process_treebank, common.ModelType.TOKENIZER, add_specific_args)
 
 if __name__ == '__main__':
     main()

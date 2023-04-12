@@ -38,7 +38,7 @@ def check_lemmas(train_file):
             return True
     return False
 
-def process_treebank(treebank, paths, args):
+def process_treebank(treebank, model_type, paths, args):
     if treebank.startswith("UD_"):
         udbase_dir = paths["UDBASE"]
         train_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
@@ -48,10 +48,10 @@ def process_treebank(treebank, paths, args):
     else:
         # TODO: check the data to see if there are lemmas or not
         augment = True
-    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["LEMMA_DATA_DIR"], augment=augment)
+    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], augment=augment)
 
 def main():
-    common.main(process_treebank)
+    common.main(process_treebank, common.ModelType.LEMMA)
 
 if __name__ == '__main__':
     main()

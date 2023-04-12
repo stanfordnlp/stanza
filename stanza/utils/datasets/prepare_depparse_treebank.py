@@ -63,10 +63,10 @@ def choose_tagger_model(short_language, dataset, tagger_model):
     return pos_path
 
 
-def process_treebank(treebank, paths, args) -> None:
+def process_treebank(treebank, model_type, paths, args) -> None:
     """Process treebank."""
     if args.tag_method is Tags.GOLD:
-        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"])
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
         short_name = treebank_to_short_name(treebank)
         short_language, dataset = short_name.split("_")
@@ -108,14 +108,14 @@ def process_treebank(treebank, paths, args) -> None:
             logger.info("Running tagger to retag {} to {}\n  Args: {}".format(original, retagged, tagger_args))
             tagger.main(tagger_args)
 
-        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, paths, paths["DEPPARSE_DATA_DIR"], retag_dataset)
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["DEPPARSE_DATA_DIR"], retag_dataset)
     else:
         raise ValueError("Unknown tags method: {}".format(args.tag_method))
 
 
 def main() -> None:
     """Call Process Treebank."""
-    common.main(process_treebank, add_specific_args)
+    common.main(process_treebank, common.ModelType.DEPPARSE, add_specific_args)
 
 
 if __name__ == '__main__':
