@@ -157,7 +157,7 @@ class TestCoreNLPClient:
             ]
         }
 
-    def ztest_tregex_trees(self, corenlp_client):
+    def test_tregex_trees(self, corenlp_client):
         """
         Test the results of tregex run on trees w/o parsing
 
