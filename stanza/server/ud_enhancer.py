@@ -48,7 +48,7 @@ def build_enhancer_request(doc, language, pronouns_pattern):
 
 def process_doc(doc, language=None, pronouns_pattern=None):
     request = build_enhancer_request(doc, language, pronouns_pattern)
-    return send_request(request, Document, ENHANCER_JAVA, "$CLASSPATH")
+    return send_request(request, Document, ENHANCER_JAVA)
 
 class UniversalEnhancer(JavaProtobufContext):
     """

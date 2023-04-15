@@ -47,13 +47,13 @@ def test_build_notuple_request():
 def test_score_one_tree_tuples():
     treebank = build_one_tree_treebank(True)
 
-    with EvaluateParser(classpath="$CLASSPATH") as ep:
+    with EvaluateParser() as ep:
         response = ep.process(treebank)
         assert response.f1 == pytest.approx(1.0)
 
 def test_score_one_tree_notuples():
     treebank = build_one_tree_treebank(False)
 
-    with EvaluateParser(classpath="$CLASSPATH") as ep:
+    with EvaluateParser() as ep:
         response = ep.process(treebank)
         assert response.f1 == pytest.approx(1.0)
