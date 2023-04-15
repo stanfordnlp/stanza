@@ -133,14 +133,14 @@ class RobustService(object):
                 with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
                     try:
                         sock.bind((self.host, self.port))
-                    except socket.error:
+                    except socket.error as e:
                         if self.ignore_binding_error:
                             logger.info(f"Connecting to existing CoreNLP server at {self.host}:{self.port}")
                             self.server = None
                             return
                         else:
                             raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
-                                                         "(possibly something is already running there)" % self.port)
+                                                             "(possibly something is already running there)" % self.port) from e
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
                 if hasattr(subprocess, 'DEVNULL'):
