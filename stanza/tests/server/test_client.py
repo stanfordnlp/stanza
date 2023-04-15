@@ -41,6 +41,21 @@ Tokens:
 [Text=. CharacterOffsetBegin=66 CharacterOffsetEnd=67 PartOfSpeech=.]
 """.strip()
 
+class HTTPTimeoutHandler(BaseHTTPRequestHandler):
+    def __init__(self, timeout_secs, *args, **kwargs):
+        self.timeout_secs = timeout_secs
+        super().__init__(*args, **kwargs)  # forwards all unused arguments
+
+    def do_POST(self):
+        time.sleep(self.timeout_secs)
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain; charset=utf-8')
+        self.end_headers()
+        self.wfile.write("HTTPMockServerTimeout")
+
+def run_webserver(port, timeout_secs):
+    HTTPServer(('127.0.0.1', port), lambda *args, **kwargs: HTTPTimeoutHandler(timeout_secs, *args, **kwargs)).serve_forever()
+
 class HTTPMockServerTimeoutContext:
     """ For launching an HTTP server on certain port with an specified delay at responses """
     def __init__(self, port, timeout_secs):
@@ -48,17 +63,7 @@ class HTTPMockServerTimeoutContext:
         self.timeout_secs = timeout_secs
 
     def __enter__(self):
-        class HTTPTimeoutHandler(BaseHTTPRequestHandler):
-            def do_POST(self_inner):
-                time.sleep(self.timeout_secs)
-                self_inner.send_response(200)
-                self_inner.send_header('Content-type', 'text/plain; charset=utf-8')
-                self_inner.end_headers()
-                self_inner.wfile.write("HTTPMockServerTimeout")
-        def run_webserver():
-            HTTPServer(('127.0.0.1',self.port), HTTPTimeoutHandler).serve_forever()
-
-        self.p = multiprocessing.Process(target=run_webserver, args=())
+        self.p = multiprocessing.Process(target=run_webserver, args=(self.port, self.timeout_secs))
         self.p.daemon = True
         self.p.start()
 
