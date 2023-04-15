@@ -236,7 +236,6 @@ class TestCoreNLPClient:
 
     def test_external_server_try_start(self):
         """ Test starting up a server with a client with start_server=StartServer.TRY_START """
-        corenlp_home = os.getenv('CORENLP_HOME')
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
                                    annotators='tokenize,ssplit,pos',
                                    endpoint="http://localhost:9001") as external_server_client:
