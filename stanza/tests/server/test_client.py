@@ -217,10 +217,12 @@ class TestCoreNLPClient:
 
     def test_external_server_try_start_with_external(self, external_server_9001):
         """ Test starting up an external server and accessing with a client with start_server=StartServer.TRY_START """
+        time.sleep(5) # wait and make sure the external CoreNLP server is up and running
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
                                    annotators='tokenize,ssplit,pos',
                                    endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+            assert external_server_client.server is None, "If this is not None, that indicates the client started a server instead of reusing an existing one"
         assert ann.strip() == EN_GOLD
 
     def test_external_server_try_start(self):
