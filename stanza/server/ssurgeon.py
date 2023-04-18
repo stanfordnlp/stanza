@@ -170,7 +170,6 @@ def convert_response_to_doc(doc, semgrex_response):
                     TEXT: word["mwt_text"],
                     NER: word[NER],
                     # use the SpaceAfter=No (or not) from the last word in the token
-                    # TODO: use the mwtMisc field as well
                     MISC: None,
                 }
                 mwt_token_entry[MISC] = java_protobuf_requests.misc_space_pieces(tokens[word_end_idx-1][MISC])
