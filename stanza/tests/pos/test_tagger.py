@@ -8,6 +8,8 @@ import os
 import pytest
 
 from stanza.models import tagger
+from stanza.models.common import pretrain
+from stanza.models.pos.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -71,7 +73,10 @@ class TestTagger:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text):
+    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, extra_args=None):
+        """
+        Run the training for a few iterations, load & return the model
+        """
         train_file = str(tmp_path / "train.conllu")
         dev_file = str(tmp_path / "dev.conllu")
         pred_file = str(tmp_path / "pred.conllu")
@@ -97,12 +102,27 @@ class TestTagger:
                 "--save_dir", str(tmp_path),
                 "--save_name", save_name,
                 "--lang", "en"]
+        if extra_args is not None:
+            args = args + extra_args
         tagger.main(args)
 
         assert os.path.exists(save_file)
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        saved_model = Trainer(pretrain=pt, model_file=save_file)
+        return saved_model
 
     def test_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+
+    def test_vocab_cutoff(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test that the vocab cutoff leaves words we expect in the vocab, but not rare words
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, ["--word_cutoff", "3"])
+        word_vocab = trainer.vocab['word']
+        assert 'of' in word_vocab
+        assert 'officials' in TRAIN_DATA
+        assert 'officials' not in word_vocab
