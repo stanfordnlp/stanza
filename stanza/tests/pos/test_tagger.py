@@ -71,10 +71,7 @@ class TestTagger:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def test_train(self, tmp_path, wordvec_pretrain_file):
-        """
-        Simple test of a few 'epochs' of tagger training
-        """
+    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text):
         train_file = str(tmp_path / "train.conllu")
         dev_file = str(tmp_path / "dev.conllu")
         pred_file = str(tmp_path / "pred.conllu")
@@ -83,10 +80,10 @@ class TestTagger:
         save_file = str(tmp_path / save_name)
 
         with open(train_file, "w", encoding="utf-8") as fout:
-            fout.write(TRAIN_DATA)
+            fout.write(train_text)
 
         with open(dev_file, "w", encoding="utf-8") as fout:
-            fout.write(DEV_DATA)
+            fout.write(dev_text)
 
         args = ["--wordvec_pretrain_file", wordvec_pretrain_file,
                 "--train_file", train_file,
@@ -103,3 +100,9 @@ class TestTagger:
         tagger.main(args)
 
         assert os.path.exists(save_file)
+
+    def test_train(self, tmp_path, wordvec_pretrain_file):
+        """
+        Simple test of a few 'epochs' of tagger training
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
