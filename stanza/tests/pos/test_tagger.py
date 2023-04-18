@@ -4,6 +4,7 @@ Run the tagger for a couple iterations on some fake data
 Uses a couple sentences of UD_English-EWT as training/dev data
 """
 
+import os
 import pytest
 
 from stanza.models import tagger
@@ -78,6 +79,9 @@ class TestTagger:
         dev_file = str(tmp_path / "dev.conllu")
         pred_file = str(tmp_path / "pred.conllu")
 
+        save_name = "test_tagger.pt"
+        save_file = str(tmp_path / save_name)
+
         with open(train_file, "w", encoding="utf-8") as fout:
             fout.write(TRAIN_DATA)
 
@@ -93,5 +97,9 @@ class TestTagger:
                 "--eval_interval", "20",
                 "--max_steps", "100",
                 "--shorthand", "en_test",
+                "--save_dir", str(tmp_path),
+                "--save_name", save_name,
                 "--lang", "en"]
         tagger.main(args)
+
+        assert os.path.exists(save_file)
