@@ -14,7 +14,7 @@ import stanza
 import random
 from tqdm import tqdm
 
-from stanza import Pipeline
+from stanza import DownloadMethod, Pipeline
 import stanza.utils.default_paths as default_paths
 
 def read_data(path: str) -> list:
@@ -124,8 +124,8 @@ def train_test_dev_split(sents, base_output_path, short_name, train_fraction=0.7
         write_sentences_to_file(batch, os.path.join(base_output_path, filename))
 
 
-def convert_dataset(base_input_path, base_output_path, short_name):
-    nlp_hy = stanza.Pipeline(lang='hy', processors='tokenize')
+def convert_dataset(base_input_path, base_output_path, short_name, download_method):
+    nlp_hy = stanza.Pipeline(lang='hy', processors='tokenize', download_method=download_method)
     paragraphs = read_data(os.path.join(base_input_path, 'ArmNER-HY.json1'))
     tagged_sentences = format_sentences(paragraphs, nlp_hy)
     beios_sentences = convert_to_bioes(tagged_sentences)
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_path', type=str, default=os.path.join(paths["NERBASE"], "armenian", "ArmTDP-NER"), help="Path to input file")
     parser.add_argument('--output_path', type=str, default=paths["NER_DATA_DIR"], help="Path to the output directory")
     parser.add_argument('--short_name', type=str, default="hy_armtdp", help="Name to identify the dataset and the model")
+    parser.add_argument('--download_method', type=str, default=DownloadMethod.DOWNLOAD_RESOURCES, help="Download method for initializing the Pipeline.  Default downloads the Armenian pipeline, --download_method NONE does not.  Options: %s" % DownloadMethod._member_names_)
     args = parser.parse_args()
 
-    convert_dataset(args.input_path, args.output_path, args.short_name)
+    convert_dataset(args.input_path, args.output_path, args.short_name, args.download_method)
