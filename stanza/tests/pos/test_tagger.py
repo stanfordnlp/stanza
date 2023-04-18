@@ -73,7 +73,7 @@ class TestTagger:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, extra_args=None):
+    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None):
         """
         Run the training for a few iterations, load & return the model
         """
@@ -102,6 +102,8 @@ class TestTagger:
                 "--save_dir", str(tmp_path),
                 "--save_name", save_name,
                 "--lang", "en"]
+        if not augment_nopunct:
+            args.extend(["--augment_nopunct", "0.0"])
         if extra_args is not None:
             args = args + extra_args
         tagger.main(args)
@@ -111,7 +113,7 @@ class TestTagger:
         saved_model = Trainer(pretrain=pt, model_file=save_file)
         return saved_model
 
-    def test_train(self, tmp_path, wordvec_pretrain_file):
+    def test_train(self, tmp_path, wordvec_pretrain_file, augment_nopunct=True):
         """
         Simple test of a few 'epochs' of tagger training
         """
@@ -121,7 +123,7 @@ class TestTagger:
         """
         Test that the vocab cutoff leaves words we expect in the vocab, but not rare words
         """
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, ["--word_cutoff", "3"])
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=["--word_cutoff", "3"])
         word_vocab = trainer.vocab['word']
         assert 'of' in word_vocab
         assert 'officials' in TRAIN_DATA
