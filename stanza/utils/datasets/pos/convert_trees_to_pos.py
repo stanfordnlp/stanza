@@ -61,7 +61,7 @@ def convert_file(in_file, out_file, upos):
                 fout.write("\t_\t_\n")
             fout.write("\n")
 
-def convert_treebank(short_name, upos, paths):
+def convert_treebank(short_name, upos, output_name, paths):
     in_dir = paths["CONSTITUENCY_DATA_DIR"]
     in_files = [os.path.join(in_dir, "%s_%s.mrg" % (short_name, shard)) for shard in SHARDS]
     for in_file in in_files:
@@ -71,8 +71,10 @@ def convert_treebank(short_name, upos, paths):
     out_dir = paths["POS_DATA_DIR"]
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    out_files = [os.path.join(out_dir, "%s.%s.in.conllu" % (short_name, shard)) for shard in SHARDS]
-    gold_files = [os.path.join(out_dir, "%s.%s.gold.conllu" % (short_name, shard)) for shard in SHARDS]
+    if output_name is None:
+        output_name = short_name
+    out_files = [os.path.join(out_dir, "%s.%s.in.conllu" % (output_name, shard)) for shard in SHARDS]
+    gold_files = [os.path.join(out_dir, "%s.%s.gold.conllu" % (output_name, shard)) for shard in SHARDS]
 
     for in_file, out_file in zip(in_files, out_files):
         convert_file(in_file, out_file, upos)
@@ -84,8 +86,9 @@ if __name__ == '__main__':
     parser.add_argument("dataset", help="Which dataset to process from trees to POS")
     parser.add_argument("--upos", action="store_true", default=False, help="Store tags on the UPOS")
     parser.add_argument("--xpos", dest="upos", action="store_false", help="Store tags on the XPOS")
+    parser.add_argument("--output_name", default=None, help="What name to give the output dataset.  If blank, will use the dataset arg")
     args = parser.parse_args()
 
     paths = default_paths.get_default_paths()
 
-    convert_treebank(args.dataset, args.upos, paths)
+    convert_treebank(args.dataset, args.upos, args.output_name, paths)
