@@ -146,8 +146,8 @@ class TestXPOSVocabFactory:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             args = tagger.parse_args(["--batch_size", "1", "--shorthand", shorthand])
             train_doc = build_doc(iterations, suffix)
-            vocab = DataLoader.init_vocab([train_doc], args)
-            train_batch = DataLoader(train_doc, args["batch_size"], args, pt, vocab=vocab, evaluation=False)
+            train_batch = DataLoader(train_doc, args["batch_size"], args, pt, evaluation=False)
+            vocab = train_batch.vocab
             assert isinstance(vocab['xpos'], expected_vocab)
 
             trainer = Trainer(args=args, vocab=vocab, pretrain=pt, device="cpu")
