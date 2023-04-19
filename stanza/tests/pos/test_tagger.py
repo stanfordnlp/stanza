@@ -69,6 +69,45 @@ TRAIN_DATA_2 = """
 
 """.lstrip()
 
+TRAIN_DATA_NO_UPOS = """
+# sent_id = 11
+# text = It's all hers!
+# previous = Which person owns this?
+# comment = predeterminer modifier
+1	It	it	_	PRP	Number=Sing|Person=3|PronType=Prs	4	nsubj	_	SpaceAfter=No
+2	's	be	_	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
+3	all	all	_	DT	Case=Nom	4	det:predet	_	_
+4	hers	hers	_	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+5	!	!	_	.	_	4	punct	_	_
+
+""".lstrip()
+
+TRAIN_DATA_NO_XPOS = """
+# sent_id = 11
+# text = It's all hers!
+# previous = Which person owns this?
+# comment = predeterminer modifier
+1	It	it	PRON	_	Number=Sing|Person=3|PronType=Prs	4	nsubj	_	SpaceAfter=No
+2	's	be	AUX	_	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	_
+3	all	all	DET	_	Case=Nom	4	det:predet	_	_
+4	hers	hers	PRON	_	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+5	!	!	PUNCT	_	_	4	punct	_	_
+
+""".lstrip()
+
+TRAIN_DATA_NO_FEATS = """
+# sent_id = 11
+# text = It's all hers!
+# previous = Which person owns this?
+# comment = predeterminer modifier
+1	It	it	PRON	PRP	_	4	nsubj	_	SpaceAfter=No
+2	's	be	AUX	VBZ	_	4	cop	_	_
+3	all	all	DET	DT	_	4	det:predet	_	_
+4	hers	hers	PRON	PRP	_	0	root	_	SpaceAfter=No
+5	!	!	PUNCT	.	_	4	punct	_	_
+
+""".lstrip()
+
 DEV_DATA = """
 1	From	from	ADP	IN	_	3	case	3:case	_
 2	the	the	DET	DT	Definite=Def|PronType=Art	3	det	3:det	_
@@ -162,3 +201,12 @@ class TestTagger:
         assert '	hers	' not in TRAIN_DATA
         assert '	hers	' in TRAIN_DATA_2
         assert 'hers' in word_vocab
+
+
+    def test_missing_column(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test that using train files with missing columns works
+
+        TODO: we should find some evidence that it is successfully training the upos & xpos
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA)
