@@ -49,6 +49,8 @@ def run_treebank(mode, paths, treebank, short_name,
 
     pos_dir        = paths["POS_DATA_DIR"]
     train_file     = f"{pos_dir}/{short_name}.train.in.conllu"
+    if short_name == 'vi_vlsp22':
+        train_file += f";{pos_dir}/vi_vtb.train.in.conllu"
     dev_in_file    = f"{pos_dir}/{short_name}.dev.in.conllu"
     dev_gold_file  = f"{pos_dir}/{short_name}.dev.gold.conllu"
     dev_pred_file  = temp_output_file if temp_output_file else f"{pos_dir}/{short_name}.dev.pred.conllu"
@@ -60,9 +62,10 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm_args = build_charlm_args(short_language, charlm)
 
     if mode == Mode.TRAIN:
-        if not os.path.exists(train_file):
-            logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_file)
-            return
+        for train_piece in train_file.split(";"):
+            if not os.path.exists(train_piece):
+                logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_piece)
+                return
 
         # some languages need reduced batch size
         batch_size = pos_batch_size(short_name)
