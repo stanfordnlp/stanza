@@ -198,6 +198,8 @@ class Tagger(nn.Module):
         if upos is not None:
             upos = pack(upos).data
             loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
+        else:
+            loss = 0.0
 
         if self.share_hid:
             xpos_hid = upos_hid

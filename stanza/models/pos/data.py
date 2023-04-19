@@ -24,6 +24,10 @@ class DataLoader:
         else:
             self.vocab = vocab
 
+        self.has_upos = not all(x is None or x == '_' for x in doc.get(UPOS, as_sentences=False))
+        self.has_xpos = not all(x is None or x == '_' for x in doc.get(XPOS, as_sentences=False))
+        self.has_feats = not all(x is None or x == '_' for x in doc.get(FEATS, as_sentences=False))
+
         data = self.load_doc(self.doc)
 
         # handle pretrain; pretrain vocab is used when args['pretrain'] == True and pretrain is not None
@@ -111,9 +115,9 @@ class DataLoader:
         wordchars = get_long_tensor(batch_words, len(word_lens))
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
-        upos = get_long_tensor(batch[2], batch_size)
-        xpos = get_long_tensor(batch[3], batch_size)
-        ufeats = get_long_tensor(batch[4], batch_size)
+        upos = get_long_tensor(batch[2], batch_size) if self.has_upos else None
+        xpos = get_long_tensor(batch[3], batch_size) if self.has_xpos else None
+        ufeats = get_long_tensor(batch[4], batch_size) if self.has_feats else None
         pretrained = get_long_tensor(batch[5], batch_size)
         text = batch[6]
         sentlens = [len(x) for x in batch[0]]
