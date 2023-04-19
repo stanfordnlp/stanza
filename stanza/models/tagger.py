@@ -171,7 +171,7 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    all_train_data = []
+    train_docs = []
     for train_file in args['train_file'].split(";"):
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
@@ -183,12 +183,11 @@ def train(args):
         train_data.extend(augment_punct(train_data, args['augment_nopunct'],
                                         keep_original_sentences=False))
         logger.info("Augmented data size: {}".format(len(train_data)))
-        all_train_data.extend(train_data)
-    # TODO: build the DataLoader out of multiple docs, which we can use
-    # to separate the sentences which have xpos vs no xpos, for example
-    train_doc = Document(all_train_data)
-    vocab = DataLoader.init_vocab(train_doc, args)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+        train_doc = Document(train_data)
+        train_docs.append(train_doc)
+    vocab = DataLoader.init_vocab(train_docs, args)
+    train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+                     for train_doc in train_docs]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
@@ -197,7 +196,7 @@ def train(args):
     gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
-    if len(train_batch) == 0 or len(dev_batch) == 0:
+    if sum(len(train_batch) for train_batch in train_batches) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
         return
 
@@ -230,7 +229,9 @@ def train(args):
     train_loss = 0
     while True:
         do_break = False
-        for i, batch in enumerate(train_batch):
+        all_train_batches = [x for train_batch in train_batches for x in train_batch]
+        random.shuffle(all_train_batches)
+        for i, batch in enumerate(all_train_batches):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
@@ -293,7 +294,11 @@ def train(args):
 
         if do_break: break
 
-        train_batch.reshuffle()
+        for train_batch in train_batches:
+            # we shuffle the order of all of the batches at the start of an iteration
+            # but this step shuffles the datapoints ins the batches, so the batches are different
+            # shuffle the batches themselves is useful to mix together batches from multiple DataLoader objects
+            train_batch.reshuffle()
 
     logger.info("Training ended with {} steps.".format(global_step))
 

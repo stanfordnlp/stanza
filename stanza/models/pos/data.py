@@ -44,8 +44,8 @@ class DataLoader:
         logger.debug("{} batches created.".format(len(self.data)))
 
     @staticmethod
-    def init_vocab(doc, args):
-        data = DataLoader.load_doc(doc)
+    def init_vocab(docs, args):
+        data = [x for doc in docs for x in DataLoader.load_doc(doc)]
         charvocab = CharVocab(data, args['shorthand'])
         wordvocab = WordVocab(data, args['shorthand'], cutoff=args['word_cutoff'], lower=True)
         uposvocab = WordVocab(data, args['shorthand'], idx=1)
