@@ -87,14 +87,14 @@ def get_augment_ratio(train_data, should_augment_predicate, can_augment_predicat
 
 def should_augment_nopunct_predicate(sentence):
     last_word = sentence[-1]
-    return last_word[UPOS] == 'PUNCT'
+    return last_word.get(UPOS, None) == 'PUNCT'
 
 def can_augment_nopunct_predicate(sentence):
     """
     Check that the sentence ends with PUNCT and also doesn't have any words which depend on the last word
     """
     last_word = sentence[-1]
-    if last_word[UPOS] != 'PUNCT':
+    if last_word.get(UPOS, None) != 'PUNCT':
         return False
     # don't cut off MWT
     if len(last_word[ID]) > 1:
