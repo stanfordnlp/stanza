@@ -195,8 +195,9 @@ class Tagger(nn.Module):
 
         preds = [pad(upos_pred).max(2)[1]]
 
-        upos = pack(upos).data
-        loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
+        if upos is not None:
+            upos = pack(upos).data
+            loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
 
         if self.share_hid:
             xpos_hid = upos_hid
@@ -207,31 +208,34 @@ class Tagger(nn.Module):
             xpos_hid = F.relu(self.xpos_hid(self.drop(lstm_outputs)))
             ufeats_hid = F.relu(self.ufeats_hid(self.drop(lstm_outputs)))
 
-            if self.training:
+            if self.training and upos is not None:
                 upos_emb = self.upos_emb(upos)
             else:
                 upos_emb = self.upos_emb(upos_pred.max(1)[1])
 
             clffunc = lambda clf, hid: clf(self.drop(hid), self.drop(upos_emb))
 
-        xpos = pack(xpos).data
+        if xpos is not None: xpos = pack(xpos).data
         if isinstance(self.vocab['xpos'], CompositeVocab):
             xpos_preds = []
             for i in range(len(self.vocab['xpos'])):
                 xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
-                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
+                if xpos is not None:
+                    loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
                 xpos_preds.append(pad(xpos_pred).max(2, keepdim=True)[1])
             preds.append(torch.cat(xpos_preds, 2))
         else:
             xpos_pred = clffunc(self.xpos_clf, xpos_hid)
-            loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
+            if xpos is not None:
+                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
             preds.append(pad(xpos_pred).max(2)[1])
 
         ufeats_preds = []
-        ufeats = pack(ufeats).data
+        if ufeats is not None: ufeats = pack(ufeats).data
         for i in range(len(self.vocab['feats'])):
             ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
-            loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
+            if ufeats is not None:
+                loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
             ufeats_preds.append(pad(ufeats_pred).max(2, keepdim=True)[1])
         preds.append(torch.cat(ufeats_preds, 2))
 
