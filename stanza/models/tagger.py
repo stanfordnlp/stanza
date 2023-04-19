@@ -187,8 +187,8 @@ def train(args):
     # TODO: build the DataLoader out of multiple docs, which we can use
     # to separate the sentences which have xpos vs no xpos, for example
     train_doc = Document(all_train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
-    vocab = train_batch.vocab
+    vocab = DataLoader.init_vocab(train_doc, args)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 

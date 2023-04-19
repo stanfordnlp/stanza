@@ -11,21 +11,16 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab, evaluation=False, sort_during_eval=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
         self.doc = doc
+        self.vocab = vocab
 
         data = self.load_doc(self.doc)
-
-        # handle vocab
-        if vocab is None:
-            self.vocab = self.init_vocab(data)
-        else:
-            self.vocab = vocab
 
         # handle pretrain; pretrain vocab is used when args['pretrain'] == True and pretrain is not None
         self.pretrain_vocab = None
@@ -48,13 +43,14 @@ class DataLoader:
         self.data = self.chunk_batches(data)
         logger.debug("{} batches created.".format(len(self.data)))
 
-    def init_vocab(self, data):
-        assert self.eval == False # for eval vocab must exist
-        charvocab = CharVocab(data, self.args['shorthand'])
-        wordvocab = WordVocab(data, self.args['shorthand'], cutoff=self.args['word_cutoff'], lower=True)
-        uposvocab = WordVocab(data, self.args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(data, self.args['shorthand'])
-        featsvocab = FeatureVocab(data, self.args['shorthand'], idx=3)
+    @staticmethod
+    def init_vocab(doc, args):
+        data = DataLoader.load_doc(doc)
+        charvocab = CharVocab(data, args['shorthand'])
+        wordvocab = WordVocab(data, args['shorthand'], cutoff=args['word_cutoff'], lower=True)
+        uposvocab = WordVocab(data, args['shorthand'], idx=1)
+        xposvocab = xpos_vocab_factory(data, args['shorthand'])
+        featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
                             'upos': uposvocab,
