@@ -11,14 +11,18 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain, vocab, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
         self.doc = doc
-        self.vocab = vocab
+
+        if vocab is None:
+            self.vocab = DataLoader.init_vocab([doc], args)
+        else:
+            self.vocab = vocab
 
         data = self.load_doc(self.doc)
 
