@@ -59,7 +59,7 @@ Stanza will not work with Python 3.5 or below. If you have trouble importing the
 
 ### Getting `Segmentation fault` or other uninterpretable non-Python errors when trying to run the neural pipeline
 
-This is ususally caused by a corrupted installation of PyTorch in your environment. Try reinstalling PyTorch and Stanza.
+This is usually caused by a corrupted installation of PyTorch in your environment. Try reinstalling PyTorch and Stanza.
 
 ### Why am I getting an `OSError: [Errno 22] Invalid argument` error and therefore a `Vector file is not provided` exception while the model is being loaded?
 
