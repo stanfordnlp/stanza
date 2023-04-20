@@ -199,6 +199,16 @@ def train(args):
     vocab = DataLoader.init_vocab(train_docs, args)
     train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
                      for train_doc in train_docs]
+    # here we make sure the model will learn to output _ for empty columns
+    if not any(train_batch.has_upos for train_batch in train_batches):
+        for train_batch in train_batches:
+            train_batch.has_upos = True
+    if not any(train_batch.has_xpos for train_batch in train_batches):
+        for train_batch in train_batches:
+            train_batch.has_xpos = True
+    if not any(train_batch.has_feats for train_batch in train_batches):
+        for train_batch in train_batches:
+            train_batch.has_feats = True
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
