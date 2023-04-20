@@ -13,6 +13,11 @@ from stanza.resources.prepare_resources import default_charlms, pos_charlms, pos
 
 logger = logging.getLogger('stanza')
 
+def add_pos_args(parser):
+    add_charlm_args(parser)
+
+    parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
+
 # TODO: move this somewhere common
 def wordvec_args(short_language, dataset, extra_args):
     if '--wordvec_pretrain_file' in extra_args:
@@ -61,6 +66,13 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, pos_charlms)
     charlm_args = build_charlm_args(short_language, charlm)
 
+    bert_args = []
+    if command_args.use_bert and '--bert_model' not in extra_args:
+        if short_language in common.BERT:
+            bert_args = ['--bert_model', common.BERT.get(short_language)]
+        else:
+            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % short_language)
+
     if mode == Mode.TRAIN:
         for train_piece in train_file.split(";"):
             if not os.path.exists(train_piece):
@@ -79,7 +91,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-        train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
+        train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
@@ -92,7 +104,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
+        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
@@ -108,7 +120,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        test_args = test_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
+        test_args = test_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)
@@ -118,7 +130,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "pos", "tagger", add_charlm_args)
+    common.main(run_treebank, "pos", "tagger", add_pos_args)
 
 if __name__ == "__main__":
     main()
