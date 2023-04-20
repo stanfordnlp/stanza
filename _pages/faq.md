@@ -47,6 +47,10 @@ Although we try our best to keep our model server available, it does become unav
 
 This is an known issue for users from some certain areas, such as China. A common reason for this is that a connection to the `raw.githubusercontent.com` URL cannot be established, and therefore the resource file required for downloading models cannot be accessed. Users have widely reported that using a VPN that provides stable access to GitHub services can solve this issue.
 
+### Stanza is trying to download models and/or its resources file when offline.  How can I stop that?
+
+When building a `Pipeline`, Stanza will try to download the resources file to see if anything has changed, then download any updated models.  You can turn this behavior off by creating the `Pipeline` with the `download_method=None` parameter.  You can make it reuse an existing resources file but try to download any updated models with `download_method="reuse_resources"`.
+
 ## Troubleshooting Running Stanza
 
 ### Why do I keep getting a `SyntaxError: invalid syntax` error message while trying to `import stanza`?
