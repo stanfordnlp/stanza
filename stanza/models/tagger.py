@@ -153,6 +153,17 @@ def load_pretrain(args):
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def get_eval_type(dev_batch):
+    """
+    If there is only one column to score in the dev set, use that instead of AllTags
+    """
+    if dev_batch.has_xpos and not dev_batch.has_upos and not dev_batch.has_feats:
+        return "XPOS"
+    elif dev_batch.has_upos and not dev_batch.has_xpos and not dev_batch.has_feats:
+        return "UPOS"
+    else:
+        return "AllTags"
+
 def train(args):
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
@@ -190,6 +201,8 @@ def train(args):
                      for train_doc in train_docs]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+
+    eval_type = get_eval_type(dev_batch)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -252,7 +265,8 @@ def train(args):
                 dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
                 dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, gold_file)
+
+                _, _, dev_score = scorer.score(system_pred_file, gold_file, eval_type=eval_type)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -338,6 +352,7 @@ def evaluate(args):
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    eval_type = get_eval_type(batch)
     if len(batch) > 0:
         logger.info("Start evaluation...")
         preds = []
@@ -353,7 +368,7 @@ def evaluate(args):
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if gold_file is not None:
-        _, _, score = scorer.score(system_pred_file, gold_file)
+        _, _, score = scorer.score(system_pred_file, gold_file, eval_type=eval_type)
 
         logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
 

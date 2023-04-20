@@ -7,10 +7,10 @@ from stanza.models.common.utils import ud_scores
 
 logger = logging.getLogger('stanza')
 
-def score(system_conllu_file, gold_conllu_file, verbose=True):
+def score(system_conllu_file, gold_conllu_file, verbose=True, eval_type='AllTags'):
     """ Wrapper for tagger scorer. """
     evaluation = ud_scores(gold_conllu_file, system_conllu_file)
-    el = evaluation['AllTags']
+    el = evaluation[eval_type]
     p = el.precision
     r = el.recall
     f = el.f1
