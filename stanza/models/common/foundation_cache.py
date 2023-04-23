@@ -12,13 +12,19 @@ from stanza.models.common.pretrain import Pretrain
 logger = logging.getLogger('stanza')
 
 class FoundationCache:
-    def __init__(self):
-        self.bert = {}
-        self.charlms = {}
-        self.pretrains = {}
-        # future proof the module by using a lock for the glorious day
-        # when the GIL is finally gone
-        self.lock = threading.Lock()
+    def __init__(self, other=None):
+        if other is None:
+            self.bert = {}
+            self.charlms = {}
+            self.pretrains = {}
+            # future proof the module by using a lock for the glorious day
+            # when the GIL is finally gone
+            self.lock = threading.Lock()
+        else:
+            self.bert = other.bert
+            self.charlms = other.charlms
+            self.pretrains = other.pretrains
+            self.lock = other.lock
 
     def load_bert(self, transformer_name):
         """
@@ -66,6 +72,18 @@ class FoundationCache:
                 logger.debug("Reusing pretrain %s", filename)
 
             return self.pretrains[filename]
+
+class NoTransformerFoundationCache(FoundationCache):
+    """
+    Uses the underlying FoundationCache, but hiding the transformer.
+
+    Useful for when loading a downstream model such as POS which has a
+    finetuned transformer, and we don't want the transformer reused
+    since it will then have the finetuned weights for other models
+    which don't want them
+    """
+    def load_bert(self, transformer_name):
+        return load_bert(transformer_name)
 
 def load_bert(model_name, foundation_cache=None):
     """

@@ -140,8 +140,14 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None):
-    parameters = [p for p in model.parameters() if p.requires_grad]
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0):
+    base_parameters = [p for n, p in model.named_parameters() if p.requires_grad and not n.startswith("bert_model.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+    if len(bert_parameters) > 0 and bert_learning_rate > 0:
+        parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
+
     extra_args = {}
     if weight_decay is not None:
         extra_args["weight_decay"] = weight_decay
