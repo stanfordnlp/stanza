@@ -79,9 +79,8 @@ class Trainer(BaseTrainer):
             for pname, p in self.model.named_parameters():
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device

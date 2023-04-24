@@ -306,7 +306,7 @@ def train(args):
                     lr = args['second_lr']
                     if lr is None:
                         lr = args['lr']
-                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model.parameters(), lr=lr, betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
+                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model, lr=lr, betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
                 else:
                     logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True

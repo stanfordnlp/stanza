@@ -35,9 +35,8 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None))
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device

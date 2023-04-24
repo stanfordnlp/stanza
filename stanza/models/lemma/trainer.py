@@ -46,8 +46,7 @@ class Trainer(object):
                 logger.debug("Running seq2seq lemmatizer with edit classifier...")
             else:
                 self.crit = loss.SequenceLoss(self.vocab['char'].size).to(device)
-            self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-            self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device

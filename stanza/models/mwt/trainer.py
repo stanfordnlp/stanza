@@ -38,8 +38,7 @@ class Trainer(BaseTrainer):
         if not self.args['dict_only']:
             self.model = self.model.to(device)
             self.crit = loss.SequenceLoss(self.vocab.size).to(device)
-            self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-            self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'])
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
