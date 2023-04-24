@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from stanza.models.common import utils
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.tokenization.utils import create_dictionary
 
@@ -26,8 +27,7 @@ class Trainer(BaseTrainer):
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model = self.model.to(device)
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
-        self.optimizer = optim.Adam(self.parameters, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
+        self.optimizer = utils.get_optimizer("adam", self.model, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
         self.lang = self.args['lang'] # language determines how token normalization is done
 
