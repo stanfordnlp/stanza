@@ -160,7 +160,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
-        return torch.optim.Adadelta(parameters, **extra_args) # use default lr
+        return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
     elif name == 'madgrad':
         try:
             import madgrad
