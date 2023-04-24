@@ -86,6 +86,7 @@ def parse_args(args=None):
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamw, adamax, or adadelta.  madgrad as an optional dependency')
     parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')
     parser.add_argument('--second_optim_reload', default=False, action='store_true', help='Reload the best model instead of continuing from current model if the first optimizer stalls out.  This does not seem to help, but might be useful for further experiments')
+    parser.add_argument('--no_second_optim', action='store_const', const=None, dest='second_optim', help="Don't use a second optimizer - only use the first optimizer")
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=None, help='Alternate learning rate for the second optimizer')
     parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
@@ -296,7 +297,7 @@ def train(args):
                 dev_score_history += [dev_score]
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
-                if not using_amsgrad:
+                if not using_amsgrad and args['second_optim'] is not None:
                     logger.info("Switching to second optimizer: {}".format(args['second_optim']))
                     if args['second_optim_reload']:
                         logger.info('Reloading best model to continue from current local optimum')
