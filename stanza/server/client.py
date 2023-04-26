@@ -468,7 +468,11 @@ class CoreNLPClient(RobustService):
         except requests.exceptions.Timeout as e:
             raise TimeoutException("Timeout requesting to CoreNLPServer. Maybe server is unavailable or your document is too long")
         except requests.exceptions.RequestException as e:
-            raise AnnotationException(e)
+            if e.response is not None and e.response.text is not None:
+                raise AnnotationException(e.response.text) from e
+            elif e.args:
+                raise AnnotationException(e.args[0]) from e
+            raise AnnotationException() from e
 
     def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=None, **kwargs):
         """
