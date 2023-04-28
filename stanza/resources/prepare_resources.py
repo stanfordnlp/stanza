@@ -122,10 +122,19 @@ no_pretrain_languages = set([
     "swl",
 ])
 
+# in some cases, we give the pretrain a name other than the original
+# name for the UD dataset
+# we will eventually do this for all of the pretrains
+specific_default_pretrains = {
+    "mr":      "fasttextwiki",
+    "myv":     "mokha",
+}
+
 default_pretrains = dict(default_treebanks)
 for lang in no_pretrain_languages:
     default_pretrains.pop(lang, None)
-default_pretrains["myv"] = "mokha"
+for lang in specific_default_pretrains.keys():
+    default_pretrains[lang] = specific_default_pretrains[lang]
 
 # default ner for languages
 default_ners = {
@@ -245,9 +254,6 @@ pos_pretrains = {
     "it": {
         "combined_electra": "combined",
         "vit_bert": "vit",
-    },
-    "myv": {
-        "jr": "mokha",
     },
     "vi": {
         "vlsp22_phobert_large": "vtb",
@@ -397,7 +403,10 @@ def split_model_name(model):
 def get_con_dependencies(lang, package):
     # so far, this invariant is true:
     # constituency models use the default pretrain and charlm for the language
-    pretrain_package = default_treebanks[lang]
+    if lang in specific_default_pretrains:
+        pretrain_package = specific_default_pretrains[lang]
+    else:
+        pretrain_package = default_treebanks[lang]
     dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     # sometimes there is no charlm for a language that has constituency, though
@@ -414,10 +423,12 @@ def get_pos_dependencies(lang, package):
     # pretrains we have floating around
     if lang in no_pretrain_languages:
         dependencies = []
-    elif lang not in pos_pretrains or package not in pos_pretrains[lang]:
-        dependencies = [{'model': 'pretrain', 'package': package}]
-    else:
+    elif lang in pos_pretrains and package in pos_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': pos_pretrains[lang][package]}]
+    elif lang in specific_default_pretrains:
+        dependencies = [{'model': 'pretrain', 'package': specific_default_pretrains[lang]}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': package}]
 
     if lang in pos_charlms and package in pos_charlms[lang]:
         charlm_package = pos_charlms[lang][package]
@@ -433,10 +444,12 @@ def get_pos_dependencies(lang, package):
 def get_depparse_dependencies(lang, package):
     if lang in no_pretrain_languages:
         dependencies = []
-    elif lang not in depparse_pretrains or package not in depparse_pretrains[lang]:
-        dependencies = [{'model': 'pretrain', 'package': package}]
-    else:
+    elif lang in depparse_pretrains and package in depparse_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': depparse_pretrains[lang][package]}]
+    elif lang in specific_default_pretrains:
+        dependencies = [{'model': 'pretrain', 'package': specific_default_pretrains[lang]}]
+    else:
+        dependencies = [{'model': 'pretrain', 'package': package}]
 
     if lang in depparse_charlms and package in depparse_charlms[lang]:
         charlm_package = depparse_charlms[lang][package]
@@ -455,10 +468,12 @@ def get_depparse_dependencies(lang, package):
 def get_ner_dependencies(lang, package):
     dependencies = []
 
-    if lang not in ner_pretrains or package not in ner_pretrains[lang]:
-        pretrain_package = default_treebanks[lang]
-    else:
+    if lang in ner_pretrains and package in ner_pretrains[lang]:
         pretrain_package = ner_pretrains[lang][package]
+    elif lang in specific_default_pretrains:
+        pretrain_package = specific_default_pretrains[lang]
+    else:
+        pretrain_package = default_treebanks[lang]
     if pretrain_package is not None:
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
@@ -481,7 +496,10 @@ def get_sentiment_dependencies(lang, package):
     sentiment models use the default pretrain for the language
     also, they all use the default charlm for a language
     """
-    pretrain_package = default_treebanks[lang]
+    if lang in specific_default_pretrains:
+        pretrain_package = specific_default_pretrains[lang]
+    else:
+        pretrain_package = default_treebanks[lang]
     dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     charlm_package = default_charlms.get(lang, None)
