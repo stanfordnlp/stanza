@@ -38,6 +38,19 @@ have started noting those with `fasttextwiki` in the distributions.
 }
 ```
 
+
+```
+@article{bojanowski2017enriching,
+  title={Enriching Word Vectors with Subword Information},
+  author={Bojanowski, Piotr and Grave, Edouard and Joulin, Armand and Mikolov, Tomas},
+  journal={Transactions of the Association for Computational Linguistics},
+  volume={5},
+  year={2017},
+  issn={2307-387X},
+  pages={135--146}
+}
+```
+
 ## Using alternate word vectors
 
 The simplest way to retrain models for an existing language with new data is to use the existing word vectors.  Generally we redistribute word vectors built with word2vec or fasttext.
