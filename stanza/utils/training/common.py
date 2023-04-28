@@ -104,6 +104,11 @@ BERT = {
     # test: 2022-03-04 INFO: fi_turku 91.36
     "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
+    # a couple possibilities to experiment with for Hebrew
+    # https://huggingface.co/imvladikon/alephbertgimmel-base-512
+    # https://huggingface.co/onlplab/alephbert-base
+    # https://huggingface.co/avichr/heBERT
+
     # https://huggingface.co/xlm-roberta-base
     # Scores by entity for armtdp NER on 18 labels:
     # no bert : 86.68
