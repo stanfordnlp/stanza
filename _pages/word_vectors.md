@@ -25,6 +25,18 @@ After running the script, your embedding vector files will be organized in the f
 {{ "If you only want one language's word vectors, you can get them from your [STANZA_RESOURCES](download_models.md) directory.  For example, word vectors used for English go to `~stanza_resources/en/pretrain/combined.pt` by default" | markdownify }}
 {{ end }}
 
+Several of the vector files we use are from the [Wiki version of the
+fasttext vectors](https://fasttext.cc/docs/en/crawl-vectors.html).  We
+have started noting those with `fasttextwiki` in the distributions.
+
+```
+@inproceedings{grave2018learning,
+  title={Learning Word Vectors for 157 Languages},
+  author={Grave, Edouard and Bojanowski, Piotr and Gupta, Prakhar and Joulin, Armand and Mikolov, Tomas},
+  booktitle={Proceedings of the International Conference on Language Resources and Evaluation (LREC 2018)},
+  year={2018}
+}
+```
 
 ## Using alternate word vectors
 
