@@ -370,8 +370,9 @@ def evaluate(args):
     if len(batch) > 0:
         logger.info("Start evaluation...")
         preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
+        with torch.no_grad():
+            for i, b in enumerate(batch):
+                preds += trainer.predict(b)
     else:
         # skip eval if dev data does not exist
         preds = []
